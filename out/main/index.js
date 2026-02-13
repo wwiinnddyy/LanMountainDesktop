@@ -3,8 +3,8 @@ const electron = require("electron");
 const path = require("path");
 const utils = require("@electron-toolkit/utils");
 const elysia = require("elysia");
-const fs = require("fs");
 const child_process = require("child_process");
+const fs = require("fs");
 const util = require("util");
 const node = require("@elysiajs/node");
 const icon = path.join(__dirname, "../../resources/icon.png");
@@ -20,7 +20,7 @@ function getStartMenuRoots() {
   const { userProgramsPath, commonProgramsPath } = getStartMenuPaths();
   return [userProgramsPath, commonProgramsPath].filter((p) => Boolean(p));
 }
-const execFileAsync$1 = util.promisify(child_process.execFile);
+const execFileAsync$2 = util.promisify(child_process.execFile);
 function getWindowsPowerShellExe() {
   const systemRoot = process.env["SystemRoot"] ?? process.env["WINDIR"] ?? "C:\\Windows";
   return path.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
@@ -124,7 +124,7 @@ async function listWindowsStartMenuApps() {
   const roots = getStartMenuRoots();
   const script = buildPowerShellScript(roots);
   const powershellExe = getWindowsPowerShellExe();
-  const { stdout } = await execFileAsync$1(
+  const { stdout } = await execFileAsync$2(
     powershellExe,
     ["-NoProfile", "-NonInteractive", "-Sta", "-ExecutionPolicy", "Bypass", "-Command", script],
     { windowsHide: true, maxBuffer: 50 * 1024 * 1024, timeout: 6e4 }
@@ -157,7 +157,7 @@ async function listWindowsStartMenuApps() {
   result.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
   return result;
 }
-const execFileAsync = util.promisify(child_process.execFile);
+const execFileAsync$1 = util.promisify(child_process.execFile);
 function isUnderRoot(filePath, root) {
   const normalizedFile = path.resolve(filePath).toLowerCase();
   const normalizedRoot = path.resolve(root).toLowerCase();
@@ -166,7 +166,7 @@ function isUnderRoot(filePath, root) {
 async function launchStartMenuEntry(filePath) {
   if (process.platform !== "win32") return;
   if (filePath.startsWith("shell:AppsFolder\\")) {
-    await execFileAsync("explorer.exe", [filePath], { windowsHide: true });
+    await execFileAsync$1("explorer.exe", [filePath], { windowsHide: true });
     return;
   }
   const roots = getStartMenuRoots();
@@ -179,6 +179,7 @@ async function launchStartMenuEntry(filePath) {
     throw new Error(result);
   }
 }
+const execFileAsync = util.promisify(child_process.execFile);
 function createEiysiaApp(deps) {
   const iconCache = /* @__PURE__ */ new Map();
   const appsCacheFilePath = path.join(electron.app.getPath("userData"), "apps-cache.json");
@@ -327,6 +328,27 @@ function createEiysiaApp(deps) {
       const message = error instanceof Error ? error.message : "UnknownError";
       if (message === "PathNotAllowed") return new Response("Forbidden", { status: 403 });
       return new Response("LaunchFailed", { status: 500 });
+    }
+  }).post("/open/external", async ({ body }) => {
+    const payload = body;
+    if (typeof payload.url !== "string") {
+      return new Response("BadRequest", { status: 400 });
+    }
+    const url = payload.url.trim();
+    if (!url) return new Response("BadRequest", { status: 400 });
+    const lower = url.toLowerCase();
+    if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("file:")) {
+      return new Response("Forbidden", { status: 403 });
+    }
+    try {
+      if (process.platform === "win32" && lower.startsWith("shell:")) {
+        await execFileAsync("explorer.exe", [url], { windowsHide: true });
+        return { ok: true };
+      }
+      await electron.shell.openExternal(url);
+      return { ok: true };
+    } catch {
+      return new Response("OpenFailed", { status: 500 });
     }
   }).get("/backend/port", () => ({
     port: deps.getHttpPort()

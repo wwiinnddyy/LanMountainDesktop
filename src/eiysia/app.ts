@@ -1,13 +1,17 @@
-import { app as electronApp, BrowserWindow } from 'electron'
+import { app as electronApp, BrowserWindow, shell } from 'electron'
 import { Elysia } from 'elysia'
+import { execFile } from 'child_process'
 import { promises as fs } from 'fs'
 import { join } from 'path'
+import { promisify } from 'util'
 import { launchStartMenuEntry, listWindowsStartMenuApps } from '../app_list'
 
 export interface EiysiaDependencies {
   getMainWindow: () => BrowserWindow | null
   getHttpPort: () => number | null
 }
+
+const execFileAsync = promisify(execFile)
 
 export function createEiysiaApp(deps: EiysiaDependencies): {
   handle: (request: Request) => Response | Promise<Response>
@@ -214,6 +218,36 @@ export function createEiysiaApp(deps: EiysiaDependencies): {
         const message = error instanceof Error ? error.message : 'UnknownError'
         if (message === 'PathNotAllowed') return new Response('Forbidden', { status: 403 })
         return new Response('LaunchFailed', { status: 500 })
+      }
+    })
+    .post('/open/external', async ({ body }) => {
+      const payload = body as { url?: unknown }
+      if (typeof payload.url !== 'string') {
+        return new Response('BadRequest', { status: 400 })
+      }
+
+      const url = payload.url.trim()
+      if (!url) return new Response('BadRequest', { status: 400 })
+
+      const lower = url.toLowerCase()
+      if (
+        lower.startsWith('javascript:') ||
+        lower.startsWith('data:') ||
+        lower.startsWith('file:')
+      ) {
+        return new Response('Forbidden', { status: 403 })
+      }
+
+      try {
+        if (process.platform === 'win32' && lower.startsWith('shell:')) {
+          await execFileAsync('explorer.exe', [url], { windowsHide: true })
+          return { ok: true }
+        }
+
+        await shell.openExternal(url)
+        return { ok: true }
+      } catch {
+        return new Response('OpenFailed', { status: 500 })
       }
     })
     .get('/backend/port', () => ({

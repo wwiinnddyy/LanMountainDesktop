@@ -2500,7 +2500,43 @@ const onRenderTracked = createHook("rtc");
 function onErrorCaptured(hook, target = currentInstance) {
   injectHook("ec", hook, target);
 }
+const COMPONENTS = "components";
 const NULL_DYNAMIC_COMPONENT = /* @__PURE__ */ Symbol.for("v-ndc");
+function resolveDynamicComponent(component) {
+  if (isString(component)) {
+    return resolveAsset(COMPONENTS, component, false) || component;
+  } else {
+    return component || NULL_DYNAMIC_COMPONENT;
+  }
+}
+function resolveAsset(type, name, warnMissing = true, maybeSelfReference = false) {
+  const instance = currentRenderingInstance || currentInstance;
+  if (instance) {
+    const Component = instance.type;
+    {
+      const selfName = getComponentName(
+        Component,
+        false
+      );
+      if (selfName && (selfName === name || selfName === camelize(name) || selfName === capitalize(camelize(name)))) {
+        return Component;
+      }
+    }
+    const res = (
+      // local registration
+      // check instance[type] first which is resolved for options API
+      resolve(instance[type] || Component[type], name) || // global registration
+      resolve(instance.appContext[type], name)
+    );
+    if (!res && maybeSelfReference) {
+      return Component;
+    }
+    return res;
+  }
+}
+function resolve(registry, name) {
+  return registry && (registry[name] || registry[camelize(name)] || registry[capitalize(camelize(name))]);
+}
 function renderList(source, renderItem, cache, index) {
   let ret;
   const cached = cache;
@@ -6353,50 +6389,460 @@ function normalizeContainer(container) {
 }
 const _hoisted_1 = { class: "screen" };
 const _hoisted_2 = { class: "clock" };
-const _hoisted_3 = {
-  key: 0,
-  class: "home"
+const _hoisted_3 = ["data-active"];
+const _hoisted_4 = { class: "page page--home" };
+const _hoisted_5 = { class: "home" };
+const _hoisted_6 = { class: "desktopGridShell" };
+const _hoisted_7 = { class: "desktopGrid" };
+const _hoisted_8 = { class: "writingPanelButtons" };
+const _hoisted_9 = ["onPointerup"];
+const _hoisted_10 = {
+  class: "writingActionIcon",
+  xmlns: "http://www.w3.org/2000/svg",
+  width: "18",
+  height: "18",
+  viewBox: "0 0 20 20",
+  "aria-hidden": "true",
+  focusable: "false"
 };
-const _hoisted_4 = ["onKeydown"];
-const _hoisted_5 = {
+const _hoisted_11 = ["d"];
+const _hoisted_12 = { class: "writingActionText" };
+const _hoisted_13 = {
   key: 1,
-  class: "appsPage"
+  class: "deskTileRow"
 };
-const _hoisted_6 = { class: "appsTilesArea" };
-const _hoisted_7 = {
+const _hoisted_14 = {
+  class: "deskTileIcon",
+  xmlns: "http://www.w3.org/2000/svg",
+  width: "28",
+  height: "28",
+  viewBox: "0 0 20 20",
+  "aria-hidden": "true",
+  focusable: "false"
+};
+const _hoisted_15 = ["d"];
+const _hoisted_16 = { class: "deskTileText" };
+const _hoisted_17 = { class: "notesPanel" };
+const _hoisted_18 = { class: "notesHeader" };
+const _hoisted_19 = { class: "notesGrid" };
+const _hoisted_20 = ["onUpdate:modelValue"];
+const _hoisted_21 = { class: "page page--apps" };
+const _hoisted_22 = { class: "appsPage" };
+const _hoisted_23 = { class: "appsTilesArea" };
+const _hoisted_24 = {
   key: 0,
   class: "appsLoading"
 };
-const _hoisted_8 = {
+const _hoisted_25 = {
   key: 1,
   class: "error"
 };
-const _hoisted_9 = { class: "errorHeader" };
-const _hoisted_10 = { class: "errorBody" };
-const _hoisted_11 = { class: "groupHeader" };
-const _hoisted_12 = ["onPointerdown", "onKeydown"];
-const _hoisted_13 = ["src"];
-const _hoisted_14 = { class: "name" };
-const _hoisted_15 = { class: "appsBottomBar" };
+const _hoisted_26 = { class: "errorHeader" };
+const _hoisted_27 = { class: "errorBody" };
+const _hoisted_28 = { class: "groupHeader" };
+const _hoisted_29 = ["onPointerdown", "onKeydown"];
+const _hoisted_30 = ["src"];
+const _hoisted_31 = { class: "name" };
+const _hoisted_32 = { class: "appsBottomBar" };
+const _hoisted_33 = {
+  key: 0,
+  class: "settingsPage"
+};
+const _hoisted_34 = { class: "settingsContentArea" };
+const _hoisted_35 = { class: "settingsSidebar" };
+const _hoisted_36 = ["data-active"];
+const _hoisted_37 = { class: "settingsDetail" };
+const _hoisted_38 = { class: "settingsDetailHeader" };
+const _hoisted_39 = { class: "settingsDetailHeaderActions" };
+const _hoisted_40 = { class: "settingsDetailBody" };
+const _hoisted_41 = {
+  key: 0,
+  class: "settingsSection"
+};
+const _hoisted_42 = { class: "settingsPreviewList" };
+const _hoisted_43 = { class: "settingsPreviewMain" };
+const _hoisted_44 = { class: "settingsPreviewTitle" };
+const _hoisted_45 = { class: "settingsPreviewMeta" };
+const _hoisted_46 = { class: "settingsPreviewBehavior" };
+const _hoisted_47 = { class: "settingsPreviewBehaviorLabel" };
+const _hoisted_48 = { class: "settingsPreviewBehaviorValue" };
+const _hoisted_49 = { class: "settingsPreviewBehaviorValue" };
+const _hoisted_50 = { class: "settingsSection" };
+const _hoisted_51 = { class: "homeEditGrid" };
+const _hoisted_52 = ["data-active", "data-selected", "onPointerup"];
+const _hoisted_53 = {
+  class: "homeWidgetCardIcon",
+  xmlns: "http://www.w3.org/2000/svg",
+  width: "22",
+  height: "22",
+  viewBox: "0 0 20 20",
+  "aria-hidden": "true",
+  focusable: "false"
+};
+const _hoisted_54 = ["d"];
+const _hoisted_55 = { class: "homeWidgetCardTitle" };
+const _hoisted_56 = { class: "homeWidgetCardMeta" };
+const _hoisted_57 = { class: "settingsSection" };
+const _hoisted_58 = { class: "homeEditOrderList" };
+const _hoisted_59 = { class: "homeEditOrderTitle" };
+const _hoisted_60 = { class: "homeEditOrderActions" };
+const _hoisted_61 = ["onPointerup"];
+const _hoisted_62 = ["onPointerup"];
+const _hoisted_63 = ["onPointerup"];
+const _hoisted_64 = { class: "settingsSection" };
+const _hoisted_65 = { class: "settingsSectionTitle" };
+const _hoisted_66 = { class: "settingsConfigArea" };
+const _hoisted_67 = { class: "settingsSubActionTitle" };
+const _hoisted_68 = ["value", "onChange"];
+const _hoisted_69 = ["value", "onInput"];
+const _hoisted_70 = ["onPointerup"];
+const _hoisted_71 = { class: "settingsSingleActionRow" };
+const _hoisted_72 = ["value"];
+const _hoisted_73 = ["value"];
+const _hoisted_74 = { class: "settingsActionHint" };
+const _hoisted_75 = { class: "settingsBottomBar" };
 const _sfc_main = /* @__PURE__ */ defineComponent({
   __name: "App",
   setup(__props) {
     const now = /* @__PURE__ */ ref(/* @__PURE__ */ new Date());
-    const page = /* @__PURE__ */ ref("home");
+    const mainPage = /* @__PURE__ */ ref("home");
+    const isSettingsOpen = /* @__PURE__ */ ref(false);
     const apps = /* @__PURE__ */ ref([]);
     const query = /* @__PURE__ */ ref("");
     const loadError = /* @__PURE__ */ ref(null);
     const isLoadingApps = /* @__PURE__ */ ref(false);
     const isAppsScrolling = /* @__PURE__ */ ref(false);
+    const notes = /* @__PURE__ */ ref([]);
+    const iconPath = (icon) => {
+      switch (icon) {
+        case "pen":
+          return "M14.1 2.65a2.25 2.25 0 0 1 3.182 3.182l-8.6 8.6a2.25 2.25 0 0 1-1.04.576l-3.1.775a.75.75 0 0 1-.91-.91l.775-3.1a2.25 2.25 0 0 1 .576-1.04zm2.121 1.06a.75.75 0 0 0-1.06 0L6.7 12.174a.75.75 0 0 0-.192.346l-.44 1.76 1.76-.44a.75.75 0 0 0 .346-.192l8.462-8.462a.75.75 0 0 0 0-1.06z";
+        case "folder":
+          return "M3.5 4.5A2.5 2.5 0 0 1 6 2h2.25c.43 0 .84.184 1.126.505L10.2 3.5H14A2.5 2.5 0 0 1 16.5 6v7.5A2.5 2.5 0 0 1 14 16H6A2.5 2.5 0 0 1 3.5 13.5zM6 3.5A1 1 0 0 0 5 4.5V5h10v-1a1 1 0 0 0-1-1h-4.1a.75.75 0 0 1-.562-.253L8.086 3.5zm9 3H5v7a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1z";
+        case "camera":
+          return "M7 4.5h6l.6 1.2c.127.254.387.414.67.414H15A2.5 2.5 0 0 1 17.5 8.6v6.9A2.5 2.5 0 0 1 15 18H5A2.5 2.5 0 0 1 2.5 15.5V8.6A2.5 2.5 0 0 1 5 6.114h.73c.283 0 .543-.16.67-.414zM10 15.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6z";
+        case "globe":
+          return "M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16m5.93 7H13.6a12 12 0 0 0-1.03-4.09A6.5 6.5 0 0 1 15.93 9M10 3.5c-.9 0-1.98 1.6-2.45 5.5h4.9c-.47-3.9-1.55-5.5-2.45-5.5m-2.57 1.41A12 12 0 0 0 6.4 9H4.07a6.5 6.5 0 0 1 3.36-4.09M4.07 11H6.4c.17 1.5.56 2.92 1.03 4.09A6.5 6.5 0 0 1 4.07 11m3.48 0c.47 3.9 1.55 5.5 2.45 5.5s1.98-1.6 2.45-5.5zm5.02 4.09c.47-1.17.86-2.59 1.03-4.09h2.33a6.5 6.5 0 0 1-3.36 4.09";
+        case "apps":
+          return "M4.5 3A1.5 1.5 0 0 0 3 4.5v2A1.5 1.5 0 0 0 4.5 8h2A1.5 1.5 0 0 0 8 6.5v-2A1.5 1.5 0 0 0 6.5 3zm9 0A1.5 1.5 0 0 0 12 4.5v2A1.5 1.5 0 0 0 13.5 8h2A1.5 1.5 0 0 0 17 6.5v-2A1.5 1.5 0 0 0 15.5 3zM3 13.5A1.5 1.5 0 0 1 4.5 12h2A1.5 1.5 0 0 1 8 13.5v2A1.5 1.5 0 0 1 6.5 17h-2A1.5 1.5 0 0 1 3 15.5zm10.5-1.5A1.5 1.5 0 0 0 12 13.5v2a1.5 1.5 0 0 0 1.5 1.5h2a1.5 1.5 0 0 0 1.5-1.5v-2a1.5 1.5 0 0 0-1.5-1.5z";
+        case "note":
+          return "M6 2.5A2.5 2.5 0 0 0 3.5 5v10A2.5 2.5 0 0 0 6 17.5h5.5a.75.75 0 0 0 .53-.22l3.25-3.25a.75.75 0 0 0 .22-.53V5A2.5 2.5 0 0 0 13 2.5zm6.5 12.94V14a.5.5 0 0 1 .5-.5h1.44z";
+        case "doc":
+          return "M6 2.5A2.5 2.5 0 0 0 3.5 5v10A2.5 2.5 0 0 0 6 17.5h8A2.5 2.5 0 0 0 16.5 15V7.75a.75.75 0 0 0-.22-.53l-3.5-3.5a.75.75 0 0 0-.53-.22zM12.5 4.56 14.44 6.5H13a.5.5 0 0 1-.5-.5z";
+        case "comment":
+          return "M5.5 3.5A2.5 2.5 0 0 0 3 6v6a2.5 2.5 0 0 0 2.5 2.5H7.3l2.2 1.76a.75.75 0 0 0 .94 0l2.2-1.76H14.5A2.5 2.5 0 0 0 17 12V6a2.5 2.5 0 0 0-2.5-2.5z";
+      }
+    };
+    const writingActions = [
+      { id: "writing.whiteboard", label: "白板书写", icon: "pen" },
+      { id: "writing.annotate", label: "智能批注", icon: "comment" },
+      { id: "writing.historyNotes", label: "历史笔记", icon: "note" },
+      { id: "writing.classNotes", label: "课堂笔记", icon: "note" },
+      { id: "writing.historyDocs", label: "历史文档", icon: "doc" }
+    ];
+    const actionConfigs = /* @__PURE__ */ ref({});
+    let actionSaveTimerId;
+    const settingsTab = /* @__PURE__ */ ref("homeEdit");
+    const isHomeEditMode = /* @__PURE__ */ ref(false);
+    const homeEditSelectedId = /* @__PURE__ */ ref("whiteboard");
+    let pageSwipePointerId = null;
+    let pageSwipeStartX = 0;
+    let pageSwipeStartY = 0;
+    let pageSwipeStartTime = 0;
+    let pageSwipeStartMainPage = "home";
+    let suppressTapUntil = 0;
+    const availableWidgets = [
+      { id: "writingPanel", title: "书写", size: "2x4", icon: "pen", clickable: false, variant: "soft" },
+      {
+        id: "whiteboard",
+        title: "白板书写",
+        size: "2x2",
+        icon: "pen",
+        clickable: true,
+        onActivate: () => void activateAction("whiteboard"),
+        variant: "soft"
+      },
+      {
+        id: "fileManager",
+        title: "文件管理",
+        size: "2x2",
+        icon: "folder",
+        clickable: true,
+        onActivate: () => void activateAction("fileManager")
+      },
+      {
+        id: "visualPresenter",
+        title: "视频展台",
+        size: "2x2",
+        icon: "camera",
+        clickable: true,
+        onActivate: () => void activateAction("visualPresenter")
+      },
+      {
+        id: "browser",
+        title: "浏览器",
+        size: "2x2",
+        icon: "globe",
+        clickable: true,
+        onActivate: () => void activateAction("browser")
+      },
+      {
+        id: "moreApps",
+        title: "更多应用",
+        size: "2x2",
+        icon: "apps",
+        clickable: true,
+        onActivate: () => void activateAction("moreApps", () => void openApps()),
+        variant: "accent"
+      }
+    ];
+    const widgetsOrder = /* @__PURE__ */ ref(["writingPanel", "whiteboard", "fileManager", "visualPresenter", "browser", "moreApps"]);
+    const widgetsEnabled = /* @__PURE__ */ ref({
+      writingPanel: true,
+      whiteboard: true,
+      fileManager: true,
+      visualPresenter: true,
+      browser: true,
+      moreApps: true
+    });
+    let widgetsSaveTimerId;
+    const widgetsInOrder = computed(() => {
+      const map = new Map(availableWidgets.map((w) => [w.id, w]));
+      const seen = /* @__PURE__ */ new Set();
+      const ordered = [];
+      for (const id of widgetsOrder.value) {
+        const w = map.get(id);
+        if (!w) continue;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ordered.push(w);
+      }
+      for (const w of availableWidgets) {
+        if (seen.has(w.id)) continue;
+        ordered.push(w);
+      }
+      return ordered;
+    });
+    const enabledWidgets = computed(() => {
+      return widgetsInOrder.value.filter((w) => widgetsEnabled.value[w.id] !== false);
+    });
+    const placedDesktopTiles = computed(() => {
+      const cols = 4;
+      const rows = 4;
+      const occupied = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
+      const tryPlace = (tile) => {
+        const rowSpan = tile.size === "2x4" ? 4 : 2;
+        const colSpan = tile.size === "4x2" ? 4 : 2;
+        for (let r = 1; r <= rows - rowSpan + 1; r += 1) {
+          for (let c = 1; c <= cols - colSpan + 1; c += 1) {
+            let ok = true;
+            for (let rr = r; rr < r + rowSpan; rr += 1) {
+              for (let cc = c; cc < c + colSpan; cc += 1) {
+                if (occupied[rr - 1]?.[cc - 1]) {
+                  ok = false;
+                  break;
+                }
+              }
+              if (!ok) break;
+            }
+            if (!ok) continue;
+            for (let rr = r; rr < r + rowSpan; rr += 1) {
+              for (let cc = c; cc < c + colSpan; cc += 1) {
+                occupied[rr - 1][cc - 1] = true;
+              }
+            }
+            return { ...tile, row: r, col: c, rowSpan, colSpan };
+          }
+        }
+        return null;
+      };
+      const out = [];
+      for (const tile of enabledWidgets.value) {
+        const placed = tryPlace(tile);
+        if (placed) out.push(placed);
+      }
+      return out;
+    });
+    const placedWidgetIds = computed(() => new Set(placedDesktopTiles.value.map((t) => t.id)));
+    const settingsWidgets = computed(() => {
+      return widgetsInOrder.value.map((w) => {
+        const sizeLabel = w.size === "2x4" ? "2×4" : w.size === "4x2" ? "4×2" : "2×2";
+        const enabled = widgetsEnabled.value[w.id] !== false;
+        const visible = placedWidgetIds.value.has(w.id);
+        return { id: w.id, title: w.title, sizeLabel, enabled, visible };
+      });
+    });
+    const widgetTitle = (id) => {
+      if (id === "writingPanel") return "书写";
+      const found = availableWidgets.find((w) => w.id === id);
+      if (found) return found.title;
+      const foundAction = writingActions.find((a) => a.id === id);
+      if (foundAction) return foundAction.label;
+      return id;
+    };
+    const actionSummary = (id) => {
+      const config = actionConfigs.value[id];
+      const target = config?.target?.trim() ?? "";
+      if (!config || !target) {
+        if (id === "moreApps") return "默认：打开应用列表";
+        return "未配置";
+      }
+      return config.kind === "app" ? `打开应用：${target}` : `打开URL：${target}`;
+    };
+    const enabledWidgetOrder = computed(() => {
+      return widgetsOrder.value.filter((id) => widgetsEnabled.value[id] !== false);
+    });
+    const moveEnabledWidget = (id, delta) => {
+      const enabled = enabledWidgetOrder.value;
+      const index = enabled.indexOf(id);
+      if (index < 0) return;
+      const nextIndex = index + delta;
+      if (nextIndex < 0 || nextIndex >= enabled.length) return;
+      const otherId = enabled[nextIndex];
+      const full = [...widgetsOrder.value];
+      const a = full.indexOf(id);
+      const b = full.indexOf(otherId);
+      if (a < 0 || b < 0) return;
+      full[a] = otherId;
+      full[b] = id;
+      widgetsOrder.value = full;
+    };
+    const selectSettingsTab = (tab) => {
+      settingsTab.value = tab;
+      isHomeEditMode.value = false;
+    };
+    const enterHomeEdit = () => {
+      settingsTab.value = "homeEdit";
+      isHomeEditMode.value = true;
+      if (!homeEditSelectedId.value) {
+        homeEditSelectedId.value = "whiteboard";
+      }
+    };
+    const exitHomeEdit = () => {
+      isHomeEditMode.value = false;
+    };
+    const selectHomeWidget = (id) => {
+      homeEditSelectedId.value = id;
+    };
+    const toggleHomeWidget = (id) => {
+      homeEditSelectedId.value = id;
+      toggleWidgetEnabled(id);
+    };
     let timerId;
     let appsScrollTimerId;
     let launchTimerId;
+    let notesSaveTimerId;
     const activeAppPointer = /* @__PURE__ */ ref(null);
     onMounted(() => {
       timerId = window.setInterval(() => {
         now.value = /* @__PURE__ */ new Date();
       }, 1e3);
+      try {
+        const savedV2 = window.localStorage.getItem("lanmountain.notes.v2");
+        if (typeof savedV2 === "string" && savedV2) {
+          const parsed = JSON.parse(savedV2);
+          const rawNotes = Array.isArray(parsed.notes) ? parsed.notes : [];
+          const loaded = rawNotes.map((n) => {
+            const id = typeof n.id === "string" ? n.id : "";
+            const text = typeof n.text === "string" ? n.text : "";
+            if (!id) return null;
+            return { id, text };
+          }).filter(Boolean);
+          notes.value = loaded;
+        } else {
+          const savedV1 = window.localStorage.getItem("lanmountain.notes.v1");
+          if (typeof savedV1 === "string" && savedV1.trim()) {
+            notes.value = [{ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, text: savedV1 }];
+            window.localStorage.removeItem("lanmountain.notes.v1");
+          } else {
+            notes.value = [];
+          }
+        }
+      } catch {
+      }
+      try {
+        const raw = window.localStorage.getItem("lanmountain.desktop.widgets.v1");
+        if (typeof raw !== "string" || !raw) return;
+        const parsed = JSON.parse(raw);
+        const order = Array.isArray(parsed.order) ? parsed.order.filter((x) => typeof x === "string") : null;
+        const enabled = parsed.enabled && typeof parsed.enabled === "object" && !Array.isArray(parsed.enabled) ? parsed.enabled : null;
+        if (order) widgetsOrder.value = order;
+        if (enabled) {
+          const next = { ...widgetsEnabled.value };
+          for (const [k, v] of Object.entries(enabled)) {
+            if (typeof v === "boolean") next[k] = v;
+          }
+          widgetsEnabled.value = next;
+        }
+      } catch {
+      }
+      try {
+        const raw = window.localStorage.getItem("lanmountain.desktop.actions.v1");
+        if (typeof raw === "string" && raw) {
+          const parsed = JSON.parse(raw);
+          const actions = parsed.actions && typeof parsed.actions === "object" && !Array.isArray(parsed.actions) ? parsed.actions : null;
+          if (actions) {
+            const next = {};
+            for (const [k, v] of Object.entries(actions)) {
+              if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+              const kind = v.kind;
+              const target = v.target;
+              if ((kind === "app" || kind === "url") && typeof target === "string") {
+                next[k] = { kind, target };
+              }
+            }
+            actionConfigs.value = next;
+          }
+        }
+      } catch {
+      }
     });
+    watch(
+      notes,
+      (next) => {
+        if (notesSaveTimerId) window.clearTimeout(notesSaveTimerId);
+        notesSaveTimerId = window.setTimeout(() => {
+          try {
+            window.localStorage.setItem("lanmountain.notes.v2", JSON.stringify({ notes: next }));
+          } catch {
+          }
+        }, 250);
+      },
+      { deep: true }
+    );
+    const addNote = () => {
+      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      notes.value = [{ id, text: "" }, ...notes.value];
+    };
+    watch(
+      [widgetsOrder, widgetsEnabled],
+      () => {
+        if (widgetsSaveTimerId) window.clearTimeout(widgetsSaveTimerId);
+        widgetsSaveTimerId = window.setTimeout(() => {
+          try {
+            window.localStorage.setItem(
+              "lanmountain.desktop.widgets.v1",
+              JSON.stringify({ order: widgetsOrder.value, enabled: widgetsEnabled.value })
+            );
+          } catch {
+          }
+        }, 250);
+      },
+      { deep: true }
+    );
+    watch(
+      actionConfigs,
+      (next) => {
+        if (actionSaveTimerId) window.clearTimeout(actionSaveTimerId);
+        actionSaveTimerId = window.setTimeout(() => {
+          try {
+            window.localStorage.setItem("lanmountain.desktop.actions.v1", JSON.stringify({ actions: next }));
+          } catch {
+          }
+        }, 250);
+      },
+      { deep: true }
+    );
     const handleAppsListScroll = () => {
       isAppsScrolling.value = true;
       if (appsScrollTimerId) window.clearTimeout(appsScrollTimerId);
@@ -6424,19 +6870,132 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
       }
     };
     const openApps = async () => {
-      page.value = "apps";
+      mainPage.value = "apps";
       if (apps.value.length === 0 || loadError.value) {
         await loadApps();
       }
     };
     const closeApps = () => {
-      page.value = "home";
+      mainPage.value = "home";
       query.value = "";
+    };
+    const openExternal = async (url) => {
+      await window.api.call({ method: "POST", path: "/open/external", body: { url } });
+    };
+    const activateAction = async (actionId, fallback) => {
+      const config = actionConfigs.value[actionId];
+      const target = config?.target?.trim() ?? "";
+      if (!config || !target) {
+        fallback?.();
+        return;
+      }
+      if (config.kind === "app") {
+        await launch(target);
+        return;
+      }
+      await openExternal(target);
+    };
+    const openSettings = () => {
+      isSettingsOpen.value = true;
+      settingsTab.value = "homeEdit";
+      isHomeEditMode.value = false;
+    };
+    const closeSettings = () => {
+      isSettingsOpen.value = false;
+      isHomeEditMode.value = false;
+    };
+    const handleTilePointerUp = async (tile) => {
+      if (Date.now() < suppressTapUntil) return;
+      await tile.onActivate?.();
+    };
+    const handleWritingActionPointerUp = async (actionId) => {
+      if (Date.now() < suppressTapUntil) return;
+      await activateAction(actionId);
+    };
+    const handlePagePointerDown = (event) => {
+      if (isSettingsOpen.value) return;
+      if (pageSwipePointerId !== null) return;
+      const tag = event.target?.tagName?.toLowerCase() ?? "";
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (mainPage.value === "apps" && event.clientX > 36) {
+        return;
+      }
+      pageSwipePointerId = event.pointerId;
+      pageSwipeStartX = event.clientX;
+      pageSwipeStartY = event.clientY;
+      pageSwipeStartTime = Date.now();
+      pageSwipeStartMainPage = mainPage.value;
+    };
+    const handlePagePointerMove = (event) => {
+      if (pageSwipePointerId === null) return;
+      if (event.pointerId !== pageSwipePointerId) return;
+      const dx = event.clientX - pageSwipeStartX;
+      const dy = event.clientY - pageSwipeStartY;
+      if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+      if (Math.abs(dx) > Math.abs(dy) + 24 && Math.abs(dx) > 60) {
+        suppressTapUntil = Date.now() + 350;
+      }
+    };
+    const handlePagePointerUp = (event) => {
+      if (pageSwipePointerId === null) return;
+      if (event.pointerId !== pageSwipePointerId) return;
+      const dt = Date.now() - pageSwipeStartTime;
+      const dx = event.clientX - pageSwipeStartX;
+      const dy = event.clientY - pageSwipeStartY;
+      pageSwipePointerId = null;
+      if (dt > 900) return;
+      if (Math.abs(dx) < 90) return;
+      if (Math.abs(dx) <= Math.abs(dy) + 28) return;
+      suppressTapUntil = Date.now() + 450;
+      if (pageSwipeStartMainPage === "home" && dx < -90) {
+        void openApps();
+        return;
+      }
+      if (pageSwipeStartMainPage === "apps" && dx > 90 && pageSwipeStartX <= 36) {
+        closeApps();
+      }
+    };
+    const handlePagePointerCancel = (event) => {
+      if (pageSwipePointerId === null) return;
+      if (event.pointerId !== pageSwipePointerId) return;
+      pageSwipePointerId = null;
+    };
+    const restoreDefaultWidgets = () => {
+      widgetsOrder.value = ["writingPanel", "whiteboard", "fileManager", "visualPresenter", "browser", "moreApps"];
+      widgetsEnabled.value = {
+        writingPanel: true,
+        whiteboard: true,
+        fileManager: true,
+        visualPresenter: true,
+        browser: true,
+        moreApps: true
+      };
+    };
+    const toggleWidgetEnabled = (id) => {
+      const next = { ...widgetsEnabled.value };
+      next[id] = !(next[id] !== false);
+      widgetsEnabled.value = next;
+    };
+    const setActionKind = (id, kind) => {
+      const current = actionConfigs.value[id] ?? { kind, target: "" };
+      actionConfigs.value = { ...actionConfigs.value, [id]: { ...current, kind } };
+    };
+    const setActionTarget = (id, target) => {
+      const current = actionConfigs.value[id] ?? { kind: "url", target: "" };
+      actionConfigs.value = { ...actionConfigs.value, [id]: { ...current, target } };
+    };
+    const clearAction = (id) => {
+      const next = { ...actionConfigs.value };
+      delete next[id];
+      actionConfigs.value = next;
     };
     onBeforeUnmount(() => {
       if (timerId) window.clearInterval(timerId);
       if (appsScrollTimerId) window.clearTimeout(appsScrollTimerId);
       if (launchTimerId) window.clearTimeout(launchTimerId);
+      if (notesSaveTimerId) window.clearTimeout(notesSaveTimerId);
+      if (widgetsSaveTimerId) window.clearTimeout(widgetsSaveTimerId);
+      if (actionSaveTimerId) window.clearTimeout(actionSaveTimerId);
     });
     const timeText = computed(() => {
       return new Intl.DateTimeFormat("zh-CN", {
@@ -6587,83 +7146,381 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1, [
         createBaseVNode("div", _hoisted_2, toDisplayString(timeText.value), 1),
-        page.value === "home" ? (openBlock(), createElementBlock("div", _hoisted_3, [
-          createBaseVNode("button", {
-            class: "openAppsButton touchButton",
-            type: "button",
-            onPointerup: openApps,
-            onKeydown: [
-              withKeys(withModifiers(openApps, ["prevent"]), ["enter"]),
-              withKeys(withModifiers(openApps, ["prevent"]), ["space"])
-            ]
-          }, " 应用列表 ", 40, _hoisted_4)
-        ])) : (openBlock(), createElementBlock("div", _hoisted_5, [
-          createBaseVNode("div", _hoisted_6, [
-            isLoadingApps.value ? (openBlock(), createElementBlock("div", _hoisted_7, "加载中...")) : loadError.value ? (openBlock(), createElementBlock("div", _hoisted_8, [
-              createBaseVNode("div", _hoisted_9, [
-                _cache[4] || (_cache[4] = createBaseVNode("div", { class: "errorTitle" }, "加载失败", -1)),
-                createBaseVNode("button", {
-                  class: "copyButton touchButton",
-                  type: "button",
-                  onPointerup: copyLoadError
-                }, "复制错误", 32)
-              ]),
-              createBaseVNode("div", _hoisted_10, toDisplayString(loadError.value), 1)
-            ])) : (openBlock(), createElementBlock("div", {
-              key: 2,
-              class: "appsList",
-              onScroll: handleAppsListScroll
-            }, [
-              (openBlock(true), createElementBlock(Fragment, null, renderList(groupedApps.value, (group) => {
-                return openBlock(), createElementBlock(Fragment, {
-                  key: group.key
-                }, [
-                  createBaseVNode("div", _hoisted_11, toDisplayString(group.label), 1),
-                  (openBlock(true), createElementBlock(Fragment, null, renderList(group.items, (app) => {
-                    return openBlock(), createElementBlock("button", {
-                      key: app.id,
-                      class: "item touchButton",
+        createBaseVNode("div", {
+          class: "pagesViewport",
+          onPointerdown: handlePagePointerDown,
+          onPointermove: handlePagePointerMove,
+          onPointerup: handlePagePointerUp,
+          onPointercancel: handlePagePointerCancel
+        }, [
+          createBaseVNode("div", {
+            class: "pagesTrack",
+            "data-active": mainPage.value
+          }, [
+            createBaseVNode("div", _hoisted_4, [
+              createBaseVNode("div", _hoisted_5, [
+                createBaseVNode("div", _hoisted_6, [
+                  createBaseVNode("div", _hoisted_7, [
+                    (openBlock(true), createElementBlock(Fragment, null, renderList(placedDesktopTiles.value, (tile) => {
+                      return openBlock(), createBlock(resolveDynamicComponent(tile.clickable ? "button" : "div"), {
+                        key: tile.id,
+                        class: normalizeClass(["deskTile touchButton", [
+                          tile.variant ? `deskTile--${tile.variant}` : "",
+                          tile.id === "writingPanel" ? "deskTile--panel" : ""
+                        ]]),
+                        style: normalizeStyle({
+                          gridColumn: `${tile.col} / span ${tile.colSpan}`,
+                          gridRow: `${tile.row} / span ${tile.rowSpan}`
+                        }),
+                        type: tile.clickable ? "button" : void 0,
+                        onPointerup: ($event) => tile.clickable ? handleTilePointerUp(tile) : void 0
+                      }, {
+                        default: withCtx(() => [
+                          tile.id === "writingPanel" ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                            _cache[8] || (_cache[8] = createBaseVNode("div", { class: "writingPanelTitle" }, "书写", -1)),
+                            createBaseVNode("div", _hoisted_8, [
+                              (openBlock(), createElementBlock(Fragment, null, renderList(writingActions, (a) => {
+                                return createBaseVNode("button", {
+                                  key: a.id,
+                                  class: "writingActionButton touchButton",
+                                  type: "button",
+                                  onPointerup: ($event) => handleWritingActionPointerUp(a.id)
+                                }, [
+                                  (openBlock(), createElementBlock("svg", _hoisted_10, [
+                                    createBaseVNode("path", {
+                                      fill: "currentColor",
+                                      d: iconPath(a.icon)
+                                    }, null, 8, _hoisted_11)
+                                  ])),
+                                  createBaseVNode("div", _hoisted_12, toDisplayString(a.label), 1)
+                                ], 40, _hoisted_9);
+                              }), 64))
+                            ])
+                          ], 64)) : (openBlock(), createElementBlock("div", _hoisted_13, [
+                            (openBlock(), createElementBlock("svg", _hoisted_14, [
+                              createBaseVNode("path", {
+                                fill: "currentColor",
+                                d: iconPath(tile.icon)
+                              }, null, 8, _hoisted_15)
+                            ])),
+                            createBaseVNode("div", _hoisted_16, toDisplayString(tile.title), 1)
+                          ]))
+                        ]),
+                        _: 2
+                      }, 1064, ["class", "style", "type", "onPointerup"]);
+                    }), 128))
+                  ])
+                ]),
+                createBaseVNode("div", _hoisted_17, [
+                  createBaseVNode("div", _hoisted_18, [
+                    _cache[9] || (_cache[9] = createBaseVNode("div", { class: "notesHeaderTitle" }, "作业版", -1)),
+                    createBaseVNode("button", {
+                      class: "notesAddButton touchButton",
                       type: "button",
-                      onPointerdown: ($event) => handleAppPointerDown($event, app.filePath),
-                      onPointermove: _cache[0] || (_cache[0] = ($event) => handleAppPointerMove($event)),
-                      onPointerup: _cache[1] || (_cache[1] = ($event) => handleAppPointerUp($event)),
-                      onPointercancel: _cache[2] || (_cache[2] = ($event) => handleAppPointerCancel($event)),
-                      onKeydown: [
-                        withKeys(withModifiers(($event) => launch(app.filePath), ["prevent"]), ["enter"]),
-                        withKeys(withModifiers(($event) => launch(app.filePath), ["prevent"]), ["space"])
-                      ]
+                      onPointerup: addNote
+                    }, "新建", 32)
+                  ]),
+                  createBaseVNode("div", _hoisted_19, [
+                    (openBlock(true), createElementBlock(Fragment, null, renderList(notes.value, (note) => {
+                      return openBlock(), createElementBlock("div", {
+                        key: note.id,
+                        class: "noteCard"
+                      }, [
+                        withDirectives(createBaseVNode("textarea", {
+                          "onUpdate:modelValue": ($event) => note.text = $event,
+                          class: "noteTextarea",
+                          placeholder: "写点什么..."
+                        }, null, 8, _hoisted_20), [
+                          [vModelText, note.text]
+                        ])
+                      ]);
+                    }), 128))
+                  ])
+                ])
+              ])
+            ]),
+            createBaseVNode("div", _hoisted_21, [
+              createBaseVNode("div", _hoisted_22, [
+                createBaseVNode("div", _hoisted_23, [
+                  isLoadingApps.value ? (openBlock(), createElementBlock("div", _hoisted_24, "加载中...")) : loadError.value ? (openBlock(), createElementBlock("div", _hoisted_25, [
+                    createBaseVNode("div", _hoisted_26, [
+                      _cache[10] || (_cache[10] = createBaseVNode("div", { class: "errorTitle" }, "加载失败", -1)),
+                      createBaseVNode("button", {
+                        class: "copyButton touchButton",
+                        type: "button",
+                        onPointerup: copyLoadError
+                      }, "复制错误", 32)
+                    ]),
+                    createBaseVNode("div", _hoisted_27, toDisplayString(loadError.value), 1)
+                  ])) : (openBlock(), createElementBlock("div", {
+                    key: 2,
+                    class: "appsList",
+                    onScroll: handleAppsListScroll
+                  }, [
+                    (openBlock(true), createElementBlock(Fragment, null, renderList(groupedApps.value, (group) => {
+                      return openBlock(), createElementBlock(Fragment, {
+                        key: group.key
+                      }, [
+                        createBaseVNode("div", _hoisted_28, toDisplayString(group.label), 1),
+                        (openBlock(true), createElementBlock(Fragment, null, renderList(group.items, (app) => {
+                          return openBlock(), createElementBlock("button", {
+                            key: app.id,
+                            class: "item touchButton",
+                            type: "button",
+                            onPointerdown: ($event) => handleAppPointerDown($event, app.filePath),
+                            onPointermove: _cache[0] || (_cache[0] = ($event) => handleAppPointerMove($event)),
+                            onPointerup: _cache[1] || (_cache[1] = ($event) => handleAppPointerUp($event)),
+                            onPointercancel: _cache[2] || (_cache[2] = ($event) => handleAppPointerCancel($event)),
+                            onKeydown: [
+                              withKeys(withModifiers(($event) => launch(app.filePath), ["prevent"]), ["enter"]),
+                              withKeys(withModifiers(($event) => launch(app.filePath), ["prevent"]), ["space"])
+                            ]
+                          }, [
+                            createBaseVNode("img", {
+                              class: "icon",
+                              src: app.iconDataUrl,
+                              alt: ""
+                            }, null, 8, _hoisted_30),
+                            createBaseVNode("div", _hoisted_31, toDisplayString(app.name), 1)
+                          ], 40, _hoisted_29);
+                        }), 128))
+                      ], 64);
+                    }), 128))
+                  ], 32))
+                ]),
+                createBaseVNode("div", _hoisted_32, [
+                  createBaseVNode("button", {
+                    class: "backButton touchButton",
+                    type: "button",
+                    onPointerup: closeApps
+                  }, "返回", 32),
+                  withDirectives(createBaseVNode("input", {
+                    "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => query.value = $event),
+                    class: "appsSearch",
+                    type: "text",
+                    placeholder: "搜索应用..."
+                  }, null, 512), [
+                    [vModelText, query.value]
+                  ]),
+                  createBaseVNode("button", {
+                    class: "appsExitButton touchButton",
+                    type: "button",
+                    onPointerup: handleExit
+                  }, [..._cache[11] || (_cache[11] = [
+                    createBaseVNode("svg", {
+                      class: "buttonIcon",
+                      xmlns: "http://www.w3.org/2000/svg",
+                      width: "20",
+                      height: "20",
+                      viewBox: "0 0 20 20",
+                      "aria-hidden": "true",
+                      focusable: "false"
                     }, [
-                      createBaseVNode("img", {
-                        class: "icon",
-                        src: app.iconDataUrl,
-                        alt: ""
-                      }, null, 8, _hoisted_13),
-                      createBaseVNode("div", _hoisted_14, toDisplayString(app.name), 1)
-                    ], 40, _hoisted_12);
-                  }), 128))
-                ], 64);
-              }), 128))
-            ], 32))
+                      createBaseVNode("path", {
+                        fill: "currentColor",
+                        d: "M8.5 9A1.5 1.5 0 0 0 10 7.5v-4A1.5 1.5 0 0 0 8.5 2h-6A1.5 1.5 0 0 0 1 3.5v4a1.5 1.5 0 0 0 1 1.415l.019.006c.15.051.313.079.481.079zm6.75-3H11V5h4.25A2.75 2.75 0 0 1 18 7.75v6.5A2.75 2.75 0 0 1 15.25 17H4.75A2.75 2.75 0 0 1 2 14.25v-4.3q.243.05.5.05H3v4.25c0 .966.784 1.75 1.75 1.75h10.5A1.75 1.75 0 0 0 17 14.25v-6.5A1.75 1.75 0 0 0 15.25 6M14 12.293l-2.646-2.647a.5.5 0 0 0-.708.708L13.293 13H11.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 .5-.497V10.5a.5.5 0 0 0-1 0z"
+                      })
+                    ], -1),
+                    createTextVNode(" 回到Window ", -1)
+                  ])], 32)
+                ])
+              ])
+            ])
+          ], 8, _hoisted_3)
+        ], 32),
+        isSettingsOpen.value ? (openBlock(), createElementBlock("div", _hoisted_33, [
+          createBaseVNode("div", _hoisted_34, [
+            createBaseVNode("div", _hoisted_35, [
+              _cache[12] || (_cache[12] = createBaseVNode("div", { class: "settingsSidebarTitle" }, "设置", -1)),
+              createBaseVNode("button", {
+                class: "settingsTabButton touchButton",
+                type: "button",
+                "data-active": settingsTab.value === "homeEdit",
+                onPointerup: _cache[4] || (_cache[4] = ($event) => selectSettingsTab("homeEdit"))
+              }, " 主页编辑 ", 40, _hoisted_36)
+            ]),
+            createBaseVNode("div", _hoisted_37, [
+              createBaseVNode("div", _hoisted_38, [
+                _cache[13] || (_cache[13] = createBaseVNode("div", { class: "settingsDetailTitle" }, "主页编辑", -1)),
+                createBaseVNode("div", _hoisted_39, [
+                  !isHomeEditMode.value ? (openBlock(), createElementBlock("button", {
+                    key: 0,
+                    class: "settingsPrimaryButton touchButton",
+                    type: "button",
+                    onPointerup: enterHomeEdit
+                  }, " 进入主页编辑 ", 32)) : (openBlock(), createElementBlock("button", {
+                    key: 1,
+                    class: "settingsPrimaryButton touchButton",
+                    type: "button",
+                    onPointerup: exitHomeEdit
+                  }, " 退出编辑 ", 32)),
+                  createBaseVNode("button", {
+                    class: "settingsResetButton touchButton",
+                    type: "button",
+                    onPointerup: restoreDefaultWidgets
+                  }, " 恢复默认 ", 32)
+                ])
+              ]),
+              createBaseVNode("div", _hoisted_40, [
+                !isHomeEditMode.value ? (openBlock(), createElementBlock("div", _hoisted_41, [
+                  _cache[16] || (_cache[16] = createBaseVNode("div", { class: "settingsSectionTitle" }, "组件与点击行为", -1)),
+                  createBaseVNode("div", _hoisted_42, [
+                    (openBlock(true), createElementBlock(Fragment, null, renderList(settingsWidgets.value, (w) => {
+                      return openBlock(), createElementBlock("div", {
+                        key: w.id,
+                        class: "settingsPreviewItem"
+                      }, [
+                        createBaseVNode("div", _hoisted_43, [
+                          createBaseVNode("div", _hoisted_44, toDisplayString(w.title), 1),
+                          createBaseVNode("div", _hoisted_45, toDisplayString(w.sizeLabel) + " · " + toDisplayString(w.enabled ? "已添加" : "未添加") + " · " + toDisplayString(w.visible ? "显示中" : "未显示"), 1)
+                        ]),
+                        createBaseVNode("div", _hoisted_46, [
+                          w.id === "writingPanel" ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [
+                            _cache[14] || (_cache[14] = createBaseVNode("div", { class: "settingsPreviewBehaviorTitle" }, "内置按钮", -1)),
+                            (openBlock(), createElementBlock(Fragment, null, renderList(writingActions, (a) => {
+                              return createBaseVNode("div", {
+                                key: a.id,
+                                class: "settingsPreviewBehaviorRow"
+                              }, [
+                                createBaseVNode("div", _hoisted_47, toDisplayString(a.label), 1),
+                                createBaseVNode("div", _hoisted_48, toDisplayString(actionSummary(a.id)), 1)
+                              ]);
+                            }), 64))
+                          ], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                            _cache[15] || (_cache[15] = createBaseVNode("div", { class: "settingsPreviewBehaviorTitle" }, "点击行为", -1)),
+                            createBaseVNode("div", _hoisted_49, toDisplayString(actionSummary(w.id)), 1)
+                          ], 64))
+                        ])
+                      ]);
+                    }), 128))
+                  ])
+                ])) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                  createBaseVNode("div", _hoisted_50, [
+                    _cache[17] || (_cache[17] = createBaseVNode("div", { class: "settingsSectionTitle" }, "主页组件（点按添加/移除）", -1)),
+                    createBaseVNode("div", _hoisted_51, [
+                      (openBlock(true), createElementBlock(Fragment, null, renderList(widgetsInOrder.value, (w) => {
+                        return openBlock(), createElementBlock("button", {
+                          key: w.id,
+                          class: "homeWidgetCard touchButton",
+                          type: "button",
+                          "data-active": widgetsEnabled.value[w.id] !== false,
+                          "data-selected": homeEditSelectedId.value === w.id,
+                          onPointerup: ($event) => toggleHomeWidget(w.id)
+                        }, [
+                          (openBlock(), createElementBlock("svg", _hoisted_53, [
+                            createBaseVNode("path", {
+                              fill: "currentColor",
+                              d: iconPath(w.icon)
+                            }, null, 8, _hoisted_54)
+                          ])),
+                          createBaseVNode("div", _hoisted_55, toDisplayString(w.title), 1),
+                          createBaseVNode("div", _hoisted_56, toDisplayString(w.size === "2x4" ? "2×4" : w.size === "4x2" ? "4×2" : "2×2"), 1)
+                        ], 40, _hoisted_52);
+                      }), 128))
+                    ])
+                  ]),
+                  createBaseVNode("div", _hoisted_57, [
+                    _cache[18] || (_cache[18] = createBaseVNode("div", { class: "settingsSectionTitle" }, "排序（仅已添加）", -1)),
+                    createBaseVNode("div", _hoisted_58, [
+                      (openBlock(true), createElementBlock(Fragment, null, renderList(enabledWidgetOrder.value, (id) => {
+                        return openBlock(), createElementBlock("div", {
+                          key: id,
+                          class: "homeEditOrderRow"
+                        }, [
+                          createBaseVNode("div", _hoisted_59, toDisplayString(widgetTitle(id)), 1),
+                          createBaseVNode("div", _hoisted_60, [
+                            createBaseVNode("button", {
+                              class: "settingsActionButton touchButton",
+                              type: "button",
+                              onPointerup: ($event) => moveEnabledWidget(id, -1)
+                            }, " 上移 ", 40, _hoisted_61),
+                            createBaseVNode("button", {
+                              class: "settingsActionButton touchButton",
+                              type: "button",
+                              onPointerup: ($event) => moveEnabledWidget(id, 1)
+                            }, " 下移 ", 40, _hoisted_62),
+                            createBaseVNode("button", {
+                              class: "settingsActionButton touchButton",
+                              type: "button",
+                              onPointerup: ($event) => selectHomeWidget(id)
+                            }, " 设置 ", 40, _hoisted_63)
+                          ])
+                        ]);
+                      }), 128))
+                    ])
+                  ]),
+                  createBaseVNode("div", _hoisted_64, [
+                    createBaseVNode("div", _hoisted_65, "详细设置：" + toDisplayString(widgetTitle(homeEditSelectedId.value)), 1),
+                    createBaseVNode("div", _hoisted_66, [
+                      homeEditSelectedId.value === "writingPanel" ? (openBlock(), createElementBlock(Fragment, { key: 0 }, renderList(writingActions, (a) => {
+                        return createBaseVNode("div", {
+                          key: a.id,
+                          class: "settingsSubAction"
+                        }, [
+                          createBaseVNode("div", _hoisted_67, toDisplayString(a.label), 1),
+                          createBaseVNode("select", {
+                            class: "settingsSelect touchButton",
+                            value: actionConfigs.value[a.id]?.kind ?? "url",
+                            onChange: ($event) => setActionKind(a.id, $event.target.value)
+                          }, [..._cache[19] || (_cache[19] = [
+                            createBaseVNode("option", { value: "app" }, "打开应用", -1),
+                            createBaseVNode("option", { value: "url" }, "打开URL", -1)
+                          ])], 40, _hoisted_68),
+                          createBaseVNode("input", {
+                            class: "settingsInput",
+                            type: "text",
+                            value: actionConfigs.value[a.id]?.target ?? "",
+                            onInput: ($event) => setActionTarget(a.id, $event.target.value),
+                            placeholder: "输入开始菜单路径或URL"
+                          }, null, 40, _hoisted_69),
+                          createBaseVNode("button", {
+                            class: "settingsMiniButton touchButton",
+                            type: "button",
+                            onPointerup: ($event) => clearAction(a.id)
+                          }, " 清空 ", 40, _hoisted_70)
+                        ]);
+                      }), 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [
+                        createBaseVNode("div", _hoisted_71, [
+                          createBaseVNode("select", {
+                            class: "settingsSelect touchButton",
+                            value: actionConfigs.value[homeEditSelectedId.value]?.kind ?? "url",
+                            onChange: _cache[5] || (_cache[5] = ($event) => setActionKind(homeEditSelectedId.value, $event.target.value))
+                          }, [..._cache[20] || (_cache[20] = [
+                            createBaseVNode("option", { value: "app" }, "打开应用", -1),
+                            createBaseVNode("option", { value: "url" }, "打开URL", -1)
+                          ])], 40, _hoisted_72),
+                          createBaseVNode("input", {
+                            class: "settingsInput",
+                            type: "text",
+                            value: actionConfigs.value[homeEditSelectedId.value]?.target ?? "",
+                            onInput: _cache[6] || (_cache[6] = ($event) => setActionTarget(homeEditSelectedId.value, $event.target.value)),
+                            placeholder: "输入开始菜单路径或URL"
+                          }, null, 40, _hoisted_73),
+                          createBaseVNode("button", {
+                            class: "settingsMiniButton touchButton",
+                            type: "button",
+                            onPointerup: _cache[7] || (_cache[7] = ($event) => clearAction(homeEditSelectedId.value))
+                          }, " 清空 ", 32)
+                        ]),
+                        createBaseVNode("div", _hoisted_74, "当前：" + toDisplayString(actionSummary(homeEditSelectedId.value)), 1)
+                      ], 64))
+                    ])
+                  ])
+                ], 64))
+              ])
+            ])
           ]),
-          createBaseVNode("div", _hoisted_15, [
+          createBaseVNode("div", _hoisted_75, [
             createBaseVNode("button", {
               class: "backButton touchButton",
               type: "button",
-              onPointerup: closeApps
+              onPointerup: closeSettings
             }, "返回", 32),
-            withDirectives(createBaseVNode("input", {
-              "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => query.value = $event),
-              class: "appsSearch",
-              type: "text",
-              placeholder: "搜索应用..."
-            }, null, 512), [
-              [vModelText, query.value]
-            ]),
             createBaseVNode("button", {
               class: "appsExitButton touchButton",
               type: "button",
               onPointerup: handleExit
-            }, [..._cache[5] || (_cache[5] = [
+            }, [..._cache[21] || (_cache[21] = [
               createBaseVNode("svg", {
                 class: "buttonIcon",
                 xmlns: "http://www.w3.org/2000/svg",
@@ -6678,16 +7535,16 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
                   d: "M8.5 9A1.5 1.5 0 0 0 10 7.5v-4A1.5 1.5 0 0 0 8.5 2h-6A1.5 1.5 0 0 0 1 3.5v4a1.5 1.5 0 0 0 1 1.415l.019.006c.15.051.313.079.481.079zm6.75-3H11V5h4.25A2.75 2.75 0 0 1 18 7.75v6.5A2.75 2.75 0 0 1 15.25 17H4.75A2.75 2.75 0 0 1 2 14.25v-4.3q.243.05.5.05H3v4.25c0 .966.784 1.75 1.75 1.75h10.5A1.75 1.75 0 0 0 17 14.25v-6.5A1.75 1.75 0 0 0 15.25 6M14 12.293l-2.646-2.647a.5.5 0 0 0-.708.708L13.293 13H11.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 .5-.497V10.5a.5.5 0 0 0-1 0z"
                 })
               ], -1),
-              createTextVNode(" Windows ", -1)
+              createTextVNode(" 回到Window ", -1)
             ])], 32)
           ])
-        ])),
-        page.value === "home" ? (openBlock(), createElementBlock("button", {
-          key: 2,
+        ])) : createCommentVNode("", true),
+        mainPage.value === "home" && !isSettingsOpen.value ? (openBlock(), createElementBlock("button", {
+          key: 1,
           class: "exitButton touchButton",
           type: "button",
           onPointerup: handleExit
-        }, [..._cache[6] || (_cache[6] = [
+        }, [..._cache[22] || (_cache[22] = [
           createBaseVNode("svg", {
             class: "buttonIcon",
             xmlns: "http://www.w3.org/2000/svg",
@@ -6702,8 +7559,14 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
               d: "M8.5 9A1.5 1.5 0 0 0 10 7.5v-4A1.5 1.5 0 0 0 8.5 2h-6A1.5 1.5 0 0 0 1 3.5v4a1.5 1.5 0 0 0 1 1.415l.019.006c.15.051.313.079.481.079zm6.75-3H11V5h4.25A2.75 2.75 0 0 1 18 7.75v6.5A2.75 2.75 0 0 1 15.25 17H4.75A2.75 2.75 0 0 1 2 14.25v-4.3q.243.05.5.05H3v4.25c0 .966.784 1.75 1.75 1.75h10.5A1.75 1.75 0 0 0 17 14.25v-6.5A1.75 1.75 0 0 0 15.25 6M14 12.293l-2.646-2.647a.5.5 0 0 0-.708.708L13.293 13H11.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 .5-.497V10.5a.5.5 0 0 0-1 0z"
             })
           ], -1),
-          createTextVNode(" Windows ", -1)
-        ])], 32)) : createCommentVNode("", true)
+          createTextVNode(" 回到Window ", -1)
+        ])], 32)) : createCommentVNode("", true),
+        mainPage.value === "home" && !isSettingsOpen.value ? (openBlock(), createElementBlock("button", {
+          key: 2,
+          class: "settingsButton touchButton",
+          type: "button",
+          onPointerup: openSettings
+        }, " 设置 ", 32)) : createCommentVNode("", true)
       ]);
     };
   }
