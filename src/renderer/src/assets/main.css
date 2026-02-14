@@ -55,19 +55,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.launcher {
-  position: fixed;
-  left: 16px;
-  top: 84px;
-  width: 520px;
-  height: calc(100vh - 168px);
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  backdrop-filter: blur(12px);
-  box-sizing: border-box;
-}
+/* 移除旧的 .notesPanel 和 .launcher 相关样式，它们已不再使用 */
 
 .home {
   position: fixed;
@@ -81,20 +69,21 @@ body {
 }
 
 .desktopGridShell {
-  position: fixed;
+  position: absolute;
   left: 16px;
+  right: 16px;
   top: 88px;
   bottom: 96px;
-  right: calc(50vw + 8px);
   display: block;
   box-sizing: border-box;
 }
 
 .desktopGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  grid-template-rows: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(8, minmax(100px, 1fr));
+  grid-template-rows: repeat(5, minmax(100px, 1fr));
   gap: 12px;
+  height: 100%;
   box-sizing: border-box;
 }
 
@@ -104,7 +93,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.25);
   color: var(--ev-c-text-1);
-  padding: 14px;
+  padding: 12px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -112,6 +101,50 @@ body {
   align-items: flex-start;
   text-align: left;
   overflow: hidden;
+  position: relative;
+}
+
+.deskTile--notes {
+  padding: 0;
+}
+
+.notesWidget {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  overflow: hidden;
+}
+
+.notesWidget .notesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notesWidget .notesHeaderTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.notesWidget .notesAddButton {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.notesWidget .notesGrid {
+  padding: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-auto-rows: 140px;
+  gap: 10px;
+}
+
+.notesWidget .noteCard {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 button.deskTile {
@@ -143,22 +176,75 @@ button.deskTile {
 
 .deskTileRow {
   width: 100%;
+  height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 .deskTileIcon {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
   opacity: 0.95;
+  transition: transform 0.2s ease;
+}
+
+.deskTile:active .deskTileIcon {
+  transform: scale(0.9);
 }
 
 .deskTileText {
-  font-size: 20px;
-  line-height: 24px;
-  font-weight: 900;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  opacity: 0.9;
+}
+
+/* 针对较宽组件的特殊布局 (如 2x1, 4x2) */
+.deskTile[style*="span 2"] .deskTileRow,
+.deskTile[style*="span 4"] .deskTileRow,
+.deskTile[style*="span 8"] .deskTileRow {
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: 0 16px;
+  gap: 14px;
+}
+
+.deskTile[style*="span 2"] .deskTileIcon,
+.deskTile[style*="span 4"] .deskTileIcon,
+.deskTile[style*="span 8"] .deskTileIcon {
+  width: 32px;
+  height: 32px;
+}
+
+.deskTile[style*="span 2"] .deskTileText,
+.deskTile[style*="span 4"] .deskTileText,
+.deskTile[style*="span 8"] .deskTileText {
+  font-size: 16px;
+  text-align: left;
+  -webkit-line-clamp: 1;
+}
+
+/* 针对较高组件的特殊布局 (如 1x2, 2x4) */
+.deskTile[style*="grid-row: span 2"] .deskTileRow,
+.deskTile[style*="grid-row: span 4"] .deskTileRow {
+  justify-content: center;
+}
+
+/* 针对 1x1 极小组件的微调 */
+.deskTile[style*="span 1 / span 1"] .deskTileText {
+  font-size: 12px;
 }
 
 .deskTile--panel {
@@ -176,8 +262,14 @@ button.deskTile {
 .writingPanelButtons {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.writingPanelButtons::-webkit-scrollbar {
+  display: none;
 }
 
 .writingActionButton {
@@ -226,107 +318,77 @@ button.deskTile {
   background: rgba(0, 0, 0, 0.18);
 }
 
-.notesPanel {
-  position: fixed;
-  top: 88px;
-  right: 16px;
-  bottom: 96px;
-  left: calc(50vw + 8px);
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  backdrop-filter: blur(12px);
-  box-sizing: border-box;
+/* 移除旧的绝对定位 notesPanel */
+/* .notesPanel {...} 已被集成到 grid 中的 .deskTile--notes */
+
+.notesWidget {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  display: grid;
-  grid-template-rows: 56px 1fr;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
 }
 
-.notesHeader {
+.notesWidget .notesHeader {
+  flex: 0 0 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  font-size: 18px;
-  line-height: 22px;
-  font-weight: 800;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.notesHeaderTitle {
-  font-size: 18px;
-  line-height: 22px;
-  font-weight: 900;
-}
-
-.notesAddButton {
-  cursor: pointer;
-  border-radius: 14px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--ev-c-text-1);
-  background: rgba(0, 0, 0, 0.18);
+.notesWidget .notesHeaderTitle {
   font-size: 16px;
-  line-height: 18px;
   font-weight: 800;
-  height: 40px;
 }
 
-.notesAddButton:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.32);
+.notesWidget .notesAddButton {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
 }
 
-.notesGrid {
-  height: 100%;
-  overflow: auto;
-  padding: 12px;
-  box-sizing: border-box;
+.notesWidget .notesGrid {
+  flex: 1;
+  padding: 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  grid-auto-rows: 200px;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-auto-rows: 120px;
+  gap: 10px;
+  overflow-y: auto;
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.notesGrid::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+.notesWidget .notesGrid::-webkit-scrollbar {
   display: none;
 }
 
-.noteCard {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.22);
+.notesWidget .noteCard {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
-  box-sizing: border-box;
 }
 
-.noteTextarea {
+.notesWidget .noteTextarea {
   width: 100%;
   height: 100%;
-  resize: none;
-  border: none;
-  outline: none;
+  padding: 8px;
+  font-size: 14px;
   background: transparent;
-  color: var(--ev-c-text-1);
-  padding: 12px;
-  box-sizing: border-box;
-  font-size: 16px;
-  line-height: 22px;
-  font-weight: 700;
-  user-select: text;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.noteTextarea::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  border: none;
+  color: white;
+  resize: none;
+  outline: none;
 }
 
 .openAppsButton {

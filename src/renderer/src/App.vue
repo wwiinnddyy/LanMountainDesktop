@@ -20,7 +20,8 @@
                   class="deskTile touchButton"
                   :class="[
                     tile.variant ? `deskTile--${tile.variant}` : '',
-                    tile.id === 'writingPanel' ? 'deskTile--panel' : ''
+                    (tile.id === 'writingPanel' || tile.id === 'notesPanel') ? 'deskTile--panel' : '',
+                    tile.id === 'notesPanel' ? 'deskTile--notes' : ''
                   ]"
                   :style="{
                     gridColumn: `${tile.col} / span ${tile.colSpan}`,
@@ -54,6 +55,21 @@
                       </button>
                     </div>
                   </template>
+                  <template v-else-if="tile.id === 'notesPanel'">
+                    <div class="notesWidget">
+                      <div class="notesHeader">
+                        <div class="notesHeaderTitle">作业版</div>
+                        <button class="notesAddButton touchButton" type="button" @pointerup="addNote">
+                          新建
+                        </button>
+                      </div>
+                      <div class="notesGrid">
+                        <div v-for="note in notes" :key="note.id" class="noteCard">
+                          <textarea v-model="note.text" class="noteTextarea" placeholder="写点什么..." />
+                        </div>
+                      </div>
+                    </div>
+                  </template>
                   <template v-else>
                     <div class="deskTileRow">
                       <svg
@@ -71,18 +87,6 @@
                     </div>
                   </template>
                 </component>
-              </div>
-            </div>
-
-            <div class="notesPanel">
-              <div class="notesHeader">
-                <div class="notesHeaderTitle">作业版</div>
-                <button class="notesAddButton touchButton" type="button" @pointerup="addNote">新建</button>
-              </div>
-              <div class="notesGrid">
-                <div v-for="note in notes" :key="note.id" class="noteCard">
-                  <textarea v-model="note.text" class="noteTextarea" placeholder="写点什么..." />
-                </div>
               </div>
             </div>
           </div>
@@ -243,7 +247,7 @@
                       <path fill="currentColor" :d="iconPath(w.icon)" />
                     </svg>
                     <div class="homeWidgetCardTitle">{{ w.title }}</div>
-                    <div class="homeWidgetCardMeta">{{ w.size === '2x4' ? '2×4' : w.size === '4x2' ? '4×2' : '2×2' }}</div>
+                    <div class="homeWidgetCardMeta">{{ w.size }}</div>
                   </button>
                 </div>
               </div>
@@ -271,8 +275,8 @@
               <div class="settingsSection">
                 <div class="settingsSectionTitle">详细设置：{{ widgetTitle(homeEditSelectedId) }}</div>
                 <div class="settingsConfigArea">
-                  <template v-if="homeEditSelectedId === 'writingPanel'">
-                    <div v-for="a in writingActions" :key="a.id" class="settingsSubAction">
+                  <template v-if="homeEditSelectedId === 'writingPanel' || homeEditSelectedId === 'notesPanel'">
+                    <div v-if="homeEditSelectedId === 'writingPanel'" v-for="a in writingActions" :key="a.id" class="settingsSubAction">
                       <div class="settingsSubActionTitle">{{ a.label }}</div>
                       <select
                         class="settingsSelect touchButton"
@@ -292,6 +296,9 @@
                       <button class="settingsMiniButton touchButton" type="button" @pointerup="clearAction(a.id)">
                         清空
                       </button>
+                    </div>
+                    <div v-else class="settingsSingleActionRow">
+                      <div class="settingsActionHint">作业版目前不支持自定义点击行为。</div>
                     </div>
                   </template>
                   <template v-else>
@@ -392,7 +399,7 @@ const notes = ref<Note[]>([])
 
 type ActionKind = 'app' | 'url'
 type ActionConfig = { kind: ActionKind; target: string }
-type WidgetSize = '2x2' | '4x2' | '2x4'
+type WidgetSize = '1x1' | '2x1' | '1x2' | '2x2' | '4x2' | '2x4' | '4x4' | '8x4'
 type TileIcon = 'pen' | 'folder' | 'camera' | 'globe' | 'apps' | 'note' | 'doc' | 'comment'
 type DesktopTile = {
   id: string
@@ -456,19 +463,20 @@ let pageSwipeStartMainPage: MainPage = 'home'
 let suppressTapUntil = 0
 
 const availableWidgets: DesktopTile[] = [
-  { id: 'writingPanel', title: '书写', size: '2x4', icon: 'pen', clickable: false, variant: 'soft' },
+  { id: 'writingPanel', title: '书写', size: '2x4', icon: 'pen', clickable: false, variant: 'accent' },
+  { id: 'notesPanel', title: '作业版', size: '4x4', icon: 'note', clickable: false, variant: 'soft' },
   {
     id: 'whiteboard',
-    title: '白板书写',
+    title: '白板',
     size: '2x2',
-    icon: 'pen',
+    icon: 'doc',
     clickable: true,
     onActivate: () => void activateAction('whiteboard'),
     variant: 'soft'
   },
   {
     id: 'fileManager',
-    title: '文件管理',
+    title: '文件',
     size: '2x2',
     icon: 'folder',
     clickable: true,
@@ -476,7 +484,7 @@ const availableWidgets: DesktopTile[] = [
   },
   {
     id: 'visualPresenter',
-    title: '视频展台',
+    title: '展台',
     size: '2x2',
     icon: 'camera',
     clickable: true,
@@ -492,18 +500,59 @@ const availableWidgets: DesktopTile[] = [
   },
   {
     id: 'moreApps',
-    title: '更多应用',
+    title: '全部应用',
     size: '2x2',
     icon: 'apps',
     clickable: true,
     onActivate: () => void activateAction('moreApps', () => void openApps()),
     variant: 'accent'
+  },
+  {
+    id: 'calculator',
+    title: '计算器',
+    size: '1x1',
+    icon: 'apps',
+    clickable: true,
+    onActivate: () => void activateAction('calculator')
+  },
+  {
+    id: 'calendar',
+    title: '日历',
+    size: '2x1',
+    icon: 'apps',
+    clickable: true,
+    onActivate: () => void activateAction('calendar')
+  },
+  {
+    id: 'timer',
+    title: '计时器',
+    size: '1x1',
+    icon: 'apps',
+    clickable: true,
+    onActivate: () => void activateAction('timer')
+  },
+  {
+    id: 'camera',
+    title: '相机',
+    size: '1x1',
+    icon: 'camera',
+    clickable: true,
+    onActivate: () => void activateAction('camera')
   }
 ]
 
-const widgetsOrder = ref<string[]>(['writingPanel', 'whiteboard', 'fileManager', 'visualPresenter', 'browser', 'moreApps'])
+const widgetsOrder = ref<string[]>([
+  'writingPanel',
+  'notesPanel',
+  'whiteboard',
+  'fileManager',
+  'visualPresenter',
+  'browser',
+  'moreApps'
+])
 const widgetsEnabled = ref<Record<string, boolean>>({
   writingPanel: true,
+  notesPanel: true,
   whiteboard: true,
   fileManager: true,
   visualPresenter: true,
@@ -536,13 +585,36 @@ const enabledWidgets = computed<DesktopTile[]>(() => {
 })
 
 const placedDesktopTiles = computed<PlacedDesktopTile[]>(() => {
-  const cols = 4
-  const rows = 4
+  const cols = 8
+  const rows = 5
   const occupied = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false))
 
   const tryPlace = (tile: DesktopTile): PlacedDesktopTile | null => {
-    const rowSpan = tile.size === '2x4' ? 4 : 2
-    const colSpan = tile.size === '4x2' ? 4 : 2
+    let rowSpan = 1
+    let colSpan = 1
+    if (tile.size === '8x4') {
+      rowSpan = 4
+      colSpan = 8
+    } else if (tile.size === '4x4') {
+      rowSpan = 4
+      colSpan = 4
+    } else if (tile.size === '2x4') {
+      rowSpan = 4
+      colSpan = 2
+    } else if (tile.size === '4x2') {
+      rowSpan = 2
+      colSpan = 4
+    } else if (tile.size === '2x2') {
+      rowSpan = 2
+      colSpan = 2
+    } else if (tile.size === '2x1') {
+      rowSpan = 1
+      colSpan = 2
+    } else if (tile.size === '1x2') {
+      rowSpan = 2
+      colSpan = 1
+    }
+
     for (let r = 1; r <= rows - rowSpan + 1; r += 1) {
       for (let c = 1; c <= cols - colSpan + 1; c += 1) {
         let ok = true
@@ -579,7 +651,7 @@ const placedWidgetIds = computed(() => new Set(placedDesktopTiles.value.map((t) 
 
 const settingsWidgets = computed(() => {
   return widgetsInOrder.value.map((w) => {
-    const sizeLabel = w.size === '2x4' ? '2×4' : w.size === '4x2' ? '4×2' : '2×2'
+    const sizeLabel = w.size
     const enabled = widgetsEnabled.value[w.id] !== false
     const visible = placedWidgetIds.value.has(w.id)
     return { id: w.id, title: w.title, sizeLabel, enabled, visible }
@@ -931,9 +1003,18 @@ const handlePagePointerCancel = (event: PointerEvent): void => {
 }
 
 const restoreDefaultWidgets = (): void => {
-  widgetsOrder.value = ['writingPanel', 'whiteboard', 'fileManager', 'visualPresenter', 'browser', 'moreApps']
+  widgetsOrder.value = [
+    'writingPanel',
+    'notesPanel',
+    'whiteboard',
+    'fileManager',
+    'visualPresenter',
+    'browser',
+    'moreApps'
+  ]
   widgetsEnabled.value = {
     writingPanel: true,
+    notesPanel: true,
     whiteboard: true,
     fileManager: true,
     visualPresenter: true,
