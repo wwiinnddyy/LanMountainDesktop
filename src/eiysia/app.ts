@@ -5,6 +5,7 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 import { promisify } from 'util'
 import { launchStartMenuEntry, listWindowsStartMenuApps } from '../app_list'
+import { createSqlite } from '../SQLitte'
 
 export interface EiysiaDependencies {
   getMainWindow: () => BrowserWindow | null
@@ -22,6 +23,8 @@ export function createEiysiaApp(deps: EiysiaDependencies): {
     filePath: string
     iconDataUrl: string
   }
+
+  const sqliteHandle = createSqlite()
 
   const iconCache = new Map<string, string>()
   const appsCacheFilePath = join(electronApp.getPath('userData'), 'apps-cache.json')
@@ -182,6 +185,10 @@ export function createEiysiaApp(deps: EiysiaDependencies): {
   }
 
   return new Elysia()
+    .get('/db/sqlite/health', () => ({
+      ok: true,
+      path: sqliteHandle.filePath
+    }))
     .get('/health', () => ({
       ok: true,
       time: Date.now()

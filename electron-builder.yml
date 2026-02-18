@@ -11,6 +11,7 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+  - '**/*.node'
 win:
   executableName: desktop
 nsis:

@@ -24,6 +24,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@elysiajs/node": "^1.4.4",
+    "better-sqlite3": "^12.6.2",
     "electron-updater": "^6.3.9",
     "elysia": "^1.4.25"
   },
@@ -46,6 +47,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
+      "better-sqlite3",
       "esbuild"
     ]
   }
