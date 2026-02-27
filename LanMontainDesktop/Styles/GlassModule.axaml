@@ -10,24 +10,27 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Padding" Value="16,10" />
         <Setter Property="Transitions">
             <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
-                <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+                <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
             </Transitions>
         </Setter>
     </Style>
 
     <Style Selector="Button:pointerover">
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
-        <Setter Property="RenderTransform" Value="scale(1.02)" />
+        <Setter Property="RenderTransform" Value="scale(1.015)" />
     </Style>
 
     <Style Selector="Button:pressed">
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonPressedBackgroundBrush}" />
-        <Setter Property="RenderTransform" Value="scale(0.98)" />
+        <Setter Property="RenderTransform" Value="scale(0.985)" />
     </Style>
 
     <Style Selector="ComboBox">
@@ -68,18 +71,18 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassPanelOpacity}" />
-        <Setter Property="BoxShadow" Value="0 4 20 #1A000000, 0 8 40 #0D000000" />
+        <Setter Property="BoxShadow" Value="0 1 2 #1A000000" />
     </Style>
 
     <Style Selector="Border.glass-strong">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
-        <Setter Property="BoxShadow" Value="0 8 30 #26000000, 0 16 60 #14000000" />
+        <Setter Property="BoxShadow" Value="0 2 4 #26000000" />
     </Style>
 
     <Style Selector="Border.glass-overlay">

@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     private const int MinShortSideCells = 6;
     private const int MaxShortSideCells = 96;
     private const int SettingsTransitionDurationMs = 240;
+    private const double WallpaperPreviewMaxWidth = 520;
     private const double LightBackgroundLuminanceThreshold = 0.57;
     private const string ClockStatusComponentId = "Clock";
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
@@ -62,6 +63,7 @@ public partial class MainWindow : Window
     private readonly record struct GridMetrics(int ColumnCount, int RowCount, double CellSize);
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly LocalizationService _localizationService = new();
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
@@ -71,7 +73,9 @@ public partial class MainWindow : Window
     private bool _enableDynamicTaskbarActions;
     private bool _suppressThemeToggleEvents;
     private bool _suppressStatusBarToggleEvents;
+    private bool _suppressLanguageSelectionEvents;
     private bool _suppressSettingsPersistence;
+    private bool _isUpdatingWallpaperPreviewLayout;
     private TranslateTransform? _settingsContentPanelTransform;
     private IBrush? _defaultDesktopBackground;
     private Bitmap? _wallpaperBitmap;
@@ -87,7 +91,9 @@ public partial class MainWindow : Window
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
     private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");
+    private double _currentDesktopCellSize;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
+    private string _languageCode = "zh-CN";
 
     public MainWindow()
     {
@@ -109,12 +115,13 @@ public partial class MainWindow : Window
             MaxShortSideCells);
         GridSizeNumberBox.Value = _targetShortSideCells;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 3);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 4);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
         ApplyTaskbarSettings(snapshot);
+        InitializeLocalization(snapshot.LanguageCode);
 
         TryRestoreWallpaper(snapshot.WallpaperPath);
         ApplyWallpaperBrush();
@@ -130,7 +137,8 @@ public partial class MainWindow : Window
         _suppressStatusBarToggleEvents = true;
         StatusBarClockToggleSwitch.IsChecked = _topStatusComponentIds.Contains(ClockStatusComponentId);
         _suppressStatusBarToggleEvents = false;
-        ThemeColorStatusTextBlock.Text = $"Theme color ready: {_selectedThemeColor}.";
+        ApplyLocalization();
+        ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);
         _settingsContentPanelTransform = SettingsContentPanel.RenderTransform as TranslateTransform;
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged += OnWallpaperPreviewHostSizeChanged;
@@ -208,6 +216,7 @@ public partial class MainWindow : Window
         {
             return;
         }
+        _currentDesktopCellSize = gridMetrics.CellSize;
 
         DesktopGrid.RowDefinitions.Clear();
         DesktopGrid.ColumnDefinitions.Clear();
@@ -240,9 +249,14 @@ public partial class MainWindow : Window
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
         ApplyWidgetSizing(gridMetrics.CellSize);
+        UpdateSettingsViewportInsets(gridMetrics.CellSize);
 
-        GridInfoTextBlock.Text =
-            $"Grid: {gridMetrics.ColumnCount} cols x {gridMetrics.RowCount} rows | cell {gridMetrics.CellSize:F1}px (1:1)";
+        GridInfoTextBlock.Text = Lf(
+            "settings.grid.info_format",
+            "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
+            gridMetrics.ColumnCount,
+            gridMetrics.RowCount,
+            gridMetrics.CellSize);
 
         UpdateWallpaperPreviewLayout();
     }
@@ -308,20 +322,46 @@ public partial class MainWindow : Window
         BottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.24, 10, 24));
         BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 2, 10));
 
-        BackToWindowsContainer.Margin = new Thickness(0);
-        BackToWindowsContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.16, 6, 16));
+        BackToWindowsButton.Margin = new Thickness(0);
         BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
         BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
         BackToWindowsButton.MinHeight = taskbarCell;
         BackToWindowsButton.MinWidth = Math.Clamp(cellSize * 2.3, 90, 320);
 
-        OpenSettingsContainer.Margin = new Thickness(0);
-        OpenSettingsContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.16, 6, 16));
-        OpenSettingsContainer.Width = taskbarCell;
-        OpenSettingsContainer.Height = taskbarCell;
-        OpenSettingsButton.Width = taskbarCell;
+        OpenSettingsButton.Margin = new Thickness(0);
         OpenSettingsButton.Height = taskbarCell;
-        OpenSettingsButton.Padding = new Thickness(Math.Clamp(taskbarCell * 0.2, 4, 12));
+        OpenSettingsButton.MinHeight = taskbarCell;
+
+        if (_isSettingsOpen)
+        {
+            OpenSettingsButton.Width = double.NaN;
+            OpenSettingsButton.MinWidth = Math.Clamp(cellSize * 2.3, 120, 340);
+            OpenSettingsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
+        }
+        else
+        {
+            OpenSettingsButton.Width = taskbarCell;
+            OpenSettingsButton.MinWidth = taskbarCell;
+            OpenSettingsButton.Padding = new Thickness(Math.Clamp(taskbarCell * 0.2, 4, 12));
+        }
+    }
+
+    private void UpdateSettingsViewportInsets(double cellSize)
+    {
+        if (SettingsBackdropOverlay is null || SettingsContentPanel is null)
+        {
+            return;
+        }
+
+        var clampedCell = Math.Max(1, cellSize);
+        var horizontalInset = Math.Clamp(clampedCell * 0.45, 12, 64);
+        var verticalGap = Math.Clamp(clampedCell * 0.16, 6, 18);
+        var topInset = clampedCell + verticalGap;
+        var bottomInset = clampedCell + verticalGap;
+        var inset = new Thickness(horizontalInset, topInset, horizontalInset, bottomInset);
+
+        SettingsBackdropOverlay.Margin = inset;
+        SettingsContentPanel.Margin = inset;
     }
 
     private void UpdateWallpaperPreviewLayout()
@@ -333,6 +373,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_isUpdatingWallpaperPreviewLayout)
+        {
+            return;
+        }
+
+        _isUpdatingWallpaperPreviewLayout = true;
+        try
+        {
         var desktopWidth = Math.Max(1, DesktopHost.Bounds.Width);
         var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
         var aspectRatio = desktopWidth / desktopHeight;
@@ -349,7 +397,7 @@ public partial class MainWindow : Window
         availableWidth = Math.Max(1, availableWidth);
         availableHeight = Math.Max(1, availableHeight);
 
-        var previewWidth = availableWidth;
+        var previewWidth = Math.Min(availableWidth, WallpaperPreviewMaxWidth);
         var previewHeight = previewWidth / aspectRatio;
         if (previewHeight > availableHeight)
         {
@@ -357,8 +405,16 @@ public partial class MainWindow : Window
             previewWidth = previewHeight * aspectRatio;
         }
 
-        WallpaperPreviewFrame.Width = previewWidth;
-        WallpaperPreviewFrame.Height = previewHeight;
+        if (Math.Abs(WallpaperPreviewFrame.Width - previewWidth) > 0.5)
+        {
+            WallpaperPreviewFrame.Width = previewWidth;
+        }
+
+        if (Math.Abs(WallpaperPreviewFrame.Height - previewHeight) > 0.5)
+        {
+            WallpaperPreviewFrame.Height = previewHeight;
+        }
+
         WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
 
         var gridMetrics = CalculateGridMetrics(previewWidth, previewHeight, _targetShortSideCells);
@@ -399,6 +455,11 @@ public partial class MainWindow : Window
         ApplyTopStatusComponentVisibility();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
         ApplyPreviewWidgetSizing(gridMetrics.CellSize);
+        }
+        finally
+        {
+            _isUpdatingWallpaperPreviewLayout = false;
+        }
     }
 
     private void ApplyPreviewWidgetSizing(double cellSize)
@@ -412,16 +473,10 @@ public partial class MainWindow : Window
 
         WallpaperPreviewClockTextBlock.FontSize = Math.Clamp(cellSize * 0.30, 6, 18);
         WallpaperPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
-        WallpaperPreviewBackButtonContainer.MinHeight = previewTaskbarCell;
-        WallpaperPreviewBackButtonContainer.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
-        WallpaperPreviewSettingsButtonContainer.Width = previewTaskbarCell;
-        WallpaperPreviewSettingsButtonContainer.Height = previewTaskbarCell;
+        WallpaperPreviewBackButtonVisual.MinHeight = previewTaskbarCell;
+        WallpaperPreviewBackButtonVisual.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
         WallpaperPreviewSettingsButtonIcon.Width = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
         WallpaperPreviewSettingsButtonIcon.Height = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
-
-        var cornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.12, 3, 10));
-        WallpaperPreviewBackButtonContainer.CornerRadius = cornerRadius;
-        WallpaperPreviewSettingsButtonContainer.CornerRadius = cornerRadius;
     }
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
@@ -450,4 +505,3 @@ public partial class MainWindow : Window
         });
     }
 }
-

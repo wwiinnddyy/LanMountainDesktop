@@ -16,6 +16,8 @@ public sealed class AppSettingsSnapshot
 
     public int SettingsTabIndex { get; set; } = 0;
 
+    public string LanguageCode { get; set; } = "zh-CN";
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =

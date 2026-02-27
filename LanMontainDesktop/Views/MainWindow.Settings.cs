@@ -24,6 +24,12 @@ public partial class MainWindow
 {
     private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
     {
+        if (_isSettingsOpen)
+        {
+            CloseSettingsPage();
+            return;
+        }
+
         OpenSettingsPage();
     }
 
@@ -45,7 +51,8 @@ public partial class MainWindow
             GridSettingsPanel is null ||
             WallpaperSettingsPanel is null ||
             ColorSettingsPanel is null ||
-            StatusBarSettingsPanel is null)
+            StatusBarSettingsPanel is null ||
+            RegionSettingsPanel is null)
         {
             return;
         }
@@ -55,6 +62,7 @@ public partial class MainWindow
         GridSettingsPanel.IsVisible = selectedIndex == 1;
         ColorSettingsPanel.IsVisible = selectedIndex == 2;
         StatusBarSettingsPanel.IsVisible = selectedIndex == 3;
+        RegionSettingsPanel.IsVisible = selectedIndex == 4;
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
@@ -106,12 +114,12 @@ public partial class MainWindow
 
     private void OnRecommendedColorClick(object? sender, RoutedEventArgs e)
     {
-        ApplyThemeColorFromButton(sender as Button, "Recommended");
+        ApplyThemeColorFromButton(sender as Button, L("common.recommended", "Recommended"));
     }
 
     private void OnMonetColorClick(object? sender, RoutedEventArgs e)
     {
-        ApplyThemeColorFromButton(sender as Button, "Monet");
+        ApplyThemeColorFromButton(sender as Button, L("common.monet", "Monet"));
     }
 
     private void OnRefreshMonetColorsClick(object? sender, RoutedEventArgs e)
@@ -119,7 +127,7 @@ public partial class MainWindow
         RefreshColorPalettes();
         EnsureSelectedThemeColor();
         UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = "Monet colors refreshed.";
+        ThemeColorStatusTextBlock.Text = L("settings.color.monet_refreshed", "Monet colors refreshed.");
         UpdateAdaptiveTextSystem();
         PersistSettings();
     }
@@ -128,22 +136,22 @@ public partial class MainWindow
     {
         if (StorageProvider is null)
         {
-            _wallpaperStatus = "Storage provider is unavailable.";
+            _wallpaperStatus = L("settings.wallpaper.storage_unavailable", "Storage provider is unavailable.");
             UpdateWallpaperDisplay();
             return;
         }
 
         var options = new FilePickerOpenOptions
         {
-            Title = "Select wallpaper",
+            Title = L("filepicker.title", "Select wallpaper"),
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("Image files")
+                new FilePickerFileType(L("filepicker.image_files", "Image files"))
                 {
                     Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp"]
                 },
-                new FilePickerFileType("Video files")
+                new FilePickerFileType(L("filepicker.video_files", "Video files"))
                 {
                     Patterns = ["*.mp4", "*.mkv", "*.webm", "*.avi", "*.mov", "*.m4v"]
                 }
@@ -162,7 +170,7 @@ public partial class MainWindow
             var importedPath = await ImportWallpaperAssetAsync(file);
             if (string.IsNullOrWhiteSpace(importedPath))
             {
-                _wallpaperStatus = "Failed to import wallpaper file.";
+                _wallpaperStatus = L("settings.wallpaper.import_failed", "Failed to import wallpaper file.");
                 UpdateWallpaperDisplay();
                 return;
             }
@@ -176,17 +184,17 @@ public partial class MainWindow
                     _wallpaperBitmap = new Bitmap(importedPath);
                     _wallpaperVideoPath = null;
                     _wallpaperMediaType = WallpaperMediaType.Image;
-                    _wallpaperStatus = "Image wallpaper applied.";
+                    _wallpaperStatus = L("settings.wallpaper.image_applied", "Image wallpaper applied.");
                     break;
                 case WallpaperMediaType.Video:
                     _wallpaperBitmap?.Dispose();
                     _wallpaperBitmap = null;
                     _wallpaperVideoPath = importedPath;
                     _wallpaperMediaType = WallpaperMediaType.Video;
-                    _wallpaperStatus = "Video wallpaper applied.";
+                    _wallpaperStatus = L("settings.wallpaper.video_applied", "Video wallpaper applied.");
                     break;
                 default:
-                    _wallpaperStatus = "Selected file type is not supported.";
+                    _wallpaperStatus = L("settings.wallpaper.unsupported_file", "Selected file type is not supported.");
                     UpdateWallpaperDisplay();
                     return;
             }
@@ -197,13 +205,13 @@ public partial class MainWindow
             EnsureSelectedThemeColor();
             UpdateThemeColorSelectionState();
             ThemeColorStatusTextBlock.Text = _wallpaperMediaType == WallpaperMediaType.Video
-                ? "Video wallpaper updated. Theme colors refreshed."
-                : "Wallpaper updated. Monet colors refreshed.";
+                ? L("settings.color.theme_updated_video", "Video wallpaper updated. Theme colors refreshed.")
+                : L("settings.color.theme_updated_wallpaper", "Wallpaper updated. Monet colors refreshed.");
             PersistSettings();
         }
         catch (Exception ex)
         {
-            _wallpaperStatus = $"Failed to apply wallpaper: {ex.Message}";
+            _wallpaperStatus = Lf("settings.wallpaper.apply_failed_format", "Failed to apply wallpaper: {0}", ex.Message);
             UpdateWallpaperDisplay();
         }
     }
@@ -216,13 +224,13 @@ public partial class MainWindow
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
         _wallpaperPath = null;
-        _wallpaperStatus = "Background reset to solid color.";
+        _wallpaperStatus = L("settings.wallpaper.cleared", "Background reset to solid color.");
         ApplyWallpaperBrush();
         UpdateWallpaperDisplay();
         RefreshColorPalettes();
         EnsureSelectedThemeColor();
         UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = "Wallpaper cleared. Monet colors refreshed.";
+        ThemeColorStatusTextBlock.Text = L("settings.color.theme_cleared_wallpaper", "Wallpaper cleared. Monet colors refreshed.");
         PersistSettings();
     }
 
@@ -231,11 +239,14 @@ public partial class MainWindow
         ApplyWallpaperBrush();
         if (_wallpaperMediaType == WallpaperMediaType.Image && _wallpaperBitmap is not null)
         {
-            _wallpaperStatus = $"Wallpaper mode: {GetPlacementDisplayName(GetSelectedWallpaperPlacement())}.";
+            _wallpaperStatus = Lf(
+                "settings.wallpaper.mode_format",
+                "Wallpaper mode: {0}.",
+                GetLocalizedPlacementDisplayName(GetSelectedWallpaperPlacement()));
         }
         else if (_wallpaperMediaType == WallpaperMediaType.Video)
         {
-            _wallpaperStatus = "Video wallpaper mode uses automatic fill.";
+            _wallpaperStatus = L("settings.wallpaper.video_mode", "Video wallpaper mode uses automatic fill mode.");
         }
 
         UpdateWallpaperDisplay();
@@ -278,7 +289,7 @@ public partial class MainWindow
         }
 
         WallpaperPathTextBlock.Text = string.IsNullOrWhiteSpace(_wallpaperPath)
-            ? "No wallpaper selected."
+            ? L("settings.wallpaper.no_selection", "No wallpaper selected.")
             : Path.GetFileName(_wallpaperPath);
         WallpaperStatusTextBlock.Text = _wallpaperStatus;
         WallpaperPlacementComboBox.IsEnabled = _wallpaperMediaType != WallpaperMediaType.Video;
@@ -404,13 +415,15 @@ public partial class MainWindow
 
         if (string.IsNullOrWhiteSpace(savedWallpaperPath))
         {
-            _wallpaperStatus = "Current background uses solid color.";
+            _wallpaperStatus = L("settings.wallpaper.default_status", "Current background uses solid color.");
             return;
         }
 
         if (!Path.IsPathRooted(savedWallpaperPath) || !File.Exists(savedWallpaperPath))
         {
-            _wallpaperStatus = "Saved wallpaper file was not found. Using solid color background.";
+            _wallpaperStatus = L(
+                "settings.wallpaper.saved_not_found",
+                "Saved wallpaper file was not found. Using solid color background.");
             return;
         }
 
@@ -423,22 +436,26 @@ public partial class MainWindow
                     _wallpaperBitmap = new Bitmap(savedWallpaperPath);
                     _wallpaperPath = savedWallpaperPath;
                     _wallpaperMediaType = WallpaperMediaType.Image;
-                    _wallpaperStatus = "Wallpaper restored from saved settings.";
+                    _wallpaperStatus = L("settings.wallpaper.restored", "Wallpaper restored from saved settings.");
                     break;
                 case WallpaperMediaType.Video:
                     _wallpaperVideoPath = savedWallpaperPath;
                     _wallpaperPath = savedWallpaperPath;
                     _wallpaperMediaType = WallpaperMediaType.Video;
-                    _wallpaperStatus = "Video wallpaper restored from saved settings.";
+                    _wallpaperStatus = L("settings.wallpaper.video_restored", "Video wallpaper restored from saved settings.");
                     break;
                 default:
-                    _wallpaperStatus = "Saved wallpaper type is not supported. Using solid color background.";
+                    _wallpaperStatus = L(
+                        "settings.wallpaper.unsupported_file",
+                        "Saved wallpaper type is not supported. Using solid color background.");
                     break;
             }
         }
         catch
         {
-            _wallpaperStatus = "Failed to restore saved wallpaper. Using solid color background.";
+            _wallpaperStatus = L(
+                "settings.wallpaper.restore_failed",
+                "Failed to restore saved wallpaper. Using solid color background.");
             _wallpaperBitmap?.Dispose();
             _wallpaperBitmap = null;
             _wallpaperMediaType = WallpaperMediaType.None;
@@ -538,7 +555,7 @@ public partial class MainWindow
     {
         if (!File.Exists(videoPath))
         {
-            _wallpaperStatus = "Video wallpaper file not found.";
+            _wallpaperStatus = L("settings.wallpaper.video_not_found", "Video wallpaper file not found.");
             StopVideoWallpaper();
             return;
         }
@@ -552,7 +569,7 @@ public partial class MainWindow
                 DesktopVideoWallpaperView is null ||
                 WallpaperPreviewVideoView is null)
             {
-                _wallpaperStatus = "Video player is unavailable.";
+                _wallpaperStatus = L("settings.wallpaper.video_player_unavailable", "Video player is unavailable.");
                 StopVideoWallpaper();
                 return;
             }
@@ -570,7 +587,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            _wallpaperStatus = $"Failed to play video wallpaper: {ex.Message}";
+            _wallpaperStatus = Lf("settings.wallpaper.video_play_failed_format", "Failed to play video wallpaper: {0}", ex.Message);
             StopVideoWallpaper();
         }
     }
@@ -676,16 +693,17 @@ public partial class MainWindow
             1 => TaskbarContext.SettingsGrid,
             2 => TaskbarContext.SettingsColor,
             3 => TaskbarContext.SettingsStatusBar,
+            4 => TaskbarContext.SettingsRegion,
             _ => TaskbarContext.Desktop
         };
     }
 
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
-        if (BackToWindowsContainer is null ||
-            OpenSettingsContainer is null ||
-            WallpaperPreviewBackButtonContainer is null ||
-            WallpaperPreviewSettingsButtonContainer is null)
+        if (BackToWindowsButton is null ||
+            OpenSettingsButton is null ||
+            WallpaperPreviewBackButtonVisual is null ||
+            WallpaperPreviewSettingsButtonIcon is null)
         {
             return;
         }
@@ -693,19 +711,29 @@ public partial class MainWindow
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
         var showSettings = _pinnedTaskbarActions.Contains(TaskbarActionId.OpenSettings);
 
-        BackToWindowsContainer.IsVisible = showMinimize;
-        OpenSettingsContainer.IsVisible = showSettings;
-        WallpaperPreviewBackButtonContainer.IsVisible = showMinimize;
-        WallpaperPreviewSettingsButtonContainer.IsVisible = showSettings;
+        BackToWindowsButton.IsVisible = showMinimize;
+        OpenSettingsButton.IsVisible = showSettings;
+        WallpaperPreviewBackButtonVisual.IsVisible = showMinimize;
+        WallpaperPreviewSettingsButtonIcon.IsVisible = showSettings;
 
         if (TaskbarFixedActionsHost is not null)
         {
-            TaskbarFixedActionsHost.IsVisible = showMinimize || showSettings;
+            TaskbarFixedActionsHost.IsVisible = showMinimize;
+        }
+
+        if (TaskbarSettingsActionHost is not null)
+        {
+            TaskbarSettingsActionHost.IsVisible = showSettings;
         }
 
         if (WallpaperPreviewTaskbarFixedActionsHost is not null)
         {
-            WallpaperPreviewTaskbarFixedActionsHost.IsVisible = showMinimize || showSettings;
+            WallpaperPreviewTaskbarFixedActionsHost.IsVisible = showMinimize;
+        }
+
+        if (WallpaperPreviewTaskbarSettingsActionHost is not null)
+        {
+            WallpaperPreviewTaskbarSettingsActionHost.IsVisible = showSettings;
         }
 
         var dynamicActions = ResolveDynamicTaskbarActions(context);
@@ -721,6 +749,30 @@ public partial class MainWindow
         {
             WallpaperPreviewTaskbarDynamicActionsHost.IsVisible = hasDynamicActions;
         }
+
+        UpdateOpenSettingsActionVisualState();
+    }
+
+    private void UpdateOpenSettingsActionVisualState()
+    {
+        if (OpenSettingsButtonTextBlock is null || OpenSettingsButton is null)
+        {
+            return;
+        }
+
+        var showBackToDesktop = _isSettingsOpen;
+        OpenSettingsButtonTextBlock.IsVisible = showBackToDesktop;
+        OpenSettingsButtonTextBlock.Text = L("settings.back_to_desktop", "Back to Desktop");
+        ToolTip.SetTip(
+            OpenSettingsButton,
+            showBackToDesktop
+                ? L("settings.back_to_desktop", "Back to Desktop")
+                : L("tooltip.open_settings", "Settings"));
+
+        var effectiveCellSize = _currentDesktopCellSize > 0
+            ? _currentDesktopCellSize
+            : Math.Max(32, Math.Min(Bounds.Width, Bounds.Height) / Math.Max(1, _targetShortSideCells));
+        ApplyWidgetSizing(effectiveCellSize);
     }
 
     private IReadOnlyList<TaskbarActionItem> ResolveDynamicTaskbarActions(TaskbarContext context)
@@ -804,6 +856,7 @@ public partial class MainWindow
             WallpaperPath = _wallpaperPath,
             WallpaperPlacement = GetPlacementDisplayName(GetSelectedWallpaperPlacement()),
             SettingsTabIndex = Math.Max(0, SettingsNavListBox?.SelectedIndex ?? 0),
+            LanguageCode = _languageCode,
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
@@ -863,7 +916,9 @@ public partial class MainWindow
         _suppressThemeToggleEvents = true;
         NightModeToggleSwitch.IsChecked = enabled;
         _suppressThemeToggleEvents = false;
-        ThemeModeStatusTextBlock.Text = enabled ? "Night mode enabled" : "Day mode enabled";
+        ThemeModeStatusTextBlock.Text = enabled
+            ? L("settings.color.mode_night", "Night mode enabled")
+            : L("settings.color.mode_day", "Day mode enabled");
 
         if (refreshPalettes)
         {
@@ -872,7 +927,10 @@ public partial class MainWindow
         }
 
         UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = $"Theme mode: {(enabled ? "Night" : "Day")}.";
+        ThemeColorStatusTextBlock.Text = Lf(
+            "settings.color.mode_status_format",
+            "Theme mode: {0}.",
+            enabled ? L("common.night", "Night") : L("common.day", "Day"));
         UpdateAdaptiveTextSystem();
         ApplyWallpaperBrush();
         PersistSettings();
@@ -960,7 +1018,11 @@ public partial class MainWindow
 
         _selectedThemeColor = color;
         UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = $"{sourceLabel} color applied: {_selectedThemeColor}.";
+        ThemeColorStatusTextBlock.Text = Lf(
+            "settings.color.theme_applied_format",
+            "{0} color applied: {1}.",
+            sourceLabel,
+            _selectedThemeColor);
         UpdateAdaptiveTextSystem();
         PersistSettings();
     }
@@ -1131,12 +1193,7 @@ public partial class MainWindow
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
         SettingsPage.IsVisible = true;
         SettingsPage.Opacity = 0;
-        if (_settingsContentPanelTransform is not null)
-        {
-            _settingsContentPanelTransform.Y = 30;
-        }
 
-        DesktopPage.IsHitTestVisible = false;
         UpdateWallpaperPreviewLayout();
 
         Dispatcher.UIThread.Post(() =>
@@ -1147,10 +1204,6 @@ public partial class MainWindow
             }
 
             SettingsPage.Opacity = 1;
-            if (_settingsContentPanelTransform is not null)
-            {
-                _settingsContentPanelTransform.Y = 0;
-            }
         }, DispatcherPriority.Background);
     }
 
@@ -1166,13 +1219,7 @@ public partial class MainWindow
         ApplyWallpaperBrush();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
-        DesktopPage.IsHitTestVisible = true;
-
         SettingsPage.Opacity = 0;
-        if (_settingsContentPanelTransform is not null)
-        {
-            _settingsContentPanelTransform.Y = 30;
-        }
 
         DispatcherTimer.RunOnce(() =>
         {
@@ -1182,6 +1229,6 @@ public partial class MainWindow
             }
 
             SettingsPage.IsVisible = false;
-        }, TimeSpan.FromMilliseconds(SettingsTransitionDurationMs));
+        }, TimeSpan.FromMilliseconds(200));
     }
 }

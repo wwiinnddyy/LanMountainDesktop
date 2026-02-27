@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LanMontainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -113,60 +113,38 @@
                             Margin="4"
                             CornerRadius="18"
                             Padding="6">
-                        <Grid ColumnDefinitions="Auto,*"
+                        <Grid ColumnDefinitions="Auto,*,Auto"
                               ColumnSpacing="8">
                             <Border x:Name="TaskbarFixedActionsHost"
                                     Grid.Column="0"
                                     Background="Transparent"
                                     BorderThickness="0">
-                                <Grid ColumnDefinitions="Auto,Auto"
+                                <Grid ColumnDefinitions="Auto"
                                       ColumnSpacing="8">
-                                    <Border x:Name="BackToWindowsContainer"
+                                    <Button x:Name="BackToWindowsButton"
                                             Grid.Column="0"
+                                            Padding="8"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
                                             Background="Transparent"
-                                            CornerRadius="12">
-                                        <Button x:Name="BackToWindowsButton"
-                                                Padding="8"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnMinimizeClick"
-                                                ToolTip.Tip="&#22238;&#21040;Windows">
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="8">
-                                                <fi:SymbolIcon Classes="icon-m"
-                                                               Symbol="Window"
-                                                               IconVariant="Regular"
-                                                               />
-                                                <TextBlock Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                           Text="&#22238;&#21040;Windows" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Border>
-
-                                    <Border x:Name="OpenSettingsContainer"
-                                            Grid.Column="1"
-                                            Background="Transparent"
-                                            CornerRadius="12">
-                                        <Button x:Name="OpenSettingsButton"
-                                                Padding="6"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnOpenSettingsClick"
-                                                ToolTip.Tip="&#35774;&#32622;">
-                                            <fi:SymbolIcon Classes="icon-l"
-                                                           Symbol="Settings"
+                                            BorderThickness="0"
+                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                            Click="OnMinimizeClick"
+                                            ToolTip.Tip="&#22238;&#21040;Windows">
+                                        <StackPanel Orientation="Horizontal"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="8">
+                                            <fi:SymbolIcon Classes="icon-m"
+                                                           Symbol="Window"
                                                            IconVariant="Regular"
                                                            />
-                                        </Button>
-                                    </Border>
+                                            <TextBlock x:Name="BackToWindowsTextBlock"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                       Text="&#22238;&#21040;Windows" />
+                                        </StackPanel>
+                                    </Button>
+
                                 </Grid>
                             </Border>
 
@@ -178,6 +156,34 @@
                                 <StackPanel x:Name="TaskbarDynamicActionsPanel"
                                             Orientation="Horizontal"
                                             Spacing="8" />
+                            </Border>
+
+                            <Border x:Name="TaskbarSettingsActionHost"
+                                    Grid.Column="2"
+                                    Background="Transparent"
+                                    BorderThickness="0">
+                                <Button x:Name="OpenSettingsButton"
+                                        Padding="6"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                        Click="OnOpenSettingsClick"
+                                        ToolTip.Tip="&#35774;&#32622;">
+                                    <StackPanel Orientation="Horizontal"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="6">
+                                        <fi:SymbolIcon Classes="icon-l"
+                                                       Symbol="Settings"
+                                                       IconVariant="Regular" />
+                                        <TextBlock x:Name="OpenSettingsButtonTextBlock"
+                                                   IsVisible="False"
+                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                   Text="&#36820;&#22238;&#26700;&#38754;" />
+                                    </StackPanel>
+                                </Button>
                             </Border>
                         </Grid>
                     </Border>
@@ -199,11 +205,10 @@
                     Classes="glass-overlay" />
 
             <Border x:Name="SettingsContentPanel"
-                    Classes="glass-strong"
-                    Margin="24"
-                    Padding="24"
-                    MaxWidth="1240"
-                    CornerRadius="16">
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Margin="0"
+                    Padding="8">
                 <Border.RenderTransform>
                     <TranslateTransform Y="30">
                         <TranslateTransform.Transitions>
@@ -214,19 +219,15 @@
                     </TranslateTransform>
                 </Border.RenderTransform>
 
-                <Grid RowDefinitions="Auto,*,Auto"
+                <Grid RowDefinitions="Auto,*"
                       RowSpacing="16">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock VerticalAlignment="Center"
-                               FontSize="30"
-                               FontWeight="Bold"
+                <Grid ColumnDefinitions="*">
+                    <TextBlock x:Name="SettingsTitleTextBlock"
+                               VerticalAlignment="Center"
+                               FontSize="22"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                Text="&#35774;&#32622;" />
-                    <Button Grid.Column="1"
-                            Padding="14,8"
-                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                            Click="OnCloseSettingsClick"
-                            Content="&#36820;&#22238;&#26700;&#38754;" />
                 </Grid>
 
                 <Border Grid.Row="1"
@@ -263,16 +264,18 @@
                             </Border.Styles>
 
                             <StackPanel Spacing="10">
-                                <TextBlock FontSize="16"
+                                <TextBlock x:Name="SettingsNavHeaderTextBlock"
+                                           FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                            Text="&#35774;&#32622;&#36873;&#39033;" />
                                 <ListBox x:Name="SettingsNavListBox"
                                          SelectionChanged="OnSettingsNavSelectionChanged">
-                                    <ListBoxItem Content="&#22721;&#32440;" />
-                                    <ListBoxItem Content="&#32593;&#26684;" />
-                                    <ListBoxItem Content="&#39068;&#33394;" />
-                                    <ListBoxItem Content="&#29366;&#24577;&#26639;" />
+                                    <ListBoxItem x:Name="SettingsNavWallpaperItem" Content="&#22721;&#32440;" />
+                                    <ListBoxItem x:Name="SettingsNavGridItem" Content="&#32593;&#26684;" />
+                                    <ListBoxItem x:Name="SettingsNavColorItem" Content="&#39068;&#33394;" />
+                                    <ListBoxItem x:Name="SettingsNavStatusBarItem" Content="&#29366;&#24577;&#26639;" />
+                                    <ListBoxItem x:Name="SettingsNavRegionItem" Content="&#22320;&#21306;" />
                                 </ListBox>
                             </StackPanel>
                         </Border>
@@ -285,11 +288,13 @@
                                 <StackPanel x:Name="WallpaperSettingsPanel"
                                             IsVisible="True"
                                             Spacing="14">
-                                    <TextBlock FontSize="18"
+                                    <TextBlock x:Name="WallpaperPanelTitleTextBlock"
+                                               FontSize="18"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="&#22721;&#32440;" />
-                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                    <TextBlock x:Name="WallpaperPanelDescriptionTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="&#36873;&#25321;&#22270;&#29255;&#21518;&#21487;&#31435;&#21363;&#35774;&#20026;&#24212;&#29992;&#31383;&#21475;&#22721;&#32440;&#12290;" />
 
                                     <Border x:Name="WallpaperPreviewHost"
@@ -351,44 +356,31 @@
                                                             Margin="3"
                                                             CornerRadius="8"
                                                             Padding="2">
-                                                        <Grid ColumnDefinitions="Auto,*"
+                                                        <Grid ColumnDefinitions="Auto,*,Auto"
                                                               ColumnSpacing="3">
                                                             <Border x:Name="WallpaperPreviewTaskbarFixedActionsHost"
                                                                     Grid.Column="0"
                                                                     Background="Transparent"
                                                                     BorderThickness="0">
-                                                                <Grid ColumnDefinitions="Auto,Auto"
+                                                                <Grid ColumnDefinitions="Auto"
                                                                       ColumnSpacing="3">
-                                                                    <Border x:Name="WallpaperPreviewBackButtonContainer"
-                                                                            Grid.Column="0"
-                                                                            Background="Transparent"
-                                                                            CornerRadius="6">
-                                                                        <StackPanel Orientation="Horizontal"
-                                                                                    HorizontalAlignment="Center"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Spacing="3">
-                                                                            <fi:SymbolIcon Classes="icon-s"
-                                                                                           Symbol="Window"
-                                                                                           IconVariant="Regular"
-                                                                                           />
-                                                                            <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
-                                                                                       HorizontalAlignment="Center"
-                                                                                       VerticalAlignment="Center"
-                                                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                                       Text="&#22238;&#21040;Windows" />
-                                                                        </StackPanel>
-                                                                    </Border>
-
-                                                                    <Border x:Name="WallpaperPreviewSettingsButtonContainer"
-                                                                            Grid.Column="1"
-                                                                            Background="Transparent"
-                                                                            CornerRadius="6">
-                                                                        <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon"
-                                                                                       Classes="icon-s"
-                                                                                       Symbol="Settings"
+                                                                    <StackPanel x:Name="WallpaperPreviewBackButtonVisual"
+                                                                                Grid.Column="0"
+                                                                                Orientation="Horizontal"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                Spacing="3">
+                                                                        <fi:SymbolIcon Classes="icon-s"
+                                                                                       Symbol="Window"
                                                                                        IconVariant="Regular"
                                                                                        />
-                                                                    </Border>
+                                                                        <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                                   Text="&#22238;&#21040;Windows" />
+                                                                    </StackPanel>
+
                                                                 </Grid>
                                                             </Border>
 
@@ -400,6 +392,16 @@
                                                                 <StackPanel x:Name="WallpaperPreviewTaskbarDynamicActionsPanel"
                                                                             Orientation="Horizontal"
                                                                             Spacing="3" />
+                                                            </Border>
+
+                                                            <Border x:Name="WallpaperPreviewTaskbarSettingsActionHost"
+                                                                    Grid.Column="2"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0">
+                                                                <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon"
+                                                                               Classes="icon-s"
+                                                                               Symbol="Settings"
+                                                                               IconVariant="Regular" />
                                                             </Border>
                                                         </Grid>
                                                     </Border>
@@ -413,7 +415,8 @@
                                           RowDefinitions="Auto,Auto,Auto"
                                           ColumnSpacing="10"
                                           RowSpacing="10">
-                                        <TextBlock VerticalAlignment="Center"
+                                        <TextBlock x:Name="WallpaperCurrentLabelTextBlock"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                    Text="&#24403;&#21069;&#22721;&#32440;" />
                                         <TextBlock x:Name="WallpaperPathTextBlock"
@@ -423,7 +426,8 @@
                                                    Foreground="{DynamicResource AdaptiveTextAccentBrush}"
                                                    Text="&#26410;&#36873;&#25321;&#22721;&#32440;" />
 
-                                        <TextBlock Grid.Row="1"
+                                        <TextBlock x:Name="WallpaperPlacementLabelTextBlock"
+                                                   Grid.Row="1"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                    Text="&#26174;&#31034;&#26041;&#24335;" />
@@ -443,11 +447,13 @@
                                                     Grid.ColumnSpan="2"
                                                     Orientation="Horizontal"
                                                     Spacing="10">
-                                            <Button Padding="12,6"
+                                            <Button x:Name="PickWallpaperButton"
+                                                    Padding="12,6"
                                                     Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                     Click="OnPickWallpaperClick"
                                                     Content="&#27983;&#35272;&#22270;&#29255;" />
-                                            <Button Padding="12,6"
+                                            <Button x:Name="ClearWallpaperButton"
+                                                    Padding="12,6"
                                                     Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                     Click="OnClearWallpaperClick"
                                                     Content="&#24674;&#22797;&#32431;&#33394;" />
@@ -462,18 +468,21 @@
                                 <StackPanel x:Name="GridSettingsPanel"
                                             IsVisible="False"
                                             Spacing="14">
-                                    <TextBlock FontSize="18"
+                                    <TextBlock x:Name="GridPanelTitleTextBlock"
+                                               FontSize="18"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Grid layout" />
-                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                    <TextBlock x:Name="GridPanelDescriptionTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Every component must occupy at least one cell (minimum 1x1)." />
 
                                     <Grid ColumnDefinitions="Auto,Auto,Auto"
                                           RowDefinitions="Auto,Auto"
                                           ColumnSpacing="8"
                                           RowSpacing="8">
-                                        <TextBlock Grid.Row="0"
+                                        <TextBlock x:Name="GridShortSideLabelTextBlock"
+                                                   Grid.Row="0"
                                                    Grid.Column="0"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
@@ -486,7 +495,8 @@
                                                       Maximum="96"
                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                       Value="12" />
-                                        <Button Grid.Row="0"
+                                        <Button x:Name="ApplyGridButton"
+                                                Grid.Row="0"
                                                 Grid.Column="2"
                                                 Padding="12,6"
                                                 Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
@@ -505,16 +515,19 @@
                                 <StackPanel x:Name="ColorSettingsPanel"
                                             IsVisible="False"
                                             Spacing="14">
-                                    <TextBlock FontSize="18"
+                                    <TextBlock x:Name="ColorPanelTitleTextBlock"
+                                               FontSize="18"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Color" />
-                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                    <TextBlock x:Name="ColorPanelDescriptionTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Switch day/night mode and pick app accent colors." />
 
                                     <Grid ColumnDefinitions="Auto,Auto,*"
                                           ColumnSpacing="12">
-                                        <TextBlock VerticalAlignment="Center"
+                                        <TextBlock x:Name="DayNightModeLabelTextBlock"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                    Text="&#26085;&#22812;&#27169;&#24335;" />
                                         <ToggleSwitch x:Name="NightModeToggleSwitch"
@@ -530,7 +543,8 @@
                                                    Text="Night mode enabled" />
                                     </Grid>
 
-                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                    <TextBlock x:Name="RecommendedColorsLabelTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Recommended Colors" />
                                     <WrapPanel ItemWidth="72"
                                                ItemHeight="56"
@@ -605,10 +619,12 @@
 
                                     <Grid ColumnDefinitions="*,Auto"
                                           ColumnSpacing="10">
-                                        <TextBlock VerticalAlignment="Center"
+                                        <TextBlock x:Name="SystemMonetColorsLabelTextBlock"
+                                                   VerticalAlignment="Center"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                    Text="System Monet Colors" />
-                                        <Button Grid.Column="1"
+                                        <Button x:Name="RefreshMonetColorsButton"
+                                                Grid.Column="1"
                                                 Padding="10,6"
                                                 Click="OnRefreshMonetColorsClick"
                                                 Content="Refresh" />
@@ -693,14 +709,17 @@
                                 <StackPanel x:Name="StatusBarSettingsPanel"
                                             IsVisible="False"
                                             Spacing="14">
-                                    <TextBlock FontSize="18"
+                                    <TextBlock x:Name="StatusBarPanelTitleTextBlock"
+                                               FontSize="18"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Status Bar" />
-                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                    <TextBlock x:Name="StatusBarPanelDescriptionTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                Text="Choose which components appear on the top status bar." />
 
-                                    <ui:SettingsExpander Header="&#26102;&#38388;&#32452;&#20214;">
+                                    <ui:SettingsExpander x:Name="StatusBarClockSettingsExpander"
+                                                         Header="&#26102;&#38388;&#32452;&#20214;">
                                         <Grid ColumnDefinitions="Auto,*"
                                               ColumnSpacing="12">
                                             <ToggleSwitch x:Name="StatusBarClockToggleSwitch"
@@ -709,10 +728,43 @@
                                                           OffContent="Off"
                                                           Checked="OnStatusBarClockChecked"
                                                           Unchecked="OnStatusBarClockUnchecked" />
-                                            <TextBlock Grid.Column="1"
+                                            <TextBlock x:Name="StatusBarClockDescriptionTextBlock"
+                                                       Grid.Column="1"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                                        Text="&#22312;&#39030;&#37096;&#29366;&#24577;&#26639;&#26174;&#31034;&#26102;&#38047;&#12290;" />
+                                        </Grid>
+                                    </ui:SettingsExpander>
+                                </StackPanel>
+
+                                <StackPanel x:Name="RegionSettingsPanel"
+                                            IsVisible="False"
+                                            Spacing="14">
+                                    <TextBlock x:Name="RegionPanelTitleTextBlock"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="&#22320;&#21306;" />
+                                    <TextBlock x:Name="RegionPanelDescriptionTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="&#36873;&#25321;&#35821;&#35328;&#65292;&#31435;&#21363;&#24212;&#29992;&#21040;&#35774;&#32622;&#19982;&#20027;&#35201;&#30028;&#38754;&#12290;" />
+
+                                    <ui:SettingsExpander x:Name="LanguageSettingsExpander"
+                                                         Header="&#35821;&#35328;">
+                                        <Grid ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="12">
+                                            <TextBlock x:Name="LanguageLabelTextBlock"
+                                                       Grid.Column="0"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                       Text="&#35821;&#35328;" />
+                                            <ComboBox x:Name="LanguageComboBox"
+                                                      Grid.Column="1"
+                                                      Width="220"
+                                                      SelectionChanged="OnLanguageSelectionChanged">
+                                                <ComboBoxItem x:Name="LanguageChineseItem" Tag="zh-CN" Content="&#20013;&#25991;" />
+                                                <ComboBoxItem x:Name="LanguageEnglishItem" Tag="en-US" Content="English" />
+                                            </ComboBox>
                                         </Grid>
                                     </ui:SettingsExpander>
                                 </StackPanel>
@@ -721,20 +773,9 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="2"
-                        Classes="glass-panel"
-                        CornerRadius="10"
-                        Padding="8,6">
-                    <TextBlock HorizontalAlignment="Center"
-                               Foreground="{DynamicResource AdaptiveTextMutedBrush}"
-                               Text="LanMontainDesktop Settings" />
-                </Border>
                 </Grid>
             </Border>
         </Grid>
     </Grid>
 
 </Window>
-
-
-

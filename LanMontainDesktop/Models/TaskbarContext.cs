@@ -6,5 +6,6 @@ public enum TaskbarContext
     SettingsWallpaper,
     SettingsGrid,
     SettingsColor,
-    SettingsStatusBar
+    SettingsStatusBar,
+    SettingsRegion
 }

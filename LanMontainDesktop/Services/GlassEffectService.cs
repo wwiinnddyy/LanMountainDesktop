@@ -15,36 +15,54 @@ public static class GlassEffectService
 
     public static void ApplyGlassResources(IResourceDictionary resources, ThemeColorContext context)
     {
-        var neutralBase = context.IsNightMode ? Color.Parse("#FF0B1220") : Color.Parse("#FFF8FAFC");
-        var neutralElevated = context.IsNightMode ? Color.Parse("#FF1E293B") : Color.Parse("#FFFFFFFF");
-        var tintMix = context.IsNightMode ? 0.15 : 0.08;
-        var panelTone = ColorMath.Blend(neutralElevated, context.AccentColor, tintMix);
-        var strongTone = ColorMath.Blend(neutralBase, context.AccentColor, context.IsNightMode ? 0.18 : 0.12);
-        var overlayTone = ColorMath.Blend(neutralBase, context.AccentColor, context.IsNightMode ? 0.25 : 0.15);
-
-        resources["AdaptiveButtonBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(panelTone, context.IsNightMode ? (byte)0x66 : (byte)0x80));
-        resources["AdaptiveButtonBorderBrush"] = new SolidColorBrush(ColorMath.WithAlpha(neutralElevated, 0x1A));
+        // Mica 材质：不透明，但混合壁纸颜色
+        // 提取壁纸颜色的透明度（0-1），用于控制 Mica 效果强度
+        var wallpaperTintOpacity = 0.15; // 壁纸颜色混合比例
+        
+        var neutralBase = context.IsNightMode ? Color.Parse("#FF202020") : Color.Parse("#FFF3F3F3");
+        var neutralElevated = context.IsNightMode ? Color.Parse("#FF2C2C2C") : Color.Parse("#FFFAFAFA");
+        
+        // Mica 效果：将壁纸颜色混合到中性基色中
+        var micaBackground = ColorMath.Blend(neutralBase, context.AccentColor, wallpaperTintOpacity);
+        var micaElevated = ColorMath.Blend(neutralElevated, context.AccentColor, wallpaperTintOpacity * 0.8);
+        
+        // 按钮颜色
+        var buttonBackground = context.IsNightMode ? 
+            Color.FromArgb(0x33, micaBackground.R, micaBackground.G, micaBackground.B) :
+            Color.FromArgb(0x4D, micaBackground.R, micaBackground.G, micaBackground.B);
+            
+        resources["AdaptiveButtonBackgroundBrush"] = new SolidColorBrush(buttonBackground);
+        resources["AdaptiveButtonBorderBrush"] = new SolidColorBrush(
+            Color.FromArgb(0x1A, neutralElevated.R, neutralElevated.G, neutralElevated.B));
         resources["AdaptiveButtonHoverBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(ColorMath.Blend(panelTone, context.AccentColor, 0.15), context.IsNightMode ? (byte)0x7A : (byte)0x99));
+            ColorMath.WithAlpha(buttonBackground, context.IsNightMode ? (byte)0x4D : (byte)0x66));
         resources["AdaptiveButtonPressedBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(ColorMath.Blend(panelTone, context.AccentColor, 0.28), context.IsNightMode ? (byte)0x8C : (byte)0xB3));
+            ColorMath.WithAlpha(buttonBackground, context.IsNightMode ? (byte)0x66 : (byte)0x80));
 
+        // 面板颜色 - 使用 Mica 材质
         resources["AdaptiveGlassPanelBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(panelTone, context.IsNightMode ? (byte)0x4D : (byte)0x66));
-        resources["AdaptiveGlassPanelBorderBrush"] = new SolidColorBrush(ColorMath.WithAlpha(neutralElevated, 0x26));
+            Color.FromArgb(context.IsNightMode ? (byte)0xE6 : (byte)0xF2, 
+                          micaBackground.R, micaBackground.G, micaBackground.B));
+        resources["AdaptiveGlassPanelBorderBrush"] = new SolidColorBrush(
+            Color.FromArgb(0x1F, neutralElevated.R, neutralElevated.G, neutralElevated.B));
         resources["AdaptiveGlassStrongBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(strongTone, context.IsNightMode ? (byte)0x66 : (byte)0x80));
-        resources["AdaptiveGlassStrongBorderBrush"] = new SolidColorBrush(ColorMath.WithAlpha(neutralElevated, 0x33));
+            Color.FromArgb(context.IsNightMode ? (byte)0xE6 : (byte)0xF5, 
+                          micaElevated.R, micaElevated.G, micaElevated.B));
+        resources["AdaptiveGlassStrongBorderBrush"] = new SolidColorBrush(
+            Color.FromArgb(0x29, neutralElevated.R, neutralElevated.G, neutralElevated.B));
         resources["AdaptiveGlassOverlayBackgroundBrush"] = new SolidColorBrush(
-            ColorMath.WithAlpha(overlayTone, context.IsNightMode ? (byte)0x59 : (byte)0x73));
+            Color.FromArgb(context.IsNightMode ? (byte)0xCC : (byte)0xE6, 
+                          micaBackground.R, micaBackground.G, micaBackground.B));
 
-        resources["AdaptiveGlassPanelBlurRadius"] = context.IsNightMode ? NightPanelBlurRadius : DayPanelBlurRadius;
-        resources["AdaptiveGlassStrongBlurRadius"] = context.IsNightMode ? NightStrongBlurRadius : DayStrongBlurRadius;
-        resources["AdaptiveGlassOverlayBlurRadius"] = context.IsNightMode ? NightOverlayBlurRadius : DayOverlayBlurRadius;
-        resources["AdaptiveGlassPanelOpacity"] = context.IsNightMode ? 0.85 : 0.80;
-        resources["AdaptiveGlassStrongOpacity"] = context.IsNightMode ? 0.90 : 0.85;
-        resources["AdaptiveGlassOverlayOpacity"] = context.IsNightMode ? 0.75 : 0.70;
-        resources["AdaptiveGlassNoiseOpacity"] = context.IsNightMode ? 0.03 : 0.02;
+        // 模糊半径（Mica 不需要强模糊）
+        resources["AdaptiveGlassPanelBlurRadius"] = context.IsNightMode ? 20.0 : 30.0;
+        resources["AdaptiveGlassStrongBlurRadius"] = context.IsNightMode ? 25.0 : 35.0;
+        resources["AdaptiveGlassOverlayBlurRadius"] = context.IsNightMode ? 30.0 : 40.0;
+        
+        // 不透明度（Mica 材质接近不透明）
+        resources["AdaptiveGlassPanelOpacity"] = context.IsNightMode ? 0.95 : 0.98;
+        resources["AdaptiveGlassStrongOpacity"] = context.IsNightMode ? 0.97 : 0.99;
+        resources["AdaptiveGlassOverlayOpacity"] = context.IsNightMode ? 0.85 : 0.92;
+        resources["AdaptiveGlassNoiseOpacity"] = context.IsNightMode ? 0.01 : 0.008;
     }
 }
