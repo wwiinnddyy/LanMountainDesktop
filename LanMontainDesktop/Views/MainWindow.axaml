@@ -44,7 +44,7 @@
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         Click="OnMinimizeClick"
-                        Content="回到Windows" />
+                        Content="&#22238;&#21040;Windows" />
             </Grid>
         </Border>
 
@@ -64,7 +64,7 @@
                            Grid.Column="0"
                            VerticalAlignment="Center"
                            Foreground="#FFE5E7EB"
-                           Text="短边格数" />
+                           Text="&#30701;&#36793;&#26684;&#25968;" />
                 <ui:NumberBox x:Name="GridSizeNumberBox"
                               Grid.Row="0"
                               Grid.Column="1"
@@ -76,7 +76,7 @@
                         Grid.Column="2"
                         Padding="12,6"
                         Click="OnApplyGridSizeClick"
-                        Content="应用" />
+                        Content="&#24212;&#29992;" />
 
                 <TextBlock x:Name="GridInfoTextBlock"
                            Grid.Row="1"

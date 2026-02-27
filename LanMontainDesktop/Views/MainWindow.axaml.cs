@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 namespace LanMontainDesktop.Views;
 
@@ -14,6 +15,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PropertyChanged += OnWindowPropertyChanged;
     }
 
     protected override void OnOpened(EventArgs e)
@@ -28,6 +30,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
         base.OnClosed(e);
     }
@@ -114,12 +117,49 @@ public partial class MainWindow : Window
         Grid.SetRowSpan(BackToWindowsButton, 1);
         Grid.SetColumnSpan(BackToWindowsButton, Math.Min(4, columnCount));
 
+        ApplyWidgetSizing(cellSize);
+
         GridInfoTextBlock.Text =
             $"Grid: {columnCount} cols x {rowCount} rows | cell {cellSize:F1}px (1:1)";
+    }
+
+    private void ApplyWidgetSizing(double cellSize)
+    {
+        var margin = Math.Clamp(cellSize * 0.08, 1.5, 10);
+        var verticalPadding = Math.Clamp(cellSize * 0.08, 2, 12);
+        var horizontalPadding = Math.Clamp(cellSize * 0.20, 4, 22);
+
+        ClockWidget.Margin = new Thickness(margin);
+        ClockWidget.ApplyCellSize(cellSize);
+
+        BackToWindowsButton.Margin = new Thickness(margin);
+        BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
+        BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.30, 8, 30);
     }
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
+    }
+
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property != WindowStateProperty)
+        {
+            return;
+        }
+
+        if (WindowState is WindowState.Minimized or WindowState.FullScreen)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (WindowState is not (WindowState.Minimized or WindowState.FullScreen))
+            {
+                WindowState = WindowState.FullScreen;
+            }
+        });
     }
 }
