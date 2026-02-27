@@ -2,5 +2,5 @@
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    public string Greeting { get; } = "Welcome to Avalonia!";
+    public string Greeting { get; } = "A modern desktop shell powered by FluentAvalonia.";
 }

@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="220"
+             d:DesignHeight="70"
+             x:Class="LanMontainDesktop.Views.Components.ClockWidget">
+
+    <Border Padding="8"
+            CornerRadius="8"
+            BorderBrush="#80A5B4FC"
+            BorderThickness="1"
+            Background="#CC0F172A">
+        <TextBlock x:Name="TimeTextBlock"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="26"
+                   FontWeight="SemiBold"
+                   Foreground="White" />
+    </Border>
+
+</UserControl>
