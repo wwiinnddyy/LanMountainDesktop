@@ -1,8 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LanMontainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:comp="using:LanMontainDesktop.Views.Components"
+        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -14,8 +16,9 @@
         WindowState="FullScreen"
         SystemDecorations="None"
         CanResize="False"
+        UseLayoutRounding="True"
         Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-        Background="#FF020617"
+        Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
         Title="LanMontainDesktop">
 
     <Design.DataContext>
@@ -23,10 +26,17 @@
     </Design.DataContext>
 
     <Window.Resources>
+        <SolidColorBrush x:Key="AdaptivePrimaryBrush" Color="#FF1D4ED8" />
+        <SolidColorBrush x:Key="AdaptiveSecondaryBrush" Color="#FF1E40AF" />
         <SolidColorBrush x:Key="AdaptiveTextPrimaryBrush" Color="#FFF8FAFC" />
         <SolidColorBrush x:Key="AdaptiveTextSecondaryBrush" Color="#FFE2E8F0" />
         <SolidColorBrush x:Key="AdaptiveTextMutedBrush" Color="#FF94A3B8" />
         <SolidColorBrush x:Key="AdaptiveTextAccentBrush" Color="#FF93C5FD" />
+        <SolidColorBrush x:Key="AdaptiveAccentBrush" Color="#FF3B82F6" />
+        <SolidColorBrush x:Key="AdaptiveOnAccentBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AdaptiveSurfaceBaseBrush" Color="#FF020617" />
+        <SolidColorBrush x:Key="AdaptiveSurfaceRaisedBrush" Color="#FF1E293B" />
+        <SolidColorBrush x:Key="AdaptiveSurfaceOverlayBrush" Color="#CC0F172A" />
         <SolidColorBrush x:Key="AdaptiveButtonBackgroundBrush" Color="#66334155" />
         <SolidColorBrush x:Key="AdaptiveButtonBorderBrush" Color="#80E2E8F0" />
         <SolidColorBrush x:Key="AdaptiveButtonHoverBackgroundBrush" Color="#88475A74" />
@@ -35,16 +45,21 @@
         <SolidColorBrush x:Key="AdaptiveGlassPanelBorderBrush" Color="#70475569" />
         <SolidColorBrush x:Key="AdaptiveGlassStrongBackgroundBrush" Color="#A01E293B" />
         <SolidColorBrush x:Key="AdaptiveGlassStrongBorderBrush" Color="#80475569" />
+        <SolidColorBrush x:Key="AdaptiveGlassOverlayBackgroundBrush" Color="#9A0F172A" />
         <SolidColorBrush x:Key="AdaptiveNavTextBrush" Color="#FFF8FAFC" />
         <SolidColorBrush x:Key="AdaptiveNavSelectedTextBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AdaptiveNavSelectionIndicatorBrush" Color="#FF93C5FD" />
         <SolidColorBrush x:Key="AdaptiveNavItemBackgroundBrush" Color="#220F172A" />
         <SolidColorBrush x:Key="AdaptiveNavItemHoverBackgroundBrush" Color="#40334155" />
         <SolidColorBrush x:Key="AdaptiveNavItemSelectedBackgroundBrush" Color="#CC1D4ED8" />
+        <SolidColorBrush x:Key="AdaptiveToggleOnBrush" Color="#FF3B82F6" />
+        <SolidColorBrush x:Key="AdaptiveToggleOffBrush" Color="#66475569" />
+        <SolidColorBrush x:Key="AdaptiveToggleBorderBrush" Color="#80E2E8F0" />
+        <x:Double x:Key="AdaptiveGlassPanelBlurRadius">22</x:Double>
+        <x:Double x:Key="AdaptiveGlassStrongBlurRadius">28</x:Double>
+        <x:Double x:Key="AdaptiveGlassPanelOpacity">0.92</x:Double>
+        <x:Double x:Key="AdaptiveGlassStrongOpacity">0.95</x:Double>
     </Window.Resources>
-
-    <Window.Styles>
-        <StyleInclude Source="avares://LanMontainDesktop/Styles/GlassModule.axaml" />
-    </Window.Styles>
 
     <Grid>
         <Grid x:Name="DesktopPage">
@@ -56,46 +71,117 @@
 
             <Border x:Name="DesktopHost"
                     ClipToBounds="True"
-                    Background="#FF020617">
-                <Grid x:Name="DesktopGrid"
-                      HorizontalAlignment="Left"
-                      VerticalAlignment="Top"
-                      ShowGridLines="False">
-                    <comp:ClockWidget x:Name="ClockWidget"
-                                      Grid.Row="0"
-                                      Grid.Column="0"
-                                      Grid.ColumnSpan="3"
-                                      Margin="4" />
-
-                    <Border x:Name="BackToWindowsContainer"
-                            Classes="glass-panel"
-                            Grid.Row="0"
-                            Grid.Column="0"
-                            Grid.ColumnSpan="4"
-                            Margin="4"
-                            CornerRadius="10">
-                        <Button x:Name="BackToWindowsButton"
-                                Padding="8"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                Click="OnMinimizeClick"
-                                Content="&#22238;&#21040;Windows" />
-                    </Border>
-
-                    <Button x:Name="OpenSettingsButton"
-                            Grid.Row="0"
-                            Grid.Column="0"
-                            Grid.ColumnSpan="2"
-                            Margin="4"
-                            Padding="16,8"
+                    Background="Transparent">
+                <Grid>
+                    <Border x:Name="DesktopWallpaperLayer"
+                            IsHitTestVisible="False"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
-                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                            Click="OnOpenSettingsClick"
-                            Content="&#35774;&#32622;" />
+                            Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
+
+                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
+                                   IsVisible="False"
+                                   IsHitTestVisible="False"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" />
+
+                    <Grid x:Name="DesktopGrid"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Top"
+                          ShowGridLines="False">
+                    <Border x:Name="TopStatusBarHost"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="1"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="4">
+                        <StackPanel x:Name="TopStatusComponentsPanel"
+                                    Orientation="Horizontal"
+                                    Spacing="6">
+                            <comp:ClockWidget x:Name="ClockWidget"
+                                              IsVisible="False"
+                                              Margin="0" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="BottomTaskbarContainer"
+                            Classes="glass-strong"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="1"
+                            Margin="4"
+                            CornerRadius="18"
+                            Padding="6">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <Border x:Name="TaskbarFixedActionsHost"
+                                    Grid.Column="0"
+                                    Background="Transparent"
+                                    BorderThickness="0">
+                                <Grid ColumnDefinitions="Auto,Auto"
+                                      ColumnSpacing="8">
+                                    <Border x:Name="BackToWindowsContainer"
+                                            Grid.Column="0"
+                                            Background="Transparent"
+                                            CornerRadius="12">
+                                        <Button x:Name="BackToWindowsButton"
+                                                Padding="8"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                Click="OnMinimizeClick"
+                                                ToolTip.Tip="&#22238;&#21040;Windows">
+                                            <StackPanel Orientation="Horizontal"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="8">
+                                                <fi:SymbolIcon Classes="icon-m"
+                                                               Symbol="Window"
+                                                               IconVariant="Regular"
+                                                               />
+                                                <TextBlock Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                           Text="&#22238;&#21040;Windows" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Border>
+
+                                    <Border x:Name="OpenSettingsContainer"
+                                            Grid.Column="1"
+                                            Background="Transparent"
+                                            CornerRadius="12">
+                                        <Button x:Name="OpenSettingsButton"
+                                                Padding="6"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                Click="OnOpenSettingsClick"
+                                                ToolTip.Tip="&#35774;&#32622;">
+                                            <fi:SymbolIcon Classes="icon-l"
+                                                           Symbol="Settings"
+                                                           IconVariant="Regular"
+                                                           />
+                                        </Button>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <Border x:Name="TaskbarDynamicActionsHost"
+                                    Grid.Column="1"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    IsVisible="False">
+                                <StackPanel x:Name="TaskbarDynamicActionsPanel"
+                                            Orientation="Horizontal"
+                                            Spacing="8" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
@@ -110,8 +196,7 @@
             </Grid.Transitions>
 
             <Border x:Name="SettingsBackdropOverlay"
-                    Classes="glass-strong"
-                    BorderThickness="0" />
+                    Classes="glass-overlay" />
 
             <Border x:Name="SettingsContentPanel"
                     Classes="glass-strong"
@@ -156,13 +241,17 @@
                                 CornerRadius="10"
                                 Padding="10">
                             <Border.Styles>
+                                <Style Selector="ListBox#SettingsNavListBox">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                </Style>
                                 <Style Selector="ListBox#SettingsNavListBox ListBoxItem">
                                     <Setter Property="Foreground" Value="{DynamicResource AdaptiveNavTextBrush}" />
                                     <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemBackgroundBrush}" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Setter Property="BorderThickness" Value="0" />
                                     <Setter Property="Padding" Value="10,8" />
                                     <Setter Property="Margin" Value="0,2" />
+                                    <Setter Property="CornerRadius" Value="8" />
                                 </Style>
                                 <Style Selector="ListBox#SettingsNavListBox ListBoxItem:pointerover">
                                     <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemHoverBackgroundBrush}" />
@@ -170,7 +259,6 @@
                                 <Style Selector="ListBox#SettingsNavListBox ListBoxItem:selected">
                                     <Setter Property="Foreground" Value="{DynamicResource AdaptiveNavSelectedTextBrush}" />
                                     <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
                                 </Style>
                             </Border.Styles>
 
@@ -184,6 +272,7 @@
                                     <ListBoxItem Content="&#22721;&#32440;" />
                                     <ListBoxItem Content="&#32593;&#26684;" />
                                     <ListBoxItem Content="&#39068;&#33394;" />
+                                    <ListBoxItem Content="&#29366;&#24577;&#26639;" />
                                 </ListBox>
                             </StackPanel>
                         </Border>
@@ -212,60 +301,109 @@
                                                 Width="360"
                                                 Height="220"
                                                 CornerRadius="14"
-                                                BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
-                                                BorderThickness="1"
                                                 Background="#22000000">
                                             <Border x:Name="WallpaperPreviewViewport"
                                                     ClipToBounds="True"
                                                     CornerRadius="13"
                                                     Background="#30111827">
-                                                <Grid x:Name="WallpaperPreviewGrid"
-                                                      HorizontalAlignment="Left"
-                                                      VerticalAlignment="Top"
-                                                      ShowGridLines="False">
-                                                    <Border x:Name="WallpaperPreviewClockContainer"
+                                                <Grid>
+                                                    <vlc:VideoView x:Name="WallpaperPreviewVideoView"
+                                                                   IsVisible="False"
+                                                                   IsHitTestVisible="False"
+                                                                   HorizontalAlignment="Stretch"
+                                                                   VerticalAlignment="Stretch" />
+
+                                                    <Grid x:Name="WallpaperPreviewGrid"
+                                                          HorizontalAlignment="Left"
+                                                          VerticalAlignment="Top"
+                                                          ShowGridLines="False">
+                                                    <Border x:Name="WallpaperPreviewTopStatusBarHost"
                                                             Grid.Row="0"
                                                             Grid.Column="0"
-                                                            Grid.ColumnSpan="3"
-                                                            CornerRadius="0"
-                                                            BorderThickness="0"
+                                                            Grid.ColumnSpan="1"
                                                             Background="Transparent"
-                                                            Margin="3">
-                                                        <TextBlock x:Name="WallpaperPreviewClockTextBlock"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                   Text="12:34" />
+                                                            BorderThickness="0"
+                                                            Padding="2">
+                                                        <StackPanel x:Name="WallpaperPreviewTopStatusComponentsPanel"
+                                                                    Orientation="Horizontal"
+                                                                    Spacing="3">
+                                                            <Border x:Name="WallpaperPreviewClockContainer"
+                                                                    CornerRadius="0"
+                                                                    BorderThickness="0"
+                                                                    Background="Transparent"
+                                                                    Margin="0"
+                                                                    IsVisible="False">
+                                                                <TextBlock x:Name="WallpaperPreviewClockTextBlock"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                           Text="12:34" />
+                                                            </Border>
+                                                        </StackPanel>
                                                     </Border>
 
-                                                    <Border x:Name="WallpaperPreviewBackButtonContainer"
-                                                            Classes="glass-panel"
+                                                    <Border x:Name="WallpaperPreviewBottomTaskbarContainer"
+                                                            Classes="glass-strong"
                                                             Grid.Row="1"
                                                             Grid.Column="0"
-                                                            Grid.ColumnSpan="4"
+                                                            Grid.ColumnSpan="1"
                                                             Margin="3"
-                                                            CornerRadius="7">
-                                                        <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                   Text="&#22238;&#21040;Windows" />
-                                                    </Border>
+                                                            CornerRadius="8"
+                                                            Padding="2">
+                                                        <Grid ColumnDefinitions="Auto,*"
+                                                              ColumnSpacing="3">
+                                                            <Border x:Name="WallpaperPreviewTaskbarFixedActionsHost"
+                                                                    Grid.Column="0"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0">
+                                                                <Grid ColumnDefinitions="Auto,Auto"
+                                                                      ColumnSpacing="3">
+                                                                    <Border x:Name="WallpaperPreviewBackButtonContainer"
+                                                                            Grid.Column="0"
+                                                                            Background="Transparent"
+                                                                            CornerRadius="6">
+                                                                        <StackPanel Orientation="Horizontal"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Spacing="3">
+                                                                            <fi:SymbolIcon Classes="icon-s"
+                                                                                           Symbol="Window"
+                                                                                           IconVariant="Regular"
+                                                                                           />
+                                                                            <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"
+                                                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                                       Text="&#22238;&#21040;Windows" />
+                                                                        </StackPanel>
+                                                                    </Border>
 
-                                                    <Border x:Name="WallpaperPreviewSettingsButtonContainer"
-                                                            Classes="glass-panel"
-                                                            Grid.Row="1"
-                                                            Grid.Column="4"
-                                                            Grid.ColumnSpan="2"
-                                                            Margin="3"
-                                                            CornerRadius="7">
-                                                        <TextBlock x:Name="WallpaperPreviewSettingsButtonTextBlock"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                   Text="&#35774;&#32622;" />
+                                                                    <Border x:Name="WallpaperPreviewSettingsButtonContainer"
+                                                                            Grid.Column="1"
+                                                                            Background="Transparent"
+                                                                            CornerRadius="6">
+                                                                        <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon"
+                                                                                       Classes="icon-s"
+                                                                                       Symbol="Settings"
+                                                                                       IconVariant="Regular"
+                                                                                       />
+                                                                    </Border>
+                                                                </Grid>
+                                                            </Border>
+
+                                                            <Border x:Name="WallpaperPreviewTaskbarDynamicActionsHost"
+                                                                    Grid.Column="1"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    IsVisible="False">
+                                                                <StackPanel x:Name="WallpaperPreviewTaskbarDynamicActionsPanel"
+                                                                            Orientation="Horizontal"
+                                                                            Spacing="3" />
+                                                            </Border>
+                                                        </Grid>
                                                     </Border>
+                                                    </Grid>
                                                 </Grid>
                                             </Border>
                                         </Border>
@@ -406,8 +544,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="RecommendedColorButton2"
                                                 Width="68"
@@ -418,8 +555,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="RecommendedColorButton3"
                                                 Width="68"
@@ -430,8 +566,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="RecommendedColorButton4"
                                                 Width="68"
@@ -442,8 +577,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="RecommendedColorButton5"
                                                 Width="68"
@@ -454,8 +588,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="RecommendedColorButton6"
                                                 Width="68"
@@ -466,8 +599,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                     </WrapPanel>
 
@@ -494,8 +626,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="MonetColorButton2"
                                                 Width="68"
@@ -506,8 +637,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="MonetColorButton3"
                                                 Width="68"
@@ -518,8 +648,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="MonetColorButton4"
                                                 Width="68"
@@ -530,8 +659,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="MonetColorButton5"
                                                 Width="68"
@@ -542,8 +670,7 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                         <Button x:Name="MonetColorButton6"
                                                 Width="68"
@@ -554,14 +681,40 @@
                                                     Width="26"
                                                     Height="26"
                                                     CornerRadius="6"
-                                                    BorderBrush="#A0FFFFFF"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="0" />
                                         </Button>
                                     </WrapPanel>
 
                                     <TextBlock x:Name="ThemeColorStatusTextBlock"
                                                Foreground="{DynamicResource AdaptiveTextMutedBrush}"
                                                Text="Theme color is ready." />
+                                </StackPanel>
+
+                                <StackPanel x:Name="StatusBarSettingsPanel"
+                                            IsVisible="False"
+                                            Spacing="14">
+                                    <TextBlock FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Status Bar" />
+                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Choose which components appear on the top status bar." />
+
+                                    <ui:SettingsExpander Header="&#26102;&#38388;&#32452;&#20214;">
+                                        <Grid ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="12">
+                                            <ToggleSwitch x:Name="StatusBarClockToggleSwitch"
+                                                          Grid.Column="0"
+                                                          OnContent="On"
+                                                          OffContent="Off"
+                                                          Checked="OnStatusBarClockChecked"
+                                                          Unchecked="OnStatusBarClockUnchecked" />
+                                            <TextBlock Grid.Column="1"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                       Text="&#22312;&#39030;&#37096;&#29366;&#24577;&#26639;&#26174;&#31034;&#26102;&#38047;&#12290;" />
+                                        </Grid>
+                                    </ui:SettingsExpander>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -582,3 +735,6 @@
     </Grid>
 
 </Window>
+
+
+

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -10,9 +13,11 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using FluentAvalonia.Styling;
 using LanMontainDesktop.Models;
 using LanMontainDesktop.Services;
 using LanMontainDesktop.Theme;
+using LibVLCSharp.Shared;
 
 namespace LanMontainDesktop.Views;
 
@@ -27,32 +32,67 @@ public partial class MainWindow : Window
         Tile
     }
 
+    private enum WallpaperMediaType
+    {
+        None,
+        Image,
+        Video
+    }
+
     private const int StatusBarRowIndex = 0;
     private const int MinShortSideCells = 6;
     private const int MaxShortSideCells = 96;
     private const int SettingsTransitionDurationMs = 240;
     private const double LightBackgroundLuminanceThreshold = 0.57;
-    private const double WallpaperPreviewMinWidth = 220;
-    private const double WallpaperPreviewMinHeight = 140;
-    private const double WallpaperPreviewMaxHeight = 280;
+    private const string ClockStatusComponentId = "Clock";
+    private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
+    private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"
+    };
+    private static readonly HashSet<string> SupportedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mkv", ".webm", ".avi", ".mov", ".m4v"
+    };
+    private static readonly TaskbarActionId[] DefaultPinnedTaskbarActions =
+    [
+        TaskbarActionId.MinimizeToWindows,
+        TaskbarActionId.OpenSettings
+    ];
     private readonly record struct GridMetrics(int ColumnCount, int RowCount, double CellSize);
     private readonly MonetColorService _monetColorService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
+    private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
     private int _targetShortSideCells;
     private bool _isSettingsOpen;
     private bool _isNightMode;
+    private bool _enableDynamicTaskbarActions;
     private bool _suppressThemeToggleEvents;
+    private bool _suppressStatusBarToggleEvents;
+    private bool _suppressSettingsPersistence;
     private TranslateTransform? _settingsContentPanelTransform;
     private IBrush? _defaultDesktopBackground;
     private Bitmap? _wallpaperBitmap;
+    private WallpaperMediaType _wallpaperMediaType;
+    private string? _wallpaperVideoPath;
+    private LibVLC? _libVlc;
+    private MediaPlayer? _videoWallpaperPlayer;
+    private Media? _videoWallpaperMedia;
+    private MediaPlayer? _previewVideoWallpaperPlayer;
+    private Media? _previewVideoWallpaperMedia;
     private string? _wallpaperPath;
     private string _wallpaperStatus = "Current background uses solid color.";
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
     private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");
+    private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
 
     public MainWindow()
     {
         InitializeComponent();
+        _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         PropertyChanged += OnWindowPropertyChanged;
     }
 
@@ -60,28 +100,60 @@ public partial class MainWindow : Window
     {
         base.OnOpened(e);
 
-        _targetShortSideCells = CalculateDefaultShortSideCellCountFromDpi();
+        _suppressSettingsPersistence = true;
+        var snapshot = _appSettingsService.Load();
+
+        _targetShortSideCells = Math.Clamp(
+            snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
+            MinShortSideCells,
+            MaxShortSideCells);
         GridSizeNumberBox.Value = _targetShortSideCells;
-        SettingsNavListBox.SelectedIndex = 0;
+
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 3);
         UpdateSettingsTabContent();
-        WallpaperPlacementComboBox.SelectedIndex = 0;
-        _defaultDesktopBackground = DesktopHost.Background;
+
+        WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
+        _defaultDesktopBackground = DesktopWallpaperLayer.Background;
+        ApplyTaskbarSettings(snapshot);
+
+        TryRestoreWallpaper(snapshot.WallpaperPath);
+        ApplyWallpaperBrush();
         UpdateWallpaperDisplay();
-        _isNightMode = CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold;
-        ApplyNightModeState(_isNightMode, refreshPalettes: false);
-        RefreshColorPalettes();
-        EnsureSelectedThemeColor();
-        UpdateThemeColorSelectionState();
+
+        if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
+        {
+            _selectedThemeColor = savedThemeColor;
+        }
+
+        _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
+        ApplyNightModeState(_isNightMode, refreshPalettes: true);
+        _suppressStatusBarToggleEvents = true;
+        StatusBarClockToggleSwitch.IsChecked = _topStatusComponentIds.Contains(ClockStatusComponentId);
+        _suppressStatusBarToggleEvents = false;
         ThemeColorStatusTextBlock.Text = $"Theme color ready: {_selectedThemeColor}.";
-        UpdateAdaptiveTextSystem();
         _settingsContentPanelTransform = SettingsContentPanel.RenderTransform as TranslateTransform;
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged += OnWallpaperPreviewHostSizeChanged;
         RebuildDesktopGrid();
+
+        _suppressSettingsPersistence = false;
+        PersistSettings();
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        PersistSettings();
+        StopVideoWallpaper();
+        _previewVideoWallpaperMedia?.Dispose();
+        _previewVideoWallpaperMedia = null;
+        _previewVideoWallpaperPlayer?.Dispose();
+        _previewVideoWallpaperPlayer = null;
+        _videoWallpaperMedia?.Dispose();
+        _videoWallpaperMedia = null;
+        _videoWallpaperPlayer?.Dispose();
+        _videoWallpaperPlayer = null;
+        _libVlc?.Dispose();
+        _libVlc = null;
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
         PropertyChanged -= OnWindowPropertyChanged;
@@ -100,6 +172,7 @@ public partial class MainWindow : Window
     private void OnDesktopHostSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         RebuildDesktopGrid();
+        PersistSettings();
     }
 
     private void OnWallpaperPreviewHostSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -151,37 +224,20 @@ public partial class MainWindow : Window
             DesktopGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
         }
 
-        PlaceStatusBarComponent(ClockWidget, column: 0, requestedColumnSpan: 3, totalColumns: gridMetrics.ColumnCount);
+        PlaceStatusBarComponent(
+            TopStatusBarHost,
+            column: 0,
+            requestedColumnSpan: gridMetrics.ColumnCount,
+            totalColumns: gridMetrics.ColumnCount);
 
-        var firstDesktopRow = Math.Min(gridMetrics.RowCount - 1, StatusBarRowIndex + 1);
+        var taskbarRow = gridMetrics.RowCount - 1;
+        Grid.SetRow(BottomTaskbarContainer, taskbarRow);
+        Grid.SetColumn(BottomTaskbarContainer, 0);
+        Grid.SetRowSpan(BottomTaskbarContainer, 1);
+        Grid.SetColumnSpan(BottomTaskbarContainer, gridMetrics.ColumnCount);
 
-        var settingsColumnSpan = ClampComponentSpan(2, gridMetrics.ColumnCount);
-        var settingsRowSpan = ClampComponentSpan(1, gridMetrics.RowCount);
-        var settingsRow = Math.Max(firstDesktopRow, gridMetrics.RowCount - 1);
-        var settingsColumn = Math.Max(0, gridMetrics.ColumnCount - settingsColumnSpan);
-
-        var backButtonRow = settingsRow;
-        var backButtonMaxColumnsWithoutOverlap = settingsColumn;
-        int backButtonColumnSpan;
-        if (backButtonMaxColumnsWithoutOverlap >= 1)
-        {
-            backButtonColumnSpan = ClampComponentSpan(Math.Min(4, backButtonMaxColumnsWithoutOverlap), gridMetrics.ColumnCount);
-        }
-        else
-        {
-            backButtonRow = Math.Max(firstDesktopRow, gridMetrics.RowCount - 2);
-            backButtonColumnSpan = ClampComponentSpan(Math.Min(4, gridMetrics.ColumnCount), gridMetrics.ColumnCount);
-        }
-
-        Grid.SetRow(BackToWindowsContainer, backButtonRow);
-        Grid.SetColumn(BackToWindowsContainer, 0);
-        Grid.SetRowSpan(BackToWindowsContainer, ClampComponentSpan(1, gridMetrics.RowCount));
-        Grid.SetColumnSpan(BackToWindowsContainer, backButtonColumnSpan);
-
-        Grid.SetRow(OpenSettingsButton, settingsRow);
-        Grid.SetColumn(OpenSettingsButton, settingsColumn);
-        Grid.SetRowSpan(OpenSettingsButton, settingsRowSpan);
-        Grid.SetColumnSpan(OpenSettingsButton, settingsColumnSpan);
+        ApplyTopStatusComponentVisibility();
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
         ApplyWidgetSizing(gridMetrics.CellSize);
 
@@ -242,20 +298,30 @@ public partial class MainWindow : Window
         var margin = Math.Clamp(cellSize * 0.08, 1.5, 10);
         var verticalPadding = Math.Clamp(cellSize * 0.08, 2, 12);
         var horizontalPadding = Math.Clamp(cellSize * 0.20, 4, 22);
+        var taskbarCell = Math.Clamp(cellSize, 28, 128);
 
+        TopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1.5, 10));
         ClockWidget.Margin = new Thickness(margin);
         ClockWidget.ApplyCellSize(cellSize);
 
-        BackToWindowsContainer.Margin = new Thickness(margin);
-        BackToWindowsContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.12, 5, 14));
-        BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-        BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.30, 8, 30);
+        BottomTaskbarContainer.Margin = new Thickness(Math.Clamp(cellSize * 0.18, 6, 18));
+        BottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.24, 10, 24));
+        BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 2, 10));
 
-        OpenSettingsButton.Margin = new Thickness(Math.Clamp(cellSize * 0.12, 6, 16));
-        OpenSettingsButton.Padding = new Thickness(
-            Math.Clamp(horizontalPadding + 2, 8, 26),
-            Math.Clamp(verticalPadding, 4, 12));
-        OpenSettingsButton.FontSize = Math.Clamp(cellSize * 0.22, 9, 22);
+        BackToWindowsContainer.Margin = new Thickness(0);
+        BackToWindowsContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.16, 6, 16));
+        BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
+        BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
+        BackToWindowsButton.MinHeight = taskbarCell;
+        BackToWindowsButton.MinWidth = Math.Clamp(cellSize * 2.3, 90, 320);
+
+        OpenSettingsContainer.Margin = new Thickness(0);
+        OpenSettingsContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.16, 6, 16));
+        OpenSettingsContainer.Width = taskbarCell;
+        OpenSettingsContainer.Height = taskbarCell;
+        OpenSettingsButton.Width = taskbarCell;
+        OpenSettingsButton.Height = taskbarCell;
+        OpenSettingsButton.Padding = new Thickness(Math.Clamp(taskbarCell * 0.2, 4, 12));
     }
 
     private void UpdateWallpaperPreviewLayout()
@@ -270,24 +336,24 @@ public partial class MainWindow : Window
         var desktopWidth = Math.Max(1, DesktopHost.Bounds.Width);
         var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
         var aspectRatio = desktopWidth / desktopHeight;
-        var availableWidth = WallpaperPreviewHost.Bounds.Width - 24;
+        var availableWidth = WallpaperPreviewHost.Bounds.Width - 20;
+        var availableHeight = WallpaperPreviewHost.Bounds.Height - 20;
         if (availableWidth <= 1)
         {
             availableWidth = WallpaperPreviewFrame.Width;
         }
-
-        var previewWidth = Math.Max(WallpaperPreviewMinWidth, availableWidth);
-        var previewHeight = previewWidth / aspectRatio;
-
-        if (previewHeight > WallpaperPreviewMaxHeight)
+        if (availableHeight <= 1)
         {
-            previewHeight = WallpaperPreviewMaxHeight;
-            previewWidth = previewHeight * aspectRatio;
+            availableHeight = WallpaperPreviewFrame.Height;
         }
+        availableWidth = Math.Max(1, availableWidth);
+        availableHeight = Math.Max(1, availableHeight);
 
-        if (previewHeight < WallpaperPreviewMinHeight)
+        var previewWidth = availableWidth;
+        var previewHeight = previewWidth / aspectRatio;
+        if (previewHeight > availableHeight)
         {
-            previewHeight = WallpaperPreviewMinHeight;
+            previewHeight = availableHeight;
             previewWidth = previewHeight * aspectRatio;
         }
 
@@ -319,52 +385,39 @@ public partial class MainWindow : Window
         }
 
         PlaceStatusBarComponent(
-            WallpaperPreviewClockContainer,
+            WallpaperPreviewTopStatusBarHost,
             column: 0,
-            requestedColumnSpan: 3,
+            requestedColumnSpan: gridMetrics.ColumnCount,
             totalColumns: gridMetrics.ColumnCount);
 
-        var firstDesktopRow = Math.Min(gridMetrics.RowCount - 1, StatusBarRowIndex + 1);
-        var settingsColumnSpan = ClampComponentSpan(2, gridMetrics.ColumnCount);
-        var settingsRow = Math.Max(firstDesktopRow, gridMetrics.RowCount - 1);
-        var settingsColumn = Math.Max(0, gridMetrics.ColumnCount - settingsColumnSpan);
+        var taskbarRow = gridMetrics.RowCount - 1;
+        Grid.SetRow(WallpaperPreviewBottomTaskbarContainer, taskbarRow);
+        Grid.SetColumn(WallpaperPreviewBottomTaskbarContainer, 0);
+        Grid.SetRowSpan(WallpaperPreviewBottomTaskbarContainer, 1);
+        Grid.SetColumnSpan(WallpaperPreviewBottomTaskbarContainer, gridMetrics.ColumnCount);
 
-        var backButtonRow = settingsRow;
-        var backButtonMaxColumnsWithoutOverlap = settingsColumn;
-        int backButtonColumnSpan;
-        if (backButtonMaxColumnsWithoutOverlap >= 1)
-        {
-            backButtonColumnSpan = ClampComponentSpan(Math.Min(4, backButtonMaxColumnsWithoutOverlap), gridMetrics.ColumnCount);
-        }
-        else
-        {
-            backButtonRow = Math.Max(firstDesktopRow, gridMetrics.RowCount - 2);
-            backButtonColumnSpan = ClampComponentSpan(Math.Min(4, gridMetrics.ColumnCount), gridMetrics.ColumnCount);
-        }
-
-        Grid.SetRow(WallpaperPreviewBackButtonContainer, backButtonRow);
-        Grid.SetColumn(WallpaperPreviewBackButtonContainer, 0);
-        Grid.SetRowSpan(WallpaperPreviewBackButtonContainer, 1);
-        Grid.SetColumnSpan(WallpaperPreviewBackButtonContainer, backButtonColumnSpan);
-
-        Grid.SetRow(WallpaperPreviewSettingsButtonContainer, settingsRow);
-        Grid.SetColumn(WallpaperPreviewSettingsButtonContainer, settingsColumn);
-        Grid.SetRowSpan(WallpaperPreviewSettingsButtonContainer, 1);
-        Grid.SetColumnSpan(WallpaperPreviewSettingsButtonContainer, settingsColumnSpan);
-
+        ApplyTopStatusComponentVisibility();
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
         ApplyPreviewWidgetSizing(gridMetrics.CellSize);
     }
 
     private void ApplyPreviewWidgetSizing(double cellSize)
     {
         var margin = Math.Clamp(cellSize * 0.08, 1, 6);
-        WallpaperPreviewClockContainer.Margin = new Thickness(margin);
-        WallpaperPreviewBackButtonContainer.Margin = new Thickness(margin);
-        WallpaperPreviewSettingsButtonContainer.Margin = new Thickness(margin);
+        var previewTaskbarCell = Math.Clamp(cellSize, 10, 36);
+        WallpaperPreviewTopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1, 4));
+        WallpaperPreviewBottomTaskbarContainer.Margin = new Thickness(margin);
+        WallpaperPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.22, 4, 10));
+        WallpaperPreviewBottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 1, 4));
 
         WallpaperPreviewClockTextBlock.FontSize = Math.Clamp(cellSize * 0.30, 6, 18);
         WallpaperPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
-        WallpaperPreviewSettingsButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
+        WallpaperPreviewBackButtonContainer.MinHeight = previewTaskbarCell;
+        WallpaperPreviewBackButtonContainer.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
+        WallpaperPreviewSettingsButtonContainer.Width = previewTaskbarCell;
+        WallpaperPreviewSettingsButtonContainer.Height = previewTaskbarCell;
+        WallpaperPreviewSettingsButtonIcon.Width = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
+        WallpaperPreviewSettingsButtonIcon.Height = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
 
         var cornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.12, 3, 10));
         WallpaperPreviewBackButtonContainer.CornerRadius = cornerRadius;
@@ -374,617 +427,6 @@ public partial class MainWindow : Window
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
-    }
-
-    private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
-    {
-        OpenSettingsPage();
-    }
-
-    private void OnCloseSettingsClick(object? sender, RoutedEventArgs e)
-    {
-        CloseSettingsPage();
-    }
-
-    private void OnSettingsNavSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        UpdateSettingsTabContent();
-    }
-
-    private void UpdateSettingsTabContent()
-    {
-        // SelectionChanged can fire during XAML initialization before all named controls are assigned.
-        if (SettingsNavListBox is null ||
-            GridSettingsPanel is null ||
-            WallpaperSettingsPanel is null ||
-            ColorSettingsPanel is null)
-        {
-            return;
-        }
-
-        var selectedIndex = SettingsNavListBox.SelectedIndex;
-        WallpaperSettingsPanel.IsVisible = selectedIndex == 0;
-        GridSettingsPanel.IsVisible = selectedIndex == 1;
-        ColorSettingsPanel.IsVisible = selectedIndex == 2;
-    }
-
-    private void OnNightModeChecked(object? sender, RoutedEventArgs e)
-    {
-        if (_suppressThemeToggleEvents)
-        {
-            return;
-        }
-
-        ApplyNightModeState(true, refreshPalettes: true);
-    }
-
-    private void OnNightModeUnchecked(object? sender, RoutedEventArgs e)
-    {
-        if (_suppressThemeToggleEvents)
-        {
-            return;
-        }
-
-        ApplyNightModeState(false, refreshPalettes: true);
-    }
-
-    private void OnRecommendedColorClick(object? sender, RoutedEventArgs e)
-    {
-        ApplyThemeColorFromButton(sender as Button, "Recommended");
-    }
-
-    private void OnMonetColorClick(object? sender, RoutedEventArgs e)
-    {
-        ApplyThemeColorFromButton(sender as Button, "Monet");
-    }
-
-    private void OnRefreshMonetColorsClick(object? sender, RoutedEventArgs e)
-    {
-        RefreshColorPalettes();
-        EnsureSelectedThemeColor();
-        UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = "Monet colors refreshed.";
-        UpdateAdaptiveTextSystem();
-    }
-
-    private async void OnPickWallpaperClick(object? sender, RoutedEventArgs e)
-    {
-        if (StorageProvider is null)
-        {
-            _wallpaperStatus = "Storage provider is unavailable.";
-            UpdateWallpaperDisplay();
-            return;
-        }
-
-        var options = new FilePickerOpenOptions
-        {
-            Title = "Select wallpaper",
-            AllowMultiple = false,
-            FileTypeFilter =
-            [
-                new FilePickerFileType("Image files")
-                {
-                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp"]
-                }
-            ]
-        };
-
-        var files = await StorageProvider.OpenFilePickerAsync(options);
-        if (files.Count == 0)
-        {
-            return;
-        }
-
-        var file = files[0];
-        try
-        {
-            Bitmap bitmap;
-            var localPath = file.TryGetLocalPath();
-            if (!string.IsNullOrWhiteSpace(localPath))
-            {
-                bitmap = new Bitmap(localPath);
-                _wallpaperPath = localPath;
-            }
-            else
-            {
-                await using var stream = await file.OpenReadAsync();
-                bitmap = new Bitmap(stream);
-                _wallpaperPath = file.Name;
-            }
-
-            _wallpaperBitmap?.Dispose();
-            _wallpaperBitmap = bitmap;
-            _wallpaperStatus = "Wallpaper applied.";
-            ApplyWallpaperBrush();
-            UpdateWallpaperDisplay();
-            RefreshColorPalettes();
-            EnsureSelectedThemeColor();
-            UpdateThemeColorSelectionState();
-            ThemeColorStatusTextBlock.Text = "Wallpaper updated. Monet colors refreshed.";
-        }
-        catch (Exception ex)
-        {
-            _wallpaperStatus = $"Failed to apply wallpaper: {ex.Message}";
-            UpdateWallpaperDisplay();
-        }
-    }
-
-    private void OnClearWallpaperClick(object? sender, RoutedEventArgs e)
-    {
-        _wallpaperBitmap?.Dispose();
-        _wallpaperBitmap = null;
-        _wallpaperPath = null;
-        _wallpaperStatus = "Background reset to solid color.";
-        ApplyWallpaperBrush();
-        UpdateWallpaperDisplay();
-        RefreshColorPalettes();
-        EnsureSelectedThemeColor();
-        UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = "Wallpaper cleared. Monet colors refreshed.";
-    }
-
-    private void OnWallpaperPlacementSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        ApplyWallpaperBrush();
-        if (_wallpaperBitmap is not null)
-        {
-            _wallpaperStatus = $"Wallpaper mode: {GetPlacementDisplayName(GetSelectedWallpaperPlacement())}.";
-        }
-
-        UpdateWallpaperDisplay();
-    }
-
-    private void ApplyWallpaperBrush()
-    {
-        if (_wallpaperBitmap is null)
-        {
-            DesktopHost.Background = _defaultDesktopBackground ?? new SolidColorBrush(Color.Parse("#FF020617"));
-            WallpaperPreviewViewport.Background = _defaultDesktopBackground ?? new SolidColorBrush(Color.Parse("#30111827"));
-            UpdateAdaptiveTextSystem();
-            return;
-        }
-
-        var placement = GetSelectedWallpaperPlacement();
-        DesktopHost.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, false);
-        WallpaperPreviewViewport.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, true);
-        UpdateAdaptiveTextSystem();
-    }
-
-    private void UpdateWallpaperDisplay()
-    {
-        if (WallpaperPathTextBlock is null ||
-            WallpaperStatusTextBlock is null ||
-            WallpaperPreviewViewport is null ||
-            WallpaperPlacementComboBox is null)
-        {
-            return;
-        }
-
-        WallpaperPathTextBlock.Text = string.IsNullOrWhiteSpace(_wallpaperPath)
-            ? "No wallpaper selected."
-            : _wallpaperPath;
-        WallpaperStatusTextBlock.Text = _wallpaperStatus;
-
-        if (_wallpaperBitmap is null)
-        {
-            WallpaperPreviewViewport.Background = _defaultDesktopBackground ?? new SolidColorBrush(Color.Parse("#30111827"));
-            return;
-        }
-
-        WallpaperPreviewViewport.Background = CreateWallpaperBrush(
-            _wallpaperBitmap,
-            GetSelectedWallpaperPlacement(),
-            true);
-    }
-
-    private ImageBrush CreateWallpaperBrush(Bitmap bitmap, WallpaperPlacement placement, bool forPreview)
-    {
-        var brush = new ImageBrush
-        {
-            Source = bitmap,
-            Stretch = Stretch.UniformToFill,
-            AlignmentX = AlignmentX.Center,
-            AlignmentY = AlignmentY.Center,
-            TileMode = TileMode.None
-        };
-
-        switch (placement)
-        {
-            case WallpaperPlacement.Fill:
-                brush.Stretch = Stretch.UniformToFill;
-                break;
-            case WallpaperPlacement.Fit:
-                brush.Stretch = Stretch.Uniform;
-                break;
-            case WallpaperPlacement.Stretch:
-                brush.Stretch = Stretch.Fill;
-                break;
-            case WallpaperPlacement.Center:
-                brush.Stretch = Stretch.None;
-                break;
-            case WallpaperPlacement.Tile:
-                brush.Stretch = Stretch.None;
-                brush.TileMode = TileMode.Tile;
-                var tileSize = forPreview ? 96d : 220d;
-                brush.DestinationRect = new RelativeRect(0, 0, tileSize, tileSize, RelativeUnit.Absolute);
-                break;
-        }
-
-        return brush;
-    }
-
-    private WallpaperPlacement GetSelectedWallpaperPlacement()
-    {
-        return WallpaperPlacementComboBox?.SelectedIndex switch
-        {
-            1 => WallpaperPlacement.Fit,
-            2 => WallpaperPlacement.Stretch,
-            3 => WallpaperPlacement.Center,
-            4 => WallpaperPlacement.Tile,
-            _ => WallpaperPlacement.Fill
-        };
-    }
-
-    private static string GetPlacementDisplayName(WallpaperPlacement placement)
-    {
-        return placement switch
-        {
-            WallpaperPlacement.Fill => "Fill",
-            WallpaperPlacement.Fit => "Fit",
-            WallpaperPlacement.Stretch => "Stretch",
-            WallpaperPlacement.Center => "Center",
-            WallpaperPlacement.Tile => "Tile",
-            _ => "Fill"
-        };
-    }
-
-    private void UpdateAdaptiveTextSystem()
-    {
-        var luminance = CalculateCurrentBackgroundLuminance();
-        var isLightBackground = luminance >= LightBackgroundLuminanceThreshold;
-        var navBackground = SettingsNavPanelBorder?.Background;
-        var isLightNavBackground = CalculateBrushLuminance(navBackground) >= LightBackgroundLuminanceThreshold;
-        var context = new ThemeColorContext(
-            _selectedThemeColor,
-            isLightBackground,
-            isLightNavBackground,
-            _isNightMode);
-
-        ThemeColorSystemService.ApplyThemeResources(Resources, context);
-        GlassEffectService.ApplyGlassResources(Resources, context.IsLightBackground);
-    }
-
-    private double CalculateCurrentBackgroundLuminance()
-    {
-        if (_wallpaperBitmap is not null)
-        {
-            return CalculateBitmapAverageLuminance(_wallpaperBitmap);
-        }
-
-        return CalculateBrushLuminance(DesktopHost.Background ?? _defaultDesktopBackground);
-    }
-
-    private void ApplyNightModeState(bool enabled, bool refreshPalettes)
-    {
-        _isNightMode = enabled;
-        RequestedThemeVariant = enabled ? ThemeVariant.Dark : ThemeVariant.Light;
-
-        _suppressThemeToggleEvents = true;
-        NightModeToggleSwitch.IsChecked = enabled;
-        _suppressThemeToggleEvents = false;
-        ThemeModeStatusTextBlock.Text = enabled ? "Night mode enabled" : "Day mode enabled";
-
-        if (refreshPalettes)
-        {
-            RefreshColorPalettes();
-            EnsureSelectedThemeColor();
-        }
-
-        UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = $"Theme mode: {(enabled ? "Night" : "Day")}.";
-        UpdateAdaptiveTextSystem();
-    }
-
-    private void RefreshColorPalettes()
-    {
-        var palette = _monetColorService.BuildPalette(_wallpaperBitmap, _isNightMode);
-        _recommendedColors = palette.RecommendedColors;
-        _monetColors = palette.MonetColors;
-        ApplyColorPaletteToButtons(_recommendedColors, GetRecommendedColorTargets());
-        ApplyColorPaletteToButtons(_monetColors, GetMonetColorTargets());
-    }
-
-    private void ApplyColorPaletteToButtons(
-        IReadOnlyList<Color> colors,
-        IReadOnlyList<(Button Button, Border Swatch)> targets)
-    {
-        for (var i = 0; i < targets.Count; i++)
-        {
-            var color = i < colors.Count
-                ? colors[i]
-                : Color.Parse("#00000000");
-            var (button, swatch) = targets[i];
-            button.Tag = color.ToString();
-            button.IsEnabled = i < colors.Count;
-            swatch.Background = i < colors.Count
-                ? new SolidColorBrush(color)
-                : new SolidColorBrush(Color.Parse("#00000000"));
-        }
-    }
-
-    private IReadOnlyList<(Button Button, Border Swatch)> GetRecommendedColorTargets()
-    {
-        return
-        [
-            (RecommendedColorButton1, RecommendedColorSwatch1),
-            (RecommendedColorButton2, RecommendedColorSwatch2),
-            (RecommendedColorButton3, RecommendedColorSwatch3),
-            (RecommendedColorButton4, RecommendedColorSwatch4),
-            (RecommendedColorButton5, RecommendedColorSwatch5),
-            (RecommendedColorButton6, RecommendedColorSwatch6)
-        ];
-    }
-
-    private IReadOnlyList<(Button Button, Border Swatch)> GetMonetColorTargets()
-    {
-        return
-        [
-            (MonetColorButton1, MonetColorSwatch1),
-            (MonetColorButton2, MonetColorSwatch2),
-            (MonetColorButton3, MonetColorSwatch3),
-            (MonetColorButton4, MonetColorSwatch4),
-            (MonetColorButton5, MonetColorSwatch5),
-            (MonetColorButton6, MonetColorSwatch6)
-        ];
-    }
-
-    private void EnsureSelectedThemeColor()
-    {
-        if (ContainsColor(_recommendedColors, _selectedThemeColor) ||
-            ContainsColor(_monetColors, _selectedThemeColor))
-        {
-            return;
-        }
-
-        if (_recommendedColors.Count > 0)
-        {
-            _selectedThemeColor = _recommendedColors[0];
-            return;
-        }
-
-        if (_monetColors.Count > 0)
-        {
-            _selectedThemeColor = _monetColors[0];
-        }
-    }
-
-    private void ApplyThemeColorFromButton(Button? button, string sourceLabel)
-    {
-        if (!TryGetButtonColor(button, out var color))
-        {
-            return;
-        }
-
-        _selectedThemeColor = color;
-        UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = $"{sourceLabel} color applied: {_selectedThemeColor}.";
-        UpdateAdaptiveTextSystem();
-    }
-
-    private void UpdateThemeColorSelectionState()
-    {
-        UpdateColorSelectionVisuals(GetRecommendedColorTargets());
-        UpdateColorSelectionVisuals(GetMonetColorTargets());
-    }
-
-    private void UpdateColorSelectionVisuals(IReadOnlyList<(Button Button, Border Swatch)> targets)
-    {
-        foreach (var (button, swatch) in targets)
-        {
-            var isSelected = TryGetButtonColor(button, out var color) && AreSameColor(color, _selectedThemeColor);
-            swatch.BorderBrush = isSelected
-                ? new SolidColorBrush(Color.Parse("#FFFFFFFF"))
-                : new SolidColorBrush(Color.Parse("#A0FFFFFF"));
-            swatch.BorderThickness = new Thickness(isSelected ? 2 : 1);
-        }
-    }
-
-    private static bool TryGetButtonColor(Button? button, out Color color)
-    {
-        color = default;
-        if (button?.Tag is not string colorText || string.IsNullOrWhiteSpace(colorText))
-        {
-            return false;
-        }
-
-        try
-        {
-            color = Color.Parse(colorText);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-
-    private static bool ContainsColor(IReadOnlyList<Color> colors, Color target)
-    {
-        for (var i = 0; i < colors.Count; i++)
-        {
-            if (AreSameColor(colors[i], target))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool AreSameColor(Color left, Color right)
-    {
-        return left.R == right.R && left.G == right.G && left.B == right.B;
-    }
-
-
-    private static double CalculateBrushLuminance(IBrush? brush)
-    {
-        if (brush is ISolidColorBrush solidBrush)
-        {
-            return CalculateRelativeLuminance(solidBrush.Color);
-        }
-
-        return CalculateRelativeLuminance(Color.Parse("#FF020617"));
-    }
-
-    private static double CalculateBitmapAverageLuminance(Bitmap bitmap)
-    {
-        try
-        {
-            var sampleWidth = Math.Clamp(bitmap.PixelSize.Width, 1, 48);
-            var sampleHeight = Math.Clamp(bitmap.PixelSize.Height, 1, 48);
-
-            using var scaledBitmap = bitmap.CreateScaledBitmap(
-                new PixelSize(sampleWidth, sampleHeight),
-                BitmapInterpolationMode.MediumQuality);
-            using var writeable = new WriteableBitmap(
-                scaledBitmap.PixelSize,
-                new Vector(96, 96),
-                PixelFormat.Bgra8888,
-                AlphaFormat.Premul);
-            using var framebuffer = writeable.Lock();
-
-            scaledBitmap.CopyPixels(framebuffer, AlphaFormat.Premul);
-
-            var rowBytes = framebuffer.RowBytes;
-            var byteCount = rowBytes * framebuffer.Size.Height;
-            if (byteCount <= 0 || framebuffer.Address == IntPtr.Zero)
-            {
-                return CalculateRelativeLuminance(Color.Parse("#FF020617"));
-            }
-
-            var pixelBuffer = new byte[byteCount];
-            Marshal.Copy(framebuffer.Address, pixelBuffer, 0, byteCount);
-
-            double luminanceSum = 0;
-            var pixelCount = 0;
-            for (var y = 0; y < framebuffer.Size.Height; y++)
-            {
-                var rowOffset = y * rowBytes;
-                for (var x = 0; x < framebuffer.Size.Width; x++)
-                {
-                    var index = rowOffset + (x * 4);
-                    var alpha = pixelBuffer[index + 3] / 255d;
-                    if (alpha <= 0.01)
-                    {
-                        continue;
-                    }
-
-                    var blue = (pixelBuffer[index] / 255d) / alpha;
-                    var green = (pixelBuffer[index + 1] / 255d) / alpha;
-                    var red = (pixelBuffer[index + 2] / 255d) / alpha;
-
-                    red = Math.Clamp(red, 0, 1);
-                    green = Math.Clamp(green, 0, 1);
-                    blue = Math.Clamp(blue, 0, 1);
-
-                    luminanceSum += CalculateRelativeLuminance(red, green, blue);
-                    pixelCount++;
-                }
-            }
-
-            return pixelCount > 0
-                ? luminanceSum / pixelCount
-                : CalculateRelativeLuminance(Color.Parse("#FF020617"));
-        }
-        catch
-        {
-            return CalculateRelativeLuminance(Color.Parse("#FF020617"));
-        }
-    }
-
-    private static double CalculateRelativeLuminance(Color color)
-    {
-        return CalculateRelativeLuminance(color.R / 255d, color.G / 255d, color.B / 255d);
-    }
-
-    private static double CalculateRelativeLuminance(double red, double green, double blue)
-    {
-        var linearRed = ToLinearRgb(red);
-        var linearGreen = ToLinearRgb(green);
-        var linearBlue = ToLinearRgb(blue);
-        return (0.2126 * linearRed) + (0.7152 * linearGreen) + (0.0722 * linearBlue);
-    }
-
-    private static double ToLinearRgb(double value)
-    {
-        return value <= 0.04045
-            ? value / 12.92
-            : Math.Pow((value + 0.055) / 1.055, 2.4);
-    }
-
-    private void OpenSettingsPage()
-    {
-        if (_isSettingsOpen)
-        {
-            return;
-        }
-
-        _isSettingsOpen = true;
-        UpdateAdaptiveTextSystem();
-        SettingsPage.IsVisible = true;
-        SettingsPage.Opacity = 0;
-        if (_settingsContentPanelTransform is not null)
-        {
-            _settingsContentPanelTransform.Y = 30;
-        }
-
-        DesktopPage.IsHitTestVisible = false;
-        UpdateWallpaperPreviewLayout();
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_isSettingsOpen)
-            {
-                return;
-            }
-
-            SettingsPage.Opacity = 1;
-            if (_settingsContentPanelTransform is not null)
-            {
-                _settingsContentPanelTransform.Y = 0;
-            }
-        }, DispatcherPriority.Background);
-    }
-
-    private void CloseSettingsPage()
-    {
-        if (!_isSettingsOpen)
-        {
-            return;
-        }
-
-        _isSettingsOpen = false;
-        UpdateAdaptiveTextSystem();
-
-        DesktopPage.IsHitTestVisible = true;
-
-        SettingsPage.Opacity = 0;
-        if (_settingsContentPanelTransform is not null)
-        {
-            _settingsContentPanelTransform.Y = 30;
-        }
-
-        DispatcherTimer.RunOnce(() =>
-        {
-            if (_isSettingsOpen)
-            {
-                return;
-            }
-
-            SettingsPage.IsVisible = false;
-        }, TimeSpan.FromMilliseconds(SettingsTransitionDurationMs));
     }
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -1008,3 +450,4 @@ public partial class MainWindow : Window
         });
     }
 }
+
