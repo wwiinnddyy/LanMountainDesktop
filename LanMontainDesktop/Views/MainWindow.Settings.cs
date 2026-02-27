@@ -24,6 +24,11 @@ public partial class MainWindow
 {
     private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
     {
+        if (_isComponentLibraryOpen)
+        {
+            CloseComponentLibraryWindow(reopenSettings: false);
+        }
+
         if (_isSettingsOpen)
         {
             CloseSettingsPage();
@@ -31,6 +36,27 @@ public partial class MainWindow
         }
 
         OpenSettingsPage();
+    }
+
+    private void OnOpenComponentLibraryClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isComponentLibraryOpen)
+        {
+            return;
+        }
+
+        _reopenSettingsAfterComponentLibraryClose = _isSettingsOpen;
+        if (_isSettingsOpen)
+        {
+            CloseSettingsPage(immediate: true);
+        }
+
+        OpenComponentLibraryWindow();
+    }
+
+    private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)
+    {
+        CloseComponentLibraryWindow(reopenSettings: true);
     }
 
     private void OnCloseSettingsClick(object? sender, RoutedEventArgs e)
@@ -701,8 +727,10 @@ public partial class MainWindow
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
         if (BackToWindowsButton is null ||
+            OpenComponentLibraryButton is null ||
             OpenSettingsButton is null ||
             WallpaperPreviewBackButtonVisual is null ||
+            WallpaperPreviewComponentLibraryVisual is null ||
             WallpaperPreviewSettingsButtonIcon is null)
         {
             return;
@@ -710,10 +738,13 @@ public partial class MainWindow
 
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
         var showSettings = _pinnedTaskbarActions.Contains(TaskbarActionId.OpenSettings);
+        var showComponentLibrary = _isSettingsOpen || _isComponentLibraryOpen;
 
         BackToWindowsButton.IsVisible = showMinimize;
+        OpenComponentLibraryButton.IsVisible = showComponentLibrary;
         OpenSettingsButton.IsVisible = showSettings;
         WallpaperPreviewBackButtonVisual.IsVisible = showMinimize;
+        WallpaperPreviewComponentLibraryVisual.IsVisible = showComponentLibrary;
         WallpaperPreviewSettingsButtonIcon.IsVisible = showSettings;
 
         if (TaskbarFixedActionsHost is not null)
@@ -723,7 +754,7 @@ public partial class MainWindow
 
         if (TaskbarSettingsActionHost is not null)
         {
-            TaskbarSettingsActionHost.IsVisible = showSettings;
+            TaskbarSettingsActionHost.IsVisible = showSettings || showComponentLibrary;
         }
 
         if (WallpaperPreviewTaskbarFixedActionsHost is not null)
@@ -733,7 +764,7 @@ public partial class MainWindow
 
         if (WallpaperPreviewTaskbarSettingsActionHost is not null)
         {
-            WallpaperPreviewTaskbarSettingsActionHost.IsVisible = showSettings;
+            WallpaperPreviewTaskbarSettingsActionHost.IsVisible = showSettings || showComponentLibrary;
         }
 
         var dynamicActions = ResolveDynamicTaskbarActions(context);
@@ -773,6 +804,58 @@ public partial class MainWindow
             ? _currentDesktopCellSize
             : Math.Max(32, Math.Min(Bounds.Width, Bounds.Height) / Math.Max(1, _targetShortSideCells));
         ApplyWidgetSizing(effectiveCellSize);
+    }
+
+    private void OpenComponentLibraryWindow()
+    {
+        if (ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        _isComponentLibraryOpen = true;
+        ComponentLibraryWindow.IsVisible = true;
+        ComponentLibraryWindow.Opacity = 0;
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isComponentLibraryOpen || ComponentLibraryWindow is null)
+            {
+                return;
+            }
+
+            ComponentLibraryWindow.Opacity = 1;
+        }, DispatcherPriority.Background);
+    }
+
+    private void CloseComponentLibraryWindow(bool reopenSettings)
+    {
+        if (!_isComponentLibraryOpen || ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        _isComponentLibraryOpen = false;
+        ComponentLibraryWindow.Opacity = 0;
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (_isComponentLibraryOpen || ComponentLibraryWindow is null)
+            {
+                return;
+            }
+
+            ComponentLibraryWindow.IsVisible = false;
+
+            var shouldReopenSettings = reopenSettings && _reopenSettingsAfterComponentLibraryClose;
+            _reopenSettingsAfterComponentLibraryClose = false;
+            if (shouldReopenSettings)
+            {
+                OpenSettingsPage();
+            }
+        }, TimeSpan.FromMilliseconds(200));
     }
 
     private IReadOnlyList<TaskbarActionItem> ResolveDynamicTaskbarActions(TaskbarContext context)
@@ -1182,6 +1265,11 @@ public partial class MainWindow
 
     private void OpenSettingsPage()
     {
+        if (_isComponentLibraryOpen)
+        {
+            return;
+        }
+
         if (_isSettingsOpen)
         {
             return;
@@ -1207,7 +1295,7 @@ public partial class MainWindow
         }, DispatcherPriority.Background);
     }
 
-    private void CloseSettingsPage()
+    private void CloseSettingsPage(bool immediate = false)
     {
         if (!_isSettingsOpen)
         {
@@ -1218,6 +1306,13 @@ public partial class MainWindow
         UpdateAdaptiveTextSystem();
         ApplyWallpaperBrush();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+
+        if (immediate)
+        {
+            SettingsPage.Opacity = 0;
+            SettingsPage.IsVisible = false;
+            return;
+        }
 
         SettingsPage.Opacity = 0;
 

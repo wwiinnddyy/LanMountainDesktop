@@ -162,28 +162,56 @@
                                     Grid.Column="2"
                                     Background="Transparent"
                                     BorderThickness="0">
-                                <Button x:Name="OpenSettingsButton"
-                                        Padding="6"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                        Click="OnOpenSettingsClick"
-                                        ToolTip.Tip="&#35774;&#32622;">
-                                    <StackPanel Orientation="Horizontal"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Spacing="6">
-                                        <fi:SymbolIcon Classes="icon-l"
-                                                       Symbol="Settings"
-                                                       IconVariant="Regular" />
-                                        <TextBlock x:Name="OpenSettingsButtonTextBlock"
-                                                   IsVisible="False"
-                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                   Text="&#36820;&#22238;&#26700;&#38754;" />
-                                    </StackPanel>
-                                </Button>
+                                <Grid ColumnDefinitions="Auto,Auto"
+                                      ColumnSpacing="8">
+                                    <Button x:Name="OpenComponentLibraryButton"
+                                            Grid.Column="0"
+                                            IsVisible="False"
+                                            Padding="8"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                            Click="OnOpenComponentLibraryClick"
+                                            ToolTip.Tip="&#32452;&#20214;&#24211;">
+                                        <StackPanel Orientation="Horizontal"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="8">
+                                            <fi:FluentIcon Classes="icon-m"
+                                                           Icon="Apps"
+                                                           IconVariant="Regular" />
+                                            <TextBlock x:Name="OpenComponentLibraryTextBlock"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                       Text="&#32452;&#20214;&#24211;" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button x:Name="OpenSettingsButton"
+                                            Grid.Column="1"
+                                            Padding="6"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                            Click="OnOpenSettingsClick"
+                                            ToolTip.Tip="&#35774;&#32622;">
+                                        <StackPanel Orientation="Horizontal"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="6">
+                                            <fi:SymbolIcon Classes="icon-l"
+                                                           Symbol="Settings"
+                                                           IconVariant="Regular" />
+                                            <TextBlock x:Name="OpenSettingsButtonTextBlock"
+                                                       IsVisible="False"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                       Text="&#36820;&#22238;&#26700;&#38754;" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
                             </Border>
                         </Grid>
                     </Border>
@@ -377,8 +405,8 @@
                                                                         <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
                                                                                    HorizontalAlignment="Center"
                                                                                    VerticalAlignment="Center"
-                                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                                   Text="&#22238;&#21040;Windows" />
+                                                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                                    Text="&#22238;&#21040;Windows" />
                                                                     </StackPanel>
 
                                                                 </Grid>
@@ -398,10 +426,30 @@
                                                                     Grid.Column="2"
                                                                     Background="Transparent"
                                                                     BorderThickness="0">
-                                                                <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon"
-                                                                               Classes="icon-s"
-                                                                               Symbol="Settings"
-                                                                               IconVariant="Regular" />
+                                                                <Grid ColumnDefinitions="Auto,Auto"
+                                                                      ColumnSpacing="3">
+                                                                    <StackPanel x:Name="WallpaperPreviewComponentLibraryVisual"
+                                                                                Grid.Column="0"
+                                                                                IsVisible="False"
+                                                                                Orientation="Horizontal"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                Spacing="3">
+                                                                        <fi:FluentIcon Classes="icon-s"
+                                                                                       Icon="Apps"
+                                                                                       IconVariant="Regular" />
+                                                                        <TextBlock x:Name="WallpaperPreviewComponentLibraryTextBlock"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                                   Text="&#32452;&#20214;&#24211;" />
+                                                                    </StackPanel>
+                                                                    <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon"
+                                                                                   Grid.Column="1"
+                                                                                   Classes="icon-s"
+                                                                                   Symbol="Settings"
+                                                                                   IconVariant="Regular" />
+                                                                </Grid>
                                                             </Border>
                                                         </Grid>
                                                     </Border>
@@ -776,6 +824,63 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <Border x:Name="ComponentLibraryWindow"
+                IsVisible="False"
+                Opacity="0"
+                Classes="glass-strong"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Width="520"
+                MinWidth="360"
+                MaxWidth="720"
+                Height="260"
+                MinHeight="220"
+                Margin="24,24,24,100"
+                CornerRadius="18"
+                Padding="14">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Border.Transitions>
+
+            <Grid RowDefinitions="Auto,*"
+                  RowSpacing="10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="ComponentLibraryTitleTextBlock"
+                               VerticalAlignment="Center"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                               Text="&#32452;&#20214;&#24211;" />
+                    <Button x:Name="CloseComponentLibraryButton"
+                            Grid.Column="1"
+                            Padding="8"
+                            Width="32"
+                            Height="32"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                            Click="OnCloseComponentLibraryClick">
+                        <fi:SymbolIcon Classes="icon-s"
+                                       Symbol="Dismiss"
+                                       IconVariant="Regular" />
+                    </Button>
+                </Grid>
+
+                <Border Grid.Row="1"
+                        Classes="glass-panel"
+                        CornerRadius="12"
+                        Padding="14">
+                    <TextBlock x:Name="ComponentLibraryEmptyTextBlock"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                               Text="&#26242;&#26080;&#32452;&#20214;&#65292;&#21518;&#32493;&#23558;&#22312;&#36825;&#37324;&#26174;&#31034;&#12290;" />
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 
 </Window>

@@ -58,6 +58,14 @@ public partial class MainWindow
         BackToWindowsTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         WallpaperPreviewBackButtonTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         ToolTip.SetTip(BackToWindowsButton, L("tooltip.back_to_windows", "Back to Windows"));
+        OpenComponentLibraryTextBlock.Text = L("button.component_library", "组件库");
+        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "组件库");
+        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "组件库"));
+        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "组件库");
+        ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "关闭"));
+        ComponentLibraryEmptyTextBlock.Text = L(
+            "component_library.empty",
+            "暂无组件，后续将在这里显示。");
 
         SettingsTitleTextBlock.Text = L("settings.title", "Settings");
         SettingsNavHeaderTextBlock.Text = L("settings.nav_header", "Settings");

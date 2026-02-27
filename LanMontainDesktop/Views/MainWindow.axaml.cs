@@ -76,6 +76,8 @@ public partial class MainWindow : Window
     private bool _suppressLanguageSelectionEvents;
     private bool _suppressSettingsPersistence;
     private bool _isUpdatingWallpaperPreviewLayout;
+    private bool _isComponentLibraryOpen;
+    private bool _reopenSettingsAfterComponentLibraryClose;
     private TranslateTransform? _settingsContentPanelTransform;
     private IBrush? _defaultDesktopBackground;
     private Bitmap? _wallpaperBitmap;
@@ -327,6 +329,11 @@ public partial class MainWindow : Window
         BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
         BackToWindowsButton.MinHeight = taskbarCell;
         BackToWindowsButton.MinWidth = Math.Clamp(cellSize * 2.3, 90, 320);
+        OpenComponentLibraryButton.Margin = new Thickness(0);
+        OpenComponentLibraryButton.Padding = new Thickness(horizontalPadding, verticalPadding);
+        OpenComponentLibraryButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
+        OpenComponentLibraryButton.MinHeight = taskbarCell;
+        OpenComponentLibraryButton.MinWidth = Math.Clamp(cellSize * 2.0, 88, 300);
 
         OpenSettingsButton.Margin = new Thickness(0);
         OpenSettingsButton.Height = taskbarCell;
@@ -344,6 +351,23 @@ public partial class MainWindow : Window
             OpenSettingsButton.MinWidth = taskbarCell;
             OpenSettingsButton.Padding = new Thickness(Math.Clamp(taskbarCell * 0.2, 4, 12));
         }
+
+        UpdateComponentLibraryLayout(cellSize);
+    }
+
+    private void UpdateComponentLibraryLayout(double cellSize)
+    {
+        if (ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        var horizontalMargin = Math.Clamp(cellSize * 0.7, 18, 44);
+        var bottomMargin = Math.Clamp(cellSize * 1.4, 56, 190);
+        ComponentLibraryWindow.Margin = new Thickness(horizontalMargin, 20, horizontalMargin, bottomMargin);
+        ComponentLibraryWindow.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.24, 12, 24));
+        ComponentLibraryWindow.Height = Math.Clamp(cellSize * 4.8, 220, 360);
+        ComponentLibraryWindow.Width = Math.Clamp(cellSize * 9.2, 360, 760);
     }
 
     private void UpdateSettingsViewportInsets(double cellSize)
@@ -473,8 +497,11 @@ public partial class MainWindow : Window
 
         WallpaperPreviewClockTextBlock.FontSize = Math.Clamp(cellSize * 0.30, 6, 18);
         WallpaperPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
+        WallpaperPreviewComponentLibraryTextBlock.FontSize = Math.Clamp(cellSize * 0.18, 5, 12);
         WallpaperPreviewBackButtonVisual.MinHeight = previewTaskbarCell;
         WallpaperPreviewBackButtonVisual.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
+        WallpaperPreviewComponentLibraryVisual.MinHeight = previewTaskbarCell;
+        WallpaperPreviewComponentLibraryVisual.MinWidth = Math.Clamp(cellSize * 2.0, 28, 110);
         WallpaperPreviewSettingsButtonIcon.Width = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
         WallpaperPreviewSettingsButtonIcon.Height = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
     }
