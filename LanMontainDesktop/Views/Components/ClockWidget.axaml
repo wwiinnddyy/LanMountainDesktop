@@ -9,17 +9,17 @@
 
     <Border x:Name="RootBorder"
             Padding="8"
-            CornerRadius="8"
-            BorderBrush="#80A5B4FC"
-            BorderThickness="1"
-            Background="#CC0F172A">
+            CornerRadius="0"
+            BorderBrush="Transparent"
+            BorderThickness="0"
+            Background="Transparent">
         <TextBlock x:Name="TimeTextBlock"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    TextAlignment="Center"
                    FontSize="26"
                    FontWeight="SemiBold"
-                   Foreground="White" />
+                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Border>
 
 </UserControl>

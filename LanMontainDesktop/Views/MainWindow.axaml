@@ -14,6 +14,7 @@
         WindowState="FullScreen"
         SystemDecorations="None"
         CanResize="False"
+        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
         Background="#FF020617"
         Title="LanMontainDesktop">
 
@@ -21,71 +22,563 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
+    <Window.Resources>
+        <SolidColorBrush x:Key="AdaptiveTextPrimaryBrush" Color="#FFF8FAFC" />
+        <SolidColorBrush x:Key="AdaptiveTextSecondaryBrush" Color="#FFE2E8F0" />
+        <SolidColorBrush x:Key="AdaptiveTextMutedBrush" Color="#FF94A3B8" />
+        <SolidColorBrush x:Key="AdaptiveTextAccentBrush" Color="#FF93C5FD" />
+        <SolidColorBrush x:Key="AdaptiveButtonBackgroundBrush" Color="#66334155" />
+        <SolidColorBrush x:Key="AdaptiveButtonBorderBrush" Color="#80E2E8F0" />
+        <SolidColorBrush x:Key="AdaptiveButtonHoverBackgroundBrush" Color="#88475A74" />
+        <SolidColorBrush x:Key="AdaptiveButtonPressedBackgroundBrush" Color="#AA2A3B55" />
+        <SolidColorBrush x:Key="AdaptiveGlassPanelBackgroundBrush" Color="#70233448" />
+        <SolidColorBrush x:Key="AdaptiveGlassPanelBorderBrush" Color="#70475569" />
+        <SolidColorBrush x:Key="AdaptiveGlassStrongBackgroundBrush" Color="#A01E293B" />
+        <SolidColorBrush x:Key="AdaptiveGlassStrongBorderBrush" Color="#80475569" />
+        <SolidColorBrush x:Key="AdaptiveNavTextBrush" Color="#FFF8FAFC" />
+        <SolidColorBrush x:Key="AdaptiveNavSelectedTextBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AdaptiveNavItemBackgroundBrush" Color="#220F172A" />
+        <SolidColorBrush x:Key="AdaptiveNavItemHoverBackgroundBrush" Color="#40334155" />
+        <SolidColorBrush x:Key="AdaptiveNavItemSelectedBackgroundBrush" Color="#CC1D4ED8" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <StyleInclude Source="avares://LanMontainDesktop/Styles/GlassModule.axaml" />
+    </Window.Styles>
+
     <Grid>
-        <Border x:Name="DesktopHost"
-                ClipToBounds="True"
-                Background="#FF020617">
-            <Grid x:Name="DesktopGrid"
-                  HorizontalAlignment="Left"
-                  VerticalAlignment="Top"
-                  ShowGridLines="False">
-                <comp:ClockWidget x:Name="ClockWidget"
-                                  Grid.Row="0"
-                                  Grid.Column="0"
-                                  Grid.ColumnSpan="3"
-                                  Margin="4" />
+        <Grid x:Name="DesktopPage">
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.24" />
+                </Transitions>
+            </Grid.Transitions>
 
-                <Button x:Name="BackToWindowsButton"
-                        Grid.Row="0"
-                        Grid.Column="0"
-                        Grid.ColumnSpan="4"
-                        Margin="4"
-                        Padding="8"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        Click="OnMinimizeClick"
-                        Content="&#22238;&#21040;Windows" />
-            </Grid>
-        </Border>
+            <Border x:Name="DesktopHost"
+                    ClipToBounds="True"
+                    Background="#FF020617">
+                <Grid x:Name="DesktopGrid"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      ShowGridLines="False">
+                    <comp:ClockWidget x:Name="ClockWidget"
+                                      Grid.Row="0"
+                                      Grid.Column="0"
+                                      Grid.ColumnSpan="3"
+                                      Margin="4" />
 
-        <Border HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="10"
-                Padding="10"
-                CornerRadius="10"
-                Background="#BF111827"
-                BorderBrush="#80334155"
-                BorderThickness="1">
-            <Grid ColumnDefinitions="Auto,Auto,Auto"
-                  RowDefinitions="Auto,Auto"
-                  ColumnSpacing="8"
-                  RowSpacing="6">
-                <TextBlock Grid.Row="0"
-                           Grid.Column="0"
-                           VerticalAlignment="Center"
-                           Foreground="#FFE5E7EB"
-                           Text="&#30701;&#36793;&#26684;&#25968;" />
-                <ui:NumberBox x:Name="GridSizeNumberBox"
-                              Grid.Row="0"
-                              Grid.Column="1"
-                              Width="100"
-                              Minimum="6"
-                              Maximum="96"
-                              Value="12" />
-                <Button Grid.Row="0"
-                        Grid.Column="2"
-                        Padding="12,6"
-                        Click="OnApplyGridSizeClick"
-                        Content="&#24212;&#29992;" />
+                    <Border x:Name="BackToWindowsContainer"
+                            Classes="glass-panel"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="4"
+                            Margin="4"
+                            CornerRadius="10">
+                        <Button x:Name="BackToWindowsButton"
+                                Padding="8"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                Click="OnMinimizeClick"
+                                Content="&#22238;&#21040;Windows" />
+                    </Border>
 
-                <TextBlock x:Name="GridInfoTextBlock"
-                           Grid.Row="1"
-                           Grid.Column="0"
-                           Grid.ColumnSpan="3"
-                           Foreground="#FF93C5FD"
-                           Text="Grid: - cols x - rows (1:1)" />
-            </Grid>
-        </Border>
+                    <Button x:Name="OpenSettingsButton"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Margin="4"
+                            Padding="16,8"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                            Click="OnOpenSettingsClick"
+                            Content="&#35774;&#32622;" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="SettingsPage"
+              IsVisible="False"
+              Opacity="0">
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.24" />
+                </Transitions>
+            </Grid.Transitions>
+
+            <Border x:Name="SettingsBackdropOverlay"
+                    Classes="glass-strong"
+                    BorderThickness="0" />
+
+            <Border x:Name="SettingsContentPanel"
+                    Classes="glass-strong"
+                    Margin="24"
+                    Padding="24"
+                    MaxWidth="1240"
+                    CornerRadius="16">
+                <Border.RenderTransform>
+                    <TranslateTransform Y="30">
+                        <TranslateTransform.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Y" Duration="0:0:0.24" />
+                            </Transitions>
+                        </TranslateTransform.Transitions>
+                    </TranslateTransform>
+                </Border.RenderTransform>
+
+                <Grid RowDefinitions="Auto,*,Auto"
+                      RowSpacing="16">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="30"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                               Text="&#35774;&#32622;" />
+                    <Button Grid.Column="1"
+                            Padding="14,8"
+                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                            Click="OnCloseSettingsClick"
+                            Content="&#36820;&#22238;&#26700;&#38754;" />
+                </Grid>
+
+                <Border Grid.Row="1"
+                        Classes="glass-strong"
+                        CornerRadius="14"
+                        Padding="18">
+                    <Grid ColumnDefinitions="220,*"
+                          ColumnSpacing="16">
+                        <Border x:Name="SettingsNavPanelBorder"
+                                Classes="glass-panel"
+                                Grid.Column="0"
+                                CornerRadius="10"
+                                Padding="10">
+                            <Border.Styles>
+                                <Style Selector="ListBox#SettingsNavListBox ListBoxItem">
+                                    <Setter Property="Foreground" Value="{DynamicResource AdaptiveNavTextBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemBackgroundBrush}" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                    <Setter Property="Padding" Value="10,8" />
+                                    <Setter Property="Margin" Value="0,2" />
+                                </Style>
+                                <Style Selector="ListBox#SettingsNavListBox ListBoxItem:pointerover">
+                                    <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemHoverBackgroundBrush}" />
+                                </Style>
+                                <Style Selector="ListBox#SettingsNavListBox ListBoxItem:selected">
+                                    <Setter Property="Foreground" Value="{DynamicResource AdaptiveNavSelectedTextBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+                                </Style>
+                            </Border.Styles>
+
+                            <StackPanel Spacing="10">
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           Text="&#35774;&#32622;&#36873;&#39033;" />
+                                <ListBox x:Name="SettingsNavListBox"
+                                         SelectionChanged="OnSettingsNavSelectionChanged">
+                                    <ListBoxItem Content="&#22721;&#32440;" />
+                                    <ListBoxItem Content="&#32593;&#26684;" />
+                                    <ListBoxItem Content="&#39068;&#33394;" />
+                                </ListBox>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1"
+                                Classes="glass-panel"
+                                CornerRadius="10"
+                                Padding="14">
+                            <Grid>
+                                <StackPanel x:Name="WallpaperSettingsPanel"
+                                            IsVisible="True"
+                                            Spacing="14">
+                                    <TextBlock FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="&#22721;&#32440;" />
+                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="&#36873;&#25321;&#22270;&#29255;&#21518;&#21487;&#31435;&#21363;&#35774;&#20026;&#24212;&#29992;&#31383;&#21475;&#22721;&#32440;&#12290;" />
+
+                                    <Border x:Name="WallpaperPreviewHost"
+                                            Classes="glass-panel"
+                                            CornerRadius="10"
+                                            Padding="10">
+                                        <Border x:Name="WallpaperPreviewFrame"
+                                                HorizontalAlignment="Center"
+                                                Width="360"
+                                                Height="220"
+                                                CornerRadius="14"
+                                                BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                                                BorderThickness="1"
+                                                Background="#22000000">
+                                            <Border x:Name="WallpaperPreviewViewport"
+                                                    ClipToBounds="True"
+                                                    CornerRadius="13"
+                                                    Background="#30111827">
+                                                <Grid x:Name="WallpaperPreviewGrid"
+                                                      HorizontalAlignment="Left"
+                                                      VerticalAlignment="Top"
+                                                      ShowGridLines="False">
+                                                    <Border x:Name="WallpaperPreviewClockContainer"
+                                                            Grid.Row="0"
+                                                            Grid.Column="0"
+                                                            Grid.ColumnSpan="3"
+                                                            CornerRadius="0"
+                                                            BorderThickness="0"
+                                                            Background="Transparent"
+                                                            Margin="3">
+                                                        <TextBlock x:Name="WallpaperPreviewClockTextBlock"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                   Text="12:34" />
+                                                    </Border>
+
+                                                    <Border x:Name="WallpaperPreviewBackButtonContainer"
+                                                            Classes="glass-panel"
+                                                            Grid.Row="1"
+                                                            Grid.Column="0"
+                                                            Grid.ColumnSpan="4"
+                                                            Margin="3"
+                                                            CornerRadius="7">
+                                                        <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                   Text="&#22238;&#21040;Windows" />
+                                                    </Border>
+
+                                                    <Border x:Name="WallpaperPreviewSettingsButtonContainer"
+                                                            Classes="glass-panel"
+                                                            Grid.Row="1"
+                                                            Grid.Column="4"
+                                                            Grid.ColumnSpan="2"
+                                                            Margin="3"
+                                                            CornerRadius="7">
+                                                        <TextBlock x:Name="WallpaperPreviewSettingsButtonTextBlock"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                   Text="&#35774;&#32622;" />
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </Border>
+                                    </Border>
+
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          RowDefinitions="Auto,Auto,Auto"
+                                          ColumnSpacing="10"
+                                          RowSpacing="10">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="&#24403;&#21069;&#22721;&#32440;" />
+                                        <TextBlock x:Name="WallpaperPathTextBlock"
+                                                   Grid.Column="1"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource AdaptiveTextAccentBrush}"
+                                                   Text="&#26410;&#36873;&#25321;&#22721;&#32440;" />
+
+                                        <TextBlock Grid.Row="1"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="&#26174;&#31034;&#26041;&#24335;" />
+                                        <ComboBox x:Name="WallpaperPlacementComboBox"
+                                                  Grid.Row="1"
+                                                  Grid.Column="1"
+                                                  Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                  SelectionChanged="OnWallpaperPlacementSelectionChanged">
+                                            <ComboBoxItem Content="Fill" />
+                                            <ComboBoxItem Content="Fit" />
+                                            <ComboBoxItem Content="Stretch" />
+                                            <ComboBoxItem Content="Center" />
+                                            <ComboBoxItem Content="Tile" />
+                                        </ComboBox>
+
+                                        <StackPanel Grid.Row="2"
+                                                    Grid.ColumnSpan="2"
+                                                    Orientation="Horizontal"
+                                                    Spacing="10">
+                                            <Button Padding="12,6"
+                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                    Click="OnPickWallpaperClick"
+                                                    Content="&#27983;&#35272;&#22270;&#29255;" />
+                                            <Button Padding="12,6"
+                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                    Click="OnClearWallpaperClick"
+                                                    Content="&#24674;&#22797;&#32431;&#33394;" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock x:Name="WallpaperStatusTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                                               Text="&#24403;&#21069;&#20351;&#29992;&#32431;&#33394;&#32972;&#26223;&#12290;" />
+                                </StackPanel>
+
+                                <StackPanel x:Name="GridSettingsPanel"
+                                            IsVisible="False"
+                                            Spacing="14">
+                                    <TextBlock FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Grid layout" />
+                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Every component must occupy at least one cell (minimum 1x1)." />
+
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="8"
+                                          RowSpacing="8">
+                                        <TextBlock Grid.Row="0"
+                                                   Grid.Column="0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="&#30701;&#36793;&#26684;&#25968;" />
+                                        <ui:NumberBox x:Name="GridSizeNumberBox"
+                                                      Grid.Row="0"
+                                                      Grid.Column="1"
+                                                      Width="120"
+                                                      Minimum="6"
+                                                      Maximum="96"
+                                                      Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                      Value="12" />
+                                        <Button Grid.Row="0"
+                                                Grid.Column="2"
+                                                Padding="12,6"
+                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                Click="OnApplyGridSizeClick"
+                                                Content="&#24212;&#29992;" />
+
+                                        <TextBlock x:Name="GridInfoTextBlock"
+                                                   Grid.Row="1"
+                                                   Grid.Column="0"
+                                                   Grid.ColumnSpan="3"
+                                                   Foreground="{DynamicResource AdaptiveTextAccentBrush}"
+                                                   Text="Grid: - cols x - rows (1:1)" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel x:Name="ColorSettingsPanel"
+                                            IsVisible="False"
+                                            Spacing="14">
+                                    <TextBlock FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Color" />
+                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Switch day/night mode and pick app accent colors." />
+
+                                    <Grid ColumnDefinitions="Auto,Auto,*"
+                                          ColumnSpacing="12">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="&#26085;&#22812;&#27169;&#24335;" />
+                                        <ToggleSwitch x:Name="NightModeToggleSwitch"
+                                                      Grid.Column="1"
+                                                      OffContent="Day"
+                                                      OnContent="Night"
+                                                      Checked="OnNightModeChecked"
+                                                      Unchecked="OnNightModeUnchecked" />
+                                        <TextBlock x:Name="ThemeModeStatusTextBlock"
+                                                   Grid.Column="2"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                                                   Text="Night mode enabled" />
+                                    </Grid>
+
+                                    <TextBlock Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Recommended Colors" />
+                                    <WrapPanel ItemWidth="72"
+                                               ItemHeight="56"
+                                               Orientation="Horizontal">
+                                        <Button x:Name="RecommendedColorButton1"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch1"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="RecommendedColorButton2"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch2"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="RecommendedColorButton3"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch3"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="RecommendedColorButton4"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch4"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="RecommendedColorButton5"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch5"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="RecommendedColorButton6"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnRecommendedColorClick">
+                                            <Border x:Name="RecommendedColorSwatch6"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                    </WrapPanel>
+
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="10">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="System Monet Colors" />
+                                        <Button Grid.Column="1"
+                                                Padding="10,6"
+                                                Click="OnRefreshMonetColorsClick"
+                                                Content="Refresh" />
+                                    </Grid>
+
+                                    <WrapPanel ItemWidth="72"
+                                               ItemHeight="56"
+                                               Orientation="Horizontal">
+                                        <Button x:Name="MonetColorButton1"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch1"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="MonetColorButton2"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch2"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="MonetColorButton3"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch3"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="MonetColorButton4"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch4"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="MonetColorButton5"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch5"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                        <Button x:Name="MonetColorButton6"
+                                                Width="68"
+                                                Height="50"
+                                                Padding="8"
+                                                Click="OnMonetColorClick">
+                                            <Border x:Name="MonetColorSwatch6"
+                                                    Width="26"
+                                                    Height="26"
+                                                    CornerRadius="6"
+                                                    BorderBrush="#A0FFFFFF"
+                                                    BorderThickness="1" />
+                                        </Button>
+                                    </WrapPanel>
+
+                                    <TextBlock x:Name="ThemeColorStatusTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                                               Text="Theme color is ready." />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Classes="glass-panel"
+                        CornerRadius="10"
+                        Padding="8,6">
+                    <TextBlock HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                               Text="LanMontainDesktop Settings" />
+                </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 
 </Window>

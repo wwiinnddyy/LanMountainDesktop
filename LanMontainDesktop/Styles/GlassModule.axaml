@@ -1,0 +1,54 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:FluentAvalonia.UI.Controls">
+
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="Button:pressed">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonPressedBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ui|NumberBox">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ToggleSwitch">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Border.glass-panel">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Border.glass-strong">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+</Styles>
