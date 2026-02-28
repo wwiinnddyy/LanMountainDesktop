@@ -14,6 +14,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentAvalonia.Styling;
+using LanMontainDesktop.ComponentSystem;
+using LanMontainDesktop.ComponentSystem.Extensions;
 using LanMontainDesktop.Models;
 using LanMontainDesktop.Services;
 using LanMontainDesktop.Theme;
@@ -45,7 +47,6 @@ public partial class MainWindow : Window
     private const int SettingsTransitionDurationMs = 240;
     private const double WallpaperPreviewMaxWidth = 520;
     private const double LightBackgroundLuminanceThreshold = 0.57;
-    private const string ClockStatusComponentId = "Clock";
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
     private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -64,6 +65,11 @@ public partial class MainWindow : Window
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
+    private readonly ComponentRegistry _componentRegistry = ComponentRegistry
+        .CreateDefault()
+        .RegisterExtensions(
+            JsonComponentExtensionProvider.LoadProvidersFromDirectory(
+                Path.Combine(AppContext.BaseDirectory, "Extensions", "Components")));
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
@@ -137,7 +143,7 @@ public partial class MainWindow : Window
         _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
         ApplyNightModeState(_isNightMode, refreshPalettes: true);
         _suppressStatusBarToggleEvents = true;
-        StatusBarClockToggleSwitch.IsChecked = _topStatusComponentIds.Contains(ClockStatusComponentId);
+        StatusBarClockToggleSwitch.IsChecked = _topStatusComponentIds.Contains(BuiltInComponentIds.Clock);
         _suppressStatusBarToggleEvents = false;
         ApplyLocalization();
         ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);

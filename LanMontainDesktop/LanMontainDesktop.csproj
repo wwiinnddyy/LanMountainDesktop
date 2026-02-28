@@ -12,6 +12,7 @@
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
     <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Extensions\Components\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
