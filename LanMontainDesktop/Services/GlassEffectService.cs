@@ -41,17 +41,17 @@ public static class GlassEffectService
 
         // 面板颜色 - 使用 Mica 材质
         resources["AdaptiveGlassPanelBackgroundBrush"] = new SolidColorBrush(
-            Color.FromArgb(context.IsNightMode ? (byte)0xE6 : (byte)0xF2, 
+            Color.FromArgb(context.IsNightMode ? (byte)0xF0 : (byte)0xF8, 
                           micaBackground.R, micaBackground.G, micaBackground.B));
         resources["AdaptiveGlassPanelBorderBrush"] = new SolidColorBrush(
             Color.FromArgb(0x1F, neutralElevated.R, neutralElevated.G, neutralElevated.B));
         resources["AdaptiveGlassStrongBackgroundBrush"] = new SolidColorBrush(
-            Color.FromArgb(context.IsNightMode ? (byte)0xE6 : (byte)0xF5, 
+            Color.FromArgb(context.IsNightMode ? (byte)0xF4 : (byte)0xFB, 
                           micaElevated.R, micaElevated.G, micaElevated.B));
         resources["AdaptiveGlassStrongBorderBrush"] = new SolidColorBrush(
             Color.FromArgb(0x29, neutralElevated.R, neutralElevated.G, neutralElevated.B));
         resources["AdaptiveGlassOverlayBackgroundBrush"] = new SolidColorBrush(
-            Color.FromArgb(context.IsNightMode ? (byte)0xCC : (byte)0xE6, 
+            Color.FromArgb(context.IsNightMode ? (byte)0xE6 : (byte)0xF2, 
                           micaBackground.R, micaBackground.G, micaBackground.B));
 
         // 模糊半径（Mica 不需要强模糊）
@@ -60,9 +60,9 @@ public static class GlassEffectService
         resources["AdaptiveGlassOverlayBlurRadius"] = context.IsNightMode ? 30.0 : 40.0;
         
         // 不透明度（Mica 材质接近不透明）
-        resources["AdaptiveGlassPanelOpacity"] = context.IsNightMode ? 0.95 : 0.98;
-        resources["AdaptiveGlassStrongOpacity"] = context.IsNightMode ? 0.97 : 0.99;
-        resources["AdaptiveGlassOverlayOpacity"] = context.IsNightMode ? 0.85 : 0.92;
+        resources["AdaptiveGlassPanelOpacity"] = context.IsNightMode ? 0.99 : 1.0;
+        resources["AdaptiveGlassStrongOpacity"] = context.IsNightMode ? 1.0 : 1.0;
+        resources["AdaptiveGlassOverlayOpacity"] = context.IsNightMode ? 0.94 : 0.97;
         resources["AdaptiveGlassNoiseOpacity"] = context.IsNightMode ? 0.01 : 0.008;
     }
 }

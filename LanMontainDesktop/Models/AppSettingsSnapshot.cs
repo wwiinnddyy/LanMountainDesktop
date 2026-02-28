@@ -29,4 +29,8 @@ public sealed class AppSettingsSnapshot
     public bool EnableDynamicTaskbarActions { get; set; } = false;
 
     public string TaskbarLayoutMode { get; set; } = "BottomFullRowMacStyle";
+
+    public int DesktopPageCount { get; set; } = 1;
+
+    public int CurrentDesktopSurfaceIndex { get; set; } = 0;
 }

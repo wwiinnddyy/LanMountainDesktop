@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMontainDesktop.ComponentSystem;
@@ -298,14 +299,14 @@ public partial class MainWindow
             TaskbarDynamicActionsPanel.Children.Clear();
         }
 
-        if (WallpaperPreviewTaskbarDynamicActionsPanel is not null)
+        if (WallpaperPreviewTaskbarDynamicActionsHost is not null)
         {
-            WallpaperPreviewTaskbarDynamicActionsPanel.Children.Clear();
+            WallpaperPreviewTaskbarDynamicActionsHost.Children.Clear();
         }
 
         if (actions.Count == 0 ||
             TaskbarDynamicActionsPanel is null ||
-            WallpaperPreviewTaskbarDynamicActionsPanel is null)
+            WallpaperPreviewTaskbarDynamicActionsHost is null)
         {
             return;
         }
@@ -341,7 +342,77 @@ public partial class MainWindow
                 BorderThickness = new Thickness(0),
                 Child = previewText
             };
-            WallpaperPreviewTaskbarDynamicActionsPanel.Children.Add(previewBorder);
+            WallpaperPreviewTaskbarDynamicActionsHost.Children.Add(previewBorder);
+        }
+    }
+
+    private void PopulateComponentLibraryItems()
+    {
+        if (ComponentLibraryItemsPanel is null || ComponentLibraryEmptyTextBlock is null)
+        {
+            return;
+        }
+
+        ComponentLibraryItemsPanel.Children.Clear();
+
+        var definitions = _componentRegistry
+            .GetAll()
+            .Where(definition => definition.AllowDesktopPlacement)
+            .ToList();
+
+        foreach (var definition in definitions)
+        {
+            var title = new TextBlock
+            {
+                Text = definition.DisplayName,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = Foreground
+            };
+
+            var details = new TextBlock
+            {
+                Text = $"Min {definition.MinWidthCells}x{definition.MinHeightCells}",
+                Foreground = Foreground,
+                Opacity = 0.8
+            };
+
+            var category = new TextBlock
+            {
+                Text = definition.Category,
+                Foreground = Foreground,
+                Opacity = 0.68
+            };
+
+            var content = new StackPanel
+            {
+                Spacing = 5,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+            content.Children.Add(title);
+            content.Children.Add(details);
+            content.Children.Add(category);
+
+            var card = new Border
+            {
+                Classes = { "glass-panel" },
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(12, 10),
+                Margin = new Thickness(0, 0, 10, 10),
+                Width = 180,
+                MinHeight = 92,
+                Child = content
+            };
+
+            ComponentLibraryItemsPanel.Children.Add(card);
+        }
+
+        var hasAny = definitions.Count > 0;
+        ComponentLibraryEmptyTextBlock.IsVisible = !hasAny;
+        if (ComponentLibraryItemsScrollViewer is not null)
+        {
+            ComponentLibraryItemsScrollViewer.IsVisible = hasAny;
         }
     }
 }

@@ -35,7 +35,7 @@ public partial class MainWindow
     {
         return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
             ? L("settings.region.language_en", "English")
-            : L("settings.region.language_zh", "中文");
+            : L("settings.region.language_zh", "Chinese");
     }
 
     private string GetLocalizedPlacementDisplayName(WallpaperPlacement placement)
@@ -58,16 +58,21 @@ public partial class MainWindow
         BackToWindowsTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         WallpaperPreviewBackButtonTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         ToolTip.SetTip(BackToWindowsButton, L("tooltip.back_to_windows", "Back to Windows"));
-        OpenComponentLibraryTextBlock.Text = L("button.component_library", "组件库");
-        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "组件库");
-        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "组件库"));
-        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "组件库");
-        ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "关闭"));
+
+        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Component Library");
+        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Component Library");
+        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "Component Library"));
+        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Component Library");
+        ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "Close"));
         ComponentLibraryEmptyTextBlock.Text = L(
             "component_library.empty",
-            "暂无组件，后续将在这里显示。");
+            "No components yet. Components will appear here later.");
 
-        SettingsTitleTextBlock.Text = L("settings.title", "Settings");
+        LauncherTitleTextBlock.Text = L("launcher.title", "应用启动台");
+        LauncherSubtitleTextBlock.Text = L("launcher.subtitle", "按 Windows 开始菜单结构显示所有应用与文件夹");
+        ToolTip.SetTip(LauncherFolderBackButton, L("common.back", "返回"));
+        ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "关闭"));
+
         SettingsNavHeaderTextBlock.Text = L("settings.nav_header", "Settings");
         SettingsNavWallpaperItem.Content = L("settings.nav.wallpaper", "Wallpaper");
         SettingsNavGridItem.Content = L("settings.nav.grid", "Grid");
@@ -75,21 +80,18 @@ public partial class MainWindow
         SettingsNavStatusBarItem.Content = L("settings.nav.status_bar", "Status Bar");
         SettingsNavRegionItem.Content = L("settings.nav.region", "Region");
 
-        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Wallpaper");
-        WallpaperPanelDescriptionTextBlock.Text = L("settings.wallpaper.description", "Pick wallpaper.");
-        WallpaperCurrentLabelTextBlock.Text = L("settings.wallpaper.current_label", "Current Wallpaper");
-        WallpaperPlacementLabelTextBlock.Text = L("settings.wallpaper.placement_label", "Placement");
-        PickWallpaperButton.Content = L("settings.wallpaper.pick_button", "Browse Files");
-        ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "Reset");
+        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "个性化您的背景");
+        WallpaperPanelDescriptionTextBlock.Text = L("settings.wallpaper.description", "选择图片或视频");
+        WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "选择契合度");
+        WallpaperPlacementSettingsExpander.Description = L("settings.wallpaper.placement_desc", "调整图像在桌面上的填充方式。");
+        PickWallpaperButton.Content = L("settings.wallpaper.pick_button", "浏览照片");
+        ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "重置");
 
         GridPanelTitleTextBlock.Text = L("settings.grid.title", "Grid Layout");
-        GridPanelDescriptionTextBlock.Text = L("settings.grid.description", "Each component should occupy at least 1x1.");
-        GridShortSideLabelTextBlock.Text = L("settings.grid.short_side_label", "Short Side Cells");
         ApplyGridButton.Content = L("settings.grid.apply_button", "Apply");
 
         ColorPanelTitleTextBlock.Text = L("settings.color.title", "Color");
-        ColorPanelDescriptionTextBlock.Text = L("settings.color.description", "Theme and accent settings.");
-        DayNightModeLabelTextBlock.Text = L("settings.color.day_night_label", "Day/Night");
+        ThemeModeSettingsExpander.Header = L("settings.color.day_night_label", "Day/Night");
         NightModeToggleSwitch.OnContent = L("settings.color.day_night_on", "Night");
         NightModeToggleSwitch.OffContent = L("settings.color.day_night_off", "Day");
         RecommendedColorsLabelTextBlock.Text = L("settings.color.recommended_label", "Recommended Colors");
@@ -97,15 +99,11 @@ public partial class MainWindow
         RefreshMonetColorsButton.Content = L("settings.color.refresh_button", "Refresh");
 
         StatusBarPanelTitleTextBlock.Text = L("settings.status_bar.title", "Status Bar");
-        StatusBarPanelDescriptionTextBlock.Text = L("settings.status_bar.description", "Status bar components.");
         StatusBarClockSettingsExpander.Header = L("settings.status_bar.clock_header", "Clock");
-        StatusBarClockDescriptionTextBlock.Text = L("settings.status_bar.clock_description", "Display clock in top status bar.");
 
         RegionPanelTitleTextBlock.Text = L("settings.region.title", "Region");
-        RegionPanelDescriptionTextBlock.Text = L("settings.region.description", "Select language.");
         LanguageSettingsExpander.Header = L("settings.region.language_header", "Language");
-        LanguageLabelTextBlock.Text = L("settings.region.language_label", "Language");
-        LanguageChineseItem.Content = L("settings.region.language_zh", "中文");
+        LanguageChineseItem.Content = L("settings.region.language_zh", "Chinese");
         LanguageEnglishItem.Content = L("settings.region.language_en", "English");
 
         if (WallpaperPlacementComboBox?.ItemCount >= 5)
@@ -117,9 +115,6 @@ public partial class MainWindow
             if (WallpaperPlacementComboBox.Items[4] is ComboBoxItem tileItem) tileItem.Content = L("placement.tile", "Tile");
         }
 
-        ThemeModeStatusTextBlock.Text = _isNightMode
-            ? L("settings.color.mode_night", "Night mode enabled")
-            : L("settings.color.mode_day", "Day mode enabled");
 
         GridInfoTextBlock.Text = Lf(
             "settings.grid.info_format",
@@ -128,6 +123,8 @@ public partial class MainWindow
             DesktopGrid.RowDefinitions.Count,
             DesktopGrid.RowDefinitions.Count > 0 ? DesktopGrid.RowDefinitions[0].Height.Value : 0d);
 
+        PopulateComponentLibraryItems();
+        RenderLauncherRootTiles();
         UpdateOpenSettingsActionVisualState();
         UpdateWallpaperDisplay();
     }

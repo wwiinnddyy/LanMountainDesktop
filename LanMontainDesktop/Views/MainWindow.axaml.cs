@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -130,6 +131,8 @@ public partial class MainWindow : Window
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
+        InitializeDesktopSurfaceState(snapshot);
+        InitializeSettingsIcons();
 
         TryRestoreWallpaper(snapshot.WallpaperPath);
         ApplyWallpaperBrush();
@@ -151,6 +154,8 @@ public partial class MainWindow : Window
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged += OnWallpaperPreviewHostSizeChanged;
         RebuildDesktopGrid();
+        PopulateComponentLibraryItems();
+        LoadLauncherEntriesAsync();
 
         _suppressSettingsPersistence = false;
         PersistSettings();
@@ -164,6 +169,7 @@ public partial class MainWindow : Window
         _previewVideoWallpaperMedia = null;
         _previewVideoWallpaperPlayer?.Dispose();
         _previewVideoWallpaperPlayer = null;
+        DisposeLauncherResources();
         _videoWallpaperMedia?.Dispose();
         _videoWallpaperMedia = null;
         _videoWallpaperPlayer?.Dispose();
@@ -257,6 +263,7 @@ public partial class MainWindow : Window
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
         ApplyWidgetSizing(gridMetrics.CellSize);
+        UpdateDesktopSurfaceLayout(gridMetrics);
         UpdateSettingsViewportInsets(gridMetrics.CellSize);
 
         GridInfoTextBlock.Text = Lf(
@@ -378,7 +385,7 @@ public partial class MainWindow : Window
 
     private void UpdateSettingsViewportInsets(double cellSize)
     {
-        if (SettingsBackdropOverlay is null || SettingsContentPanel is null)
+        if (SettingsContentPanel is null)
         {
             return;
         }
@@ -388,16 +395,29 @@ public partial class MainWindow : Window
         var verticalGap = Math.Clamp(clampedCell * 0.16, 6, 18);
         var topInset = clampedCell + verticalGap;
         var bottomInset = clampedCell + verticalGap;
-        var inset = new Thickness(horizontalInset, topInset, horizontalInset, bottomInset);
 
-        SettingsBackdropOverlay.Margin = inset;
+        // 添加额外的安全边距以确保圆角不被裁剪
+        var cornerSafetyMargin = Math.Clamp(clampedCell * 0.12, 4, 12);
+        var inset = new Thickness(
+            horizontalInset + cornerSafetyMargin,
+            topInset + cornerSafetyMargin,
+            horizontalInset + cornerSafetyMargin,
+            bottomInset + cornerSafetyMargin);
+
+        // 使用 Margin 来定位，而不是直接设置 Width/Height
+        // 这样可以让面板自然填充可用空间，同时保持边距
+        SettingsContentPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        SettingsContentPanel.VerticalAlignment = VerticalAlignment.Stretch;
         SettingsContentPanel.Margin = inset;
+        SettingsContentPanel.Width = double.NaN;
+        SettingsContentPanel.Height = double.NaN;
     }
 
     private void UpdateWallpaperPreviewLayout()
     {
         if (WallpaperPreviewFrame is null ||
             WallpaperPreviewHost is null ||
+            WallpaperPreviewViewport is null ||
             WallpaperPreviewGrid is null)
         {
             return;
@@ -411,80 +431,65 @@ public partial class MainWindow : Window
         _isUpdatingWallpaperPreviewLayout = true;
         try
         {
-        var desktopWidth = Math.Max(1, DesktopHost.Bounds.Width);
-        var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
-        var aspectRatio = desktopWidth / desktopHeight;
-        var availableWidth = WallpaperPreviewHost.Bounds.Width - 20;
-        var availableHeight = WallpaperPreviewHost.Bounds.Height - 20;
-        if (availableWidth <= 1)
-        {
-            availableWidth = WallpaperPreviewFrame.Width;
-        }
-        if (availableHeight <= 1)
-        {
-            availableHeight = WallpaperPreviewFrame.Height;
-        }
-        availableWidth = Math.Max(1, availableWidth);
-        availableHeight = Math.Max(1, availableHeight);
+            var desktopWidth = Math.Max(1, DesktopHost.Bounds.Width);
+            var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
+            var aspectRatio = desktopWidth / desktopHeight;
 
-        var previewWidth = Math.Min(availableWidth, WallpaperPreviewMaxWidth);
-        var previewHeight = previewWidth / aspectRatio;
-        if (previewHeight > availableHeight)
-        {
-            previewHeight = availableHeight;
-            previewWidth = previewHeight * aspectRatio;
-        }
+            // Use the host width (which is roughly 50% of the settings area)
+            // Subtract padding for the outer host container if needed, but let it stretch
+            var availableWidth = Math.Max(100, WallpaperPreviewHost.Bounds.Width);
+            
+            // Calculate height based on aspect ratio
+            var previewWidth = availableWidth;
+            var previewHeight = previewWidth / aspectRatio;
 
-        if (Math.Abs(WallpaperPreviewFrame.Width - previewWidth) > 0.5)
-        {
+            // Apply sizes to the monitor frame
             WallpaperPreviewFrame.Width = previewWidth;
-        }
-
-        if (Math.Abs(WallpaperPreviewFrame.Height - previewHeight) > 0.5)
-        {
             WallpaperPreviewFrame.Height = previewHeight;
-        }
 
-        WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
+            WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
 
-        var gridMetrics = CalculateGridMetrics(previewWidth, previewHeight, _targetShortSideCells);
-        if (gridMetrics.CellSize <= 0)
-        {
-            return;
-        }
+            var gridMetrics = CalculateGridMetrics(previewWidth, previewHeight, _targetShortSideCells);
+            if (gridMetrics.CellSize <= 0)
+            {
+                return;
+            }
 
-        WallpaperPreviewGrid.RowDefinitions.Clear();
-        WallpaperPreviewGrid.ColumnDefinitions.Clear();
-        WallpaperPreviewGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
-        WallpaperPreviewGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
+            WallpaperPreviewGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
+            WallpaperPreviewGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
 
-        for (var row = 0; row < gridMetrics.RowCount; row++)
-        {
-            WallpaperPreviewGrid.RowDefinitions.Add(
-                new RowDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
-        }
+            // This can be triggered by layout changes; always rebuild the preview grid definitions
+            // to avoid definitions accumulating and shifting overlay components out of place.
+            WallpaperPreviewGrid.RowDefinitions.Clear();
+            WallpaperPreviewGrid.ColumnDefinitions.Clear();
 
-        for (var col = 0; col < gridMetrics.ColumnCount; col++)
-        {
-            WallpaperPreviewGrid.ColumnDefinitions.Add(
-                new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
-        }
+            for (var row = 0; row < gridMetrics.RowCount; row++)
+            {
+                WallpaperPreviewGrid.RowDefinitions.Add(
+                    new RowDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
+            }
 
-        PlaceStatusBarComponent(
-            WallpaperPreviewTopStatusBarHost,
-            column: 0,
-            requestedColumnSpan: gridMetrics.ColumnCount,
-            totalColumns: gridMetrics.ColumnCount);
+            for (var col = 0; col < gridMetrics.ColumnCount; col++)
+            {
+                WallpaperPreviewGrid.ColumnDefinitions.Add(
+                    new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
+            }
 
-        var taskbarRow = gridMetrics.RowCount - 1;
-        Grid.SetRow(WallpaperPreviewBottomTaskbarContainer, taskbarRow);
-        Grid.SetColumn(WallpaperPreviewBottomTaskbarContainer, 0);
-        Grid.SetRowSpan(WallpaperPreviewBottomTaskbarContainer, 1);
-        Grid.SetColumnSpan(WallpaperPreviewBottomTaskbarContainer, gridMetrics.ColumnCount);
+            PlaceStatusBarComponent(
+                WallpaperPreviewTopStatusBarHost,
+                column: 0,
+                requestedColumnSpan: gridMetrics.ColumnCount,
+                totalColumns: gridMetrics.ColumnCount);
 
-        ApplyTopStatusComponentVisibility();
-        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
-        ApplyPreviewWidgetSizing(gridMetrics.CellSize);
+            var taskbarRow = gridMetrics.RowCount - 1;
+            Grid.SetRow(WallpaperPreviewBottomTaskbarContainer, taskbarRow);
+            Grid.SetColumn(WallpaperPreviewBottomTaskbarContainer, 0);
+            Grid.SetRowSpan(WallpaperPreviewBottomTaskbarContainer, 1);
+            Grid.SetColumnSpan(WallpaperPreviewBottomTaskbarContainer, gridMetrics.ColumnCount);
+
+            ApplyTopStatusComponentVisibility();
+            ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+            ApplyPreviewWidgetSizing(gridMetrics.CellSize);
         }
         finally
         {

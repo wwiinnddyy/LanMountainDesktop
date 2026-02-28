@@ -85,6 +85,14 @@
         <Setter Property="BoxShadow" Value="0 2 4 #26000000" />
     </Style>
 
+    <Style Selector="Border.mica-strong">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
+        <Setter Property="BoxShadow" Value="0 8 22 #2A000000" />
+    </Style>
+
     <Style Selector="Border.glass-overlay">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassOverlayBackgroundBrush}" />
         <Setter Property="BorderThickness" Value="0" />

@@ -1,4 +1,7 @@
 using System;
+using FluentIcons.Avalonia;
+using FluentIcons.Common;
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -301,6 +304,21 @@ public partial class MainWindow
             AlignmentY = AlignmentY.Center,
             TileMode = TileMode.None
         };
+
+        if (forPreview)
+        {
+            // For preview, we want to simulate how the image looks on a real screen.
+            // Assuming a nominal screen width of 1920 for calculation.
+            // The preview width is 480, so the scale is 480/1920 = 0.25.
+            const double nominalScreenWidth = 1920.0;
+            const double previewWidth = 480.0;
+            double scale = previewWidth / nominalScreenWidth;
+
+            if (placement == WallpaperPlacement.Center)
+            {
+                brush.Transform = new ScaleTransform(scale, scale);
+            }
+        }
 
         switch (placement)
         {
@@ -618,7 +636,9 @@ public partial class MainWindow
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
-            TaskbarLayoutMode = _taskbarLayoutMode
+            TaskbarLayoutMode = _taskbarLayoutMode,
+            DesktopPageCount = _desktopPageCount,
+            CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex
         };
 
         _appSettingsService.Save(snapshot);
@@ -670,13 +690,11 @@ public partial class MainWindow
     {
         _isNightMode = enabled;
         RequestedThemeVariant = enabled ? ThemeVariant.Dark : ThemeVariant.Light;
+        UpdateThemeModeIcon();
 
         _suppressThemeToggleEvents = true;
         NightModeToggleSwitch.IsChecked = enabled;
         _suppressThemeToggleEvents = false;
-        ThemeModeStatusTextBlock.Text = enabled
-            ? L("settings.color.mode_night", "Night mode enabled")
-            : L("settings.color.mode_day", "Day mode enabled");
 
         if (refreshPalettes)
         {
@@ -1000,5 +1018,71 @@ public partial class MainWindow
 
             SettingsPage.IsVisible = false;
         }, TimeSpan.FromMilliseconds(200));
+    }
+
+    private void InitializeSettingsIcons()
+    {
+        const IconVariant variant = IconVariant.Regular;
+
+        if (WallpaperPlacementSettingsExpander is not null)
+        {
+            WallpaperPlacementSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Image,
+                IconVariant = variant
+            };
+        }
+
+        if (GridSizeSettingsExpander is not null)
+        {
+            GridSizeSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Grid,
+                IconVariant = variant
+            };
+        }
+
+        if (ThemeColorSettingsExpander is not null)
+        {
+            ThemeColorSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Color,
+                IconVariant = variant
+            };
+        }
+
+        if (StatusBarClockSettingsExpander is not null)
+        {
+            StatusBarClockSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Clock,
+                IconVariant = variant
+            };
+        }
+
+        if (LanguageSettingsExpander is not null)
+        {
+            LanguageSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Earth,
+                IconVariant = variant
+            };
+        }
+
+        UpdateThemeModeIcon();
+    }
+
+    private void UpdateThemeModeIcon()
+    {
+        if (ThemeModeSettingsExpander is null)
+        {
+            return;
+        }
+
+        ThemeModeSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+        {
+            Symbol = _isNightMode ? Symbol.WeatherMoon : Symbol.WeatherSunny,
+            IconVariant = IconVariant.Regular
+        };
     }
 }
