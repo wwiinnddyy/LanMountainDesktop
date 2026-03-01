@@ -8,11 +8,9 @@
              x:Class="LanMontainDesktop.Views.Components.ClockWidget">
 
     <Border x:Name="RootBorder"
+            Classes="glass-panel"
             Padding="8"
-            CornerRadius="0"
-            BorderBrush="Transparent"
-            BorderThickness="0"
-            Background="Transparent">
+            CornerRadius="8">
         <TextBlock x:Name="TimeTextBlock"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"

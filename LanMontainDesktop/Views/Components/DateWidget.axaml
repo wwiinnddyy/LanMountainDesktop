@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="400"
+             d:DesignHeight="200"
+             x:Class="LanMontainDesktop.Views.Components.DateWidget">
+
+    <Border x:Name="RootBorder"
+            Background="Transparent"
+            CornerRadius="16"
+            ClipToBounds="True">
+        <Grid ColumnDefinitions="*,*">
+            <!-- 左侧：月历 -->
+            <Border x:Name="CalendarBackgroundBorder"
+                    Grid.Column="0"
+                    Padding="12"
+                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- 月份年份 -->
+                    <TextBlock x:Name="CalendarMonthYearTextBlock"
+                               Grid.Row="0"
+                               HorizontalAlignment="Center"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                               Margin="0,0,0,8" />
+                    
+                    <!-- 月历网格 -->
+                    <Grid x:Name="CalendarGrid"
+                          Grid.Row="1"
+                          RowDefinitions="Auto,*,*,*,*,*"
+                          ColumnDefinitions="*,*,*,*,*,*,*">
+                        <!-- 星期标题 -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="日" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="一" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="二" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="3" Text="三" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="4" Text="四" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="5" Text="五" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="6" Text="六" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- 右侧：今日详情 -->
+            <Border x:Name="TodayBackgroundBorder"
+                    Grid.Column="1"
+                    Background="{DynamicResource AdaptiveAccentBrush}"
+                    Padding="16">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- 今日标签 -->
+                    <TextBlock Grid.Row="0"
+                               Text="今天"
+                               HorizontalAlignment="Center"
+                               FontSize="11"
+                               FontWeight="Medium"
+                               Opacity="0.8"
+                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
+                    
+                    <!-- 日期数字 -->
+                    <TextBlock x:Name="TodayDayTextBlock"
+                               Grid.Row="1"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="56"
+                               FontWeight="Light"
+                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
+                    
+                    <!-- 星期 -->
+                    <TextBlock x:Name="TodayWeekdayTextBlock"
+                               Grid.Row="2"
+                               HorizontalAlignment="Center"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+
+</UserControl>

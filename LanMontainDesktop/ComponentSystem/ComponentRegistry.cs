@@ -29,14 +29,14 @@ public sealed class ComponentRegistry
                 MinWidthCells: 1,
                 MinHeightCells: 1,
                 AllowStatusBarPlacement: true,
-                AllowDesktopPlacement: true),
+                AllowDesktopPlacement: false),
             new DesktopComponentDefinition(
-                BuiltInComponentIds.Blank2x4,
-                "Blank 2x4",
-                "Rectangle",
-                "Layout",
-                MinWidthCells: 2,
-                MinHeightCells: 4,
+                BuiltInComponentIds.Date,
+                "Date",
+                "Calendar",
+                "Date",
+                MinWidthCells: 4,
+                MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true)
         };

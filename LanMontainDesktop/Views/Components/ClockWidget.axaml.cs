@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
@@ -14,6 +15,8 @@ public partial class ClockWidget : UserControl
         Interval = TimeSpan.FromSeconds(1)
     };
 
+    private TimeZoneService? _timeZoneService;
+
     public ClockWidget()
     {
         InitializeComponent();
@@ -21,6 +24,21 @@ public partial class ClockWidget : UserControl
         _timer.Tick += OnTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
+        UpdateClock();
+    }
+
+    /// <summary>
+    /// 设置时区服务
+    /// </summary>
+    public void SetTimeZoneService(TimeZoneService timeZoneService)
+    {
+        if (_timeZoneService != null)
+        {
+            _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
+        }
+
+        _timeZoneService = timeZoneService;
+        _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
         UpdateClock();
     }
 
@@ -40,9 +58,14 @@ public partial class ClockWidget : UserControl
         UpdateClock();
     }
 
+    private void OnTimeZoneChanged(object? sender, EventArgs e)
+    {
+        UpdateClock();
+    }
+
     private void UpdateClock()
     {
-        var now = DateTime.Now;
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         TimeTextBlock.Text = now.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
     }
 

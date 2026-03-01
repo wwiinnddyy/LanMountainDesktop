@@ -210,8 +210,6 @@
                                     </Border>
                                 </Grid>
 
-                                <Canvas x:Name="DesktopEditDragLayer"
-                                        IsHitTestVisible="False" />
                             </Grid>
                         </Border>
 
@@ -415,32 +413,32 @@
                                          SelectionChanged="OnSettingsNavSelectionChanged">
                                     <ListBoxItem x:Name="SettingsNavWallpaperItem" ToolTip.Tip="&#22721;&#32440;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <fi:SymbolIcon x:Name="SettingsNavWallpaperIcon" Symbol="Wallpaper" IconVariant="Regular" />
-                                            <TextBlock x:Name="SettingsNavWallpaperTextBlock" Text="&#22721;&#32440;" VerticalAlignment="Center" />
+                                            <fi:SymbolIcon Symbol="Image" IconVariant="Regular" />
+                                            <TextBlock Text="&#22721;&#32440;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavGridItem" ToolTip.Tip="&#32593;&#26684;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <fi:SymbolIcon x:Name="SettingsNavGridIcon" Symbol="Grid" IconVariant="Regular" />
-                                            <TextBlock x:Name="SettingsNavGridTextBlock" Text="&#32593;&#26684;" VerticalAlignment="Center" />
+                                            <fi:SymbolIcon Symbol="Grid" IconVariant="Regular" />
+                                            <TextBlock Text="&#32593;&#26684;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavColorItem" ToolTip.Tip="&#39068;&#33394;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <fi:SymbolIcon x:Name="SettingsNavColorIcon" Symbol="Color" IconVariant="Regular" />
-                                            <TextBlock x:Name="SettingsNavColorTextBlock" Text="&#39068;&#33394;" VerticalAlignment="Center" />
+                                            <fi:SymbolIcon Symbol="Color" IconVariant="Regular" />
+                                            <TextBlock Text="&#39068;&#33394;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavStatusBarItem" ToolTip.Tip="&#29366;&#24577;&#26639;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <fi:SymbolIcon x:Name="SettingsNavStatusBarIcon" Symbol="Status" IconVariant="Regular" />
-                                            <TextBlock x:Name="SettingsNavStatusBarTextBlock" Text="&#29366;&#24577;&#26639;" VerticalAlignment="Center" />
+                                            <fi:SymbolIcon Symbol="Clock" IconVariant="Regular" />
+                                            <TextBlock Text="&#29366;&#24577;&#26639;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavRegionItem" ToolTip.Tip="&#22320;&#21306;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <fi:SymbolIcon x:Name="SettingsNavRegionIcon" Symbol="Globe" IconVariant="Regular" />
-                                            <TextBlock x:Name="SettingsNavRegionTextBlock" Text="&#22320;&#21306;" VerticalAlignment="Center" />
+                                            <fi:SymbolIcon Symbol="Earth" IconVariant="Regular" />
+                                            <TextBlock Text="&#22320;&#21306;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                 </ListBox>
@@ -970,18 +968,6 @@
                                             </ComboBox>
                                         </ui:SettingsExpander.Footer>
                                     </ui:SettingsExpander>
-                                      <ui:SettingsExpander x:Name="TimeZoneSettingsExpander"
-                                                           Header="时区"
-                                                           Description="选择时区，时钟和日历将根据此时区显示时间。">
-                                          <ui:SettingsExpander.IconSource>
-  
-                                          </ui:SettingsExpander.IconSource>
-                                          <ui:SettingsExpander.Footer>
-                                              <ComboBox x:Name="TimeZoneComboBox"
-                                                        Width="280"
-                                                        SelectionChanged="OnTimeZoneSelectionChanged" />
-                                          </ui:SettingsExpander.Footer>
-                                      </ui:SettingsExpander>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -1039,89 +1025,20 @@
                         CornerRadius="12"
                         Padding="14">
                     <Grid>
-                        <!-- Category picker (outer) -->
-                        <Grid x:Name="ComponentLibraryCategoriesView">
-                            <Border x:Name="ComponentLibraryCategoryViewport"
-                                    Background="Transparent"
-                                    ClipToBounds="True"
-                                    PointerPressed="OnComponentLibraryCategoryViewportPointerPressed"
-                                    PointerMoved="OnComponentLibraryCategoryViewportPointerMoved"
-                                    PointerReleased="OnComponentLibraryCategoryViewportPointerReleased"
-                                    PointerCaptureLost="OnComponentLibraryCategoryViewportPointerCaptureLost">
-                                <Grid>
-                                    <Grid x:Name="ComponentLibraryCategoryPagesHost"
-                                          HorizontalAlignment="Left"
-                                          VerticalAlignment="Top">
-                                        <Grid.RenderTransform>
-                                            <TranslateTransform>
-                                                <TranslateTransform.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="X" Duration="0:0:0.22" />
-                                                    </Transitions>
-                                                </TranslateTransform.Transitions>
-                                            </TranslateTransform>
-                                        </Grid.RenderTransform>
+                        <ScrollViewer x:Name="ComponentLibraryItemsScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <WrapPanel x:Name="ComponentLibraryItemsPanel"
+                                       ItemWidth="190"
+                                       ItemHeight="104"
+                                       Orientation="Horizontal" />
+                        </ScrollViewer>
 
-                                        <Grid x:Name="ComponentLibraryCategoryPagesContainer" />
-                                    </Grid>
-
-                                    <TextBlock x:Name="ComponentLibraryEmptyTextBlock"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="No components." />
-                                </Grid>
-                            </Border>
-                        </Grid>
-
-                        <!-- Component picker (inner) -->
-                        <Grid x:Name="ComponentLibraryComponentsView"
-                              IsVisible="False"
-                              RowDefinitions="Auto,*"
-                              RowSpacing="10">
-                            <Button x:Name="ComponentLibraryBackButton"
-                                    Grid.Row="0"
-                                    HorizontalAlignment="Left"
-                                    Padding="8,6"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                    Click="OnComponentLibraryBackClick">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <fi:SymbolIcon Classes="icon-s" Symbol="ArrowLeft" IconVariant="Regular" />
-                                    <TextBlock x:Name="ComponentLibraryBackTextBlock"
-                                               VerticalAlignment="Center"
-                                               Text="Back" />
-                                </StackPanel>
-                            </Button>
-
-                            <Border x:Name="ComponentLibraryComponentViewport"
-                                    Grid.Row="1"
-                                    Background="Transparent"
-                                    ClipToBounds="True"
-                                    PointerPressed="OnComponentLibraryComponentViewportPointerPressed"
-                                    PointerMoved="OnComponentLibraryComponentViewportPointerMoved"
-                                    PointerReleased="OnComponentLibraryComponentViewportPointerReleased"
-                                    PointerCaptureLost="OnComponentLibraryComponentViewportPointerCaptureLost">
-                                <Grid>
-                                    <Grid x:Name="ComponentLibraryComponentPagesHost"
-                                          HorizontalAlignment="Left"
-                                          VerticalAlignment="Top">
-                                        <Grid.RenderTransform>
-                                            <TranslateTransform>
-                                                <TranslateTransform.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="X" Duration="0:0:0.22" />
-                                                    </Transitions>
-                                                </TranslateTransform.Transitions>
-                                            </TranslateTransform>
-                                        </Grid.RenderTransform>
-
-                                        <Grid x:Name="ComponentLibraryComponentPagesContainer" />
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </Grid>
+                        <TextBlock x:Name="ComponentLibraryEmptyTextBlock"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Text="&#26242;&#26080;&#32452;&#20214;&#65292;&#21518;&#32493;&#23558;&#22312;&#36825;&#37324;&#26174;&#31034;&#12290;" />
                     </Grid>
                 </Border>
             </Grid>

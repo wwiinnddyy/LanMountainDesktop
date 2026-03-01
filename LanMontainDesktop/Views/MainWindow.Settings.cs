@@ -71,6 +71,12 @@ public partial class MainWindow
         ColorSettingsPanel.IsVisible = selectedIndex == 2;
         StatusBarSettingsPanel.IsVisible = selectedIndex == 3;
         RegionSettingsPanel.IsVisible = selectedIndex == 4;
+
+        if (selectedIndex == 1)
+        {
+            UpdateGridPreviewLayout();
+        }
+
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
@@ -633,12 +639,14 @@ public partial class MainWindow
             WallpaperPlacement = GetPlacementDisplayName(GetSelectedWallpaperPlacement()),
             SettingsTabIndex = Math.Max(0, SettingsNavListBox?.SelectedIndex ?? 0),
             LanguageCode = _languageCode,
+            TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
             TaskbarLayoutMode = _taskbarLayoutMode,
             DesktopPageCount = _desktopPageCount,
-            CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex
+            CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex,
+            DesktopComponentPlacements = _desktopComponentPlacements.ToList()
         };
 
         _appSettingsService.Save(snapshot);
@@ -1028,16 +1036,7 @@ public partial class MainWindow
         {
             WallpaperPlacementSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
-                Symbol = Symbol.Image,
-                IconVariant = variant
-            };
-        }
-
-        if (GridSizeSettingsExpander is not null)
-        {
-            GridSizeSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
-            {
-                Symbol = Symbol.Grid,
+                Symbol = Symbol.Wallpaper,
                 IconVariant = variant
             };
         }
@@ -1064,7 +1063,16 @@ public partial class MainWindow
         {
             LanguageSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
-                Symbol = Symbol.Earth,
+                Symbol = Symbol.Translate,
+                IconVariant = variant
+            };
+        }
+
+        if (TimeZoneSettingsExpander is not null)
+        {
+            TimeZoneSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.GlobeClock,
                 IconVariant = variant
             };
         }

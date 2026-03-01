@@ -107,6 +107,11 @@ public partial class MainWindow
         Grid.SetColumnSpan(DesktopPagesViewport, gridMetrics.ColumnCount);
         DesktopPagesViewport.Width = pageWidth;
         DesktopPagesViewport.Height = pageHeight;
+        if (DesktopEditDragLayer is not null)
+        {
+            DesktopEditDragLayer.Width = pageWidth;
+            DesktopEditDragLayer.Height = pageHeight;
+        }
 
         DesktopPagesHost.RowDefinitions.Clear();
         DesktopPagesHost.RowDefinitions.Add(new RowDefinition(new GridLength(pageHeight, GridUnitType.Pixel)));
@@ -123,31 +128,35 @@ public partial class MainWindow
         DesktopPagesContainer.Children.Clear();
         DesktopPagesContainer.Width = pageWidth * _desktopPageCount;
         DesktopPagesContainer.Height = pageHeight;
+        _desktopPageComponentGrids.Clear();
         for (var index = 0; index < _desktopPageCount; index++)
         {
             DesktopPagesContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(pageWidth, GridUnitType.Pixel)));
-            var pageSurface = new Border
+
+            var pageGrid = new Grid
             {
+                Width = pageWidth,
+                Height = pageHeight,
                 Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(10)
+                ShowGridLines = false
             };
 
-            if (_desktopPageCount > 1)
+            for (var row = 0; row < viewportRowSpan; row++)
             {
-                pageSurface.Child = new TextBlock
-                {
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Top,
-                    Foreground = Foreground,
-                    Opacity = 0.72,
-                    Text = Lf("desktop.page_index_format", "Desktop {0}", index + 1)
-                };
+                pageGrid.RowDefinitions.Add(new RowDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
             }
 
-            Grid.SetColumn(pageSurface, index);
-            Grid.SetRow(pageSurface, 0);
-            DesktopPagesContainer.Children.Add(pageSurface);
+            for (var col = 0; col < gridMetrics.ColumnCount; col++)
+            {
+                pageGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
+            }
+
+            _desktopPageComponentGrids[index] = pageGrid;
+            RestoreDesktopPageComponents(index);
+
+            Grid.SetColumn(pageGrid, index);
+            Grid.SetRow(pageGrid, 0);
+            DesktopPagesContainer.Children.Add(pageGrid);
         }
 
         Grid.SetColumn(LauncherPagePanel, 1);
@@ -290,12 +299,17 @@ public partial class MainWindow
 
     private bool CanSwipeDesktopSurface()
     {
-        return !_isSettingsOpen && !_isComponentLibraryOpen && _desktopSurfacePageWidth > 1;
+        return !_isSettingsOpen && !_isDesktopComponentDragActive && _desktopSurfacePageWidth > 1;
     }
 
     private void OnDesktopPagesPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!CanSwipeDesktopSurface() || DesktopPagesViewport is null)
+        if (DesktopPagesViewport is null)
+        {
+            return;
+        }
+
+        if (!CanSwipeDesktopSurface())
         {
             return;
         }
@@ -326,6 +340,16 @@ public partial class MainWindow
 
         foreach (var node in visual.GetSelfAndVisualAncestors())
         {
+            if (node is Control control)
+            {
+                // Avoid swiping pages when interacting with desktop components/widgets.
+                if (control.Classes.Contains("desktop-component") ||
+                    control.Classes.Contains("desktop-component-host"))
+                {
+                    return true;
+                }
+            }
+
             if (node is Button or TextBox or ComboBox or ListBoxItem or Slider or ToggleSwitch)
             {
                 return true;

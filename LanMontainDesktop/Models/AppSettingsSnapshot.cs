@@ -18,6 +18,8 @@ public sealed class AppSettingsSnapshot
 
     public string LanguageCode { get; set; } = "zh-CN";
 
+    public string? TimeZoneId { get; set; }
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =
@@ -33,4 +35,6 @@ public sealed class AppSettingsSnapshot
     public int DesktopPageCount { get; set; } = 1;
 
     public int CurrentDesktopSurfaceIndex { get; set; } = 0;
+
+    public List<DesktopComponentPlacementSnapshot> DesktopComponentPlacements { get; set; } = [];
 }

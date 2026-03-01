@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using FluentAvalonia.UI.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Line = Avalonia.Controls.Shapes.Line;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
@@ -66,6 +68,7 @@ public partial class MainWindow : Window
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
+      private readonly TimeZoneService _timeZoneService = new();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
         .CreateDefault()
         .RegisterExtensions(
@@ -109,6 +112,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         PropertyChanged += OnWindowPropertyChanged;
+        InitializeDesktopComponentDragHandlers();
     }
 
     protected override void OnOpened(EventArgs e)
@@ -118,11 +122,19 @@ public partial class MainWindow : Window
         _suppressSettingsPersistence = true;
         var snapshot = _appSettingsService.Load();
 
+        if (!string.IsNullOrWhiteSpace(snapshot.TimeZoneId))
+        {
+            _timeZoneService.SetTimeZoneById(snapshot.TimeZoneId);
+        }
+
         _targetShortSideCells = Math.Clamp(
             snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
             MinShortSideCells,
             MaxShortSideCells);
         GridSizeNumberBox.Value = _targetShortSideCells;
+        GridSizeSlider.Value = _targetShortSideCells;
+        GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
+        GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
         SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 4);
         UpdateSettingsTabContent();
@@ -132,6 +144,7 @@ public partial class MainWindow : Window
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
         InitializeDesktopSurfaceState(snapshot);
+        InitializeDesktopComponentPlacements(snapshot);
         InitializeSettingsIcons();
 
         TryRestoreWallpaper(snapshot.WallpaperPath);
@@ -153,9 +166,11 @@ public partial class MainWindow : Window
         _settingsContentPanelTransform = SettingsContentPanel.RenderTransform as TranslateTransform;
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged += OnWallpaperPreviewHostSizeChanged;
+        GridPreviewHost.SizeChanged += OnGridPreviewHostSizeChanged;
         RebuildDesktopGrid();
-        PopulateComponentLibraryItems();
         LoadLauncherEntriesAsync();
+        InitializeTimeZoneSettings();
+        ClockWidget.SetTimeZoneService(_timeZoneService);
 
         _suppressSettingsPersistence = false;
         PersistSettings();
@@ -181,6 +196,9 @@ public partial class MainWindow : Window
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged -= OnWallpaperPreviewHostSizeChanged;
+        GridPreviewHost.SizeChanged -= OnGridPreviewHostSizeChanged;
+        GridSizeSlider.ValueChanged -= OnGridSizeSliderChanged;
+        GridSizeNumberBox.ValueChanged -= OnGridSizeNumberBoxChanged;
         base.OnClosed(e);
     }
 
@@ -202,6 +220,195 @@ public partial class MainWindow : Window
         UpdateWallpaperPreviewLayout();
     }
 
+    private void OnGridPreviewHostSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateGridPreviewLayout();
+    }
+
+    private void OnGridSizeSliderChanged(object? sender, RoutedEventArgs e)
+    {
+        var sliderValue = (int)Math.Round(GridSizeSlider.Value);
+        if (Math.Abs(GridSizeNumberBox.Value - sliderValue) > double.Epsilon)
+        {
+            GridSizeNumberBox.Value = sliderValue;
+        }
+        UpdateGridPreviewLayout();
+    }
+
+    private void OnGridSizeNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
+    {
+        var numberBoxValue = (int)Math.Round(GridSizeNumberBox.Value);
+        if (Math.Abs(GridSizeSlider.Value - numberBoxValue) > double.Epsilon)
+        {
+            GridSizeSlider.Value = numberBoxValue;
+        }
+        UpdateGridPreviewLayout();
+    }
+
+    private void UpdateGridPreviewLayout()
+    {
+        if (GridPreviewFrame is null ||
+            GridPreviewHost is null ||
+            GridPreviewViewport is null ||
+            GridPreviewGrid is null)
+        {
+            return;
+        }
+
+        var previewShortSideCells = (int)Math.Round(GridSizeSlider.Value);
+        if (previewShortSideCells < MinShortSideCells || previewShortSideCells > MaxShortSideCells)
+        {
+            previewShortSideCells = _targetShortSideCells;
+        }
+
+        var desktopWidth = Math.Max(1, DesktopHost.Bounds.Width);
+        var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
+        var aspectRatio = desktopWidth / desktopHeight;
+
+        var availableWidth = Math.Max(100, GridPreviewHost.Bounds.Width);
+        
+        var framePadding = GridPreviewFrame.Padding;
+        var horizontalPadding = framePadding.Left + framePadding.Right;
+        var verticalPadding = framePadding.Top + framePadding.Bottom;
+
+        var gridPreviewWidth = availableWidth;
+        var gridPreviewHeight = gridPreviewWidth / aspectRatio;
+
+        GridPreviewFrame.Width = gridPreviewWidth;
+        GridPreviewFrame.Height = gridPreviewHeight;
+
+        var innerWidth = Math.Max(1, gridPreviewWidth - horizontalPadding);
+        var innerHeight = Math.Max(1, gridPreviewHeight - verticalPadding);
+        var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells);
+        if (gridMetrics.CellSize <= 0)
+        {
+            return;
+        }
+
+        GridPreviewGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
+        GridPreviewGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
+
+        GridPreviewGrid.RowDefinitions.Clear();
+        GridPreviewGrid.ColumnDefinitions.Clear();
+
+        for (var row = 0; row < gridMetrics.RowCount; row++)
+        {
+            GridPreviewGrid.RowDefinitions.Add(
+                new RowDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
+        }
+
+        for (var col = 0; col < gridMetrics.ColumnCount; col++)
+        {
+            GridPreviewGrid.ColumnDefinitions.Add(
+                new ColumnDefinition(new GridLength(gridMetrics.CellSize, GridUnitType.Pixel)));
+        }
+
+        PlaceStatusBarComponent(
+            GridPreviewTopStatusBarHost,
+            column: 0,
+            requestedColumnSpan: gridMetrics.ColumnCount,
+            totalColumns: gridMetrics.ColumnCount);
+
+        var taskbarRow = gridMetrics.RowCount - 1;
+        Grid.SetRow(GridPreviewBottomTaskbarContainer, taskbarRow);
+        Grid.SetColumn(GridPreviewBottomTaskbarContainer, 0);
+        Grid.SetRowSpan(GridPreviewBottomTaskbarContainer, 1);
+        Grid.SetColumnSpan(GridPreviewBottomTaskbarContainer, gridMetrics.ColumnCount);
+
+        ApplyGridPreviewWidgetSizing(gridMetrics.CellSize);
+
+        GridInfoTextBlock.Text = Lf(
+            "settings.grid.info_format",
+            "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
+            gridMetrics.ColumnCount,
+            gridMetrics.RowCount,
+            gridMetrics.CellSize);
+
+        DrawGridPreviewLines(gridMetrics);
+    }
+
+    private void DrawGridPreviewLines(GridMetrics gridMetrics)
+    {
+        if (GridPreviewLinesCanvas is null || GridPreviewViewport is null || GridPreviewGrid is null)
+        {
+            return;
+        }
+
+        var viewportBackground = GridPreviewViewport.Background as SolidColorBrush;
+        var backgroundColor = viewportBackground?.Color ?? Color.Parse("#30111827");
+        var luminance = CalculateRelativeLuminance(backgroundColor);
+        var lineColor = luminance >= LightBackgroundLuminanceThreshold 
+            ? Color.Parse("#80000000") 
+            : Color.Parse("#80FFFFFF");
+
+        GridPreviewLinesCanvas.Children.Clear();
+        
+        var cellSize = gridMetrics.CellSize;
+        var gridWidth = gridMetrics.ColumnCount * cellSize;
+        var gridHeight = gridMetrics.RowCount * cellSize;
+        
+        GridPreviewLinesCanvas.Width = gridWidth;
+        GridPreviewLinesCanvas.Height = gridHeight;
+        
+        Canvas.SetLeft(GridPreviewLinesCanvas, 0);
+        Canvas.SetTop(GridPreviewLinesCanvas, 0);
+
+        var dashLength = cellSize * 0.3;
+        var gapLength = cellSize * 0.2;
+
+        for (var row = 0; row <= gridMetrics.RowCount; row++)
+        {
+            var y = row * cellSize;
+            var line = new Line
+            {
+                StartPoint = new Point(0, y),
+                EndPoint = new Point(gridWidth, y),
+                Stroke = new SolidColorBrush(lineColor),
+                StrokeThickness = 1,
+                StrokeDashArray = new Avalonia.Collections.AvaloniaList<double> { dashLength, gapLength },
+                IsHitTestVisible = false
+            };
+            GridPreviewLinesCanvas.Children.Add(line);
+        }
+
+        for (var col = 0; col <= gridMetrics.ColumnCount; col++)
+        {
+            var x = col * cellSize;
+            var line = new Line
+            {
+                StartPoint = new Point(x, 0),
+                EndPoint = new Point(x, gridHeight),
+                Stroke = new SolidColorBrush(lineColor),
+                StrokeThickness = 1,
+                StrokeDashArray = new Avalonia.Collections.AvaloniaList<double> { dashLength, gapLength },
+                IsHitTestVisible = false
+            };
+            GridPreviewLinesCanvas.Children.Add(line);
+        }
+    }
+
+    private void ApplyGridPreviewWidgetSizing(double cellSize)
+    {
+        var margin = Math.Clamp(cellSize * 0.08, 1, 6);
+        var previewTaskbarCell = Math.Clamp(cellSize, 10, 36);
+        var iconSize = Math.Clamp(cellSize * 0.35, 8, 16);
+        
+        GridPreviewTopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1, 4));
+        GridPreviewBottomTaskbarContainer.Margin = new Thickness(margin);
+        GridPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.22, 4, 10));
+        GridPreviewBottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 1, 4));
+
+        GridPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
+        GridPreviewComponentLibraryTextBlock.FontSize = Math.Clamp(cellSize * 0.18, 5, 12);
+        GridPreviewComponentLibraryIcon.FontSize = iconSize;
+        GridPreviewBackButtonVisual.MinHeight = previewTaskbarCell;
+        GridPreviewBackButtonVisual.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
+        GridPreviewComponentLibraryVisual.MinHeight = previewTaskbarCell;
+        GridPreviewComponentLibraryVisual.MinWidth = Math.Clamp(cellSize * 2.0, 28, 110);
+        GridPreviewSettingsButtonIcon.Width = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
+        GridPreviewSettingsButtonIcon.Height = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
+    }
+
     private void OnApplyGridSizeClick(object? sender, RoutedEventArgs e)
     {
         var requested = (int)Math.Round(GridSizeNumberBox.Value);
@@ -217,7 +424,13 @@ public partial class MainWindow : Window
             GridSizeNumberBox.Value = _targetShortSideCells;
         }
 
+        if (Math.Abs(GridSizeSlider.Value - _targetShortSideCells) > double.Epsilon)
+        {
+            GridSizeSlider.Value = _targetShortSideCells;
+        }
+
         RebuildDesktopGrid();
+        PersistSettings();
     }
 
     private void RebuildDesktopGrid()
@@ -328,6 +541,8 @@ public partial class MainWindow : Window
         var verticalPadding = Math.Clamp(cellSize * 0.08, 2, 12);
         var horizontalPadding = Math.Clamp(cellSize * 0.20, 4, 22);
         var taskbarCell = Math.Clamp(cellSize, 28, 128);
+        var unifiedFontSize = Math.Clamp(cellSize * 0.22, 8, 22);
+        var unifiedIconSize = Math.Clamp(cellSize * 0.28, 10, 26);
 
         TopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1.5, 10));
         ClockWidget.Margin = new Thickness(margin);
@@ -339,24 +554,29 @@ public partial class MainWindow : Window
 
         BackToWindowsButton.Margin = new Thickness(0);
         BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-        BackToWindowsButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
+        BackToWindowsButton.FontSize = unifiedFontSize;
         BackToWindowsButton.MinHeight = taskbarCell;
         BackToWindowsButton.MinWidth = Math.Clamp(cellSize * 2.3, 90, 320);
+        BackToWindowsIcon.FontSize = unifiedIconSize;
+        
         OpenComponentLibraryButton.Margin = new Thickness(0);
         OpenComponentLibraryButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-        OpenComponentLibraryButton.FontSize = Math.Clamp(cellSize * 0.22, 8, 22);
+        OpenComponentLibraryButton.FontSize = unifiedFontSize;
         OpenComponentLibraryButton.MinHeight = taskbarCell;
         OpenComponentLibraryButton.MinWidth = Math.Clamp(cellSize * 2.0, 88, 300);
+        OpenComponentLibraryIcon.FontSize = unifiedIconSize;
 
         OpenSettingsButton.Margin = new Thickness(0);
         OpenSettingsButton.Height = taskbarCell;
         OpenSettingsButton.MinHeight = taskbarCell;
+        OpenSettingsIcon.FontSize = unifiedIconSize;
 
         if (_isSettingsOpen)
         {
             OpenSettingsButton.Width = double.NaN;
             OpenSettingsButton.MinWidth = Math.Clamp(cellSize * 2.3, 120, 340);
             OpenSettingsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
+            OpenSettingsButton.FontSize = unifiedFontSize;
         }
         else
         {
@@ -435,21 +655,23 @@ public partial class MainWindow : Window
             var desktopHeight = Math.Max(1, DesktopHost.Bounds.Height);
             var aspectRatio = desktopWidth / desktopHeight;
 
-            // Use the host width (which is roughly 50% of the settings area)
-            // Subtract padding for the outer host container if needed, but let it stretch
             var availableWidth = Math.Max(100, WallpaperPreviewHost.Bounds.Width);
             
-            // Calculate height based on aspect ratio
+            var framePadding = WallpaperPreviewFrame.Padding;
+            var horizontalPadding = framePadding.Left + framePadding.Right;
+            var verticalPadding = framePadding.Top + framePadding.Bottom;
+
             var previewWidth = availableWidth;
             var previewHeight = previewWidth / aspectRatio;
 
-            // Apply sizes to the monitor frame
             WallpaperPreviewFrame.Width = previewWidth;
             WallpaperPreviewFrame.Height = previewHeight;
 
             WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
 
-            var gridMetrics = CalculateGridMetrics(previewWidth, previewHeight, _targetShortSideCells);
+            var innerWidth = Math.Max(1, previewWidth - horizontalPadding);
+            var innerHeight = Math.Max(1, previewHeight - verticalPadding);
+            var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells);
             if (gridMetrics.CellSize <= 0)
             {
                 return;
@@ -542,4 +764,44 @@ public partial class MainWindow : Window
             }
         });
     }
-}
+
+      private void InitializeTimeZoneSettings()
+      {
+        // 填充时区下拉框
+        TimeZoneComboBox.Items.Clear();
+        var timeZones = _timeZoneService.GetAllTimeZones();
+        foreach (var tz in timeZones)
+        {
+            var displayText = _timeZoneService.GetTimeZoneDisplayName(tz);
+            var item = new ComboBoxItem
+            {
+                Content = displayText,
+                Tag = tz.Id
+            };
+            TimeZoneComboBox.Items.Add(item);
+
+            // 选中当前时区
+            if (tz.Id == _timeZoneService.CurrentTimeZone.Id)
+            {
+                TimeZoneComboBox.SelectedItem = item;
+            }
+        }
+      }
+
+      private void OnTimeZoneSelectionChanged(object? sender, SelectionChangedEventArgs e)
+      {
+        if (_suppressLanguageSelectionEvents || TimeZoneComboBox.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+
+        var timeZoneId = item.Tag?.ToString();
+        if (string.IsNullOrEmpty(timeZoneId))
+        {
+            return;
+        }
+
+        _timeZoneService.SetTimeZoneById(timeZoneId);
+        PersistSettings();
+      }
+  }

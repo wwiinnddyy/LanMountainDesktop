@@ -59,14 +59,15 @@ public partial class MainWindow
         WallpaperPreviewBackButtonTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         ToolTip.SetTip(BackToWindowsButton, L("tooltip.back_to_windows", "Back to Windows"));
 
-        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Component Library");
-        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Component Library");
-        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "Component Library"));
-        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Component Library");
+        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        GridPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "Edit Desktop"));
+        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Edit Desktop");
         ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "Close"));
         ComponentLibraryEmptyTextBlock.Text = L(
             "component_library.empty",
-            "No components yet. Components will appear here later.");
+            "Swipe to pick a category, tap to open, then drag a widget onto the desktop.");
 
         LauncherTitleTextBlock.Text = L("launcher.title", "应用启动台");
         LauncherSubtitleTextBlock.Text = L("launcher.subtitle", "按 Windows 开始菜单结构显示所有应用与文件夹");
@@ -74,21 +75,19 @@ public partial class MainWindow
         ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "关闭"));
 
         SettingsNavHeaderTextBlock.Text = L("settings.nav_header", "Settings");
-        SettingsNavWallpaperItem.Content = L("settings.nav.wallpaper", "Wallpaper");
-        SettingsNavGridItem.Content = L("settings.nav.grid", "Grid");
-        SettingsNavColorItem.Content = L("settings.nav.color", "Color");
-        SettingsNavStatusBarItem.Content = L("settings.nav.status_bar", "Status Bar");
-        SettingsNavRegionItem.Content = L("settings.nav.region", "Region");
+        SettingsNavWallpaperTextBlock.Text = L("settings.nav.wallpaper", "Wallpaper");
+        SettingsNavGridTextBlock.Text = L("settings.nav.grid", "Grid");
+        SettingsNavColorTextBlock.Text = L("settings.nav.color", "Color");
+        SettingsNavStatusBarTextBlock.Text = L("settings.nav.status_bar", "Status Bar");
+        SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
 
-        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "个性化您的背景");
-        WallpaperPanelDescriptionTextBlock.Text = L("settings.wallpaper.description", "选择图片或视频");
+        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "个性化我们的背景");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "选择契合度");
         WallpaperPlacementSettingsExpander.Description = L("settings.wallpaper.placement_desc", "调整图像在桌面上的填充方式。");
         PickWallpaperButton.Content = L("settings.wallpaper.pick_button", "浏览照片");
         ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "重置");
 
         GridPanelTitleTextBlock.Text = L("settings.grid.title", "Grid Layout");
-        ApplyGridButton.Content = L("settings.grid.apply_button", "Apply");
 
         ColorPanelTitleTextBlock.Text = L("settings.color.title", "Color");
         ThemeModeSettingsExpander.Header = L("settings.color.day_night_label", "Day/Night");
@@ -123,7 +122,7 @@ public partial class MainWindow
             DesktopGrid.RowDefinitions.Count,
             DesktopGrid.RowDefinitions.Count > 0 ? DesktopGrid.RowDefinitions[0].Height.Value : 0d);
 
-        PopulateComponentLibraryItems();
+        BuildComponentLibraryCategoryPages();
         RenderLauncherRootTiles();
         UpdateOpenSettingsActionVisualState();
         UpdateWallpaperDisplay();
