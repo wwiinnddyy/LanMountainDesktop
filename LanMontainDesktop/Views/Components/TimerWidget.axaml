@@ -1,0 +1,160 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="320"
+             d:DesignHeight="320"
+             x:Class="LanMontainDesktop.Views.Components.TimerWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            ClipToBounds="True"
+            Padding="14"
+            Background="#E8EAEE">
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="LayoutRoot"
+                  Width="300"
+                  Height="300">
+                <Border x:Name="TimerPanelBorder"
+                        Width="224"
+                        Height="224"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        CornerRadius="32"
+                        BorderThickness="1">
+                    <Grid ColumnDefinitions="96,2,*">
+                        <Grid Grid.Column="0"
+                              Margin="18,18,8,18"
+                              RowDefinitions="Auto,Auto,Auto,Auto,*">
+                            <TextBlock x:Name="TopNumberTextBlock"
+                                       Grid.Row="0"
+                                       Text="60"
+                                       FontSize="38"
+                                       FontWeight="SemiBold"
+                                       Foreground="#AEB4C1"
+                                       Margin="0,0,0,10" />
+                            <TextBlock x:Name="MainNumberTextBlock"
+                                       Grid.Row="1"
+                                       Text="0"
+                                       FontSize="64"
+                                       FontWeight="Bold"
+                                       Foreground="#0F141C" />
+                            <TextBlock x:Name="NextNumberTextBlock"
+                                       Grid.Row="2"
+                                       Text="1"
+                                       FontSize="34"
+                                       FontWeight="Medium"
+                                       Foreground="#B2B8C4"
+                                       Margin="0,8,0,0" />
+                            <TextBlock x:Name="NextNextNumberTextBlock"
+                                       Grid.Row="3"
+                                       Text="2"
+                                       FontSize="26"
+                                       FontWeight="Medium"
+                                       Foreground="#C8CDD7"
+                                       Margin="0,2,0,0" />
+                        </Grid>
+
+                        <Border x:Name="CenterDivider"
+                                Grid.Column="1"
+                                Width="2"
+                                Margin="0,12"
+                                Background="#D5DAE3" />
+
+                        <Grid Grid.Column="2"
+                              Margin="10,18,16,16"
+                              RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                            <Border x:Name="ScaleMark1"
+                                    Grid.Row="0"
+                                    Height="3"
+                                    Width="18"
+                                    CornerRadius="2"
+                                    HorizontalAlignment="Left"
+                                    Background="#D0D6E1" />
+                            <Border x:Name="ScaleMark2"
+                                    Grid.Row="1"
+                                    Height="3"
+                                    Width="16"
+                                    CornerRadius="2"
+                                    Margin="0,18,0,0"
+                                    HorizontalAlignment="Left"
+                                    Background="#D0D6E1" />
+                            <Border x:Name="ScaleMark3"
+                                    Grid.Row="2"
+                                    Height="3"
+                                    Width="14"
+                                    CornerRadius="2"
+                                    Margin="0,18,0,0"
+                                    HorizontalAlignment="Left"
+                                    Background="#D0D6E1" />
+                            <Border x:Name="ScaleMark4"
+                                    Grid.Row="3"
+                                    Height="3"
+                                    Width="12"
+                                    CornerRadius="2"
+                                    Margin="0,18,0,0"
+                                    HorizontalAlignment="Left"
+                                    Background="#D0D6E1" />
+
+                            <Border x:Name="PlayButtonBorder"
+                                    Grid.Row="5"
+                                    Width="42"
+                                    Height="42"
+                                    CornerRadius="21"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Background="#00000000"
+                                    BorderBrush="#D3D9E4"
+                                    BorderThickness="2"
+                                    Cursor="Hand">
+                                <Viewbox Width="16"
+                                         Height="16"
+                                         Stretch="Uniform">
+                                    <Path x:Name="PlayIconPath"
+                                          Data="M 0,0 L 0,14 L 11,7 Z"
+                                          Fill="#98A2B8"
+                                          Stretch="Uniform" />
+                                </Viewbox>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Canvas Width="224"
+                        Height="224"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        IsHitTestVisible="False">
+                    <Line x:Name="HandGlowLine"
+                          StartPoint="112,112"
+                          EndPoint="186,112"
+                          Stroke="#FF7A78"
+                          StrokeThickness="9"
+                          Opacity="0.20"
+                          StrokeLineCap="Round" />
+                    <Line x:Name="HandLine"
+                          StartPoint="112,112"
+                          EndPoint="180,112"
+                          Stroke="#FF4D63"
+                          StrokeThickness="6"
+                          StrokeLineCap="Round" />
+                    <Ellipse x:Name="CenterDotRing"
+                             Width="22"
+                             Height="22"
+                             Fill="#FDFEFF"
+                             Stroke="#E3E8F0"
+                             StrokeThickness="2"
+                             Canvas.Left="101"
+                             Canvas.Top="101" />
+                    <Ellipse x:Name="CenterDotCore"
+                             Width="8"
+                             Height="8"
+                             Fill="#FF4D63"
+                             Canvas.Left="108"
+                             Canvas.Top="108" />
+                </Canvas>
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>

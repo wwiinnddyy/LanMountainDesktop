@@ -1163,11 +1163,11 @@
                 Classes="glass-strong"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
-                Width="520"
-                MinWidth="360"
-                MaxWidth="720"
-                Height="260"
-                MinHeight="220"
+                Width="620"
+                MinWidth="420"
+                MaxWidth="860"
+                Height="320"
+                MinHeight="260"
                 Margin="24,24,24,100"
                 CornerRadius="36"
                 Padding="14"
@@ -1211,37 +1211,26 @@
                     <Grid>
                         <!-- Category picker (outer) -->
                         <Grid x:Name="ComponentLibraryCategoriesView">
-                            <Border x:Name="ComponentLibraryCategoryViewport"
-                                    Background="Transparent"
-                                    ClipToBounds="True"
-                                    PointerPressed="OnComponentLibraryCategoryViewportPointerPressed"
-                                    PointerMoved="OnComponentLibraryCategoryViewportPointerMoved"
-                                    PointerReleased="OnComponentLibraryCategoryViewportPointerReleased"
-                                    PointerCaptureLost="OnComponentLibraryCategoryViewportPointerCaptureLost">
-                                <Grid>
-                                    <Grid x:Name="ComponentLibraryCategoryPagesHost"
-                                          HorizontalAlignment="Left"
-                                          VerticalAlignment="Top">
-                                        <Grid.RenderTransform>
-                                            <TranslateTransform>
-                                                <TranslateTransform.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="X" Duration="0:0:0.22" />
-                                                    </Transitions>
-                                                </TranslateTransform.Transitions>
-                                            </TranslateTransform>
-                                        </Grid.RenderTransform>
+                            <Grid RowDefinitions="*">
+                                <Border x:Name="ComponentLibraryCategoryViewport"
+                                        Background="Transparent"
+                                        ClipToBounds="True">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <Grid x:Name="ComponentLibraryCategoryPagesHost"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Top">
+                                            <Grid x:Name="ComponentLibraryCategoryPagesContainer" />
+                                        </Grid>
+                                    </ScrollViewer>
+                                </Border>
 
-                                        <Grid x:Name="ComponentLibraryCategoryPagesContainer" />
-                                    </Grid>
-
-                                    <TextBlock x:Name="ComponentLibraryEmptyTextBlock"
-                                               VerticalAlignment="Center"
-                                               HorizontalAlignment="Center"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="No components." />
-                                </Grid>
-                            </Border>
+                                <TextBlock x:Name="ComponentLibraryEmptyTextBlock"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           Text="No components." />
+                            </Grid>
                         </Grid>
 
                         <!-- Component picker (inner) -->
@@ -1265,32 +1254,64 @@
                                 </StackPanel>
                             </Button>
 
-                            <Border x:Name="ComponentLibraryComponentViewport"
-                                    Grid.Row="1"
-                                    Background="Transparent"
-                                    ClipToBounds="True"
-                                    PointerPressed="OnComponentLibraryComponentViewportPointerPressed"
-                                    PointerMoved="OnComponentLibraryComponentViewportPointerMoved"
-                                    PointerReleased="OnComponentLibraryComponentViewportPointerReleased"
-                                    PointerCaptureLost="OnComponentLibraryComponentViewportPointerCaptureLost">
-                                <Grid>
-                                    <Grid x:Name="ComponentLibraryComponentPagesHost"
-                                          HorizontalAlignment="Left"
-                                          VerticalAlignment="Top">
-                                        <Grid.RenderTransform>
-                                            <TranslateTransform>
-                                                <TranslateTransform.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="X" Duration="0:0:0.22" />
-                                                    </Transitions>
-                                                </TranslateTransform.Transitions>
-                                            </TranslateTransform>
-                                        </Grid.RenderTransform>
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8">
+                                <Button x:Name="ComponentLibraryPrevComponentButton"
+                                        Grid.Column="0"
+                                        Width="36"
+                                        Height="36"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="18"
+                                        Click="OnComponentLibraryPrevComponentClick"
+                                        IsVisible="False">
+                                    <fi:SymbolIcon Symbol="ChevronLeft"
+                                                   IconVariant="Regular" />
+                                </Button>
 
-                                        <Grid x:Name="ComponentLibraryComponentPagesContainer" />
+                                <Border x:Name="ComponentLibraryComponentViewport"
+                                        Grid.Column="1"
+                                        Background="Transparent"
+                                        ClipToBounds="True"
+                                        PointerPressed="OnComponentLibraryComponentViewportPointerPressed"
+                                        PointerMoved="OnComponentLibraryComponentViewportPointerMoved"
+                                        PointerReleased="OnComponentLibraryComponentViewportPointerReleased"
+                                        PointerCaptureLost="OnComponentLibraryComponentViewportPointerCaptureLost">
+                                    <Grid>
+                                        <Grid x:Name="ComponentLibraryComponentPagesHost"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Top">
+                                            <Grid.RenderTransform>
+                                                <TranslateTransform>
+                                                    <TranslateTransform.Transitions>
+                                                        <Transitions>
+                                                            <DoubleTransition Property="X" Duration="0:0:0.22" />
+                                                        </Transitions>
+                                                    </TranslateTransform.Transitions>
+                                                </TranslateTransform>
+                                            </Grid.RenderTransform>
+
+                                            <Grid x:Name="ComponentLibraryComponentPagesContainer" />
+                                        </Grid>
                                     </Grid>
-                                </Grid>
-                            </Border>
+                                </Border>
+
+                                <Button x:Name="ComponentLibraryNextComponentButton"
+                                        Grid.Column="2"
+                                        Width="36"
+                                        Height="36"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        CornerRadius="18"
+                                        Click="OnComponentLibraryNextComponentClick"
+                                        IsVisible="False">
+                                    <fi:SymbolIcon Symbol="ChevronRight"
+                                                   IconVariant="Regular" />
+                                </Button>
+                            </Grid>
                         </Grid>
                     </Grid>
                 </Border>

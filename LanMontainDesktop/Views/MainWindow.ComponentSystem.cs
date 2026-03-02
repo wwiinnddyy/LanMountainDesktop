@@ -1065,6 +1065,21 @@ public partial class MainWindow
             return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopClock, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopTimer, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.HolidayCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
         return (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells));
     }
 
@@ -1075,6 +1090,9 @@ public partial class MainWindow
             BuiltInComponentIds.Date => 16,
             BuiltInComponentIds.MonthCalendar => Math.Clamp(_currentDesktopCellSize * 0.26, 10, 22),
             BuiltInComponentIds.LunarCalendar => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 26),
+            BuiltInComponentIds.DesktopClock => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 28),
+            BuiltInComponentIds.DesktopTimer => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 28),
+            BuiltInComponentIds.HolidayCalendar => Math.Clamp(_currentDesktopCellSize * 0.32, 12, 28),
             _ => Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18)
         };
     }
@@ -1175,6 +1193,32 @@ public partial class MainWindow
         if (componentId == BuiltInComponentIds.LunarCalendar)
         {
             var widget = new LunarCalendarWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(_currentDesktopCellSize);
+            widget.Classes.Add(DesktopComponentClass);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.DesktopClock)
+        {
+            var widget = new AnalogClockWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(_currentDesktopCellSize);
+            widget.Classes.Add(DesktopComponentClass);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.DesktopTimer)
+        {
+            var widget = new TimerWidget();
+            widget.ApplyCellSize(_currentDesktopCellSize);
+            widget.Classes.Add(DesktopComponentClass);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.HolidayCalendar)
+        {
+            var widget = new HolidayCalendarWidget();
             widget.SetTimeZoneService(_timeZoneService);
             widget.ApplyCellSize(_currentDesktopCellSize);
             widget.Classes.Add(DesktopComponentClass);
@@ -1911,36 +1955,17 @@ public partial class MainWindow
         ComponentLibraryCategoryPagesContainer.Children.Clear();
         ComponentLibraryCategoryPagesContainer.RowDefinitions.Clear();
         ComponentLibraryCategoryPagesContainer.ColumnDefinitions.Clear();
+        ComponentLibraryCategoryPagesContainer.Width = double.NaN;
+        ComponentLibraryCategoryPagesContainer.Height = double.NaN;
+        ComponentLibraryCategoryPagesHost.Width = double.NaN;
+        ComponentLibraryCategoryPagesHost.Height = double.NaN;
+
         if (categoryCount == 0)
         {
             _componentLibraryCategoryIndex = 0;
             _componentLibraryActiveCategoryId = null;
+            UpdateComponentLibraryComponentNavigationButtons();
             return;
-        }
-
-        var viewportWidth = ComponentLibraryCategoryViewport.Bounds.Width;
-        if (viewportWidth <= 1 && ComponentLibraryWindow is not null)
-        {
-            viewportWidth = Math.Max(1, ComponentLibraryWindow.Bounds.Width - 48);
-        }
-
-        var viewportHeight = ComponentLibraryCategoryViewport.Bounds.Height;
-        if (viewportHeight <= 1 && ComponentLibraryWindow is not null)
-        {
-            viewportHeight = Math.Max(1, ComponentLibraryWindow.Bounds.Height - 120);
-        }
-
-        _componentLibraryCategoryPageWidth = Math.Max(1, viewportWidth);
-        ComponentLibraryCategoryPagesHost.Width = _componentLibraryCategoryPageWidth * categoryCount;
-        ComponentLibraryCategoryPagesHost.Height = viewportHeight;
-        ComponentLibraryCategoryPagesContainer.Width = ComponentLibraryCategoryPagesHost.Width;
-        ComponentLibraryCategoryPagesContainer.Height = viewportHeight;
-
-        ComponentLibraryCategoryPagesContainer.RowDefinitions.Add(new RowDefinition(new GridLength(viewportHeight, GridUnitType.Pixel)));
-        for (var i = 0; i < categoryCount; i++)
-        {
-            ComponentLibraryCategoryPagesContainer.ColumnDefinitions.Add(
-                new ColumnDefinition(new GridLength(_componentLibraryCategoryPageWidth, GridUnitType.Pixel)));
         }
 
         if (!string.IsNullOrWhiteSpace(_componentLibraryActiveCategoryId))
@@ -1959,71 +1984,65 @@ public partial class MainWindow
 
         _componentLibraryActiveCategoryId = _componentLibraryCategories[_componentLibraryCategoryIndex].Id;
 
+        ComponentLibraryCategoryPagesContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
         for (var i = 0; i < categoryCount; i++)
         {
             var category = _componentLibraryCategories[i];
-            var page = new Grid
+            var isSelected = i == _componentLibraryCategoryIndex;
+            var row = new RowDefinition(GridLength.Auto);
+            ComponentLibraryCategoryPagesContainer.RowDefinitions.Add(row);
+
+            var icon = new SymbolIcon
             {
-                Width = _componentLibraryCategoryPageWidth,
-                Height = viewportHeight,
-                Background = Brushes.Transparent
+                Symbol = category.Icon,
+                IconVariant = IconVariant.Regular,
+                FontSize = 18,
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            var cardWidth = Math.Clamp(_componentLibraryCategoryPageWidth * 0.64, 160, 260);
-            var cardHeight = Math.Clamp(viewportHeight * 0.70, 140, 220);
-
-            var iconSize = Math.Clamp(cardHeight * 0.34, 30, 56);
-
-            var card = new Border
+            var title = new TextBlock
             {
-                Classes = { "glass-panel" },
-                Width = cardWidth,
-                Height = cardHeight,
-                CornerRadius = new CornerRadius(36),
-                Padding = new Thickness(18),
-                HorizontalAlignment = HorizontalAlignment.Center,
+                Text = category.Title,
+                FontSize = 15,
+                FontWeight = isSelected ? FontWeight.Bold : FontWeight.SemiBold,
+                Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new StackPanel
-                {
-                    Spacing = 12,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children =
-                    {
-                        new SymbolIcon
-                        {
-                            Symbol = category.Icon,
-                            IconVariant = IconVariant.Regular,
-                            FontSize = iconSize,
-                            HorizontalAlignment = HorizontalAlignment.Center
-                        },
-                        new TextBlock
-                        {
-                            Text = category.Title,
-                            FontSize = Math.Clamp(cardHeight * 0.14, 12, 18),
-                            FontWeight = FontWeight.SemiBold,
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush")
-                        }
-                    }
-                }
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
 
-            page.Children.Add(card);
+            var contentGrid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+                ColumnSpacing = 10,
+                Children = { icon, title }
+            };
+            Grid.SetColumn(icon, 0);
+            Grid.SetColumn(title, 1);
 
-            Grid.SetRow(page, 0);
-            Grid.SetColumn(page, i);
-            ComponentLibraryCategoryPagesContainer.Children.Add(page);
+            var itemButton = new Button
+            {
+                Tag = i,
+                Margin = new Thickness(0, 0, 0, i < categoryCount - 1 ? 8 : 0),
+                Padding = new Thickness(12, 10),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Background = isSelected
+                    ? GetThemeBrush("AdaptiveNavItemSelectedBackgroundBrush")
+                    : GetThemeBrush("AdaptiveNavItemBackgroundBrush"),
+                BorderBrush = GetThemeBrush("AdaptiveButtonBorderBrush"),
+                BorderThickness = new Thickness(isSelected ? 1.5 : 1),
+                Content = contentGrid
+            };
+            itemButton.Click += OnComponentLibraryCategoryItemClick;
+
+            Grid.SetRow(itemButton, i);
+            Grid.SetColumn(itemButton, 0);
+            ComponentLibraryCategoryPagesContainer.Children.Add(itemButton);
         }
 
-        _componentLibraryCategoryHostTransform = ComponentLibraryCategoryPagesHost.RenderTransform as TranslateTransform;
-        if (_componentLibraryCategoryHostTransform is null)
-        {
-            _componentLibraryCategoryHostTransform = new TranslateTransform();
-            ComponentLibraryCategoryPagesHost.RenderTransform = _componentLibraryCategoryHostTransform;
-        }
-
-        ApplyComponentLibraryCategoryOffset();
+        _componentLibraryCategoryHostTransform = null;
+        _componentLibraryCategoryPageWidth = 0;
 
         if (ComponentLibraryBackTextBlock is not null)
         {
@@ -2063,6 +2082,11 @@ public partial class MainWindow
 
     private Symbol ResolveComponentLibraryCategoryIcon(string categoryId)
     {
+        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Clock;
+        }
+
         if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
         {
             return Symbol.CalendarDate;
@@ -2073,6 +2097,11 @@ public partial class MainWindow
 
     private string GetLocalizedComponentLibraryCategoryTitle(string categoryId)
     {
+        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.clock", "Clock");
+        }
+
         if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.date", "Calendar");
@@ -2099,6 +2128,31 @@ public partial class MainWindow
         }
 
         _componentLibraryComponentHostTransform.X = -_componentLibraryComponentIndex * _componentLibraryComponentPageWidth;
+        UpdateComponentLibraryComponentNavigationButtons();
+    }
+
+    private void UpdateComponentLibraryComponentNavigationButtons()
+    {
+        if (ComponentLibraryPrevComponentButton is null || ComponentLibraryNextComponentButton is null)
+        {
+            return;
+        }
+
+        var maxIndex = Math.Max(0, _componentLibraryActiveComponents.Count - 1);
+        var hasMultiplePages = maxIndex > 0;
+
+        ComponentLibraryPrevComponentButton.IsVisible = hasMultiplePages;
+        ComponentLibraryNextComponentButton.IsVisible = hasMultiplePages;
+
+        if (!hasMultiplePages)
+        {
+            ComponentLibraryPrevComponentButton.IsEnabled = false;
+            ComponentLibraryNextComponentButton.IsEnabled = false;
+            return;
+        }
+
+        ComponentLibraryPrevComponentButton.IsEnabled = _componentLibraryComponentIndex > 0;
+        ComponentLibraryNextComponentButton.IsEnabled = _componentLibraryComponentIndex < maxIndex;
     }
 
     private void OpenComponentLibraryCurrentCategory()
@@ -2134,19 +2188,35 @@ public partial class MainWindow
         if (componentCount == 0)
         {
             _componentLibraryComponentIndex = 0;
+            UpdateComponentLibraryComponentNavigationButtons();
             return;
         }
 
         var viewportWidth = ComponentLibraryComponentViewport.Bounds.Width;
-        if (viewportWidth <= 1 && ComponentLibraryWindow is not null)
+        if (viewportWidth <= 1)
         {
-            viewportWidth = Math.Max(1, ComponentLibraryWindow.Bounds.Width - 48);
+            if (ComponentLibraryComponentViewport.Parent is Control parent && parent.Bounds.Width > 1)
+            {
+                // Parent includes left/right nav buttons; reserve space to get true viewport width.
+                viewportWidth = Math.Max(1, parent.Bounds.Width - 96);
+            }
+            else if (ComponentLibraryWindow is not null)
+            {
+                viewportWidth = Math.Max(1, ComponentLibraryWindow.Bounds.Width - 150);
+            }
         }
 
         var viewportHeight = ComponentLibraryComponentViewport.Bounds.Height;
-        if (viewportHeight <= 1 && ComponentLibraryWindow is not null)
+        if (viewportHeight <= 1)
         {
-            viewportHeight = Math.Max(1, ComponentLibraryWindow.Bounds.Height - 160);
+            if (ComponentLibraryComponentViewport.Parent is Control parent && parent.Bounds.Height > 1)
+            {
+                viewportHeight = Math.Max(1, parent.Bounds.Height);
+            }
+            else if (ComponentLibraryWindow is not null)
+            {
+                viewportHeight = Math.Max(1, ComponentLibraryWindow.Bounds.Height - 170);
+            }
         }
 
         _componentLibraryComponentPageWidth = Math.Max(1, viewportWidth);
@@ -2180,19 +2250,19 @@ public partial class MainWindow
             };
 
             // Fit the preview to the page while preserving component cell span proportions.
-            var previewMaxWidth = _componentLibraryComponentPageWidth * 0.86;
-            var previewMaxHeight = viewportHeight * 0.72;
+            var previewMaxWidth = _componentLibraryComponentPageWidth * 0.94;
+            var previewMaxHeight = viewportHeight * 0.86;
             var previewSpan = NormalizeComponentCellSpan(
                 resolved.Id,
                 (resolved.MinWidthCells, resolved.MinHeightCells));
             var previewCellSize = Math.Min(
                 previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
                 previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
-            previewCellSize = Math.Clamp(previewCellSize, 20, 72);
+            previewCellSize = Math.Clamp(previewCellSize, 24, 96);
 
             var previewWidth = previewSpan.WidthCells * previewCellSize;
             var previewHeight = previewSpan.HeightCells * previewCellSize;
-            var renderCellSize = Math.Clamp(previewCellSize * 1.35, 28, 82);
+            var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
 
             var previewControl = CreateComponentLibraryPreviewControl(resolved.Id, renderCellSize);
             if (previewControl is null)
@@ -2220,8 +2290,7 @@ public partial class MainWindow
             {
                 Width = previewWidth,
                 Height = previewHeight,
-                CornerRadius = new CornerRadius(20),
-                ClipToBounds = true,
+                ClipToBounds = false,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Child = previewViewbox,
@@ -2248,18 +2317,12 @@ public partial class MainWindow
 
             var stack = new StackPanel
             {
-                Spacing = 10,
+                Spacing = 8,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Children =
                 {
-                    new Border
-                    {
-                        Classes = { "glass-panel" },
-                        CornerRadius = new CornerRadius(28),
-                        Padding = new Thickness(12),
-                        Child = previewBorder
-                    },
+                    previewBorder,
                     label,
                     hint
                 }
@@ -2280,6 +2343,7 @@ public partial class MainWindow
         }
 
         ApplyComponentLibraryComponentOffset();
+        UpdateComponentLibraryComponentNavigationButtons();
     }
 
     private Control? CreateComponentLibraryPreviewControl(string componentId, double cellSize)
@@ -2308,6 +2372,29 @@ public partial class MainWindow
             return widget;
         }
 
+        if (componentId == BuiltInComponentIds.DesktopClock)
+        {
+            var widget = new AnalogClockWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(cellSize);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.DesktopTimer)
+        {
+            var widget = new TimerWidget();
+            widget.ApplyCellSize(cellSize);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.HolidayCalendar)
+        {
+            var widget = new HolidayCalendarWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(cellSize);
+            return widget;
+        }
+
         return null;
     }
 
@@ -2326,6 +2413,21 @@ public partial class MainWindow
         if (string.Equals(definition.Id, BuiltInComponentIds.LunarCalendar, StringComparison.OrdinalIgnoreCase))
         {
             return L("component.lunar_calendar", definition.DisplayName);
+        }
+
+        if (string.Equals(definition.Id, BuiltInComponentIds.DesktopClock, StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component.desktop_clock", definition.DisplayName);
+        }
+
+        if (string.Equals(definition.Id, BuiltInComponentIds.DesktopTimer, StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component.desktop_timer", definition.DisplayName);
+        }
+
+        if (string.Equals(definition.Id, BuiltInComponentIds.HolidayCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component.holiday_calendar", definition.DisplayName);
         }
 
         return definition.DisplayName;
@@ -2416,6 +2518,42 @@ public partial class MainWindow
     {
         ShowComponentLibraryCategoryView();
         BuildComponentLibraryCategoryPages();
+    }
+
+    private void OnComponentLibraryCategoryItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not int categoryIndex ||
+            _componentLibraryCategories.Count == 0)
+        {
+            return;
+        }
+
+        _componentLibraryCategoryIndex = Math.Clamp(categoryIndex, 0, Math.Max(0, _componentLibraryCategories.Count - 1));
+        OpenComponentLibraryCurrentCategory();
+    }
+
+    private void OnComponentLibraryPrevComponentClick(object? sender, RoutedEventArgs e)
+    {
+        if (_componentLibraryActiveComponents.Count <= 1)
+        {
+            return;
+        }
+
+        _componentLibraryComponentIndex = Math.Max(0, _componentLibraryComponentIndex - 1);
+        ApplyComponentLibraryComponentOffset();
+    }
+
+    private void OnComponentLibraryNextComponentClick(object? sender, RoutedEventArgs e)
+    {
+        var maxIndex = Math.Max(0, _componentLibraryActiveComponents.Count - 1);
+        if (maxIndex <= 0)
+        {
+            return;
+        }
+
+        _componentLibraryComponentIndex = Math.Min(maxIndex, _componentLibraryComponentIndex + 1);
+        ApplyComponentLibraryComponentOffset();
     }
 
     private void OnComponentLibraryCategoryViewportPointerPressed(object? sender, PointerPressedEventArgs e)
