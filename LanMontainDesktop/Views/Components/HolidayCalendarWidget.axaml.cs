@@ -9,7 +9,7 @@ using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class HolidayCalendarWidget : UserControl
+public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {

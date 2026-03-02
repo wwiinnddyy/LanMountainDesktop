@@ -24,6 +24,20 @@ public sealed class AppSettingsSnapshot
 
     public string? TimeZoneId { get; set; }
 
+    public string WeatherLocationMode { get; set; } = "CitySearch";
+
+    public string WeatherLocationKey { get; set; } = string.Empty;
+
+    public string WeatherLocationName { get; set; } = string.Empty;
+
+    public double WeatherLatitude { get; set; } = 39.9042;
+
+    public double WeatherLongitude { get; set; } = 116.4074;
+
+    public bool WeatherAutoRefreshLocation { get; set; }
+
+    public string WeatherLocationQuery { get; set; } = string.Empty;
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =

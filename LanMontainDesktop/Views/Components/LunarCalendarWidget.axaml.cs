@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Threading;
 using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class LunarCalendarWidget : UserControl
+public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {
@@ -79,6 +80,11 @@ public partial class LunarCalendarWidget : UserControl
 
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
+    private FontWeight _gregorianLineWeight = FontWeight.SemiBold;
+    private FontWeight _lunarDateWeight = FontWeight.Bold;
+    private FontWeight _labelWeight = FontWeight.Bold;
+    private FontWeight _itemsWeight = FontWeight.SemiBold;
+    private int _auspiciousItemCount = 4;
 
     public LunarCalendarWidget()
     {
@@ -131,6 +137,8 @@ public partial class LunarCalendarWidget : UserControl
 
     private void UpdateContent()
     {
+        ApplyAdaptiveTypography();
+
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         var culture = CultureInfo.CurrentCulture;
         var isZh = culture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase);
@@ -146,13 +154,13 @@ public partial class LunarCalendarWidget : UserControl
         YiItemsTextBlock.Text = BuildDailySelection(
             now.Date,
             isZh ? ZhYiCandidates : EnYiCandidates,
-            count: 4,
+            count: _auspiciousItemCount,
             salt: 17,
             useChineseSpacing: isZh);
         JiItemsTextBlock.Text = BuildDailySelection(
             now.Date,
             isZh ? ZhJiCandidates : EnJiCandidates,
-            count: 4,
+            count: _auspiciousItemCount,
             salt: 29,
             useChineseSpacing: isZh);
     }
@@ -160,6 +168,11 @@ public partial class LunarCalendarWidget : UserControl
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
+        UpdateContent();
+    }
+
+    private void ApplyAdaptiveTypography()
+    {
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(30 * scale, 16, 44));
@@ -172,12 +185,33 @@ public partial class LunarCalendarWidget : UserControl
             Math.Clamp(2 * scale, 1, 6));
         AuspiciousGrid.RowSpacing = Math.Clamp(12 * scale, 6, 20);
 
-        GregorianLineTextBlock.FontSize = Math.Clamp(24 * scale, 11, 36);
-        LunarDateTextBlock.FontSize = Math.Clamp(88 * scale, 30, 130);
-        YiLabelTextBlock.FontSize = Math.Clamp(30 * scale, 13, 44);
+        var densityBoost = scale <= 0.72 ? 0.90 : scale <= 0.88 ? 0.95 : scale >= 1.42 ? 1.04 : 1.0;
+        GregorianLineTextBlock.FontSize = Math.Clamp(24 * scale * densityBoost, 10, 38);
+        LunarDateTextBlock.FontSize = Math.Clamp(88 * scale * densityBoost, 28, 134);
+        YiLabelTextBlock.FontSize = Math.Clamp(30 * scale * densityBoost, 12, 46);
         JiLabelTextBlock.FontSize = YiLabelTextBlock.FontSize;
-        YiItemsTextBlock.FontSize = Math.Clamp(24 * scale, 11, 36);
+        YiItemsTextBlock.FontSize = Math.Clamp(24 * scale * densityBoost, 10, 36);
         JiItemsTextBlock.FontSize = YiItemsTextBlock.FontSize;
+
+        _gregorianLineWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _lunarDateWeight = ToVariableWeight(Lerp(650, 780, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _labelWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _itemsWeight = ToVariableWeight(Lerp(520, 670, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+
+        GregorianLineTextBlock.FontWeight = _gregorianLineWeight;
+        LunarDateTextBlock.FontWeight = _lunarDateWeight;
+        YiLabelTextBlock.FontWeight = _labelWeight;
+        JiLabelTextBlock.FontWeight = _labelWeight;
+        YiItemsTextBlock.FontWeight = _itemsWeight;
+        JiItemsTextBlock.FontWeight = _itemsWeight;
+
+        _auspiciousItemCount = scale switch
+        {
+            <= 0.72 => 2,
+            <= 0.92 => 3,
+            <= 1.30 => 4,
+            _ => 5
+        };
     }
 
     private double ResolveScale()
@@ -186,6 +220,16 @@ public partial class LunarCalendarWidget : UserControl
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 300d, 0.58, 2.0) : 1;
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 300d, 0.58, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
+    }
+
+    private static double Lerp(double from, double to, double t)
+    {
+        return from + ((to - from) * t);
+    }
+
+    private static FontWeight ToVariableWeight(double weight)
+    {
+        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
     }
 
     private static string ToChineseWeekday(DayOfWeek dayOfWeek)

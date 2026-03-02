@@ -14,7 +14,7 @@ public enum ClockDisplayFormat
     HourMinute          // HH:mm
 }
 
-public partial class ClockWidget : UserControl
+public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {

@@ -32,6 +32,12 @@ public sealed record WeatherDailyForecast(
     string? SunsetTime,
     int? PrecipitationProbabilityPercent);
 
+public sealed record WeatherHourlyForecast(
+    DateTimeOffset Time,
+    double? TemperatureC,
+    int? WeatherCode,
+    string? WeatherText);
+
 public sealed record WeatherSnapshot(
     string Provider,
     string LocationKey,
@@ -41,5 +47,5 @@ public sealed record WeatherSnapshot(
     DateTimeOffset FetchedAt,
     DateTimeOffset? ObservationTime,
     WeatherCurrentCondition Current,
-    IReadOnlyList<WeatherDailyForecast> DailyForecasts);
-
+    IReadOnlyList<WeatherDailyForecast> DailyForecasts,
+    IReadOnlyList<WeatherHourlyForecast> HourlyForecasts);

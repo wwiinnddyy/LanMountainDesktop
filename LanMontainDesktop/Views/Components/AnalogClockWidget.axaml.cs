@@ -10,7 +10,7 @@ using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {

@@ -31,9 +31,13 @@ public sealed record WeatherQueryResult<T>(
     }
 }
 
-public interface IWeatherDataService
+public interface IWeatherInfoService
 {
     Task<WeatherQueryResult<WeatherSnapshot>> GetWeatherAsync(WeatherQuery query, CancellationToken cancellationToken = default);
+}
+
+public interface IWeatherDataService : IWeatherInfoService
+{
 
     Task<WeatherQueryResult<IReadOnlyList<WeatherLocation>>> SearchLocationsAsync(
         string keyword,

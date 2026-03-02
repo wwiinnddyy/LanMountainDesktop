@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -310,6 +311,9 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         var currentNode = TryGetNode(payload, "current") ?? payload;
         var cityNode = TryGetNode(payload, "city");
         var dailyNode = TryGetNode(payload, "forecastDaily") ?? TryGetNode(payload, "daily");
+        var hourlyNode = TryGetNode(payload, "forecastHourly") ??
+                         TryGetNode(payload, "hourly") ??
+                         TryGetNode(payload, "hourlyForecast");
 
         var weatherCode = ReadInt(currentNode, "weather", "value") ??
                           ReadInt(currentNode, "weatherCode") ??
@@ -334,6 +338,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             WeatherText: weatherText);
 
         var forecasts = ParseDailyForecasts(dailyNode, days, locale);
+        var hourlyForecasts = ParseHourlyForecasts(hourlyNode, locale);
 
         var locationName = ReadString(cityNode, "name") ??
                            ReadString(payload, "cityName") ??
@@ -351,7 +356,8 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             FetchedAt: DateTimeOffset.UtcNow,
             ObservationTime: observationTime,
             Current: current,
-            DailyForecasts: forecasts);
+            DailyForecasts: forecasts,
+            HourlyForecasts: hourlyForecasts);
     }
 
     private IReadOnlyList<WeatherDailyForecast> ParseDailyForecasts(JsonElement? dailyNode, int days, string locale)
@@ -409,6 +415,151 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         }
 
         return forecasts;
+    }
+
+    private IReadOnlyList<WeatherHourlyForecast> ParseHourlyForecasts(JsonElement? hourlyNode, string locale)
+    {
+        var forecasts = new List<WeatherHourlyForecast>();
+        if (!hourlyNode.HasValue)
+        {
+            return forecasts;
+        }
+
+        var root = hourlyNode.Value;
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            ParseHourlyArray(root, locale, forecasts);
+            return forecasts
+                .OrderBy(item => item.Time)
+                .Take(48)
+                .ToList();
+        }
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return forecasts;
+        }
+
+        var directArray =
+            ReadArray(root, "value") ??
+            ReadArray(root, "list") ??
+            ReadArray(root, "hourly");
+
+        if (directArray.HasValue && directArray.Value.ValueKind == JsonValueKind.Array)
+        {
+            ParseHourlyArray(directArray.Value, locale, forecasts);
+        }
+
+        var timeArray =
+            ReadArray(root, "time", "value") ??
+            ReadArray(root, "datetime", "value") ??
+            ReadArray(root, "date", "value") ??
+            ReadArray(root, "pubTime", "value");
+        var tempArray =
+            ReadArray(root, "temperature", "value") ??
+            ReadArray(root, "temp", "value") ??
+            ReadArray(root, "temperature");
+        var weatherArray =
+            ReadArray(root, "weather", "value") ??
+            ReadArray(root, "weatherCode", "value") ??
+            ReadArray(root, "weather");
+
+        var count = Math.Max(
+            timeArray?.GetArrayLength() ?? 0,
+            Math.Max(
+                tempArray?.GetArrayLength() ?? 0,
+                weatherArray?.GetArrayLength() ?? 0));
+        count = Math.Clamp(count, 0, 72);
+
+        for (var i = 0; i < count; i++)
+        {
+            var timeItem = GetArrayItem(timeArray, i);
+            var tempItem = GetArrayItem(tempArray, i);
+            var weatherItem = GetArrayItem(weatherArray, i);
+
+            var time = ParseTime(
+                ReadString(timeItem, "value") ??
+                ReadString(timeItem, "datetime") ??
+                ReadString(timeItem, "time") ??
+                ReadString(timeItem, "date") ??
+                ReadString(timeItem));
+            if (!time.HasValue)
+            {
+                continue;
+            }
+
+            var code = ReadInt(weatherItem, "value") ??
+                       ReadInt(weatherItem, "code") ??
+                       ReadInt(weatherItem, "weatherCode") ??
+                       ReadInt(weatherItem, "from") ??
+                       ReadInt(weatherItem);
+            var weatherText = ReadString(weatherItem, "text") ??
+                              ReadString(weatherItem, "desc") ??
+                              ResolveWeatherDescription(code, locale);
+
+            forecasts.Add(new WeatherHourlyForecast(
+                Time: time.Value,
+                TemperatureC: ReadDouble(tempItem, "value") ??
+                              ReadDouble(tempItem, "temperature") ??
+                              ReadDouble(tempItem, "temp") ??
+                              ReadDouble(tempItem),
+                WeatherCode: code,
+                WeatherText: weatherText));
+        }
+
+        return forecasts
+            .GroupBy(item => item.Time.ToUnixTimeSeconds())
+            .Select(group => group.First())
+            .OrderBy(item => item.Time)
+            .Take(48)
+            .ToList();
+    }
+
+    private void ParseHourlyArray(JsonElement array, string locale, ICollection<WeatherHourlyForecast> output)
+    {
+        foreach (var item in array.EnumerateArray())
+        {
+            if (item.ValueKind is not (JsonValueKind.Object or JsonValueKind.String or JsonValueKind.Number))
+            {
+                continue;
+            }
+
+            var time = ParseTime(
+                ReadString(item, "datetime") ??
+                ReadString(item, "time") ??
+                ReadString(item, "date") ??
+                ReadString(item, "forecastTime") ??
+                ReadString(item, "pubTime") ??
+                ReadString(item, "ts") ??
+                ReadString(item));
+            if (!time.HasValue)
+            {
+                continue;
+            }
+
+            var code = ReadInt(item, "weatherCode") ??
+                       ReadInt(item, "code") ??
+                       ReadInt(item, "weather", "value") ??
+                       ReadInt(item, "weather") ??
+                       ReadInt(item, "from");
+            var weatherText = ReadString(item, "weatherText") ??
+                              ReadString(item, "weather", "desc") ??
+                              ReadString(item, "weather", "text") ??
+                              ReadString(item, "desc") ??
+                              ResolveWeatherDescription(code, locale);
+
+            var temperature = ReadDouble(item, "temperature", "value") ??
+                              ReadDouble(item, "temperature") ??
+                              ReadDouble(item, "temp", "value") ??
+                              ReadDouble(item, "temp") ??
+                              ReadDouble(item, "value");
+
+            output.Add(new WeatherHourlyForecast(
+                Time: time.Value,
+                TemperatureC: temperature,
+                WeatherCode: code,
+                WeatherText: weatherText));
+        }
     }
 
     private static DateOnly? ResolveDateForIndex(JsonElement? dateArray, int index)
@@ -728,4 +879,3 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             : $"{text[..maxLength]}...";
     }
 }
-

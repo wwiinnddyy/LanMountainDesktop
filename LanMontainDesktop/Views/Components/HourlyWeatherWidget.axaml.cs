@@ -1,0 +1,1630 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using FluentIcons.Avalonia;
+using FluentIcons.Common;
+using LanMontainDesktop.Models;
+using LanMontainDesktop.Services;
+
+namespace LanMontainDesktop.Views.Components;
+
+public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
+{
+    private enum WeatherVisualKind
+    {
+        ClearDay,
+        ClearNight,
+        CloudyDay,
+        CloudyNight,
+        RainLight,
+        RainHeavy,
+        Storm,
+        Snow,
+        Fog
+    }
+
+    private readonly record struct WeatherVisualPalette(
+        string GradientFrom,
+        string GradientTo,
+        string Tint,
+        string PrimaryText,
+        string SecondaryText,
+        string ParticleColor);
+
+    private readonly record struct WeatherMotionProfile(
+        double DriftX,
+        double DriftY,
+        double ZoomBase,
+        double ZoomAmplitude,
+        double MotionOpacityBase,
+        double MotionOpacityPulse,
+        double LightOpacityBase,
+        double LightOpacityPulse,
+        double ShadeOpacityBase,
+        double ShadeOpacityPulse,
+        double PhaseStep,
+        int ParticleCount,
+        double ParticleSpeedMin,
+        double ParticleSpeedMax,
+        double ParticleLengthMin,
+        double ParticleLengthMax,
+        double ParticleDriftPerTick);
+
+    private sealed class ParticleState
+    {
+        public double Speed { get; set; }
+
+        public double Drift { get; set; }
+    }
+
+    private sealed record HourlyWeatherWidgetConfig(
+        string LanguageCode,
+        string Locale,
+        string LocationKey,
+        string LocationName,
+        double Latitude,
+        double Longitude);
+
+    private readonly record struct HourlyForecastItem(
+        DateTime Time,
+        string TimeLabel,
+        Symbol Icon,
+        string TemperatureText);
+
+    private static readonly IReadOnlyDictionary<WeatherVisualKind, string> WeatherBackgroundAssets =
+        new Dictionary<WeatherVisualKind, string>
+        {
+            [WeatherVisualKind.ClearDay] = "avares://LanMontainDesktop/Assets/Weather/clear_day.jpg",
+            [WeatherVisualKind.ClearNight] = "avares://LanMontainDesktop/Assets/Weather/clear_night.jpg",
+            [WeatherVisualKind.CloudyDay] = "avares://LanMontainDesktop/Assets/Weather/cloudy_day.jpg",
+            [WeatherVisualKind.CloudyNight] = "avares://LanMontainDesktop/Assets/Weather/cloudy_night.jpg",
+            [WeatherVisualKind.RainLight] = "avares://LanMontainDesktop/Assets/Weather/rain_light.jpg",
+            [WeatherVisualKind.RainHeavy] = "avares://LanMontainDesktop/Assets/Weather/rain_heavy.jpg",
+            [WeatherVisualKind.Storm] = "avares://LanMontainDesktop/Assets/Weather/storm_dark.jpg",
+            [WeatherVisualKind.Snow] = "avares://LanMontainDesktop/Assets/Weather/snow_soft.jpg",
+            [WeatherVisualKind.Fog] = "avares://LanMontainDesktop/Assets/Weather/fog_haze.jpg"
+        };
+
+    private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
+
+    private readonly DispatcherTimer _refreshTimer = new()
+    {
+        Interval = TimeSpan.FromMinutes(12)
+    };
+
+    private readonly DispatcherTimer _backgroundAnimationTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(48)
+    };
+
+    private readonly AppSettingsService _settingsService = new();
+    private readonly LocalizationService _localizationService = new();
+    private readonly Dictionary<WeatherVisualKind, IBrush> _backgroundBrushCache = new();
+    private readonly List<Border> _particleVisuals = new();
+    private readonly List<ParticleState> _particleStates = new();
+    private readonly Random _particleRandom = new();
+
+    private IWeatherInfoService _weatherInfoService = DefaultWeatherInfoService;
+    private TimeZoneService? _timeZoneService;
+    private CancellationTokenSource? _refreshCts;
+    private WeatherSnapshot? _latestSnapshot;
+    private string _languageCode = "zh-CN";
+    private double _currentCellSize = 48;
+    private WeatherVisualKind _activeVisualKind = WeatherVisualKind.ClearDay;
+    private double _animationPhase;
+    private int _activeParticleCount;
+    private bool _isAttached;
+    private bool _isRefreshing;
+    private readonly TextBlock[] _hourlyTimeBlocks;
+    private readonly SymbolIcon[] _hourlyIconBlocks;
+    private readonly TextBlock[] _hourlyTempBlocks;
+
+    public HourlyWeatherWidget()
+    {
+        InitializeComponent();
+        _hourlyTimeBlocks =
+        [
+            HourlyTime0, HourlyTime1, HourlyTime2, HourlyTime3, HourlyTime4, HourlyTime5
+        ];
+        _hourlyIconBlocks =
+        [
+            HourlyIcon0, HourlyIcon1, HourlyIcon2, HourlyIcon3, HourlyIcon4, HourlyIcon5
+        ];
+        _hourlyTempBlocks =
+        [
+            HourlyTemp0, HourlyTemp1, HourlyTemp2, HourlyTemp3, HourlyTemp4, HourlyTemp5
+        ];
+        ConfigureTextOverflowGuards();
+
+        _refreshTimer.Tick += OnRefreshTimerTick;
+        _backgroundAnimationTimer.Tick += OnBackgroundAnimationTick;
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
+        SizeChanged += OnSizeChanged;
+
+        InitializeParticleVisuals();
+        ApplyVisualTheme(WeatherVisualKind.ClearDay);
+        ApplyNotConfiguredState();
+        ApplyCellSize(_currentCellSize);
+    }
+
+    private void ConfigureTextOverflowGuards()
+    {
+        CityTextBlock.TextWrapping = TextWrapping.NoWrap;
+        CityTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        CityTextBlock.MaxLines = 1;
+
+        ConditionTextBlock.TextWrapping = TextWrapping.NoWrap;
+        ConditionTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        ConditionTextBlock.MaxLines = 1;
+
+        RangeTextBlock.TextWrapping = TextWrapping.NoWrap;
+        RangeTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        RangeTextBlock.MaxLines = 1;
+
+        TemperatureTextBlock.TextWrapping = TextWrapping.NoWrap;
+        TemperatureTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        TemperatureTextBlock.MaxLines = 1;
+
+        foreach (var timeBlock in _hourlyTimeBlocks)
+        {
+            timeBlock.TextWrapping = TextWrapping.NoWrap;
+            timeBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+            timeBlock.MaxLines = 1;
+            timeBlock.TextAlignment = TextAlignment.Center;
+        }
+
+        foreach (var tempBlock in _hourlyTempBlocks)
+        {
+            tempBlock.TextWrapping = TextWrapping.NoWrap;
+            tempBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+            tempBlock.MaxLines = 1;
+            tempBlock.TextAlignment = TextAlignment.Center;
+        }
+    }
+
+    public void SetTimeZoneService(TimeZoneService timeZoneService)
+    {
+        if (_timeZoneService is not null)
+        {
+            _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
+        }
+
+        _timeZoneService = timeZoneService;
+        _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
+    }
+
+    public void SetWeatherInfoService(IWeatherInfoService weatherInfoService)
+    {
+        _weatherInfoService = weatherInfoService ?? DefaultWeatherInfoService;
+        if (_isAttached)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: false);
+        }
+    }
+
+    public void ApplyCellSize(double cellSize)
+    {
+        _currentCellSize = Math.Max(1, cellSize);
+        var scale = ResolveScale();
+        var hostWidth = Bounds.Width > 1 ? Bounds.Width : Math.Max(140, _currentCellSize * 4);
+        var hostHeight = Bounds.Height > 1 ? Bounds.Height : Math.Max(78, _currentCellSize * 2);
+        var cornerRadius = Math.Clamp(_currentCellSize * 0.45, 24, 44);
+
+        RootBorder.CornerRadius = new CornerRadius(cornerRadius);
+        BackgroundImageLayer.CornerRadius = new CornerRadius(cornerRadius);
+        BackgroundMotionLayer.CornerRadius = new CornerRadius(cornerRadius);
+        BackgroundTintLayer.CornerRadius = new CornerRadius(cornerRadius);
+        BackgroundLightLayer.CornerRadius = new CornerRadius(cornerRadius);
+        BackgroundShadeLayer.CornerRadius = new CornerRadius(cornerRadius);
+        ContentPaddingBorder.Padding = new Thickness(
+            Math.Clamp(Math.Min(20 * scale, hostWidth * 0.028), 3, 18),
+            Math.Clamp(Math.Min(14 * scale, hostHeight * 0.060), 2, 14));
+        ApplyAdaptiveTypography();
+        ResetParticles();
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = true;
+        _refreshTimer.Start();
+        _backgroundAnimationTimer.Start();
+        _ = RefreshWeatherAsync(forceRefresh: false);
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = false;
+        _refreshTimer.Stop();
+        _backgroundAnimationTimer.Stop();
+        CancelRefreshRequest();
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        ApplyCellSize(_currentCellSize);
+        ResetParticles();
+    }
+
+    private async void OnRefreshTimerTick(object? sender, EventArgs e)
+    {
+        await RefreshWeatherAsync(forceRefresh: false);
+    }
+
+    private void OnBackgroundAnimationTick(object? sender, EventArgs e)
+    {
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        var motion = ResolveMotionProfile(_activeVisualKind);
+        _animationPhase += motion.PhaseStep;
+        if (_animationPhase > Math.PI * 2)
+        {
+            _animationPhase -= Math.PI * 2;
+        }
+
+        var sin = Math.Sin(_animationPhase);
+        var cos = Math.Cos(_animationPhase * 0.83);
+        var zoom = motion.ZoomBase + (sin * motion.ZoomAmplitude);
+
+        SetMotionTransform(sin * motion.DriftX, cos * motion.DriftY, zoom);
+
+        BackgroundMotionLayer.Opacity = Math.Clamp(
+            motion.MotionOpacityBase + (cos * motion.MotionOpacityPulse),
+            0.08,
+            0.92);
+        BackgroundLightLayer.Opacity = Math.Clamp(
+            motion.LightOpacityBase + (sin * motion.LightOpacityPulse),
+            0.10,
+            0.95);
+        BackgroundShadeLayer.Opacity = Math.Clamp(
+            motion.ShadeOpacityBase + (cos * motion.ShadeOpacityPulse),
+            0.42,
+            0.95);
+
+        AdvanceParticles(motion);
+    }
+
+    private void OnTimeZoneChanged(object? sender, EventArgs e)
+    {
+        if (_isAttached)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: false);
+        }
+    }
+
+    private WeatherVisualKind ResolveFallbackVisualKind()
+    {
+        return IsNightNow() ? WeatherVisualKind.ClearNight : WeatherVisualKind.ClearDay;
+    }
+
+    private bool ResolveIsNight(WeatherSnapshot snapshot)
+    {
+        if (snapshot.ObservationTime.HasValue)
+        {
+            var observed = snapshot.ObservationTime.Value;
+            try
+            {
+                if (_timeZoneService is not null)
+                {
+                    var zoned = TimeZoneInfo.ConvertTime(observed, _timeZoneService.CurrentTimeZone);
+                    return zoned.Hour < 6 || zoned.Hour >= 18;
+                }
+            }
+            catch
+            {
+                // fall through to local clock
+            }
+
+            return observed.Hour < 6 || observed.Hour >= 18;
+        }
+
+        return IsNightNow();
+    }
+
+    private bool IsNightNow()
+    {
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        return now.Hour < 6 || now.Hour >= 18;
+    }
+
+    private async Task RefreshWeatherAsync(bool forceRefresh)
+    {
+        if (!_isAttached || _isRefreshing)
+        {
+            return;
+        }
+
+        _isRefreshing = true;
+        var config = LoadConfig();
+        _languageCode = config.LanguageCode;
+
+        if (string.IsNullOrWhiteSpace(config.LocationKey))
+        {
+            ApplyNotConfiguredState();
+            _isRefreshing = false;
+            return;
+        }
+
+        if (_latestSnapshot is null)
+        {
+            ApplyLoadingState(config.LocationName);
+        }
+
+        var cts = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(ref _refreshCts, cts);
+        previous?.Cancel();
+        previous?.Dispose();
+
+        try
+        {
+            var query = new WeatherQuery(
+                LocationKey: config.LocationKey,
+                Latitude: config.Latitude,
+                Longitude: config.Longitude,
+                ForecastDays: 3,
+                Locale: config.Locale,
+                ForceRefresh: forceRefresh);
+
+            var result = await _weatherInfoService.GetWeatherAsync(query, cts.Token);
+            if (cts.IsCancellationRequested || !_isAttached)
+            {
+                return;
+            }
+
+            if (!result.Success || result.Data is null)
+            {
+                ApplyFailedState(config.LocationName);
+                return;
+            }
+
+            _latestSnapshot = result.Data;
+            ApplySnapshot(result.Data, config.LocationName);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore canceled refresh requests.
+        }
+        catch
+        {
+            if (!cts.IsCancellationRequested && _isAttached)
+            {
+                ApplyFailedState(config.LocationName);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_refreshCts, cts))
+            {
+                _refreshCts = null;
+            }
+
+            cts.Dispose();
+            _isRefreshing = false;
+        }
+    }
+
+    private HourlyWeatherWidgetConfig LoadConfig()
+    {
+        var snapshot = _settingsService.Load();
+        var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var locale = string.Equals(languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+            ? "zh_cn"
+            : "en_us";
+
+        var latitude = NormalizeLatitude(snapshot.WeatherLatitude);
+        var longitude = NormalizeLongitude(snapshot.WeatherLongitude);
+        var modeIsCoordinates = string.Equals(snapshot.WeatherLocationMode, "Coordinates", StringComparison.OrdinalIgnoreCase);
+        var locationKey = snapshot.WeatherLocationKey?.Trim() ?? string.Empty;
+        var locationName = snapshot.WeatherLocationName?.Trim() ?? string.Empty;
+
+        if (modeIsCoordinates)
+        {
+            if (string.IsNullOrWhiteSpace(locationKey))
+            {
+                locationKey = BuildCoordinateLocationKey(latitude, longitude);
+            }
+
+            if (string.IsNullOrWhiteSpace(locationName))
+            {
+                locationName = BuildCoordinateLocationName(latitude, longitude, languageCode);
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(locationName))
+        {
+            locationName = locationKey;
+        }
+
+        return new HourlyWeatherWidgetConfig(
+            languageCode,
+            locale,
+            locationKey,
+            locationName,
+            latitude,
+            longitude);
+    }
+
+    private void ApplySnapshot(WeatherSnapshot snapshot, string fallbackLocationName)
+    {
+        var isNight = ResolveIsNight(snapshot);
+        var visualKind = ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
+        ApplyVisualTheme(visualKind);
+
+        var rawLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
+            ? fallbackLocationName
+            : snapshot.LocationName;
+        CityTextBlock.Text = ResolvePreciseDisplayLocation(rawLocation, _languageCode, L("weather.widget.location_unknown", "Unknown location"));
+
+        ConditionTextBlock.Text = ResolveWeatherConditionText(snapshot.Current.WeatherText, visualKind);
+        WeatherIconSymbol.Symbol = ResolveWeatherSymbol(visualKind);
+        WeatherIconSymbol.Foreground = CreateSolidBrush(
+            ResolveWeatherIconAccent(
+                WeatherIconSymbol.Symbol,
+                visualKind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight));
+
+        TemperatureTextBlock.Text = FormatTemperature(snapshot.Current.TemperatureC);
+        var (low, high) = ResolveTemperatureRange(snapshot);
+        RangeTextBlock.Text = FormatTemperatureRange(low, high);
+        ApplyHourlyForecastItems(BuildHourlyForecastItems(snapshot));
+        ApplyAdaptiveTypography();
+    }
+
+    private void ApplyNotConfiguredState()
+    {
+        var fallbackKind = ResolveFallbackVisualKind();
+        ApplyVisualTheme(fallbackKind);
+        WeatherIconSymbol.Symbol = fallbackKind == WeatherVisualKind.ClearNight
+            ? Symbol.WeatherMoon
+            : Symbol.WeatherSunny;
+        WeatherIconSymbol.Foreground = CreateSolidBrush(
+            ResolveWeatherIconAccent(
+                WeatherIconSymbol.Symbol,
+                fallbackKind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight));
+        CityTextBlock.Text = L("weather.widget.location_not_configured", "Weather location is not configured");
+        ConditionTextBlock.Text = L("weather.widget.configure_hint", "Open Settings > Weather to configure");
+        TemperatureTextBlock.Text = "--°";
+        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        ApplyHourlyForecastItems(BuildPlaceholderHourlyForecastItems(fallbackKind));
+        ApplyAdaptiveTypography();
+        _latestSnapshot = null;
+    }
+
+    private void ApplyLoadingState(string locationName)
+    {
+        var loadingKind = IsNightNow() ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay;
+        ApplyVisualTheme(loadingKind);
+        WeatherIconSymbol.Symbol = loadingKind == WeatherVisualKind.CloudyNight
+            ? Symbol.WeatherPartlyCloudyNight
+            : Symbol.WeatherPartlyCloudyDay;
+        WeatherIconSymbol.Foreground = CreateSolidBrush(
+            ResolveWeatherIconAccent(
+                WeatherIconSymbol.Symbol,
+                loadingKind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight));
+        CityTextBlock.Text = ResolvePreciseDisplayLocation(
+            locationName,
+            _languageCode,
+            L("weather.widget.location_unknown", "Unknown location"));
+        ConditionTextBlock.Text = L("weather.widget.loading", "Loading...");
+        TemperatureTextBlock.Text = "--°";
+        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        ApplyHourlyForecastItems(BuildPlaceholderHourlyForecastItems(loadingKind));
+        ApplyAdaptiveTypography();
+    }
+
+    private void ApplyFailedState(string locationName)
+    {
+        ApplyVisualTheme(WeatherVisualKind.Fog);
+        WeatherIconSymbol.Symbol = Symbol.WeatherFog;
+        WeatherIconSymbol.Foreground = CreateSolidBrush(ResolveWeatherIconAccent(WeatherIconSymbol.Symbol, false));
+        CityTextBlock.Text = ResolvePreciseDisplayLocation(
+            locationName,
+            _languageCode,
+            L("weather.widget.location_unknown", "Unknown location"));
+        ConditionTextBlock.Text = L("weather.widget.fetch_failed", "Weather fetch failed");
+        TemperatureTextBlock.Text = "--°";
+        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        ApplyHourlyForecastItems(BuildPlaceholderHourlyForecastItems(WeatherVisualKind.Fog));
+        ApplyAdaptiveTypography();
+        _latestSnapshot = null;
+    }
+
+    private void ApplyVisualTheme(WeatherVisualKind kind)
+    {
+        _activeVisualKind = kind;
+        var palette = ResolvePalette(kind);
+        RootBorder.Background = CreateGradientBrush(palette.GradientFrom, palette.GradientTo);
+        BackgroundImageLayer.Background = ResolveWeatherBackgroundBrush(kind, palette);
+        BackgroundMotionLayer.Background = ResolveWeatherBackgroundBrush(kind, palette);
+        BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
+
+        var primary = CreateSolidBrush(palette.PrimaryText);
+        var particleBrush = CreateSolidBrush(palette.ParticleColor);
+        var isNightVisual = kind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight;
+        var conditionSecondary = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xF0 : (byte)0xE6);
+        var rangeSecondary = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xE8 : (byte)0xD6);
+        var forecastTimeBrush = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xDA : (byte)0xC6);
+        var forecastTempBrush = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xF4 : (byte)0xEA);
+        HourlyPanelBorder.Background = CreateSolidBrush(isNightVisual ? "#1BFFFFFF" : "#1EFFFFFF");
+        LocationIcon.Foreground = primary;
+        CityTextBlock.Foreground = primary;
+        TemperatureTextBlock.Foreground = primary;
+        WeatherIconSymbol.Foreground = CreateSolidBrush(ResolveWeatherIconAccent(WeatherIconSymbol.Symbol, isNightVisual));
+        ConditionTextBlock.Foreground = conditionSecondary;
+        RangeTextBlock.Foreground = rangeSecondary;
+        for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
+        {
+            _hourlyTimeBlocks[i].Foreground = forecastTimeBrush;
+            _hourlyTempBlocks[i].Foreground = forecastTempBrush;
+            _hourlyIconBlocks[i].Foreground = CreateSolidBrush(ResolveWeatherIconAccent(_hourlyIconBlocks[i].Symbol, isNightVisual));
+        }
+
+        foreach (var particle in _particleVisuals)
+        {
+            particle.Background = particleBrush;
+        }
+
+        ResetAnimationState();
+        ResetParticles();
+    }
+
+    private IBrush ResolveWeatherBackgroundBrush(WeatherVisualKind kind, WeatherVisualPalette palette)
+    {
+        if (_backgroundBrushCache.TryGetValue(kind, out var cached))
+        {
+            return cached;
+        }
+
+        if (WeatherBackgroundAssets.TryGetValue(kind, out var uriText))
+        {
+            try
+            {
+                var uri = new Uri(uriText, UriKind.Absolute);
+                using var stream = AssetLoader.Open(uri);
+                var bitmap = new Bitmap(stream);
+                var imageBrush = new ImageBrush
+                {
+                    Source = bitmap,
+                    Stretch = Stretch.UniformToFill,
+                    AlignmentX = AlignmentX.Center,
+                    AlignmentY = AlignmentY.Center
+                };
+                _backgroundBrushCache[kind] = imageBrush;
+                return imageBrush;
+            }
+            catch
+            {
+                // Fall through to gradient background when the image cannot be loaded.
+            }
+        }
+
+        var gradientBrush = CreateGradientBrush(palette.GradientFrom, palette.GradientTo);
+        _backgroundBrushCache[kind] = gradientBrush;
+        return gradientBrush;
+    }
+
+    private static WeatherVisualKind ResolveVisualKind(int? weatherCode, bool isNight)
+    {
+        return weatherCode switch
+        {
+            0 => isNight ? WeatherVisualKind.ClearNight : WeatherVisualKind.ClearDay,
+            1 or 2 => isNight ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay,
+            3 or 7 => WeatherVisualKind.RainLight,
+            8 or 9 => WeatherVisualKind.RainHeavy,
+            4 => WeatherVisualKind.Storm,
+            13 or 14 or 15 or 16 => WeatherVisualKind.Snow,
+            18 or 32 => WeatherVisualKind.Fog,
+            _ => isNight ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay
+        };
+    }
+
+    private static WeatherVisualPalette ResolvePalette(WeatherVisualKind kind)
+    {
+        return kind switch
+        {
+            WeatherVisualKind.ClearDay => new WeatherVisualPalette(
+                GradientFrom: "#4F92E8",
+                GradientTo: "#83C5FF",
+                Tint: "#234D87",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#EEF5FF",
+                ParticleColor: "#00FFFFFF"),
+            WeatherVisualKind.ClearNight => new WeatherVisualPalette(
+                GradientFrom: "#0E2B72",
+                GradientTo: "#193A85",
+                Tint: "#0A1E52",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#CFE0FF",
+                ParticleColor: "#00FFFFFF"),
+            WeatherVisualKind.CloudyDay => new WeatherVisualPalette(
+                GradientFrom: "#4A72B3",
+                GradientTo: "#6A8EC2",
+                Tint: "#2A487C",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#EAF2FF",
+                ParticleColor: "#16FFFFFF"),
+            WeatherVisualKind.CloudyNight => new WeatherVisualPalette(
+                GradientFrom: "#102A6B",
+                GradientTo: "#193A80",
+                Tint: "#0B1F51",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#D5E4FF",
+                ParticleColor: "#24FFFFFF"),
+            WeatherVisualKind.RainLight => new WeatherVisualPalette(
+                GradientFrom: "#32588A",
+                GradientTo: "#4D74A8",
+                Tint: "#1F3454",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#E6F0FF",
+                ParticleColor: "#88D7E8FF"),
+            WeatherVisualKind.RainHeavy => new WeatherVisualPalette(
+                GradientFrom: "#253F66",
+                GradientTo: "#36567F",
+                Tint: "#17263E",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#DCE9FF",
+                ParticleColor: "#A2CDE1FF"),
+            WeatherVisualKind.Storm => new WeatherVisualPalette(
+                GradientFrom: "#293A67",
+                GradientTo: "#3A4F78",
+                Tint: "#161E35",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#DCE4F8",
+                ParticleColor: "#A8C2D6F2"),
+            WeatherVisualKind.Snow => new WeatherVisualPalette(
+                GradientFrom: "#D1E8FF",
+                GradientTo: "#A7D0F4",
+                Tint: "#607C9D",
+                PrimaryText: "#FF10253D",
+                SecondaryText: "#FF2B435E",
+                ParticleColor: "#CCFFFFFF"),
+            _ => new WeatherVisualPalette(
+                GradientFrom: "#445B7A",
+                GradientTo: "#5B738F",
+                Tint: "#2A3E56",
+                PrimaryText: "#FFFFFFFF",
+                SecondaryText: "#E7EDF6",
+                ParticleColor: "#88E4EDF7")
+        };
+    }
+
+    private static Symbol ResolveWeatherSymbol(WeatherVisualKind kind)
+    {
+        return kind switch
+        {
+            WeatherVisualKind.ClearDay => Symbol.WeatherSunny,
+            WeatherVisualKind.ClearNight => Symbol.WeatherMoon,
+            WeatherVisualKind.CloudyDay => Symbol.WeatherPartlyCloudyDay,
+            WeatherVisualKind.CloudyNight => Symbol.WeatherPartlyCloudyNight,
+            WeatherVisualKind.RainLight => Symbol.WeatherRainShowersDay,
+            WeatherVisualKind.RainHeavy => Symbol.WeatherRain,
+            WeatherVisualKind.Storm => Symbol.WeatherThunderstorm,
+            WeatherVisualKind.Snow => Symbol.WeatherSnow,
+            _ => Symbol.WeatherFog
+        };
+    }
+
+    private string ResolveWeatherConditionText(string? weatherText, WeatherVisualKind kind)
+    {
+        if (!string.IsNullOrWhiteSpace(weatherText))
+        {
+            return weatherText;
+        }
+
+        return kind switch
+        {
+            WeatherVisualKind.ClearDay or WeatherVisualKind.ClearNight => L("weather.widget.condition_clear", "Clear"),
+            WeatherVisualKind.CloudyDay or WeatherVisualKind.CloudyNight => L("weather.widget.condition_cloudy", "Cloudy"),
+            WeatherVisualKind.RainLight or WeatherVisualKind.RainHeavy => L("weather.widget.condition_rain", "Rain"),
+            WeatherVisualKind.Storm => L("weather.widget.condition_storm", "Thunderstorm"),
+            WeatherVisualKind.Snow => L("weather.widget.condition_snow", "Snow"),
+            WeatherVisualKind.Fog => L("weather.widget.condition_fog", "Fog"),
+            _ => L("weather.widget.condition_unknown", "Unknown")
+        };
+    }
+
+    private static (double? Low, double? High) ResolveTemperatureRange(WeatherSnapshot snapshot)
+    {
+        var first = snapshot.DailyForecasts.FirstOrDefault();
+        var low = first?.LowTemperatureC;
+        var high = first?.HighTemperatureC;
+
+        if (!low.HasValue && !high.HasValue && snapshot.Current.TemperatureC.HasValue)
+        {
+            var baseline = snapshot.Current.TemperatureC.Value;
+            low = Math.Floor(baseline - 2);
+            high = Math.Ceiling(baseline + 2);
+        }
+
+        return (low, high);
+    }
+
+    private string FormatTemperatureRange(double? low, double? high)
+    {
+        if (!low.HasValue && !high.HasValue)
+        {
+            return L("weather.widget.range_unknown", "-- / --");
+        }
+
+        var lowText = FormatTemperature(low);
+        var highText = FormatTemperature(high);
+        return string.Format(
+            GetUiCulture(),
+            L("weather.widget.range_format", "{0} / {1}"),
+            lowText,
+            highText);
+    }
+
+    private static string FormatTemperature(double? value)
+    {
+        if (!value.HasValue || double.IsNaN(value.Value) || double.IsInfinity(value.Value))
+        {
+            return "--°";
+        }
+
+        var rounded = (int)Math.Round(value.Value, MidpointRounding.AwayFromZero);
+        return string.Create(CultureInfo.InvariantCulture, $"{rounded}°");
+    }
+
+    private IReadOnlyList<HourlyForecastItem> BuildHourlyForecastItems(WeatherSnapshot snapshot)
+    {
+        const int itemCount = 6;
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        var fallbackDaily = ResolveDailyForecastForDate(snapshot, DateOnly.FromDateTime(now))
+            ?? snapshot.DailyForecasts.FirstOrDefault();
+        var (low, high) = ResolveTemperatureRange(snapshot);
+
+        var hourlyCandidates = snapshot.HourlyForecasts
+            .Select(hourly => (Hourly: hourly, Time: ConvertToConfiguredTime(hourly.Time).DateTime))
+            .Where(item => item.Time >= now.AddMinutes(-70))
+            .OrderBy(item => item.Time)
+            .Take(72)
+            .ToList();
+
+        var items = new List<HourlyForecastItem>(itemCount);
+        for (var i = 0; i < itemCount; i++)
+        {
+            var targetTime = now.AddHours(i);
+            var displayLabel = i == 0
+                ? L("weather.hourly.now", "Now")
+                : targetTime.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+            var candidate = TryFindNearestHourlyCandidate(hourlyCandidates, targetTime);
+            var weatherCode = candidate?.Hourly.WeatherCode ??
+                              ResolveFallbackWeatherCode(targetTime, snapshot, fallbackDaily);
+            var icon = ResolveWeatherSymbol(ResolveVisualKind(weatherCode, IsNightHour(targetTime)));
+
+            var estimatedTemp = candidate?.Hourly.TemperatureC ??
+                                EstimateHourlyTemperature(
+                                    targetTime,
+                                    i,
+                                    snapshot.Current.TemperatureC,
+                                    low,
+                                    high);
+
+            items.Add(new HourlyForecastItem(
+                targetTime,
+                displayLabel,
+                icon,
+                FormatTemperature(estimatedTemp)));
+        }
+
+        return items;
+    }
+
+    private IReadOnlyList<HourlyForecastItem> BuildPlaceholderHourlyForecastItems(WeatherVisualKind visualKind)
+    {
+        const int itemCount = 6;
+        var items = new List<HourlyForecastItem>(itemCount);
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        var symbol = ResolveWeatherSymbol(visualKind);
+        for (var i = 0; i < itemCount; i++)
+        {
+            var targetTime = now.AddHours(i);
+            items.Add(new HourlyForecastItem(
+                targetTime,
+                i == 0
+                    ? L("weather.hourly.now", "Now")
+                    : targetTime.ToString("HH:mm", CultureInfo.InvariantCulture),
+                symbol,
+                "--°"));
+        }
+
+        return items;
+    }
+
+    private void ApplyHourlyForecastItems(IReadOnlyList<HourlyForecastItem> items)
+    {
+        var isNightVisual = _activeVisualKind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight;
+        for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
+        {
+            if (i >= items.Count)
+            {
+                _hourlyTimeBlocks[i].Text = "--";
+                _hourlyTempBlocks[i].Text = "--°";
+                _hourlyIconBlocks[i].Symbol = ResolveWeatherSymbol(_activeVisualKind);
+                continue;
+            }
+
+            var item = items[i];
+            _hourlyTimeBlocks[i].Text = item.TimeLabel;
+            _hourlyIconBlocks[i].Symbol = item.Icon;
+            _hourlyIconBlocks[i].Foreground = CreateSolidBrush(ResolveWeatherIconAccent(item.Icon, isNightVisual));
+            _hourlyTempBlocks[i].Text = item.TemperatureText;
+        }
+    }
+
+    private static (WeatherHourlyForecast Hourly, DateTime Time)? TryFindNearestHourlyCandidate(
+        IReadOnlyList<(WeatherHourlyForecast Hourly, DateTime Time)> candidates,
+        DateTime targetTime)
+    {
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var bestDelta = double.MaxValue;
+        (WeatherHourlyForecast Hourly, DateTime Time)? best = null;
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            var delta = Math.Abs((candidate.Time - targetTime).TotalMinutes);
+            if (delta >= bestDelta)
+            {
+                continue;
+            }
+
+            bestDelta = delta;
+            best = candidate;
+        }
+
+        return bestDelta <= 70 ? best : null;
+    }
+
+    private int? ResolveFallbackWeatherCode(
+        DateTime targetTime,
+        WeatherSnapshot snapshot,
+        WeatherDailyForecast? fallbackDaily)
+    {
+        var daily = ResolveDailyForecastForDate(snapshot, DateOnly.FromDateTime(targetTime)) ?? fallbackDaily;
+        if (daily is null)
+        {
+            return snapshot.Current.WeatherCode;
+        }
+
+        return IsNightHour(targetTime)
+            ? daily.NightWeatherCode ?? daily.DayWeatherCode ?? snapshot.Current.WeatherCode
+            : daily.DayWeatherCode ?? daily.NightWeatherCode ?? snapshot.Current.WeatherCode;
+    }
+
+    private static WeatherDailyForecast? ResolveDailyForecastForDate(WeatherSnapshot snapshot, DateOnly date)
+    {
+        foreach (var forecast in snapshot.DailyForecasts)
+        {
+            if (forecast.Date == date)
+            {
+                return forecast;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsNightHour(DateTime time)
+    {
+        return time.Hour < 6 || time.Hour >= 18;
+    }
+
+    private DateTimeOffset ConvertToConfiguredTime(DateTimeOffset time)
+    {
+        if (_timeZoneService is null)
+        {
+            return time.ToLocalTime();
+        }
+
+        try
+        {
+            return TimeZoneInfo.ConvertTime(time, _timeZoneService.CurrentTimeZone);
+        }
+        catch
+        {
+            return time.ToLocalTime();
+        }
+    }
+
+    private static double? EstimateHourlyTemperature(
+        DateTime targetTime,
+        int hourOffset,
+        double? currentTemperature,
+        double? low,
+        double? high)
+    {
+        if (hourOffset == 0 && currentTemperature.HasValue)
+        {
+            return currentTemperature.Value;
+        }
+
+        if (!low.HasValue && !high.HasValue)
+        {
+            return currentTemperature;
+        }
+
+        if (!low.HasValue && high.HasValue)
+        {
+            low = high.Value - 4;
+        }
+        else if (!high.HasValue && low.HasValue)
+        {
+            high = low.Value + 4;
+        }
+
+        if (!low.HasValue || !high.HasValue)
+        {
+            return currentTemperature;
+        }
+
+        var hour = targetTime.Hour + targetTime.Minute / 60d;
+        var normalized = (Math.Cos((hour - 15d) / 12d * Math.PI) + 1d) * 0.5d;
+        var estimated = low.Value + ((high.Value - low.Value) * normalized);
+        if (currentTemperature.HasValue && hourOffset <= 2)
+        {
+            estimated = (estimated * 0.60) + (currentTemperature.Value * 0.40);
+        }
+
+        return estimated;
+    }
+
+    private static string ResolveWeatherIconAccent(Symbol symbol, bool isNightVisual)
+    {
+        return symbol switch
+        {
+            Symbol.WeatherSunny => isNightVisual ? "#FFD978" : "#F7C40A",
+            Symbol.WeatherMoon => "#F3D38C",
+            Symbol.WeatherPartlyCloudyDay => "#75B0FF",
+            Symbol.WeatherPartlyCloudyNight => "#8AB6FF",
+            Symbol.WeatherRainShowersDay => "#9ECBFF",
+            Symbol.WeatherRain => "#8DBDF5",
+            Symbol.WeatherThunderstorm => "#F4D16E",
+            Symbol.WeatherSnow => "#C7E6FF",
+            _ => isNightVisual ? "#D5E2F4" : "#E2ECFA"
+        };
+    }
+
+    private static string ResolvePreciseDisplayLocation(string? rawName, string languageCode, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(rawName))
+        {
+            return fallback;
+        }
+
+        var name = rawName.Trim();
+        if (name.Length == 0)
+        {
+            return fallback;
+        }
+
+        var isZh = string.Equals(languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase);
+        var candidates = new List<string> { name };
+
+        // Prefer detailed parts inside parenthesis, e.g. "Beijing (Haidian)".
+        var parenthesisMatches = Regex.Matches(name, @"\(([^()]+)\)|\uFF08([^\uFF08\uFF09]+)\uFF09");
+        foreach (Match match in parenthesisMatches)
+        {
+            var inner = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+            if (!string.IsNullOrWhiteSpace(inner))
+            {
+                candidates.Add(inner.Trim());
+            }
+        }
+
+        var nameWithoutParenthesis = Regex.Replace(name, @"\([^()]*\)|\uFF08[^\uFF08\uFF09]*\uFF09", " ");
+        candidates.Add(nameWithoutParenthesis);
+
+        const string splitPattern = @"[\s\|/\\,\uFF0C\u3001\u00B7]+";
+        foreach (var piece in Regex.Split(string.Join(" ", candidates), splitPattern))
+        {
+            var token = piece.Trim();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                candidates.Add(token);
+            }
+        }
+
+        var best = fallback;
+        var bestScore = int.MinValue;
+        foreach (var candidate in candidates
+                     .Select(c => c.Trim())
+                     .Where(c => !string.IsNullOrWhiteSpace(c))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var score = ScoreLocationToken(candidate, isZh);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(best) ? fallback : best;
+    }
+
+    private static int ScoreLocationToken(string token, bool isZh)
+    {
+        var cleaned = token.Trim();
+        if (cleaned.Length == 0)
+        {
+            return int.MinValue;
+        }
+
+        if (Regex.IsMatch(cleaned, @"^[0-9.+-]+$") ||
+            cleaned.StartsWith("coord:", StringComparison.OrdinalIgnoreCase))
+        {
+            return -500;
+        }
+
+        var score = Math.Min(cleaned.Length, 32);
+        if (isZh)
+        {
+            // Prefer granular places: street > district > city > province.
+            if (cleaned.EndsWith("\u8857\u9053", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u8DEF", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u793E\u533A", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u6751", StringComparison.Ordinal))
+            {
+                score += 120;
+            }
+            else if (cleaned.EndsWith("\u9547", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u4E61", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u65B0\u533A", StringComparison.Ordinal))
+            {
+                score += 100;
+            }
+            else if (cleaned.EndsWith("\u533A", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u53BF", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u65D7", StringComparison.Ordinal))
+            {
+                score += 80;
+            }
+            else if (cleaned.EndsWith("\u5E02", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u5DDE", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u76DF", StringComparison.Ordinal))
+            {
+                score += 60;
+            }
+            else if (cleaned.EndsWith("\u7701", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u81EA\u6CBB\u533A", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u7279\u522B\u884C\u653F\u533A", StringComparison.Ordinal))
+            {
+                score += 40;
+            }
+        }
+        else
+        {
+            var lower = cleaned.ToLowerInvariant();
+            if (lower.Contains("street", StringComparison.Ordinal) ||
+                lower.Contains("st.", StringComparison.Ordinal) ||
+                lower.Contains("road", StringComparison.Ordinal) ||
+                lower.Contains("rd.", StringComparison.Ordinal) ||
+                lower.Contains("avenue", StringComparison.Ordinal) ||
+                lower.Contains("district", StringComparison.Ordinal))
+            {
+                score += 120;
+            }
+            else if (lower.Contains("county", StringComparison.Ordinal) ||
+                     lower.Contains("borough", StringComparison.Ordinal))
+            {
+                score += 90;
+            }
+            else if (lower.Contains("city", StringComparison.Ordinal))
+            {
+                score += 70;
+            }
+            else if (lower.Contains("province", StringComparison.Ordinal) ||
+                     lower.Contains("state", StringComparison.Ordinal))
+            {
+                score += 50;
+            }
+            else if (lower.Contains("country", StringComparison.Ordinal))
+            {
+                score += 30;
+            }
+        }
+
+        return score;
+    }
+
+    private void ApplyAdaptiveTypography()
+    {
+        var (layoutWidth, layoutHeight) = ResolveLayoutViewport();
+        var scale = ResolveScale(layoutWidth, layoutHeight);
+        var densityBoost = scale <= 0.55 ? 0.80 : scale <= 0.72 ? 0.88 : scale <= 0.92 ? 0.95 : scale >= 1.45 ? 1.06 : 1.0;
+        var compactness = Math.Clamp((0.88 - scale) / 0.50, 0, 1);
+        var cityLength = Math.Max(1, CityTextBlock.Text?.Length ?? 2);
+        var cityCompression = cityLength >= 12 ? 0.68 : cityLength >= 9 ? 0.80 : cityLength >= 6 ? 0.90 : 1.0;
+        var conditionLength = Math.Max(1, ConditionTextBlock.Text?.Length ?? 2);
+        var conditionCompression = conditionLength >= 12 ? 0.72 : conditionLength >= 8 ? 0.85 : conditionLength >= 6 ? 0.92 : 1.0;
+
+        ContentGrid.RowSpacing = Math.Clamp(layoutHeight * Lerp(0.030, 0.018, compactness), 2, 14);
+        TopRowGrid.ColumnSpacing = Math.Clamp(layoutWidth * 0.014, 3, 14);
+        BottomInfoStack.Spacing = Math.Clamp(layoutHeight * 0.016, 2, 10);
+        BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(layoutHeight * 0.018, 0, 10));
+        ConditionRangeStack.Spacing = Math.Clamp(layoutWidth * 0.010, 3, 12);
+        ConditionRangeStack.Margin = new Thickness(0, 0, 0, Math.Clamp(layoutHeight * 0.018, 0, 10));
+
+        HourlyPanelBorder.Padding = new Thickness(
+            Math.Clamp(layoutWidth * 0.018, 4, 16),
+            Math.Clamp(layoutHeight * 0.020, 3, 12));
+        HourlyPanelBorder.CornerRadius = new CornerRadius(Math.Clamp(Math.Min(layoutWidth, layoutHeight) * 0.065, 8, 22));
+        HourlyGrid.ColumnSpacing = Math.Clamp(layoutWidth * 0.010, 1.5, 12);
+
+        var topBandHeight = Math.Max(18, layoutHeight * 0.22);
+        var middleBandHeight = Math.Max(24, layoutHeight * 0.30);
+        var bottomBandHeight = Math.Max(22, layoutHeight - topBandHeight - middleBandHeight - (ContentGrid.RowSpacing * 2));
+
+        LocationIcon.FontSize = Math.Min(Math.Clamp(24 * scale * densityBoost, 9, 30), topBandHeight * 0.58);
+        CityTextBlock.FontSize = Math.Min(Math.Clamp(40 * scale * cityCompression * densityBoost, 12, 46), topBandHeight * 0.76);
+        WeatherIconSymbol.FontSize = Math.Min(Math.Clamp(52 * scale * densityBoost, 12, 56), topBandHeight * 0.95);
+        TemperatureTextBlock.FontSize = Math.Min(Math.Clamp(134 * scale * densityBoost, 26, 138), middleBandHeight * 0.92);
+        ConditionTextBlock.FontSize = Math.Min(Math.Clamp(32 * scale * conditionCompression * densityBoost, 9, 40), middleBandHeight * 0.42);
+        RangeTextBlock.FontSize = Math.Min(Math.Clamp(37 * scale * densityBoost, 10, 46), middleBandHeight * 0.50);
+        TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(layoutHeight * 0.008, 0, 6), 0, Math.Clamp(layoutHeight * 0.012, 0, 8));
+
+        var weightProgress = Math.Clamp((scale - 0.34) / 1.18, 0, 1);
+        CityTextBlock.FontWeight = ToVariableWeight(Lerp(540, 680, weightProgress));
+        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(600, 760, weightProgress));
+        ConditionTextBlock.FontWeight = ToVariableWeight(Lerp(490, 620, weightProgress));
+        RangeTextBlock.FontWeight = ToVariableWeight(Lerp(490, 610, weightProgress));
+
+        var topRightMaxWidth = Math.Clamp(layoutWidth * Lerp(0.42, 0.34, compactness), 128, 280);
+        ConditionRangeStack.MaxWidth = topRightMaxWidth;
+        ConditionTextBlock.MaxWidth = Math.Max(44, topRightMaxWidth * Lerp(0.45, 0.40, compactness));
+        RangeTextBlock.MaxWidth = Math.Max(62, topRightMaxWidth * Lerp(0.55, 0.60, compactness));
+        var leftTopBudget = Math.Max(140, layoutWidth - topRightMaxWidth - Math.Clamp(64 * scale, 26, 92));
+        TemperatureTextBlock.MaxWidth = leftTopBudget;
+        CityTextBlock.MaxWidth = Math.Max(110, layoutWidth - Math.Clamp(86 * scale, 28, 120));
+
+        var hourlyColumnCount = Math.Max(1, _hourlyTimeBlocks.Length);
+        var hourlyInnerWidth = Math.Max(
+            80,
+            layoutWidth - HourlyPanelBorder.Padding.Left - HourlyPanelBorder.Padding.Right - (HourlyGrid.ColumnSpacing * (hourlyColumnCount - 1)));
+        var hourlyCellWidth = Math.Max(32, hourlyInnerWidth / hourlyColumnCount);
+        var hourlyStackSpacing = Math.Clamp(bottomBandHeight * 0.065, 1, 5);
+        var hourlyInnerHeight = Math.Max(
+            20,
+            bottomBandHeight - HourlyPanelBorder.Padding.Top - HourlyPanelBorder.Padding.Bottom);
+        var hourlyLineHeight = Math.Max(6, (hourlyInnerHeight - (hourlyStackSpacing * 2)) / 3d);
+        var hourlyTimeMaxByWidth = Math.Clamp(hourlyCellWidth / Lerp(4.4, 3.8, 1 - compactness), 7, 24);
+        var hourlyTempMaxByWidth = Math.Clamp(hourlyCellWidth / Lerp(5.0, 4.4, 1 - compactness), 7, 28);
+        var hourlyIconMaxByWidth = Math.Clamp(hourlyCellWidth * Lerp(0.32, 0.38, 1 - compactness), 7, 30);
+        var hourlyTimeMaxByHeight = Math.Clamp(hourlyLineHeight * 0.95, 7, 24);
+        var hourlyTempMaxByHeight = Math.Clamp(hourlyLineHeight * 0.95, 7, 28);
+        var hourlyIconMaxByHeight = Math.Clamp(hourlyLineHeight * 1.05, 8, 30);
+
+        var hourlyTimeSize = Math.Min(
+            Math.Clamp(24 * scale * densityBoost, 8, 30),
+            Math.Min(hourlyTimeMaxByWidth, hourlyTimeMaxByHeight));
+        var hourlyIconSize = Math.Min(
+            Math.Clamp(30 * scale * densityBoost, 8, 34),
+            Math.Min(hourlyIconMaxByWidth, hourlyIconMaxByHeight));
+        var hourlyTempSize = Math.Min(
+            Math.Clamp(32 * scale * densityBoost, 8, 34),
+            Math.Min(hourlyTempMaxByWidth, hourlyTempMaxByHeight));
+
+        for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
+        {
+            _hourlyTimeBlocks[i].FontSize = hourlyTimeSize;
+            _hourlyTempBlocks[i].FontSize = hourlyTempSize;
+            _hourlyIconBlocks[i].FontSize = hourlyIconSize;
+            _hourlyTimeBlocks[i].MaxWidth = hourlyCellWidth;
+            _hourlyTempBlocks[i].MaxWidth = hourlyCellWidth;
+            _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(Lerp(480, 620, weightProgress));
+            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(500, 650, weightProgress));
+            if (_hourlyTimeBlocks[i].Parent is StackPanel hourlyStack)
+            {
+                hourlyStack.Spacing = hourlyStackSpacing;
+            }
+        }
+    }
+
+    private static double Lerp(double from, double to, double t)
+    {
+        return from + ((to - from) * t);
+    }
+
+    private static FontWeight ToVariableWeight(double weight)
+    {
+        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
+    }
+
+    private WeatherMotionProfile ResolveMotionProfile(WeatherVisualKind kind)
+    {
+        return kind switch
+        {
+            WeatherVisualKind.ClearDay => new WeatherMotionProfile(
+                DriftX: 8.0, DriftY: 4.0, ZoomBase: 1.055, ZoomAmplitude: 0.012,
+                MotionOpacityBase: 0.22, MotionOpacityPulse: 0.05,
+                LightOpacityBase: 0.68, LightOpacityPulse: 0.08,
+                ShadeOpacityBase: 0.72, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.015, ParticleCount: 0,
+                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
+                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
+            WeatherVisualKind.ClearNight => new WeatherMotionProfile(
+                DriftX: 10.0, DriftY: 6.0, ZoomBase: 1.060, ZoomAmplitude: 0.014,
+                MotionOpacityBase: 0.28, MotionOpacityPulse: 0.06,
+                LightOpacityBase: 0.58, LightOpacityPulse: 0.07,
+                ShadeOpacityBase: 0.82, ShadeOpacityPulse: 0.04,
+                PhaseStep: 0.018, ParticleCount: 0,
+                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
+                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
+            WeatherVisualKind.CloudyDay => new WeatherMotionProfile(
+                DriftX: 12.0, DriftY: 7.0, ZoomBase: 1.060, ZoomAmplitude: 0.013,
+                MotionOpacityBase: 0.32, MotionOpacityPulse: 0.06,
+                LightOpacityBase: 0.62, LightOpacityPulse: 0.07,
+                ShadeOpacityBase: 0.80, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.020, ParticleCount: 6,
+                ParticleSpeedMin: 0.30, ParticleSpeedMax: 0.70,
+                ParticleLengthMin: 14, ParticleLengthMax: 28, ParticleDriftPerTick: 0.10),
+            WeatherVisualKind.CloudyNight => new WeatherMotionProfile(
+                DriftX: 14.0, DriftY: 8.0, ZoomBase: 1.065, ZoomAmplitude: 0.013,
+                MotionOpacityBase: 0.34, MotionOpacityPulse: 0.07,
+                LightOpacityBase: 0.54, LightOpacityPulse: 0.06,
+                ShadeOpacityBase: 0.85, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.021, ParticleCount: 8,
+                ParticleSpeedMin: 0.35, ParticleSpeedMax: 0.80,
+                ParticleLengthMin: 16, ParticleLengthMax: 30, ParticleDriftPerTick: 0.12),
+            WeatherVisualKind.RainLight => new WeatherMotionProfile(
+                DriftX: 6.0, DriftY: 10.0, ZoomBase: 1.050, ZoomAmplitude: 0.010,
+                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.08,
+                LightOpacityBase: 0.50, LightOpacityPulse: 0.04,
+                ShadeOpacityBase: 0.84, ShadeOpacityPulse: 0.04,
+                PhaseStep: 0.030, ParticleCount: 18,
+                ParticleSpeedMin: 1.80, ParticleSpeedMax: 3.20,
+                ParticleLengthMin: 14, ParticleLengthMax: 26, ParticleDriftPerTick: 0.70),
+            WeatherVisualKind.RainHeavy => new WeatherMotionProfile(
+                DriftX: 5.0, DriftY: 11.0, ZoomBase: 1.045, ZoomAmplitude: 0.010,
+                MotionOpacityBase: 0.34, MotionOpacityPulse: 0.10,
+                LightOpacityBase: 0.42, LightOpacityPulse: 0.03,
+                ShadeOpacityBase: 0.88, ShadeOpacityPulse: 0.05,
+                PhaseStep: 0.036, ParticleCount: 30,
+                ParticleSpeedMin: 2.80, ParticleSpeedMax: 4.80,
+                ParticleLengthMin: 18, ParticleLengthMax: 34, ParticleDriftPerTick: 0.92),
+            WeatherVisualKind.Storm => new WeatherMotionProfile(
+                DriftX: 4.0, DriftY: 12.0, ZoomBase: 1.042, ZoomAmplitude: 0.012,
+                MotionOpacityBase: 0.38, MotionOpacityPulse: 0.12,
+                LightOpacityBase: 0.36, LightOpacityPulse: 0.02,
+                ShadeOpacityBase: 0.91, ShadeOpacityPulse: 0.04,
+                PhaseStep: 0.042, ParticleCount: 34,
+                ParticleSpeedMin: 3.60, ParticleSpeedMax: 5.80,
+                ParticleLengthMin: 20, ParticleLengthMax: 36, ParticleDriftPerTick: 1.08),
+            WeatherVisualKind.Snow => new WeatherMotionProfile(
+                DriftX: 9.0, DriftY: 7.0, ZoomBase: 1.055, ZoomAmplitude: 0.012,
+                MotionOpacityBase: 0.28, MotionOpacityPulse: 0.06,
+                LightOpacityBase: 0.74, LightOpacityPulse: 0.08,
+                ShadeOpacityBase: 0.68, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.020, ParticleCount: 24,
+                ParticleSpeedMin: 0.60, ParticleSpeedMax: 1.60,
+                ParticleLengthMin: 3.0, ParticleLengthMax: 8.5, ParticleDriftPerTick: 0.24),
+            _ => new WeatherMotionProfile(
+                DriftX: 7.0, DriftY: 5.0, ZoomBase: 1.050, ZoomAmplitude: 0.011,
+                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.05,
+                LightOpacityBase: 0.58, LightOpacityPulse: 0.05,
+                ShadeOpacityBase: 0.86, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.018, ParticleCount: 10,
+                ParticleSpeedMin: 0.25, ParticleSpeedMax: 0.70,
+                ParticleLengthMin: 16, ParticleLengthMax: 34, ParticleDriftPerTick: 0.12)
+        };
+    }
+
+    private void ResetAnimationState()
+    {
+        var motion = ResolveMotionProfile(_activeVisualKind);
+        _animationPhase = 0;
+        SetMotionTransform(0, 0, motion.ZoomBase);
+        BackgroundMotionLayer.Opacity = motion.MotionOpacityBase;
+        BackgroundLightLayer.Opacity = motion.LightOpacityBase;
+        BackgroundShadeLayer.Opacity = motion.ShadeOpacityBase;
+    }
+
+    private void SetMotionTransform(double translateX, double translateY, double scale)
+    {
+        var group = new TransformGroup
+        {
+            Children = new Transforms
+            {
+                new ScaleTransform(scale, scale),
+                new TranslateTransform(translateX, translateY)
+            }
+        };
+        BackgroundMotionLayer.RenderTransform = group;
+    }
+
+    private void InitializeParticleVisuals()
+    {
+        if (_particleVisuals.Count > 0)
+        {
+            return;
+        }
+
+        const int maxParticles = 40;
+        for (var i = 0; i < maxParticles; i++)
+        {
+            var particle = new Border
+            {
+                IsVisible = false,
+                Width = 2,
+                Height = 14,
+                CornerRadius = new CornerRadius(1),
+                Opacity = 0.0
+            };
+            _particleVisuals.Add(particle);
+            _particleStates.Add(new ParticleState());
+            ParticleLayer.Children.Add(particle);
+        }
+    }
+
+    private void ResetParticles()
+    {
+        if (_particleVisuals.Count == 0)
+        {
+            return;
+        }
+
+        var motion = ResolveMotionProfile(_activeVisualKind);
+        _activeParticleCount = Math.Clamp(motion.ParticleCount, 0, _particleVisuals.Count);
+
+        var (width, height) = ResolveParticleViewport();
+
+        for (var i = 0; i < _particleVisuals.Count; i++)
+        {
+            var particle = _particleVisuals[i];
+            if (i >= _activeParticleCount)
+            {
+                particle.IsVisible = false;
+                continue;
+            }
+
+            particle.IsVisible = true;
+            RespawnParticle(i, width, height, motion, initialPlacement: true);
+        }
+    }
+
+    private void AdvanceParticles(WeatherMotionProfile motion)
+    {
+        if (_activeParticleCount <= 0)
+        {
+            return;
+        }
+
+        var (width, height) = ResolveParticleViewport();
+
+        for (var i = 0; i < _activeParticleCount; i++)
+        {
+            var particle = _particleVisuals[i];
+            var state = _particleStates[i];
+
+            var x = Canvas.GetLeft(particle);
+            var y = Canvas.GetTop(particle);
+            if (double.IsNaN(x))
+            {
+                x = 0;
+            }
+
+            if (double.IsNaN(y))
+            {
+                y = -20;
+            }
+
+            var sway = _activeVisualKind == WeatherVisualKind.Snow
+                ? Math.Sin(_animationPhase + (i * 0.45)) * 0.55
+                : _activeVisualKind == WeatherVisualKind.Fog
+                    ? Math.Sin((_animationPhase * 0.7) + (i * 0.31)) * 0.18
+                    : 0;
+
+            x += state.Drift + sway;
+            y += state.Speed;
+
+            Canvas.SetLeft(particle, x);
+            Canvas.SetTop(particle, y);
+
+            if (y > height + 48 || x > width + 56 || x < -72)
+            {
+                RespawnParticle(i, width, height, motion, initialPlacement: false);
+            }
+        }
+    }
+
+    private void RespawnParticle(int index, double width, double height, WeatherMotionProfile motion, bool initialPlacement)
+    {
+        var particle = _particleVisuals[index];
+        var state = _particleStates[index];
+
+        state.Speed = NextRange(motion.ParticleSpeedMin, motion.ParticleSpeedMax);
+        var driftVariance = Math.Abs(motion.ParticleDriftPerTick) * 0.35;
+        state.Drift = motion.ParticleDriftPerTick + NextRange(-driftVariance, driftVariance);
+
+        var length = NextRange(motion.ParticleLengthMin, motion.ParticleLengthMax);
+        var thickness = _activeVisualKind switch
+        {
+            WeatherVisualKind.Snow => NextRange(2.2, 4.3),
+            WeatherVisualKind.Fog => NextRange(10.0, 22.0),
+            _ => NextRange(1.0, 2.2)
+        };
+        var opacity = _activeVisualKind switch
+        {
+            WeatherVisualKind.Storm => NextRange(0.26, 0.52),
+            WeatherVisualKind.RainHeavy => NextRange(0.24, 0.46),
+            WeatherVisualKind.RainLight => NextRange(0.18, 0.34),
+            WeatherVisualKind.Snow => NextRange(0.40, 0.72),
+            WeatherVisualKind.Fog => NextRange(0.08, 0.20),
+            _ => NextRange(0.10, 0.24)
+        };
+
+        particle.Width = thickness;
+        particle.Height = length;
+        particle.Opacity = opacity;
+        particle.CornerRadius = new CornerRadius(Math.Max(1, thickness * 0.5));
+        particle.RenderTransform = new RotateTransform(_activeVisualKind switch
+        {
+            WeatherVisualKind.Storm => -24,
+            WeatherVisualKind.RainHeavy => -20,
+            WeatherVisualKind.RainLight => -14,
+            WeatherVisualKind.Snow => -6,
+            _ => 0
+        });
+
+        var x = initialPlacement
+            ? NextRange(-40, width + 20)
+            : NextRange(-24, width + 20);
+        var y = initialPlacement
+            ? NextRange(-height, height)
+            : -length - NextRange(8, 120);
+
+        Canvas.SetLeft(particle, x);
+        Canvas.SetTop(particle, y);
+    }
+
+    private double NextRange(double min, double max)
+    {
+        if (max <= min)
+        {
+            return min;
+        }
+
+        return min + (_particleRandom.NextDouble() * (max - min));
+    }
+
+    private string L(string key, string fallback)
+    {
+        return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    private CultureInfo GetUiCulture()
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(_languageCode);
+        }
+        catch
+        {
+            return CultureInfo.InvariantCulture;
+        }
+    }
+
+    private static string BuildCoordinateLocationKey(double latitude, double longitude)
+    {
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"coord:{latitude:F4},{longitude:F4}");
+    }
+
+    private static string BuildCoordinateLocationName(double latitude, double longitude, string languageCode)
+    {
+        var template = string.Equals(languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+            ? "坐标 {0:F2}, {1:F2}"
+            : "Coordinate {0:F2}, {1:F2}";
+        return string.Format(CultureInfo.InvariantCulture, template, latitude, longitude);
+    }
+
+    private static double NormalizeLatitude(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 39.9042;
+        }
+
+        return Math.Clamp(value, -90, 90);
+    }
+
+    private static double NormalizeLongitude(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 116.4074;
+        }
+
+        return Math.Clamp(value, -180, 180);
+    }
+
+    private void CancelRefreshRequest()
+    {
+        var cts = Interlocked.Exchange(ref _refreshCts, null);
+        cts?.Cancel();
+        cts?.Dispose();
+    }
+
+    private (double Width, double Height) ResolveLayoutViewport()
+    {
+        var width = LayoutRoot.Bounds.Width;
+        var height = LayoutRoot.Bounds.Height;
+        if (width > 1 && height > 1)
+        {
+            return (width, height);
+        }
+
+        var fallbackWidth = Bounds.Width > 1
+            ? Bounds.Width - ContentPaddingBorder.Padding.Left - ContentPaddingBorder.Padding.Right
+            : _currentCellSize * 4;
+        var fallbackHeight = Bounds.Height > 1
+            ? Bounds.Height - ContentPaddingBorder.Padding.Top - ContentPaddingBorder.Padding.Bottom
+            : _currentCellSize * 2;
+
+        return (Math.Max(100, fallbackWidth), Math.Max(56, fallbackHeight));
+    }
+
+    private (double Width, double Height) ResolveParticleViewport()
+    {
+        var width = Bounds.Width > 1 ? Bounds.Width : LayoutRoot.Bounds.Width;
+        var height = Bounds.Height > 1 ? Bounds.Height : LayoutRoot.Bounds.Height;
+        return (Math.Max(80, width), Math.Max(56, height));
+    }
+
+    private double ResolveScale()
+    {
+        var (layoutWidth, layoutHeight) = ResolveLayoutViewport();
+        return ResolveScale(layoutWidth, layoutHeight);
+    }
+
+    private double ResolveScale(double layoutWidth, double layoutHeight)
+    {
+        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.34, 2.30);
+        var heightScale = Math.Clamp(layoutHeight / 320d, 0.34, 2.30);
+        var widthScale = Math.Clamp(layoutWidth / 620d, 0.34, 2.30);
+        return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.34, 2.30);
+    }
+
+    private static IBrush CreateSolidBrush(string colorHex)
+    {
+        return new SolidColorBrush(Color.Parse(colorHex));
+    }
+
+    private static IBrush CreateSolidBrush(string colorHex, byte alpha)
+    {
+        var color = Color.Parse(colorHex);
+        return new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+    }
+
+    private static IBrush CreateGradientBrush(string fromColorHex, string toColorHex)
+    {
+        return new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Color.Parse(fromColorHex), 0),
+                new GradientStop(Color.Parse(toColorHex), 1)
+            }
+        };
+    }
+}

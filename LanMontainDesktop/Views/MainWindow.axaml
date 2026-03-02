@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LanMontainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -133,10 +133,10 @@
                                                 <TextBlock x:Name="LauncherTitleTextBlock"
                                                            FontSize="24"
                                                            FontWeight="SemiBold"
-                                                           Text="应用启动台" />
+                                                           Text="App Launcher" />
                                                 <TextBlock x:Name="LauncherSubtitleTextBlock"
                                                            Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                           Text="按 Windows 开始菜单结构显示所有应用与文件夹" />
+                                                           Text="Apps and folders from Windows Start Menu." />
                                             </StackPanel>
 
                                             <Grid Grid.Row="1"
@@ -183,7 +183,7 @@
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"
                                                                            FontWeight="SemiBold"
-                                                                           Text="文件夹" />
+                                                                           Text="Folder" />
                                                                 <Button x:Name="LauncherFolderCloseButton"
                                                                         Grid.Column="2"
                                                                         Width="38"
@@ -346,6 +346,7 @@
         </Grid>
 
         <Grid x:Name="SettingsPage"
+              Classes="settings-scope"
               IsVisible="False"
               Opacity="0"
               HorizontalAlignment="Stretch"
@@ -375,14 +376,14 @@
                 </Border.RenderTransform>
 
                 <Border Classes="mica-strong"
-                        CornerRadius="32"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXl}"
                         Padding="18">
                     <Grid ColumnDefinitions="220,*"
                           ColumnSpacing="16">
                         <Border x:Name="SettingsNavPanelBorder"
                                 Classes="glass-panel"
                                 Grid.Column="0"
-                                CornerRadius="28"
+                                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                                 Padding="10">
                             <Border.Styles>
                                 <Style Selector="ListBox#SettingsNavListBox">
@@ -395,7 +396,7 @@
                                     <Setter Property="BorderThickness" Value="0" />
                                     <Setter Property="Padding" Value="10,8" />
                                     <Setter Property="Margin" Value="0,2" />
-                                    <Setter Property="CornerRadius" Value="12" />
+                                    <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
                                 </Style>
                                 <Style Selector="ListBox#SettingsNavListBox ListBoxItem:pointerover">
                                     <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemHoverBackgroundBrush}" />
@@ -438,6 +439,12 @@
                                             <TextBlock x:Name="SettingsNavStatusBarTextBlock" Text="&#29366;&#24577;&#26639;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
+                                    <ListBoxItem x:Name="SettingsNavWeatherItem" ToolTip.Tip="&#22825;&#27668;">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <fi:SymbolIcon x:Name="SettingsNavWeatherIcon" Symbol="WeatherSunny" IconVariant="Regular" />
+                                            <TextBlock x:Name="SettingsNavWeatherTextBlock" Text="&#22825;&#27668;" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavRegionItem" ToolTip.Tip="&#22320;&#21306;">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
                                             <fi:SymbolIcon x:Name="SettingsNavRegionIcon" Symbol="Globe" IconVariant="Regular" />
@@ -456,7 +463,7 @@
 
                         <Border Grid.Column="1"
                                 Classes="glass-panel"
-                                CornerRadius="20"
+                                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
                                 Padding="14">
                             <Grid>
                                     <Grid x:Name="WallpaperSettingsPanel"
@@ -469,7 +476,7 @@
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                    Margin="0,0,0,24"
-                                                   Text="个性化您的背景" />
+                                                   Text="涓€у寲鎮ㄧ殑鑳屾櫙" />
 
                                         <!-- Left Column: Monitor Preview -->
                                         <Border x:Name="WallpaperPreviewHost"
@@ -520,7 +527,7 @@
                                                                     <Border x:Name="WallpaperPreviewTaskbarFixedActionsHost" Grid.Column="0">
                                                                         <StackPanel x:Name="WallpaperPreviewBackButtonVisual" Orientation="Horizontal" Spacing="3">
                                                                             <fi:SymbolIcon Classes="icon-s" Symbol="Window" />
-                                                                            <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock" Text="回到Windows" VerticalAlignment="Center" />
+                                                                            <TextBlock x:Name="WallpaperPreviewBackButtonTextBlock" Text="鍥炲埌Windows" VerticalAlignment="Center" />
                                                                         </StackPanel>
                                                                     </Border>
                                                                      <StackPanel x:Name="WallpaperPreviewTaskbarDynamicActionsHost"
@@ -532,7 +539,7 @@
                                                                         <StackPanel Orientation="Horizontal" Spacing="3">
                                                                             <StackPanel x:Name="WallpaperPreviewComponentLibraryVisual" IsVisible="False" Orientation="Horizontal" Spacing="3">
                                                                                 <fi:FluentIcon Classes="icon-s" Icon="Apps" />
-                                                                                <TextBlock x:Name="WallpaperPreviewComponentLibraryTextBlock" Text="组件库" VerticalAlignment="Center" />
+                                                                                <TextBlock x:Name="WallpaperPreviewComponentLibraryTextBlock" Text="Widget library" VerticalAlignment="Center" />
                                                                             </StackPanel>
                                                                             <fi:SymbolIcon x:Name="WallpaperPreviewSettingsButtonIcon" Classes="icon-s" Symbol="Settings" />
                                                                         </StackPanel>
@@ -550,22 +557,22 @@
                                                     Margin="16,0,0,0"
                                                     Spacing="16">
                                             <StackPanel Spacing="8">
-                                                <TextBlock Text="预览状态" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                <TextBlock Text="Preview status" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                                 <TextBlock x:Name="WallpaperPathTextBlock"
                                                            FontSize="14"
                                                            FontWeight="Medium"
                                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                            TextTrimming="CharacterEllipsis"
-                                                           Text="未选择文件" />
+                                                           Text="鏈€夋嫨鏂囦欢" />
                                                 <TextBlock x:Name="WallpaperStatusTextBlock"
                                                            FontSize="12"
                                                            Foreground="{DynamicResource AdaptiveTextMutedBrush}"
-                                                           Text="就绪" />
+                                                           Text="灏辩华" />
                                             </StackPanel>
 
                                             <Separator Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" Height="1" Margin="0,8" />
 
-                                            <TextBlock Text="选择图片或视频" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                            <TextBlock Text="Choose image or video" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                             
                                             <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                                                 <Button x:Name="PickWallpaperButton"
@@ -574,17 +581,18 @@
                                                         HorizontalAlignment="Stretch"
                                                         Padding="0,10"
                                                         Click="OnPickWallpaperClick"
-                                                        Content="浏览照片" />
+                                                        Content="娴忚鐓х墖" />
                                                 <Button x:Name="ClearWallpaperButton"
                                                         Grid.Column="1"
                                                         HorizontalAlignment="Stretch"
                                                         Padding="0,10"
                                                         Click="OnClearWallpaperClick"
-                                                        Content="重置" />
+                                                        Content="閲嶇疆" />
                                             </Grid>
 
-                                            <ui:SettingsExpander x:Name="WallpaperPlacementSettingsExpander"
-                                                                 Header="选择契合度"
+                                            <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="WallpaperPlacementSettingsExpander"
+                                                                 Header="Placement"
                                                                  Padding="12,8">
                                                 <ui:SettingsExpander.Footer>
                                                     <ComboBox x:Name="WallpaperPlacementComboBox"
@@ -598,6 +606,7 @@
                                                     </ComboBox>
                                                 </ui:SettingsExpander.Footer>
                                             </ui:SettingsExpander>
+</Border>
                                         </StackPanel>
                                     </Grid>
 
@@ -611,7 +620,7 @@
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                Margin="0,0,0,24"
-                                               Text="调整网格布局" />
+                                               Text="璋冩暣缃戞牸甯冨眬" />
 
                                     <!-- Left Column: Grid Preview -->
                                     <Border x:Name="GridPreviewHost"
@@ -657,7 +666,7 @@
                                                             <Border x:Name="GridPreviewTaskbarFixedActionsHost" Grid.Column="0">
                                                                 <StackPanel x:Name="GridPreviewBackButtonVisual" Orientation="Horizontal" Spacing="3">
                                                                     <fi:SymbolIcon Classes="icon-s" Symbol="Window" />
-                                                                    <TextBlock x:Name="GridPreviewBackButtonTextBlock" Text="回到Windows" VerticalAlignment="Center" />
+                                                                    <TextBlock x:Name="GridPreviewBackButtonTextBlock" Text="鍥炲埌Windows" VerticalAlignment="Center" />
                                                                 </StackPanel>
                                                             </Border>
                                                             <StackPanel x:Name="GridPreviewTaskbarDynamicActionsHost"
@@ -669,7 +678,7 @@
                                                                 <StackPanel Orientation="Horizontal" Spacing="3">
                                                                     <StackPanel x:Name="GridPreviewComponentLibraryVisual" IsVisible="False" Orientation="Horizontal" Spacing="3">
                                                                         <fi:FluentIcon x:Name="GridPreviewComponentLibraryIcon" Classes="icon-s" Icon="Apps" />
-                                                                        <TextBlock x:Name="GridPreviewComponentLibraryTextBlock" Text="组件库" VerticalAlignment="Center" />
+                                                                        <TextBlock x:Name="GridPreviewComponentLibraryTextBlock" Text="Widget library" VerticalAlignment="Center" />
                                                                     </StackPanel>
                                                                     <fi:SymbolIcon x:Name="GridPreviewSettingsButtonIcon" Classes="icon-s" Symbol="Settings" />
                                                                 </StackPanel>
@@ -686,7 +695,7 @@
                                     <StackPanel Grid.Row="1" Grid.Column="1"
                                                 Margin="16,0,0,0"
                                                 Spacing="16">
-                                        <TextBlock Text="竖排格数" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                        <TextBlock Text="绔栨帓鏍兼暟" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
 
                                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                              <Slider x:Name="GridSizeSlider"
@@ -745,7 +754,7 @@
 
                                         <TextBlock x:Name="GridEdgeInsetComputedPxTextBlock"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                   Text="≈ 0 px" />
+                                                   Text="鈮?0 px" />
 
                                          <Button x:Name="ApplyGridButton"
                                                  HorizontalAlignment="Stretch"
@@ -769,7 +778,8 @@
                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                Text="Color" />
 
-                                    <ui:SettingsExpander x:Name="ThemeModeSettingsExpander"
+                                    <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="ThemeModeSettingsExpander"
                                                          Header="&#26085;&#22812;&#27169;&#24335;"
                                                          Description="&#20999;&#25442;&#24212;&#29992;&#30340;&#27973;&#33394;&#25110;&#28145;&#33394;&#20027;&#39064;&#12290;">
                                         <ui:SettingsExpander.IconSource>
@@ -783,8 +793,10 @@
                                                           Unchecked="OnNightModeUnchecked" />
                                         </ui:SettingsExpander.Footer>
                                     </ui:SettingsExpander>
+</Border>
 
-                                    <ui:SettingsExpander x:Name="ThemeColorSettingsExpander"
+                                    <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="ThemeColorSettingsExpander"
                                                          Header="&#20027;&#39064;&#33394;"
                                                          Description="&#36873;&#25321;&#24212;&#29992;&#30340;&#20027;&#39064;&#28857;&#32512;&#33394;&#12290;">
                                         <ui:SettingsExpander.IconSource>
@@ -961,6 +973,7 @@
                                             </ui:SettingsExpanderItem.Footer>
                                         </ui:SettingsExpanderItem>
                                     </ui:SettingsExpander>
+</Border>
 
                                     <TextBlock x:Name="ThemeColorStatusTextBlock"
                                                Foreground="{DynamicResource AdaptiveTextMutedBrush}"
@@ -976,7 +989,8 @@
                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                Text="Status Bar" />
 
-                                    <ui:SettingsExpander x:Name="StatusBarClockSettingsExpander"
+                                    <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="StatusBarClockSettingsExpander"
                                                          Header="&#26102;&#38388;&#32452;&#20214;"
                                                          Description="&#22312;&#39030;&#37096;&#29366;&#24577;&#26639;&#26174;&#31034;&#26102;&#38047;&#12290;"
                                                          IsExpanded="False">
@@ -991,23 +1005,25 @@
                                                           Unchecked="OnStatusBarClockUnchecked" />
                                         </ui:SettingsExpander.Footer>
                                         <StackPanel Margin="0,8,0,0" Spacing="12">
-                                            <TextBlock Text="显示格式" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                            <TextBlock Text="鏄剧ず鏍煎紡" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <RadioButton x:Name="ClockFormatHMSSRadio"
-                                                             Content="时分秒 (HH:mm:ss)"
+                                                             Content="鏃跺垎绉?(HH:mm:ss)"
                                                              GroupName="ClockFormat"
                                                              Checked="OnClockFormatChanged"
                                                              Tag="Hms" />
                                                 <RadioButton x:Name="ClockFormatHMRadio"
-                                                             Content="时分 (HH:mm)"
+                                                             Content="鏃跺垎 (HH:mm)"
                                                              GroupName="ClockFormat"
                                                              Checked="OnClockFormatChanged"
                                                              Tag="Hm" />
                                             </StackPanel>
                                         </StackPanel>
                                      </ui:SettingsExpander>
+</Border>
 
-                                    <ui:SettingsExpander x:Name="StatusBarSpacingSettingsExpander"
+                                    <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="StatusBarSpacingSettingsExpander"
                                                          Header="Component spacing"
                                                          Description="Adjust spacing between status bar components."
                                                          IsExpanded="False">
@@ -1054,11 +1070,168 @@
 
                                             <TextBlock x:Name="StatusBarSpacingComputedPxTextBlock"
                                                        Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                       Text="≈ 0 px" />
+                                                       Text="鈮?0 px" />
                                         </StackPanel>
                                     </ui:SettingsExpander>
+</Border>
                                  </StackPanel>
- 
+                                
+                                <StackPanel x:Name="WeatherSettingsPanel"
+                                            IsVisible="False"
+                                            Spacing="16">
+                                    <TextBlock x:Name="WeatherPanelTitleTextBlock"
+                                               FontSize="24"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Text="&#22825;&#27668;" />
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherLocationSettingsExpander"
+                                                             Header="Location Source"
+                                                             Description="Choose how weather widgets resolve location.">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <ComboBox x:Name="WeatherLocationModeComboBox"
+                                                              Width="220"
+                                                              SelectionChanged="OnWeatherLocationModeSelectionChanged">
+                                                        <ComboBoxItem x:Name="WeatherLocationModeCityItem"
+                                                                      Tag="CitySearch"
+                                                                      Content="City Search" />
+                                                        <ComboBoxItem x:Name="WeatherLocationModeCoordinatesItem"
+                                                                      Tag="Coordinates"
+                                                                      Content="Coordinates" />
+                                                    </ComboBox>
+                                                    <ToggleSwitch x:Name="WeatherAutoRefreshToggleSwitch"
+                                                                  Checked="OnWeatherAutoRefreshToggled"
+                                                                  Unchecked="OnWeatherAutoRefreshToggled"
+                                                                  Content="Auto refresh location on startup" />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherCitySearchSettingsExpander"
+                                                             Header="City Search"
+                                                             Description="Search cities and apply one weather location.">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                          ColumnSpacing="8">
+                                                        <TextBox x:Name="WeatherCitySearchTextBox"
+                                                                 Grid.Column="0"
+                                                                 Watermark="e.g. Beijing" />
+                                                        <ui:ProgressRing x:Name="WeatherSearchProgressRing"
+                                                                         Grid.Column="1"
+                                                                         Width="24"
+                                                                         Height="24"
+                                                                         IsActive="True"
+                                                                         IsVisible="False" />
+                                                        <Button x:Name="WeatherSearchButton"
+                                                                Grid.Column="2"
+                                                                Padding="12,8"
+                                                                Click="OnSearchWeatherCityClick"
+                                                                Content="Search" />
+                                                    </Grid>
+
+                                                    <ComboBox x:Name="WeatherCityResultsComboBox"
+                                                              MinWidth="320" />
+
+                                                    <Button x:Name="WeatherApplyCityButton"
+                                                            HorizontalAlignment="Left"
+                                                            Padding="12,8"
+                                                            Click="OnApplyWeatherCitySelectionClick"
+                                                            Content="Apply City" />
+
+                                                    <TextBlock x:Name="WeatherSearchStatusTextBlock"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               Text="Search by city name and apply one location." />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherCoordinateSettingsExpander"
+                                                             Header="Coordinates"
+                                                             Description="Set latitude/longitude and optional key/name."
+                                                             IsVisible="False">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <Grid ColumnDefinitions="*,*"
+                                                          ColumnSpacing="10">
+                                                        <ui:NumberBox x:Name="WeatherLatitudeNumberBox"
+                                                                      Grid.Column="0"
+                                                                      Header="Latitude"
+                                                                      Minimum="-90"
+                                                                      Maximum="90"
+                                                                      SpinButtonPlacementMode="Inline"
+                                                                      SmallChange="0.1"
+                                                                      LargeChange="1"
+                                                                      Value="39.9042" />
+                                                        <ui:NumberBox x:Name="WeatherLongitudeNumberBox"
+                                                                      Grid.Column="1"
+                                                                      Header="Longitude"
+                                                                      Minimum="-180"
+                                                                      Maximum="180"
+                                                                      SpinButtonPlacementMode="Inline"
+                                                                      SmallChange="0.1"
+                                                                      LargeChange="1"
+                                                                      Value="116.4074" />
+                                                    </Grid>
+
+                                                    <TextBox x:Name="WeatherLocationKeyTextBox"
+                                                             Watermark="Location key (optional)" />
+
+                                                    <TextBox x:Name="WeatherLocationNameTextBox"
+                                                             Watermark="Display name (optional)" />
+
+                                                    <Button x:Name="WeatherApplyCoordinatesButton"
+                                                            HorizontalAlignment="Left"
+                                                            Padding="12,8"
+                                                            Click="OnApplyWeatherCoordinatesClick"
+                                                            Content="Apply Coordinates" />
+
+                                                    <TextBlock x:Name="WeatherCoordinateStatusTextBlock"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherPreviewSettingsExpander"
+                                                             Header="Connection Test"
+                                                             Description="Send one test request to verify current settings.">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Spacing="8">
+                                                        <Button x:Name="WeatherPreviewButton"
+                                                                Padding="12,8"
+                                                                Click="OnTestWeatherRequestClick"
+                                                                Content="Test Fetch" />
+                                                        <ui:ProgressRing x:Name="WeatherPreviewProgressRing"
+                                                                         Width="24"
+                                                                         Height="24"
+                                                                         IsActive="True"
+                                                                         IsVisible="False" />
+                                                    </StackPanel>
+
+                                                    <TextBlock x:Name="WeatherPreviewResultTextBlock"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               TextWrapping="Wrap"
+                                                               Text="Use test fetch to verify your weather configuration." />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <TextBlock x:Name="WeatherLocationStatusTextBlock"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="No city location is configured." />
+                                </StackPanel>
+
                                  <StackPanel x:Name="RegionSettingsPanel"
                                              IsVisible="False"
                                             Spacing="16">
@@ -1068,7 +1241,8 @@
                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                Text="&#22320;&#21306;" />
 
-                                    <ui:SettingsExpander x:Name="LanguageSettingsExpander"
+                                    <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="LanguageSettingsExpander"
                                                          Header="&#35821;&#35328;"
                                                          Description="&#36873;&#25321;&#35821;&#35328;&#65292;&#31435;&#21363;&#24212;&#29992;&#21040;&#35774;&#32622;&#19982;&#20027;&#35201;&#30028;&#38754;&#12290;">
                                         <ui:SettingsExpander.IconSource>
@@ -1083,9 +1257,11 @@
                                             </ComboBox>
                                         </ui:SettingsExpander.Footer>
                                     </ui:SettingsExpander>
-                                      <ui:SettingsExpander x:Name="TimeZoneSettingsExpander"
-                                                           Header="时区"
-                                                           Description="选择时区，时钟和日历将根据此时区显示时间。">
+</Border>
+                                      <Border Classes="settings-expander-shell">
+<ui:SettingsExpander x:Name="TimeZoneSettingsExpander"
+                                                           Header="Time Zone"
+                                                           Description="Select a time zone. Clock and calendar widgets will follow this zone.">
                                           <ui:SettingsExpander.IconSource>
   
                                           </ui:SettingsExpander.IconSource>
@@ -1095,17 +1271,19 @@
                                                         SelectionChanged="OnTimeZoneSelectionChanged" />
                                           </ui:SettingsExpander.Footer>
                                       </ui:SettingsExpander>
+</Border>
                                 </StackPanel>
 
                                     <StackPanel x:Name="AboutSettingsPanel" IsVisible="False" Spacing="20">
-                                        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="关于" />
-                                        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="20" Padding="20">
+                                        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="鍏充簬" />
+                                        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="LanMontainDesktop" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                                                <TextBlock Text="现代化桌面壳层应用" FontSize="13" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                <TextBlock Text="Modern desktop shell experience." FontSize="13" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                                 <Separator Background="{DynamicResource AdaptiveButtonBorderBrush}" Margin="0,8" />
-                                                <TextBlock x:Name="VersionTextBlock" Text="版本号: 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                                                <TextBlock x:Name="CodeNameTextBlock" Text="版本代号: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
+                                                <TextBlock x:Name="VersionTextBlock" Text="鐗堟湰鍙? 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                                <TextBlock x:Name="CodeNameTextBlock" Text="鐗堟湰浠ｅ彿: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
+                                                <TextBlock x:Name="FontInfoTextBlock" Text="字体: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -1136,7 +1314,7 @@
                         CornerRadius="36,36,0,0"
                         Padding="16,12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="组件设置"
+                        <TextBlock Text="缁勪欢璁剧疆"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    Foreground="White"
@@ -1188,7 +1366,7 @@
                                FontSize="16"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                               Text="小组件" />
+                               Text="Widgets" />
                     <Button x:Name="CloseComponentLibraryButton"
                             Grid.Column="1"
                             Padding="8"
@@ -1320,3 +1498,4 @@
     </Grid>
 
 </Window>
+

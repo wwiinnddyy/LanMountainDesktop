@@ -10,7 +10,7 @@ using Avalonia.Threading;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class TimerWidget : UserControl
+public partial class TimerWidget : UserControl, IDesktopComponentWidget
 {
     private const int MaxTimerSeconds = 60;
     private const double DialSize = 224;

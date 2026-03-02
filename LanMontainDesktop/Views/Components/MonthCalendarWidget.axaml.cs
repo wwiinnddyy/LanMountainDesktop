@@ -9,7 +9,7 @@ using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class MonthCalendarWidget : UserControl
+public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
 {
     private readonly DispatcherTimer _timer = new()
     {
@@ -21,7 +21,10 @@ public partial class MonthCalendarWidget : UserControl
 
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
+    private double _weekdayFontSize = 20;
+    private FontWeight _weekdayFontWeight = FontWeight.SemiBold;
     private double _calendarDayFontSize = 22;
+    private FontWeight _calendarDayFontWeight = FontWeight.SemiBold;
     private double _calendarTodayDotSize = 44;
 
     public MonthCalendarWidget()
@@ -83,6 +86,8 @@ public partial class MonthCalendarWidget : UserControl
             ? $"{now.Month}\u6708{now.Day}\u65e5"
             : now.ToString("MMM d", culture);
 
+        // Locale changes the header width; re-balance typography on every refresh.
+        ApplyAdaptiveTypography();
         UpdateWeekdayHeaders(isZh);
         GenerateCalendar(now);
     }
@@ -152,7 +157,7 @@ public partial class MonthCalendarWidget : UserControl
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 FontSize = _calendarDayFontSize,
-                FontWeight = FontWeight.SemiBold,
+                FontWeight = _calendarDayFontWeight,
                 Tag = "day"
             };
 
@@ -198,24 +203,40 @@ public partial class MonthCalendarWidget : UserControl
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
+        UpdateCalendar();
+    }
+
+    private void ApplyAdaptiveTypography()
+    {
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(28 * scale, 14, 40));
         RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 22));
         LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 16);
+        LayoutRoot.Width = Math.Clamp(280 * scale, 220, 420);
+        LayoutRoot.Height = Math.Clamp(280 * scale, 220, 420);
 
-        HeaderTextBlock.FontSize = Math.Clamp(42 * scale, 14, 58);
+        var isZh = CultureInfo.CurrentCulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase);
+        var headerTextLength = Math.Max(1, HeaderTextBlock.Text?.Length ?? (isZh ? 5 : 6));
+        var headerCompression = headerTextLength >= 8 ? 0.90 : headerTextLength >= 6 ? 0.95 : 1.0;
+        var densityBoost = scale <= 0.74 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.45 ? 1.05 : 1.0;
 
-        var weekdayFontSize = Math.Clamp(20 * scale, 8, 26);
+        HeaderTextBlock.FontSize = Math.Clamp(42 * scale * headerCompression * densityBoost, 13, 62);
+        HeaderTextBlock.FontWeight = ToVariableWeight(Lerp(560, 720, Math.Clamp((scale - 0.62) / 1.2, 0, 1)));
+        HeaderTextBlock.LineHeight = HeaderTextBlock.FontSize * 1.05;
+
+        _weekdayFontSize = Math.Clamp(20 * scale * densityBoost, 7.5, 27);
+        _weekdayFontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
         foreach (var block in GetWeekdayHeaderBlocks())
         {
-            block.FontSize = weekdayFontSize;
+            block.FontSize = _weekdayFontSize;
+            block.FontWeight = _weekdayFontWeight;
+            block.LineHeight = _weekdayFontSize * 1.06;
         }
 
-        _calendarDayFontSize = Math.Clamp(22 * scale, 8, 30);
-        _calendarTodayDotSize = Math.Clamp(44 * scale, 16, 58);
-
-        UpdateCalendar();
+        _calendarDayFontSize = Math.Clamp(22 * scale * densityBoost, 8, 32);
+        _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
+        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.95, 16, 62);
     }
 
     private double ResolveScale()
@@ -240,5 +261,14 @@ public partial class MonthCalendarWidget : UserControl
 
         return new SolidColorBrush(Colors.Gray, opacity);
     }
-}
 
+    private static double Lerp(double from, double to, double t)
+    {
+        return from + ((to - from) * t);
+    }
+
+    private static FontWeight ToVariableWeight(double weight)
+    {
+        return (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
+    }
+}

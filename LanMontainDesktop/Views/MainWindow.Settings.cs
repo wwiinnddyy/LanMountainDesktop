@@ -4,6 +4,7 @@ using FluentIcons.Common;
 using LanMontainDesktop.Views.Components;
 
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -61,8 +62,9 @@ public partial class MainWindow
             WallpaperSettingsPanel is null ||
             ColorSettingsPanel is null ||
             StatusBarSettingsPanel is null ||
+            WeatherSettingsPanel is null ||
             RegionSettingsPanel is null ||
-              AboutSettingsPanel is null)
+            AboutSettingsPanel is null)
         {
             return;
         }
@@ -72,8 +74,9 @@ public partial class MainWindow
         GridSettingsPanel.IsVisible = selectedIndex == 1;
         ColorSettingsPanel.IsVisible = selectedIndex == 2;
         StatusBarSettingsPanel.IsVisible = selectedIndex == 3;
-        RegionSettingsPanel.IsVisible = selectedIndex == 4;
-          AboutSettingsPanel.IsVisible = selectedIndex == 5;
+        WeatherSettingsPanel.IsVisible = selectedIndex == 4;
+        RegionSettingsPanel.IsVisible = selectedIndex == 5;
+        AboutSettingsPanel.IsVisible = selectedIndex == 6;
 
         if (selectedIndex == 1)
         {
@@ -645,6 +648,13 @@ public partial class MainWindow
             SettingsTabIndex = Math.Max(0, SettingsNavListBox?.SelectedIndex ?? 0),
             LanguageCode = _languageCode,
             TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
+            WeatherLocationMode = ToWeatherLocationModeTag(_weatherLocationMode),
+            WeatherLocationKey = _weatherLocationKey,
+            WeatherLocationName = _weatherLocationName,
+            WeatherLatitude = _weatherLatitude,
+            WeatherLongitude = _weatherLongitude,
+            WeatherAutoRefreshLocation = _weatherAutoRefreshLocation,
+            WeatherLocationQuery = BuildLegacyWeatherLocationQuery(),
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
@@ -675,6 +685,560 @@ public partial class MainWindow
             _persistSettingsDebounceTimer = null;
             PersistSettings();
         }, TimeSpan.FromMilliseconds(Math.Max(0, delayMs)));
+    }
+
+    private void InitializeWeatherSettings(AppSettingsSnapshot snapshot)
+    {
+        _suppressWeatherLocationEvents = true;
+        try
+        {
+            _weatherLocationMode = ParseWeatherLocationMode(snapshot.WeatherLocationMode);
+            _weatherLocationKey = snapshot.WeatherLocationKey?.Trim() ?? string.Empty;
+            _weatherLocationName = snapshot.WeatherLocationName?.Trim() ?? string.Empty;
+            _weatherLatitude = NormalizeLatitude(snapshot.WeatherLatitude);
+            _weatherLongitude = NormalizeLongitude(snapshot.WeatherLongitude);
+            _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
+            _weatherSearchKeyword = string.Empty;
+
+            var legacyQuery = snapshot.WeatherLocationQuery?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(_weatherLocationKey) && !string.IsNullOrWhiteSpace(legacyQuery))
+            {
+                _weatherLocationKey = legacyQuery;
+            }
+
+            if (string.IsNullOrWhiteSpace(_weatherLocationName) && !string.IsNullOrWhiteSpace(legacyQuery))
+            {
+                _weatherLocationName = legacyQuery;
+            }
+
+            SelectWeatherLocationModeInUi(_weatherLocationMode);
+            if (WeatherAutoRefreshToggleSwitch is not null)
+            {
+                WeatherAutoRefreshToggleSwitch.IsChecked = _weatherAutoRefreshLocation;
+            }
+
+            if (WeatherCitySearchTextBox is not null)
+            {
+                WeatherCitySearchTextBox.Text = string.Empty;
+            }
+
+            if (WeatherCityResultsComboBox is not null)
+            {
+                WeatherCityResultsComboBox.Items.Clear();
+            }
+
+            if (WeatherLocationKeyTextBox is not null)
+            {
+                WeatherLocationKeyTextBox.Text = _weatherLocationKey;
+            }
+
+            if (WeatherLocationNameTextBox is not null)
+            {
+                WeatherLocationNameTextBox.Text = _weatherLocationName;
+            }
+
+            if (WeatherLatitudeNumberBox is not null)
+            {
+                WeatherLatitudeNumberBox.Value = _weatherLatitude;
+            }
+
+            if (WeatherLongitudeNumberBox is not null)
+            {
+                WeatherLongitudeNumberBox.Value = _weatherLongitude;
+            }
+
+            if (WeatherSearchStatusTextBlock is not null)
+            {
+                WeatherSearchStatusTextBlock.Text = L(
+                    "settings.weather.search_hint",
+                    "Search by city name and apply one location.");
+            }
+
+            if (WeatherCoordinateStatusTextBlock is not null)
+            {
+                WeatherCoordinateStatusTextBlock.Text = string.Empty;
+            }
+
+            if (WeatherPreviewResultTextBlock is not null)
+            {
+                WeatherPreviewResultTextBlock.Text = L(
+                    "settings.weather.preview_hint",
+                    "Use test fetch to verify your weather configuration.");
+            }
+
+            UpdateWeatherLocationModePanels();
+            UpdateWeatherLocationStatusText();
+        }
+        finally
+        {
+            _suppressWeatherLocationEvents = false;
+        }
+    }
+
+    private static WeatherLocationMode ParseWeatherLocationMode(string? value)
+    {
+        return string.Equals(value, "Coordinates", StringComparison.OrdinalIgnoreCase)
+            ? WeatherLocationMode.Coordinates
+            : WeatherLocationMode.CitySearch;
+    }
+
+    private static string ToWeatherLocationModeTag(WeatherLocationMode mode)
+    {
+        return mode == WeatherLocationMode.Coordinates ? "Coordinates" : "CitySearch";
+    }
+
+    private static double NormalizeLatitude(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 39.9042;
+        }
+
+        return Math.Clamp(value, -90, 90);
+    }
+
+    private static double NormalizeLongitude(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 116.4074;
+        }
+
+        return Math.Clamp(value, -180, 180);
+    }
+
+    private string BuildLegacyWeatherLocationQuery()
+    {
+        if (!string.IsNullOrWhiteSpace(_weatherLocationName))
+        {
+            return _weatherLocationName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_weatherLocationKey))
+        {
+            return _weatherLocationKey;
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{_weatherLatitude:F4},{_weatherLongitude:F4}");
+    }
+
+    private void SelectWeatherLocationModeInUi(WeatherLocationMode mode)
+    {
+        if (WeatherLocationModeComboBox is null)
+        {
+            return;
+        }
+
+        foreach (var item in WeatherLocationModeComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), ToWeatherLocationModeTag(mode), StringComparison.OrdinalIgnoreCase))
+            {
+                WeatherLocationModeComboBox.SelectedItem = item;
+                return;
+            }
+        }
+
+        WeatherLocationModeComboBox.SelectedIndex = mode == WeatherLocationMode.Coordinates ? 1 : 0;
+    }
+
+    private void UpdateWeatherLocationModePanels()
+    {
+        if (WeatherCitySearchSettingsExpander is not null)
+        {
+            WeatherCitySearchSettingsExpander.IsVisible = _weatherLocationMode == WeatherLocationMode.CitySearch;
+        }
+
+        if (WeatherCoordinateSettingsExpander is not null)
+        {
+            WeatherCoordinateSettingsExpander.IsVisible = _weatherLocationMode == WeatherLocationMode.Coordinates;
+        }
+    }
+
+    private void OnWeatherLocationModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressWeatherLocationEvents || WeatherLocationModeComboBox?.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+
+        _weatherLocationMode = ParseWeatherLocationMode(item.Tag?.ToString());
+        UpdateWeatherLocationModePanels();
+        UpdateWeatherLocationStatusText();
+        PersistSettings();
+    }
+
+    private void OnWeatherAutoRefreshToggled(object? sender, RoutedEventArgs e)
+    {
+        if (_suppressWeatherLocationEvents || WeatherAutoRefreshToggleSwitch is null)
+        {
+            return;
+        }
+
+        _weatherAutoRefreshLocation = WeatherAutoRefreshToggleSwitch.IsChecked == true;
+        PersistSettings();
+    }
+
+    private async void OnSearchWeatherCityClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isWeatherSearchInProgress || WeatherCitySearchTextBox is null || WeatherCityResultsComboBox is null)
+        {
+            return;
+        }
+
+        var keyword = WeatherCitySearchTextBox.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            if (WeatherSearchStatusTextBlock is not null)
+            {
+                WeatherSearchStatusTextBlock.Text = L(
+                    "settings.weather.search_required",
+                    "Please enter a city keyword first.");
+            }
+
+            return;
+        }
+
+        _weatherSearchKeyword = keyword;
+        _isWeatherSearchInProgress = true;
+        SetWeatherSearchBusy(isBusy: true);
+        try
+        {
+            var result = await _weatherDataService.SearchLocationsAsync(keyword, ResolveWeatherApiLocale());
+            if (!result.Success || result.Data is null)
+            {
+                WeatherCityResultsComboBox.Items.Clear();
+                if (WeatherSearchStatusTextBlock is not null)
+                {
+                    WeatherSearchStatusTextBlock.Text = Lf(
+                        "settings.weather.search_failed_format",
+                        "Search failed: {0}",
+                        result.ErrorMessage ?? result.ErrorCode ?? "Unknown error");
+                }
+
+                return;
+            }
+
+            var locations = result.Data
+                .Where(location => !string.IsNullOrWhiteSpace(location.LocationKey))
+                .Take(80)
+                .ToList();
+
+            WeatherCityResultsComboBox.Items.Clear();
+            foreach (var location in locations)
+            {
+                WeatherCityResultsComboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = FormatWeatherLocationDisplayName(location),
+                    Tag = location
+                });
+            }
+
+            if (WeatherSearchStatusTextBlock is not null)
+            {
+                WeatherSearchStatusTextBlock.Text = locations.Count == 0
+                    ? L("settings.weather.search_no_results", "No locations were found.")
+                    : Lf(
+                        "settings.weather.search_result_count_format",
+                        "Found {0} locations.",
+                        locations.Count);
+            }
+
+            if (locations.Count > 0)
+            {
+                WeatherCityResultsComboBox.SelectedIndex = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            if (WeatherSearchStatusTextBlock is not null)
+            {
+                WeatherSearchStatusTextBlock.Text = Lf(
+                    "settings.weather.search_failed_format",
+                    "Search failed: {0}",
+                    ex.Message);
+            }
+        }
+        finally
+        {
+            _isWeatherSearchInProgress = false;
+            SetWeatherSearchBusy(isBusy: false);
+        }
+    }
+
+    private static string FormatWeatherLocationDisplayName(WeatherLocation location)
+    {
+        var affiliation = string.IsNullOrWhiteSpace(location.Affiliation)
+            ? string.Empty
+            : $" ({location.Affiliation})";
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{location.Name}{affiliation} · {location.LocationKey}");
+    }
+
+    private static string BuildWeatherLocationName(WeatherLocation location)
+    {
+        if (string.IsNullOrWhiteSpace(location.Affiliation))
+        {
+            return location.Name;
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{location.Name} ({location.Affiliation})");
+    }
+
+    private void OnApplyWeatherCitySelectionClick(object? sender, RoutedEventArgs e)
+    {
+        if (WeatherCityResultsComboBox?.SelectedItem is not ComboBoxItem item ||
+            item.Tag is not WeatherLocation location)
+        {
+            if (WeatherSearchStatusTextBlock is not null)
+            {
+                WeatherSearchStatusTextBlock.Text = L(
+                    "settings.weather.search_select_required",
+                    "Please select one location from search results.");
+            }
+
+            return;
+        }
+
+        _weatherLocationMode = WeatherLocationMode.CitySearch;
+        _weatherLocationKey = location.LocationKey.Trim();
+        _weatherLocationName = BuildWeatherLocationName(location);
+        _weatherLatitude = NormalizeLatitude(location.Latitude);
+        _weatherLongitude = NormalizeLongitude(location.Longitude);
+
+        _suppressWeatherLocationEvents = true;
+        try
+        {
+            SelectWeatherLocationModeInUi(_weatherLocationMode);
+            if (WeatherLocationKeyTextBox is not null)
+            {
+                WeatherLocationKeyTextBox.Text = _weatherLocationKey;
+            }
+
+            if (WeatherLocationNameTextBox is not null)
+            {
+                WeatherLocationNameTextBox.Text = _weatherLocationName;
+            }
+
+            if (WeatherLatitudeNumberBox is not null)
+            {
+                WeatherLatitudeNumberBox.Value = _weatherLatitude;
+            }
+
+            if (WeatherLongitudeNumberBox is not null)
+            {
+                WeatherLongitudeNumberBox.Value = _weatherLongitude;
+            }
+        }
+        finally
+        {
+            _suppressWeatherLocationEvents = false;
+        }
+
+        if (WeatherSearchStatusTextBlock is not null)
+        {
+            WeatherSearchStatusTextBlock.Text = Lf(
+                "settings.weather.search_applied_format",
+                "Location applied: {0}",
+                _weatherLocationName);
+        }
+
+        UpdateWeatherLocationModePanels();
+        UpdateWeatherLocationStatusText();
+        PersistSettings();
+    }
+
+    private void OnApplyWeatherCoordinatesClick(object? sender, RoutedEventArgs e)
+    {
+        if (WeatherLatitudeNumberBox is null || WeatherLongitudeNumberBox is null)
+        {
+            return;
+        }
+
+        var latitude = NormalizeLatitude(WeatherLatitudeNumberBox.Value);
+        var longitude = NormalizeLongitude(WeatherLongitudeNumberBox.Value);
+        var keyInput = WeatherLocationKeyTextBox?.Text?.Trim() ?? string.Empty;
+        var nameInput = WeatherLocationNameTextBox?.Text?.Trim() ?? string.Empty;
+
+        _weatherLocationMode = WeatherLocationMode.Coordinates;
+        _weatherLatitude = latitude;
+        _weatherLongitude = longitude;
+        _weatherLocationKey = string.IsNullOrWhiteSpace(keyInput)
+            ? BuildCoordinateLocationKey(latitude, longitude)
+            : keyInput;
+        _weatherLocationName = string.IsNullOrWhiteSpace(nameInput)
+            ? Lf(
+                "settings.weather.coordinates_default_name_format",
+                "Coordinate {0:F4}, {1:F4}",
+                latitude,
+                longitude)
+            : nameInput;
+
+        _suppressWeatherLocationEvents = true;
+        try
+        {
+            SelectWeatherLocationModeInUi(_weatherLocationMode);
+            if (WeatherLocationKeyTextBox is not null && string.IsNullOrWhiteSpace(keyInput))
+            {
+                WeatherLocationKeyTextBox.Text = _weatherLocationKey;
+            }
+
+            if (WeatherLocationNameTextBox is not null && string.IsNullOrWhiteSpace(nameInput))
+            {
+                WeatherLocationNameTextBox.Text = _weatherLocationName;
+            }
+        }
+        finally
+        {
+            _suppressWeatherLocationEvents = false;
+        }
+
+        if (WeatherCoordinateStatusTextBlock is not null)
+        {
+            WeatherCoordinateStatusTextBlock.Text = Lf(
+                "settings.weather.coordinates_saved_format",
+                "Coordinates saved: {0:F4}, {1:F4}",
+                _weatherLatitude,
+                _weatherLongitude);
+        }
+
+        UpdateWeatherLocationModePanels();
+        UpdateWeatherLocationStatusText();
+        PersistSettings();
+    }
+
+    private static string BuildCoordinateLocationKey(double latitude, double longitude)
+    {
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"coord:{latitude:F4},{longitude:F4}");
+    }
+
+    private async void OnTestWeatherRequestClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isWeatherPreviewInProgress)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_weatherLocationKey))
+        {
+            if (_weatherLocationMode == WeatherLocationMode.Coordinates)
+            {
+                _weatherLocationKey = BuildCoordinateLocationKey(_weatherLatitude, _weatherLongitude);
+            }
+            else
+            {
+                if (WeatherPreviewResultTextBlock is not null)
+                {
+                    WeatherPreviewResultTextBlock.Text = L(
+                        "settings.weather.preview_missing_location",
+                        "Please apply one weather location before testing.");
+                }
+
+                return;
+            }
+        }
+
+        _isWeatherPreviewInProgress = true;
+        SetWeatherPreviewBusy(isBusy: true);
+        try
+        {
+            var query = new WeatherQuery(
+                LocationKey: _weatherLocationKey,
+                Latitude: _weatherLatitude,
+                Longitude: _weatherLongitude,
+                ForecastDays: 3,
+                Locale: ResolveWeatherApiLocale(),
+                IsGlobal: false,
+                ForceRefresh: true);
+
+            var result = await _weatherDataService.GetWeatherAsync(query);
+            if (!result.Success || result.Data is null)
+            {
+                if (WeatherPreviewResultTextBlock is not null)
+                {
+                    WeatherPreviewResultTextBlock.Text = Lf(
+                        "settings.weather.preview_failed_format",
+                        "Test fetch failed: {0}",
+                        result.ErrorMessage ?? result.ErrorCode ?? "Unknown error");
+                }
+
+                return;
+            }
+
+            var snapshot = result.Data;
+            var location = string.IsNullOrWhiteSpace(snapshot.LocationName)
+                ? (!string.IsNullOrWhiteSpace(_weatherLocationName) ? _weatherLocationName : _weatherLocationKey)
+                : snapshot.LocationName;
+            var weather = snapshot.Current.WeatherText ??
+                          L("settings.weather.preview_unknown", "Unknown");
+            var temperature = snapshot.Current.TemperatureC.HasValue
+                ? string.Create(CultureInfo.InvariantCulture, $"{snapshot.Current.TemperatureC.Value:F1}°C")
+                : "--";
+
+            if (WeatherPreviewResultTextBlock is not null)
+            {
+                WeatherPreviewResultTextBlock.Text = Lf(
+                    "settings.weather.preview_success_format",
+                    "Test success: {0} · {1} · {2}",
+                    location,
+                    weather,
+                    temperature);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (WeatherPreviewResultTextBlock is not null)
+            {
+                WeatherPreviewResultTextBlock.Text = Lf(
+                    "settings.weather.preview_failed_format",
+                    "Test fetch failed: {0}",
+                    ex.Message);
+            }
+        }
+        finally
+        {
+            _isWeatherPreviewInProgress = false;
+            SetWeatherPreviewBusy(isBusy: false);
+        }
+    }
+
+    private void SetWeatherSearchBusy(bool isBusy)
+    {
+        if (WeatherSearchButton is not null)
+        {
+            WeatherSearchButton.IsEnabled = !isBusy;
+        }
+
+        if (WeatherSearchProgressRing is not null)
+        {
+            WeatherSearchProgressRing.IsVisible = isBusy;
+        }
+    }
+
+    private void SetWeatherPreviewBusy(bool isBusy)
+    {
+        if (WeatherPreviewButton is not null)
+        {
+            WeatherPreviewButton.IsEnabled = !isBusy;
+        }
+
+        if (WeatherPreviewProgressRing is not null)
+        {
+            WeatherPreviewProgressRing.IsVisible = isBusy;
+        }
+    }
+
+    private string ResolveWeatherApiLocale()
+    {
+        return string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase)
+            ? "zh_cn"
+            : "en_us";
     }
 
     private void UpdateAdaptiveTextSystem()
@@ -1106,6 +1670,15 @@ public partial class MainWindow
             StatusBarSpacingSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
                 Symbol = Symbol.TextLineSpacing,
+                IconVariant = variant
+            };
+        }
+
+        if (WeatherLocationSettingsExpander is not null)
+        {
+            WeatherLocationSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.WeatherSunny,
                 IconVariant = variant
             };
         }

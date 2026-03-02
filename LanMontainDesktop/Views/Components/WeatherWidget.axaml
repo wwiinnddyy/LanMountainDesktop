@@ -1,0 +1,150 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="320"
+             d:DesignHeight="320"
+             x:Class="LanMontainDesktop.Views.Components.WeatherWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="28"
+            ClipToBounds="True"
+            Background="#68A9EC">
+        <Grid>
+            <Border x:Name="BackgroundImageLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True" />
+
+            <Border x:Name="BackgroundMotionLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True"
+                    Opacity="0.24"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1.05"
+                                        ScaleY="1.05" />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Border.RenderTransform>
+            </Border>
+
+            <Border x:Name="BackgroundTintLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True"
+                    Opacity="0.20" />
+
+            <Border x:Name="BackgroundLightLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True"
+                    Opacity="0.66">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="1,1">
+                        <GradientStop Color="#5BFFFFFF"
+                                      Offset="0" />
+                        <GradientStop Color="#1FFFFFFF"
+                                      Offset="0.30" />
+                        <GradientStop Color="#00000000"
+                                      Offset="0.55" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Border x:Name="BackgroundShadeLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True"
+                    Opacity="0.78">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="0,1">
+                        <GradientStop Color="#00040A16"
+                                      Offset="0.50" />
+                        <GradientStop Color="#2E0B1C34"
+                                      Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Canvas x:Name="ParticleLayer"
+                    IsHitTestVisible="False"
+                    ClipToBounds="True" />
+
+            <Border x:Name="ContentPaddingBorder"
+                    Padding="18"
+                    Background="Transparent">
+                <Viewbox Stretch="Uniform">
+                    <Grid x:Name="LayoutRoot"
+                          Width="300"
+                          Height="300">
+                        <Grid x:Name="ContentGrid"
+                              RowDefinitions="Auto,*,Auto"
+                              RowSpacing="8">
+                            <Grid x:Name="TopRowGrid"
+                                  Grid.Row="0"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8">
+                                <fi:SymbolIcon x:Name="LocationIcon"
+                                               Symbol="Location"
+                                               FontSize="20"
+                                               VerticalAlignment="Center" />
+
+                                <TextBlock x:Name="CityTextBlock"
+                                           Grid.Column="1"
+                                           Text="Beijing"
+                                           FontSize="30"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+
+                                <fi:SymbolIcon x:Name="WeatherIconSymbol"
+                                               Grid.Column="2"
+                                               Symbol="WeatherSunny"
+                                               IconVariant="Regular"
+                                               FontSize="40"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                            </Grid>
+
+                            <TextBlock x:Name="TemperatureTextBlock"
+                                       Grid.Row="1"
+                                       Text="26"
+                                       FontSize="108"
+                                       FontWeight="Bold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center"
+                                       Margin="0,4,0,10"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
+
+                            <StackPanel x:Name="BottomInfoStack"
+                                        Grid.Row="2"
+                                        VerticalAlignment="Bottom"
+                                        Spacing="4"
+                                        Margin="0,0,0,10">
+                                <TextBlock x:Name="ConditionTextBlock"
+                                           Text="Clear"
+                                           FontSize="30"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+
+                                <TextBlock x:Name="RangeTextBlock"
+                                           Text="20 / 28"
+                                           FontSize="36"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Viewbox>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>
+

@@ -2,6 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls">
 
+    <Styles.Resources>
+        <!-- Unified corner radius tokens used across settings and widget panels -->
+        <CornerRadius x:Key="DesignCornerRadiusXl">32</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusLg">28</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusMd">20</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusSm">14</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusXs">12</CornerRadius>
+    </Styles.Resources>
+
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
@@ -53,6 +62,53 @@
 
     <Style Selector="ToggleSwitch">
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope Border.settings-expander-shell">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope Button">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+        <Setter Property="MinHeight" Value="34" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope ComboBox">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+        <Setter Property="MinHeight" Value="34" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope ComboBoxItem">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Margin" Value="4,2" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope ui|NumberBox">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+        <Setter Property="MinHeight" Value="34" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope RadioButton">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="MinHeight" Value="34" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope RadioButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="Grid.settings-scope RadioButton:checked">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
     </Style>
 
     <Style Selector="Button.swatch-button">

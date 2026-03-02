@@ -42,7 +42,7 @@ public partial class MainWindow
     private TranslateTransform? _componentLibraryCategoryHostTransform;
     private TranslateTransform? _componentLibraryComponentHostTransform;
     private IReadOnlyList<ComponentLibraryCategory> _componentLibraryCategories = Array.Empty<ComponentLibraryCategory>();
-    private IReadOnlyList<DesktopComponentDefinition> _componentLibraryActiveComponents = Array.Empty<DesktopComponentDefinition>();
+    private IReadOnlyList<DesktopComponentRuntimeDescriptor> _componentLibraryActiveComponents = Array.Empty<DesktopComponentRuntimeDescriptor>();
     private bool _isComponentLibraryCategoryGestureActive;
     private bool _isComponentLibraryComponentGestureActive;
     private Point _componentLibraryCategoryGestureStartPoint;
@@ -93,7 +93,9 @@ public partial class MainWindow
         string Id,
         Symbol Icon,
         string Title,
-        IReadOnlyList<DesktopComponentDefinition> Components);
+        IReadOnlyList<DesktopComponentRuntimeDescriptor> Components);
+
+    private readonly record struct ComponentScaleRule(int WidthUnit, int HeightUnit, int MinScale);
 
     private void OnOpenComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
@@ -258,7 +260,8 @@ public partial class MainWindow
             1 => TaskbarContext.SettingsGrid,
             2 => TaskbarContext.SettingsColor,
             3 => TaskbarContext.SettingsStatusBar,
-            4 => TaskbarContext.SettingsRegion,
+            4 => TaskbarContext.SettingsWeather,
+            5 => TaskbarContext.SettingsRegion,
             _ => TaskbarContext.Desktop
         };
     }
@@ -806,7 +809,8 @@ public partial class MainWindow
                 ? Guid.NewGuid().ToString("N")
                 : placement.PlacementId.Trim();
             var componentId = placement.ComponentId.Trim();
-            if (!_componentRegistry.TryGetDefinition(componentId, out var definition) || !definition.AllowDesktopPlacement)
+            if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor) ||
+                !runtimeDescriptor.Definition.AllowDesktopPlacement)
             {
                 continue;
             }
@@ -814,7 +818,7 @@ public partial class MainWindow
             var (widthCells, heightCells) = NormalizeComponentCellSpan(
                 componentId,
                 ComponentPlacementRules.EnsureMinimumSize(
-                    definition,
+                    runtimeDescriptor.Definition,
                     placement.WidthCells,
                     placement.HeightCells));
 
@@ -849,7 +853,8 @@ public partial class MainWindow
 
         foreach (var placement in _desktopComponentPlacements.Where(p => p.PageIndex == pageIndex))
         {
-            if (!_componentRegistry.TryGetDefinition(placement.ComponentId, out var definition) || !definition.AllowDesktopPlacement)
+            if (!_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor) ||
+                !runtimeDescriptor.Definition.AllowDesktopPlacement)
             {
                 continue;
             }
@@ -857,7 +862,7 @@ public partial class MainWindow
             var (widthCells, heightCells) = NormalizeComponentCellSpan(
                 placement.ComponentId,
                 ComponentPlacementRules.EnsureMinimumSize(
-                    definition,
+                    runtimeDescriptor.Definition,
                     placement.WidthCells,
                     placement.HeightCells));
 
@@ -890,7 +895,8 @@ public partial class MainWindow
             return;
         }
 
-        if (!_componentRegistry.TryGetDefinition(componentId, out var definition) || !definition.AllowDesktopPlacement)
+        if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor) ||
+            !runtimeDescriptor.Definition.AllowDesktopPlacement)
         {
             return;
         }
@@ -898,9 +904,9 @@ public partial class MainWindow
         var (widthCells, heightCells) = NormalizeComponentCellSpan(
             componentId,
             ComponentPlacementRules.EnsureMinimumSize(
-                definition,
-                definition.MinWidthCells,
-                definition.MinHeightCells));
+                runtimeDescriptor.Definition,
+                runtimeDescriptor.Definition.MinWidthCells,
+                runtimeDescriptor.Definition.MinHeightCells));
 
         var maxColumns = pageGrid.ColumnDefinitions.Count;
         var maxRows = pageGrid.RowDefinitions.Count;
@@ -1046,55 +1052,110 @@ public partial class MainWindow
         return host;
     }
 
-    private static (int WidthCells, int HeightCells) NormalizeComponentCellSpan(
+    private (int WidthCells, int HeightCells) NormalizeComponentCellSpan(
         string componentId,
         (int WidthCells, int HeightCells) span)
     {
-        if (string.Equals(componentId, BuiltInComponentIds.Date, StringComparison.OrdinalIgnoreCase))
+        if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
-            return (Math.Max(4, span.WidthCells), Math.Max(2, span.HeightCells));
+            var normalized = ComponentPlacementRules.EnsureMinimumSize(
+                runtimeDescriptor.Definition,
+                span.WidthCells,
+                span.HeightCells);
+            return NormalizeAspectRatioForComponent(componentId, normalized);
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.MonthCalendar, StringComparison.OrdinalIgnoreCase))
+        return NormalizeAspectRatioForComponent(
+            componentId,
+            (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells)));
+    }
+
+    private static (int WidthCells, int HeightCells) NormalizeAspectRatioForComponent(
+        string componentId,
+        (int WidthCells, int HeightCells) span)
+    {
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopWhiteboard, StringComparison.OrdinalIgnoreCase))
         {
-            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+            // Support both portrait ratios and snap to nearest viable scale tier.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 1, HeightUnit: 2, MinScale: 2), // 2x4, 3x6, 4x8...
+                new ComponentScaleRule(WidthUnit: 3, HeightUnit: 4, MinScale: 1)); // 3x4, 6x8...
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.LunarCalendar, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopBlackboardLandscape, StringComparison.OrdinalIgnoreCase))
         {
-            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+            // Support both landscape ratios and snap to nearest viable scale tier.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2), // 4x2, 6x3, 8x4...
+                new ComponentScaleRule(WidthUnit: 4, HeightUnit: 3, MinScale: 1)); // 4x3, 8x6...
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.DesktopClock, StringComparison.OrdinalIgnoreCase))
+        return span;
+    }
+
+    private static (int WidthCells, int HeightCells) SnapSpanToScaleRules(
+        (int WidthCells, int HeightCells) span,
+        params ComponentScaleRule[] rules)
+    {
+        var targetWidth = Math.Max(1, span.WidthCells);
+        var targetHeight = Math.Max(1, span.HeightCells);
+
+        var hasCandidate = false;
+        var bestWidth = targetWidth;
+        var bestHeight = targetHeight;
+        var bestArea = -1;
+        var bestDistance = double.MaxValue;
+
+        foreach (var rule in rules)
         {
-            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+            if (rule.WidthUnit <= 0 || rule.HeightUnit <= 0 || rule.MinScale <= 0)
+            {
+                continue;
+            }
+
+            var maxScale = Math.Min(targetWidth / rule.WidthUnit, targetHeight / rule.HeightUnit);
+            if (maxScale < rule.MinScale)
+            {
+                continue;
+            }
+
+            for (var scale = rule.MinScale; scale <= maxScale; scale++)
+            {
+                var width = rule.WidthUnit * scale;
+                var height = rule.HeightUnit * scale;
+                var area = width * height;
+                var dx = targetWidth - width;
+                var dy = targetHeight - height;
+                var distance = dx * dx + dy * dy;
+
+                if (!hasCandidate ||
+                    area > bestArea ||
+                    (area == bestArea && distance < bestDistance))
+                {
+                    hasCandidate = true;
+                    bestWidth = width;
+                    bestHeight = height;
+                    bestArea = area;
+                    bestDistance = distance;
+                }
+            }
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.DesktopTimer, StringComparison.OrdinalIgnoreCase))
-        {
-            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
-        }
-
-        if (string.Equals(componentId, BuiltInComponentIds.HolidayCalendar, StringComparison.OrdinalIgnoreCase))
-        {
-            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
-        }
-
-        return (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells));
+        return hasCandidate
+            ? (bestWidth, bestHeight)
+            : (targetWidth, targetHeight);
     }
 
     private double GetComponentCornerRadius(string componentId)
     {
-        return componentId switch
+        if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
-            BuiltInComponentIds.Date => 16,
-            BuiltInComponentIds.MonthCalendar => Math.Clamp(_currentDesktopCellSize * 0.26, 10, 22),
-            BuiltInComponentIds.LunarCalendar => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 26),
-            BuiltInComponentIds.DesktopClock => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 28),
-            BuiltInComponentIds.DesktopTimer => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 28),
-            BuiltInComponentIds.HolidayCalendar => Math.Clamp(_currentDesktopCellSize * 0.32, 12, 28),
-            _ => Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18)
-        };
+            return runtimeDescriptor.ResolveCornerRadius(_currentDesktopCellSize);
+        }
+
+        return Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18);
     }
 
     private Thickness GetDesktopComponentVisualInset(int widthCells, int heightCells)
@@ -1172,60 +1233,14 @@ public partial class MainWindow
 
     private Control? CreateDesktopComponentControl(string componentId)
     {
-        if (componentId == BuiltInComponentIds.Date)
+        if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
-            var widget = new DateWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
+            return null;
         }
 
-        if (componentId == BuiltInComponentIds.MonthCalendar)
-        {
-            var widget = new MonthCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.LunarCalendar)
-        {
-            var widget = new LunarCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.DesktopClock)
-        {
-            var widget = new AnalogClockWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.DesktopTimer)
-        {
-            var widget = new TimerWidget();
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.HolidayCalendar)
-        {
-            var widget = new HolidayCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(_currentDesktopCellSize);
-            widget.Classes.Add(DesktopComponentClass);
-            return widget;
-        }
-
-        return null;
+        var component = runtimeDescriptor.CreateControl(_currentDesktopCellSize, _timeZoneService, _weatherDataService);
+        component.Classes.Add(DesktopComponentClass);
+        return component;
     }
 
     private void CollapseComponentLibraryPanel()
@@ -1372,7 +1387,7 @@ public partial class MainWindow
             DesktopEditDragLayer is null ||
             DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
-            !_componentRegistry.TryGetDefinition(placement.ComponentId, out var definition))
+            !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor))
         {
             return;
         }
@@ -1380,7 +1395,7 @@ public partial class MainWindow
         var (widthCells, heightCells) = NormalizeComponentCellSpan(
             placement.ComponentId,
             ComponentPlacementRules.EnsureMinimumSize(
-                definition,
+                runtimeDescriptor.Definition,
                 placement.WidthCells,
                 placement.HeightCells));
 
@@ -1418,8 +1433,8 @@ public partial class MainWindow
             DesktopEditDragLayer is null ||
             DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
-            !_componentRegistry.TryGetDefinition(componentId, out var definition) ||
-            !definition.AllowDesktopPlacement)
+            !_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor) ||
+            !runtimeDescriptor.Definition.AllowDesktopPlacement)
         {
             return;
         }
@@ -1427,9 +1442,9 @@ public partial class MainWindow
         var (widthCells, heightCells) = NormalizeComponentCellSpan(
             componentId,
             ComponentPlacementRules.EnsureMinimumSize(
-                definition,
-                definition.MinWidthCells,
-                definition.MinHeightCells));
+                runtimeDescriptor.Definition,
+                runtimeDescriptor.Definition.MinWidthCells,
+                runtimeDescriptor.Definition.MinHeightCells));
 
         // Center the component under the pointer while dragging from the library.
         var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize + Math.Max(0, widthCells - 1) * _currentDesktopCellGap);
@@ -1534,7 +1549,7 @@ public partial class MainWindow
     {
         if (DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
-            !_componentRegistry.TryGetDefinition(placement.ComponentId, out var definition) ||
+            !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor) ||
             !_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
         {
             return;
@@ -1543,16 +1558,16 @@ public partial class MainWindow
         var startSpan = NormalizeComponentCellSpan(
             placement.ComponentId,
             ComponentPlacementRules.EnsureMinimumSize(
-                definition,
+                runtimeDescriptor.Definition,
                 placement.WidthCells,
                 placement.HeightCells));
 
         var minSpan = NormalizeComponentCellSpan(
             placement.ComponentId,
             ComponentPlacementRules.EnsureMinimumSize(
-                definition,
-                definition.MinWidthCells,
-                definition.MinHeightCells));
+                runtimeDescriptor.Definition,
+                runtimeDescriptor.Definition.MinWidthCells,
+                runtimeDescriptor.Definition.MinHeightCells));
 
         var maxWidthCells = Math.Max(startSpan.WidthCells, pageGrid.ColumnDefinitions.Count - placement.Column);
         var maxHeightCells = Math.Max(startSpan.HeightCells, pageGrid.RowDefinitions.Count - placement.Row);
@@ -2052,24 +2067,20 @@ public partial class MainWindow
 
     private IReadOnlyList<ComponentLibraryCategory> GetComponentLibraryCategories()
     {
-        var definitions = _componentRegistry
-            .GetAll()
-            .Where(definition => definition.AllowDesktopPlacement)
-            .ToList();
-
-        if (definitions.Count == 0)
+        var descriptors = _componentRuntimeRegistry.GetDesktopComponents();
+        if (descriptors.Count == 0)
         {
             return Array.Empty<ComponentLibraryCategory>();
         }
 
-        return definitions
-            .GroupBy(definition => definition.Category, StringComparer.OrdinalIgnoreCase)
+        return descriptors
+            .GroupBy(descriptor => descriptor.Definition.Category, StringComparer.OrdinalIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 var categoryId = string.IsNullOrWhiteSpace(group.Key) ? "Other" : group.Key.Trim();
                 var components = group
-                    .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(descriptor => descriptor.Definition.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 return new ComponentLibraryCategory(
                     categoryId,
@@ -2092,6 +2103,16 @@ public partial class MainWindow
             return Symbol.CalendarDate;
         }
 
+        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.WeatherSunny;
+        }
+
+        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Edit;
+        }
+
         return Symbol.Apps;
     }
 
@@ -2105,6 +2126,16 @@ public partial class MainWindow
         if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.date", "Calendar");
+        }
+
+        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.weather", "Weather");
+        }
+
+        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.board", "Board");
         }
 
         return categoryId;
@@ -2236,8 +2267,9 @@ public partial class MainWindow
 
         for (var i = 0; i < componentCount; i++)
         {
-            var definition = _componentLibraryActiveComponents[i];
-            if (!_componentRegistry.TryGetDefinition(definition.Id, out var resolved) || !resolved.AllowDesktopPlacement)
+            var descriptor = _componentLibraryActiveComponents[i];
+            var definition = descriptor.Definition;
+            if (!definition.AllowDesktopPlacement)
             {
                 continue;
             }
@@ -2253,8 +2285,8 @@ public partial class MainWindow
             var previewMaxWidth = _componentLibraryComponentPageWidth * 0.94;
             var previewMaxHeight = viewportHeight * 0.86;
             var previewSpan = NormalizeComponentCellSpan(
-                resolved.Id,
-                (resolved.MinWidthCells, resolved.MinHeightCells));
+                definition.Id,
+                (definition.MinWidthCells, definition.MinHeightCells));
             var previewCellSize = Math.Min(
                 previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
                 previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
@@ -2264,11 +2296,7 @@ public partial class MainWindow
             var previewHeight = previewSpan.HeightCells * previewCellSize;
             var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
 
-            var previewControl = CreateComponentLibraryPreviewControl(resolved.Id, renderCellSize);
-            if (previewControl is null)
-            {
-                continue;
-            }
+            var previewControl = descriptor.CreateControl(renderCellSize, _timeZoneService, _weatherDataService);
 
             var previewSurface = new Border
             {
@@ -2294,13 +2322,13 @@ public partial class MainWindow
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Child = previewViewbox,
-                Tag = resolved.Id
+                Tag = definition.Id
             };
             previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
 
             var label = new TextBlock
             {
-                Text = GetLocalizedComponentDisplayName(resolved),
+                Text = GetLocalizedComponentDisplayName(descriptor),
                 FontSize = 14,
                 FontWeight = FontWeight.SemiBold,
                 Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
@@ -2346,91 +2374,9 @@ public partial class MainWindow
         UpdateComponentLibraryComponentNavigationButtons();
     }
 
-    private Control? CreateComponentLibraryPreviewControl(string componentId, double cellSize)
+    private string GetLocalizedComponentDisplayName(DesktopComponentRuntimeDescriptor descriptor)
     {
-        if (componentId == BuiltInComponentIds.Date)
-        {
-            var widget = new DateWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.MonthCalendar)
-        {
-            var widget = new MonthCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.LunarCalendar)
-        {
-            var widget = new LunarCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.DesktopClock)
-        {
-            var widget = new AnalogClockWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.DesktopTimer)
-        {
-            var widget = new TimerWidget();
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        if (componentId == BuiltInComponentIds.HolidayCalendar)
-        {
-            var widget = new HolidayCalendarWidget();
-            widget.SetTimeZoneService(_timeZoneService);
-            widget.ApplyCellSize(cellSize);
-            return widget;
-        }
-
-        return null;
-    }
-
-    private string GetLocalizedComponentDisplayName(DesktopComponentDefinition definition)
-    {
-        if (string.Equals(definition.Id, BuiltInComponentIds.Date, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.date", definition.DisplayName);
-        }
-
-        if (string.Equals(definition.Id, BuiltInComponentIds.MonthCalendar, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.month_calendar", definition.DisplayName);
-        }
-
-        if (string.Equals(definition.Id, BuiltInComponentIds.LunarCalendar, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.lunar_calendar", definition.DisplayName);
-        }
-
-        if (string.Equals(definition.Id, BuiltInComponentIds.DesktopClock, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.desktop_clock", definition.DisplayName);
-        }
-
-        if (string.Equals(definition.Id, BuiltInComponentIds.DesktopTimer, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.desktop_timer", definition.DisplayName);
-        }
-
-        if (string.Equals(definition.Id, BuiltInComponentIds.HolidayCalendar, StringComparison.OrdinalIgnoreCase))
-        {
-            return L("component.holiday_calendar", definition.DisplayName);
-        }
-
-        return definition.DisplayName;
+        return L(descriptor.DisplayNameLocalizationKey, descriptor.Definition.DisplayName);
     }
 
     private void OnComponentLibraryComponentPreviewPointerPressed(object? sender, PointerPressedEventArgs e)

@@ -7,6 +7,10 @@
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
+    <Application.Resources>
+        <FontFamily x:Key="AppFontFamily">avares://LanMontainDesktop/Assets/Fonts#MiSans</FontFamily>
+    </Application.Resources>
+
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
@@ -14,6 +18,14 @@
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
         <StyleInclude Source="avares://LanMontainDesktop/Styles/GlassModule.axaml" />
+
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        </Style>
+
+        <Style Selector="UserControl">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        </Style>
 
         <Style Selector="fi|SymbolIcon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />

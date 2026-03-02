@@ -46,6 +46,12 @@ public partial class MainWindow : Window
         Video
     }
 
+    private enum WeatherLocationMode
+    {
+        CitySearch,
+        Coordinates
+    }
+
     private const int StatusBarRowIndex = 0;
     private const int MinShortSideCells = 6;
     private const int MaxShortSideCells = 96;
@@ -83,12 +89,14 @@ public partial class MainWindow : Window
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
-      private readonly TimeZoneService _timeZoneService = new();
+    private readonly TimeZoneService _timeZoneService = new();
+    private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
         .CreateDefault()
         .RegisterExtensions(
             JsonComponentExtensionProvider.LoadProvidersFromDirectory(
                 Path.Combine(AppContext.BaseDirectory, "Extensions", "Components")));
+    private readonly DesktopComponentRuntimeRegistry _componentRuntimeRegistry;
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
@@ -99,6 +107,8 @@ public partial class MainWindow : Window
     private bool _suppressThemeToggleEvents;
     private bool _suppressStatusBarToggleEvents;
     private bool _suppressLanguageSelectionEvents;
+    private bool _suppressTimeZoneSelectionEvents;
+    private bool _suppressWeatherLocationEvents;
     private bool _suppressSettingsPersistence;
     private bool _isUpdatingWallpaperPreviewLayout;
     private bool _isComponentLibraryOpen;
@@ -131,6 +141,15 @@ public partial class MainWindow : Window
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
+    private WeatherLocationMode _weatherLocationMode = WeatherLocationMode.CitySearch;
+    private string _weatherLocationKey = string.Empty;
+    private string _weatherLocationName = string.Empty;
+    private double _weatherLatitude = 39.9042;
+    private double _weatherLongitude = 116.4074;
+    private bool _weatherAutoRefreshLocation;
+    private string _weatherSearchKeyword = string.Empty;
+    private bool _isWeatherSearchInProgress;
+    private bool _isWeatherPreviewInProgress;
     private ClockDisplayFormat _clockDisplayFormat = ClockDisplayFormat.HourMinuteSecond;
 
     private double CurrentDesktopPitch => _currentDesktopCellSize + _currentDesktopCellGap;
@@ -138,6 +157,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _componentRuntimeRegistry = DesktopComponentRuntimeRegistry.CreateDefault(_componentRegistry);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopComponentDragHandlers();
@@ -192,13 +212,14 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 5);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 6);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
+        InitializeWeatherSettings(snapshot);
         InitializeDesktopSurfaceState(snapshot);
         InitializeDesktopComponentPlacements(snapshot);
         InitializeSettingsIcons();
@@ -247,6 +268,10 @@ public partial class MainWindow : Window
         _videoWallpaperPlayer = null;
         _libVlc?.Dispose();
         _libVlc = null;
+        if (_weatherDataService is IDisposable weatherServiceDisposable)
+        {
+            weatherServiceDisposable.Dispose();
+        }
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
         PropertyChanged -= OnWindowPropertyChanged;
@@ -1241,14 +1266,15 @@ public partial class MainWindow : Window
         });
     }
 
-      private void InitializeTimeZoneSettings()
-      {
+    private void InitializeTimeZoneSettings()
+    {
         // Populate timezone dropdown items before selecting current timezone.
+        _suppressTimeZoneSelectionEvents = true;
         TimeZoneComboBox.Items.Clear();
         var timeZones = _timeZoneService.GetAllTimeZones();
         foreach (var tz in timeZones)
         {
-            var displayText = _timeZoneService.GetTimeZoneDisplayName(tz);
+            var displayText = GetLocalizedTimeZoneDisplayName(tz);
             var item = new ComboBoxItem
             {
                 Content = displayText,
@@ -1262,11 +1288,12 @@ public partial class MainWindow : Window
                 TimeZoneComboBox.SelectedItem = item;
             }
         }
-      }
+        _suppressTimeZoneSelectionEvents = false;
+    }
 
-      private void OnTimeZoneSelectionChanged(object? sender, SelectionChangedEventArgs e)
-      {
-        if (_suppressLanguageSelectionEvents || TimeZoneComboBox.SelectedItem is not ComboBoxItem item)
+    private void OnTimeZoneSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressTimeZoneSelectionEvents || TimeZoneComboBox.SelectedItem is not ComboBoxItem item)
         {
             return;
         }
@@ -1279,6 +1306,6 @@ public partial class MainWindow : Window
 
         _timeZoneService.SetTimeZoneById(timeZoneId);
         PersistSettings();
-      }
-  }
+    }
+}
 
