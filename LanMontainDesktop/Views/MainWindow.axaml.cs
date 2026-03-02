@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using FluentAvalonia.UI.Controls;
 using Avalonia.Layout;
@@ -22,6 +23,7 @@ using LanMontainDesktop.ComponentSystem.Extensions;
 using LanMontainDesktop.Models;
 using LanMontainDesktop.Services;
 using LanMontainDesktop.Theme;
+using LanMontainDesktop.Views.Components;
 using LibVLCSharp.Shared;
 
 namespace LanMontainDesktop.Views;
@@ -47,6 +49,9 @@ public partial class MainWindow : Window
     private const int StatusBarRowIndex = 0;
     private const int MinShortSideCells = 6;
     private const int MaxShortSideCells = 96;
+    private const int MinEdgeInsetPercent = 0;
+    private const int MaxEdgeInsetPercent = 30;
+    private const int DefaultEdgeInsetPercent = 18;
     private const int SettingsTransitionDurationMs = 240;
     private const double WallpaperPreviewMaxWidth = 520;
     private const double LightBackgroundLuminanceThreshold = 0.57;
@@ -64,7 +69,17 @@ public partial class MainWindow : Window
         TaskbarActionId.MinimizeToWindows,
         TaskbarActionId.OpenSettings
     ];
-    private readonly record struct GridMetrics(int ColumnCount, int RowCount, double CellSize);
+    private readonly record struct GridMetrics(
+        int ColumnCount,
+        int RowCount,
+        double CellSize,
+        double GapPx,
+        double EdgeInsetPx,
+        double GridWidthPx,
+        double GridHeightPx)
+    {
+        public double Pitch => CellSize + GapPx;
+    }
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
@@ -87,6 +102,7 @@ public partial class MainWindow : Window
     private bool _suppressSettingsPersistence;
     private bool _isUpdatingWallpaperPreviewLayout;
     private bool _isComponentLibraryOpen;
+    private Border? _selectedDesktopComponentHost;
     private bool _reopenSettingsAfterComponentLibraryClose;
     private TranslateTransform? _settingsContentPanelTransform;
     private IBrush? _defaultDesktopBackground;
@@ -104,8 +120,20 @@ public partial class MainWindow : Window
     private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");
     private double _currentDesktopCellSize;
+    private double _currentDesktopCellGap;
+    private double _currentDesktopEdgeInset;
+    private string _gridSpacingPreset = "Relaxed";
+    private string _statusBarSpacingMode = "Relaxed";
+    private int _statusBarCustomSpacingPercent = 12;
+    private bool _suppressGridSpacingEvents;
+    private bool _suppressGridInsetEvents;
+    private bool _suppressStatusBarSpacingEvents;
+    private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
+    private ClockDisplayFormat _clockDisplayFormat = ClockDisplayFormat.HourMinuteSecond;
+
+    private double CurrentDesktopPitch => _currentDesktopCellSize + _currentDesktopCellGap;
 
     public MainWindow()
     {
@@ -131,12 +159,40 @@ public partial class MainWindow : Window
             snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
             MinShortSideCells,
             MaxShortSideCells);
+
+        _gridSpacingPreset = NormalizeGridSpacingPreset(snapshot.GridSpacingPreset);
+        _suppressGridSpacingEvents = true;
+        GridSpacingPresetComboBox.SelectedIndex = string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        _suppressGridSpacingEvents = false;
+
+        _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+        _suppressGridInsetEvents = true;
+        GridEdgeInsetSlider.Value = _desktopEdgeInsetPercent;
+        GridEdgeInsetNumberBox.Value = _desktopEdgeInsetPercent;
+        _suppressGridInsetEvents = false;
+        GridEdgeInsetNumberBox.ValueChanged += OnGridEdgeInsetNumberBoxChanged;
+
+        _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
+        _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
+        _suppressStatusBarSpacingEvents = true;
+        StatusBarSpacingModeComboBox.SelectedIndex = _statusBarSpacingMode switch
+        {
+            "Compact" => 0,
+            "Custom" => 2,
+            _ => 1
+        };
+        StatusBarSpacingSlider.Value = _statusBarCustomSpacingPercent;
+        StatusBarSpacingNumberBox.Value = _statusBarCustomSpacingPercent;
+        StatusBarSpacingCustomPanel.IsVisible = string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase);
+        _suppressStatusBarSpacingEvents = false;
+        StatusBarSpacingNumberBox.ValueChanged += OnStatusBarSpacingNumberBoxChanged;
+
         GridSizeNumberBox.Value = _targetShortSideCells;
         GridSizeSlider.Value = _targetShortSideCells;
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 4);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 5);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
@@ -199,6 +255,8 @@ public partial class MainWindow : Window
         GridPreviewHost.SizeChanged -= OnGridPreviewHostSizeChanged;
         GridSizeSlider.ValueChanged -= OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged -= OnGridSizeNumberBoxChanged;
+        GridEdgeInsetNumberBox.ValueChanged -= OnGridEdgeInsetNumberBoxChanged;
+        StatusBarSpacingNumberBox.ValueChanged -= OnStatusBarSpacingNumberBoxChanged;
         base.OnClosed(e);
     }
 
@@ -245,12 +303,152 @@ public partial class MainWindow : Window
         UpdateGridPreviewLayout();
     }
 
+    private void OnGridEdgeInsetSliderChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_suppressGridInsetEvents)
+        {
+            return;
+        }
+
+        var value = (int)Math.Round(GridEdgeInsetSlider.Value);
+        SetPendingGridEdgeInsetPercent(value, updateSlider: false, updateNumberBox: true);
+        UpdateGridPreviewLayout();
+    }
+
+    private void OnGridEdgeInsetNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
+    {
+        if (_suppressGridInsetEvents)
+        {
+            return;
+        }
+
+        var value = (int)Math.Round(GridEdgeInsetNumberBox.Value);
+        SetPendingGridEdgeInsetPercent(value, updateSlider: true, updateNumberBox: false);
+        UpdateGridPreviewLayout();
+    }
+
+    private void SetPendingGridEdgeInsetPercent(int percent, bool updateSlider, bool updateNumberBox)
+    {
+        var clamped = Math.Clamp(percent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+
+        _suppressGridInsetEvents = true;
+        try
+        {
+            if (updateSlider && Math.Abs(GridEdgeInsetSlider.Value - clamped) > double.Epsilon)
+            {
+                GridEdgeInsetSlider.Value = clamped;
+            }
+
+            if (updateNumberBox && Math.Abs(GridEdgeInsetNumberBox.Value - clamped) > double.Epsilon)
+            {
+                GridEdgeInsetNumberBox.Value = clamped;
+            }
+        }
+        finally
+        {
+            _suppressGridInsetEvents = false;
+        }
+    }
+
+    private void OnGridSpacingPresetSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressGridSpacingEvents)
+        {
+            return;
+        }
+
+        UpdateGridPreviewLayout();
+    }
+
+    private void OnStatusBarSpacingModeChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressStatusBarSpacingEvents)
+        {
+            return;
+        }
+
+        _statusBarSpacingMode = NormalizeStatusBarSpacingMode(
+            TryGetSelectedComboBoxTag(StatusBarSpacingModeComboBox) ?? _statusBarSpacingMode);
+
+        StatusBarSpacingCustomPanel.IsVisible = string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase);
+
+        ApplyDesktopStatusBarComponentSpacing();
+        UpdateWallpaperPreviewLayout();
+        UpdateGridPreviewLayout();
+        SchedulePersistSettings();
+    }
+
+    private void OnStatusBarSpacingSliderChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_suppressStatusBarSpacingEvents)
+        {
+            return;
+        }
+
+        var percent = (int)Math.Round(StatusBarSpacingSlider.Value);
+        SetStatusBarCustomSpacingPercent(percent, updateSlider: false, updateNumberBox: true);
+
+        if (string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyDesktopStatusBarComponentSpacing();
+            UpdateWallpaperPreviewLayout();
+            UpdateGridPreviewLayout();
+        }
+
+        SchedulePersistSettings();
+    }
+
+    private void OnStatusBarSpacingNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
+    {
+        if (_suppressStatusBarSpacingEvents)
+        {
+            return;
+        }
+
+        var percent = (int)Math.Round(StatusBarSpacingNumberBox.Value);
+        SetStatusBarCustomSpacingPercent(percent, updateSlider: true, updateNumberBox: false);
+
+        if (string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyDesktopStatusBarComponentSpacing();
+            UpdateWallpaperPreviewLayout();
+            UpdateGridPreviewLayout();
+        }
+
+        SchedulePersistSettings();
+    }
+
+    private void SetStatusBarCustomSpacingPercent(int percent, bool updateSlider, bool updateNumberBox)
+    {
+        percent = Math.Clamp(percent, 0, 30);
+        _statusBarCustomSpacingPercent = percent;
+
+        _suppressStatusBarSpacingEvents = true;
+        try
+        {
+            if (updateSlider && Math.Abs(StatusBarSpacingSlider.Value - percent) > double.Epsilon)
+            {
+                StatusBarSpacingSlider.Value = percent;
+            }
+
+            if (updateNumberBox && Math.Abs(StatusBarSpacingNumberBox.Value - percent) > double.Epsilon)
+            {
+                StatusBarSpacingNumberBox.Value = percent;
+            }
+        }
+        finally
+        {
+            _suppressStatusBarSpacingEvents = false;
+        }
+    }
+
     private void UpdateGridPreviewLayout()
     {
         if (GridPreviewFrame is null ||
             GridPreviewHost is null ||
             GridPreviewViewport is null ||
-            GridPreviewGrid is null)
+            GridPreviewGrid is null ||
+            GridPreviewLinesCanvas is null)
         {
             return;
         }
@@ -279,14 +477,24 @@ public partial class MainWindow : Window
 
         var innerWidth = Math.Max(1, gridPreviewWidth - horizontalPadding);
         var innerHeight = Math.Max(1, gridPreviewHeight - verticalPadding);
-        var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells);
+        var preset = NormalizeGridSpacingPreset(TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
+        var gapRatio = ResolveGridGapRatio(preset);
+        var pendingEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
+        var edgeInset = CalculateEdgeInset(innerWidth, innerHeight, previewShortSideCells, pendingEdgeInsetPercent);
+        var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
         }
 
-        GridPreviewGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
-        GridPreviewGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
+        var inset = new Thickness(gridMetrics.EdgeInsetPx);
+        GridPreviewGrid.Margin = inset;
+        GridPreviewGrid.RowSpacing = gridMetrics.GapPx;
+        GridPreviewGrid.ColumnSpacing = gridMetrics.GapPx;
+        GridPreviewGrid.Width = gridMetrics.GridWidthPx;
+        GridPreviewGrid.Height = gridMetrics.GridHeightPx;
+
+        GridPreviewLinesCanvas.Margin = inset;
 
         GridPreviewGrid.RowDefinitions.Clear();
         GridPreviewGrid.ColumnDefinitions.Clear();
@@ -316,6 +524,8 @@ public partial class MainWindow : Window
         Grid.SetColumnSpan(GridPreviewBottomTaskbarContainer, gridMetrics.ColumnCount);
 
         ApplyGridPreviewWidgetSizing(gridMetrics.CellSize);
+        ApplyStatusBarComponentSpacingForPanel(GridPreviewTopStatusComponentsPanel, gridMetrics.CellSize);
+        UpdateGridEdgeInsetComputedPxText(gridMetrics.CellSize);
 
         GridInfoTextBlock.Text = Lf(
             "settings.grid.info_format",
@@ -344,21 +554,19 @@ public partial class MainWindow : Window
         GridPreviewLinesCanvas.Children.Clear();
         
         var cellSize = gridMetrics.CellSize;
-        var gridWidth = gridMetrics.ColumnCount * cellSize;
-        var gridHeight = gridMetrics.RowCount * cellSize;
+        var pitch = gridMetrics.Pitch;
+        var gridWidth = gridMetrics.GridWidthPx;
+        var gridHeight = gridMetrics.GridHeightPx;
         
         GridPreviewLinesCanvas.Width = gridWidth;
         GridPreviewLinesCanvas.Height = gridHeight;
-        
-        Canvas.SetLeft(GridPreviewLinesCanvas, 0);
-        Canvas.SetTop(GridPreviewLinesCanvas, 0);
 
         var dashLength = cellSize * 0.3;
         var gapLength = cellSize * 0.2;
 
         for (var row = 0; row <= gridMetrics.RowCount; row++)
         {
-            var y = row * cellSize;
+            var y = row == gridMetrics.RowCount ? gridHeight : row * pitch;
             var line = new Line
             {
                 StartPoint = new Point(0, y),
@@ -373,7 +581,7 @@ public partial class MainWindow : Window
 
         for (var col = 0; col <= gridMetrics.ColumnCount; col++)
         {
-            var x = col * cellSize;
+            var x = col == gridMetrics.ColumnCount ? gridWidth : col * pitch;
             var line = new Line
             {
                 StartPoint = new Point(x, 0),
@@ -389,13 +597,12 @@ public partial class MainWindow : Window
 
     private void ApplyGridPreviewWidgetSizing(double cellSize)
     {
-        var margin = Math.Clamp(cellSize * 0.08, 1, 6);
-        var previewTaskbarCell = Math.Clamp(cellSize, 10, 36);
+        var previewTaskbarCell = Math.Clamp(cellSize * 0.74, 10, 30);
         var iconSize = Math.Clamp(cellSize * 0.35, 8, 16);
         
-        GridPreviewTopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1, 4));
-        GridPreviewBottomTaskbarContainer.Margin = new Thickness(margin);
-        GridPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.22, 4, 10));
+        GridPreviewTopStatusBarHost.Padding = new Thickness(0);
+        GridPreviewBottomTaskbarContainer.Margin = new Thickness(0);
+        GridPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.45, 16, 32));
         GridPreviewBottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 1, 4));
 
         GridPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
@@ -411,6 +618,10 @@ public partial class MainWindow : Window
 
     private void OnApplyGridSizeClick(object? sender, RoutedEventArgs e)
     {
+        _gridSpacingPreset = NormalizeGridSpacingPreset(
+            TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
+        _desktopEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
+
         var requested = (int)Math.Round(GridSizeNumberBox.Value);
         if (requested <= 0)
         {
@@ -429,26 +640,56 @@ public partial class MainWindow : Window
             GridSizeSlider.Value = _targetShortSideCells;
         }
 
+        SetPendingGridEdgeInsetPercent(_desktopEdgeInsetPercent, updateSlider: true, updateNumberBox: true);
+
         RebuildDesktopGrid();
+        PersistSettings();
+    }
+
+    private void OnClockFormatChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not RadioButton radioButton || radioButton.Tag is not string formatTag)
+        {
+            return;
+        }
+
+        _clockDisplayFormat = formatTag == "Hm" 
+            ? ClockDisplayFormat.HourMinute 
+            : ClockDisplayFormat.HourMinuteSecond;
+
+        if (ClockWidget is ClockWidget clock)
+        {
+            clock.SetDisplayFormat(_clockDisplayFormat);
+        }
+
+        ApplyTopStatusComponentVisibility();
+        UpdateWallpaperPreviewLayout();
         PersistSettings();
     }
 
     private void RebuildDesktopGrid()
     {
-        var gridMetrics = CalculateGridMetrics(
-            DesktopHost.Bounds.Width,
-            DesktopHost.Bounds.Height,
-            _targetShortSideCells);
+        var hostWidth = DesktopHost.Bounds.Width;
+        var hostHeight = DesktopHost.Bounds.Height;
+        var gapRatio = ResolveGridGapRatio(_gridSpacingPreset);
+        var edgeInset = CalculateEdgeInset(hostWidth, hostHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+        var gridMetrics = CalculateGridMetrics(hostWidth, hostHeight, _targetShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
         }
         _currentDesktopCellSize = gridMetrics.CellSize;
+        _currentDesktopCellGap = gridMetrics.GapPx;
+        _currentDesktopEdgeInset = gridMetrics.EdgeInsetPx;
+        UpdateGridEdgeInsetComputedPxText(gridMetrics.CellSize);
 
         DesktopGrid.RowDefinitions.Clear();
         DesktopGrid.ColumnDefinitions.Clear();
-        DesktopGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
-        DesktopGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
+        DesktopGrid.Margin = new Thickness(gridMetrics.EdgeInsetPx);
+        DesktopGrid.RowSpacing = gridMetrics.GapPx;
+        DesktopGrid.ColumnSpacing = gridMetrics.GapPx;
+        DesktopGrid.Width = gridMetrics.GridWidthPx;
+        DesktopGrid.Height = gridMetrics.GridHeightPx;
 
         for (var row = 0; row < gridMetrics.RowCount; row++)
         {
@@ -476,6 +717,7 @@ public partial class MainWindow : Window
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
         ApplyWidgetSizing(gridMetrics.CellSize);
+        ApplyDesktopStatusBarComponentSpacing();
         UpdateDesktopSurfaceLayout(gridMetrics);
         UpdateSettingsViewportInsets(gridMetrics.CellSize);
 
@@ -489,26 +731,190 @@ public partial class MainWindow : Window
         UpdateWallpaperPreviewLayout();
     }
 
-    private static GridMetrics CalculateGridMetrics(double hostWidth, double hostHeight, int targetShortSideCells)
+    private void ApplyDesktopStatusBarComponentSpacing()
+    {
+        ApplyStatusBarComponentSpacingForPanel(TopStatusComponentsPanel, _currentDesktopCellSize);
+        UpdateStatusBarSpacingComputedPxText(_currentDesktopCellSize);
+    }
+
+    private int ResolveStatusBarSpacingPercent()
+    {
+        return _statusBarSpacingMode switch
+        {
+            "Compact" => 6,
+            "Custom" => Math.Clamp(_statusBarCustomSpacingPercent, 0, 30),
+            _ => 12
+        };
+    }
+
+    private void ApplyStatusBarComponentSpacingForPanel(StackPanel? panel, double cellSize)
+    {
+        if (panel is null)
+        {
+            return;
+        }
+
+        var percent = ResolveStatusBarSpacingPercent();
+        var spacingPx = Math.Max(0, cellSize) * (percent / 100d);
+        panel.Spacing = spacingPx;
+    }
+
+    private void UpdateStatusBarSpacingComputedPxText(double cellSize)
+    {
+        if (StatusBarSpacingComputedPxTextBlock is null)
+        {
+            return;
+        }
+
+        var percent = ResolveStatusBarSpacingPercent();
+        var spacingPx = Math.Max(0, cellSize) * (percent / 100d);
+        StatusBarSpacingComputedPxTextBlock.Text = Lf(
+            "settings.status_bar.spacing_custom_px_format",
+            "鈮?{0:F1}px",
+            spacingPx);
+    }
+
+    private int ResolvePendingGridEdgeInsetPercent()
+    {
+        var pending = (int)Math.Round(GridEdgeInsetNumberBox.Value);
+        return Math.Clamp(pending, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+    }
+
+    private void UpdateGridEdgeInsetComputedPxText(double cellSize)
+    {
+        if (GridEdgeInsetComputedPxTextBlock is null)
+        {
+            return;
+        }
+
+        var percent = ResolvePendingGridEdgeInsetPercent();
+        var insetPx = Math.Clamp(Math.Max(0, cellSize) * (percent / 100d), 0, 80);
+        GridEdgeInsetComputedPxTextBlock.Text = Lf(
+            "settings.grid.edge_inset_px_format",
+            "{0:F1}px",
+            insetPx);
+    }
+
+    private static string NormalizeGridSpacingPreset(string? value)
+    {
+        return string.Equals(value, "Compact", StringComparison.OrdinalIgnoreCase)
+            ? "Compact"
+            : "Relaxed";
+    }
+
+    private static string NormalizeStatusBarSpacingMode(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Compact", StringComparison.OrdinalIgnoreCase) => "Compact",
+            _ when string.Equals(value, "Custom", StringComparison.OrdinalIgnoreCase) => "Custom",
+            _ => "Relaxed"
+        };
+    }
+
+    private static string? TryGetSelectedComboBoxTag(ComboBox? comboBox)
+    {
+        if (comboBox?.SelectedItem is ComboBoxItem item)
+        {
+            return item.Tag?.ToString();
+        }
+
+        return comboBox?.SelectedItem?.ToString();
+    }
+
+    private static double ResolveGridGapRatio(string preset)
+    {
+        return string.Equals(preset, "Compact", StringComparison.OrdinalIgnoreCase) ? 0.06 : 0.12;
+    }
+
+    private static double CalculateEdgeInset(double hostWidth, double hostHeight, int shortSideCells, int insetPercent)
+    {
+        if (hostWidth <= 1 || hostHeight <= 1)
+        {
+            return 0;
+        }
+
+        var cells = Math.Max(1, shortSideCells);
+        var shortSidePx = Math.Max(1, Math.Min(hostWidth, hostHeight));
+        var baseCell = shortSidePx / cells;
+        
+        // --- 姣斾緥鍖栫暀鐧?(Proportional Inset) ---
+        // 鍏佽鐢ㄦ埛鐧惧垎姣旇皟鑺傦紝浣嗚瀹氭洿鍚堢悊鐨勫熀鍑嗗拰闄愬埗
+        var clampedPercent = Math.Clamp(insetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+        var insetRatio = clampedPercent / 100d;
+        
+        // 纭繚鏈€灏忕暀鐧借兘瀹圭撼涓€瀹氱殑闃村奖鎵╁睍
+        // 鍏佽 0 杈硅窛锛屾渶澶т笂闄愮淮鎸?80px
+        return Math.Clamp(baseCell * insetRatio, 0, 80);
+    }
+
+    private static GridMetrics CalculateGridMetrics(
+        double hostWidth,
+        double hostHeight,
+        int shortSideCells,
+        double gapRatio,
+        double edgeInsetPx)
     {
         if (hostWidth <= 1 || hostHeight <= 1)
         {
             return default;
         }
 
-        var shortSideCells = Math.Max(1, targetShortSideCells);
+        var shortSide = Math.Max(1, shortSideCells);
+        var clampedGapRatio = Math.Max(0, gapRatio);
+        var inset = Math.Max(0, edgeInsetPx);
+
+        // Edge inset should come only from user setting.
+        // Remaining free space is handled by container centering, not baked into inset.
+        var availableWidth = Math.Max(1, hostWidth - inset * 2);
+        var availableHeight = Math.Max(1, hostHeight - inset * 2);
+
         if (hostWidth >= hostHeight)
         {
-            var rowCount = shortSideCells;
-            var cellSize = hostHeight / rowCount;
-            var columnCount = Math.Max(1, (int)Math.Floor(hostWidth / cellSize));
-            return new GridMetrics(columnCount, rowCount, cellSize);
-        }
+            var rowCount = shortSide;
+            var denominator = rowCount + Math.Max(0, rowCount - 1) * clampedGapRatio;
+            if (denominator <= 0)
+            {
+                return default;
+            }
 
-        var columns = shortSideCells;
-        var size = hostWidth / columns;
-        var rows = Math.Max(1, (int)Math.Floor(hostHeight / size));
-        return new GridMetrics(columns, rows, size);
+            var cellSize = availableHeight / denominator;
+            var gapPx = cellSize * clampedGapRatio;
+            var pitch = cellSize + gapPx;
+            if (pitch <= 0)
+            {
+                return default;
+            }
+
+            var columnCount = Math.Max(1, (int)Math.Floor((availableWidth + gapPx) / pitch));
+            var gridWidth = columnCount * cellSize + Math.Max(0, columnCount - 1) * gapPx;
+            var gridHeight = rowCount * cellSize + Math.Max(0, rowCount - 1) * gapPx;
+
+            return new GridMetrics(columnCount, rowCount, cellSize, gapPx, inset, gridWidth, gridHeight);
+        }
+        else
+        {
+            var columnCount = shortSide;
+            var denominator = columnCount + Math.Max(0, columnCount - 1) * clampedGapRatio;
+            if (denominator <= 0)
+            {
+                return default;
+            }
+
+            var cellSize = availableWidth / denominator;
+            var gapPx = cellSize * clampedGapRatio;
+            var pitch = cellSize + gapPx;
+            if (pitch <= 0)
+            {
+                return default;
+            }
+
+            var rowCount = Math.Max(1, (int)Math.Floor((availableHeight + gapPx) / pitch));
+            var gridWidth = columnCount * cellSize + Math.Max(0, columnCount - 1) * gapPx;
+            var gridHeight = rowCount * cellSize + Math.Max(0, rowCount - 1) * gapPx;
+
+            return new GridMetrics(columnCount, rowCount, cellSize, gapPx, inset, gridWidth, gridHeight);
+        }
     }
 
     private static int ClampComponentSpan(int requestedSpan, int axisCellCount)
@@ -537,55 +943,75 @@ public partial class MainWindow : Window
 
     private void ApplyWidgetSizing(double cellSize)
     {
-        var margin = Math.Clamp(cellSize * 0.08, 1.5, 10);
-        var verticalPadding = Math.Clamp(cellSize * 0.08, 2, 12);
-        var horizontalPadding = Math.Clamp(cellSize * 0.20, 4, 22);
-        var taskbarCell = Math.Clamp(cellSize, 28, 128);
-        var unifiedFontSize = Math.Clamp(cellSize * 0.22, 8, 22);
-        var unifiedIconSize = Math.Clamp(cellSize * 0.28, 10, 26);
+        var taskbarCellHeight = Math.Clamp(cellSize * 0.76, 36, 76);
+        var taskbarTextSize = Math.Clamp(taskbarCellHeight * 0.36, 12, 22);
+        var taskbarIconSize = Math.Clamp(taskbarCellHeight * 0.46, 16, 34);
+        var taskbarButtonInset = Math.Clamp(taskbarCellHeight * 0.22, 6, 16);
+        var compactButtonInset = Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
+        var buttonContentSpacing = Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
+        var taskbarButtonPadding = new Thickness(taskbarButtonInset);
 
-        TopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1.5, 10));
-        ClockWidget.Margin = new Thickness(margin);
+        // Status bar and taskbar are special surfaces: they should fill their row.
+        TopStatusBarHost.Margin = new Thickness(0);
+        TopStatusBarHost.Padding = new Thickness(0);
+
+        BottomTaskbarContainer.Margin = new Thickness(0);
+        BottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(taskbarCellHeight * 0.58, 20, 44));
+        BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(taskbarCellHeight * 0.16, 6, 14));
+
+        ClockWidget.Margin = new Thickness(0);
         ClockWidget.ApplyCellSize(cellSize);
 
-        BottomTaskbarContainer.Margin = new Thickness(Math.Clamp(cellSize * 0.18, 6, 18));
-        BottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.24, 10, 24));
-        BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 2, 10));
+        var buttonMinWidth = Math.Clamp(taskbarCellHeight * 2.35, 100, 340);
 
         BackToWindowsButton.Margin = new Thickness(0);
-        BackToWindowsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-        BackToWindowsButton.FontSize = unifiedFontSize;
-        BackToWindowsButton.MinHeight = taskbarCell;
-        BackToWindowsButton.MinWidth = Math.Clamp(cellSize * 2.3, 90, 320);
-        BackToWindowsIcon.FontSize = unifiedIconSize;
+        BackToWindowsButton.Padding = taskbarButtonPadding;
+        BackToWindowsButton.FontSize = taskbarTextSize;
+        BackToWindowsButton.MinHeight = taskbarCellHeight;
+        BackToWindowsButton.MinWidth = buttonMinWidth;
+        BackToWindowsIcon.FontSize = taskbarIconSize;
+        BackToWindowsTextBlock.FontSize = taskbarTextSize;
+        SetButtonContentSpacing(BackToWindowsButton, buttonContentSpacing);
         
         OpenComponentLibraryButton.Margin = new Thickness(0);
-        OpenComponentLibraryButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-        OpenComponentLibraryButton.FontSize = unifiedFontSize;
-        OpenComponentLibraryButton.MinHeight = taskbarCell;
-        OpenComponentLibraryButton.MinWidth = Math.Clamp(cellSize * 2.0, 88, 300);
-        OpenComponentLibraryIcon.FontSize = unifiedIconSize;
+        OpenComponentLibraryButton.Padding = taskbarButtonPadding;
+        OpenComponentLibraryButton.FontSize = taskbarTextSize;
+        OpenComponentLibraryButton.MinHeight = taskbarCellHeight;
+        OpenComponentLibraryButton.MinWidth = Math.Clamp(taskbarCellHeight * 2.15, 92, 320);
+        OpenComponentLibraryIcon.FontSize = taskbarIconSize;
+        OpenComponentLibraryTextBlock.FontSize = taskbarTextSize;
+        SetButtonContentSpacing(OpenComponentLibraryButton, buttonContentSpacing);
 
         OpenSettingsButton.Margin = new Thickness(0);
-        OpenSettingsButton.Height = taskbarCell;
-        OpenSettingsButton.MinHeight = taskbarCell;
-        OpenSettingsIcon.FontSize = unifiedIconSize;
+        OpenSettingsButton.Height = taskbarCellHeight;
+        OpenSettingsButton.MinHeight = taskbarCellHeight;
+        OpenSettingsButton.FontSize = taskbarTextSize;
+        OpenSettingsButtonTextBlock.FontSize = taskbarTextSize;
+        OpenSettingsIcon.FontSize = taskbarIconSize;
+        SetButtonContentSpacing(OpenSettingsButton, Math.Clamp(taskbarCellHeight * 0.18, 4, 10));
 
         if (_isSettingsOpen)
         {
             OpenSettingsButton.Width = double.NaN;
-            OpenSettingsButton.MinWidth = Math.Clamp(cellSize * 2.3, 120, 340);
-            OpenSettingsButton.Padding = new Thickness(horizontalPadding, verticalPadding);
-            OpenSettingsButton.FontSize = unifiedFontSize;
+            OpenSettingsButton.MinWidth = Math.Clamp(taskbarCellHeight * 2.45, 120, 360);
+            OpenSettingsButton.Padding = taskbarButtonPadding;
         }
         else
         {
-            OpenSettingsButton.Width = taskbarCell;
-            OpenSettingsButton.MinWidth = taskbarCell;
-            OpenSettingsButton.Padding = new Thickness(Math.Clamp(taskbarCell * 0.2, 4, 12));
+            OpenSettingsButton.Width = taskbarCellHeight;
+            OpenSettingsButton.MinWidth = taskbarCellHeight;
+            OpenSettingsButton.Padding = new Thickness(compactButtonInset);
         }
 
         UpdateComponentLibraryLayout(cellSize);
+    }
+
+    private static void SetButtonContentSpacing(Button? button, double spacing)
+    {
+        if (button?.Content is StackPanel contentPanel)
+        {
+            contentPanel.Spacing = spacing;
+        }
     }
 
     private void UpdateComponentLibraryLayout(double cellSize)
@@ -597,8 +1023,14 @@ public partial class MainWindow : Window
 
         var horizontalMargin = Math.Clamp(cellSize * 0.7, 18, 44);
         var bottomMargin = Math.Clamp(cellSize * 1.4, 56, 190);
-        ComponentLibraryWindow.Margin = new Thickness(horizontalMargin, 20, horizontalMargin, bottomMargin);
-        ComponentLibraryWindow.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.24, 12, 24));
+        var defaultMargin = new Thickness(horizontalMargin, 20, horizontalMargin, bottomMargin);
+        if (!_isComponentLibraryWindowPositionCustomized)
+        {
+            _savedComponentLibraryMargin = defaultMargin;
+        }
+
+        ComponentLibraryWindow.Margin = _savedComponentLibraryMargin;
+        ComponentLibraryWindow.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.45, 24, 44));
         ComponentLibraryWindow.Height = Math.Clamp(cellSize * 4.8, 220, 360);
         ComponentLibraryWindow.Width = Math.Clamp(cellSize * 9.2, 360, 760);
     }
@@ -613,10 +1045,26 @@ public partial class MainWindow : Window
         var clampedCell = Math.Max(1, cellSize);
         var horizontalInset = Math.Clamp(clampedCell * 0.45, 12, 64);
         var verticalGap = Math.Clamp(clampedCell * 0.16, 6, 18);
-        var topInset = clampedCell + verticalGap;
-        var bottomInset = clampedCell + verticalGap;
+        var edgeInset = Math.Max(0, _currentDesktopEdgeInset);
 
-        // 添加额外的安全边距以确保圆角不被裁剪
+        var taskbarCellHeight = Math.Clamp(clampedCell * 0.76, 36, 76);
+        var taskbarPadding = Math.Clamp(taskbarCellHeight * 0.16, 6, 14);
+        var taskbarVisualHeight = Math.Max(clampedCell, taskbarCellHeight + taskbarPadding * 2);
+        if (BottomTaskbarContainer is not null && BottomTaskbarContainer.Bounds.Height > 1)
+        {
+            taskbarVisualHeight = Math.Max(taskbarVisualHeight, BottomTaskbarContainer.Bounds.Height);
+        }
+
+        var statusBarVisualHeight = clampedCell;
+        if (TopStatusBarHost is not null && TopStatusBarHost.Bounds.Height > 1)
+        {
+            statusBarVisualHeight = Math.Max(statusBarVisualHeight, TopStatusBarHost.Bounds.Height);
+        }
+
+        var topInset = Math.Max(clampedCell + verticalGap, edgeInset + statusBarVisualHeight + verticalGap);
+        var bottomInset = Math.Max(clampedCell + verticalGap, edgeInset + taskbarVisualHeight + verticalGap);
+
+        // Add extra safety margin so rounded panel corners never clip against viewport edges.
         var cornerSafetyMargin = Math.Clamp(clampedCell * 0.12, 4, 12);
         var inset = new Thickness(
             horizontalInset + cornerSafetyMargin,
@@ -624,8 +1072,7 @@ public partial class MainWindow : Window
             horizontalInset + cornerSafetyMargin,
             bottomInset + cornerSafetyMargin);
 
-        // 使用 Margin 来定位，而不是直接设置 Width/Height
-        // 这样可以让面板自然填充可用空间，同时保持边距
+        // Keep panel stretched with explicit viewport insets so it never overlaps fixed chrome.
         SettingsContentPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
         SettingsContentPanel.VerticalAlignment = VerticalAlignment.Stretch;
         SettingsContentPanel.Margin = inset;
@@ -656,29 +1103,46 @@ public partial class MainWindow : Window
             var aspectRatio = desktopWidth / desktopHeight;
 
             var availableWidth = Math.Max(100, WallpaperPreviewHost.Bounds.Width);
+            var availableHeight = WallpaperPreviewHost.Bounds.Height;
+            // During initial measure, host height can be too small and cause the preview to collapse.
+            // Ignore tiny heights so width-driven sizing can stabilize first.
+            if (availableHeight < 120)
+            {
+                availableHeight = double.PositiveInfinity;
+            }
             
             var framePadding = WallpaperPreviewFrame.Padding;
             var horizontalPadding = framePadding.Left + framePadding.Right;
             var verticalPadding = framePadding.Top + framePadding.Bottom;
 
-            var previewWidth = availableWidth;
+            var previewWidth = Math.Min(availableWidth, WallpaperPreviewMaxWidth);
             var previewHeight = previewWidth / aspectRatio;
+            if (double.IsFinite(availableHeight) && previewHeight > availableHeight)
+            {
+                previewHeight = availableHeight;
+                previewWidth = previewHeight * aspectRatio;
+            }
 
             WallpaperPreviewFrame.Width = previewWidth;
             WallpaperPreviewFrame.Height = previewHeight;
 
-            WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
+
 
             var innerWidth = Math.Max(1, previewWidth - horizontalPadding);
             var innerHeight = Math.Max(1, previewHeight - verticalPadding);
-            var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells);
+            var gapRatio = ResolveGridGapRatio(_gridSpacingPreset);
+            var edgeInset = CalculateEdgeInset(innerWidth, innerHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+            var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells, gapRatio, edgeInset);
             if (gridMetrics.CellSize <= 0)
             {
                 return;
             }
 
-            WallpaperPreviewGrid.Width = gridMetrics.ColumnCount * gridMetrics.CellSize;
-            WallpaperPreviewGrid.Height = gridMetrics.RowCount * gridMetrics.CellSize;
+            WallpaperPreviewGrid.Margin = new Thickness(gridMetrics.EdgeInsetPx);
+            WallpaperPreviewGrid.RowSpacing = gridMetrics.GapPx;
+            WallpaperPreviewGrid.ColumnSpacing = gridMetrics.GapPx;
+            WallpaperPreviewGrid.Width = gridMetrics.GridWidthPx;
+            WallpaperPreviewGrid.Height = gridMetrics.GridHeightPx;
 
             // This can be triggered by layout changes; always rebuild the preview grid definitions
             // to avoid definitions accumulating and shifting overlay components out of place.
@@ -712,6 +1176,7 @@ public partial class MainWindow : Window
             ApplyTopStatusComponentVisibility();
             ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
             ApplyPreviewWidgetSizing(gridMetrics.CellSize);
+            ApplyStatusBarComponentSpacingForPanel(WallpaperPreviewTopStatusComponentsPanel, gridMetrics.CellSize);
         }
         finally
         {
@@ -721,22 +1186,33 @@ public partial class MainWindow : Window
 
     private void ApplyPreviewWidgetSizing(double cellSize)
     {
-        var margin = Math.Clamp(cellSize * 0.08, 1, 6);
-        var previewTaskbarCell = Math.Clamp(cellSize, 10, 36);
-        WallpaperPreviewTopStatusBarHost.Padding = new Thickness(Math.Clamp(cellSize * 0.08, 1, 4));
-        WallpaperPreviewBottomTaskbarContainer.Margin = new Thickness(margin);
-        WallpaperPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.22, 4, 10));
-        WallpaperPreviewBottomTaskbarContainer.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 1, 4));
+        var previewTaskbarCell = Math.Clamp(cellSize * 0.74, 10, 28);
+        var previewTextSize = Math.Clamp(previewTaskbarCell * 0.38, 7, 14);
+        var previewIconSize = Math.Clamp(previewTaskbarCell * 0.46, 8, 16);
+        var previewInset = Math.Clamp(previewTaskbarCell * 0.20, 2, 6);
+        var previewContentSpacing = Math.Clamp(previewTaskbarCell * 0.20, 2, 6);
+        
+        // Match desktop behavior: special bars fill their preview row.
+        WallpaperPreviewTopStatusBarHost.Margin = new Thickness(0);
+        WallpaperPreviewTopStatusBarHost.Padding = new Thickness(0);
 
-        WallpaperPreviewClockTextBlock.FontSize = Math.Clamp(cellSize * 0.30, 6, 18);
-        WallpaperPreviewBackButtonTextBlock.FontSize = Math.Clamp(cellSize * 0.19, 5, 13);
-        WallpaperPreviewComponentLibraryTextBlock.FontSize = Math.Clamp(cellSize * 0.18, 5, 12);
+        WallpaperPreviewBottomTaskbarContainer.Margin = new Thickness(0);
+        WallpaperPreviewBottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.45, 6, 14));
+        WallpaperPreviewBottomTaskbarContainer.Padding = new Thickness(previewInset);
+
+        WallpaperPreviewClockWidget.ApplyCellSize(cellSize);
+        WallpaperPreviewBackButtonTextBlock.FontSize = previewTextSize;
+        WallpaperPreviewComponentLibraryTextBlock.FontSize = previewTextSize;
+        WallpaperPreviewBackButtonVisual.Spacing = previewContentSpacing;
+        WallpaperPreviewComponentLibraryVisual.Spacing = previewContentSpacing;
+        
         WallpaperPreviewBackButtonVisual.MinHeight = previewTaskbarCell;
         WallpaperPreviewBackButtonVisual.MinWidth = Math.Clamp(cellSize * 2.1, 30, 120);
         WallpaperPreviewComponentLibraryVisual.MinHeight = previewTaskbarCell;
         WallpaperPreviewComponentLibraryVisual.MinWidth = Math.Clamp(cellSize * 2.0, 28, 110);
-        WallpaperPreviewSettingsButtonIcon.Width = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
-        WallpaperPreviewSettingsButtonIcon.Height = Math.Clamp(previewTaskbarCell * 0.42, 6, 14);
+        
+        WallpaperPreviewSettingsButtonIcon.Width = previewIconSize;
+        WallpaperPreviewSettingsButtonIcon.Height = previewIconSize;
     }
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
@@ -767,7 +1243,7 @@ public partial class MainWindow : Window
 
       private void InitializeTimeZoneSettings()
       {
-        // 填充时区下拉框
+        // Populate timezone dropdown items before selecting current timezone.
         TimeZoneComboBox.Items.Clear();
         var timeZones = _timeZoneService.GetAllTimeZones();
         foreach (var tz in timeZones)
@@ -780,7 +1256,7 @@ public partial class MainWindow : Window
             };
             TimeZoneComboBox.Items.Add(item);
 
-            // 选中当前时区
+            // 閫変腑褰撳墠鏃跺尯
             if (tz.Id == _timeZoneService.CurrentTimeZone.Id)
             {
                 TimeZoneComboBox.SelectedItem = item;
@@ -805,3 +1281,4 @@ public partial class MainWindow : Window
         PersistSettings();
       }
   }
+

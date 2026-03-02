@@ -4,5 +4,8 @@ public enum TaskbarActionId
 {
     MinimizeToWindows,
     OpenSettings,
-    AddDesktopPage
+    AddDesktopPage,
+    DeleteDesktopPage,
+    DeleteComponent,
+    EditComponent
 }

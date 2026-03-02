@@ -1,6 +1,9 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
+using FluentIcons.Avalonia;
+using FluentIcons.Common;
 
 namespace LanMontainDesktop.Views;
 
@@ -59,11 +62,11 @@ public partial class MainWindow
         WallpaperPreviewBackButtonTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         ToolTip.SetTip(BackToWindowsButton, L("tooltip.back_to_windows", "Back to Windows"));
 
-        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
-        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
-        GridPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
-        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "Edit Desktop"));
-        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Edit Desktop");
+        OpenComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
+        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
+        GridPreviewComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
+        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "编辑桌面"));
+        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "小组件");
         ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "Close"));
         ComponentLibraryEmptyTextBlock.Text = L(
             "component_library.empty",
@@ -88,17 +91,55 @@ public partial class MainWindow
         ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "重置");
 
         GridPanelTitleTextBlock.Text = L("settings.grid.title", "Grid Layout");
+        GridSpacingPresetLabelTextBlock.Text = L("settings.grid.spacing_label", "Grid Spacing");
+        GridSpacingRelaxedComboBoxItem.Content = L("settings.grid.spacing_relaxed", "Relaxed");
+        GridSpacingCompactComboBoxItem.Content = L("settings.grid.spacing_compact", "Compact");
+        GridEdgeInsetLabelTextBlock.Text = L("settings.grid.edge_inset_label", "Screen Inset");
+        ApplyGridButton.Content = L("settings.grid.apply_button", "Apply");
+        UpdateGridEdgeInsetComputedPxText(_currentDesktopCellSize);
 
         ColorPanelTitleTextBlock.Text = L("settings.color.title", "Color");
         ThemeModeSettingsExpander.Header = L("settings.color.day_night_label", "Day/Night");
-        NightModeToggleSwitch.OnContent = L("settings.color.day_night_on", "Night");
-        NightModeToggleSwitch.OffContent = L("settings.color.day_night_off", "Day");
+        NightModeToggleSwitch.OffContent = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Children =
+            {
+                new SymbolIcon { Symbol = Symbol.WeatherSunny, IconVariant = IconVariant.Regular, FontSize = 14 },
+                new TextBlock
+                {
+                    Text = L("settings.color.day_night_off", "Day"),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                }
+            }
+        };
+        NightModeToggleSwitch.OnContent = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Children =
+            {
+                new SymbolIcon { Symbol = Symbol.WeatherMoon, IconVariant = IconVariant.Regular, FontSize = 14 },
+                new TextBlock
+                {
+                    Text = L("settings.color.day_night_on", "Night"),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                }
+            }
+        };
         RecommendedColorsLabelTextBlock.Text = L("settings.color.recommended_label", "Recommended Colors");
         SystemMonetColorsLabelTextBlock.Text = L("settings.color.system_monet_label", "System Monet Colors");
         RefreshMonetColorsButton.Content = L("settings.color.refresh_button", "Refresh");
 
         StatusBarPanelTitleTextBlock.Text = L("settings.status_bar.title", "Status Bar");
         StatusBarClockSettingsExpander.Header = L("settings.status_bar.clock_header", "Clock");
+        StatusBarSpacingSettingsExpander.Header = L("settings.status_bar.spacing_header", "Component Spacing");
+        StatusBarSpacingSettingsExpander.Description = L("settings.status_bar.spacing_desc", "Adjust spacing between status bar components.");
+        StatusBarSpacingModeCompactItem.Content = L("settings.status_bar.spacing_mode_compact", "Compact");
+        StatusBarSpacingModeRelaxedItem.Content = L("settings.status_bar.spacing_mode_relaxed", "Relaxed");
+        StatusBarSpacingModeCustomItem.Content = L("settings.status_bar.spacing_mode_custom", "Custom");
+        StatusBarSpacingCustomLabelTextBlock.Text = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
 
         RegionPanelTitleTextBlock.Text = L("settings.region.title", "Region");
         LanguageSettingsExpander.Header = L("settings.region.language_header", "Language");

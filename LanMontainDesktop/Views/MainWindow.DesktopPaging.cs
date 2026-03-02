@@ -98,8 +98,10 @@ public partial class MainWindow
 
         var viewportRow = gridMetrics.RowCount > 2 ? 1 : 0;
         var viewportRowSpan = gridMetrics.RowCount > 2 ? gridMetrics.RowCount - 2 : 1;
-        var pageWidth = Math.Max(1, gridMetrics.ColumnCount * gridMetrics.CellSize);
-        var pageHeight = Math.Max(1, viewportRowSpan * gridMetrics.CellSize);
+        var pageWidth = Math.Max(1, gridMetrics.GridWidthPx);
+        var pageHeight = Math.Max(
+            1,
+            viewportRowSpan * gridMetrics.CellSize + Math.Max(0, viewportRowSpan - 1) * gridMetrics.GapPx);
 
         Grid.SetRow(DesktopPagesViewport, viewportRow);
         Grid.SetColumn(DesktopPagesViewport, 0);
@@ -137,6 +139,8 @@ public partial class MainWindow
             {
                 Width = pageWidth,
                 Height = pageHeight,
+                RowSpacing = gridMetrics.GapPx,
+                ColumnSpacing = gridMetrics.GapPx,
                 Background = Brushes.Transparent,
                 ShowGridLines = false
             };
@@ -307,6 +311,16 @@ public partial class MainWindow
         if (DesktopPagesViewport is null)
         {
             return;
+        }
+
+        // 如果在组件编辑模式下点击空白区域，取消组件选中
+        if (_isComponentLibraryOpen && _selectedDesktopComponentHost is not null)
+        {
+            if (!IsInteractivePointerSource(e.Source))
+            {
+                ClearDesktopComponentSelection();
+                ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+            }
         }
 
         if (!CanSwipeDesktopSurface())
@@ -519,7 +533,7 @@ public partial class MainWindow
             Classes = { "glass-panel" },
             BorderThickness = new Thickness(0),
             Margin = new Thickness(0, 0, 12, 12),
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(20),
             Child = panel
             // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
         };
@@ -598,7 +612,7 @@ public partial class MainWindow
             Classes = { "glass-panel" },
             Margin = new Thickness(0, 0, 12, 12),
             BorderThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(20),
             Padding = new Thickness(10),
             Content = content
             // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置

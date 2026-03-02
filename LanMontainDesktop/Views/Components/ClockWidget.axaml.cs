@@ -8,6 +8,12 @@ using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
+public enum ClockDisplayFormat
+{
+    HourMinuteSecond,  // HH:mm:ss
+    HourMinute          // HH:mm
+}
+
 public partial class ClockWidget : UserControl
 {
     private readonly DispatcherTimer _timer = new()
@@ -16,6 +22,7 @@ public partial class ClockWidget : UserControl
     };
 
     private TimeZoneService? _timeZoneService;
+    private ClockDisplayFormat _displayFormat = ClockDisplayFormat.HourMinuteSecond;
 
     public ClockWidget()
     {
@@ -27,9 +34,21 @@ public partial class ClockWidget : UserControl
         UpdateClock();
     }
 
-    /// <summary>
-    /// 设置时区服务
-    /// </summary>
+    public ClockDisplayFormat DisplayFormat
+    {
+        get => _displayFormat;
+        set
+        {
+            _displayFormat = value;
+            UpdateClock();
+        }
+    }
+
+    public void SetDisplayFormat(ClockDisplayFormat format)
+    {
+        DisplayFormat = format;
+    }
+
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
         if (_timeZoneService != null)
@@ -66,17 +85,45 @@ public partial class ClockWidget : UserControl
     private void UpdateClock()
     {
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
-        TimeTextBlock.Text = now.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+        
+        MainTimeTextBlock.Text = now.ToString("HH:mm", CultureInfo.CurrentCulture);
+        SecondsTextBlock.Text = now.ToString("ss", CultureInfo.CurrentCulture);
+        
+        SecondsTextBlock.IsVisible = _displayFormat == ClockDisplayFormat.HourMinuteSecond;
     }
 
     public void ApplyCellSize(double cellSize)
     {
-        var padding = Math.Clamp(cellSize * 0.12, 2, 14);
-        RootBorder.Padding = new Thickness(padding);
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(cellSize * 0.16, 4, 18));
+        // --- Class Island “满盈”风格算法 ---
+        
+        // 1. 计算组件高度：保持与任务栏核心比例一致 (0.74x)
+        var targetHeight = Math.Clamp(cellSize * 0.74, 34, 74);
+        RootBorder.Height = targetHeight;
+        
+        // 2. 动态圆角：确保始终是完美的胶囊半圆
+        RootBorder.CornerRadius = new CornerRadius(targetHeight / 2);
+        RootBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
+        
+        // 3. 核心：满盈字阶 (Filled Typography)
+        // 使主时间文字占据容器高度的 ~68%，产生饱满的视觉张力
+        var mainFontSize = targetHeight * 0.68;
+        MainTimeTextBlock.FontSize = mainFontSize;
+        MainTimeTextBlock.FontWeight = FontWeight.SemiBold;
+        
+        // 4. 次级信息：秒数维持 0.7x 比例，并增强透明度呼吸感
+        SecondsTextBlock.FontSize = mainFontSize * 0.7;
+        SecondsTextBlock.Opacity = 0.55;
+        
+        // 5. 视觉占比：占据约 2.2 个单元格的感官宽度 (cellSize * 2 + gaps)
+        RootBorder.MinWidth = cellSize * 2.2;
 
-        // Keep the time legible across dense and sparse grid layouts.
-        TimeTextBlock.FontSize = Math.Clamp(cellSize * 0.42, 10, 56);
-        TimeTextBlock.FontWeight = FontWeight.SemiBold;
+        // 6. 间距微调
+        if (MainTimeTextBlock.Parent is StackPanel panel)
+        {
+            panel.Spacing = Math.Clamp(cellSize * 0.06, 2, 8);
+        }
+        
+        // 确保清除可能存在的固定 Padding，由代码控制“紧密感”
+        RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.15, 12, 24), 0);
     }
 }

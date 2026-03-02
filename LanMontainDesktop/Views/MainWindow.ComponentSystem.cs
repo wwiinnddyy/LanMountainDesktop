@@ -1,13 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMontainDesktop.ComponentSystem;
@@ -23,10 +25,14 @@ public partial class MainWindow
 
     private const string DesktopComponentClass = "desktop-component";
     private const string DesktopComponentHostClass = "desktop-component-host";
+    private const string DesktopComponentContentHostTag = "desktop-component-content-host";
+    private const string DesktopComponentResizeHandleTag = "desktop-component-resize-handle";
 
     private bool _isDesktopComponentDragActive;
     private DesktopComponentDragState? _desktopComponentDrag;
     private Border? _desktopComponentDragGhost;
+    private bool _isDesktopComponentResizeActive;
+    private DesktopComponentResizeState? _desktopComponentResize;
 
     private string? _componentLibraryActiveCategoryId;
     private int _componentLibraryCategoryIndex;
@@ -67,6 +73,22 @@ public partial class MainWindow
         public int TargetColumn { get; set; }
     }
 
+    private sealed class DesktopComponentResizeState
+    {
+        public string PlacementId { get; init; } = string.Empty;
+        public string ComponentId { get; init; } = string.Empty;
+        public Border SourceHost { get; init; } = null!;
+        public int StartWidthCells { get; init; }
+        public int StartHeightCells { get; init; }
+        public int MinWidthCells { get; init; }
+        public int MinHeightCells { get; init; }
+        public int MaxWidthCells { get; init; }
+        public int MaxHeightCells { get; init; }
+        public Point StartPointerInViewport { get; init; }
+        public int CurrentWidthCells { get; set; }
+        public int CurrentHeightCells { get; set; }
+    }
+
     private sealed record ComponentLibraryCategory(
         string Id,
         Symbol Icon,
@@ -94,6 +116,11 @@ public partial class MainWindow
     private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
         CloseComponentLibraryWindow(reopenSettings: true);
+    }
+
+    private void OnCloseComponentSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        CloseComponentSettingsWindow();
     }
 
     private void OnStatusBarClockChecked(object? sender, RoutedEventArgs e)
@@ -167,6 +194,30 @@ public partial class MainWindow
         _taskbarLayoutMode = string.IsNullOrWhiteSpace(snapshot.TaskbarLayoutMode)
             ? TaskbarLayoutBottomFullRowMacStyle
             : snapshot.TaskbarLayoutMode;
+
+        _clockDisplayFormat = snapshot.ClockDisplayFormat == "HourMinute"
+            ? ClockDisplayFormat.HourMinute
+            : ClockDisplayFormat.HourMinuteSecond;
+
+        if (ClockWidget is not null)
+        {
+            ClockWidget.SetDisplayFormat(_clockDisplayFormat);
+        }
+
+        if (_clockDisplayFormat == ClockDisplayFormat.HourMinute)
+        {
+            if (ClockFormatHMRadio is not null)
+            {
+                ClockFormatHMRadio.IsChecked = true;
+            }
+        }
+        else
+        {
+            if (ClockFormatHMSSRadio is not null)
+            {
+                ClockFormatHMSSRadio.IsChecked = true;
+            }
+        }
     }
 
     private void ApplyTopStatusComponentVisibility()
@@ -176,16 +227,21 @@ public partial class MainWindow
         if (ClockWidget is not null)
         {
             ClockWidget.IsVisible = showClock;
+            if (showClock)
+            {
+                ClockWidget.SetDisplayFormat(_clockDisplayFormat);
+                var columnSpan = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? 2 : 3;
+                Grid.SetColumnSpan(ClockWidget, columnSpan);
+            }
         }
 
-        if (WallpaperPreviewClockContainer is not null)
+        if (WallpaperPreviewClockWidget is not null)
         {
-            WallpaperPreviewClockContainer.IsVisible = showClock;
-        }
-
-        if (WallpaperPreviewClockTextBlock is not null && showClock)
-        {
-            WallpaperPreviewClockTextBlock.Text = DateTime.Now.ToString("HH:mm");
+            WallpaperPreviewClockWidget.IsVisible = showClock;
+            if (showClock)
+            {
+                WallpaperPreviewClockWidget.SetDisplayFormat(_clockDisplayFormat);
+            }
         }
     }
 
@@ -221,7 +277,7 @@ public partial class MainWindow
 
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
         var showSettings = _pinnedTaskbarActions.Contains(TaskbarActionId.OpenSettings);
-        var showDesktopEdit = true;
+        var showDesktopEdit = _isSettingsOpen;
 
         BackToWindowsButton.IsVisible = showMinimize;
         OpenComponentLibraryButton.IsVisible = showDesktopEdit;
@@ -254,7 +310,7 @@ public partial class MainWindow
             .Where(action => action.IsVisible)
             .ToList();
         var hasDynamicActions = dynamicActions.Count > 0;
-        BuildDynamicTaskbarVisuals(dynamicActions);
+        BuildDynamicTaskbarVisuals(dynamicActions, _currentDesktopCellSize);
 
         if (TaskbarDynamicActionsHost is not null)
         {
@@ -304,6 +360,7 @@ public partial class MainWindow
         ComponentLibraryWindow.IsVisible = true;
         ComponentLibraryWindow.Opacity = 0;
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+        RestoreComponentLibraryWindowPosition();
 
         Dispatcher.UIThread.Post(() =>
         {
@@ -326,6 +383,8 @@ public partial class MainWindow
 
         _isComponentLibraryOpen = false;
         CancelDesktopComponentDrag();
+        CancelDesktopComponentResize(restoreOriginalSpan: true);
+        ClearDesktopComponentSelection();
         UpdateDesktopComponentHostEditState();
         ComponentLibraryWindow.Opacity = 0;
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -360,16 +419,50 @@ public partial class MainWindow
     {
         if (context == TaskbarContext.Desktop && _isComponentLibraryOpen)
         {
+            var actions = new List<TaskbarActionItem>();
+            if (_selectedDesktopComponentHost is not null)
+            {
+                actions.Add(new TaskbarActionItem(
+                    TaskbarActionId.DeleteComponent,
+                    L("component.delete", "Delete"),
+                    "Delete",
+                    IsVisible: true,
+                    CommandKey: "component.delete"));
+
+                actions.Add(new TaskbarActionItem(
+                    TaskbarActionId.EditComponent,
+                    L("component.edit", "Edit"),
+                    "Edit",
+                    IsVisible: true,
+                    CommandKey: "component.edit"));
+
+                return actions;
+            }
+
             var canAddPage = _desktopPageCount < MaxDesktopPageCount;
-            return
-            [
-                new TaskbarActionItem(
+            var canDeletePage = _desktopPageCount > MinDesktopPageCount;
+
+            if (canAddPage)
+            {
+                actions.Add(new TaskbarActionItem(
                     TaskbarActionId.AddDesktopPage,
                     L("desktop.add_page", "Add page"),
                     "Add",
-                    IsVisible: canAddPage,
-                    CommandKey: "desktop.add_page")
-            ];
+                    IsVisible: true,
+                    CommandKey: "desktop.add_page"));
+            }
+
+            if (canDeletePage)
+            {
+                actions.Add(new TaskbarActionItem(
+                    TaskbarActionId.DeleteDesktopPage,
+                    L("desktop.delete_page", "Delete page"),
+                    "Delete",
+                    IsVisible: true,
+                    CommandKey: "desktop.delete_page"));
+            }
+
+            return actions;
         }
 
         if (!_enableDynamicTaskbarActions)
@@ -377,12 +470,11 @@ public partial class MainWindow
             return Array.Empty<TaskbarActionItem>();
         }
 
-        // Reserved for page-specific actions. Disabled by default in this phase.
         _ = context;
         return Array.Empty<TaskbarActionItem>();
     }
 
-    private void BuildDynamicTaskbarVisuals(IReadOnlyList<TaskbarActionItem> actions)
+    private void BuildDynamicTaskbarVisuals(IReadOnlyList<TaskbarActionItem> actions, double cellSize)
     {
         if (TaskbarDynamicActionsPanel is not null)
         {
@@ -401,6 +493,36 @@ public partial class MainWindow
             return;
         }
 
+        // Match taskbar typographic scale to the current grid cell size.
+        var taskbarCellHeight = Math.Clamp(cellSize * 0.76, 36, 76);
+        var fontSize = Math.Clamp(taskbarCellHeight * 0.36, 11, 22);
+        var iconSize = Math.Clamp(taskbarCellHeight * 0.44, 12, 26);
+        var padding = Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
+        var cornerRadius = Math.Clamp(taskbarCellHeight * 0.32, 8, 16);
+        var spacing = Math.Clamp(taskbarCellHeight * 0.18, 4, 10);
+
+        var pageCountText = $"{_currentDesktopSurfaceIndex + 1}/{_desktopPageCount}";
+        var pageCountBlock = new TextBlock
+        {
+            Text = pageCountText,
+            Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+            FontSize = fontSize,
+            FontWeight = FontWeight.SemiBold,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, spacing, 0)
+        };
+
+        var pageCountContainer = new Border
+        {
+            Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
+            CornerRadius = new CornerRadius(cornerRadius),
+            Padding = new Thickness(padding),
+            Child = pageCountBlock,
+            Margin = new Thickness(0, 0, spacing, 0)
+        };
+
+        TaskbarDynamicActionsPanel.Children.Add(pageCountContainer);
+
         foreach (var action in actions)
         {
             if (!action.IsVisible)
@@ -408,31 +530,91 @@ public partial class MainWindow
                 continue;
             }
 
+            var isDeleteAction = action.Id == TaskbarActionId.DeleteDesktopPage ||
+                                 action.Id == TaskbarActionId.DeleteComponent;
+            var isEditAction = action.Id == TaskbarActionId.EditComponent;
+
+            Symbol iconSymbol;
+            if (isDeleteAction)
+            {
+                iconSymbol = Symbol.Delete;
+            }
+            else if (isEditAction)
+            {
+                iconSymbol = Symbol.Edit;
+            }
+            else
+            {
+                iconSymbol = Symbol.Add;
+            }
+
+            Control icon = new SymbolIcon
+            {
+                Symbol = iconSymbol,
+                IconVariant = IconVariant.Regular,
+                FontSize = iconSize
+            };
+
+            var buttonContent = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = spacing * 0.6,
+                Children =
+                {
+                    icon,
+                    new TextBlock
+                    {
+                        Text = action.Title,
+                        FontSize = fontSize,
+                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                    }
+                }
+            };
+
             var button = new Button
             {
-                Content = action.Title,
+                Content = buttonContent,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(12, 6),
-                Foreground = Foreground,
+                Padding = new Thickness(padding),
+                Foreground = isDeleteAction
+                    ? new SolidColorBrush(Color.Parse("#FFFF6B6B"))
+                    : Foreground,
                 Tag = action.CommandKey
             };
             button.Click += OnDynamicTaskbarActionClick;
 
             TaskbarDynamicActionsPanel.Children.Add(button);
 
+            Control previewIcon = new SymbolIcon
+            {
+                Symbol = iconSymbol,
+                IconVariant = IconVariant.Regular,
+                FontSize = iconSize * 0.85
+            };
+
             var previewText = new TextBlock
             {
                 Text = action.Title,
-                Foreground = Foreground,
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                FontSize = fontSize * 0.85,
+                Foreground = isDeleteAction
+                    ? new SolidColorBrush(Color.Parse("#FFFF6B6B"))
+                    : Foreground,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
             };
+
+            var previewContent = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = spacing * 0.5,
+                Children = { previewIcon, previewText }
+            };
+
             var previewBorder = new Border
             {
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Child = previewText
+                Child = previewContent
             };
             WallpaperPreviewTaskbarDynamicActionsHost.Children.Add(previewBorder);
         }
@@ -450,7 +632,105 @@ public partial class MainWindow
             case "desktop.add_page":
                 AddDesktopPage();
                 break;
+            case "desktop.delete_page":
+                DeleteCurrentDesktopPage();
+                break;
+            case "component.delete":
+                DeleteSelectedComponent();
+                break;
+            case "component.edit":
+                OpenComponentSettings();
+                break;
         }
+    }
+
+    private void DeleteSelectedComponent()
+    {
+        if (_selectedDesktopComponentHost is null || _selectedDesktopComponentHost.Tag is not string placementId)
+        {
+            return;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null)
+        {
+            return;
+        }
+
+        // 娴犲海缍夐弽闂磋厬缁夊娅庣紒鍕
+        if (_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
+        {
+            pageGrid.Children.Remove(_selectedDesktopComponentHost);
+        }
+
+        // Remove from persisted placement list as well.
+        _desktopComponentPlacements.Remove(placement);
+
+        ClearDesktopComponentSelection();
+
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+
+        // 娣囨繂鐡ㄧ拋鍓х枂
+        PersistSettings();
+    }
+
+    private void OpenComponentSettings()
+    {
+        if (_selectedDesktopComponentHost is null || _selectedDesktopComponentHost.Tag is not string placementId)
+        {
+            return;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null)
+        {
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.Date)
+        {
+            OpenDateComponentSettings();
+        }
+    }
+
+    private void OpenDateComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new DateWidgetSettingsWindow();
+        ComponentSettingsContentHost.Content = settingsContent;
+        
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void CloseComponentSettingsWindow()
+    {
+        if (ComponentSettingsWindow is null)
+        {
+            return;
+        }
+
+        ComponentSettingsWindow.Opacity = 0;
+        
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (ComponentSettingsWindow is not null)
+            {
+                ComponentSettingsWindow.IsVisible = false;
+            }
+            if (ComponentSettingsContentHost is not null)
+            {
+                ComponentSettingsContentHost.Content = null;
+            }
+        }, TimeSpan.FromMilliseconds(200));
     }
 
     private void AddDesktopPage()
@@ -464,6 +744,46 @@ public partial class MainWindow
         _currentDesktopSurfaceIndex = Math.Clamp(_desktopPageCount - 1, 0, LauncherSurfaceIndex);
         RebuildDesktopGrid();
         PersistSettings();
+        
+        // 閺囧瓨鏌婇崝銊︹偓浣锋崲閸斺剝鐖弰鍓с仛
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+    }
+
+    private void DeleteCurrentDesktopPage()
+    {
+        if (_desktopPageCount <= MinDesktopPageCount)
+        {
+            return;
+        }
+
+        var placementsToRemove = _desktopComponentPlacements
+            .Where(p => p.PageIndex == _currentDesktopSurfaceIndex)
+            .ToList();
+        
+        foreach (var placement in placementsToRemove)
+        {
+            _desktopComponentPlacements.Remove(placement);
+        }
+
+        _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
+        
+        // 鐠嬪啯鏆ｈぐ鎾冲妞ょ敻娼扮槐銏犵穿
+        _currentDesktopSurfaceIndex = Math.Clamp(_currentDesktopSurfaceIndex, 0, _desktopPageCount - 1);
+        
+        // Update remaining page indices after deletion.
+        foreach (var placement in _desktopComponentPlacements)
+        {
+            if (placement.PageIndex > _currentDesktopSurfaceIndex)
+            {
+                placement.PageIndex--;
+            }
+        }
+
+        RebuildDesktopGrid();
+        PersistSettings();
+        
+        // 閺囧瓨鏌婇崝銊︹偓浣锋崲閸斺剝鐖弰鍓с仛
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
     private void InitializeDesktopComponentPlacements(AppSettingsSnapshot snapshot)
@@ -491,10 +811,12 @@ public partial class MainWindow
                 continue;
             }
 
-            var (widthCells, heightCells) = ComponentPlacementRules.EnsureMinimumSize(
-                definition,
-                placement.WidthCells,
-                placement.HeightCells);
+            var (widthCells, heightCells) = NormalizeComponentCellSpan(
+                componentId,
+                ComponentPlacementRules.EnsureMinimumSize(
+                    definition,
+                    placement.WidthCells,
+                    placement.HeightCells));
 
             _desktopComponentPlacements.Add(new DesktopComponentPlacementSnapshot
             {
@@ -532,10 +854,12 @@ public partial class MainWindow
                 continue;
             }
 
-            var (widthCells, heightCells) = ComponentPlacementRules.EnsureMinimumSize(
-                definition,
-                placement.WidthCells,
-                placement.HeightCells);
+            var (widthCells, heightCells) = NormalizeComponentCellSpan(
+                placement.ComponentId,
+                ComponentPlacementRules.EnsureMinimumSize(
+                    definition,
+                    placement.WidthCells,
+                    placement.HeightCells));
 
             var clampedColumn = Math.Clamp(placement.Column, 0, Math.Max(0, maxColumns - widthCells));
             var clampedRow = Math.Clamp(placement.Row, 0, Math.Max(0, maxRows - heightCells));
@@ -571,10 +895,12 @@ public partial class MainWindow
             return;
         }
 
-        var (widthCells, heightCells) = ComponentPlacementRules.EnsureMinimumSize(
-            definition,
-            definition.MinWidthCells,
-            definition.MinHeightCells);
+        var (widthCells, heightCells) = NormalizeComponentCellSpan(
+            componentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                definition,
+                definition.MinWidthCells,
+                definition.MinHeightCells));
 
         var maxColumns = pageGrid.ColumnDefinitions.Count;
         var maxRows = pageGrid.RowDefinitions.Count;
@@ -629,12 +955,90 @@ public partial class MainWindow
             return null;
         }
 
+        var componentCornerRadius = GetComponentCornerRadius(placement.ComponentId);
+
+        var visualInset = GetDesktopComponentVisualInset(
+            Math.Max(1, placement.WidthCells),
+            Math.Max(1, placement.HeightCells));
+
+        var contentHost = new Border
+        {
+            Tag = DesktopComponentContentHostTag,
+            Background = Brushes.Transparent,
+            CornerRadius = new CornerRadius(componentCornerRadius),
+            ClipToBounds = true,
+            Padding = visualInset,
+            Child = component
+        };
+
+        // Separate visual arc size from hit target size for better touch usability.
+        var handleTouchSize = Math.Clamp(_currentDesktopCellSize * 0.72, 30, 54);
+        var handleVisualSize = Math.Clamp(_currentDesktopCellSize * 0.56, 20, 40);
+        var handlePadding = Math.Max(2, (handleTouchSize - handleVisualSize) / 2);
+        var arcThickness = Math.Clamp(_currentDesktopCellSize * 0.17, 7, 14);
+        var arcData = Geometry.Parse("M 24,6 A 18,18 0 0 1 6,24");
+
+        var resizeHandleVisual = new Grid
+        {
+            Width = handleVisualSize,
+            Height = handleVisualSize,
+            IsHitTestVisible = false
+        };
+        resizeHandleVisual.Children.Add(new Path
+        {
+            Data = arcData,
+            Stretch = Stretch.Fill,
+            Stroke = GetThemeBrush("AdaptiveTextAccentBrush"),
+            StrokeThickness = arcThickness + 3,
+            StrokeLineCap = PenLineCap.Round
+        });
+        resizeHandleVisual.Children.Add(new Path
+        {
+            Data = arcData,
+            Stretch = Stretch.Fill,
+            Stroke = GetThemeBrush("AdaptiveAccentBrush"),
+            StrokeThickness = arcThickness,
+            StrokeLineCap = PenLineCap.Round
+        });
+
+        var resizeHandle = new Border
+        {
+            Tag = DesktopComponentResizeHandleTag,
+            Width = handleTouchSize,
+            Height = handleTouchSize,
+            Background = Brushes.Transparent,
+            BorderBrush = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(handleTouchSize * 0.5),
+            Padding = new Thickness(handlePadding),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(
+                0,
+                0,
+                -Math.Clamp(handleTouchSize * 0.42, 10, 24),
+                -Math.Clamp(handleTouchSize * 0.42, 10, 24)),
+            Child = resizeHandleVisual,
+            Opacity = 1,
+            IsVisible = false,
+            IsHitTestVisible = false
+        };
+        resizeHandle.PointerPressed += OnDesktopComponentResizeHandlePointerPressed;
+
+        var hostChrome = new Grid
+        {
+            ClipToBounds = false
+        };
+        hostChrome.Children.Add(contentHost);
+        hostChrome.Children.Add(resizeHandle);
+
         var host = new Border
         {
             Tag = placement.PlacementId,
             Background = Brushes.Transparent,
-            ClipToBounds = true,
-            Child = component
+            ClipToBounds = false,
+            CornerRadius = new CornerRadius(componentCornerRadius),
+            Child = hostChrome
         };
         host.Classes.Add(DesktopComponentHostClass);
         ApplyDesktopEditStateToHost(host, _isComponentLibraryOpen);
@@ -642,11 +1046,135 @@ public partial class MainWindow
         return host;
     }
 
+    private static (int WidthCells, int HeightCells) NormalizeComponentCellSpan(
+        string componentId,
+        (int WidthCells, int HeightCells) span)
+    {
+        if (string.Equals(componentId, BuiltInComponentIds.Date, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(4, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.MonthCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.LunarCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Math.Max(2, span.WidthCells), Math.Max(2, span.HeightCells));
+        }
+
+        return (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells));
+    }
+
+    private double GetComponentCornerRadius(string componentId)
+    {
+        return componentId switch
+        {
+            BuiltInComponentIds.Date => 16,
+            BuiltInComponentIds.MonthCalendar => Math.Clamp(_currentDesktopCellSize * 0.26, 10, 22),
+            BuiltInComponentIds.LunarCalendar => Math.Clamp(_currentDesktopCellSize * 0.30, 12, 26),
+            _ => Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18)
+        };
+    }
+
+    private Thickness GetDesktopComponentVisualInset(int widthCells, int heightCells)
+    {
+        // Keep the drop/selection bounds on grid cells while reducing visual footprint.
+        var baseInset = Math.Clamp(_currentDesktopCellSize * 0.08, 2, 10);
+        var horizontal = Math.Clamp(baseInset + Math.Max(0, widthCells - 1) * 0.25, 2, 12);
+        var vertical = Math.Clamp(baseInset * 0.85 + Math.Max(0, heightCells - 1) * 0.2, 2, 10);
+        return new Thickness(horizontal, vertical, horizontal, vertical);
+    }
+
+    private static Border? FindDesktopComponentHost(Visual? visual)
+    {
+        var current = visual;
+        while (current is not null)
+        {
+            if (current is Border border && border.Classes.Contains(DesktopComponentHostClass))
+            {
+                return border;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return null;
+    }
+
+    private static Border? TryGetContentHost(Border host)
+    {
+        if (host.Child is Grid hostChrome)
+        {
+            return hostChrome.Children
+                .OfType<Border>()
+                .FirstOrDefault(child =>
+                    string.Equals(child.Tag?.ToString(), DesktopComponentContentHostTag, StringComparison.Ordinal));
+        }
+
+        return null;
+    }
+
+    private static Border? TryGetResizeHandle(Border host)
+    {
+        if (host.Child is Grid hostChrome)
+        {
+            return hostChrome.Children
+                .OfType<Border>()
+                .FirstOrDefault(child =>
+                    string.Equals(child.Tag?.ToString(), DesktopComponentResizeHandleTag, StringComparison.Ordinal));
+        }
+
+        return null;
+    }
+
+    private bool IsPointerOnSelectedFrameBorder(Border host, Point pointerInHost)
+    {
+        if (host != _selectedDesktopComponentHost || !_isComponentLibraryOpen)
+        {
+            return false;
+        }
+
+        var width = host.Bounds.Width;
+        var height = host.Bounds.Height;
+        if (width <= 1 || height <= 1)
+        {
+            return false;
+        }
+
+        var borderBand = Math.Clamp(_currentDesktopCellSize * 0.15, 8, 22);
+        var onLeft = pointerInHost.X <= borderBand;
+        var onRight = pointerInHost.X >= width - borderBand;
+        var onTop = pointerInHost.Y <= borderBand;
+        var onBottom = pointerInHost.Y >= height - borderBand;
+        return onLeft || onRight || onTop || onBottom;
+    }
+
     private Control? CreateDesktopComponentControl(string componentId)
     {
         if (componentId == BuiltInComponentIds.Date)
         {
             var widget = new DateWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(_currentDesktopCellSize);
+            widget.Classes.Add(DesktopComponentClass);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.MonthCalendar)
+        {
+            var widget = new MonthCalendarWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(_currentDesktopCellSize);
+            widget.Classes.Add(DesktopComponentClass);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.LunarCalendar)
+        {
+            var widget = new LunarCalendarWidget();
             widget.SetTimeZoneService(_timeZoneService);
             widget.ApplyCellSize(_currentDesktopCellSize);
             widget.Classes.Add(DesktopComponentClass);
@@ -667,6 +1195,8 @@ public partial class MainWindow
 
         _isComponentLibraryOpen = false;
         CancelDesktopComponentDrag();
+        CancelDesktopComponentResize(restoreOriginalSpan: true);
+        ClearDesktopComponentSelection();
         UpdateDesktopComponentHostEditState();
         UpdateComponentLibraryLayout(_currentDesktopCellSize);
     }
@@ -687,30 +1217,25 @@ public partial class MainWindow
 
     private void ApplyDesktopEditStateToHost(Border host, bool isEditMode)
     {
-        host.IsHitTestVisible = isEditMode;
-        host.CornerRadius = new CornerRadius(Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18));
+        host.IsHitTestVisible = true;
 
-        if (isEditMode)
-        {
-            host.BorderThickness = new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3));
-            host.BorderBrush = GetThemeBrush("AdaptiveAccentBrush");
-        }
-        else
-        {
-            host.BorderThickness = new Thickness(0);
-            host.BorderBrush = null;
-        }
-
-        if (host.Child is Control child)
+        if (TryGetContentHost(host) is Border contentHost)
         {
             // In edit mode, prefer drag interactions over component interactions.
-            child.IsHitTestVisible = !isEditMode;
+            contentHost.IsHitTestVisible = !isEditMode;
+            if (contentHost.Child is Control componentControl)
+            {
+                componentControl.IsHitTestVisible = !isEditMode;
+            }
         }
+
+        var isSelected = host == _selectedDesktopComponentHost;
+        ApplySelectionStateToHost(host, isSelected);
     }
 
     private void OnDesktopComponentHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_isComponentLibraryOpen || _isDesktopComponentDragActive)
+        if (!_isComponentLibraryOpen || _isDesktopComponentDragActive || _isDesktopComponentResizeActive)
         {
             return;
         }
@@ -730,13 +1255,77 @@ public partial class MainWindow
             return;
         }
 
+        var wasSelected = host == _selectedDesktopComponentHost;
+        SetSelectedDesktopComponent(host);
+        if (!wasSelected)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var pointerInHost = e.GetPosition(host);
+        if (IsPointerOnSelectedFrameBorder(host, pointerInHost))
+        {
+            BeginDesktopComponentResizeDrag(host, placement, e);
+            if (_isDesktopComponentResizeActive)
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         BeginDesktopComponentMoveDrag(host, placement, e);
         e.Handled = true;
     }
 
+    private void SetSelectedDesktopComponent(Border? host)
+    {
+        // Clear previous selection
+        if (_selectedDesktopComponentHost is not null && _selectedDesktopComponentHost != host)
+        {
+            ApplySelectionStateToHost(_selectedDesktopComponentHost, false);
+        }
+
+        // Set new selection
+        _selectedDesktopComponentHost = host;
+        if (host is not null)
+        {
+            ApplySelectionStateToHost(host, true);
+        }
+
+        // Refresh taskbar actions to show delete/edit buttons
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+    }
+
+    private void ApplySelectionStateToHost(Border host, bool isSelected)
+    {
+        var showSelection = isSelected && _isComponentLibraryOpen;
+        host.BorderThickness = showSelection
+            ? new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3))
+            : new Thickness(0);
+        host.BorderBrush = showSelection ? GetThemeBrush("AdaptiveAccentBrush") : null;
+
+        if (TryGetResizeHandle(host) is Border resizeHandle)
+        {
+            resizeHandle.IsVisible = showSelection;
+            resizeHandle.IsHitTestVisible = showSelection;
+        }
+    }
+
+    private void ClearDesktopComponentSelection()
+    {
+        if (_selectedDesktopComponentHost is not null)
+        {
+            ApplySelectionStateToHost(_selectedDesktopComponentHost, false);
+            _selectedDesktopComponentHost = null;
+        }
+    }
+
     private void BeginDesktopComponentMoveDrag(Border sourceHost, DesktopComponentPlacementSnapshot placement, PointerPressedEventArgs e)
     {
-        if (DesktopEditDragLayer is null ||
+        if (_isDesktopComponentResizeActive ||
+            DesktopEditDragLayer is null ||
             DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
             !_componentRegistry.TryGetDefinition(placement.ComponentId, out var definition))
@@ -744,13 +1333,16 @@ public partial class MainWindow
             return;
         }
 
-        var (widthCells, heightCells) = ComponentPlacementRules.EnsureMinimumSize(
-            definition,
-            placement.WidthCells,
-            placement.HeightCells);
+        var (widthCells, heightCells) = NormalizeComponentCellSpan(
+            placement.ComponentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                definition,
+                placement.WidthCells,
+                placement.HeightCells));
 
         var pointerInViewport = e.GetPosition(DesktopPagesViewport);
-        var topLeft = new Point(placement.Column * _currentDesktopCellSize, placement.Row * _currentDesktopCellSize);
+        var pitch = CurrentDesktopPitch;
+        var topLeft = new Point(placement.Column * pitch, placement.Row * pitch);
         var pointerOffset = pointerInViewport - topLeft;
 
         sourceHost.Opacity = 0.35;
@@ -778,6 +1370,7 @@ public partial class MainWindow
     {
         if (!_isComponentLibraryOpen ||
             _isDesktopComponentDragActive ||
+            _isDesktopComponentResizeActive ||
             DesktopEditDragLayer is null ||
             DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
@@ -787,15 +1380,19 @@ public partial class MainWindow
             return;
         }
 
-        var (widthCells, heightCells) = ComponentPlacementRules.EnsureMinimumSize(
-            definition,
-            definition.MinWidthCells,
-            definition.MinHeightCells);
+        var (widthCells, heightCells) = NormalizeComponentCellSpan(
+            componentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                definition,
+                definition.MinWidthCells,
+                definition.MinHeightCells));
 
         // Center the component under the pointer while dragging from the library.
+        var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize + Math.Max(0, widthCells - 1) * _currentDesktopCellGap);
+        var ghostHeight = Math.Max(1, heightCells * _currentDesktopCellSize + Math.Max(0, heightCells - 1) * _currentDesktopCellGap);
         var pointerOffset = new Point(
-            (widthCells * _currentDesktopCellSize) * 0.5,
-            (heightCells * _currentDesktopCellSize) * 0.5);
+            ghostWidth * 0.5,
+            ghostHeight * 0.5);
 
         _desktopComponentDrag = new DesktopComponentDragState
         {
@@ -824,8 +1421,8 @@ public partial class MainWindow
 
         DesktopEditDragLayer.Children.Clear();
 
-        var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize);
-        var ghostHeight = Math.Max(1, heightCells * _currentDesktopCellSize);
+        var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize + Math.Max(0, widthCells - 1) * _currentDesktopCellGap);
+        var ghostHeight = Math.Max(1, heightCells * _currentDesktopCellSize + Math.Max(0, heightCells - 1) * _currentDesktopCellGap);
 
         var ghostContent = CreateDesktopComponentControl(componentId);
         if (ghostContent is not null)
@@ -833,14 +1430,18 @@ public partial class MainWindow
             ghostContent.IsHitTestVisible = false;
         }
 
+        var visualInset = GetDesktopComponentVisualInset(widthCells, heightCells);
+
         _desktopComponentDragGhost = new Border
         {
             Width = ghostWidth,
             Height = ghostHeight,
-            CornerRadius = new CornerRadius(Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18)),
+            CornerRadius = new CornerRadius(Math.Clamp(_currentDesktopCellSize * 0.45, 16, 36)),
             Background = new SolidColorBrush(Color.Parse("#331E40AF")),
             BorderBrush = GetThemeBrush("AdaptiveAccentBrush"),
             BorderThickness = new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3)),
+            Padding = visualInset,
+            ClipToBounds = true,
             Child = ghostContent,
             Opacity = 0.92,
             IsHitTestVisible = false
@@ -849,9 +1450,217 @@ public partial class MainWindow
         DesktopEditDragLayer.Children.Add(_desktopComponentDragGhost);
     }
 
+    private void OnDesktopComponentResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_isComponentLibraryOpen ||
+            _isDesktopComponentDragActive ||
+            _isDesktopComponentResizeActive ||
+            DesktopPagesViewport is null ||
+            sender is not Border handle ||
+            !e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var host = FindDesktopComponentHost(handle);
+        if (host?.Tag is not string placementId)
+        {
+            return;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null)
+        {
+            return;
+        }
+
+        SetSelectedDesktopComponent(host);
+        BeginDesktopComponentResizeDrag(host, placement, e);
+        if (_isDesktopComponentResizeActive)
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void BeginDesktopComponentResizeDrag(
+        Border sourceHost,
+        DesktopComponentPlacementSnapshot placement,
+        PointerPressedEventArgs e)
+    {
+        if (DesktopPagesViewport is null ||
+            _currentDesktopCellSize <= 0 ||
+            !_componentRegistry.TryGetDefinition(placement.ComponentId, out var definition) ||
+            !_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
+        {
+            return;
+        }
+
+        var startSpan = NormalizeComponentCellSpan(
+            placement.ComponentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                definition,
+                placement.WidthCells,
+                placement.HeightCells));
+
+        var minSpan = NormalizeComponentCellSpan(
+            placement.ComponentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                definition,
+                definition.MinWidthCells,
+                definition.MinHeightCells));
+
+        var maxWidthCells = Math.Max(startSpan.WidthCells, pageGrid.ColumnDefinitions.Count - placement.Column);
+        var maxHeightCells = Math.Max(startSpan.HeightCells, pageGrid.RowDefinitions.Count - placement.Row);
+        if (maxWidthCells <= 0 || maxHeightCells <= 0)
+        {
+            return;
+        }
+
+        var pointerInViewport = e.GetPosition(DesktopPagesViewport);
+        _desktopComponentResize = new DesktopComponentResizeState
+        {
+            PlacementId = placement.PlacementId,
+            ComponentId = placement.ComponentId,
+            SourceHost = sourceHost,
+            StartWidthCells = startSpan.WidthCells,
+            StartHeightCells = startSpan.HeightCells,
+            MinWidthCells = Math.Max(1, Math.Min(minSpan.WidthCells, maxWidthCells)),
+            MinHeightCells = Math.Max(1, Math.Min(minSpan.HeightCells, maxHeightCells)),
+            MaxWidthCells = maxWidthCells,
+            MaxHeightCells = maxHeightCells,
+            StartPointerInViewport = pointerInViewport,
+            CurrentWidthCells = startSpan.WidthCells,
+            CurrentHeightCells = startSpan.HeightCells
+        };
+
+        _isDesktopComponentResizeActive = true;
+        sourceHost.Opacity = 0.96;
+        e.Pointer.Capture(this);
+    }
+
+    private void UpdateDesktopComponentResizeVisual(Point pointerInViewport)
+    {
+        if (_desktopComponentResize is null)
+        {
+            return;
+        }
+
+        var pitch = CurrentDesktopPitch;
+        if (pitch <= 0 ||
+            _desktopComponentResize.StartWidthCells <= 0 ||
+            _desktopComponentResize.StartHeightCells <= 0)
+        {
+            return;
+        }
+
+        var deltaX = pointerInViewport.X - _desktopComponentResize.StartPointerInViewport.X;
+        var deltaY = pointerInViewport.Y - _desktopComponentResize.StartPointerInViewport.Y;
+        var widthScale = (_desktopComponentResize.StartWidthCells + deltaX / pitch) / _desktopComponentResize.StartWidthCells;
+        var heightScale = (_desktopComponentResize.StartHeightCells + deltaY / pitch) / _desktopComponentResize.StartHeightCells;
+
+        var proposedScale = Math.Max(widthScale, heightScale);
+        var minScale = Math.Max(
+            (double)_desktopComponentResize.MinWidthCells / _desktopComponentResize.StartWidthCells,
+            (double)_desktopComponentResize.MinHeightCells / _desktopComponentResize.StartHeightCells);
+        var maxScale = Math.Min(
+            (double)_desktopComponentResize.MaxWidthCells / _desktopComponentResize.StartWidthCells,
+            (double)_desktopComponentResize.MaxHeightCells / _desktopComponentResize.StartHeightCells);
+
+        if (double.IsNaN(proposedScale) || double.IsInfinity(proposedScale))
+        {
+            proposedScale = minScale;
+        }
+
+        if (maxScale < minScale)
+        {
+            maxScale = minScale;
+        }
+
+        var scale = Math.Clamp(proposedScale, minScale, maxScale);
+        var widthCells = Math.Clamp(
+            (int)Math.Round(_desktopComponentResize.StartWidthCells * scale),
+            _desktopComponentResize.MinWidthCells,
+            _desktopComponentResize.MaxWidthCells);
+        var heightCells = Math.Clamp(
+            (int)Math.Round(_desktopComponentResize.StartHeightCells * scale),
+            _desktopComponentResize.MinHeightCells,
+            _desktopComponentResize.MaxHeightCells);
+
+        var normalized = NormalizeComponentCellSpan(_desktopComponentResize.ComponentId, (widthCells, heightCells));
+        widthCells = Math.Clamp(normalized.WidthCells, _desktopComponentResize.MinWidthCells, _desktopComponentResize.MaxWidthCells);
+        heightCells = Math.Clamp(normalized.HeightCells, _desktopComponentResize.MinHeightCells, _desktopComponentResize.MaxHeightCells);
+
+        _desktopComponentResize.CurrentWidthCells = widthCells;
+        _desktopComponentResize.CurrentHeightCells = heightCells;
+        Grid.SetColumnSpan(_desktopComponentResize.SourceHost, widthCells);
+        Grid.SetRowSpan(_desktopComponentResize.SourceHost, heightCells);
+    }
+
+    private bool TryCompleteDesktopComponentResize(Point pointerInViewport)
+    {
+        if (_desktopComponentResize is null)
+        {
+            return false;
+        }
+
+        UpdateDesktopComponentResizeVisual(pointerInViewport);
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, _desktopComponentResize.PlacementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null)
+        {
+            return false;
+        }
+
+        var widthCells = Math.Max(1, _desktopComponentResize.CurrentWidthCells);
+        var heightCells = Math.Max(1, _desktopComponentResize.CurrentHeightCells);
+        var changed = placement.WidthCells != widthCells || placement.HeightCells != heightCells;
+        placement.WidthCells = widthCells;
+        placement.HeightCells = heightCells;
+
+        ApplyDesktopEditStateToHost(_desktopComponentResize.SourceHost, _isComponentLibraryOpen);
+        if (changed)
+        {
+            PersistSettings();
+        }
+
+        return true;
+    }
+
+    private void CancelDesktopComponentResize(bool restoreOriginalSpan)
+    {
+        if (!_isDesktopComponentResizeActive || _desktopComponentResize is null)
+        {
+            return;
+        }
+
+        if (restoreOriginalSpan)
+        {
+            Grid.SetColumnSpan(_desktopComponentResize.SourceHost, _desktopComponentResize.StartWidthCells);
+            Grid.SetRowSpan(_desktopComponentResize.SourceHost, _desktopComponentResize.StartHeightCells);
+        }
+
+        _desktopComponentResize.SourceHost.Opacity = 1;
+        ApplyDesktopEditStateToHost(_desktopComponentResize.SourceHost, _isComponentLibraryOpen);
+        _desktopComponentResize = null;
+        _isDesktopComponentResizeActive = false;
+    }
+
     private void OnDesktopComponentDragPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null || DesktopPagesViewport is null)
+        if (DesktopPagesViewport is null)
+        {
+            return;
+        }
+
+        if (_isDesktopComponentResizeActive && _desktopComponentResize is not null)
+        {
+            UpdateDesktopComponentResizeVisual(e.GetPosition(DesktopPagesViewport));
+            return;
+        }
+
+        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null)
         {
             return;
         }
@@ -861,7 +1670,26 @@ public partial class MainWindow
 
     private void OnDesktopComponentDragPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null || DesktopPagesViewport is null)
+        if (DesktopPagesViewport is null)
+        {
+            return;
+        }
+
+        if (_isDesktopComponentResizeActive && _desktopComponentResize is not null)
+        {
+            var resizePointerInViewport = e.GetPosition(DesktopPagesViewport);
+            var resizeSuccess = TryCompleteDesktopComponentResize(resizePointerInViewport);
+            CancelDesktopComponentResize(restoreOriginalSpan: !resizeSuccess);
+            e.Pointer.Capture(null);
+            if (resizeSuccess)
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null)
         {
             return;
         }
@@ -878,6 +1706,12 @@ public partial class MainWindow
 
     private void OnDesktopComponentDragPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        if (_isDesktopComponentResizeActive)
+        {
+            CancelDesktopComponentResize(restoreOriginalSpan: true);
+            return;
+        }
+
         if (!_isDesktopComponentDragActive)
         {
             return;
@@ -909,8 +1743,9 @@ public partial class MainWindow
         _desktopComponentDragGhost.IsVisible = true;
         _desktopComponentDrag.TargetRow = row;
         _desktopComponentDrag.TargetColumn = column;
-        Canvas.SetLeft(_desktopComponentDragGhost, column * _currentDesktopCellSize);
-        Canvas.SetTop(_desktopComponentDragGhost, row * _currentDesktopCellSize);
+        var pitch = CurrentDesktopPitch;
+        Canvas.SetLeft(_desktopComponentDragGhost, column * pitch);
+        Canvas.SetTop(_desktopComponentDragGhost, row * pitch);
     }
 
     private bool TryGetDesktopComponentDropCell(
@@ -937,11 +1772,17 @@ public partial class MainWindow
             return false;
         }
 
+        var pitch = CurrentDesktopPitch;
+        if (pitch <= 0)
+        {
+            return false;
+        }
+
         var x = pointerInViewport.X - state.PointerOffset.X;
         var y = pointerInViewport.Y - state.PointerOffset.Y;
 
-        column = (int)Math.Floor(x / _currentDesktopCellSize);
-        row = (int)Math.Floor(y / _currentDesktopCellSize);
+        column = (int)Math.Floor(x / pitch);
+        row = (int)Math.Floor(y / pitch);
 
         column = Math.Clamp(column, 0, Math.Max(0, maxColumns - state.WidthCells));
         row = Math.Clamp(row, 0, Math.Max(0, maxRows - state.HeightCells));
@@ -1138,7 +1979,7 @@ public partial class MainWindow
                 Classes = { "glass-panel" },
                 Width = cardWidth,
                 Height = cardHeight,
-                CornerRadius = new CornerRadius(18),
+                CornerRadius = new CornerRadius(36),
                 Padding = new Thickness(18),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1234,7 +2075,7 @@ public partial class MainWindow
     {
         if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
         {
-            return L("component_category.date", "Date");
+            return L("component_category.date", "Calendar");
         }
 
         return categoryId;
@@ -1341,29 +2182,49 @@ public partial class MainWindow
             // Fit the preview to the page while preserving component cell span proportions.
             var previewMaxWidth = _componentLibraryComponentPageWidth * 0.86;
             var previewMaxHeight = viewportHeight * 0.72;
+            var previewSpan = NormalizeComponentCellSpan(
+                resolved.Id,
+                (resolved.MinWidthCells, resolved.MinHeightCells));
             var previewCellSize = Math.Min(
-                previewMaxWidth / Math.Max(1, resolved.MinWidthCells),
-                previewMaxHeight / Math.Max(1, resolved.MinHeightCells));
-            previewCellSize = Math.Clamp(previewCellSize, 18, 64);
+                previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
+                previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
+            previewCellSize = Math.Clamp(previewCellSize, 20, 72);
 
-            var previewWidth = resolved.MinWidthCells * previewCellSize;
-            var previewHeight = resolved.MinHeightCells * previewCellSize;
+            var previewWidth = previewSpan.WidthCells * previewCellSize;
+            var previewHeight = previewSpan.HeightCells * previewCellSize;
+            var renderCellSize = Math.Clamp(previewCellSize * 1.35, 28, 82);
 
-            var previewControl = CreateComponentLibraryPreviewControl(resolved.Id, previewCellSize);
+            var previewControl = CreateComponentLibraryPreviewControl(resolved.Id, renderCellSize);
             if (previewControl is null)
             {
                 continue;
             }
 
+            var previewSurface = new Border
+            {
+                Width = previewSpan.WidthCells * renderCellSize,
+                Height = previewSpan.HeightCells * renderCellSize,
+                Background = Brushes.Transparent,
+                Child = previewControl
+            };
+
+            var previewViewbox = new Viewbox
+            {
+                Width = previewWidth,
+                Height = previewHeight,
+                Stretch = Stretch.Uniform,
+                Child = previewSurface
+            };
+
             var previewBorder = new Border
             {
                 Width = previewWidth,
                 Height = previewHeight,
-                CornerRadius = new CornerRadius(16),
+                CornerRadius = new CornerRadius(20),
                 ClipToBounds = true,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Child = previewControl,
+                Child = previewViewbox,
                 Tag = resolved.Id
             };
             previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
@@ -1395,7 +2256,7 @@ public partial class MainWindow
                     new Border
                     {
                         Classes = { "glass-panel" },
-                        CornerRadius = new CornerRadius(18),
+                        CornerRadius = new CornerRadius(28),
                         Padding = new Thickness(12),
                         Child = previewBorder
                     },
@@ -1431,6 +2292,22 @@ public partial class MainWindow
             return widget;
         }
 
+        if (componentId == BuiltInComponentIds.MonthCalendar)
+        {
+            var widget = new MonthCalendarWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(cellSize);
+            return widget;
+        }
+
+        if (componentId == BuiltInComponentIds.LunarCalendar)
+        {
+            var widget = new LunarCalendarWidget();
+            widget.SetTimeZoneService(_timeZoneService);
+            widget.ApplyCellSize(cellSize);
+            return widget;
+        }
+
         return null;
     }
 
@@ -1439,6 +2316,16 @@ public partial class MainWindow
         if (string.Equals(definition.Id, BuiltInComponentIds.Date, StringComparison.OrdinalIgnoreCase))
         {
             return L("component.date", definition.DisplayName);
+        }
+
+        if (string.Equals(definition.Id, BuiltInComponentIds.MonthCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component.month_calendar", definition.DisplayName);
+        }
+
+        if (string.Equals(definition.Id, BuiltInComponentIds.LunarCalendar, StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component.lunar_calendar", definition.DisplayName);
         }
 
         return definition.DisplayName;
@@ -1458,6 +2345,71 @@ public partial class MainWindow
         {
             e.Handled = true;
         }
+    }
+
+    private bool _isComponentLibraryWindowDragging;
+    private Point _componentLibraryWindowDragStartPoint;
+    private Thickness _componentLibraryWindowOriginalMargin;
+    private bool _isComponentLibraryWindowPositionCustomized;
+    
+    private void OnComponentLibraryWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (ComponentLibraryWindow is null || !_isComponentLibraryOpen)
+        {
+            return;
+        }
+
+        var point = e.GetPosition(ComponentLibraryWindow);
+        if (point.Y > 40) // 閺嶅洭顣介弽蹇涚彯鎼达妇瀹虫稉?0px
+        {
+            return;
+        }
+
+        _isComponentLibraryWindowDragging = true;
+        _componentLibraryWindowDragStartPoint = e.GetPosition(this);
+        _componentLibraryWindowOriginalMargin = ComponentLibraryWindow.Margin;
+        
+        e.Pointer.Capture(ComponentLibraryWindow);
+        e.Handled = true;
+    }
+
+    private void OnComponentLibraryWindowPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isComponentLibraryWindowDragging || ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        var currentPoint = e.GetPosition(this);
+        var delta = currentPoint - _componentLibraryWindowDragStartPoint;
+        
+        var newMargin = new Thickness(
+            Math.Max(10, _componentLibraryWindowOriginalMargin.Left + delta.X),
+            Math.Max(10, _componentLibraryWindowOriginalMargin.Top + delta.Y),
+            Math.Max(10, _componentLibraryWindowOriginalMargin.Right - delta.X),
+            Math.Max(10, _componentLibraryWindowOriginalMargin.Bottom - delta.Y)
+        );
+        
+        ComponentLibraryWindow.Margin = newMargin;
+        e.Handled = true;
+    }
+
+    private void OnComponentLibraryWindowPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_isComponentLibraryWindowDragging)
+        {
+            return;
+        }
+
+        _isComponentLibraryWindowDragging = false;
+        e.Pointer.Capture(null);
+        
+        if (ComponentLibraryWindow is not null)
+        {
+            SaveComponentLibraryWindowPosition();
+        }
+        
+        e.Handled = true;
     }
 
     private void OnComponentLibraryBackClick(object? sender, RoutedEventArgs e)
@@ -1584,6 +2536,30 @@ public partial class MainWindow
         _componentLibraryComponentHostTransform.X = Math.Clamp(tentative, minOffset, 0);
     }
 
+    private void SaveComponentLibraryWindowPosition()
+    {
+        if (ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        var margin = ComponentLibraryWindow.Margin;
+        _savedComponentLibraryMargin = margin;
+        _isComponentLibraryWindowPositionCustomized = true;
+    }
+
+    private void RestoreComponentLibraryWindowPosition()
+    {
+        if (ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        ComponentLibraryWindow.Margin = _savedComponentLibraryMargin;
+    }
+
+    private Thickness _savedComponentLibraryMargin = new Thickness(24, 24, 24, 100);
+
     private void OnComponentLibraryComponentViewportPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!_isComponentLibraryComponentGestureActive ||
@@ -1622,3 +2598,4 @@ public partial class MainWindow
         ApplyComponentLibraryComponentOffset();
     }
 }
+

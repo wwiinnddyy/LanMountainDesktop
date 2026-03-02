@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -9,23 +9,22 @@ using LanMontainDesktop.Services;
 
 namespace LanMontainDesktop.Views.Components;
 
-public partial class DateWidget : UserControl
+public partial class MonthCalendarWidget : UserControl
 {
     private readonly DispatcherTimer _timer = new()
     {
         Interval = TimeSpan.FromMinutes(1)
     };
-    private static readonly LunarCalendarService LunarCalendarService = new();
 
-    private static readonly string[] ZhWeekdayHeaders = ["日", "一", "二", "三", "四", "五", "六"];
+    private static readonly string[] ZhWeekdayHeaders = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
     private static readonly string[] EnWeekdayHeaders = ["S", "M", "T", "W", "T", "F", "S"];
 
     private TimeZoneService? _timeZoneService;
-    private double _currentCellSize = 64;
-    private double _calendarDayFontSize = 14;
-    private double _calendarTodayDotSize = 28;
+    private double _currentCellSize = 48;
+    private double _calendarDayFontSize = 22;
+    private double _calendarTodayDotSize = 44;
 
-    public DateWidget()
+    public MonthCalendarWidget()
     {
         InitializeComponent();
 
@@ -33,24 +32,24 @@ public partial class DateWidget : UserControl
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
-        UpdateDate();
+        UpdateCalendar();
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        if (_timeZoneService != null)
+        if (_timeZoneService is not null)
         {
             _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
         }
 
         _timeZoneService = timeZoneService;
         _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
-        UpdateDate();
+        UpdateCalendar();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        UpdateDate();
+        UpdateCalendar();
         _timer.Start();
     }
 
@@ -66,72 +65,50 @@ public partial class DateWidget : UserControl
 
     private void OnTimerTick(object? sender, EventArgs e)
     {
-        UpdateDate();
+        UpdateCalendar();
     }
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)
     {
-        UpdateDate();
+        UpdateCalendar();
     }
 
-    private void UpdateDate()
+    private void UpdateCalendar()
     {
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         var culture = CultureInfo.CurrentCulture;
         var isZh = culture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase);
-        var lunar = LunarCalendarService.GetLunarInfo(now);
 
-        GregorianHeadlineTextBlock.Text = isZh
-            ? $"{now.Month}月{now.Day}日 {ToChineseWeekday(now.DayOfWeek)}"
-            : now.ToString("MMM d ddd", culture);
-
-        if (isZh)
-        {
-            LunarDateTextBlock.Text = $"农历 {lunar.LunarDateZh}";
-            LunarMetaTextBlock.Text = $"{lunar.GanzhiYearZh}年（{lunar.ZodiacZh}年）";
-            YiLabelTextBlock.Text = "宜";
-            JiLabelTextBlock.Text = "忌";
-            YiItemsTextBlock.Text = "祭祀 祈福 出行 会友";
-            JiItemsTextBlock.Text = "动土 诉讼 远航 争执";
-        }
-        else
-        {
-            LunarDateTextBlock.Text = $"Lunar {lunar.LunarDateEn}";
-            LunarMetaTextBlock.Text = $"Ganzhi year: {lunar.GanzhiYearEn} ({lunar.ZodiacEn})";
-            YiLabelTextBlock.Text = "Do";
-            JiLabelTextBlock.Text = "Avoid";
-            YiItemsTextBlock.Text = "Worship Blessing Travel Meet";
-            JiItemsTextBlock.Text = "Groundwork Lawsuit Voyage Dispute";
-        }
+        HeaderTextBlock.Text = isZh
+            ? $"{now.Month}\u6708{now.Day}\u65e5"
+            : now.ToString("MMM d", culture);
 
         UpdateWeekdayHeaders(isZh);
         GenerateCalendar(now);
     }
 
-    private static string ToChineseWeekday(DayOfWeek dayOfWeek)
-    {
-        return dayOfWeek switch
-        {
-            DayOfWeek.Sunday => "周日",
-            DayOfWeek.Monday => "周一",
-            DayOfWeek.Tuesday => "周二",
-            DayOfWeek.Wednesday => "周三",
-            DayOfWeek.Thursday => "周四",
-            DayOfWeek.Friday => "周五",
-            _ => "周六"
-        };
-    }
-
     private void UpdateWeekdayHeaders(bool isZh)
     {
         var headers = isZh ? ZhWeekdayHeaders : EnWeekdayHeaders;
-        WeekdayText0.Text = headers[0];
-        WeekdayText1.Text = headers[1];
-        WeekdayText2.Text = headers[2];
-        WeekdayText3.Text = headers[3];
-        WeekdayText4.Text = headers[4];
-        WeekdayText5.Text = headers[5];
-        WeekdayText6.Text = headers[6];
+        var blocks = GetWeekdayHeaderBlocks();
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            blocks[i].Text = headers[i];
+        }
+    }
+
+    private IReadOnlyList<TextBlock> GetWeekdayHeaderBlocks()
+    {
+        return
+        [
+            WeekdayText0,
+            WeekdayText1,
+            WeekdayText2,
+            WeekdayText3,
+            WeekdayText4,
+            WeekdayText5,
+            WeekdayText6
+        ];
     }
 
     private void GenerateCalendar(DateTime currentDate)
@@ -139,7 +116,8 @@ public partial class DateWidget : UserControl
         var removeList = new List<Control>();
         foreach (var child in CalendarGrid.Children)
         {
-            if (child is Control control && control.Tag is string tag &&
+            if (child is Control control &&
+                control.Tag is string tag &&
                 (tag == "day" || tag == "today-dot"))
             {
                 removeList.Add(control);
@@ -163,7 +141,7 @@ public partial class DateWidget : UserControl
         {
             var row = (day + startDayOfWeek - 1) / 7;
             var col = (day + startDayOfWeek - 1) % 7;
-            if (row > 4)
+            if (row > 5)
             {
                 continue;
             }
@@ -208,8 +186,8 @@ public partial class DateWidget : UserControl
             {
                 var isWeekend = col is 0 or 6;
                 dayText.Foreground = isWeekend
-                    ? GetThemeBrush("AdaptiveTextSecondaryBrush", 0.82)
-                    : GetThemeBrush("AdaptiveTextPrimaryBrush", 0.92);
+                    ? GetThemeBrush("AdaptiveTextSecondaryBrush", 0.78)
+                    : GetThemeBrush("AdaptiveTextPrimaryBrush", 0.94);
                 Grid.SetRow(dayText, row);
                 Grid.SetColumn(dayText, col);
                 CalendarGrid.Children.Add(dayText);
@@ -222,42 +200,30 @@ public partial class DateWidget : UserControl
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(28 * scale, 16, 40));
-        RootBorder.Padding = new Thickness(Math.Clamp(12 * scale, 8, 18));
+        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(28 * scale, 14, 40));
+        RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 22));
+        LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 16);
 
-        LeftPanelGrid.RowSpacing = Math.Clamp(8 * scale, 5, 14);
-        RightPanelGrid.RowSpacing = Math.Clamp(10 * scale, 6, 16);
-        LunarCardBorder.CornerRadius = new CornerRadius(Math.Clamp(24 * scale, 14, 34));
-        LunarCardBorder.Padding = new Thickness(Math.Clamp(14 * scale, 9, 20));
+        HeaderTextBlock.FontSize = Math.Clamp(42 * scale, 14, 58);
 
-        GregorianHeadlineTextBlock.FontSize = Math.Clamp(22 * scale, 14, 34);
-        WeekdayText0.FontSize = Math.Clamp(13 * scale, 9, 18);
-        WeekdayText1.FontSize = WeekdayText0.FontSize;
-        WeekdayText2.FontSize = WeekdayText0.FontSize;
-        WeekdayText3.FontSize = WeekdayText0.FontSize;
-        WeekdayText4.FontSize = WeekdayText0.FontSize;
-        WeekdayText5.FontSize = WeekdayText0.FontSize;
-        WeekdayText6.FontSize = WeekdayText0.FontSize;
+        var weekdayFontSize = Math.Clamp(20 * scale, 8, 26);
+        foreach (var block in GetWeekdayHeaderBlocks())
+        {
+            block.FontSize = weekdayFontSize;
+        }
 
-        LunarDateTextBlock.FontSize = Math.Clamp(28 * scale, 17, 44);
-        LunarMetaTextBlock.FontSize = Math.Clamp(14 * scale, 10, 22);
-        YiLabelTextBlock.FontSize = Math.Clamp(18 * scale, 12, 28);
-        JiLabelTextBlock.FontSize = YiLabelTextBlock.FontSize;
-        YiItemsTextBlock.FontSize = Math.Clamp(16 * scale, 11, 24);
-        JiItemsTextBlock.FontSize = YiItemsTextBlock.FontSize;
+        _calendarDayFontSize = Math.Clamp(22 * scale, 8, 30);
+        _calendarTodayDotSize = Math.Clamp(44 * scale, 16, 58);
 
-        _calendarDayFontSize = Math.Clamp(14 * scale, 9, 22);
-        _calendarTodayDotSize = Math.Clamp(28 * scale, 17, 38);
-
-        UpdateDate();
+        UpdateCalendar();
     }
 
     private double ResolveScale()
     {
-        var cellScale = Math.Clamp(_currentCellSize / 48d, 0.72, 1.55);
-        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 220d, 0.65, 1.65) : 1;
-        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 460d, 0.65, 1.65) : 1;
-        return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.08), 0.65, 1.6);
+        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.65, 1.85);
+        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 280d, 0.60, 1.90) : 1;
+        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 280d, 0.60, 1.90) : 1;
+        return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.06), 0.60, 1.85);
     }
 
     private IBrush GetThemeBrush(string key, double opacity)
@@ -275,3 +241,4 @@ public partial class DateWidget : UserControl
         return new SolidColorBrush(Colors.Gray, opacity);
     }
 }
+

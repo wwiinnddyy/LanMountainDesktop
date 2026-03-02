@@ -6,6 +6,10 @@ public sealed class AppSettingsSnapshot
 {
     public int GridShortSideCells { get; set; } = 12;
 
+    public string GridSpacingPreset { get; set; } = "Relaxed";
+
+    public int DesktopEdgeInsetPercent { get; set; } = 18;
+
     public bool? IsNightMode { get; set; }
 
     public string? ThemeColor { get; set; }
@@ -28,9 +32,15 @@ public sealed class AppSettingsSnapshot
         TaskbarActionId.OpenSettings.ToString()
     ];
 
-    public bool EnableDynamicTaskbarActions { get; set; } = false;
+    public bool EnableDynamicTaskbarActions { get; set; } = true;
 
     public string TaskbarLayoutMode { get; set; } = "BottomFullRowMacStyle";
+
+    public string ClockDisplayFormat { get; set; } = "HourMinuteSecond";
+
+    public string StatusBarSpacingMode { get; set; } = "Relaxed";
+
+    public int StatusBarCustomSpacingPercent { get; set; } = 12;
 
     public int DesktopPageCount { get; set; } = 1;
 

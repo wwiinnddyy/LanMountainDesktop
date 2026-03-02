@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="280"
+             d:DesignHeight="280"
+             x:Class="LanMontainDesktop.Views.Components.MonthCalendarWidget">
+
+    <Border x:Name="RootBorder"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="28"
+            ClipToBounds="True"
+            Padding="14">
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="LayoutRoot"
+                  Width="280"
+                  Height="280"
+                  RowDefinitions="Auto,Auto,*"
+                  RowSpacing="10">
+
+                <TextBlock x:Name="HeaderTextBlock"
+                           Grid.Row="0"
+                           FontSize="42"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                <UniformGrid Grid.Row="1"
+                             Columns="7">
+                    <TextBlock x:Name="WeekdayText0" Text="S" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText1" Text="M" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText2" Text="T" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText3" Text="W" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText4" Text="T" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText5" Text="F" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock x:Name="WeekdayText6" Text="S" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="20" FontWeight="SemiBold" />
+                </UniformGrid>
+
+                <Grid x:Name="CalendarGrid"
+                      Grid.Row="2"
+                      RowDefinitions="*,*,*,*,*,*"
+                      ColumnDefinitions="*,*,*,*,*,*,*" />
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>
+

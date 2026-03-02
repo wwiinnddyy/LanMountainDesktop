@@ -3,81 +3,111 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignWidth="400"
-             d:DesignHeight="200"
+             d:DesignWidth="460"
+             d:DesignHeight="220"
              x:Class="LanMontainDesktop.Views.Components.DateWidget">
 
     <Border x:Name="RootBorder"
-            Background="Transparent"
-            CornerRadius="16"
-            ClipToBounds="True">
-        <Grid ColumnDefinitions="*,*">
-            <!-- 左侧：月历 -->
-            <Border x:Name="CalendarBackgroundBorder"
-                    Grid.Column="0"
-                    Padding="12"
-                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
-                <Grid RowDefinitions="Auto,*">
-                    <!-- 月份年份 -->
-                    <TextBlock x:Name="CalendarMonthYearTextBlock"
-                               Grid.Row="0"
-                               HorizontalAlignment="Center"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                               Margin="0,0,0,8" />
-                    
-                    <!-- 月历网格 -->
-                    <Grid x:Name="CalendarGrid"
-                          Grid.Row="1"
-                          RowDefinitions="Auto,*,*,*,*,*"
-                          ColumnDefinitions="*,*,*,*,*,*,*">
-                        <!-- 星期标题 -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="日" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="一" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="二" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="3" Text="三" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="4" Text="四" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="5" Text="五" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                        <TextBlock Grid.Row="0" Grid.Column="6" Text="六" HorizontalAlignment="Center" FontSize="10" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                    </Grid>
-                </Grid>
-            </Border>
+            Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+            CornerRadius="28"
+            ClipToBounds="True"
+            Padding="12">
+        <Viewbox Stretch="Uniform">
+            <Grid Width="460"
+                  Height="220"
+                  ColumnDefinitions="1.2*,1*"
+                  ColumnSpacing="12">
 
-            <!-- 右侧：今日详情 -->
-            <Border x:Name="TodayBackgroundBorder"
-                    Grid.Column="1"
-                    Background="{DynamicResource AdaptiveAccentBrush}"
-                    Padding="16">
-                <Grid RowDefinitions="Auto,*,Auto">
-                    <!-- 今日标签 -->
-                    <TextBlock Grid.Row="0"
-                               Text="今天"
-                               HorizontalAlignment="Center"
-                               FontSize="11"
-                               FontWeight="Medium"
-                               Opacity="0.8"
-                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
-                    
-                    <!-- 日期数字 -->
-                    <TextBlock x:Name="TodayDayTextBlock"
-                               Grid.Row="1"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               FontSize="56"
-                               FontWeight="Light"
-                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
-                    
-                    <!-- 星期 -->
-                    <TextBlock x:Name="TodayWeekdayTextBlock"
-                               Grid.Row="2"
-                               HorizontalAlignment="Center"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AdaptiveOnAccentBrush}" />
+                <Grid x:Name="LeftPanelGrid"
+                      Grid.Column="0"
+                      RowDefinitions="Auto,Auto,*"
+                      RowSpacing="8">
+                    <TextBlock x:Name="GregorianHeadlineTextBlock"
+                               Grid.Row="0"
+                               FontSize="22"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                    <UniformGrid Grid.Row="1"
+                                 Columns="7">
+                        <TextBlock x:Name="WeekdayText0" Text="日" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText1" Text="一" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText2" Text="二" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText3" Text="三" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText4" Text="四" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText5" Text="五" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WeekdayText6" Text="六" HorizontalAlignment="Center" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" FontSize="13" FontWeight="SemiBold" />
+                    </UniformGrid>
+
+                    <Grid x:Name="CalendarGrid"
+                          Grid.Row="2"
+                          RowDefinitions="*,*,*,*,*"
+                          ColumnDefinitions="*,*,*,*,*,*,*" />
                 </Grid>
-            </Border>
-        </Grid>
+
+                <Border x:Name="LunarCardBorder"
+                        Grid.Column="1"
+                        Background="{DynamicResource AdaptiveLayer2Brush}"
+                        CornerRadius="24"
+                        Padding="14">
+                    <Grid x:Name="RightPanelGrid"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          RowSpacing="10">
+                        <TextBlock x:Name="LunarDateTextBlock"
+                                   Grid.Row="0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                        <TextBlock x:Name="LunarMetaTextBlock"
+                                   Grid.Row="1"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                   Opacity="0.88"
+                                   TextWrapping="Wrap" />
+
+                        <Border Grid.Row="2"
+                                Height="1"
+                                Margin="0,2,0,2"
+                                Background="{DynamicResource AdaptiveStrokeBrush}" />
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="YiLabelTextBlock"
+                                       Grid.Column="0"
+                                       Text="宜"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="#4E7D3A" />
+                            <TextBlock x:Name="YiItemsTextBlock"
+                                       Grid.Column="1"
+                                       FontSize="16"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+
+                        <Grid Grid.Row="4"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="JiLabelTextBlock"
+                                       Grid.Column="0"
+                                       Text="忌"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="#A1473E" />
+                            <TextBlock x:Name="JiItemsTextBlock"
+                                       Grid.Column="1"
+                                       FontSize="16"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Viewbox>
     </Border>
 
 </UserControl>

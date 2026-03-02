@@ -3,21 +3,31 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignWidth="220"
-             d:DesignHeight="70"
+             d:DesignWidth="180"
+             d:DesignHeight="48"
              x:Class="LanMontainDesktop.Views.Components.ClockWidget">
 
     <Border x:Name="RootBorder"
             Classes="glass-panel"
-            Padding="8"
-            CornerRadius="8">
-        <TextBlock x:Name="TimeTextBlock"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   TextAlignment="Center"
-                   FontSize="26"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            Padding="0"
+            CornerRadius="24">
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <TextBlock x:Name="MainTimeTextBlock"
+                       FontFeatures="tnum"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <TextBlock x:Name="SecondsTextBlock"
+                       FontFeatures="tnum"
+                       FontSize="14"
+                       FontWeight="Normal"
+                       Opacity="0.75"
+                       Margin="4,2,0,0"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        </StackPanel>
     </Border>
 
 </UserControl>

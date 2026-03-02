@@ -1,6 +1,7 @@
 using System;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
+using LanMontainDesktop.Views.Components;
 
 using System.Collections.Generic;
 using System.IO;
@@ -60,7 +61,8 @@ public partial class MainWindow
             WallpaperSettingsPanel is null ||
             ColorSettingsPanel is null ||
             StatusBarSettingsPanel is null ||
-            RegionSettingsPanel is null)
+            RegionSettingsPanel is null ||
+              AboutSettingsPanel is null)
         {
             return;
         }
@@ -71,6 +73,7 @@ public partial class MainWindow
         ColorSettingsPanel.IsVisible = selectedIndex == 2;
         StatusBarSettingsPanel.IsVisible = selectedIndex == 3;
         RegionSettingsPanel.IsVisible = selectedIndex == 4;
+          AboutSettingsPanel.IsVisible = selectedIndex == 5;
 
         if (selectedIndex == 1)
         {
@@ -633,6 +636,8 @@ public partial class MainWindow
         var snapshot = new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
+            GridSpacingPreset = _gridSpacingPreset,
+            DesktopEdgeInsetPercent = _desktopEdgeInsetPercent,
             IsNightMode = _isNightMode,
             ThemeColor = _selectedThemeColor.ToString(),
             WallpaperPath = _wallpaperPath,
@@ -644,12 +649,32 @@ public partial class MainWindow
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
             TaskbarLayoutMode = _taskbarLayoutMode,
+            ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
+            StatusBarSpacingMode = _statusBarSpacingMode,
+            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent,
             DesktopPageCount = _desktopPageCount,
             CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex,
             DesktopComponentPlacements = _desktopComponentPlacements.ToList()
         };
 
         _appSettingsService.Save(snapshot);
+    }
+
+    private IDisposable? _persistSettingsDebounceTimer;
+
+    private void SchedulePersistSettings(int delayMs = 200)
+    {
+        if (_suppressSettingsPersistence)
+        {
+            return;
+        }
+
+        _persistSettingsDebounceTimer?.Dispose();
+        _persistSettingsDebounceTimer = DispatcherTimer.RunOnce(() =>
+        {
+            _persistSettingsDebounceTimer = null;
+            PersistSettings();
+        }, TimeSpan.FromMilliseconds(Math.Max(0, delayMs)));
     }
 
     private void UpdateAdaptiveTextSystem()
@@ -980,8 +1005,13 @@ public partial class MainWindow
         UpdateAdaptiveTextSystem();
         ApplyWallpaperBrush();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+        if (_settingsContentPanelTransform is not null)
+        {
+            _settingsContentPanelTransform.Y = 30;
+        }
         SettingsPage.IsVisible = true;
         SettingsPage.Opacity = 0;
+        UpdateSettingsViewportInsets(Math.Max(1, _currentDesktopCellSize));
 
         UpdateWallpaperPreviewLayout();
 
@@ -992,6 +1022,10 @@ public partial class MainWindow
                 return;
             }
 
+            if (_settingsContentPanelTransform is not null)
+            {
+                _settingsContentPanelTransform.Y = 0;
+            }
             SettingsPage.Opacity = 1;
         }, DispatcherPriority.Background);
     }
@@ -1011,10 +1045,18 @@ public partial class MainWindow
         if (immediate)
         {
             SettingsPage.Opacity = 0;
+            if (_settingsContentPanelTransform is not null)
+            {
+                _settingsContentPanelTransform.Y = 30;
+            }
             SettingsPage.IsVisible = false;
             return;
         }
 
+        if (_settingsContentPanelTransform is not null)
+        {
+            _settingsContentPanelTransform.Y = 30;
+        }
         SettingsPage.Opacity = 0;
 
         DispatcherTimer.RunOnce(() =>
@@ -1055,6 +1097,15 @@ public partial class MainWindow
             StatusBarClockSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
                 Symbol = Symbol.Clock,
+                IconVariant = variant
+            };
+        }
+
+        if (StatusBarSpacingSettingsExpander is not null)
+        {
+            StatusBarSpacingSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.TextLineSpacing,
                 IconVariant = variant
             };
         }
