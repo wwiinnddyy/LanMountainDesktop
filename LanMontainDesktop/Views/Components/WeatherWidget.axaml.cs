@@ -825,10 +825,10 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         TopRowGrid.ColumnSpacing = Math.Clamp(7.5 * scaleX, 4, 13);
 
         var availableHeight = Math.Max(80, innerHeight - (ContentGrid.RowSpacing * 2));
-        var topZoneRatio = Math.Clamp(0.55 + ((1 - compactness) * 0.04), 0.52, 0.60);
-        var bottomZoneRatio = Math.Clamp(0.29 - (compactness * 0.03), 0.24, 0.32);
-        var topZoneHeight = Math.Clamp(availableHeight * topZoneRatio, 48, availableHeight - 28);
-        var bottomZoneHeight = Math.Clamp(availableHeight * bottomZoneRatio, 26, availableHeight - topZoneHeight - 6);
+        var topZoneRatio = Math.Clamp(0.52 + ((1 - compactness) * 0.03), 0.48, 0.56);
+        var bottomZoneRatio = Math.Clamp(0.36 - (compactness * 0.02), 0.32, 0.40);
+        var topZoneHeight = Math.Clamp(availableHeight * topZoneRatio, 44, availableHeight - 30);
+        var bottomZoneHeight = Math.Clamp(availableHeight * bottomZoneRatio, 34, availableHeight - topZoneHeight - 6);
         if (topZoneHeight + bottomZoneHeight > availableHeight - 6)
         {
             bottomZoneHeight = Math.Max(24, availableHeight - topZoneHeight - 6);
@@ -842,11 +842,11 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             ContentGrid.RowDefinitions[2].Height = new GridLength(bottomZoneHeight, GridUnitType.Pixel);
         }
 
-        var topScaleH = Math.Clamp(topZoneHeight / 112d, 0.60, 2.2);
+        var topScaleH = Math.Clamp(topZoneHeight / 112d, 0.58, 2.2);
         var topScaleW = Math.Clamp(innerWidth / 288d, 0.60, 2.2);
-        var topScale = Math.Clamp((topScaleH * 0.72) + (topScaleW * 0.28), 0.60, 2.2);
-        var bottomScaleH = Math.Clamp(bottomZoneHeight / 94d, 0.52, 2.1);
-        var bottomScale = Math.Clamp((bottomScaleH * 0.76) + (scaleX * 0.24), 0.52, 2.1);
+        var topScale = Math.Clamp((topScaleH * 0.70) + (topScaleW * 0.30), 0.58, 2.2);
+        var bottomScaleH = Math.Clamp(bottomZoneHeight / 80d, 0.62, 2.2);
+        var bottomScale = Math.Clamp((bottomScaleH * 0.80) + (scaleX * 0.20), 0.62, 2.2);
 
         var iconSize = Math.Clamp(
             Math.Max(52, topZoneHeight * 0.50) * (0.76 + (topScale * 0.24)),
@@ -857,9 +857,9 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         WeatherIconImage.Margin = new Thickness(0, Math.Clamp(-5 * topScale, -12, 0), 0, 0);
 
         TemperatureTextBlock.FontSize = Math.Clamp(
-            Math.Max(56, topZoneHeight * 0.74) * (0.72 + (topScale * 0.28)),
-            52,
-            156);
+            Math.Max(52, topZoneHeight * 0.69) * (0.74 + (topScale * 0.24)),
+            50,
+            146);
         TemperatureTextBlock.FontWeight = ToVariableWeight(310);
         TemperatureTextBlock.Margin = new Thickness(Math.Clamp(-2 * topScale, -5, 0), Math.Clamp(-8 * topScale, -14, -3), 0, 0);
         var temperatureMaxWidthLimit = Math.Max(90, innerWidth * 0.70);
@@ -868,33 +868,57 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             90,
             temperatureMaxWidthLimit);
 
-        BottomInfoStack.Spacing = Math.Clamp(1.0 * bottomScale, 0, 3);
+        var bottomStackSpacing = Math.Clamp(1.2 * bottomScale, 1, 4);
+        BottomInfoStack.Spacing = bottomStackSpacing;
         BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(1.8 * scaleY, 0, 4));
-        BottomInfoStack.MaxHeight = Math.Max(24, bottomZoneHeight);
+        BottomInfoStack.MaxHeight = Math.Max(32, bottomZoneHeight);
 
-        var bottomTextMaxWidth = Math.Min(innerWidth, Math.Max(48, innerWidth * 0.78));
-        ConditionStack.Spacing = Math.Clamp(1.0 + (1.6 * bottomScale), 1, 5);
+        var bottomTextMaxWidth = Math.Min(innerWidth, Math.Max(56, innerWidth * 0.84));
+        var conditionStackSpacing = Math.Clamp(1.4 + (2.1 * bottomScale), 1.2, 7);
+        ConditionStack.Spacing = conditionStackSpacing;
         ConditionStack.Margin = new Thickness(0);
-        var infoFontSize = Math.Clamp(
-            Math.Max(12, bottomZoneHeight * 0.30) * (0.78 + (bottomScale * 0.22)),
-            12,
-            34);
-        var infoFontWeight = ToVariableWeight(560);
+        var infoFontSizeRaw = Math.Clamp(
+            Math.Max(14, bottomZoneHeight * 0.38) * (0.82 + (bottomScale * 0.24)),
+            15,
+            42);
+        var infoFontSize = infoFontSizeRaw;
+        const double infoLineHeightFactor = 1.10;
+        var estimatedBottomUsedHeight =
+            (infoFontSize * infoLineHeightFactor * 3) +
+            conditionStackSpacing +
+            bottomStackSpacing +
+            2;
+        if (estimatedBottomUsedHeight > bottomZoneHeight)
+        {
+            var shrink = Math.Clamp(bottomZoneHeight / estimatedBottomUsedHeight, 0.58, 1.0);
+            infoFontSize = Math.Max(11, infoFontSize * shrink);
+            conditionStackSpacing = Math.Max(0.8, conditionStackSpacing * shrink);
+            bottomStackSpacing = Math.Max(0.8, bottomStackSpacing * shrink);
+            ConditionStack.Spacing = conditionStackSpacing;
+            BottomInfoStack.Spacing = bottomStackSpacing;
+        }
+
+        var infoFontWeight = ToVariableWeight(590);
         ConditionTextBlock.FontSize = infoFontSize;
         ConditionTextBlock.FontWeight = infoFontWeight;
+        ConditionTextBlock.LineHeight = infoFontSize * infoLineHeightFactor;
         ConditionTextBlock.MaxWidth = bottomTextMaxWidth;
         RangeTextBlock.FontSize = infoFontSize;
         RangeTextBlock.FontWeight = infoFontWeight;
+        RangeTextBlock.LineHeight = infoFontSize * infoLineHeightFactor;
         RangeTextBlock.MaxWidth = bottomTextMaxWidth;
 
         CityInfoBadge.Padding = new Thickness(0);
         CityInfoBadge.CornerRadius = new CornerRadius(0);
+        CityInfoBadge.MaxWidth = bottomTextMaxWidth;
         LocationIcon.FontSize = Math.Clamp(
-            Math.Max(8, bottomZoneHeight * 0.13) * (0.74 + (bottomScale * 0.20)),
-            8,
-            14);
+            Math.Max(9, bottomZoneHeight * 0.16) * (0.76 + (bottomScale * 0.22)),
+            9,
+            18);
+        LocationIcon.FontSize = Math.Min(LocationIcon.FontSize, infoFontSize * 0.72);
         CityTextBlock.FontSize = infoFontSize;
         CityTextBlock.FontWeight = infoFontWeight;
+        CityTextBlock.LineHeight = infoFontSize * infoLineHeightFactor;
         CityTextBlock.MaxWidth = bottomTextMaxWidth;
     }
 

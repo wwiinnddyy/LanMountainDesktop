@@ -230,6 +230,7 @@
     "component.daily_artwork":  "每日名画",
     "component.whiteboard":  "竖向小黑板",
     "component.blackboard_landscape":  "横向小黑板",
+    "component.browser":  "浏览器",
     "component.holiday_calendar":  "节假日日历",
     "poetry.widget.loading_content":  "正在加载诗词",
     "poetry.widget.loading_author":  "加载中",

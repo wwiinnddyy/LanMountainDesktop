@@ -160,6 +160,16 @@ public sealed class ComponentRegistry
                 AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopBrowser,
+                "Browser",
+                "Globe",
+                "Board",
+                MinWidthCells: 4,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.Date,
                 "Calendar",
                 "Calendar",

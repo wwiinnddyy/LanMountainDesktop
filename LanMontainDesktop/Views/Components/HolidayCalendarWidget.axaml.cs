@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Threading;
 using LanMontainDesktop.Services;
 
@@ -32,6 +33,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
 
+        ApplyCellSize(_currentCellSize);
         TriggerContentRefresh();
     }
 
@@ -142,6 +144,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
             CountTextBlock.Text = "--";
             DayUnitTextBlock.Text = isZh ? "\u5929" : "Days";
             DateTextBlock.Text = "--";
+            ApplyCellSize(_currentCellSize);
             return;
         }
 
@@ -195,28 +198,216 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
                 ? $"{holidayDateText} - make-up workday"
                 : holidayDateText;
         }
+
+        ApplyCellSize(_currentCellSize);
     }
 
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        var scale = ResolveScale();
+        var width = Bounds.Width > 1 ? Bounds.Width : 220;
+        var height = Bounds.Height > 1 ? Bounds.Height : 220;
+        var shortSide = Math.Min(width, height);
+        var scale = ResolveScale(width, height);
+        var isCompact = width < 170 || height < 170;
+        var isUltraCompact = width < 130 || height < 130;
+        var titleUnits = GetDisplayUnits(TitleTextBlock.Text);
+        var dateUnits = GetDisplayUnits(DateTextBlock.Text);
+        var titleNeedsTwoLines = isUltraCompact || titleUnits >= (isCompact ? 13 : 17);
+        var dateNeedsTwoLines = isUltraCompact || dateUnits >= (isCompact ? 15 : 20);
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 15, 50));
-        RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 7, 22));
-        LayoutRoot.RowSpacing = Math.Clamp(8 * scale, 4, 14);
+        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(shortSide * 0.13, 10, 46));
+        var padding = Math.Clamp(shortSide * 0.05, 4.5, 21);
+        RootBorder.Padding = new Thickness(padding);
+        LayoutRoot.RowSpacing = Math.Clamp(shortSide * 0.028, 2.2, 12);
+        var rowWeights = ApplyAdaptiveRowHeights(isCompact, isUltraCompact, titleNeedsTwoLines, dateNeedsTwoLines);
 
-        TitleTextBlock.FontSize = Math.Clamp(24 * scale, 11, 36);
-        CountTextBlock.FontSize = Math.Clamp(120 * scale, 36, 160);
-        DayUnitTextBlock.FontSize = Math.Clamp(56 * scale, 16, 78);
-        DateTextBlock.FontSize = Math.Clamp(34 * scale, 12, 50);
+        var innerWidth = Math.Max(1, width - padding * 2);
+        var innerHeight = Math.Max(1, height - padding * 2);
+        var totalWeight = Math.Max(0.001, rowWeights[0] + rowWeights[1] + rowWeights[2] + rowWeights[3] + rowWeights[4]);
+        var row0Height = innerHeight * (rowWeights[0] / totalWeight);
+        var row1Height = innerHeight * (rowWeights[1] / totalWeight);
+        var row3Height = innerHeight * (rowWeights[3] / totalWeight);
+        var row4Height = innerHeight * (rowWeights[4] / totalWeight);
+        var horizontalMargin = Math.Clamp(8 * scale, 4, 14);
+        var titleMaxWidth = Math.Max(24, innerWidth - horizontalMargin * 2);
+        var dateMaxWidth = titleMaxWidth;
+
+        var titlePreferred = Math.Clamp(24 * scale, 8.8, 34);
+        var titleHeightCap = Math.Max(10, row0Height * 0.94);
+        var titleLineCount = titleNeedsTwoLines ? 2 : 1;
+        TitleTextBlock.MaxLines = titleLineCount;
+        TitleTextBlock.TextWrapping = titleLineCount > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        TitleTextBlock.Margin = new Thickness(horizontalMargin, 0, horizontalMargin, 0);
+        TitleTextBlock.FontSize = FitTextSize(
+            TitleTextBlock.Text,
+            TitleTextBlock.FontWeight,
+            Math.Min(titlePreferred, Math.Max(8.8, row0Height * 0.62)),
+            8.6,
+            titleMaxWidth,
+            titleHeightCap,
+            titleLineCount,
+            lineHeightFactor: 1.10);
+        TitleTextBlock.LineHeight = TitleTextBlock.FontSize * 1.10;
+
+        var digitCount = Math.Max(1, CountTextBlock.Text?.Trim().Length ?? 1);
+        var digitCompression = digitCount switch
+        {
+            >= 5 => 0.68,
+            4 => 0.8,
+            3 => 0.9,
+            _ => 1.0
+        };
+        var countCompactFactor = isUltraCompact ? 0.86 : isCompact ? 0.93 : 1.0;
+        var countPreferred = Math.Clamp(132 * scale * digitCompression * countCompactFactor, 28, 170);
+        var countHeightCap = Math.Max(30, row1Height * 0.96);
+        CountTextBlock.FontSize = FitTextSize(
+            CountTextBlock.Text,
+            CountTextBlock.FontWeight,
+            Math.Min(countPreferred, Math.Max(28, row1Height * 0.9)),
+            24,
+            titleMaxWidth,
+            countHeightCap,
+            maxLines: 1,
+            lineHeightFactor: 1.08);
+        CountTextBlock.LineHeight = CountTextBlock.FontSize * 1.08;
+
+        var unitCompactFactor = isUltraCompact ? 0.8 : isCompact ? 0.9 : 1.0;
+        DayUnitTextBlock.FontSize = Math.Clamp(52 * scale * unitCompactFactor, 10, 72);
+        DayUnitTextBlock.FontSize = Math.Min(DayUnitTextBlock.FontSize, Math.Max(10, row3Height * 0.64));
+        DayUnitTextBlock.LineHeight = DayUnitTextBlock.FontSize * 1.02;
+
+        var dateCompactFactor = isUltraCompact ? 0.84 : isCompact ? 0.92 : 1.0;
+        var datePreferred = Math.Clamp(32 * scale * dateCompactFactor, 9, 46);
+        var dateHeightCap = Math.Max(10, row4Height * 0.96);
+        var dateLineCount = dateNeedsTwoLines ? 2 : 1;
+        DateTextBlock.MaxLines = dateLineCount;
+        DateTextBlock.TextWrapping = dateLineCount > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        DateTextBlock.Margin = new Thickness(horizontalMargin, 0, horizontalMargin, 0);
+        DateTextBlock.FontSize = FitTextSize(
+            DateTextBlock.Text,
+            DateTextBlock.FontWeight,
+            Math.Min(datePreferred, Math.Max(9, row4Height * 0.58)),
+            8.5,
+            dateMaxWidth,
+            dateHeightCap,
+            dateLineCount,
+            lineHeightFactor: 1.12);
+        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.12;
     }
 
-    private double ResolveScale()
+    private double[] ApplyAdaptiveRowHeights(
+        bool isCompact,
+        bool isUltraCompact,
+        bool titleNeedsTwoLines,
+        bool dateNeedsTwoLines)
     {
-        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.60, 1.95);
-        var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 300d, 0.58, 2.0) : 1;
-        var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 300d, 0.58, 2.0) : 1;
-        return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
+        var weights = isUltraCompact
+            ? new[] { 1.35, 2.55, 0.48, 0.6, 0.82 }
+            : isCompact
+                ? new[] { 1.2, 2.45, 0.56, 0.7, 0.9 }
+                : new[] { 1.1, 2.3, 0.62, 0.78, 0.95 };
+
+        if (titleNeedsTwoLines)
+        {
+            weights[0] += 0.36;
+            weights[1] -= 0.21;
+            weights[2] -= 0.08;
+            weights[3] -= 0.07;
+        }
+
+        if (dateNeedsTwoLines)
+        {
+            weights[4] += 0.42;
+            weights[1] -= 0.23;
+            weights[2] -= 0.10;
+            weights[3] -= 0.09;
+        }
+
+        weights[0] = Math.Max(0.92, weights[0]);
+        weights[1] = Math.Max(1.45, weights[1]);
+        weights[2] = Math.Max(0.34, weights[2]);
+        weights[3] = Math.Max(0.44, weights[3]);
+        weights[4] = Math.Max(0.72, weights[4]);
+
+        if (LayoutRoot.RowDefinitions.Count < 5)
+        {
+            return weights;
+        }
+
+        for (var i = 0; i < 5; i++)
+        {
+            LayoutRoot.RowDefinitions[i].Height = new GridLength(weights[i], GridUnitType.Star);
+        }
+
+        return weights;
+    }
+
+    private static int GetDisplayUnits(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+
+        var units = 0;
+        foreach (var ch in text.Trim())
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                continue;
+            }
+
+            units += ch > 0x7F ? 2 : 1;
+        }
+
+        return units;
+    }
+
+    private static double FitTextSize(
+        string? text,
+        FontWeight fontWeight,
+        double preferredSize,
+        double minSize,
+        double maxWidth,
+        double maxHeight,
+        int maxLines,
+        double lineHeightFactor)
+    {
+        var safeText = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
+        var safeMaxWidth = Math.Max(1, maxWidth);
+        var safeMaxHeight = Math.Max(1, maxHeight);
+        var safeMaxLines = Math.Max(1, maxLines);
+
+        var probe = new TextBlock
+        {
+            Text = safeText,
+            FontWeight = fontWeight,
+            MaxLines = safeMaxLines,
+            TextWrapping = safeMaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap
+        };
+
+        for (var size = preferredSize; size >= minSize; size -= 0.5)
+        {
+            probe.FontSize = size;
+            probe.LineHeight = size * lineHeightFactor;
+            probe.Measure(new Size(safeMaxWidth, double.PositiveInfinity));
+            var desired = probe.DesiredSize;
+            if (desired.Width <= safeMaxWidth + 0.6 &&
+                desired.Height <= safeMaxHeight + 0.6)
+            {
+                return size;
+            }
+        }
+
+        return minSize;
+    }
+
+    private double ResolveScale(double width, double height)
+    {
+        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.56, 2.0);
+        var widthScale = Math.Clamp(width / 220d, 0.5, 2.0);
+        var heightScale = Math.Clamp(height / 220d, 0.5, 2.0);
+        return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale) * 1.02), 0.5, 2.0);
     }
 }

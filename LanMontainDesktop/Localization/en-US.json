@@ -230,6 +230,7 @@
     "component.daily_artwork":  "Daily Artwork",
     "component.whiteboard":  "Blackboard (Portrait)",
     "component.blackboard_landscape":  "Blackboard (Landscape)",
+    "component.browser":  "Browser",
     "component.holiday_calendar":  "Holiday Calendar",
     "poetry.widget.loading_content":  "Loading poetry...",
     "poetry.widget.loading_author":  "Loading...",

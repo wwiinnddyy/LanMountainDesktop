@@ -1769,6 +1769,7 @@ public partial class MainWindow
         }
 
         _isSettingsOpen = true;
+        UpdateDesktopPageAwareComponentContext();
         UpdateAdaptiveTextSystem();
         ApplyWallpaperBrush();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -1805,6 +1806,7 @@ public partial class MainWindow
         }
 
         _isSettingsOpen = false;
+        UpdateDesktopPageAwareComponentContext();
         UpdateAdaptiveTextSystem();
         ApplyWallpaperBrush();
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());

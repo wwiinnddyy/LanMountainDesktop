@@ -22,4 +22,5 @@ public static class BuiltInComponentIds
     public const string DesktopDailyArtwork = "DesktopDailyArtwork";
     public const string DesktopWhiteboard = "DesktopWhiteboard";
     public const string DesktopBlackboardLandscape = "DesktopBlackboardLandscape";
+    public const string DesktopBrowser = "DesktopBrowser";
 }

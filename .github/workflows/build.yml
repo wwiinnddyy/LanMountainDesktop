@@ -1,25 +1,25 @@
-name: Build & Test
+name: Build
 
 on:
   push:
-    branches: [ main, master, dev, develop ]
   pull_request:
-    branches: [ main, master, dev, develop ]
   workflow_dispatch:
 
 env:
   DOTNET_VERSION: '10.0.x'
+  Solution_Name: LanMontainDesktop.sln
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
+    name: Build_Windows_${{ matrix.configuration }}
     strategy:
       matrix:
         configuration: [ Debug, Release ]
       fail-fast: false
     
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -30,27 +30,87 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore
 
-      - name: Build LanMontainDesktop
-        run: dotnet build LanMontainDesktop/LanMontainDesktop.csproj -c ${{ matrix.configuration }} --no-restore
+      - name: Build
+        run: dotnet build --no-restore -c ${{ matrix.configuration }} -v minimal
 
-      - name: Build RecommendationBackend
-        run: dotnet build LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj -c ${{ matrix.configuration }} --no-restore
-
-      - name: Test LanMontainDesktop
-        run: dotnet test LanMontainDesktop/LanMontainDesktop.csproj -c ${{ matrix.configuration }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" || true
-
-      - name: Test RecommendationBackend
-        run: dotnet test LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj -c ${{ matrix.configuration }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" || true
-
-      - name: Upload build artifacts
-        if: always()
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-output-${{ matrix.configuration }}
+          name: build-windows-${{ matrix.configuration }}
           path: |
             LanMontainDesktop/bin/${{ matrix.configuration }}/
             LanMontainDesktop.RecommendationBackend/bin/${{ matrix.configuration }}/
+          retention-days: 7
+
+  build-linux:
+    runs-on: ubuntu-latest
+    name: Build_Linux
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfontconfig1 libfreetype6 \
+            libx11-6 libxrandr2 libxinerama1 \
+            libxi6 libxcursor1 libxext6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release -v minimal
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-linux
+          path: |
+            LanMontainDesktop/bin/Release/
+            LanMontainDesktop.RecommendationBackend/bin/Release/
+          retention-days: 7
+
+  build-macos:
+    runs-on: macos-latest
+    name: Build_macOS
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release -v minimal
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-macos
+          path: |
+            LanMontainDesktop/bin/Release/
+            LanMontainDesktop.RecommendationBackend/bin/Release/
           retention-days: 7

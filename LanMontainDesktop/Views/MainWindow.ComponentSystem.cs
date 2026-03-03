@@ -934,6 +934,8 @@ public partial class MainWindow
             Grid.SetRowSpan(host, heightCells);
             pageGrid.Children.Add(host);
         }
+
+        UpdateDesktopPageAwareComponentContext();
     }
 
     private void PlaceDesktopComponentOnPage(string componentId, int pageIndex, int row, int column)
@@ -991,6 +993,7 @@ public partial class MainWindow
         pageGrid.Children.Add(host);
 
         _desktopComponentPlacements.Add(placement);
+        UpdateDesktopPageAwareComponentContext();
         PersistSettings();
 
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -1291,6 +1294,45 @@ public partial class MainWindow
         }
     }
 
+    private void UpdateDesktopPageAwareComponentContext()
+    {
+        var activeDesktopPageIndex = _isSettingsOpen ? -1 : _currentDesktopSurfaceIndex;
+        var isEditMode = _isComponentLibraryOpen || _isSettingsOpen;
+
+        foreach (var pair in _desktopPageComponentGrids)
+        {
+            var isOnActivePage = pair.Key == activeDesktopPageIndex;
+            foreach (var host in pair.Value.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is Control componentRoot)
+                {
+                    ApplyDesktopPageContext(componentRoot, isOnActivePage, isEditMode);
+                }
+            }
+        }
+    }
+
+    private static void ApplyDesktopPageContext(Control root, bool isOnActivePage, bool isEditMode)
+    {
+        if (root is IDesktopPageVisibilityAwareComponentWidget awareRoot)
+        {
+            awareRoot.SetDesktopPageContext(isOnActivePage, isEditMode);
+        }
+
+        foreach (var descendant in root.GetVisualDescendants())
+        {
+            if (descendant is IDesktopPageVisibilityAwareComponentWidget awareChild)
+            {
+                awareChild.SetDesktopPageContext(isOnActivePage, isEditMode);
+            }
+        }
+    }
+
     private static Border? TryGetResizeHandle(Border host)
     {
         if (host.Child is Grid hostChrome)
@@ -1368,6 +1410,8 @@ public partial class MainWindow
                 }
             }
         }
+
+        UpdateDesktopPageAwareComponentContext();
     }
 
     private void ApplyDesktopEditStateToHost(Border host, bool isEditMode)

@@ -186,6 +186,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new WhiteboardWidget(baseWidthCells: 4),
                     cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopBrowser,
+                    "component.browser",
+                    () => new BrowserWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.HolidayCalendar,
                     "component.holiday_calendar",
                     () => new HolidayCalendarWidget(),

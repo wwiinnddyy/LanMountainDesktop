@@ -1,4 +1,5 @@
-﻿using Avalonia;
+using Avalonia;
+using Avalonia.WebView.Desktop;
 using System;
 
 namespace LanMontainDesktop;
@@ -16,6 +17,7 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .UseDesktopWebView()
             .WithInterFont()
             .LogToTrace();
 }

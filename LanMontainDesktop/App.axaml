@@ -28,6 +28,11 @@
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
         </Style>
 
+        <!-- Mitigation for Avalonia ScrollContentPresenter offset recursion during gesture inertia -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="ScrollViewer.IsScrollInertiaEnabled" Value="False" />
+        </Style>
+
         <Style Selector="fi|SymbolIcon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
             <Setter Property="FontSize" Value="16" />

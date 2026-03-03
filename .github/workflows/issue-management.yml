@@ -1,13 +1,12 @@
 name: Issue Management
 
 on:
-  workflow_dispatch: 
   schedule:
-    # Every day at 1:30 AM UTC
-    - cron: "30 1 * * *"
+    - cron: "30 1 * * *"  # Daily at 1:30 AM UTC
+  workflow_dispatch:
 
 jobs:
-  close-stale-issues:
+  stale:
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -18,20 +17,17 @@ jobs:
         uses: actions/stale@v9
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          any-of-labels: 'need-more-info,waiting-for-response'
-          days-before-issue-stale: 14
+          days-before-issue-stale: 30
           days-before-issue-close: 7
-          days-before-pr-stale: 21
-          days-before-pr-close: 14
-          stale-issue-label: 'stale'
-          stale-pr-label: 'stale'
-          stale-issue-message: |
-            This issue has been inactive for 14 days. 
-            It will be closed in 7 days if there's no activity.
-            Please comment to keep it open.
-          stale-pr-message: |
-            This PR has been inactive for 21 days. 
-            It will be closed in 14 days if there's no activity.
-            Please comment or update the PR to keep it open.
-          close-issue-message: 'Closed due to inactivity. Feel free to reopen if needed.'
-          close-pr-message: 'Closed due to inactivity. Feel free to reopen if needed.'
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-issue-label: stale
+          stale-pr-label: stale
+          close-issue-label: closed
+          close-pr-label: closed
+          stale-issue-message: This issue is stale and will be closed in 7 days
+          stale-pr-message: This PR is stale and will be closed in 7 days
+          close-issue-message: Closed as stale
+          close-pr-message: Closed as stale
+          exempt-issue-labels: pinned,security
+          exempt-pr-labels: pinned,security

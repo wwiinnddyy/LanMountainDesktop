@@ -6,6 +6,7 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using LanMontainDesktop.ViewModels;
 using LanMontainDesktop.Views;
+using AvaloniaWebView;
 
 namespace LanMontainDesktop;
 
@@ -13,6 +14,7 @@ public partial class App : Application
 {
     public override void Initialize()
     {
+        AvaloniaWebViewBuilder.Initialize(default);
         AvaloniaXamlLoader.Load(this);
     }
 

@@ -96,7 +96,7 @@
                               VerticalAlignment="Center"
                               Margin="0,2,0,0"
                               RowDefinitions="Auto,Auto"
-                              ColumnDefinitions="Auto,*"
+                              ColumnDefinitions="*,Auto"
                               RowSpacing="2"
                               ColumnSpacing="8">
                             <Border x:Name="CityInfoBadge"
@@ -115,9 +115,24 @@
                                            MaxLines="1" />
                             </Border>
 
-                            <Border x:Name="RangeInfoBadge"
+                            <Border x:Name="ConditionInfoBadge"
                                     Grid.Row="1"
                                     Grid.Column="0"
+                                    Background="Transparent"
+                                    CornerRadius="0"
+                                    Padding="0">
+                                <TextBlock x:Name="ConditionTextBlock"
+                                           Text="雾"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           TextAlignment="Left"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+                            </Border>
+
+                            <Border x:Name="RangeInfoBadge"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
                                     Background="Transparent"
                                     CornerRadius="0"
                                     Padding="0">
@@ -130,21 +145,6 @@
                                            TextTrimming="CharacterEllipsis"
                                            MaxLines="1"
                                            Opacity="0.92" />
-                            </Border>
-
-                            <Border x:Name="ConditionInfoBadge"
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    Background="Transparent"
-                                    CornerRadius="0"
-                                    Padding="0">
-                                <TextBlock x:Name="ConditionTextBlock"
-                                           Text="雾"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           TextAlignment="Left"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
                             </Border>
                         </Grid>
 

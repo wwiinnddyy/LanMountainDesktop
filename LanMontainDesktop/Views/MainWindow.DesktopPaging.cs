@@ -281,6 +281,8 @@ public partial class MainWindow
         {
             CloseLauncherFolderOverlay();
         }
+
+        UpdateDesktopPageAwareComponentContext();
     }
 
     private void MoveSurfaceBy(int delta)
