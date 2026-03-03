@@ -18,6 +18,8 @@ public static class BuiltInComponentIds
     public const string MonthCalendar = "MonthCalendar";
     public const string LunarCalendar = "LunarCalendar";
     public const string HolidayCalendar = "HolidayCalendar";
+    public const string DesktopDailyPoetry = "DesktopDailyPoetry";
+    public const string DesktopDailyArtwork = "DesktopDailyArtwork";
     public const string DesktopWhiteboard = "DesktopWhiteboard";
     public const string DesktopBlackboardLandscape = "DesktopBlackboardLandscape";
 }

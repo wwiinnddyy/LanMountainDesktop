@@ -1,0 +1,24 @@
+# CODEOWNERS for LanMontainDesktop
+
+# Default owners for everything
+* @
+
+# Desktop UI & Components
+/LanMontainDesktop/Views/ @
+/LanMontainDesktop/ViewModels/ @
+/LanMontainDesktop/ComponentSystem/ @
+/LanMontainDesktop/Styles/ @
+/LanMontainDesktop/Controls/ @
+
+# Backend Services
+/LanMontainDesktop/Services/ @
+/LanMontainDesktop.RecommendationBackend/ @
+
+# Documentation
+/docs/ @
+/README.md @
+
+# Build & CI/CD
+/.github/ @
+/scripts/ @
+/LanMontainDesktop/LanMontainDesktop.csproj @

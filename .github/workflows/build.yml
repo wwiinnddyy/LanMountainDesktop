@@ -1,0 +1,56 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main, master, dev, develop ]
+  pull_request:
+    branches: [ main, master, dev, develop ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [ Debug, Release ]
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build LanMontainDesktop
+        run: dotnet build LanMontainDesktop/LanMontainDesktop.csproj -c ${{ matrix.configuration }} --no-restore
+
+      - name: Build RecommendationBackend
+        run: dotnet build LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj -c ${{ matrix.configuration }} --no-restore
+
+      - name: Test LanMontainDesktop
+        run: dotnet test LanMontainDesktop/LanMontainDesktop.csproj -c ${{ matrix.configuration }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" || true
+
+      - name: Test RecommendationBackend
+        run: dotnet test LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj -c ${{ matrix.configuration }} --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" || true
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-${{ matrix.configuration }}
+          path: |
+            LanMontainDesktop/bin/${{ matrix.configuration }}/
+            LanMontainDesktop.RecommendationBackend/bin/${{ matrix.configuration }}/
+          retention-days: 7

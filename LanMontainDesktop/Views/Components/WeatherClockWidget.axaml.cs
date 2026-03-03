@@ -408,9 +408,16 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyModeVisual(bool isNightMode)
     {
-        RootBorder.Background = isNightMode
-            ? CreateGradientBrush("#2A3346", "#202A3B")
-            : CreateGradientBrush("#FFFFFF", "#F6F8FC");
+        var gradientFrom = isNightMode ? "#2A3346" : "#FFFFFF";
+        var gradientTo = isNightMode ? "#202A3B" : "#F6F8FC";
+        var dialSurface = isNightMode ? "#1B2434" : "#F8FAFF";
+        var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
+            gradientFrom,
+            gradientTo,
+            dialSurface,
+            isNightMode);
+
+        RootBorder.Background = CreateGradientBrush(gradientFrom, gradientTo);
         RootBorder.BorderBrush = CreateBrush(isNightMode ? "#36F2F5FF" : "#14000000");
 
         AnalogDialBorder.Background = isNightMode
@@ -418,8 +425,14 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
             : CreateBrush("#F8FAFF");
         AnalogDialBorder.BorderBrush = CreateBrush(isNightMode ? "#34DDE7FF" : "#12000000");
 
-        TimeTextBlock.Foreground = CreateBrush(isNightMode ? "#F8FBFF" : "#10131A");
-        DateTextBlock.Foreground = CreateBrush(isNightMode ? "#BCC8DD" : "#7A7E87");
+        TimeTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            isNightMode ? "#F8FBFF" : "#10131A",
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast);
+        DateTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            isNightMode ? "#BCC8DD" : "#7A7E87",
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast);
 
         _hourHandLine.Stroke = CreateBrush(isNightMode ? "#F1F5FF" : "#232938");
         _minuteHandLine.Stroke = CreateBrush(isNightMode ? "#D6E0F2" : "#2F3749");

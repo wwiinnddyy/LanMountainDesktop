@@ -1,0 +1,31 @@
+# 自动处理行尾，确保脚本跨平台兼容
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# 文档
+*.md text eol=lf
+*.txt text eol=lf
+README* text eol=lf
+
+# 二进制文件
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar.gz binary
+
+# 代码文件
+*.cs text eol=lf
+*.csproj text eol=lf
+*.xaml text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="640"
              d:DesignHeight="320"
@@ -9,37 +10,58 @@
 
     <UserControl.Styles>
         <Style Selector="Button.music-action">
-            <Setter Property="Background" Value="#24FFFFFF" />
-            <Setter Property="BorderBrush" Value="#44FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="#00000000" />
+            <Setter Property="BorderBrush" Value="#00000000" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="999" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.music-action:pointerover">
-            <Setter Property="Background" Value="#30FFFFFF" />
+            <Setter Property="Background" Value="#20FFFFFF" />
         </Style>
         <Style Selector="Button.music-action:pressed">
-            <Setter Property="Background" Value="#4AFFFFFF" />
+            <Setter Property="Background" Value="#30FFFFFF" />
         </Style>
         <Style Selector="Button.music-action:disabled">
-            <Setter Property="Opacity" Value="0.55" />
+            <Setter Property="Opacity" Value="0.85" />
         </Style>
-        <Style Selector="Button.music-link">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="BorderBrush" Value="#3FFFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="CornerRadius" Value="9" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
+        <Style Selector="Button.music-action-primary">
+            <Setter Property="Background" Value="#F2FFFFFF" />
+            <Setter Property="BorderBrush" Value="#00FFFFFF" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
-        <Style Selector="Button.music-link:pointerover">
-            <Setter Property="Background" Value="#24FFFFFF" />
+        <Style Selector="Button.music-action-primary:pointerover">
+            <Setter Property="Background" Value="#FFFFFFFF" />
         </Style>
-        <Style Selector="Button.music-link:pressed">
+        <Style Selector="Button.music-action-primary:pressed">
+            <Setter Property="Background" Value="#E6FFFFFF" />
+        </Style>
+        <Style Selector="Button.music-source">
             <Setter Property="Background" Value="#3AFFFFFF" />
+            <Setter Property="BorderBrush" Value="#46FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="MinWidth" Value="62" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.music-source:pointerover">
+            <Setter Property="Background" Value="#46FFFFFF" />
+        </Style>
+        <Style Selector="Button.music-source:pressed">
+            <Setter Property="Background" Value="#55FFFFFF" />
+        </Style>
+        <Style Selector="Border.music-progress-track">
+            <Setter Property="Background" Value="#4AFFFFFF" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+        <Style Selector="Border.music-progress-fill">
+            <Setter Property="Background" Value="#D8FFFFFF" />
+            <Setter Property="CornerRadius" Value="2" />
         </Style>
     </UserControl.Styles>
 
@@ -47,209 +69,242 @@
             CornerRadius="30"
             ClipToBounds="True"
             BorderThickness="1"
-            BorderBrush="#54FFFFFF"
-            Padding="14,11,14,11">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0"
-                                 EndPoint="1,1">
-                <GradientStop Color="#AB9E84"
-                              Offset="0" />
-                <GradientStop Color="#8D8066"
-                              Offset="0.52" />
-                <GradientStop Color="#75684F"
-                              Offset="1" />
-            </LinearGradientBrush>
-        </Border.Background>
-
-        <Grid RowDefinitions="Auto,Auto,*"
-              RowSpacing="8">
-            <Border Grid.Row="0"
-                    Grid.RowSpan="2"
-                    Background="#22FFFFFF"
-                    CornerRadius="16"
-                    IsHitTestVisible="False" />
-
-            <Grid Grid.Row="0"
-                  ColumnDefinitions="Auto,*,Auto"
-                  ColumnSpacing="10">
-                <Border x:Name="CoverBorder"
-                        Width="56"
-                        Height="56"
-                        CornerRadius="12"
+            BorderBrush="#52FFFFFF"
+            Padding="0"
+            BoxShadow="0 12 28 #29000000">
+        <Grid>
+            <Grid IsHitTestVisible="False">
+                <Border x:Name="DynamicBackgroundBase"
+                        CornerRadius="30"
                         ClipToBounds="True"
-                        BorderThickness="1"
-                        BorderBrush="#6AFFFFFF"
-                        Background="#38FFFFFF">
-                    <Grid>
-                        <Image x:Name="CoverImage"
-                               IsVisible="False"
-                               Stretch="UniformToFill" />
-                        <Path x:Name="CoverFallbackGlyph"
-                              Width="18"
-                              Height="18"
-                              Stretch="Uniform"
-                              Fill="#F3FFFFFF"
-                              Data="M 9,1 C 6.2,1 4,3.2 4,6 C 4,8.8 6.2,11 9,11 C 11.8,11 14,8.8 14,6 C 14,3.2 11.8,1 9,1 Z M 11,6 C 11,7.1 10.1,8 9,8 C 7.9,8 7,7.1 7,6 C 7,4.9 7.9,4 9,4 C 10.1,4 11,4.9 11,6 Z M 9.5,10.8 L 8.5,10.8 L 8.5,18 L 9.5,18 Z" />
-                    </Grid>
+                        Background="#B89E7B" />
+                <Border x:Name="BackdropCoverHost"
+                        CornerRadius="30"
+                        ClipToBounds="True">
+                    <Image x:Name="BackdropCoverImage"
+                           IsVisible="False"
+                           Opacity="0.62"
+                           Stretch="UniformToFill">
+                        <Image.Effect>
+                            <BlurEffect Radius="42" />
+                        </Image.Effect>
+                    </Image>
                 </Border>
+                <Border x:Name="DynamicGradientOverlay"
+                        CornerRadius="30"
+                        ClipToBounds="True" />
+                <Border x:Name="DynamicSoftLightOverlay"
+                        CornerRadius="30"
+                        ClipToBounds="True" />
+            </Grid>
 
-                <StackPanel Grid.Column="1"
-                            Spacing="2"
-                            VerticalAlignment="Center">
-                    <TextBlock x:Name="TitleTextBlock"
-                               Text="Music"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis"
-                               MaxLines="1"
-                               Foreground="#FFFFFFFF" />
-                    <TextBlock x:Name="ArtistTextBlock"
-                               Text="No active media session"
-                               FontSize="16"
-                               FontWeight="Medium"
-                               TextTrimming="CharacterEllipsis"
-                               MaxLines="1"
-                               Foreground="#DBFFFFFF" />
-                    <Button x:Name="SourceAppButton"
-                            Classes="music-link"
-                            Click="OnSourceAppButtonClick">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="5"
-                                    VerticalAlignment="Center">
-                            <Path Width="11"
-                                  Height="11"
-                                  Stretch="Uniform"
-                                  Fill="#F7FFFFFF"
-                                  Data="M 2,2 H 12 V 5 H 10 V 4 H 4 V 12 H 8 V 10 H 9 V 13 H 3 C 2.4,13 2,12.6 2,12 Z M 7,1 H 14 V 8 H 13 V 3.4 L 9.4,7 L 8.6,6.2 L 12.2,2.6 H 7 Z" />
-                            <TextBlock x:Name="SourceAppTextBlock"
-                                       Text="Open player"
-                                       FontSize="12"
+            <Border x:Name="ContentPaddingBorder"
+                    Background="Transparent"
+                    Padding="14,11,14,11">
+                <Grid x:Name="LayoutGrid"
+                      RowDefinitions="Auto,Auto,Auto"
+                      RowSpacing="9">
+                    <Grid x:Name="HeaderRowGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="11">
+                        <Border x:Name="CoverBorder"
+                                Width="56"
+                                Height="56"
+                                CornerRadius="12"
+                                ClipToBounds="True"
+                                BorderThickness="1"
+                                BorderBrush="#77FFFFFF"
+                                Background="#3CFFFFFF">
+                            <Grid>
+                                <Image x:Name="CoverImage"
+                                       IsVisible="False"
+                                       Stretch="UniformToFill" />
+                                <fi:SymbolIcon x:Name="CoverFallbackGlyph"
+                                               Symbol="Album"
+                                               IconVariant="Regular"
+                                               FontSize="18"
+                                               Foreground="#F3FFFFFF"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel x:Name="MetaStackPanel"
+                                    Grid.Column="1"
+                                    Spacing="3"
+                                    VerticalAlignment="Top">
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="5">
+                                <TextBlock x:Name="TitleTextBlock"
+                                           Text="Music"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1"
+                                           Foreground="#FFFFFFFF" />
+                                <fi:SymbolIcon x:Name="PlaybackActivityIcon"
+                                               Grid.Column="1"
+                                               Symbol="DeviceEq"
+                                               IconVariant="Regular"
+                                               FontSize="13"
+                                               Foreground="#E5FFFFFF"
+                                               VerticalAlignment="Center"
+                                               IsVisible="False" />
+                            </Grid>
+                            <TextBlock x:Name="ArtistTextBlock"
+                                       Text="No active media session"
+                                       FontSize="14"
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis"
                                        MaxLines="1"
-                                       Foreground="#F7FFFFFF" />
+                                       Foreground="#E7FFFFFF" />
                         </StackPanel>
-                    </Button>
-                </StackPanel>
 
-                <Border Grid.Column="2"
-                        x:Name="StatusBadgeBorder"
-                        CornerRadius="10"
-                        BorderThickness="1"
-                        BorderBrush="#5FFFFFFF"
-                        Background="#1EFFFFFF"
-                        Padding="8,4"
-                        VerticalAlignment="Top">
-                    <TextBlock x:Name="StatusTextBlock"
-                               Text="--"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Foreground="#F3FFFFFF" />
-                </Border>
-            </Grid>
+                        <Button x:Name="SourceAppButton"
+                                Grid.Column="2"
+                                Classes="music-source"
+                                Click="OnSourceAppButtonClick"
+                                VerticalAlignment="Top"
+                                Margin="0,1,0,0">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        VerticalAlignment="Center">
+                                <Border x:Name="SourceAppGlyphBadge"
+                                        CornerRadius="999"
+                                        Width="22"
+                                        Height="22"
+                                        Background="#33FFFFFF"
+                                        BorderBrush="#3CFFFFFF"
+                                        BorderThickness="1">
+                                    <fi:SymbolIcon x:Name="SourceAppIcon"
+                                                    Symbol="MusicNote1"
+                                                    IconVariant="Filled"
+                                                    FontSize="13"
+                                                    Foreground="#F7FFFFFF" />
+                                </Border>
+                                <fi:SymbolIcon x:Name="SourceChevronIcon"
+                                               Symbol="ChevronDown"
+                                               IconVariant="Regular"
+                                               FontSize="12"
+                                               Foreground="#E9FFFFFF" />
+                                <TextBlock x:Name="SourceAppTextBlock"
+                                           IsVisible="False"
+                                           Text="Open player" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-            <Grid Grid.Row="1"
-                  ColumnDefinitions="Auto,*,Auto"
-                  ColumnSpacing="8"
-                  VerticalAlignment="Center">
-                <TextBlock x:Name="PositionTextBlock"
-                           Text="00:00"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="#E8FFFFFF"
-                           VerticalAlignment="Center" />
+                    <Grid x:Name="TimelineRowGrid"
+                          Grid.Row="1"
+                          ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="9"
+                          VerticalAlignment="Center">
+                        <TextBlock x:Name="PositionTextBlock"
+                                   Text="00:00"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#E9FFFFFF"
+                                   VerticalAlignment="Center" />
 
-                <ProgressBar x:Name="ProgressBar"
-                             Grid.Column="1"
-                             MinWidth="160"
-                             Minimum="0"
-                             Maximum="100"
-                             Value="0"
-                             Height="5"
-                             VerticalAlignment="Center"
-                             Foreground="#ECFFFFFF"
-                             Background="#45FFFFFF" />
+                        <Grid x:Name="ProgressTrackHost"
+                              Grid.Column="1"
+                              MinWidth="124"
+                              Height="3"
+                              VerticalAlignment="Center">
+                            <Border x:Name="ProgressTrackBorder"
+                                    Classes="music-progress-track" />
+                            <Border x:Name="ProgressFillBorder"
+                                    Classes="music-progress-fill"
+                                    HorizontalAlignment="Left"
+                                    Width="0" />
+                        </Grid>
 
-                <TextBlock x:Name="DurationTextBlock"
-                           Grid.Column="2"
-                           Text="00:00"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="#E8FFFFFF"
-                           VerticalAlignment="Center" />
-            </Grid>
+                        <TextBlock x:Name="DurationTextBlock"
+                                   Grid.Column="2"
+                                   Text="00:00"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#E9FFFFFF"
+                                   VerticalAlignment="Center" />
+                    </Grid>
 
-            <Grid Grid.Row="2"
-                  ColumnDefinitions="Auto,Auto,Auto,Auto,Auto"
-                  ColumnSpacing="8"
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Bottom">
-                <Button x:Name="QueueButton"
-                        Grid.Column="0"
-                        Classes="music-action"
-                        Width="32"
-                        Height="32"
-                        IsEnabled="False">
-                    <Path Width="14"
-                          Height="14"
-                          Stretch="Uniform"
-                          Fill="#FFFFFFFF"
-                          Data="M 2,3 H 18 V 5 H 2 Z M 2,8 H 14 V 10 H 2 Z M 2,13 H 10 V 15 H 2 Z" />
-                </Button>
+                    <Grid x:Name="ActionRowGrid"
+                          Grid.Row="2"
+                          ColumnDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="12"
+                          Margin="0,1,0,0"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Bottom">
+                        <Button x:Name="QueueButton"
+                                Grid.Column="0"
+                                Classes="music-action"
+                                Width="31"
+                                Height="31">
+                            <fi:SymbolIcon x:Name="QueueIcon"
+                                            Symbol="List"
+                                            IconVariant="Regular"
+                                            FontSize="16"
+                                            Foreground="#F0FFFFFF" />
+                        </Button>
 
-                <Button x:Name="PreviousButton"
-                        Grid.Column="1"
-                        Classes="music-action"
-                        Width="34"
-                        Height="34"
-                        Click="OnPreviousButtonClick">
-                    <Path Width="14"
-                          Height="14"
-                          Stretch="Uniform"
-                          Fill="#FFFFFFFF"
-                          Data="M 3,2 V 14 H 5 V 2 Z M 6,8 L 14,2 V 14 Z" />
-                </Button>
+                        <Button x:Name="PreviousButton"
+                                Grid.Column="1"
+                                Classes="music-action"
+                                Width="34"
+                                Height="34"
+                                Click="OnPreviousButtonClick">
+                            <fi:SymbolIcon x:Name="PreviousIcon"
+                                           Symbol="ArrowPrevious"
+                                           IconVariant="Regular"
+                                            FontSize="18"
+                                            Foreground="#F8FFFFFF" />
+                        </Button>
 
-                <Button x:Name="PlayPauseButton"
-                        Grid.Column="2"
-                        Classes="music-action"
-                        Width="42"
-                        Height="42"
-                        Click="OnPlayPauseButtonClick">
-                    <Path x:Name="PlayPauseGlyphPath"
-                          Width="14"
-                          Height="14"
-                          Stretch="Uniform"
-                          Fill="#FFFFFFFF"
-                          Data="M 2,1 L 2,13 L 12,7 Z" />
-                </Button>
+                        <Button x:Name="PlayPauseButton"
+                                Grid.Column="2"
+                                Classes="music-action music-action-primary"
+                                Width="44"
+                                Height="44"
+                                Click="OnPlayPauseButtonClick">
+                            <fi:SymbolIcon x:Name="PlayPauseGlyphIcon"
+                                           Symbol="Play"
+                                           IconVariant="Filled"
+                                           FontSize="23"
+                                           Foreground="#FF6A604F" />
+                        </Button>
 
-                <Button x:Name="NextButton"
-                        Grid.Column="3"
-                        Classes="music-action"
-                        Width="34"
-                        Height="34"
-                        Click="OnNextButtonClick">
-                    <Path Width="14"
-                          Height="14"
-                          Stretch="Uniform"
-                          Fill="#FFFFFFFF"
-                          Data="M 11,2 V 14 H 13 V 2 Z M 2,2 L 10,8 L 2,14 Z" />
-                </Button>
+                        <Button x:Name="NextButton"
+                                Grid.Column="3"
+                                Classes="music-action"
+                                Width="34"
+                                Height="34"
+                                Click="OnNextButtonClick">
+                            <fi:SymbolIcon x:Name="NextIcon"
+                                           Symbol="ArrowNext"
+                                           IconVariant="Regular"
+                                           FontSize="18"
+                                           Foreground="#F8FFFFFF" />
+                        </Button>
 
-                <Button x:Name="FavoriteButton"
-                        Grid.Column="4"
-                        Classes="music-action"
-                        Width="32"
-                        Height="32"
-                        IsEnabled="False">
-                    <Path Width="14"
-                          Height="14"
-                          Stretch="Uniform"
-                          Fill="#FFFFFFFF"
-                          Data="M 10,3 L 12.4,7.2 L 17.2,8.1 L 13.8,11.5 L 14.4,16.3 L 10,14.1 L 5.6,16.3 L 6.2,11.5 L 2.8,8.1 L 7.6,7.2 Z" />
-                </Button>
-            </Grid>
+                        <Button x:Name="FavoriteButton"
+                                Grid.Column="4"
+                                Classes="music-action"
+                                Width="31"
+                                Height="31">
+                            <fi:SymbolIcon x:Name="FavoriteIcon"
+                                           Symbol="Heart"
+                                           IconVariant="Regular"
+                                           FontSize="16"
+                                           Foreground="#F0FFFFFF" />
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="--" />
         </Grid>
     </Border>
 </UserControl>

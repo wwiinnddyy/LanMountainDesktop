@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -37,6 +37,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         string Tint,
         string PrimaryText,
         string SecondaryText,
+        string TertiaryText,
         string ParticleColor);
 
     private readonly record struct WeatherMotionProfile(
@@ -406,7 +407,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         CityTextBlock.Text = L("weather.widget.location_not_configured", "Weather location is not configured");
         ConditionTextBlock.Text = L("weather.widget.configure_hint", "Open Settings > Weather to configure");
         TemperatureTextBlock.Text = "--°";
-        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        RangeTextBlock.Text = "--°/--°";
         ApplyAdaptiveTypography();
         _latestSnapshot = null;
     }
@@ -423,7 +424,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             L("weather.widget.location_unknown", "Unknown location"));
         ConditionTextBlock.Text = L("weather.widget.loading", "Loading...");
         TemperatureTextBlock.Text = "--°";
-        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        RangeTextBlock.Text = "--°/--°";
         ApplyAdaptiveTypography();
     }
 
@@ -438,7 +439,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             L("weather.widget.location_unknown", "Unknown location"));
         ConditionTextBlock.Text = L("weather.widget.fetch_failed", "Weather fetch failed");
         TemperatureTextBlock.Text = "--°";
-        RangeTextBlock.Text = L("weather.widget.range_unknown", "-- / --");
+        RangeTextBlock.Text = "--°/--°";
         ApplyAdaptiveTypography();
         _latestSnapshot = null;
     }
@@ -452,16 +453,32 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         BackgroundMotionLayer.Background = ResolveWeatherBackgroundBrush(kind, palette);
         BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
 
-        var primary = CreateSolidBrush(palette.PrimaryText);
         var isNightVisual = kind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight;
-        var secondary = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xEA : (byte)0xDC);
-        var cityBrush = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xD8 : (byte)0xC8);
+        var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
+            palette.GradientFrom,
+            palette.GradientTo,
+            palette.Tint,
+            isNightVisual);
+        var primary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast);
+        var secondary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.SecondaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xEE : (byte)0xE0);
+        var tertiary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.TertiaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xD6 : (byte)0xC2);
         var particleBrush = ResolveParticleBrush(ToThemeKind(kind), palette.ParticleColor);
-        LocationIcon.Foreground = primary;
-        CityTextBlock.Foreground = cityBrush;
+        LocationIcon.Foreground = tertiary;
+        CityTextBlock.Foreground = tertiary;
         TemperatureTextBlock.Foreground = primary;
         ConditionTextBlock.Foreground = secondary;
-        RangeTextBlock.Foreground = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xE0 : (byte)0xD4);
+        RangeTextBlock.Foreground = secondary;
 
         foreach (var particle in _particleVisuals)
         {
@@ -569,6 +586,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             palette.Tint,
             palette.PrimaryText,
             palette.SecondaryText,
+            palette.TertiaryText,
             palette.ParticleColor);
     }
 
@@ -643,7 +661,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
     {
         if (!value.HasValue || double.IsNaN(value.Value) || double.IsInfinity(value.Value))
         {
-            return "--";
+            return "--°";
         }
 
         var rounded = (int)Math.Round(value.Value, MidpointRounding.AwayFromZero);
@@ -799,42 +817,85 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         var height = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 2;
         var innerWidth = Math.Max(90, width - ContentPaddingBorder.Padding.Left - ContentPaddingBorder.Padding.Right);
         var innerHeight = Math.Max(90, height - ContentPaddingBorder.Padding.Top - ContentPaddingBorder.Padding.Bottom);
-        var scaleX = innerWidth / 288d;
-        var scaleY = innerHeight / 288d;
-        var uiScale = Math.Clamp(Math.Min(scaleX, scaleY), 0.62, 1.58);
-        var verticalScale = Math.Clamp(scaleY, 0.58, 1.70);
+        var scaleX = Math.Clamp(innerWidth / 288d, 0.56, 2.2);
+        var scaleY = Math.Clamp(innerHeight / 288d, 0.56, 2.2);
+        var compactness = Math.Clamp((1.0 - scaleY) / 0.60, 0, 1);
 
-        ContentGrid.RowSpacing = Math.Clamp(2 * verticalScale, 1, 5);
-        TopRowGrid.ColumnSpacing = Math.Clamp(8 * uiScale, 4, 14);
-        BottomInfoStack.Spacing = 0;
-        BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(2 * uiScale, 0, 4));
+        ContentGrid.RowSpacing = Math.Clamp((2.8 - (compactness * 0.5)) * scaleY, 1, 6);
+        TopRowGrid.ColumnSpacing = Math.Clamp(7.5 * scaleX, 4, 13);
 
-        var iconSize = Math.Clamp(74 * uiScale, 46, 96);
+        var availableHeight = Math.Max(80, innerHeight - (ContentGrid.RowSpacing * 2));
+        var topZoneRatio = Math.Clamp(0.55 + ((1 - compactness) * 0.04), 0.52, 0.60);
+        var bottomZoneRatio = Math.Clamp(0.29 - (compactness * 0.03), 0.24, 0.32);
+        var topZoneHeight = Math.Clamp(availableHeight * topZoneRatio, 48, availableHeight - 28);
+        var bottomZoneHeight = Math.Clamp(availableHeight * bottomZoneRatio, 26, availableHeight - topZoneHeight - 6);
+        if (topZoneHeight + bottomZoneHeight > availableHeight - 6)
+        {
+            bottomZoneHeight = Math.Max(24, availableHeight - topZoneHeight - 6);
+            topZoneHeight = Math.Max(42, availableHeight - bottomZoneHeight - 6);
+        }
+
+        if (ContentGrid.RowDefinitions.Count >= 3)
+        {
+            ContentGrid.RowDefinitions[0].Height = new GridLength(topZoneHeight, GridUnitType.Pixel);
+            ContentGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+            ContentGrid.RowDefinitions[2].Height = new GridLength(bottomZoneHeight, GridUnitType.Pixel);
+        }
+
+        var topScaleH = Math.Clamp(topZoneHeight / 112d, 0.60, 2.2);
+        var topScaleW = Math.Clamp(innerWidth / 288d, 0.60, 2.2);
+        var topScale = Math.Clamp((topScaleH * 0.72) + (topScaleW * 0.28), 0.60, 2.2);
+        var bottomScaleH = Math.Clamp(bottomZoneHeight / 94d, 0.52, 2.1);
+        var bottomScale = Math.Clamp((bottomScaleH * 0.76) + (scaleX * 0.24), 0.52, 2.1);
+
+        var iconSize = Math.Clamp(
+            Math.Max(52, topZoneHeight * 0.50) * (0.76 + (topScale * 0.24)),
+            52,
+            136);
         WeatherIconImage.Width = iconSize;
         WeatherIconImage.Height = iconSize;
+        WeatherIconImage.Margin = new Thickness(0, Math.Clamp(-5 * topScale, -12, 0), 0, 0);
 
-        TemperatureTextBlock.FontSize = Math.Clamp(92 * uiScale, 60, 132);
-        TemperatureTextBlock.FontWeight = ToVariableWeight(320);
-        TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(-2 * uiScale, -5, 0), 0, 0);
-        TemperatureTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.50, 96, 176);
+        TemperatureTextBlock.FontSize = Math.Clamp(
+            Math.Max(56, topZoneHeight * 0.74) * (0.72 + (topScale * 0.28)),
+            52,
+            156);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(310);
+        TemperatureTextBlock.Margin = new Thickness(Math.Clamp(-2 * topScale, -5, 0), Math.Clamp(-8 * topScale, -14, -3), 0, 0);
+        var temperatureMaxWidthLimit = Math.Max(90, innerWidth * 0.70);
+        TemperatureTextBlock.MaxWidth = Math.Clamp(
+            innerWidth - iconSize - TopRowGrid.ColumnSpacing - 8,
+            90,
+            temperatureMaxWidthLimit);
 
-        ConditionInfoBadge.Padding = new Thickness(0);
-        ConditionInfoBadge.CornerRadius = new CornerRadius(Math.Clamp(10 * uiScale, 6, 14));
-        ConditionTextBlock.FontSize = Math.Clamp(44 * uiScale, 22, 58);
-        RangeTextBlock.FontSize = Math.Clamp(46 * uiScale, 24, 62);
-        ConditionTextBlock.FontWeight = ToVariableWeight(610);
-        RangeTextBlock.FontWeight = ToVariableWeight(620);
-        ConditionTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.62, 92, 204);
-        RangeTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.66, 100, 224);
+        BottomInfoStack.Spacing = Math.Clamp(1.0 * bottomScale, 0, 3);
+        BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(1.8 * scaleY, 0, 4));
+        BottomInfoStack.MaxHeight = Math.Max(24, bottomZoneHeight);
 
-        CityInfoBadge.Padding = new Thickness(
-            Math.Clamp(10 * uiScale, 6, 14),
-            Math.Clamp(5 * uiScale, 2, 8));
-        CityInfoBadge.CornerRadius = new CornerRadius(Math.Clamp(13 * uiScale, 8, 18));
-        LocationIcon.FontSize = Math.Clamp(14 * uiScale, 10, 20);
-        CityTextBlock.FontSize = Math.Clamp(23 * uiScale, 14, 34);
-        CityTextBlock.FontWeight = ToVariableWeight(560);
-        CityTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.56, 70, 196);
+        var bottomTextMaxWidth = Math.Min(innerWidth, Math.Max(48, innerWidth * 0.78));
+        ConditionStack.Spacing = Math.Clamp(1.0 + (1.6 * bottomScale), 1, 5);
+        ConditionStack.Margin = new Thickness(0);
+        var infoFontSize = Math.Clamp(
+            Math.Max(12, bottomZoneHeight * 0.30) * (0.78 + (bottomScale * 0.22)),
+            12,
+            34);
+        var infoFontWeight = ToVariableWeight(560);
+        ConditionTextBlock.FontSize = infoFontSize;
+        ConditionTextBlock.FontWeight = infoFontWeight;
+        ConditionTextBlock.MaxWidth = bottomTextMaxWidth;
+        RangeTextBlock.FontSize = infoFontSize;
+        RangeTextBlock.FontWeight = infoFontWeight;
+        RangeTextBlock.MaxWidth = bottomTextMaxWidth;
+
+        CityInfoBadge.Padding = new Thickness(0);
+        CityInfoBadge.CornerRadius = new CornerRadius(0);
+        LocationIcon.FontSize = Math.Clamp(
+            Math.Max(8, bottomZoneHeight * 0.13) * (0.74 + (bottomScale * 0.20)),
+            8,
+            14);
+        CityTextBlock.FontSize = infoFontSize;
+        CityTextBlock.FontWeight = infoFontWeight;
+        CityTextBlock.MaxWidth = bottomTextMaxWidth;
     }
 
     private static double Lerp(double from, double to, double t)
@@ -850,8 +911,11 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
 
     private void SetLoadingSkeleton(bool isLoading)
     {
-        CityInfoBadge.Background = isLoading ? CreateSolidBrush("#24FFFFFF") : Brushes.Transparent;
-        ConditionInfoBadge.Background = isLoading ? CreateSolidBrush("#1FFFFFFF") : Brushes.Transparent;
+        var opacity = isLoading ? 0.58 : 1.0;
+        TemperatureTextBlock.Opacity = opacity;
+        ConditionTextBlock.Opacity = opacity;
+        RangeTextBlock.Opacity = opacity;
+        CityTextBlock.Opacity = isLoading ? 0.45 : 0.96;
     }
 
     private static FontWeight ToVariableWeight(double weight)

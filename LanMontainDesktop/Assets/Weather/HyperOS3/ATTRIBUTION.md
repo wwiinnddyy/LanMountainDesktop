@@ -9,11 +9,15 @@ Extracted source paths inside APK:
 - `assets/map_custom/particle/sun_0.png` -> `hyper_sun_core.png`
 - `assets/map_custom/particle/sun_1.png` -> `hyper_sun_ring.png`
 - `assets/map_custom/particle/fog.png` -> `hyper_fog.png`
+- `assets/map_custom/particle/haze.png` -> `hyper_haze.png`
 - `assets/map_custom/particle/rain.png` -> `hyper_rain_drop.png`
 - `assets/map_custom/particle/snow.png` -> `hyper_snow_flake.png`
 - `assets/map_custom/skybox/top.png` -> `hyper_sky_top.png`
 - `assets/map_custom/skybox/back.png` -> `hyper_sky_back.png`
 - `assets/map_custom/skybox/front.png` -> `hyper_sky_front.png`
+- `assets/map_custom/skybox/left.png` -> `hyper_sky_left.png`
+- `assets/map_custom/skybox/right.png` -> `hyper_sky_right.png`
+- `assets/map_custom/skybox/bottom.png` -> `hyper_sky_bottom.png`
 - `assets/map_assets/VM3DRes/cross_sky_day.png` -> `hyper_cross_sky_day.png`
 - `assets/map_assets/VM3DRes/cross_sky_night.png` -> `hyper_cross_sky_night.png`
 

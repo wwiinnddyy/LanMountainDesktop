@@ -1,0 +1,348 @@
+name: Release & Publish (Multi-Platform)
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'release-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      is_prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+      build_windows:
+        description: 'Build Windows (x64/x86)'
+        required: false
+        type: boolean
+        default: true
+      build_linux:
+        description: 'Build Linux (x64)'
+        required: false
+        type: boolean
+        default: true
+      build_macos:
+        description: 'Build macOS (x64/arm64)'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      build_windows: ${{ steps.versions.outputs.build_windows }}
+      build_linux: ${{ steps.versions.outputs.build_linux }}
+      build_macos: ${{ steps.versions.outputs.build_macos }}
+    
+    steps:
+      - name: Get version from tag or input
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=${{ github.event.inputs.version }}
+          fi
+          VERSION=${VERSION#v}
+          IS_PRERELEASE=${{ github.event.inputs.is_prerelease }}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+
+      - name: Determine build targets
+        id: versions
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "build_windows=true" >> $GITHUB_OUTPUT
+            echo "build_linux=true" >> $GITHUB_OUTPUT
+            echo "build_macos=true" >> $GITHUB_OUTPUT
+          else
+            echo "build_windows=${{ github.event.inputs.build_windows }}" >> $GITHUB_OUTPUT
+            echo "build_linux=${{ github.event.inputs.build_linux }}" >> $GITHUB_OUTPUT
+            echo "build_macos=${{ github.event.inputs.build_macos }}" >> $GITHUB_OUTPUT
+          fi
+
+  build-windows:
+    if: needs.prepare.outputs.build_windows == 'true'
+    needs: prepare
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [ x64, x86 ]
+        include:
+          - arch: x64
+            rid: win-x64
+          - arch: x86
+            rid: win-x86
+    
+    name: Build Windows (${{ matrix.arch }})
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Update version in csproj
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          (Get-Content LanMontainDesktop/LanMontainDesktop.csproj) -replace '(<Version>)[^<]*(</Version>)', "`$1$version`$2" | Set-Content LanMontainDesktop/LanMontainDesktop.csproj
+          (Get-Content LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj) -replace '(<Version>)[^<]*(</Version>)', "`$1$version`$2" | Set-Content LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+        shell: pwsh
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish LanMontainDesktop
+        run: |
+          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj `
+            -c Release `
+            -o ./publish/${{ matrix.rid }} `
+            -r ${{ matrix.rid }} `
+            --self-contained `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true
+        shell: pwsh
+
+      - name: Create Windows package
+        run: |
+          $packageDir = "LanMontainDesktop-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}"
+          New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+          Copy-Item "./publish/${{ matrix.rid }}/*" -Destination $packageDir -Recurse -Force
+          Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
+          Write-Host "✅ Package created: $packageDir.zip"
+        shell: pwsh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-${{ matrix.arch }}
+          path: LanMontainDesktop-*.zip
+          retention-days: 30
+
+  build-linux:
+    if: needs.prepare.outputs.build_linux == 'true'
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ x64 ]
+        include:
+          - arch: x64
+            rid: linux-x64
+    
+    name: Build Linux (${{ matrix.arch }})
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfontconfig1 \
+            libfreetype6 \
+            libx11-6 \
+            libxrandr2 \
+            libxinerama1 \
+            libxi6 \
+            libxcursor1 \
+            libxext6 \
+            libxrender1 \
+            libxkbcommon-x11-0
+
+      - name: Update version in csproj
+        run: |
+          sed -i 's/<Version>[^<]*<\/Version>/<Version>${{ needs.prepare.outputs.version }}<\/Version>/g' LanMontainDesktop/LanMontainDesktop.csproj
+          sed -i 's/<Version>[^<]*<\/Version>/<Version>${{ needs.prepare.outputs.version }}<\/Version>/g' LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish LanMontainDesktop
+        run: |
+          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+            -c Release \
+            -o ./publish/${{ matrix.rid }} \
+            -r ${{ matrix.rid }} \
+            --self-contained \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false
+
+      - name: Create Linux packages
+        run: |
+          PACKAGE_DIR="LanMontainDesktop-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}"
+          mkdir -p "$PACKAGE_DIR"
+          cp -r "./publish/${{ matrix.rid }}"/* "$PACKAGE_DIR/"
+          
+          # Create tar.gz
+          tar -czf "$PACKAGE_DIR.tar.gz" "$PACKAGE_DIR"
+          echo "✅ Created: $PACKAGE_DIR.tar.gz"
+          
+          # Optional: Create AppImage (requires specific tools)
+          # This is commented out as it requires additional dependencies
+          # appimage-builder or similar tools would go here
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: LanMontainDesktop-*.tar.gz
+          retention-days: 30
+
+  build-macos:
+    if: needs.prepare.outputs.build_macos == 'true'
+    needs: prepare
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [ x64, arm64 ]
+        include:
+          - arch: x64
+            rid: osx-x64
+          - arch: arm64
+            rid: osx-arm64
+    
+    name: Build macOS (${{ matrix.arch }})
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Update version in csproj
+        run: |
+          sed -i '' 's/<Version>[^<]*<\/Version>/<Version>${{ needs.prepare.outputs.version }}<\/Version>/g' LanMontainDesktop/LanMontainDesktop.csproj
+          sed -i '' 's/<Version>[^<]*<\/Version>/<Version>${{ needs.prepare.outputs.version }}<\/Version>/g' LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish LanMontainDesktop
+        run: |
+          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+            -c Release \
+            -o ./publish/${{ matrix.rid }} \
+            -r ${{ matrix.rid }} \
+            --self-contained \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false
+
+      - name: Create macOS packages
+        run: |
+          PACKAGE_DIR="LanMontainDesktop-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}"
+          mkdir -p "$PACKAGE_DIR"
+          cp -r "./publish/${{ matrix.rid }}"/* "$PACKAGE_DIR/"
+          
+          # Create tar.gz
+          tar -czf "$PACKAGE_DIR.tar.gz" "$PACKAGE_DIR"
+          echo "✅ Created: $PACKAGE_DIR.tar.gz"
+          
+          # Optional: Create DMG (requires additional tools)
+          # DMG creation would go here if needed
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-${{ matrix.arch }}
+          path: LanMontainDesktop-*.tar.gz
+          retention-days: 30
+
+  create-release:
+    needs: prepare
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release-artifacts
+          pattern: release-*
+
+      - name: List downloaded artifacts
+        run: |
+          echo "📦 Downloaded artifacts:"
+          find ./release-artifacts -type f -name "*.zip" -o -name "*.tar.gz" | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            release-artifacts/**/*.zip
+            release-artifacts/**/*.tar.gz
+          draft: false
+          prerelease: ${{ needs.prepare.outputs.is_prerelease }}
+          body: |
+            ## Release ${{ needs.prepare.outputs.version }}
+            
+            ### 📥 Downloads
+            
+            **Windows:**
+            - `LanMontainDesktop-${{ needs.prepare.outputs.version }}-win-x64.zip` - Windows 64-bit
+            - `LanMontainDesktop-${{ needs.prepare.outputs.version }}-win-x86.zip` - Windows 32-bit
+            
+            **Linux:**
+            - `LanMontainDesktop-${{ needs.prepare.outputs.version }}-linux-x64.tar.gz` - Linux 64-bit
+            
+            **macOS:**
+            - `LanMontainDesktop-${{ needs.prepare.outputs.version }}-osx-x64.tar.gz` - macOS Intel
+            - `LanMontainDesktop-${{ needs.prepare.outputs.version }}-osx-arm64.tar.gz` - macOS Apple Silicon
+            
+            ### 📝 Changes
+            See commits for detailed changes: ${{ github.event.compare || 'https://github.com/${{ github.repository }}/commits/${{ github.sha }}' }}
+            
+            ### 💾 Installation
+            
+            **Windows:** Extract zip and run `LanMontainDesktop.exe`
+            
+            **Linux:** Extract tar.gz and run `./LanMontainDesktop`
+            
+            **macOS:** Extract tar.gz and run `./LanMontainDesktop`
+            
+            ### ℹ️ System Requirements
+            - .NET Runtime 10.0+ (included in self-contained builds)
+            - Windows 10+, macOS 10.15+, or modern Linux distribution
+            
+            ---
+            *Built by ${{ github.event.actor }} on ${{ github.event.head_commit.timestamp }}*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

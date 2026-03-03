@@ -35,7 +35,7 @@ public interface IAudioRecorderService : IDisposable
 
     bool Pause();
 
-    string? StopAndSave();
+    string? StopAndSave(string? outputPath = null);
 
     void Discard();
 }
@@ -84,7 +84,7 @@ internal sealed class NoOpAudioRecorderService(string reason) : IAudioRecorderSe
         return false;
     }
 
-    public string? StopAndSave()
+    public string? StopAndSave(string? outputPath = null)
     {
         return null;
     }
@@ -227,7 +227,7 @@ public sealed class PortAudioRecorderService : IAudioRecorderService
         }
     }
 
-    public string? StopAndSave()
+    public string? StopAndSave(string? outputPath = null)
     {
         byte[] pcmData;
         int sampleRate;
@@ -255,10 +255,10 @@ public sealed class PortAudioRecorderService : IAudioRecorderService
             return null;
         }
 
-        var outputPath = BuildOutputPath();
+        var resolvedOutputPath = ResolveOutputPath(outputPath);
         try
         {
-            WriteWaveFile(outputPath, pcmData, sampleRate, ChannelCount, BitsPerSample);
+            WriteWaveFile(resolvedOutputPath, pcmData, sampleRate, ChannelCount, BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -272,11 +272,11 @@ public sealed class PortAudioRecorderService : IAudioRecorderService
 
         lock (_syncRoot)
         {
-            _lastSavedFilePath = outputPath;
+            _lastSavedFilePath = resolvedOutputPath;
             _lastError = string.Empty;
         }
 
-        return outputPath;
+        return resolvedOutputPath;
     }
 
     public void Discard()
@@ -590,7 +590,31 @@ public sealed class PortAudioRecorderService : IAudioRecorderService
         return Math.Clamp(peak, 0, 1);
     }
 
-    private static string BuildOutputPath()
+    private static string ResolveOutputPath(string? outputPath)
+    {
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            return BuildDefaultOutputPath();
+        }
+
+        var normalizedPath = outputPath.Trim();
+        if (!string.Equals(Path.GetExtension(normalizedPath), ".wav", StringComparison.OrdinalIgnoreCase))
+        {
+            normalizedPath = Path.ChangeExtension(normalizedPath, ".wav");
+        }
+
+        var directory = Path.GetDirectoryName(normalizedPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Environment.CurrentDirectory;
+            normalizedPath = Path.Combine(directory, Path.GetFileName(normalizedPath));
+        }
+
+        Directory.CreateDirectory(directory);
+        return normalizedPath;
+    }
+
+    private static string BuildDefaultOutputPath()
     {
         var root = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (string.IsNullOrWhiteSpace(root))

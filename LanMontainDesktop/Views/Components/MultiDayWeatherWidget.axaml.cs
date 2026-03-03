@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -512,16 +512,44 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         BackgroundMotionLayer.Background = ResolveWeatherBackgroundBrush(kind, palette);
         BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
 
-        var primary = CreateSolidBrush(palette.PrimaryText);
         var particleBrush = ResolveParticleBrush(ToThemeKind(kind), palette.ParticleColor);
         var isNightVisual = kind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight;
-        var cityBrush = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xDC : (byte)0xCC);
-        var conditionSecondary = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xEE : (byte)0xE2);
-        var rangeSecondary = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xE6 : (byte)0xD9);
-        var forecastTimeBrush = CreateSolidBrush(palette.TertiaryText, isNightVisual ? (byte)0xCA : (byte)0xB6);
-        var forecastTempBrush = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xEA : (byte)0xDC);
-        HourlyPanelBorder.Background = CreateSolidBrush(isNightVisual ? "#12FFFFFF" : "#0BFFFFFF");
-        LocationIcon.Foreground = primary;
+        var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
+            palette.GradientFrom,
+            palette.GradientTo,
+            palette.Tint,
+            isNightVisual);
+        var primary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast);
+        var cityBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.SecondaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xE6 : (byte)0xD4);
+        var conditionSecondary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast,
+            isNightVisual ? (byte)0xED : (byte)0xDF);
+        var rangeSecondary = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast,
+            isNightVisual ? (byte)0xE2 : (byte)0xCE);
+        var forecastTimeBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xE7 : (byte)0xDA);
+        var forecastTempBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.TertiaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xC0 : (byte)0xAC);
+        HourlyPanelBorder.Background = Brushes.Transparent;
+        LocationIcon.Foreground = cityBrush;
         CityTextBlock.Foreground = cityBrush;
         TemperatureTextBlock.Foreground = primary;
         ConditionTextBlock.Foreground = conditionSecondary;
@@ -725,12 +753,12 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     {
         const int itemCount = 5;
         var today = DateOnly.FromDateTime(_timeZoneService?.GetCurrentTime() ?? DateTime.Now);
-        var firstFallback = snapshot.DailyForecasts.FirstOrDefault();
+        var firstFallback = snapshot.DailyForecasts.Skip(1).FirstOrDefault() ?? snapshot.DailyForecasts.FirstOrDefault();
         var items = new List<HourlyForecastItem>(itemCount);
 
         for (var i = 0; i < itemCount; i++)
         {
-            var date = today.AddDays(i);
+            var date = today.AddDays(i + 1);
             var daily = ResolveDailyForecastForDate(snapshot, date) ?? firstFallback;
             var weatherCode = daily?.DayWeatherCode ??
                               daily?.NightWeatherCode ??
@@ -743,10 +771,11 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
                 "{0}/{1}",
                 FormatTemperature(low),
                 FormatTemperature(high));
+            var label = ResolveForecastDayLabel(date, i + 1);
 
             items.Add(new HourlyForecastItem(
                 date.ToDateTime(TimeOnly.MinValue),
-                ResolveForecastDayLabel(date, i),
+                label,
                 ToThemeKind(visualKind),
                 rangeText));
         }
@@ -762,10 +791,11 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         var iconKind = ToThemeKind(visualKind);
         for (var i = 0; i < itemCount; i++)
         {
-            var date = start.AddDays(i);
+            var date = start.AddDays(i + 1);
+            var label = ResolveForecastDayLabel(date, i + 1);
             items.Add(new HourlyForecastItem(
                 date.ToDateTime(TimeOnly.MinValue),
-                ResolveForecastDayLabel(date, i),
+                label,
                 iconKind,
                 "--°/--°"));
         }
@@ -775,7 +805,6 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void ApplyHourlyForecastItems(IReadOnlyList<HourlyForecastItem> items)
     {
-        var compactRangeText = ResolveScale() <= 0.78;
         for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
         {
             if (i >= items.Count)
@@ -791,23 +820,8 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
             _hourlyTimeBlocks[i].Text = item.TimeLabel;
             _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(
                 HyperOS3WeatherTheme.ResolveIconAsset(item.IconKind));
-            _hourlyTempBlocks[i].Text = compactRangeText
-                ? CompactRangeLabel(item.TemperatureText)
-                : item.TemperatureText;
+            _hourlyTempBlocks[i].Text = item.TemperatureText;
         }
-    }
-
-    private static string CompactRangeLabel(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "--°/--°";
-        }
-
-        return text
-            .Replace(" / ", "/", StringComparison.Ordinal)
-            .Replace(" /", "/", StringComparison.Ordinal)
-            .Replace("/ ", "/", StringComparison.Ordinal);
     }
 
     private static WeatherDailyForecast? ResolveDailyForecastForDate(WeatherSnapshot snapshot, DateOnly date)
@@ -1003,62 +1017,66 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         var (layoutWidth, layoutHeight) = ResolveLayoutViewport();
         var scaleX = Math.Clamp(layoutWidth / 608d, 0.58, 1.90);
         var scaleY = Math.Clamp(layoutHeight / 288d, 0.58, 1.90);
-        var uiScale = Math.Clamp(Math.Min(scaleX, scaleY), 0.58, 1.75);
         var innerWidth = Math.Max(120, layoutWidth);
         var innerHeight = Math.Max(72, layoutHeight);
+        var compactness = Math.Clamp((1.0 - scaleY) / 0.55, 0, 1);
 
-        ContentGrid.RowSpacing = Math.Clamp(7 * scaleY, 2, 12);
-        TopRowGrid.ColumnSpacing = Math.Clamp(10 * scaleX, 6, 16);
-        TopRowGrid.RowSpacing = Math.Clamp(5 * scaleY, 2, 9);
-        BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(2 * scaleY, 0, 5));
-        BottomInfoStack.Spacing = Math.Clamp(2 * scaleY, 1, 5);
+        ContentGrid.RowSpacing = Math.Clamp((4.2 - (compactness * 0.7)) * scaleY, 2, 8);
+        TopRowGrid.ColumnSpacing = Math.Clamp(8 * scaleX, 6, 13);
+        BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp((1.0 - (compactness * 0.4)) * scaleY, 0, 2));
 
-        var summaryHeight = Math.Clamp(116 * scaleY, 82, 164);
-        var bodyHeight = Math.Max(52, innerHeight - summaryHeight - ContentGrid.RowSpacing);
+        var separatorHeight = Math.Clamp(6 * scaleY, 2, 10);
+        var contentHeight = Math.Max(60, innerHeight - ContentGrid.RowSpacing - separatorHeight);
+        var topZoneRatio = Math.Clamp(0.38 + (compactness * 0.09), 0.36, 0.50);
+        var topZoneHeight = Math.Clamp(contentHeight * topZoneRatio, 60, 170);
+        var bottomZoneHeight = Math.Max(42, contentHeight - topZoneHeight);
+        var topScaleH = Math.Clamp(topZoneHeight / 102d, 0.62, 2.0);
+        var topScaleW = Math.Clamp(innerWidth / 620d, 0.62, 2.0);
+        var topScale = Math.Clamp((topScaleH * 0.68) + (topScaleW * 0.32), 0.62, 2.0);
+        var bottomScaleH = Math.Clamp(bottomZoneHeight / 122d, 0.56, 2.0);
+        var bottomScale = Math.Clamp((bottomScaleH * 0.74) + (scaleX * 0.26), 0.56, 1.95);
+        var bodyHeight = bottomZoneHeight;
 
-        TemperatureTextBlock.FontSize = Math.Clamp(94 * uiScale, 56, 126);
-        TemperatureTextBlock.FontWeight = ToVariableWeight(320);
-        TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(-2 * uiScale, -5, 0), 0, 0);
-        TemperatureTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.22, 84, 168);
+        TemperatureTextBlock.FontSize = Math.Clamp(88 * topScale, 56, 132);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(315);
+        TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(-1.2 * topScale, -4, 0), 0, 0);
+        TemperatureTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.24, 88, 196);
 
-        CityInfoBadge.Padding = new Thickness(
-            Math.Clamp(10 * uiScale, 6, 14),
-            Math.Clamp(4 * uiScale, 2, 8));
-        CityInfoBadge.CornerRadius = new CornerRadius(Math.Clamp(11 * uiScale, 8, 16));
-        LocationIcon.FontSize = Math.Clamp(14 * uiScale, 10, 20);
-        CityTextBlock.FontSize = Math.Clamp(21 * uiScale, 13, 31);
-        CityTextBlock.FontWeight = ToVariableWeight(560);
-        CityTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.25, 80, 220);
+        CityInfoBadge.Padding = new Thickness(0);
+        CityInfoBadge.CornerRadius = new CornerRadius(0);
+        LocationIcon.FontSize = Math.Clamp(12 * topScale, 9, 17);
+        CityTextBlock.FontSize = Math.Clamp(18 * topScale, 11, 26);
+        CityTextBlock.FontWeight = ToVariableWeight(540);
+        CityTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.36, 112, 300);
 
         ConditionInfoBadge.Padding = new Thickness(0);
-        ConditionInfoBadge.CornerRadius = new CornerRadius(Math.Clamp(8 * uiScale, 4, 12));
-        ConditionIconStack.Spacing = Math.Clamp(12 * uiScale, 6, 18);
-        ConditionTextBlock.FontSize = Math.Clamp(34 * uiScale, 16, 46);
-        RangeTextBlock.FontSize = Math.Clamp(34 * uiScale, 16, 46);
-        ConditionTextBlock.FontWeight = ToVariableWeight(610);
+        ConditionInfoBadge.CornerRadius = new CornerRadius(0);
+        ConditionIconStack.Spacing = Math.Clamp(7 * topScale, 4, 13);
+        ConditionTextBlock.FontSize = Math.Clamp(19 * topScale, 12, 27);
+        RangeTextBlock.FontSize = Math.Clamp(20 * topScale, 12, 30);
+        ConditionTextBlock.FontWeight = ToVariableWeight(600);
         RangeTextBlock.FontWeight = ToVariableWeight(620);
-        ConditionTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.16, 46, 170);
-        RangeTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.20, 60, 200);
+        ConditionTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.24, 58, 220);
+        RangeTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.30, 88, 270);
+        BottomInfoStack.Spacing = Math.Clamp(2.2 * topScale, 1, 6);
 
-        var iconSize = Math.Clamp(68 * uiScale, 40, 90);
+        var iconSize = Math.Clamp(68 * topScale, 42, 98);
         WeatherIconImage.Width = iconSize;
         WeatherIconImage.Height = iconSize;
 
-        HourlyPanelBorder.Padding = new Thickness(
-            Math.Clamp(5 * scaleX, 3, 10),
-            Math.Clamp(3 * scaleY, 1, 7));
-        HourlyPanelBorder.CornerRadius = new CornerRadius(Math.Clamp(14 * uiScale, 8, 20));
-        HourlyGrid.ColumnSpacing = Math.Clamp(10 * scaleX, 4, 15);
-
-        var forecastColumnCount = Math.Max(1, _hourlyTimeBlocks.Length);
-        var forecastInnerWidth = Math.Max(
+        HourlyPanelBorder.Padding = new Thickness(0, Math.Clamp(1 * scaleY, 0, 2), 0, 0);
+        HourlyPanelBorder.Margin = new Thickness(0, Math.Clamp(1.2 * scaleY, 0, 3), 0, 0);
+        HourlyPanelBorder.CornerRadius = new CornerRadius(0);
+        HourlyGrid.ColumnSpacing = Math.Clamp(7 * scaleX, 4, 11);
+        var hourlyColumnCount = Math.Max(1, _hourlyTimeBlocks.Length);
+        var hourlyInnerWidth = Math.Max(
             96,
-            innerWidth - HourlyPanelBorder.Padding.Left - HourlyPanelBorder.Padding.Right - (HourlyGrid.ColumnSpacing * (forecastColumnCount - 1)));
-        var forecastCellWidth = Math.Max(40, forecastInnerWidth / forecastColumnCount);
-        var stackSpacing = Math.Clamp(2 * scaleY, 1, 4);
-        var forecastLabelSize = Math.Clamp(bodyHeight * 0.20, 10, 23);
-        var forecastIconSize = Math.Clamp(bodyHeight * 0.28, 14, 34);
-        var forecastRangeSize = Math.Clamp(bodyHeight * 0.24, 11, 28);
+            innerWidth - HourlyPanelBorder.Padding.Left - HourlyPanelBorder.Padding.Right - (HourlyGrid.ColumnSpacing * (hourlyColumnCount - 1)));
+        var hourlyCellWidth = Math.Max(34, hourlyInnerWidth / hourlyColumnCount);
+        var stackSpacing = Math.Clamp((1.6 + (bottomScale * 0.8)) * scaleY, 1, 4);
+        var forecastRangeSize = Math.Clamp(Math.Max(13, bodyHeight * 0.22) * (0.76 + (bottomScale * 0.24)), 13, 31);
+        var forecastLabelSize = Math.Clamp(Math.Max(10, bodyHeight * 0.17) * (0.78 + (bottomScale * 0.22)), 10, 23);
+        var forecastIconSize = Math.Clamp(Math.Max(14, bodyHeight * 0.25) * (0.78 + (bottomScale * 0.22)), 14, 35);
 
         for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
         {
@@ -1066,13 +1084,15 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
             _hourlyTempBlocks[i].FontSize = forecastRangeSize;
             _hourlyIconBlocks[i].Width = forecastIconSize;
             _hourlyIconBlocks[i].Height = forecastIconSize;
-            _hourlyTimeBlocks[i].MaxWidth = Math.Clamp(forecastCellWidth, 42, 148);
-            _hourlyTempBlocks[i].MaxWidth = Math.Clamp(forecastCellWidth, 42, 148);
+            _hourlyTimeBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 34, 112);
+            _hourlyTempBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 34, 112);
             _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(500);
             _hourlyTempBlocks[i].FontWeight = ToVariableWeight(590);
-            if (_hourlyTimeBlocks[i].Parent is StackPanel forecastStack)
+            _hourlyTimeBlocks[i].TextAlignment = TextAlignment.Center;
+            _hourlyTempBlocks[i].TextAlignment = TextAlignment.Center;
+            if (_hourlyTimeBlocks[i].Parent is StackPanel hourlyStack)
             {
-                forecastStack.Spacing = stackSpacing;
+                hourlyStack.Spacing = stackSpacing;
             }
         }
     }
@@ -1090,8 +1110,16 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void SetLoadingSkeleton(bool isLoading)
     {
-        CityInfoBadge.Background = isLoading ? CreateSolidBrush("#24FFFFFF") : Brushes.Transparent;
-        ConditionInfoBadge.Background = isLoading ? CreateSolidBrush("#1CFFFFFF") : Brushes.Transparent;
+        var opacity = isLoading ? 0.58 : 1.0;
+        TemperatureTextBlock.Opacity = opacity;
+        ConditionTextBlock.Opacity = opacity;
+        RangeTextBlock.Opacity = opacity;
+        CityTextBlock.Opacity = isLoading ? 0.50 : 0.96;
+        for (var i = 0; i < _hourlyTempBlocks.Length; i++)
+        {
+            _hourlyTempBlocks[i].Opacity = opacity;
+            _hourlyTimeBlocks[i].Opacity = isLoading ? 0.76 : 0.94;
+        }
     }
 
     private static FontWeight ToVariableWeight(double weight)
@@ -1424,4 +1452,3 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         };
     }
 }
-

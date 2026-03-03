@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using LanMontainDesktop.Services;
 
@@ -49,30 +51,54 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
-        var scale = ResolveScale();
+        var rawScale = ResolveScale();
+        var chromeScale = Math.Clamp(rawScale, 0.62, 2.0);
+        var contentScale = Math.Clamp(rawScale, 0.74, 1.0);
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 56));
-        RootBorder.Padding = new Thickness(Math.Clamp(10 * scale, 6, 18));
-        RecorderCardBorder.CornerRadius = new CornerRadius(Math.Clamp(30 * scale, 14, 48));
+        var rootRadius = Math.Clamp(34 * chromeScale, 16, 56);
+        RootBorder.CornerRadius = new CornerRadius(rootRadius);
+        RootBorder.Padding = new Thickness(0);
+        RecorderCardBorder.CornerRadius = new CornerRadius(rootRadius);
+        RecorderContentGrid.Margin = new Thickness(
+            Math.Clamp(24 * contentScale, 14, 26),
+            Math.Clamp(18 * contentScale, 10, 22),
+            Math.Clamp(24 * contentScale, 14, 26),
+            Math.Clamp(18 * contentScale, 10, 24));
 
-        var sideButtonSize = Math.Clamp(54 * scale, 38, 72);
+        var sideButtonSize = Math.Clamp(54 * contentScale, 34, 58);
         DiscardButtonBorder.Width = sideButtonSize;
         DiscardButtonBorder.Height = sideButtonSize;
         DiscardButtonBorder.CornerRadius = new CornerRadius(sideButtonSize / 2d);
+        DiscardIcon.FontSize = Math.Clamp(20 * contentScale, 14, 22);
 
         SaveButtonBorder.Width = sideButtonSize;
         SaveButtonBorder.Height = sideButtonSize;
         SaveButtonBorder.CornerRadius = new CornerRadius(sideButtonSize / 2d);
+        SaveIcon.FontSize = Math.Clamp(22 * contentScale, 15, 24);
 
-        var centerButtonSize = Math.Clamp(68 * scale, 48, 86);
+        var centerButtonSize = Math.Clamp(68 * contentScale, 42, 72);
         RecordToggleButtonBorder.Width = centerButtonSize;
         RecordToggleButtonBorder.Height = centerButtonSize;
         RecordToggleButtonBorder.CornerRadius = new CornerRadius(centerButtonSize / 2d);
+        var centerIconSize = Math.Clamp(20 * contentScale, 14, 24);
+        PauseGlyphIcon.FontSize = centerIconSize;
+        PlayGlyphIcon.FontSize = centerIconSize;
+        var recordDotSize = Math.Clamp(15 * contentScale, 10, 16);
+        RecordDot.Width = recordDotSize;
+        RecordDot.Height = recordDotSize;
 
-        WaveformBarsPanel.Spacing = Math.Clamp(3 * scale, 1.8, 5.4);
-        TitleTextBlock.FontSize = Math.Clamp(19 * scale, 13, 26);
-        TimerTextBlock.FontSize = Math.Clamp(66 * scale, 38, 84);
-        HintTextBlock.FontSize = Math.Clamp(13 * scale, 9, 16);
+        WaveformRowGrid.Margin = new Thickness(0, Math.Clamp(12 * contentScale, 6, 16), 0, 0);
+        CenterNeedle.Height = Math.Clamp(32 * contentScale, 18, 34);
+        FutureLine.Margin = new Thickness(Math.Clamp(4 * contentScale, 2, 6), 0, 0, 0);
+        FutureLine.Height = Math.Clamp(2 * contentScale, 1, 3);
+        ControlButtonsGrid.Margin = new Thickness(0, Math.Clamp(16 * contentScale, 8, 20), 0, 0);
+        ControlButtonsGrid.ColumnSpacing = Math.Clamp(16 * contentScale, 8, 16);
+        HintTextBlock.Margin = new Thickness(0, Math.Clamp(8 * contentScale, 4, 10), 0, 0);
+
+        WaveformBarsPanel.Spacing = Math.Clamp(3 * contentScale, 1.6, 3.4);
+        TitleTextBlock.FontSize = Math.Clamp(19 * contentScale, 12, 20);
+        TimerTextBlock.FontSize = Math.Clamp(66 * contentScale, 34, 66);
+        HintTextBlock.FontSize = Math.Clamp(13 * contentScale, 9, 13);
 
         UpdateWaveformVisual();
     }
@@ -146,14 +172,35 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         e.Handled = true;
     }
 
-    private void OnSaveButtonPointerPressed(object? sender, PointerPressedEventArgs e)
+    private async void OnSaveButtonPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             return;
         }
 
-        _ = _audioRecorderService.StopAndSave();
+        var snapshot = _audioRecorderService.GetSnapshot();
+        if (!snapshot.IsSupported)
+        {
+            RefreshVisual();
+            e.Handled = true;
+            return;
+        }
+
+        if (snapshot.State == AudioRecorderRuntimeState.Recording)
+        {
+            _audioRecorderService.Pause();
+        }
+
+        var (wasCancelled, outputPath) = await PickSavePathAsync();
+        if (wasCancelled)
+        {
+            RefreshVisual();
+            e.Handled = true;
+            return;
+        }
+
+        _ = _audioRecorderService.StopAndSave(outputPath);
         RefreshVisual();
         e.Handled = true;
     }
@@ -165,13 +212,15 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         TitleTextBlock.Text = L("recording.widget.title", "Recorder");
         TimerTextBlock.Text = FormatDuration(snapshot.Duration);
 
-        var incomingLevel = snapshot.State == AudioRecorderRuntimeState.Recording
-            ? snapshot.InputLevel
-            : snapshot.State == AudioRecorderRuntimeState.Paused
-                ? 0.10
-                : 0;
+        if (snapshot.State == AudioRecorderRuntimeState.Recording)
+        {
+            PushWaveLevel(snapshot.InputLevel);
+        }
+        else if (snapshot.State != AudioRecorderRuntimeState.Paused)
+        {
+            ClearWaveLevels();
+        }
 
-        PushWaveLevel(incomingLevel);
         UpdateWaveformVisual();
 
         ApplyControlState(snapshot);
@@ -182,7 +231,11 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         var isSupported = snapshot.IsSupported;
         var canFinalize = snapshot.State == AudioRecorderRuntimeState.Recording ||
                           snapshot.State == AudioRecorderRuntimeState.Paused;
+        var isReady = snapshot.State == AudioRecorderRuntimeState.Ready;
 
+        TitleTextBlock.IsVisible = false;
+        DiscardButtonBorder.IsVisible = canFinalize;
+        SaveButtonBorder.IsVisible = canFinalize;
         DiscardButtonBorder.IsHitTestVisible = isSupported && canFinalize;
         SaveButtonBorder.IsHitTestVisible = isSupported && canFinalize;
         RecordToggleButtonBorder.IsHitTestVisible = isSupported;
@@ -191,9 +244,16 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         SaveButtonBorder.Opacity = SaveButtonBorder.IsHitTestVisible ? 1 : 0.42;
         RecordToggleButtonBorder.Opacity = RecordToggleButtonBorder.IsHitTestVisible ? 1 : 0.54;
 
+        TimerTextBlock.Foreground = CreateBrush(!isSupported
+            ? "#B2B7C0"
+            : isReady
+                ? "#A4A9B2"
+                : "#151922");
+        HintTextBlock.IsVisible = !isReady || !isSupported;
+
         RecordDot.IsVisible = snapshot.State == AudioRecorderRuntimeState.Ready;
-        PauseGlyphPath.IsVisible = snapshot.State == AudioRecorderRuntimeState.Recording;
-        PlayGlyphPath.IsVisible = snapshot.State == AudioRecorderRuntimeState.Paused;
+        PauseGlyphIcon.IsVisible = snapshot.State == AudioRecorderRuntimeState.Recording;
+        PlayGlyphIcon.IsVisible = snapshot.State == AudioRecorderRuntimeState.Paused;
 
         if (!isSupported)
         {
@@ -276,17 +336,22 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         _waveLevels[^1] = Math.Clamp((previous * 0.35) + (target * 0.65), 0, 1);
     }
 
+    private void ClearWaveLevels()
+    {
+        Array.Fill(_waveLevels, 0);
+    }
+
     private void UpdateWaveformVisual()
     {
-        var scale = ResolveScale();
-        var barWidth = Math.Clamp(3 * scale, 2, 5);
+        var scale = Math.Clamp(ResolveScale(), 0.74, 1.0);
+        var barWidth = Math.Clamp(3 * scale, 1.8, 3.2);
         for (var i = 0; i < _waveBars.Count; i++)
         {
             var bar = _waveBars[i];
             var eased = Math.Pow(Math.Clamp(_waveLevels[i], 0, 1), 0.62);
             bar.Width = barWidth;
-            bar.Height = Math.Clamp((4 + (eased * 30)) * scale, 3, 46);
-            bar.CornerRadius = new CornerRadius(Math.Clamp(barWidth / 2d, 1, 3));
+            bar.Height = Math.Clamp((4 + (eased * 24)) * scale, 3, 30);
+            bar.CornerRadius = new CornerRadius(Math.Clamp(barWidth / 2d, 1, 2));
             bar.Opacity = Math.Clamp(0.20 + (eased * 0.82), 0.20, 1.0);
         }
     }
@@ -334,5 +399,44 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     private static IBrush CreateBrush(string colorHex)
     {
         return new SolidColorBrush(Color.Parse(colorHex));
+    }
+
+    private async Task<(bool WasCancelled, string? OutputPath)> PickSavePathAsync()
+    {
+        var suggestedName = $"recording_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
+        var topLevel = TopLevel.GetTopLevel(this);
+        var storageProvider = topLevel?.StorageProvider;
+        if (storageProvider is null)
+        {
+            return (false, null);
+        }
+
+        var saveFile = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = L("recording.widget.save_picker_title", "Save recording"),
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "wav",
+            FileTypeChoices =
+            [
+                new FilePickerFileType(L("recording.widget.save_picker_type", "WAV audio"))
+                {
+                    Patterns = ["*.wav"],
+                    MimeTypes = ["audio/wav", "audio/x-wav"]
+                }
+            ]
+        });
+
+        if (saveFile is null)
+        {
+            return (true, null);
+        }
+
+        var path = saveFile.Path;
+        if (path is null || !path.IsFile)
+        {
+            return (true, null);
+        }
+
+        return (false, path.LocalPath);
     }
 }

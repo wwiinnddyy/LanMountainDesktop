@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="320"
              d:DesignHeight="320"
@@ -9,46 +10,49 @@
 
     <Border x:Name="RootBorder"
             CornerRadius="34"
-            Padding="10"
+            Padding="0"
             ClipToBounds="True"
             Background="#ECEFF3"
-            BorderBrush="#DEE3EA"
+            BorderBrush="#D9DEE7"
             BorderThickness="1">
         <Viewbox Stretch="Uniform">
             <Grid Width="300"
                   Height="300">
                 <Border x:Name="RecorderCardBorder"
-                        Width="248"
-                        Height="248"
+                        Width="300"
+                        Height="300"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        CornerRadius="30"
-                        BorderBrush="#E6EAF0"
-                        BorderThickness="1"
-                        Background="#F4F6FA">
-                    <Grid Margin="16,14,16,12"
+                        CornerRadius="34"
+                        BorderBrush="#00000000"
+                        BorderThickness="0"
+                        Background="Transparent">
+                    <Grid x:Name="RecorderContentGrid"
+                          Margin="24,20,24,22"
                           RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <TextBlock x:Name="TitleTextBlock"
                                    Grid.Row="0"
-                                   Text="录音"
+                                   Text="Recorder"
                                    FontSize="19"
                                    FontWeight="SemiBold"
                                    Foreground="#11151D"
-                                   HorizontalAlignment="Center" />
+                                   HorizontalAlignment="Center"
+                                   IsVisible="False" />
 
                         <TextBlock x:Name="TimerTextBlock"
                                    Grid.Row="1"
-                                   Margin="0,8,0,0"
+                                   Margin="0,6,0,0"
                                    Text="00:00"
                                    FontSize="66"
                                    FontWeight="SemiBold"
                                    FontFeatures="tnum"
-                                   Foreground="#151922"
+                                   Foreground="#A4A9B2"
                                    HorizontalAlignment="Center" />
 
-                        <Grid Grid.Row="2"
-                              Margin="0,10,0,0"
-                              ColumnDefinitions="*,2,68"
+                        <Grid x:Name="WaveformRowGrid"
+                              Grid.Row="2"
+                              Margin="0,14,0,0"
+                              ColumnDefinitions="*,2,*"
                               VerticalAlignment="Center">
                             <StackPanel x:Name="WaveformBarsPanel"
                                         Grid.Column="0"
@@ -57,8 +61,8 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center" />
 
-                            <Border Grid.Column="1"
-                                    Margin="0,0,0,0"
+                            <Border x:Name="CenterNeedle"
+                                    Grid.Column="1"
                                     Width="2"
                                     Height="32"
                                     CornerRadius="1"
@@ -68,7 +72,7 @@
 
                             <Border x:Name="FutureLine"
                                     Grid.Column="2"
-                                    Margin="8,0,0,0"
+                                    Margin="4,0,0,0"
                                     Height="2"
                                     CornerRadius="1"
                                     Background="#A3A8B3"
@@ -77,8 +81,9 @@
                                     VerticalAlignment="Center" />
                         </Grid>
 
-                        <Grid Grid.Row="3"
-                              Margin="0,16,0,0"
+                        <Grid x:Name="ControlButtonsGrid"
+                              Grid.Row="3"
+                              Margin="0,22,0,0"
                               HorizontalAlignment="Center"
                               ColumnDefinitions="Auto,Auto,Auto"
                               ColumnSpacing="16">
@@ -92,13 +97,13 @@
                                     BorderThickness="1"
                                     Cursor="Hand"
                                     PointerPressed="OnDiscardButtonPointerPressed">
-                                <Viewbox Width="20"
-                                         Height="20"
-                                         Stretch="Uniform">
-                                    <Path Data="M 5,2 V 18 M 5,3 H 15 L 13,7 L 15,11 H 5"
-                                          Stroke="#141922"
-                                          StrokeThickness="1.9" />
-                                </Viewbox>
+                                <fi:SymbolIcon x:Name="DiscardIcon"
+                                               Symbol="Dismiss"
+                                               IconVariant="Regular"
+                                               FontSize="20"
+                                               Foreground="#141922"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
                             </Border>
 
                             <Border x:Name="RecordToggleButtonBorder"
@@ -116,20 +121,22 @@
                                              Fill="#FFFFFF"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center" />
-                                    <Path x:Name="PauseGlyphPath"
-                                          Width="14"
-                                          Height="16"
-                                          Stretch="Uniform"
-                                          Fill="#FFFFFF"
-                                          Data="M 0,0 H 4 V 16 H 0 Z M 8,0 H 12 V 16 H 8 Z"
-                                          IsVisible="False" />
-                                    <Path x:Name="PlayGlyphPath"
-                                          Width="16"
-                                          Height="16"
-                                          Stretch="Uniform"
-                                          Fill="#FFFFFF"
-                                          Data="M 0,0 L 0,16 L 13,8 Z"
-                                          IsVisible="False" />
+                                    <fi:SymbolIcon x:Name="PauseGlyphIcon"
+                                                   Symbol="Pause"
+                                                   IconVariant="Filled"
+                                                   FontSize="20"
+                                                   Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="False" />
+                                    <fi:SymbolIcon x:Name="PlayGlyphIcon"
+                                                   Symbol="Play"
+                                                   IconVariant="Filled"
+                                                   FontSize="20"
+                                                   Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="False" />
                                 </Grid>
                             </Border>
 
@@ -143,13 +150,13 @@
                                     BorderThickness="1"
                                     Cursor="Hand"
                                     PointerPressed="OnSaveButtonPointerPressed">
-                                <Viewbox Width="22"
-                                         Height="22"
-                                         Stretch="Uniform">
-                                    <Path Data="M 3,11 L 8,16 L 19,5"
-                                          Stroke="#141922"
-                                          StrokeThickness="2.2" />
-                                </Viewbox>
+                                <fi:SymbolIcon x:Name="SaveIcon"
+                                               Symbol="Checkmark"
+                                               IconVariant="Regular"
+                                               FontSize="22"
+                                               Foreground="#141922"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
                             </Border>
                         </Grid>
 
@@ -161,7 +168,8 @@
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Foreground="#7A818E"
-                                   Text="点击红色按钮开始" />
+                                   Text="Tap red button to record"
+                                   IsVisible="False" />
                     </Grid>
                 </Border>
             </Grid>

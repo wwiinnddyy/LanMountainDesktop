@@ -71,12 +71,12 @@ public readonly record struct HyperOS3WeatherMetrics(
 public static class HyperOS3WeatherTheme
 {
     private static readonly HyperOS3WeatherPalette FallbackPalette = new(
-        GradientFrom: "#5C7696",
-        GradientTo: "#90A6C1",
-        Tint: "#4E6682",
+        GradientFrom: "#607C9E",
+        GradientTo: "#9DB3CB",
+        Tint: "#55708D",
         PrimaryText: "#FFFFFFFF",
-        SecondaryText: "#DCE6F1",
-        TertiaryText: "#B8C7D9",
+        SecondaryText: "#E4EDF7",
+        TertiaryText: "#BFD0E1",
         ParticleColor: "#70D3E2F4");
 
     private static readonly HyperOS3WeatherMotion FallbackMotion = new(
@@ -120,12 +120,12 @@ public static class HyperOS3WeatherTheme
         new Dictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherPalette>
         {
             [HyperOS3WeatherVisualKind.ClearDay] = new(
-                GradientFrom: "#4D7097",
-                GradientTo: "#89A4C3",
-                Tint: "#4E6D8E",
+                GradientFrom: "#5F7FA3",
+                GradientTo: "#9BB4CF",
+                Tint: "#567495",
                 PrimaryText: "#F8FCFF",
-                SecondaryText: "#DDE8F4",
-                TertiaryText: "#BACADB",
+                SecondaryText: "#E5EEF8",
+                TertiaryText: "#C3D3E4",
                 ParticleColor: "#00FFFFFF"),
             [HyperOS3WeatherVisualKind.ClearNight] = new(
                 GradientFrom: "#576B86",
@@ -136,17 +136,17 @@ public static class HyperOS3WeatherTheme
                 TertiaryText: "#B4C3D6",
                 ParticleColor: "#00FFFFFF"),
             [HyperOS3WeatherVisualKind.CloudyDay] = new(
-                GradientFrom: "#607896",
-                GradientTo: "#94A9C1",
-                Tint: "#526C88",
+                GradientFrom: "#5D799A",
+                GradientTo: "#95ADC6",
+                Tint: "#526E8B",
                 PrimaryText: "#F8FCFF",
-                SecondaryText: "#DCE7F3",
-                TertiaryText: "#B9C8D9",
+                SecondaryText: "#E2ECF7",
+                TertiaryText: "#C0D0E0",
                 ParticleColor: "#26FFFFFF"),
             [HyperOS3WeatherVisualKind.CloudyNight] = new(
-                GradientFrom: "#51637A",
-                GradientTo: "#8398AF",
-                Tint: "#45586D",
+                GradientFrom: "#536882",
+                GradientTo: "#869CB4",
+                Tint: "#495E76",
                 PrimaryText: "#F6FAFF",
                 SecondaryText: "#D4E0ED",
                 TertiaryText: "#B0BFD2",
@@ -184,12 +184,12 @@ public static class HyperOS3WeatherTheme
                 TertiaryText: "#B5C4D6",
                 ParticleColor: "#CCFFFFFF"),
             [HyperOS3WeatherVisualKind.Fog] = new(
-                GradientFrom: "#657B97",
-                GradientTo: "#90A5BC",
-                Tint: "#4F637B",
+                GradientFrom: "#607793",
+                GradientTo: "#90A7C2",
+                Tint: "#4F6580",
                 PrimaryText: "#F8FBFF",
-                SecondaryText: "#D8E3EE",
-                TertiaryText: "#AFBED0",
+                SecondaryText: "#DFEAF5",
+                TertiaryText: "#B7C8DA",
                 ParticleColor: "#88D9E5F1")
         };
 
@@ -217,7 +217,7 @@ public static class HyperOS3WeatherTheme
                 MotionOpacityBase: 0.32, MotionOpacityPulse: 0.06,
                 LightOpacityBase: 0.62, LightOpacityPulse: 0.07,
                 ShadeOpacityBase: 0.80, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.020, ParticleCount: 6,
+                PhaseStep: 0.020, ParticleCount: 0,
                 ParticleSpeedMin: 0.30, ParticleSpeedMax: 0.70,
                 ParticleLengthMin: 14, ParticleLengthMax: 28, ParticleDriftPerTick: 0.10),
             [HyperOS3WeatherVisualKind.CloudyNight] = new(
@@ -225,7 +225,7 @@ public static class HyperOS3WeatherTheme
                 MotionOpacityBase: 0.34, MotionOpacityPulse: 0.07,
                 LightOpacityBase: 0.54, LightOpacityPulse: 0.06,
                 ShadeOpacityBase: 0.85, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.021, ParticleCount: 8,
+                PhaseStep: 0.021, ParticleCount: 0,
                 ParticleSpeedMin: 0.35, ParticleSpeedMax: 0.80,
                 ParticleLengthMin: 16, ParticleLengthMax: 30, ParticleDriftPerTick: 0.12),
             [HyperOS3WeatherVisualKind.RainLight] = new(
@@ -265,7 +265,7 @@ public static class HyperOS3WeatherTheme
                 MotionOpacityBase: 0.30, MotionOpacityPulse: 0.05,
                 LightOpacityBase: 0.58, LightOpacityPulse: 0.05,
                 ShadeOpacityBase: 0.86, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.018, ParticleCount: 10,
+                PhaseStep: 0.018, ParticleCount: 0,
                 ParticleSpeedMin: 0.25, ParticleSpeedMax: 0.70,
                 ParticleLengthMin: 16, ParticleLengthMax: 34, ParticleDriftPerTick: 0.12)
         };
@@ -341,7 +341,7 @@ public static class HyperOS3WeatherTheme
             HyperOS3WeatherVisualKind.Snow
                 => "avares://LanMontainDesktop/Assets/Weather/HyperOS3/hyper_snow_flake.png",
             HyperOS3WeatherVisualKind.Fog
-                => "avares://LanMontainDesktop/Assets/Weather/HyperOS3/hyper_fog.png",
+                => "avares://LanMontainDesktop/Assets/Weather/HyperOS3/hyper_haze.png",
             _ => null
         };
     }

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -69,6 +71,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         [
             DailyIcon0, DailyIcon1, DailyIcon2, DailyIcon3, DailyIcon4
         ];
+        ConfigureTextOverflowGuards();
         _refreshTimer.Tick += OnRefreshTimerTick;
         _animationTimer.Tick += OnAnimationTick;
         AttachedToVisualTree += (_, _) =>
@@ -89,6 +92,25 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         ApplyCellSize(_currentCellSize);
         ApplyVisualTheme(_activeVisualKind);
         ApplyFallback();
+    }
+
+    private void ConfigureTextOverflowGuards()
+    {
+        CityTextBlock.TextWrapping = TextWrapping.NoWrap;
+        CityTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        CityTextBlock.MaxLines = 1;
+
+        ConditionTextBlock.TextWrapping = TextWrapping.NoWrap;
+        ConditionTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        ConditionTextBlock.MaxLines = 1;
+
+        RangeTextBlock.TextWrapping = TextWrapping.NoWrap;
+        RangeTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        RangeTextBlock.MaxLines = 1;
+
+        TemperatureTextBlock.TextWrapping = TextWrapping.NoWrap;
+        TemperatureTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        TemperatureTextBlock.MaxLines = 1;
     }
 
     public void ApplyCellSize(double cellSize)
@@ -261,6 +283,8 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         RangeTextBlock.Text = $"{FormatTemperature(today?.HighTemperatureC)}/{FormatTemperature(today?.LowTemperatureC)}";
 
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        var timelineStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Kind);
+        var sunsetSlotIndex = ResolveSunsetSlotIndex(snapshot, timelineStart, _hourlyTempBlocks.Length);
         var localHourly = snapshot.HourlyForecasts
             .Select(item => new { Source = item, Time = ConvertToConfiguredTime(item.Time) })
             .OrderBy(item => item.Time)
@@ -268,14 +292,16 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
-            var target = now.AddHours(i);
+            var target = timelineStart.AddHours(i);
             var item = localHourly
                 .OrderBy(entry => Math.Abs((entry.Time - target).TotalMinutes))
                 .FirstOrDefault();
             var weatherCode = item?.Source.WeatherCode ?? snapshot.Current.WeatherCode;
             var hourKind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, IsNightHour(target));
-            _hourlyTempBlocks[i].Text = FormatTemperature(item?.Source.TemperatureC ?? snapshot.Current.TemperatureC);
-            _hourlyTimeBlocks[i].Text = i == 0 ? L("weather.hourly.now", "Now") : target.ToString("HH:mm", CultureInfo.InvariantCulture);
+            _hourlyTempBlocks[i].Text = i == sunsetSlotIndex
+                ? L("weather.hourly.sunset", "Sunset")
+                : FormatTemperature(item?.Source.TemperatureC ?? snapshot.Current.TemperatureC);
+            _hourlyTimeBlocks[i].Text = target.ToString("HH:mm", CultureInfo.InvariantCulture);
             _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(hourKind));
         }
 
@@ -287,7 +313,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             var weatherCode = daily?.DayWeatherCode ?? daily?.NightWeatherCode ?? snapshot.Current.WeatherCode;
             var dayKind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, false);
             var dayText = ResolveWeatherText(daily?.DayWeatherText ?? daily?.NightWeatherText, dayKind);
-            _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(date, i + 1)} · {dayText}";
+            _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(date, i + 1)}·{dayText}";
             _dailyHighBlocks[i].Text = FormatTemperatureValue(daily?.HighTemperatureC);
             _dailyLowBlocks[i].Text = FormatTemperatureValue(daily?.LowTemperatureC);
             _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(dayKind));
@@ -302,17 +328,19 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         CityTextBlock.Text = L("weather.widget.location_unknown", "Unknown location");
         ConditionTextBlock.Text = L("weather.widget.loading", "Loading...");
         TemperatureTextBlock.Text = "--°";
-        RangeTextBlock.Text = "--/--";
+        RangeTextBlock.Text = "--°/--°";
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        var timelineStart = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Kind);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
-            _hourlyTempBlocks[i].Text = "--°";
-            _hourlyTimeBlocks[i].Text = i == 0 ? L("weather.hourly.now", "Now") : $"{(i + 14):00}:00";
+            _hourlyTempBlocks[i].Text = i == 3 ? L("weather.hourly.sunset", "Sunset") : "--°";
+            _hourlyTimeBlocks[i].Text = timelineStart.AddHours(i).ToString("HH:mm", CultureInfo.InvariantCulture);
             _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
         }
 
         for (var i = 0; i < _dailyLabelBlocks.Length; i++)
         {
-            _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(DateOnly.FromDateTime(DateTime.Now).AddDays(i + 1), i + 1)} · {L("weather.widget.condition_cloudy", "Cloudy")}";
+            _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(DateOnly.FromDateTime(DateTime.Now).AddDays(i + 1), i + 1)}·{L("weather.widget.condition_cloudy", "Cloudy")}";
             _dailyHighBlocks[i].Text = "--";
             _dailyLowBlocks[i].Text = "--";
             _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
@@ -331,17 +359,53 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
 
         var isNightVisual = kind is HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.CloudyNight;
-        TemperatureTextBlock.Foreground = CreateSolidBrush(palette.PrimaryText);
-        CityTextBlock.Foreground = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0xDC : (byte)0xCC);
-        ConditionTextBlock.Foreground = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xEE : (byte)0xE2);
-        RangeTextBlock.Foreground = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xDE : (byte)0xD2);
-        HourlyPanelBorder.Background = CreateSolidBrush(isNightVisual ? "#12FFFFFF" : "#0BFFFFFF");
+        var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
+            palette.GradientFrom,
+            palette.GradientTo,
+            palette.Tint,
+            isNightVisual);
+        TemperatureTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast);
+        CityTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.SecondaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xE6 : (byte)0xD4);
+        ConditionTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast,
+            isNightVisual ? (byte)0xED : (byte)0xDF);
+        RangeTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagLargeTextContrast,
+            isNightVisual ? (byte)0xE2 : (byte)0xCE);
+        HourlyPanelBorder.Background = Brushes.Transparent;
         SeparatorLine.Background = CreateSolidBrush(palette.SecondaryText, isNightVisual ? (byte)0x3A : (byte)0x28);
 
-        var hourlyTempBrush = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xEA : (byte)0xDC);
-        var hourlyTimeBrush = CreateSolidBrush(palette.TertiaryText, isNightVisual ? (byte)0xCA : (byte)0xB6);
-        var dailyTextBrush = CreateSolidBrush(palette.PrimaryText, isNightVisual ? (byte)0xE8 : (byte)0xDE);
-        var dailyLowBrush = CreateSolidBrush(palette.TertiaryText, isNightVisual ? (byte)0xB6 : (byte)0xA0);
+        var hourlyTempBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xEE : (byte)0xE1);
+        var hourlyTimeBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.TertiaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xC8 : (byte)0xAC);
+        var dailyTextBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.PrimaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xEA : (byte)0xDF);
+        var dailyLowBrush = WeatherTypographyAccessibility.CreateReadableBrush(
+            palette.TertiaryText,
+            backgroundSamples,
+            WeatherTypographyAccessibility.WcagNormalTextContrast,
+            isNightVisual ? (byte)0xBE : (byte)0xA6);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
             _hourlyTempBlocks[i].Foreground = hourlyTempBrush;
@@ -358,44 +422,41 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void ApplyTypography(double width, double height)
     {
-        var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Extended4x4);
         var scale = ResolveScale(width, height);
         var compactness = Math.Clamp((0.90 - scale) / 0.55, 0, 1);
-        LayoutRoot.RowSpacing = Math.Clamp(height * 0.014, 5, 14);
-        SummaryGrid.ColumnSpacing = Math.Clamp(width * 0.017, 8, 24);
-        HourlyGrid.ColumnSpacing = Math.Clamp(width * 0.008, 3, 10);
-        DailyGrid.RowSpacing = Math.Clamp(height * 0.010, 4, 11);
-        TemperatureTextBlock.FontSize = Math.Clamp(height * 0.19, 54, 162);
-        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 380, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-        CityTextBlock.FontSize = Math.Clamp(height * 0.042, 12, 32);
-        ConditionTextBlock.FontSize = Math.Clamp(height * 0.050, 13, 38);
-        RangeTextBlock.FontSize = Math.Clamp(height * 0.053, 13, 40);
-        CityTextBlock.FontWeight = ToVariableWeight(Lerp(520, 600, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-        ConditionTextBlock.FontWeight = ToVariableWeight(Lerp(560, 640, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-        RangeTextBlock.FontWeight = ToVariableWeight(Lerp(560, 650, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-        var iconSize = Math.Clamp(height * 0.112, 36, 96);
+        LayoutRoot.RowSpacing = Math.Clamp(height * 0.012, 5, 13);
+        SummaryGrid.ColumnSpacing = Math.Clamp(width * 0.016, 8, 22);
+        HourlyGrid.ColumnSpacing = Math.Clamp(width * 0.007, 3, 10);
+        DailyGrid.RowSpacing = Math.Clamp(height * 0.009, 4, 10);
+        TemperatureTextBlock.FontSize = Math.Clamp(height * 0.18, 52, 154);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 370, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+        CityTextBlock.FontSize = Math.Clamp(height * 0.040, 12, 30);
+        ConditionTextBlock.FontSize = Math.Clamp(height * 0.046, 13, 34);
+        RangeTextBlock.FontSize = Math.Clamp(height * 0.043, 12, 32);
+        CityTextBlock.FontWeight = ToVariableWeight(Lerp(520, 590, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+        ConditionTextBlock.FontWeight = ToVariableWeight(Lerp(560, 630, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+        RangeTextBlock.FontWeight = ToVariableWeight(Lerp(560, 620, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+        var iconSize = Math.Clamp(height * 0.116, 36, 102);
         WeatherIconImage.Width = iconSize;
         WeatherIconImage.Height = iconSize;
-        ConditionTextBlock.MaxWidth = Math.Clamp(width * 0.23, 86, 260);
-        RangeTextBlock.MaxWidth = Math.Clamp(width * 0.23, 86, 260);
-        CityTextBlock.MaxWidth = Math.Clamp(width * 0.30, 92, 300);
+        ConditionTextBlock.MaxWidth = Math.Clamp(width * 0.20, 80, 240);
+        RangeTextBlock.MaxWidth = Math.Clamp(width * 0.20, 80, 240);
+        CityTextBlock.MaxWidth = Math.Clamp(width * 0.28, 90, 290);
 
-        HourlyPanelBorder.Padding = new Thickness(
-            Math.Clamp(width * metrics.HorizontalPaddingScale * 0.16, 6, 16),
-            Math.Clamp(height * metrics.VerticalPaddingScale * 0.16, 5, 14));
-        HourlyPanelBorder.CornerRadius = new CornerRadius(Math.Clamp(height * 0.042, 10, 20));
+        HourlyPanelBorder.Padding = new Thickness(0);
+        HourlyPanelBorder.CornerRadius = new CornerRadius(0);
 
-        var hourlyBandHeight = Math.Clamp(height * 0.20, 74, 164);
+        var hourlyBandHeight = Math.Clamp(height * 0.195, 74, 160);
         var hourlyCellWidth = Math.Max(34, (width - HourlyPanelBorder.Padding.Left - HourlyPanelBorder.Padding.Right - (HourlyGrid.ColumnSpacing * 5)) / 6d);
-        var hourlyTempSize = Math.Clamp(hourlyBandHeight * 0.24, 10, 34);
-        var hourlyTimeSize = Math.Clamp(hourlyBandHeight * 0.18, 8, 24);
-        var hourlyIconSize = Math.Clamp(hourlyBandHeight * 0.20, 12, 32);
+        var hourlyTempSize = Math.Clamp(hourlyBandHeight * 0.24, 10, 32);
+        var hourlyTimeSize = Math.Clamp(hourlyBandHeight * 0.18, 8, 22);
+        var hourlyIconSize = Math.Clamp(hourlyBandHeight * 0.20, 12, 30);
         var hourlyStackSpacing = Math.Clamp(hourlyBandHeight * 0.03, 1, 4);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
             _hourlyTempBlocks[i].FontSize = hourlyTempSize;
             _hourlyTimeBlocks[i].FontSize = hourlyTimeSize;
-            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(540, 620, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(540, 610, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
             _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(Lerp(450, 530, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
             _hourlyTempBlocks[i].MaxWidth = hourlyCellWidth;
             _hourlyTimeBlocks[i].MaxWidth = hourlyCellWidth;
@@ -404,8 +465,8 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             if (_hourlyTempBlocks[i].Parent is StackPanel stack) stack.Spacing = hourlyStackSpacing;
         }
 
-        var dailyLabelSize = Math.Clamp(height * 0.043, 10, 32);
-        var dailyTempSize = Math.Clamp(height * 0.044, 10, 34);
+        var dailyLabelSize = Math.Clamp(height * 0.041, 10, 30);
+        var dailyTempSize = Math.Clamp(height * 0.043, 10, 33);
         var dailyIconSize = Math.Clamp(height * 0.040, 12, 30);
         var dailyLabelMaxWidth = Math.Clamp(width * (compactness > 0.3 ? 0.48 : 0.56), 120, 380);
         var dailyHighWidth = Math.Clamp(width * 0.11, 34, 72);
@@ -430,6 +491,67 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         }
     }
 
+    private int ResolveSunsetSlotIndex(WeatherSnapshot snapshot, DateTime startTime, int slotCount)
+    {
+        if (slotCount <= 0)
+        {
+            return -1;
+        }
+
+        var todayForecast = snapshot.DailyForecasts.FirstOrDefault(item => item.Date == DateOnly.FromDateTime(startTime));
+        if (todayForecast is null || !TryParseClockTime(todayForecast.SunsetTime, out var sunsetClock))
+        {
+            return -1;
+        }
+
+        var sunsetTime = startTime.Date + sunsetClock;
+        var bestIndex = -1;
+        var bestDelta = double.MaxValue;
+        for (var i = 0; i < slotCount; i++)
+        {
+            var slotTime = startTime.AddHours(i);
+            var deltaMinutes = Math.Abs((slotTime - sunsetTime).TotalMinutes);
+            if (deltaMinutes >= bestDelta)
+            {
+                continue;
+            }
+
+            bestDelta = deltaMinutes;
+            bestIndex = i;
+        }
+
+        return bestDelta <= 60 ? bestIndex : -1;
+    }
+
+    private static bool TryParseClockTime(string? text, out TimeSpan value)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            value = default;
+            return false;
+        }
+
+        var candidate = text.Trim();
+        if (TimeSpan.TryParse(candidate, CultureInfo.InvariantCulture, out value))
+        {
+            return true;
+        }
+
+        if (DateTimeOffset.TryParse(candidate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dto))
+        {
+            value = dto.TimeOfDay;
+            return true;
+        }
+
+        if (DateTime.TryParse(candidate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
+        {
+            value = dt.TimeOfDay;
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool IsNightHour(DateTime time) => time.Hour < 6 || time.Hour >= 18;
 
     private string ResolveDayLabel(DateOnly date, int offset)
@@ -448,14 +570,153 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private string ResolveLocation(string? rawLocation, string? fallbackLocation)
     {
         var input = string.IsNullOrWhiteSpace(rawLocation) ? fallbackLocation : rawLocation;
-        if (string.IsNullOrWhiteSpace(input))
+        return ResolvePreciseDisplayLocation(
+            input,
+            _languageCode,
+            L("weather.widget.location_unknown", "Unknown location"));
+    }
+
+    private static string ResolvePreciseDisplayLocation(string? rawName, string languageCode, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(rawName))
         {
-            return L("weather.widget.location_unknown", "Unknown location");
+            return fallback;
         }
 
-        var tokens = input.Split(['|', '/', '\\', ',', '，', '、'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (tokens.Length == 0) return input.Trim();
-        return string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase) ? tokens.OrderByDescending(item => item.Length).First() : tokens.Last();
+        var name = rawName.Trim();
+        if (name.Length == 0)
+        {
+            return fallback;
+        }
+
+        var isZh = string.Equals(languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase);
+        var candidates = new List<string> { name };
+
+        // Prefer detailed parts inside parenthesis, e.g. "Beijing (Haidian)".
+        var parenthesisMatches = Regex.Matches(name, @"\(([^()]+)\)|\uFF08([^\uFF08\uFF09]+)\uFF09");
+        foreach (Match match in parenthesisMatches)
+        {
+            var inner = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+            if (!string.IsNullOrWhiteSpace(inner))
+            {
+                candidates.Add(inner.Trim());
+            }
+        }
+
+        var nameWithoutParenthesis = Regex.Replace(name, @"\([^()]*\)|\uFF08[^\uFF08\uFF09]*\uFF09", " ");
+        candidates.Add(nameWithoutParenthesis);
+
+        const string splitPattern = @"[\s\|/\\,\uFF0C\u3001\u00B7]+";
+        foreach (var piece in Regex.Split(string.Join(" ", candidates), splitPattern))
+        {
+            var token = piece.Trim();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                candidates.Add(token);
+            }
+        }
+
+        var best = fallback;
+        var bestScore = int.MinValue;
+        foreach (var candidate in candidates
+                     .Select(c => c.Trim())
+                     .Where(c => !string.IsNullOrWhiteSpace(c))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var score = ScoreLocationToken(candidate, isZh);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(best) ? fallback : best;
+    }
+
+    private static int ScoreLocationToken(string token, bool isZh)
+    {
+        var cleaned = token.Trim();
+        if (cleaned.Length == 0)
+        {
+            return int.MinValue;
+        }
+
+        if (Regex.IsMatch(cleaned, @"^[0-9.+-]+$") ||
+            cleaned.StartsWith("coord:", StringComparison.OrdinalIgnoreCase))
+        {
+            return -500;
+        }
+
+        var score = Math.Min(cleaned.Length, 32);
+        if (isZh)
+        {
+            // Prefer granular places: street > district > city > province.
+            if (cleaned.EndsWith("\u8857\u9053", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u8DEF", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u793E\u533A", StringComparison.Ordinal) ||
+                cleaned.EndsWith("\u6751", StringComparison.Ordinal))
+            {
+                score += 120;
+            }
+            else if (cleaned.EndsWith("\u9547", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u4E61", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u65B0\u533A", StringComparison.Ordinal))
+            {
+                score += 100;
+            }
+            else if (cleaned.EndsWith("\u533A", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u53BF", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u65D7", StringComparison.Ordinal))
+            {
+                score += 80;
+            }
+            else if (cleaned.EndsWith("\u5E02", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u5DDE", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u76DF", StringComparison.Ordinal))
+            {
+                score += 60;
+            }
+            else if (cleaned.EndsWith("\u7701", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u81EA\u6CBB\u533A", StringComparison.Ordinal) ||
+                     cleaned.EndsWith("\u7279\u522B\u884C\u653F\u533A", StringComparison.Ordinal))
+            {
+                score += 40;
+            }
+        }
+        else
+        {
+            var lower = cleaned.ToLowerInvariant();
+            if (lower.Contains("street", StringComparison.Ordinal) ||
+                lower.Contains("st.", StringComparison.Ordinal) ||
+                lower.Contains("road", StringComparison.Ordinal) ||
+                lower.Contains("rd.", StringComparison.Ordinal) ||
+                lower.Contains("avenue", StringComparison.Ordinal) ||
+                lower.Contains("district", StringComparison.Ordinal))
+            {
+                score += 120;
+            }
+            else if (lower.Contains("county", StringComparison.Ordinal) ||
+                     lower.Contains("borough", StringComparison.Ordinal))
+            {
+                score += 90;
+            }
+            else if (lower.Contains("city", StringComparison.Ordinal))
+            {
+                score += 70;
+            }
+            else if (lower.Contains("province", StringComparison.Ordinal) ||
+                     lower.Contains("state", StringComparison.Ordinal))
+            {
+                score += 50;
+            }
+            else if (lower.Contains("country", StringComparison.Ordinal))
+            {
+                score += 30;
+            }
+        }
+
+        return score;
     }
 
     private string ResolveWeatherText(string? weatherText, HyperOS3WeatherVisualKind kind)
@@ -518,8 +779,15 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void SetLoadingSkeleton(bool isLoading)
     {
-        CityInfoBadge.Background = isLoading ? CreateSolidBrush("#24FFFFFF") : Brushes.Transparent;
-        ConditionInfoBadge.Background = isLoading ? CreateSolidBrush("#1DFFFFFF") : Brushes.Transparent;
+        var opacity = isLoading ? 0.58 : 1.0;
+        TemperatureTextBlock.Opacity = opacity;
+        ConditionTextBlock.Opacity = opacity;
+        RangeTextBlock.Opacity = opacity;
+        CityTextBlock.Opacity = isLoading ? 0.50 : 0.96;
+        for (var i = 0; i < _hourlyTempBlocks.Length; i++)
+        {
+            _hourlyTempBlocks[i].Opacity = opacity;
+            _hourlyTimeBlocks[i].Opacity = isLoading ? 0.74 : 0.94;
+        }
     }
 }
-

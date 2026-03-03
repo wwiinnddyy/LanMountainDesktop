@@ -20,7 +20,7 @@
             <Border x:Name="BackgroundMotionLayer"
                     CornerRadius="30"
                     ClipToBounds="True"
-                    Opacity="0.24"
+                    Opacity="0.20"
                     RenderTransformOrigin="0.5,0.5">
                 <Border.RenderTransform>
                     <TransformGroup>
@@ -34,21 +34,21 @@
             <Border x:Name="BackgroundTintLayer"
                     CornerRadius="30"
                     ClipToBounds="True"
-                    Opacity="0.20" />
+                    Opacity="0.16" />
 
             <Border x:Name="BackgroundLightLayer"
                     CornerRadius="30"
                     ClipToBounds="True"
-                    Opacity="0.66">
+                    Opacity="0.62">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0"
                                          EndPoint="1,1">
-                        <GradientStop Color="#5BFFFFFF"
+                        <GradientStop Color="#52FFFFFF"
                                       Offset="0" />
-                        <GradientStop Color="#1FFFFFFF"
+                        <GradientStop Color="#1AFFFFFF"
                                       Offset="0.30" />
                         <GradientStop Color="#00000000"
-                                      Offset="0.55" />
+                                      Offset="0.56" />
                     </LinearGradientBrush>
                 </Border.Background>
             </Border>
@@ -56,13 +56,13 @@
             <Border x:Name="BackgroundShadeLayer"
                     CornerRadius="30"
                     ClipToBounds="True"
-                    Opacity="0.78">
+                    Opacity="0.74">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0"
                                          EndPoint="0,1">
-                        <GradientStop Color="#00040A16"
-                                      Offset="0.50" />
-                        <GradientStop Color="#2E0B1C34"
+                        <GradientStop Color="#00000000"
+                                      Offset="0.46" />
+                        <GradientStop Color="#2009182D"
                                       Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>
@@ -73,83 +73,87 @@
                     ClipToBounds="True" />
 
             <Border x:Name="ContentPaddingBorder"
-                    Padding="16"
+                    Padding="18,16"
                     Background="Transparent">
                 <Grid x:Name="LayoutRoot">
                     <Grid x:Name="ContentGrid"
                           RowDefinitions="Auto,*,Auto"
-                          RowSpacing="2">
+                          RowSpacing="0">
                         <Grid x:Name="TopRowGrid"
                               Grid.Row="0"
-                              ColumnDefinitions="Auto,*">
+                              ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="6">
                             <TextBlock x:Name="TemperatureTextBlock"
                                        Grid.Column="0"
-                                       Text="26°"
-                                       FontSize="96"
+                                       Text="7°"
+                                       FontSize="88"
                                        FontWeight="Light"
                                        FontFeatures="tnum"
                                        VerticalAlignment="Top"
-                                       Margin="0,-1,0,0"
+                                       Margin="-1,-7,0,0"
                                        TextTrimming="CharacterEllipsis"
                                        MaxLines="1" />
 
                             <Image x:Name="WeatherIconImage"
-                                    Grid.Column="1"
-                                   Width="76"
-                                   Height="76"
+                                   Grid.Column="2"
+                                   Width="84"
+                                   Height="84"
                                    HorizontalAlignment="Right"
                                    VerticalAlignment="Top"
+                                   Margin="0,-4,0,0"
                                    Stretch="Uniform" />
                         </Grid>
-
-                        <Border x:Name="ConditionInfoBadge"
-                                   Grid.Row="1"
-                                   Background="Transparent"
-                                   HorizontalAlignment="Left"
-                                   VerticalAlignment="Center"
-                                   Padding="0">
-                            <StackPanel Orientation="Vertical"
-                                        Spacing="0"
-                                        VerticalAlignment="Center">
-                                <TextBlock x:Name="ConditionTextBlock"
-                                           Text="Clear"
-                                           FontSize="44"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-
-                                <TextBlock x:Name="RangeTextBlock"
-                                           Text="20°/28°"
-                                           FontSize="46"
-                                           FontWeight="SemiBold"
-                                           FontFeatures="tnum"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-                            </StackPanel>
-                        </Border>
 
                         <StackPanel x:Name="BottomInfoStack"
                                     Grid.Row="2"
                                     VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Left"
                                     Spacing="0"
-                                    Margin="0,0,0,1">
+                                    Margin="0,0,0,2">
+                            <StackPanel x:Name="ConditionStack"
+                                        Orientation="Vertical"
+                                        Spacing="2"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Bottom"
+                                        Margin="0,0,0,1">
+                                <TextBlock x:Name="ConditionTextBlock"
+                                           Text="雾"
+                                           FontSize="26"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Left"
+                                           TextAlignment="Left"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+                                <TextBlock x:Name="RangeTextBlock"
+                                           Text="11°/4°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Left"
+                                           TextAlignment="Left"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+                            </StackPanel>
                             <Border x:Name="CityInfoBadge"
-                                    Background="#24FFFFFF"
-                                    CornerRadius="13"
-                                    Padding="10,5"
+                                    Background="Transparent"
+                                    CornerRadius="0"
+                                    Padding="0"
                                     HorizontalAlignment="Left">
                                 <StackPanel Orientation="Horizontal"
-                                            Spacing="6"
+                                            Spacing="0"
+                                            HorizontalAlignment="Left"
                                             VerticalAlignment="Center">
                                     <fi:SymbolIcon x:Name="LocationIcon"
                                                    Symbol="Location"
-                                                   FontSize="14"
+                                                   FontSize="12"
                                                    IsVisible="False"
                                                    VerticalAlignment="Center" />
                                     <TextBlock x:Name="CityTextBlock"
-                                               Text="Beijing"
-                                               FontSize="23"
-                                               FontWeight="Medium"
+                                               Text="北京"
+                                               FontSize="17"
+                                               FontWeight="Regular"
+                                               HorizontalAlignment="Left"
+                                               TextAlignment="Left"
                                                VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis"
                                                MaxLines="1" />
@@ -162,4 +166,3 @@
         </Grid>
     </Border>
 </UserControl>
-

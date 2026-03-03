@@ -1155,6 +1155,14 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 4, HeightUnit: 3, MinScale: 1)); // 4x3, 8x6...
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopDailyPoetry, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep recommendation card at a 2:1 ratio with a minimum footprint of 4x2.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
         return span;
     }
 
@@ -2222,6 +2230,11 @@ public partial class MainWindow
             return Symbol.Play;
         }
 
+        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Apps;
+        }
+
         return Symbol.Apps;
     }
 
@@ -2250,6 +2263,11 @@ public partial class MainWindow
         if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.media", "Media");
+        }
+
+        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.info", "Info");
         }
 
         return categoryId;

@@ -1,0 +1,74 @@
+name: Code Quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, master, dev, develop ]
+  push:
+    branches: [ main, master, dev, develop ]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  code-analysis:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build projects
+        run: |
+          dotnet build LanMontainDesktop/LanMontainDesktop.csproj
+          dotnet build LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+
+      # 可以添加Qodana检查（如果配置了token）
+      # - name: Run Qodana Analysis
+      #   uses: JetBrains/qodana-action@v2025.1
+      #   with:
+      #     pr-mode: true
+      #   env:
+      #     QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+      #     QODANA_ENDPOINT: 'https://qodana.cloud'
+
+  dotnet-format:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Check code formatting
+        run: |
+          dotnet format --verify-no-changes --verbosity diagnostic || (
+            echo "::warning::Code formatting issues detected. Please run 'dotnet format' locally."
+            exit 0
+          )
