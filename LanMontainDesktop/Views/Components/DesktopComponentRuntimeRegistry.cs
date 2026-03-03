@@ -146,6 +146,16 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new MultiDayWeatherWidget(),
                     cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopExtendedWeather,
+                    "component.extended_weather",
+                    () => new ExtendedWeatherWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopClassSchedule,
+                    "component.class_schedule",
+                    () => new ClassScheduleWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWhiteboard,
                     "component.whiteboard",
                     () => new WhiteboardWidget(),

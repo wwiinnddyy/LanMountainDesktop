@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LanMontainDesktop.Views.Components.ClassScheduleWidget">
+    <Border x:Name="RootBorder"
+            ClipToBounds="True"
+            CornerRadius="28"
+            BorderThickness="1">
+        <Grid x:Name="LayoutGrid"
+              RowDefinitions="Auto,*">
+            <Grid x:Name="HeaderGrid"
+                  ColumnDefinitions="*,Auto">
+                <StackPanel x:Name="DateGroup"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Top">
+                    <TextBlock x:Name="MonthTextBlock"
+                               Text="7"
+                               FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="SlashTextBlock"
+                               Text="/"
+                               FontWeight="Bold" />
+                    <TextBlock x:Name="DayTextBlock"
+                               Text="24"
+                               FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <StackPanel x:Name="MetaStack"
+                            Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                    <TextBlock x:Name="WeekdayTextBlock"
+                               Text="周一"
+                               TextAlignment="Right"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="ClassCountTextBlock"
+                               Text="0节课"
+                               TextAlignment="Right"
+                               FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <ScrollViewer x:Name="ContentScrollViewer"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="CourseListPanel" />
+                </ScrollViewer>
+
+                <TextBlock x:Name="StatusTextBlock"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           TextAlignment="Center"
+                           IsVisible="False"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

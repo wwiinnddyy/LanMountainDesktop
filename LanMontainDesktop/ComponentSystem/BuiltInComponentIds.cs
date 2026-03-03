@@ -9,6 +9,8 @@ public static class BuiltInComponentIds
     public const string DesktopWeather = "DesktopWeather";
     public const string DesktopHourlyWeather = "DesktopHourlyWeather";
     public const string DesktopMultiDayWeather = "DesktopMultiDayWeather";
+    public const string DesktopExtendedWeather = "DesktopExtendedWeather";
+    public const string DesktopClassSchedule = "DesktopClassSchedule";
     public const string Blank2x4 = "Blank2x4";
     public const string Date = "Date";
     public const string MonthCalendar = "MonthCalendar";

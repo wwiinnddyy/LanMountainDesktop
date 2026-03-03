@@ -177,6 +177,8 @@ public partial class MainWindow
             "Choose how weather widgets resolve location.");
         WeatherLocationModeCityItem.Content = L("settings.weather.mode_city_search", "City Search");
         WeatherLocationModeCoordinatesItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
+        WeatherLocationModeCityChipItem.Content = L("settings.weather.mode_city_search", "City Search");
+        WeatherLocationModeCoordinatesChipItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
         WeatherAutoRefreshToggleSwitch.Content = L("settings.weather.auto_refresh", "Auto refresh location on startup");
 
         WeatherCitySearchSettingsExpander.Header = L("settings.weather.city_search_header", "City Search");
@@ -197,11 +199,29 @@ public partial class MainWindow
         WeatherLocationNameTextBox.Watermark = L("settings.weather.location_name_placeholder", "Display name (optional)");
         WeatherApplyCoordinatesButton.Content = L("settings.weather.apply_coordinates_button", "Apply Coordinates");
 
-        WeatherPreviewSettingsExpander.Header = L("settings.weather.preview_header", "Connection Test");
+        WeatherPreviewSettingsExpander.Header = L("settings.weather.preview_panel_header", "Weather Preview");
         WeatherPreviewSettingsExpander.Description = L(
-            "settings.weather.preview_desc",
-            "Send one test request to verify current settings.");
-        WeatherPreviewButton.Content = L("settings.weather.preview_button", "Test Fetch");
+            "settings.weather.preview_panel_desc",
+            "Refresh and verify current weather service status.");
+        WeatherPreviewButton.Content = L("settings.weather.refresh_button", "Refresh");
+
+        WeatherAlertFilterSettingsExpander.Header = L("settings.weather.alert_filter_header", "Excluded Alerts");
+        WeatherAlertFilterSettingsExpander.Description = L(
+            "settings.weather.alert_filter_desc",
+            "Alerts containing these words will not be shown. One rule per line.");
+        WeatherExcludedAlertsTextBox.Watermark = L("settings.weather.alert_filter_placeholder", "One keyword per line");
+
+        WeatherIconPackSettingsExpander.Header = L("settings.weather.icon_style_header", "Weather Icon Style");
+        WeatherIconPackSettingsExpander.Description = L(
+            "settings.weather.icon_style_desc",
+            "Choose Fluent Icon style for weather symbols.");
+        WeatherIconPackFluentRegularItem.Content = L("settings.weather.icon_style_fluent_regular", "Fluent Regular");
+        WeatherIconPackFluentFilledItem.Content = L("settings.weather.icon_style_fluent_filled", "Fluent Filled");
+
+        WeatherNoTlsSettingsExpander.Header = L("settings.weather.no_tls_header", "No TLS Weather Request");
+        WeatherNoTlsSettingsExpander.Description = L(
+            "settings.weather.no_tls_desc",
+            "Not recommended. Enable only for incompatible network environments.");
 
         if (string.IsNullOrWhiteSpace(_weatherSearchKeyword))
         {

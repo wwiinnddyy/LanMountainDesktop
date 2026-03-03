@@ -18,6 +18,7 @@ public sealed record WeatherCurrentCondition(
     double? WindSpeedKph,
     double? WindDirectionDegree,
     int? WeatherCode,
+    bool? IsDaylight,
     string? WeatherText);
 
 public sealed record WeatherDailyForecast(

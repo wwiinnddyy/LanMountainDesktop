@@ -1076,9 +1076,14 @@
 </Border>
                                  </StackPanel>
                                 
-                                <StackPanel x:Name="WeatherSettingsPanel"
-                                            IsVisible="False"
-                                            Spacing="16">
+                                <ScrollViewer x:Name="WeatherSettingsPanel"
+                                              IsVisible="False"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="WeatherSettingsContentPanel"
+                                                Margin="0,0,8,0"
+                                                Spacing="16"
+                                                Classes="settings-animated-intro">
                                     <TextBlock x:Name="WeatherPanelTitleTextBlock"
                                                FontSize="24"
                                                FontWeight="SemiBold"
@@ -1086,13 +1091,74 @@
                                                Text="&#22825;&#27668;" />
 
                                     <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherPreviewSettingsExpander"
+                                                             Header="Weather Preview"
+                                                             Description="Refresh and verify current weather service status."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                                          ColumnSpacing="12">
+                                                        <Border Width="44"
+                                                                Height="44"
+                                                                CornerRadius="{DynamicResource DesignCornerRadiusXs}"
+                                                                BorderThickness="1"
+                                                                BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                                                                Background="{DynamicResource AdaptiveButtonBackgroundBrush}">
+                                                            <fi:SymbolIcon x:Name="WeatherPreviewIconSymbol"
+                                                                           Symbol="WeatherSunny"
+                                                                           IconVariant="Regular"
+                                                                           FontSize="22"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center" />
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Spacing="2">
+                                                            <TextBlock x:Name="WeatherPreviewTemperatureTextBlock"
+                                                                       FontSize="22"
+                                                                       FontWeight="SemiBold"
+                                                                       Text="--°" />
+                                                            <TextBlock x:Name="WeatherPreviewUpdatedTextBlock"
+                                                                       FontSize="12"
+                                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                                       Text="-" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2"
+                                                                    Orientation="Horizontal"
+                                                                    VerticalAlignment="Center"
+                                                                    Spacing="8">
+                                                            <Button x:Name="WeatherPreviewButton"
+                                                                    Padding="12,8"
+                                                                    Click="OnTestWeatherRequestClick"
+                                                                    Content="Refresh" />
+                                                            <ui:ProgressRing x:Name="WeatherPreviewProgressRing"
+                                                                             Width="20"
+                                                                             Height="20"
+                                                                             IsActive="True"
+                                                                             IsVisible="False" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <TextBlock x:Name="WeatherPreviewResultTextBlock"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               TextWrapping="Wrap"
+                                                               Text="Use refresh to verify your weather configuration." />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
                                         <ui:SettingsExpander x:Name="WeatherLocationSettingsExpander"
                                                              Header="Location Source"
-                                                             Description="Choose how weather widgets resolve location.">
+                                                             Description="Choose how weather widgets resolve location."
+                                                             IsExpanded="True">
                                             <ui:SettingsExpander.Footer>
                                                 <StackPanel Spacing="10">
                                                     <ComboBox x:Name="WeatherLocationModeComboBox"
                                                               Width="220"
+                                                              IsVisible="False"
                                                               SelectionChanged="OnWeatherLocationModeSelectionChanged">
                                                         <ComboBoxItem x:Name="WeatherLocationModeCityItem"
                                                                       Tag="CitySearch"
@@ -1101,6 +1167,24 @@
                                                                       Tag="Coordinates"
                                                                       Content="Coordinates" />
                                                     </ComboBox>
+
+                                                    <ListBox x:Name="WeatherLocationModeChipListBox"
+                                                             Classes="settings-chip-list"
+                                                             SelectionMode="Single"
+                                                             SelectionChanged="OnWeatherLocationModeChipSelectionChanged">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal" />
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBoxItem x:Name="WeatherLocationModeCityChipItem"
+                                                                     Tag="CitySearch"
+                                                                     Content="City Search" />
+                                                        <ListBoxItem x:Name="WeatherLocationModeCoordinatesChipItem"
+                                                                     Tag="Coordinates"
+                                                                     Content="Coordinates" />
+                                                    </ListBox>
+
                                                     <ToggleSwitch x:Name="WeatherAutoRefreshToggleSwitch"
                                                                   Checked="OnWeatherAutoRefreshToggled"
                                                                   Unchecked="OnWeatherAutoRefreshToggled"
@@ -1113,7 +1197,8 @@
                                     <Border Classes="settings-expander-shell">
                                         <ui:SettingsExpander x:Name="WeatherCitySearchSettingsExpander"
                                                              Header="City Search"
-                                                             Description="Search cities and apply one weather location.">
+                                                             Description="Search cities and apply one weather location."
+                                                             IsExpanded="True">
                                             <ui:SettingsExpander.Footer>
                                                 <StackPanel Spacing="10">
                                                     <Grid ColumnDefinitions="*,Auto,Auto"
@@ -1155,7 +1240,8 @@
                                         <ui:SettingsExpander x:Name="WeatherCoordinateSettingsExpander"
                                                              Header="Coordinates"
                                                              Description="Set latitude/longitude and optional key/name."
-                                                             IsVisible="False">
+                                                             IsVisible="False"
+                                                             IsExpanded="True">
                                             <ui:SettingsExpander.Footer>
                                                 <StackPanel Spacing="10">
                                                     <Grid ColumnDefinitions="*,*"
@@ -1200,38 +1286,60 @@
                                     </Border>
 
                                     <Border Classes="settings-expander-shell">
-                                        <ui:SettingsExpander x:Name="WeatherPreviewSettingsExpander"
-                                                             Header="Connection Test"
-                                                             Description="Send one test request to verify current settings.">
+                                        <ui:SettingsExpander x:Name="WeatherAlertFilterSettingsExpander"
+                                                             Header="Excluded Alerts"
+                                                             Description="Alerts containing these words will not be shown. One rule per line."
+                                                             IsExpanded="True">
                                             <ui:SettingsExpander.Footer>
-                                                <StackPanel Spacing="10">
-                                                    <StackPanel Orientation="Horizontal"
-                                                                Spacing="8">
-                                                        <Button x:Name="WeatherPreviewButton"
-                                                                Padding="12,8"
-                                                                Click="OnTestWeatherRequestClick"
-                                                                Content="Test Fetch" />
-                                                        <ui:ProgressRing x:Name="WeatherPreviewProgressRing"
-                                                                         Width="24"
-                                                                         Height="24"
-                                                                         IsActive="True"
-                                                                         IsVisible="False" />
-                                                    </StackPanel>
-
-                                                    <TextBlock x:Name="WeatherPreviewResultTextBlock"
-                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                               TextWrapping="Wrap"
-                                                               Text="Use test fetch to verify your weather configuration." />
-                                                </StackPanel>
+                                                <TextBox x:Name="WeatherExcludedAlertsTextBox"
+                                                         MinHeight="96"
+                                                         MaxHeight="220"
+                                                         Width="360"
+                                                         TextWrapping="Wrap"
+                                                         AcceptsReturn="True"
+                                                         LostFocus="OnWeatherExcludedAlertsLostFocus" />
                                             </ui:SettingsExpander.Footer>
                                         </ui:SettingsExpander>
                                     </Border>
 
-                                    <TextBlock x:Name="WeatherLocationStatusTextBlock"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="No city location is configured." />
-                                </StackPanel>
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherIconPackSettingsExpander"
+                                                             Header="Weather Icon Style"
+                                                             Description="Choose Fluent Icon style for weather symbols."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <ComboBox x:Name="WeatherIconPackComboBox"
+                                                          Width="240"
+                                                          SelectionChanged="OnWeatherIconPackSelectionChanged">
+                                                    <ComboBoxItem x:Name="WeatherIconPackFluentRegularItem"
+                                                                  Tag="FluentRegular"
+                                                                  Content="Fluent Regular" />
+                                                    <ComboBoxItem x:Name="WeatherIconPackFluentFilledItem"
+                                                                  Tag="FluentFilled"
+                                                                  Content="Fluent Filled" />
+                                                </ComboBox>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
 
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="WeatherNoTlsSettingsExpander"
+                                                             Header="No TLS Weather Request"
+                                                             Description="Not recommended. Enable only for incompatible network environments."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <ToggleSwitch x:Name="WeatherNoTlsToggleSwitch"
+                                                              Checked="OnWeatherNoTlsToggled"
+                                                              Unchecked="OnWeatherNoTlsToggled" />
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                        <TextBlock x:Name="WeatherLocationStatusTextBlock"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                   Text="No city location is configured." />
+                                    </StackPanel>
+                                </ScrollViewer>
                                  <StackPanel x:Name="RegionSettingsPanel"
                                              IsVisible="False"
                                             Spacing="16">
@@ -1498,4 +1606,5 @@
     </Grid>
 
 </Window>
+
 

@@ -55,6 +55,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private bool? _isNightModeApplied;
     private string _languageCode = "zh-CN";
     private Symbol _activeWeatherSymbol = Symbol.WeatherPartlyCloudyDay;
+    private HyperOS3WeatherVisualKind _activeVisualKind = HyperOS3WeatherVisualKind.CloudyDay;
 
     public WeatherClockWidget()
     {
@@ -104,6 +105,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
+        var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.WeatherClock2x1);
         var scale = ResolveScale();
         var targetHeight = Bounds.Height > 1
             ? Math.Clamp(Bounds.Height, 38, 160)
@@ -111,9 +113,10 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         var targetWidth = Bounds.Width > 1
             ? Math.Clamp(Bounds.Width, 48, 520)
             : Math.Clamp(_currentCellSize * 2.15, 88, 260);
-        var compactness = Math.Clamp((170 - targetWidth) / 78d, 0, 1);
-        var compactFactor = Lerp(1, 0.72, compactness);
-        var cornerRadius = Math.Clamp(targetHeight * 0.40, 15, 36);
+        var compactness = Math.Clamp((176 - targetWidth) / 86d, 0, 1);
+        var ultraCompact = targetWidth < 126 || targetHeight < 46;
+        var compactFactor = Lerp(1, ultraCompact ? 0.64 : 0.72, compactness);
+        var cornerRadius = Math.Clamp(targetHeight * metrics.CornerRadiusScale, 15, 36);
 
         var horizontalPadding = Math.Clamp(targetHeight * Lerp(0.18, 0.12, compactness), 5, 30);
         var verticalPadding = Math.Clamp(targetHeight * Lerp(0.14, 0.10, compactness), 3, 20);
@@ -121,31 +124,75 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
         RootBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
-        var columnSpacing = Math.Clamp(targetHeight * Lerp(0.16, 0.08, compactness), 3, 22);
-        ContentGrid.ColumnSpacing = columnSpacing;
+        var columnSpacing = Math.Clamp(targetHeight * Lerp(0.16, 0.08, compactness), 2, 22);
         LeftStack.Spacing = Math.Clamp(targetHeight * Lerp(0.06, 0.04, compactness), 1.5, 10);
         DateWeatherStack.Spacing = Math.Clamp(targetHeight * Lerp(0.10, 0.06, compactness), 3, 14);
 
-        TimeTextBlock.FontSize = Math.Clamp(31 * scale * compactFactor, 14, 62);
-        DateTextBlock.FontSize = Math.Clamp(15.5 * scale * compactFactor, 9, 30);
-        WeatherIconSymbol.FontSize = Math.Clamp(17 * scale * compactFactor, 10, 32);
+        var contentHeight = Math.Max(24, targetHeight - (verticalPadding * 2));
+        var contentWidth = Math.Max(48, targetWidth - (horizontalPadding * 2));
+        var minimumLeftWidth = Math.Clamp(contentWidth * Lerp(0.56, 0.64, compactness), ultraCompact ? 34 : 52, 360);
+        var maxDialByWidth = Math.Max(0, contentWidth - minimumLeftWidth - columnSpacing);
+        var dialByHeight = contentHeight * Lerp(0.94, 0.82, compactness);
+        var dialMinSize = ultraCompact ? 14 : 20;
+        var dialSize = Math.Min(dialByHeight, maxDialByWidth);
+        if (dialSize < dialMinSize && maxDialByWidth >= dialMinSize * 0.8)
+        {
+            dialSize = dialMinSize;
+        }
+
+        dialSize = Math.Clamp(dialSize, 0, 140);
+        var showDial = dialSize >= 12;
+        if (!showDial)
+        {
+            dialSize = 0;
+            columnSpacing = 0;
+        }
+
+        var leftContentWidth = Math.Max(0, contentWidth - (showDial ? dialSize + columnSpacing : 0));
+        if (showDial && leftContentWidth < 26)
+        {
+            var fittedDial = Math.Max(12, Math.Min(dialSize, Math.Max(0, contentWidth - columnSpacing - 26)));
+            dialSize = fittedDial;
+            leftContentWidth = Math.Max(0, contentWidth - dialSize - columnSpacing);
+            if (leftContentWidth < 20)
+            {
+                showDial = false;
+                dialSize = 0;
+                columnSpacing = 0;
+                leftContentWidth = contentWidth;
+            }
+        }
+
+        ContentGrid.ColumnSpacing = showDial ? columnSpacing : 0;
+        if (ContentGrid.ColumnDefinitions.Count >= 2)
+        {
+            ContentGrid.ColumnDefinitions[0].Width = new GridLength(leftContentWidth, GridUnitType.Pixel);
+            ContentGrid.ColumnDefinitions[1].Width = new GridLength(showDial ? dialSize : 0, GridUnitType.Pixel);
+        }
+
+        var leftWidthFactor = Math.Clamp(leftContentWidth / 122d, 0.48, 1.35);
+        TimeTextBlock.FontSize = Math.Clamp((metrics.PrimaryTemperatureFont * 0.74) * scale * compactFactor * leftWidthFactor, 10, 62);
+        DateTextBlock.FontSize = Math.Clamp(metrics.SecondaryTextFont * scale * compactFactor * leftWidthFactor, 8, 30);
+        WeatherIconSymbol.FontSize = Math.Clamp(metrics.IconFont * scale * compactFactor * leftWidthFactor, 9, 32);
 
         TimeTextBlock.FontWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
         DateTextBlock.FontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
 
-        var contentHeight = Math.Max(24, targetHeight - (verticalPadding * 2));
-        var contentWidth = Math.Max(48, targetWidth - (horizontalPadding * 2));
-        var minimumLeftWidth = Math.Clamp(contentWidth * Lerp(0.56, 0.64, compactness), 52, 360);
-        var maxDialByWidth = Math.Max(18, contentWidth - minimumLeftWidth - columnSpacing);
-        var dialByHeight = contentHeight * Lerp(0.94, 0.84, compactness);
-        var dialSize = Math.Clamp(Math.Min(dialByHeight, maxDialByWidth), 20, 140);
-        var leftContentWidth = Math.Max(26, contentWidth - dialSize - columnSpacing);
-
+        LeftStack.Width = leftContentWidth;
         LeftStack.MaxWidth = leftContentWidth;
         DateWeatherStack.MaxWidth = leftContentWidth;
         TimeTextBlock.MaxWidth = leftContentWidth;
-        DateTextBlock.MaxWidth = Math.Max(18, leftContentWidth - WeatherIconSymbol.FontSize - DateWeatherStack.Spacing);
 
+        var showDateLine = leftContentWidth >= Math.Max(40, TimeTextBlock.FontSize * 1.72);
+        DateWeatherStack.IsVisible = showDateLine;
+        WeatherIconSymbol.IsVisible = showDateLine && leftContentWidth >= Math.Max(56, DateTextBlock.FontSize * 2.4);
+
+        var dateReservedWidth = WeatherIconSymbol.IsVisible
+            ? WeatherIconSymbol.FontSize + DateWeatherStack.Spacing
+            : 0;
+        DateTextBlock.MaxWidth = Math.Max(12, leftContentWidth - dateReservedWidth);
+
+        AnalogDialBorder.IsVisible = showDial;
         AnalogDialBorder.Width = dialSize;
         AnalogDialBorder.Height = dialSize;
         AnalogDialBorder.CornerRadius = new CornerRadius(dialSize / 2d);
@@ -264,17 +311,19 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private void ApplyWeatherSnapshot(WeatherSnapshot snapshot)
     {
         var isNight = ResolveIsNight(snapshot);
-        _activeWeatherSymbol = ResolveWeatherSymbol(snapshot.Current.WeatherCode, isNight);
+        _activeVisualKind = HyperOS3WeatherTheme.ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
+        _activeWeatherSymbol = HyperOS3WeatherTheme.ResolveWeatherSymbol(_activeVisualKind);
         WeatherIconSymbol.Symbol = _activeWeatherSymbol;
-        WeatherIconSymbol.Foreground = CreateBrush(ResolveWeatherIconColor(_activeWeatherSymbol, isNight));
+        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
     }
 
     private void ApplyDefaultWeatherIcon()
     {
         var isNight = IsNightNow();
-        _activeWeatherSymbol = isNight ? Symbol.WeatherMoon : Symbol.WeatherPartlyCloudyDay;
+        _activeVisualKind = isNight ? HyperOS3WeatherVisualKind.ClearNight : HyperOS3WeatherVisualKind.CloudyDay;
+        _activeWeatherSymbol = HyperOS3WeatherTheme.ResolveWeatherSymbol(_activeVisualKind);
         WeatherIconSymbol.Symbol = _activeWeatherSymbol;
-        WeatherIconSymbol.Foreground = CreateBrush(ResolveWeatherIconColor(_activeWeatherSymbol, isNight));
+        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
     }
 
     private void UpdateClockVisual()
@@ -381,7 +430,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         CenterDotInner.Fill = CreateBrush("#1A74F2");
 
         BuildTicks(isNightMode);
-        WeatherIconSymbol.Foreground = CreateBrush(ResolveWeatherIconColor(_activeWeatherSymbol, isNightMode));
+        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
     }
 
     private WeatherClockConfig LoadConfig()
@@ -442,26 +491,10 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
 
     private bool ResolveIsNight(WeatherSnapshot snapshot)
     {
-        if (snapshot.ObservationTime.HasValue)
-        {
-            var observed = snapshot.ObservationTime.Value;
-            try
-            {
-                if (_timeZoneService is not null)
-                {
-                    var zoned = TimeZoneInfo.ConvertTime(observed, _timeZoneService.CurrentTimeZone);
-                    return zoned.Hour < 6 || zoned.Hour >= 18;
-                }
-            }
-            catch
-            {
-                // Fall through to local observation.
-            }
-
-            return observed.Hour < 6 || observed.Hour >= 18;
-        }
-
-        return IsNightNow();
+        return HyperOS3WeatherTheme.ResolveIsNightPreferred(
+            snapshot,
+            _timeZoneService?.CurrentTimeZone,
+            _timeZoneService?.GetCurrentTime() ?? DateTime.Now);
     }
 
     private bool IsNightNow()
@@ -489,37 +522,6 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         }
 
         return false;
-    }
-
-    private static Symbol ResolveWeatherSymbol(int? weatherCode, bool isNight)
-    {
-        return weatherCode switch
-        {
-            0 => isNight ? Symbol.WeatherMoon : Symbol.WeatherSunny,
-            1 or 2 => isNight ? Symbol.WeatherPartlyCloudyNight : Symbol.WeatherPartlyCloudyDay,
-            3 or 7 => Symbol.WeatherRainShowersDay,
-            8 or 9 => Symbol.WeatherRain,
-            4 => Symbol.WeatherThunderstorm,
-            13 or 14 or 15 or 16 => Symbol.WeatherSnow,
-            18 or 32 => Symbol.WeatherFog,
-            _ => isNight ? Symbol.WeatherPartlyCloudyNight : Symbol.WeatherPartlyCloudyDay
-        };
-    }
-
-    private static string ResolveWeatherIconColor(Symbol symbol, bool isNightMode)
-    {
-        return symbol switch
-        {
-            Symbol.WeatherSunny => isNightMode ? "#FFD978" : "#F7B500",
-            Symbol.WeatherMoon => "#F6D98F",
-            Symbol.WeatherPartlyCloudyDay => "#5A9CFF",
-            Symbol.WeatherPartlyCloudyNight => "#8AB6FF",
-            Symbol.WeatherRainShowersDay => "#5F96E8",
-            Symbol.WeatherRain => "#4B84DA",
-            Symbol.WeatherThunderstorm => "#F1C24D",
-            Symbol.WeatherSnow => "#8EBFE5",
-            _ => isNightMode ? "#A9BDD7" : "#93A2B8"
-        };
     }
 
     private static void SetHandGeometry(Line hand, double angleDeg, double forwardLength, double backwardLength)

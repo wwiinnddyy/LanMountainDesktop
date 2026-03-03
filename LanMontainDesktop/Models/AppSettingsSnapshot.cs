@@ -38,6 +38,12 @@ public sealed class AppSettingsSnapshot
 
     public string WeatherLocationQuery { get; set; } = string.Empty;
 
+    public string WeatherExcludedAlerts { get; set; } = string.Empty;
+
+    public string WeatherIconPackId { get; set; } = "FluentRegular";
+
+    public bool WeatherNoTlsRequests { get; set; }
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =
@@ -61,4 +67,8 @@ public sealed class AppSettingsSnapshot
     public int CurrentDesktopSurfaceIndex { get; set; } = 0;
 
     public List<DesktopComponentPlacementSnapshot> DesktopComponentPlacements { get; set; } = [];
+
+    public List<ImportedClassScheduleSnapshot> ImportedClassSchedules { get; set; } = [];
+
+    public string ActiveImportedClassScheduleId { get; set; } = string.Empty;
 }

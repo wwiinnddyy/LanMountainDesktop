@@ -697,6 +697,12 @@ public partial class MainWindow
         if (placement.ComponentId == BuiltInComponentIds.Date)
         {
             OpenDateComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopClassSchedule)
+        {
+            OpenClassScheduleComponentSettings();
         }
     }
 
@@ -716,11 +722,45 @@ public partial class MainWindow
         ComponentSettingsWindow.Opacity = 1;
     }
 
+    private void OpenClassScheduleComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new ClassScheduleSettingsWindow();
+        settingsContent.SettingsChanged += OnClassScheduleSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
+    {
+        if (_selectedDesktopComponentHost is null)
+        {
+            return;
+        }
+
+        if (TryGetContentHost(_selectedDesktopComponentHost)?.Child is ClassScheduleWidget widget)
+        {
+            widget.RefreshFromSettings();
+        }
+    }
+
     private void CloseComponentSettingsWindow()
     {
         if (ComponentSettingsWindow is null)
         {
             return;
+        }
+
+        if (ComponentSettingsContentHost?.Content is ClassScheduleSettingsWindow classScheduleSettingsWindow)
+        {
+            classScheduleSettingsWindow.SettingsChanged -= OnClassScheduleSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;

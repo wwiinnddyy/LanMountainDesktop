@@ -18,6 +18,7 @@
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
         <StyleInclude Source="avares://LanMontainDesktop/Styles/GlassModule.axaml" />
+        <StyleInclude Source="avares://LanMontainDesktop/Styles/SettingsAnimations.axaml" />
 
         <Style Selector="Window">
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />

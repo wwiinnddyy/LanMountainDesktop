@@ -74,20 +74,6 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         double Latitude,
         double Longitude);
 
-    private static readonly IReadOnlyDictionary<WeatherVisualKind, string> WeatherBackgroundAssets =
-        new Dictionary<WeatherVisualKind, string>
-        {
-            [WeatherVisualKind.ClearDay] = "avares://LanMontainDesktop/Assets/Weather/clear_day.jpg",
-            [WeatherVisualKind.ClearNight] = "avares://LanMontainDesktop/Assets/Weather/clear_night.jpg",
-            [WeatherVisualKind.CloudyDay] = "avares://LanMontainDesktop/Assets/Weather/cloudy_day.jpg",
-            [WeatherVisualKind.CloudyNight] = "avares://LanMontainDesktop/Assets/Weather/cloudy_night.jpg",
-            [WeatherVisualKind.RainLight] = "avares://LanMontainDesktop/Assets/Weather/rain_light.jpg",
-            [WeatherVisualKind.RainHeavy] = "avares://LanMontainDesktop/Assets/Weather/rain_heavy.jpg",
-            [WeatherVisualKind.Storm] = "avares://LanMontainDesktop/Assets/Weather/storm_dark.jpg",
-            [WeatherVisualKind.Snow] = "avares://LanMontainDesktop/Assets/Weather/snow_soft.jpg",
-            [WeatherVisualKind.Fog] = "avares://LanMontainDesktop/Assets/Weather/fog_haze.jpg"
-        };
-
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
 
     private readonly DispatcherTimer _refreshTimer = new()
@@ -103,6 +89,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly Dictionary<WeatherVisualKind, IBrush> _backgroundBrushCache = new();
+    private readonly Dictionary<HyperOS3WeatherVisualKind, IBrush> _particleBrushCache = new();
     private readonly List<Border> _particleVisuals = new();
     private readonly List<ParticleState> _particleStates = new();
     private readonly Random _particleRandom = new();
@@ -166,7 +153,10 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
     {
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
-        var cornerRadius = Math.Clamp(_currentCellSize * 0.45, 24, 44);
+        var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Realtime2x2);
+        var cornerRadius = Math.Clamp(_currentCellSize * metrics.CornerRadiusScale, 24, 44);
+        var horizontalPadding = Math.Clamp(_currentCellSize * metrics.HorizontalPaddingScale, 12, 24);
+        var verticalPadding = Math.Clamp(_currentCellSize * metrics.VerticalPaddingScale, 12, 24);
 
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
         BackgroundImageLayer.CornerRadius = new CornerRadius(cornerRadius);
@@ -174,7 +164,9 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         BackgroundTintLayer.CornerRadius = new CornerRadius(cornerRadius);
         BackgroundLightLayer.CornerRadius = new CornerRadius(cornerRadius);
         BackgroundShadeLayer.CornerRadius = new CornerRadius(cornerRadius);
-        ContentPaddingBorder.Padding = new Thickness(Math.Clamp(18 * scale, 12, 24));
+        ContentPaddingBorder.Padding = new Thickness(
+            Math.Clamp(horizontalPadding * scale, 12, 24),
+            Math.Clamp(verticalPadding * scale, 12, 24));
         ApplyAdaptiveTypography();
         ResetParticles();
     }
@@ -257,26 +249,10 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
 
     private bool ResolveIsNight(WeatherSnapshot snapshot)
     {
-        if (snapshot.ObservationTime.HasValue)
-        {
-            var observed = snapshot.ObservationTime.Value;
-            try
-            {
-                if (_timeZoneService is not null)
-                {
-                    var zoned = TimeZoneInfo.ConvertTime(observed, _timeZoneService.CurrentTimeZone);
-                    return zoned.Hour < 6 || zoned.Hour >= 18;
-                }
-            }
-            catch
-            {
-                // fall through to local clock
-            }
-
-            return observed.Hour < 6 || observed.Hour >= 18;
-        }
-
-        return IsNightNow();
+        return HyperOS3WeatherTheme.ResolveIsNightPreferred(
+            snapshot,
+            _timeZoneService?.CurrentTimeZone,
+            _timeZoneService?.GetCurrentTime() ?? DateTime.Now);
     }
 
     private bool IsNightNow()
@@ -479,7 +455,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
 
         var primary = CreateSolidBrush(palette.PrimaryText);
         var secondary = CreateSolidBrush(palette.SecondaryText);
-        var particleBrush = CreateSolidBrush(palette.ParticleColor);
+        var particleBrush = ResolveParticleBrush(ToThemeKind(kind), palette.ParticleColor);
         LocationIcon.Foreground = primary;
         CityTextBlock.Foreground = primary;
         TemperatureTextBlock.Foreground = primary;
@@ -503,7 +479,8 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
             return cached;
         }
 
-        if (WeatherBackgroundAssets.TryGetValue(kind, out var uriText))
+        var uriText = HyperOS3WeatherTheme.ResolveBackgroundAsset(ToThemeKind(kind));
+        if (!string.IsNullOrWhiteSpace(uriText))
         {
             try
             {
@@ -531,104 +508,88 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
         return gradientBrush;
     }
 
+    private IBrush ResolveParticleBrush(HyperOS3WeatherVisualKind kind, string fallbackColor)
+    {
+        if (_particleBrushCache.TryGetValue(kind, out var cached))
+        {
+            return cached;
+        }
+
+        var uriText = HyperOS3WeatherTheme.ResolveParticleAsset(kind);
+        if (!string.IsNullOrWhiteSpace(uriText))
+        {
+            try
+            {
+                var uri = new Uri(uriText, UriKind.Absolute);
+                using var stream = AssetLoader.Open(uri);
+                var bitmap = new Bitmap(stream);
+                var imageBrush = new ImageBrush
+                {
+                    Source = bitmap,
+                    Stretch = Stretch.UniformToFill,
+                    AlignmentX = AlignmentX.Center,
+                    AlignmentY = AlignmentY.Center
+                };
+                _particleBrushCache[kind] = imageBrush;
+                return imageBrush;
+            }
+            catch
+            {
+                // Fall through to solid particle color when the image cannot be loaded.
+            }
+        }
+
+        var solidBrush = CreateSolidBrush(fallbackColor);
+        _particleBrushCache[kind] = solidBrush;
+        return solidBrush;
+    }
+
     private static WeatherVisualKind ResolveVisualKind(int? weatherCode, bool isNight)
     {
-        return weatherCode switch
+        return HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, isNight) switch
         {
-            0 => isNight ? WeatherVisualKind.ClearNight : WeatherVisualKind.ClearDay,
-            1 or 2 => isNight ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay,
-            3 or 7 => WeatherVisualKind.RainLight,
-            8 or 9 => WeatherVisualKind.RainHeavy,
-            4 => WeatherVisualKind.Storm,
-            13 or 14 or 15 or 16 => WeatherVisualKind.Snow,
-            18 or 32 => WeatherVisualKind.Fog,
-            _ => isNight ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay
+            HyperOS3WeatherVisualKind.ClearDay => WeatherVisualKind.ClearDay,
+            HyperOS3WeatherVisualKind.ClearNight => WeatherVisualKind.ClearNight,
+            HyperOS3WeatherVisualKind.CloudyDay => WeatherVisualKind.CloudyDay,
+            HyperOS3WeatherVisualKind.CloudyNight => WeatherVisualKind.CloudyNight,
+            HyperOS3WeatherVisualKind.RainLight => WeatherVisualKind.RainLight,
+            HyperOS3WeatherVisualKind.RainHeavy => WeatherVisualKind.RainHeavy,
+            HyperOS3WeatherVisualKind.Storm => WeatherVisualKind.Storm,
+            HyperOS3WeatherVisualKind.Snow => WeatherVisualKind.Snow,
+            _ => WeatherVisualKind.Fog
         };
     }
 
     private static WeatherVisualPalette ResolvePalette(WeatherVisualKind kind)
     {
-        return kind switch
-        {
-            WeatherVisualKind.ClearDay => new WeatherVisualPalette(
-                GradientFrom: "#4F92E8",
-                GradientTo: "#83C5FF",
-                Tint: "#234D87",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#EEF5FF",
-                ParticleColor: "#00FFFFFF"),
-            WeatherVisualKind.ClearNight => new WeatherVisualPalette(
-                GradientFrom: "#0E2B72",
-                GradientTo: "#193A85",
-                Tint: "#0A1E52",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#CFE0FF",
-                ParticleColor: "#00FFFFFF"),
-            WeatherVisualKind.CloudyDay => new WeatherVisualPalette(
-                GradientFrom: "#4A72B3",
-                GradientTo: "#6A8EC2",
-                Tint: "#2A487C",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#EAF2FF",
-                ParticleColor: "#16FFFFFF"),
-            WeatherVisualKind.CloudyNight => new WeatherVisualPalette(
-                GradientFrom: "#102A6B",
-                GradientTo: "#193A80",
-                Tint: "#0B1F51",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#D5E4FF",
-                ParticleColor: "#24FFFFFF"),
-            WeatherVisualKind.RainLight => new WeatherVisualPalette(
-                GradientFrom: "#32588A",
-                GradientTo: "#4D74A8",
-                Tint: "#1F3454",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#E6F0FF",
-                ParticleColor: "#88D7E8FF"),
-            WeatherVisualKind.RainHeavy => new WeatherVisualPalette(
-                GradientFrom: "#253F66",
-                GradientTo: "#36567F",
-                Tint: "#17263E",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#DCE9FF",
-                ParticleColor: "#A2CDE1FF"),
-            WeatherVisualKind.Storm => new WeatherVisualPalette(
-                GradientFrom: "#293A67",
-                GradientTo: "#3A4F78",
-                Tint: "#161E35",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#DCE4F8",
-                ParticleColor: "#A8C2D6F2"),
-            WeatherVisualKind.Snow => new WeatherVisualPalette(
-                GradientFrom: "#D1E8FF",
-                GradientTo: "#A7D0F4",
-                Tint: "#607C9D",
-                PrimaryText: "#FF10253D",
-                SecondaryText: "#FF2B435E",
-                ParticleColor: "#CCFFFFFF"),
-            _ => new WeatherVisualPalette(
-                GradientFrom: "#445B7A",
-                GradientTo: "#5B738F",
-                Tint: "#2A3E56",
-                PrimaryText: "#FFFFFFFF",
-                SecondaryText: "#E7EDF6",
-                ParticleColor: "#88E4EDF7")
-        };
+        var palette = HyperOS3WeatherTheme.ResolvePalette(ToThemeKind(kind));
+        return new WeatherVisualPalette(
+            palette.GradientFrom,
+            palette.GradientTo,
+            palette.Tint,
+            palette.PrimaryText,
+            palette.SecondaryText,
+            palette.ParticleColor);
     }
 
     private static Symbol ResolveWeatherSymbol(WeatherVisualKind kind)
     {
+        return HyperOS3WeatherTheme.ResolveWeatherSymbol(ToThemeKind(kind));
+    }
+
+    private static HyperOS3WeatherVisualKind ToThemeKind(WeatherVisualKind kind)
+    {
         return kind switch
         {
-            WeatherVisualKind.ClearDay => Symbol.WeatherSunny,
-            WeatherVisualKind.ClearNight => Symbol.WeatherMoon,
-            WeatherVisualKind.CloudyDay => Symbol.WeatherPartlyCloudyDay,
-            WeatherVisualKind.CloudyNight => Symbol.WeatherPartlyCloudyNight,
-            WeatherVisualKind.RainLight => Symbol.WeatherRainShowersDay,
-            WeatherVisualKind.RainHeavy => Symbol.WeatherRain,
-            WeatherVisualKind.Storm => Symbol.WeatherThunderstorm,
-            WeatherVisualKind.Snow => Symbol.WeatherSnow,
-            _ => Symbol.WeatherFog
+            WeatherVisualKind.ClearDay => HyperOS3WeatherVisualKind.ClearDay,
+            WeatherVisualKind.ClearNight => HyperOS3WeatherVisualKind.ClearNight,
+            WeatherVisualKind.CloudyDay => HyperOS3WeatherVisualKind.CloudyDay,
+            WeatherVisualKind.CloudyNight => HyperOS3WeatherVisualKind.CloudyNight,
+            WeatherVisualKind.RainLight => HyperOS3WeatherVisualKind.RainLight,
+            WeatherVisualKind.RainHeavy => HyperOS3WeatherVisualKind.RainHeavy,
+            WeatherVisualKind.Storm => HyperOS3WeatherVisualKind.Storm,
+            WeatherVisualKind.Snow => HyperOS3WeatherVisualKind.Snow,
+            _ => HyperOS3WeatherVisualKind.Fog
         };
     }
 
@@ -840,23 +801,24 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
     private void ApplyAdaptiveTypography()
     {
         var scale = ResolveScale();
+        var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Realtime2x2);
         var densityBoost = scale <= 0.70 ? 0.88 : scale <= 0.88 ? 0.94 : scale >= 1.45 ? 1.06 : 1.0;
         var cityLength = Math.Max(1, CityTextBlock.Text?.Length ?? 2);
         var cityCompression = cityLength >= 10 ? 0.72 : cityLength >= 7 ? 0.83 : cityLength >= 5 ? 0.92 : 1.0;
         var conditionLength = Math.Max(1, ConditionTextBlock.Text?.Length ?? 2);
         var conditionCompression = conditionLength >= 9 ? 0.84 : conditionLength >= 6 ? 0.92 : 1.0;
 
-        ContentGrid.RowSpacing = Math.Clamp(8 * scale, 4, 14);
-        TopRowGrid.ColumnSpacing = Math.Clamp(8 * scale, 4, 12);
-        BottomInfoStack.Spacing = Math.Clamp(4 * scale, 2, 8);
+        ContentGrid.RowSpacing = Math.Clamp(metrics.MainGap * scale, 4, 14);
+        TopRowGrid.ColumnSpacing = Math.Clamp(metrics.MainGap * scale, 4, 12);
+        BottomInfoStack.Spacing = Math.Clamp(metrics.SectionGap * scale, 2, 8);
         BottomInfoStack.Margin = new Thickness(0, 0, 0, Math.Clamp(10 * scale, 4, 16));
 
-        LocationIcon.FontSize = Math.Clamp(20 * scale * densityBoost, 10, 30);
-        CityTextBlock.FontSize = Math.Clamp(30 * scale * cityCompression * densityBoost, 12, 42);
-        WeatherIconSymbol.FontSize = Math.Clamp(40 * scale * densityBoost, 14, 56);
-        TemperatureTextBlock.FontSize = Math.Clamp(108 * scale * densityBoost, 36, 144);
-        ConditionTextBlock.FontSize = Math.Clamp(30 * scale * conditionCompression * densityBoost, 11, 44);
-        RangeTextBlock.FontSize = Math.Clamp(36 * scale * densityBoost, 12, 50);
+        LocationIcon.FontSize = Math.Clamp((metrics.IconFont * 0.50) * scale * densityBoost, 10, 30);
+        CityTextBlock.FontSize = Math.Clamp(metrics.PrimaryTextFont * scale * cityCompression * densityBoost, 12, 42);
+        WeatherIconSymbol.FontSize = Math.Clamp(metrics.IconFont * scale * densityBoost, 14, 56);
+        TemperatureTextBlock.FontSize = Math.Clamp(metrics.PrimaryTemperatureFont * scale * densityBoost, 36, 144);
+        ConditionTextBlock.FontSize = Math.Clamp(metrics.PrimaryTextFont * scale * conditionCompression * densityBoost, 11, 44);
+        RangeTextBlock.FontSize = Math.Clamp(metrics.SecondaryTextFont * scale * densityBoost, 12, 50);
         TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(4 * scale, 1, 8), 0, Math.Clamp(10 * scale, 4, 16));
 
         CityTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, Math.Clamp((scale - 0.58) / 1.3, 0, 1)));
@@ -877,81 +839,25 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
 
     private WeatherMotionProfile ResolveMotionProfile(WeatherVisualKind kind)
     {
-        return kind switch
-        {
-            WeatherVisualKind.ClearDay => new WeatherMotionProfile(
-                DriftX: 8.0, DriftY: 4.0, ZoomBase: 1.055, ZoomAmplitude: 0.012,
-                MotionOpacityBase: 0.22, MotionOpacityPulse: 0.05,
-                LightOpacityBase: 0.68, LightOpacityPulse: 0.08,
-                ShadeOpacityBase: 0.72, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.015, ParticleCount: 0,
-                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
-                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
-            WeatherVisualKind.ClearNight => new WeatherMotionProfile(
-                DriftX: 10.0, DriftY: 6.0, ZoomBase: 1.060, ZoomAmplitude: 0.014,
-                MotionOpacityBase: 0.28, MotionOpacityPulse: 0.06,
-                LightOpacityBase: 0.58, LightOpacityPulse: 0.07,
-                ShadeOpacityBase: 0.82, ShadeOpacityPulse: 0.04,
-                PhaseStep: 0.018, ParticleCount: 0,
-                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
-                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
-            WeatherVisualKind.CloudyDay => new WeatherMotionProfile(
-                DriftX: 12.0, DriftY: 7.0, ZoomBase: 1.060, ZoomAmplitude: 0.013,
-                MotionOpacityBase: 0.32, MotionOpacityPulse: 0.06,
-                LightOpacityBase: 0.62, LightOpacityPulse: 0.07,
-                ShadeOpacityBase: 0.80, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.020, ParticleCount: 6,
-                ParticleSpeedMin: 0.30, ParticleSpeedMax: 0.70,
-                ParticleLengthMin: 14, ParticleLengthMax: 28, ParticleDriftPerTick: 0.10),
-            WeatherVisualKind.CloudyNight => new WeatherMotionProfile(
-                DriftX: 14.0, DriftY: 8.0, ZoomBase: 1.065, ZoomAmplitude: 0.013,
-                MotionOpacityBase: 0.34, MotionOpacityPulse: 0.07,
-                LightOpacityBase: 0.54, LightOpacityPulse: 0.06,
-                ShadeOpacityBase: 0.85, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.021, ParticleCount: 8,
-                ParticleSpeedMin: 0.35, ParticleSpeedMax: 0.80,
-                ParticleLengthMin: 16, ParticleLengthMax: 30, ParticleDriftPerTick: 0.12),
-            WeatherVisualKind.RainLight => new WeatherMotionProfile(
-                DriftX: 6.0, DriftY: 10.0, ZoomBase: 1.050, ZoomAmplitude: 0.010,
-                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.08,
-                LightOpacityBase: 0.50, LightOpacityPulse: 0.04,
-                ShadeOpacityBase: 0.84, ShadeOpacityPulse: 0.04,
-                PhaseStep: 0.030, ParticleCount: 18,
-                ParticleSpeedMin: 1.80, ParticleSpeedMax: 3.20,
-                ParticleLengthMin: 14, ParticleLengthMax: 26, ParticleDriftPerTick: 0.70),
-            WeatherVisualKind.RainHeavy => new WeatherMotionProfile(
-                DriftX: 5.0, DriftY: 11.0, ZoomBase: 1.045, ZoomAmplitude: 0.010,
-                MotionOpacityBase: 0.34, MotionOpacityPulse: 0.10,
-                LightOpacityBase: 0.42, LightOpacityPulse: 0.03,
-                ShadeOpacityBase: 0.88, ShadeOpacityPulse: 0.05,
-                PhaseStep: 0.036, ParticleCount: 30,
-                ParticleSpeedMin: 2.80, ParticleSpeedMax: 4.80,
-                ParticleLengthMin: 18, ParticleLengthMax: 34, ParticleDriftPerTick: 0.92),
-            WeatherVisualKind.Storm => new WeatherMotionProfile(
-                DriftX: 4.0, DriftY: 12.0, ZoomBase: 1.042, ZoomAmplitude: 0.012,
-                MotionOpacityBase: 0.38, MotionOpacityPulse: 0.12,
-                LightOpacityBase: 0.36, LightOpacityPulse: 0.02,
-                ShadeOpacityBase: 0.91, ShadeOpacityPulse: 0.04,
-                PhaseStep: 0.042, ParticleCount: 34,
-                ParticleSpeedMin: 3.60, ParticleSpeedMax: 5.80,
-                ParticleLengthMin: 20, ParticleLengthMax: 36, ParticleDriftPerTick: 1.08),
-            WeatherVisualKind.Snow => new WeatherMotionProfile(
-                DriftX: 9.0, DriftY: 7.0, ZoomBase: 1.055, ZoomAmplitude: 0.012,
-                MotionOpacityBase: 0.28, MotionOpacityPulse: 0.06,
-                LightOpacityBase: 0.74, LightOpacityPulse: 0.08,
-                ShadeOpacityBase: 0.68, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.020, ParticleCount: 24,
-                ParticleSpeedMin: 0.60, ParticleSpeedMax: 1.60,
-                ParticleLengthMin: 3.0, ParticleLengthMax: 8.5, ParticleDriftPerTick: 0.24),
-            _ => new WeatherMotionProfile(
-                DriftX: 7.0, DriftY: 5.0, ZoomBase: 1.050, ZoomAmplitude: 0.011,
-                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.05,
-                LightOpacityBase: 0.58, LightOpacityPulse: 0.05,
-                ShadeOpacityBase: 0.86, ShadeOpacityPulse: 0.03,
-                PhaseStep: 0.018, ParticleCount: 10,
-                ParticleSpeedMin: 0.25, ParticleSpeedMax: 0.70,
-                ParticleLengthMin: 16, ParticleLengthMax: 34, ParticleDriftPerTick: 0.12)
-        };
+        var motion = HyperOS3WeatherTheme.ResolveMotion(ToThemeKind(kind));
+        return new WeatherMotionProfile(
+            motion.DriftX,
+            motion.DriftY,
+            motion.ZoomBase,
+            motion.ZoomAmplitude,
+            motion.MotionOpacityBase,
+            motion.MotionOpacityPulse,
+            motion.LightOpacityBase,
+            motion.LightOpacityPulse,
+            motion.ShadeOpacityBase,
+            motion.ShadeOpacityPulse,
+            motion.PhaseStep,
+            motion.ParticleCount,
+            motion.ParticleSpeedMin,
+            motion.ParticleSpeedMax,
+            motion.ParticleLengthMin,
+            motion.ParticleLengthMax,
+            motion.ParticleDriftPerTick);
     }
 
     private void ResetAnimationState()

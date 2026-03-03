@@ -147,6 +147,9 @@ public partial class MainWindow : Window
     private double _weatherLatitude = 39.9042;
     private double _weatherLongitude = 116.4074;
     private bool _weatherAutoRefreshLocation;
+    private string _weatherExcludedAlertsRaw = string.Empty;
+    private string _weatherIconPackId = "FluentRegular";
+    private bool _weatherNoTlsRequests;
     private string _weatherSearchKeyword = string.Empty;
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;

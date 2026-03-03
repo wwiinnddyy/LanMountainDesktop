@@ -335,6 +335,12 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             WindDirectionDegree: ReadDouble(currentNode, "wind", "angle", "value") ??
                                  ReadDouble(currentNode, "wind", "direction", "value"),
             WeatherCode: weatherCode,
+            IsDaylight: ReadBool(currentNode, "daylight", "value") ??
+                        ReadBool(currentNode, "daylight") ??
+                        ReadBool(currentNode, "isDaylight") ??
+                        ReadBool(currentNode, "isDay") ??
+                        ReadBool(currentNode, "day") ??
+                        ReadBool(payload, "isDaylight"),
             WeatherText: weatherText);
 
         var forecasts = ParseDailyForecasts(dailyNode, days, locale);
@@ -822,6 +828,46 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             double.TryParse(target.Value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
         {
             return parsed;
+        }
+
+        return null;
+    }
+
+    private static bool? ReadBool(JsonElement? node, params string[] path)
+    {
+        if (!node.HasValue)
+        {
+            return null;
+        }
+
+        var target = path.Length == 0 ? node : TryGetNode(node.Value, path);
+        if (!target.HasValue)
+        {
+            return null;
+        }
+
+        if (target.Value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return target.Value.GetBoolean();
+        }
+
+        if (target.Value.ValueKind == JsonValueKind.Number && target.Value.TryGetInt32(out var number))
+        {
+            return number != 0;
+        }
+
+        if (target.Value.ValueKind == JsonValueKind.String)
+        {
+            var text = target.Value.GetString();
+            if (bool.TryParse(text, out var parsed))
+            {
+                return parsed;
+            }
+
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out number))
+            {
+                return number != 0;
+            }
         }
 
         return null;

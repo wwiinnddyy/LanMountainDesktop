@@ -1,0 +1,223 @@
+name: Desktop CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version override (for example: 1.2.3)"
+        required: false
+        type: string
+
+jobs:
+  validate:
+    name: Validate Build (Windows)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+
+      - name: Restore
+        run: dotnet restore .\LanMontainDesktop.csproj
+
+      - name: Build
+        run: dotnet build .\LanMontainDesktop.csproj -c Release --no-restore
+
+  package_windows:
+    name: Package Windows
+    runs-on: windows-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (Get-Command choco -ErrorAction SilentlyContinue) {
+            choco install innosetup --yes --no-progress
+          } elseif (Get-Command winget -ErrorAction SilentlyContinue) {
+            winget install --id JRSoftware.InnoSetup -e --source winget --accept-package-agreements --accept-source-agreements
+          } else {
+            throw "Neither choco nor winget is available to install Inno Setup."
+          }
+
+      - name: Resolve Package Version
+        id: version
+        shell: pwsh
+        run: |
+          $manualVersion = '${{ github.event.inputs.version }}'
+          if ($manualVersion) {
+            $version = $manualVersion.Trim()
+          } elseif ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } elseif ($env:GITHUB_REF -like "refs/tags/*") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+
+          if (-not $version) {
+            throw "Failed to resolve package version."
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Using package version: $version"
+
+      - name: Build Windows Installer
+        shell: pwsh
+        run: |
+          .\scripts\package.ps1 `
+            -Configuration Release `
+            -RuntimeIdentifier win-x64 `
+            -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanMontainDesktop-Setup-${{ steps.version.outputs.value }}
+          path: artifacts/installer/*.exe
+          if-no-files-found: error
+
+      - name: Upload Windows Publish Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanMontainDesktop-Publish-win-x64-${{ steps.version.outputs.value }}
+          path: artifacts/publish/win-x64/**
+          if-no-files-found: error
+
+      - name: Attach Windows Installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/installer/*.exe
+
+  package_linux:
+    name: Package Linux
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+
+      - name: Resolve Package Version
+        id: version
+        shell: pwsh
+        run: |
+          $manualVersion = '${{ github.event.inputs.version }}'
+          if ($manualVersion) {
+            $version = $manualVersion.Trim()
+          } elseif ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } elseif ($env:GITHUB_REF -like "refs/tags/*") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+
+          if (-not $version) {
+            throw "Failed to resolve package version."
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Using package version: $version"
+
+      - name: Build Linux Package
+        shell: pwsh
+        run: |
+          ./scripts/package.ps1 `
+            -Configuration Release `
+            -RuntimeIdentifier linux-x64 `
+            -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload Linux Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanMontainDesktop-linux-x64-${{ steps.version.outputs.value }}
+          path: artifacts/packages/*linux-x64*.zip
+          if-no-files-found: error
+
+  package_macos:
+    name: Package macOS
+    runs-on: macos-latest
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+
+      - name: Resolve Package Version
+        id: version
+        shell: pwsh
+        run: |
+          $manualVersion = '${{ github.event.inputs.version }}'
+          if ($manualVersion) {
+            $version = $manualVersion.Trim()
+          } elseif ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } elseif ($env:GITHUB_REF -like "refs/tags/*") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+
+          if (-not $version) {
+            throw "Failed to resolve package version."
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Using package version: $version"
+
+      - name: Build macOS Package
+        shell: pwsh
+        run: |
+          ./scripts/package.ps1 `
+            -Configuration Release `
+            -RuntimeIdentifier osx-x64 `
+            -Version "${{ steps.version.outputs.value }}"
+
+      - name: Upload macOS Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanMontainDesktop-osx-x64-${{ steps.version.outputs.value }}
+          path: artifacts/packages/*osx-x64*.zip
+          if-no-files-found: error

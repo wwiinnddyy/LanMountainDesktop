@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMontainDesktop.Views.Components;
@@ -655,6 +655,9 @@ public partial class MainWindow
             WeatherLongitude = _weatherLongitude,
             WeatherAutoRefreshLocation = _weatherAutoRefreshLocation,
             WeatherLocationQuery = BuildLegacyWeatherLocationQuery(),
+            WeatherExcludedAlerts = _weatherExcludedAlertsRaw,
+            WeatherIconPackId = _weatherIconPackId,
+            WeatherNoTlsRequests = _weatherNoTlsRequests,
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
@@ -698,6 +701,11 @@ public partial class MainWindow
             _weatherLatitude = NormalizeLatitude(snapshot.WeatherLatitude);
             _weatherLongitude = NormalizeLongitude(snapshot.WeatherLongitude);
             _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
+            _weatherExcludedAlertsRaw = snapshot.WeatherExcludedAlerts?.Trim() ?? string.Empty;
+            _weatherIconPackId = string.IsNullOrWhiteSpace(snapshot.WeatherIconPackId)
+                ? "FluentRegular"
+                : snapshot.WeatherIconPackId.Trim();
+            _weatherNoTlsRequests = snapshot.WeatherNoTlsRequests;
             _weatherSearchKeyword = string.Empty;
 
             var legacyQuery = snapshot.WeatherLocationQuery?.Trim() ?? string.Empty;
@@ -715,6 +723,11 @@ public partial class MainWindow
             if (WeatherAutoRefreshToggleSwitch is not null)
             {
                 WeatherAutoRefreshToggleSwitch.IsChecked = _weatherAutoRefreshLocation;
+            }
+
+            if (WeatherNoTlsToggleSwitch is not null)
+            {
+                WeatherNoTlsToggleSwitch.IsChecked = _weatherNoTlsRequests;
             }
 
             if (WeatherCitySearchTextBox is not null)
@@ -747,6 +760,13 @@ public partial class MainWindow
                 WeatherLongitudeNumberBox.Value = _weatherLongitude;
             }
 
+            if (WeatherExcludedAlertsTextBox is not null)
+            {
+                WeatherExcludedAlertsTextBox.Text = _weatherExcludedAlertsRaw;
+            }
+
+            SelectWeatherIconPackInUi(_weatherIconPackId);
+
             if (WeatherSearchStatusTextBlock is not null)
             {
                 WeatherSearchStatusTextBlock.Text = L(
@@ -765,6 +785,11 @@ public partial class MainWindow
                     "settings.weather.preview_hint",
                     "Use test fetch to verify your weather configuration.");
             }
+
+            UpdateWeatherPreviewSummary(
+                weatherCode: null,
+                temperatureText: "--",
+                updatedAt: null);
 
             UpdateWeatherLocationModePanels();
             UpdateWeatherLocationStatusText();
@@ -826,21 +851,61 @@ public partial class MainWindow
 
     private void SelectWeatherLocationModeInUi(WeatherLocationMode mode)
     {
-        if (WeatherLocationModeComboBox is null)
+        var targetTag = ToWeatherLocationModeTag(mode);
+        var selected = false;
+        if (WeatherLocationModeComboBox is not null)
+        {
+            foreach (var item in WeatherLocationModeComboBox.Items.OfType<ComboBoxItem>())
+            {
+                if (string.Equals(item.Tag?.ToString(), targetTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    WeatherLocationModeComboBox.SelectedItem = item;
+                    selected = true;
+                    break;
+                }
+            }
+
+            if (!selected)
+            {
+                WeatherLocationModeComboBox.SelectedIndex = mode == WeatherLocationMode.Coordinates ? 1 : 0;
+            }
+        }
+
+        if (WeatherLocationModeChipListBox is null)
         {
             return;
         }
 
-        foreach (var item in WeatherLocationModeComboBox.Items.OfType<ComboBoxItem>())
+        foreach (var item in WeatherLocationModeChipListBox.Items.OfType<ListBoxItem>())
         {
-            if (string.Equals(item.Tag?.ToString(), ToWeatherLocationModeTag(mode), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(item.Tag?.ToString(), targetTag, StringComparison.OrdinalIgnoreCase))
             {
-                WeatherLocationModeComboBox.SelectedItem = item;
+                WeatherLocationModeChipListBox.SelectedItem = item;
                 return;
             }
         }
 
-        WeatherLocationModeComboBox.SelectedIndex = mode == WeatherLocationMode.Coordinates ? 1 : 0;
+        WeatherLocationModeChipListBox.SelectedIndex = mode == WeatherLocationMode.Coordinates ? 1 : 0;
+    }
+
+    private void SelectWeatherIconPackInUi(string iconPackId)
+    {
+        if (WeatherIconPackComboBox is null)
+        {
+            return;
+        }
+
+        foreach (var item in WeatherIconPackComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), iconPackId, StringComparison.OrdinalIgnoreCase))
+            {
+                WeatherIconPackComboBox.SelectedItem = item;
+                return;
+            }
+        }
+
+        WeatherIconPackComboBox.SelectedIndex = 0;
+        _weatherIconPackId = "FluentRegular";
     }
 
     private void UpdateWeatherLocationModePanels()
@@ -864,6 +929,38 @@ public partial class MainWindow
         }
 
         _weatherLocationMode = ParseWeatherLocationMode(item.Tag?.ToString());
+        _suppressWeatherLocationEvents = true;
+        try
+        {
+            SelectWeatherLocationModeInUi(_weatherLocationMode);
+        }
+        finally
+        {
+            _suppressWeatherLocationEvents = false;
+        }
+        UpdateWeatherLocationModePanels();
+        UpdateWeatherLocationStatusText();
+        PersistSettings();
+    }
+
+    private void OnWeatherLocationModeChipSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressWeatherLocationEvents || WeatherLocationModeChipListBox?.SelectedItem is not ListBoxItem item)
+        {
+            return;
+        }
+
+        _weatherLocationMode = ParseWeatherLocationMode(item.Tag?.ToString());
+        _suppressWeatherLocationEvents = true;
+        try
+        {
+            SelectWeatherLocationModeInUi(_weatherLocationMode);
+        }
+        finally
+        {
+            _suppressWeatherLocationEvents = false;
+        }
+
         UpdateWeatherLocationModePanels();
         UpdateWeatherLocationStatusText();
         PersistSettings();
@@ -877,6 +974,51 @@ public partial class MainWindow
         }
 
         _weatherAutoRefreshLocation = WeatherAutoRefreshToggleSwitch.IsChecked == true;
+        PersistSettings();
+    }
+
+    private void OnWeatherExcludedAlertsLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (WeatherExcludedAlertsTextBox is null)
+        {
+            return;
+        }
+
+        _weatherExcludedAlertsRaw = WeatherExcludedAlertsTextBox.Text?.Trim() ?? string.Empty;
+        PersistSettings();
+    }
+
+    private void OnWeatherIconPackSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressWeatherLocationEvents || WeatherIconPackComboBox?.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+
+        _weatherIconPackId = item.Tag?.ToString() switch
+        {
+            "FluentFilled" => "FluentFilled",
+            _ => "FluentRegular"
+        };
+
+        if (WeatherPreviewIconSymbol is not null)
+        {
+            WeatherPreviewIconSymbol.IconVariant = string.Equals(_weatherIconPackId, "FluentFilled", StringComparison.OrdinalIgnoreCase)
+                ? IconVariant.Filled
+                : IconVariant.Regular;
+        }
+
+        PersistSettings();
+    }
+
+    private void OnWeatherNoTlsToggled(object? sender, RoutedEventArgs e)
+    {
+        if (_suppressWeatherLocationEvents || WeatherNoTlsToggleSwitch is null)
+        {
+            return;
+        }
+
+        _weatherNoTlsRequests = WeatherNoTlsToggleSwitch.IsChecked == true;
         PersistSettings();
     }
 
@@ -974,7 +1116,7 @@ public partial class MainWindow
             : $" ({location.Affiliation})";
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{location.Name}{affiliation} · {location.LocationKey}");
+            $"{location.Name}{affiliation} | {location.LocationKey}");
     }
 
     private static string BuildWeatherLocationName(WeatherLocation location)
@@ -1140,6 +1282,11 @@ public partial class MainWindow
                         "Please apply one weather location before testing.");
                 }
 
+                UpdateWeatherPreviewSummary(
+                    weatherCode: null,
+                    temperatureText: "--",
+                    updatedAt: null);
+
                 return;
             }
         }
@@ -1168,6 +1315,11 @@ public partial class MainWindow
                         result.ErrorMessage ?? result.ErrorCode ?? "Unknown error");
                 }
 
+                UpdateWeatherPreviewSummary(
+                    weatherCode: null,
+                    temperatureText: "--",
+                    updatedAt: DateTimeOffset.Now);
+
                 return;
             }
 
@@ -1178,18 +1330,24 @@ public partial class MainWindow
             var weather = snapshot.Current.WeatherText ??
                           L("settings.weather.preview_unknown", "Unknown");
             var temperature = snapshot.Current.TemperatureC.HasValue
-                ? string.Create(CultureInfo.InvariantCulture, $"{snapshot.Current.TemperatureC.Value:F1}°C")
+                ? string.Create(CultureInfo.InvariantCulture, $"{snapshot.Current.TemperatureC.Value:F1} C")
                 : "--";
+            var updatedAt = snapshot.ObservationTime ?? snapshot.FetchedAt;
 
             if (WeatherPreviewResultTextBlock is not null)
             {
                 WeatherPreviewResultTextBlock.Text = Lf(
                     "settings.weather.preview_success_format",
-                    "Test success: {0} · {1} · {2}",
+                    "Test success: {0} | {1} | {2}",
                     location,
                     weather,
                     temperature);
             }
+
+            UpdateWeatherPreviewSummary(
+                weatherCode: snapshot.Current.WeatherCode,
+                temperatureText: temperature,
+                updatedAt: updatedAt);
         }
         catch (Exception ex)
         {
@@ -1200,12 +1358,57 @@ public partial class MainWindow
                     "Test fetch failed: {0}",
                     ex.Message);
             }
+
+            UpdateWeatherPreviewSummary(
+                weatherCode: null,
+                temperatureText: "--",
+                updatedAt: DateTimeOffset.Now);
         }
         finally
         {
             _isWeatherPreviewInProgress = false;
             SetWeatherPreviewBusy(isBusy: false);
         }
+    }
+
+    private void UpdateWeatherPreviewSummary(int? weatherCode, string temperatureText, DateTimeOffset? updatedAt)
+    {
+        if (WeatherPreviewIconSymbol is not null)
+        {
+            WeatherPreviewIconSymbol.Symbol = ResolveWeatherPreviewSymbol(weatherCode, _isNightMode);
+            WeatherPreviewIconSymbol.IconVariant = string.Equals(_weatherIconPackId, "FluentFilled", StringComparison.OrdinalIgnoreCase)
+                ? IconVariant.Filled
+                : IconVariant.Regular;
+        }
+
+        if (WeatherPreviewTemperatureTextBlock is not null)
+        {
+            WeatherPreviewTemperatureTextBlock.Text = string.IsNullOrWhiteSpace(temperatureText) ? "--" : temperatureText;
+        }
+
+        if (WeatherPreviewUpdatedTextBlock is null)
+        {
+            return;
+        }
+
+        WeatherPreviewUpdatedTextBlock.Text = updatedAt.HasValue
+            ? Lf("weather.widget.updated_format", "Updated {0:HH:mm}", updatedAt.Value.LocalDateTime)
+            : "-";
+    }
+
+    private static Symbol ResolveWeatherPreviewSymbol(int? weatherCode, bool isNight)
+    {
+        return weatherCode switch
+        {
+            0 => isNight ? Symbol.WeatherMoon : Symbol.WeatherSunny,
+            1 or 2 => isNight ? Symbol.WeatherPartlyCloudyNight : Symbol.WeatherPartlyCloudyDay,
+            3 or 7 => Symbol.WeatherRainShowersDay,
+            8 or 9 => Symbol.WeatherRain,
+            4 => Symbol.WeatherThunderstorm,
+            13 or 14 or 15 or 16 => Symbol.WeatherSnow,
+            18 or 32 => Symbol.WeatherFog,
+            _ => isNight ? Symbol.WeatherPartlyCloudyNight : Symbol.WeatherPartlyCloudyDay
+        };
     }
 
     private void SetWeatherSearchBusy(bool isBusy)
@@ -1683,6 +1886,42 @@ public partial class MainWindow
             };
         }
 
+        if (WeatherPreviewSettingsExpander is not null)
+        {
+            WeatherPreviewSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.WeatherSunny,
+                IconVariant = variant
+            };
+        }
+
+        if (WeatherAlertFilterSettingsExpander is not null)
+        {
+            WeatherAlertFilterSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Info,
+                IconVariant = variant
+            };
+        }
+
+        if (WeatherIconPackSettingsExpander is not null)
+        {
+            WeatherIconPackSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Color,
+                IconVariant = variant
+            };
+        }
+
+        if (WeatherNoTlsSettingsExpander is not null)
+        {
+            WeatherNoTlsSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Globe,
+                IconVariant = variant
+            };
+        }
+
         if (LanguageSettingsExpander is not null)
         {
             LanguageSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
@@ -1718,3 +1957,4 @@ public partial class MainWindow
         };
     }
 }
+
