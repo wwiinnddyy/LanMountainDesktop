@@ -137,13 +137,20 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, ITime
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        if (_timeZoneService is not null)
-        {
-            _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
-        }
-
+        ClearTimeZoneService();
         _timeZoneService = timeZoneService;
         _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
+    }
+
+    public void ClearTimeZoneService()
+    {
+        if (_timeZoneService is null)
+        {
+            return;
+        }
+
+        _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
+        _timeZoneService = null;
     }
 
     public void SetWeatherInfoService(IWeatherInfoService weatherInfoService)

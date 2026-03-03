@@ -51,14 +51,21 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        if (_timeZoneService != null)
-        {
-            _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
-        }
-
+        ClearTimeZoneService();
         _timeZoneService = timeZoneService;
         _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
         UpdateClock();
+    }
+
+    public void ClearTimeZoneService()
+    {
+        if (_timeZoneService is null)
+        {
+            return;
+        }
+
+        _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
+        _timeZoneService = null;
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

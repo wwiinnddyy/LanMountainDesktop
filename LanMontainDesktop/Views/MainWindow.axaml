@@ -476,7 +476,7 @@
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                    Margin="0,0,0,24"
-                                                   Text="涓€у寲鎮ㄧ殑鑳屾櫙" />
+                                                   Text="Personalize Wallpaper" />
 
                                         <!-- Left Column: Monitor Preview -->
                                         <Border x:Name="WallpaperPreviewHost"
@@ -563,11 +563,11 @@
                                                            FontWeight="Medium"
                                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                            TextTrimming="CharacterEllipsis"
-                                                           Text="鏈€夋嫨鏂囦欢" />
+                                                           Text="No file selected" />
                                                 <TextBlock x:Name="WallpaperStatusTextBlock"
                                                            FontSize="12"
                                                            Foreground="{DynamicResource AdaptiveTextMutedBrush}"
-                                                           Text="灏辩华" />
+                                                           Text="Ready" />
                                             </StackPanel>
 
                                             <Separator Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" Height="1" Margin="0,8" />
@@ -581,13 +581,13 @@
                                                         HorizontalAlignment="Stretch"
                                                         Padding="0,10"
                                                         Click="OnPickWallpaperClick"
-                                                        Content="娴忚鐓х墖" />
+                                                        Content="Browse" />
                                                 <Button x:Name="ClearWallpaperButton"
                                                         Grid.Column="1"
                                                         HorizontalAlignment="Stretch"
                                                         Padding="0,10"
                                                         Click="OnClearWallpaperClick"
-                                                        Content="閲嶇疆" />
+                                                        Content="Reset" />
                                             </Grid>
 
                                             <Border Classes="settings-expander-shell">
@@ -695,7 +695,7 @@
                                     <StackPanel Grid.Row="1" Grid.Column="1"
                                                 Margin="16,0,0,0"
                                                 Spacing="16">
-                                        <TextBlock Text="绔栨帓鏍兼暟" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                            <TextBlock Text="Rows" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
 
                                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                              <Slider x:Name="GridSizeSlider"
@@ -754,7 +754,7 @@
 
                                         <TextBlock x:Name="GridEdgeInsetComputedPxTextBlock"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                   Text="鈮?0 px" />
+                                                   Text=">= 0 px" />
 
                                          <Button x:Name="ApplyGridButton"
                                                  HorizontalAlignment="Stretch"
@@ -1005,15 +1005,15 @@
                                                           Unchecked="OnStatusBarClockUnchecked" />
                                         </ui:SettingsExpander.Footer>
                                         <StackPanel Margin="0,8,0,0" Spacing="12">
-                                            <TextBlock Text="鏄剧ず鏍煎紡" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                            <TextBlock Text="Display Format" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <RadioButton x:Name="ClockFormatHMSSRadio"
-                                                             Content="鏃跺垎绉?(HH:mm:ss)"
+                                                        Content="Time with seconds (HH:mm:ss)"
                                                              GroupName="ClockFormat"
                                                              Checked="OnClockFormatChanged"
                                                              Tag="Hms" />
                                                 <RadioButton x:Name="ClockFormatHMRadio"
-                                                             Content="鏃跺垎 (HH:mm)"
+                                                        Content="Time (HH:mm)"
                                                              GroupName="ClockFormat"
                                                              Checked="OnClockFormatChanged"
                                                              Tag="Hm" />
@@ -1070,7 +1070,7 @@
 
                                             <TextBlock x:Name="StatusBarSpacingComputedPxTextBlock"
                                                        Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                       Text="鈮?0 px" />
+                                                       Text=">= 0 px" />
                                         </StackPanel>
                                     </ui:SettingsExpander>
 </Border>
@@ -1274,19 +1274,19 @@
 </Border>
                                 </StackPanel>
 
-                                    <StackPanel x:Name="AboutSettingsPanel" IsVisible="False" Spacing="20">
-                                        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="鍏充簬" />
+                                <StackPanel x:Name="AboutSettingsPanel" IsVisible="False" Spacing="20">
+                                    <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="About" />
                                         <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="LanMontainDesktop" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                                 <TextBlock Text="Modern desktop shell experience." FontSize="13" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                                 <Separator Background="{DynamicResource AdaptiveButtonBorderBrush}" Margin="0,8" />
-                                                <TextBlock x:Name="VersionTextBlock" Text="鐗堟湰鍙? 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                                                <TextBlock x:Name="CodeNameTextBlock" Text="鐗堟湰浠ｅ彿: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
-                                                <TextBlock x:Name="FontInfoTextBlock" Text="字体: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                <TextBlock x:Name="VersionTextBlock" Text="Version: 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                                <TextBlock x:Name="CodeNameTextBlock" Text="Code Name: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
+                                                <TextBlock x:Name="FontInfoTextBlock" Text="Font: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                             </StackPanel>
                                         </Border>
-                                    </StackPanel>
+                                </StackPanel>
                             </Grid>
                         </Border>
                     </Grid>
@@ -1314,7 +1314,7 @@
                         CornerRadius="36,36,0,0"
                         Padding="16,12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="缁勪欢璁剧疆"
+                        <TextBlock Text="Component Settings"
                                    FontSize="16"
                                    FontWeight="SemiBold"
                                    Foreground="White"

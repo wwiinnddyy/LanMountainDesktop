@@ -127,6 +127,7 @@ public partial class MainWindow
         DesktopPagesContainer.RowDefinitions.Clear();
         DesktopPagesContainer.RowDefinitions.Add(new RowDefinition(new GridLength(pageHeight, GridUnitType.Pixel)));
         DesktopPagesContainer.ColumnDefinitions.Clear();
+        ClearTimeZoneServiceBindings(DesktopPagesContainer.Children.OfType<Control>().ToList());
         DesktopPagesContainer.Children.Clear();
         DesktopPagesContainer.Width = pageWidth * _desktopPageCount;
         DesktopPagesContainer.Height = pageHeight;

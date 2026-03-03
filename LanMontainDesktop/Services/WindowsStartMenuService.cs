@@ -82,7 +82,7 @@ public sealed class WindowsStartMenuService
             nameOverride ?? Path.GetFileName(folderPath),
             relativePath);
 
-        foreach (var subFolderPath in Directory.EnumerateDirectories(folderPath))
+        foreach (var subFolderPath in EnumerateDirectoriesSafe(folderPath))
         {
             var folderName = Path.GetFileName(subFolderPath);
             if (folderName.StartsWith(".", StringComparison.Ordinal))
@@ -90,36 +90,74 @@ public sealed class WindowsStartMenuService
                 continue;
             }
 
-            folder.Folders.Add(ScanFolder(subFolderPath, rootPath));
+            try
+            {
+                folder.Folders.Add(ScanFolder(subFolderPath, rootPath));
+            }
+            catch
+            {
+                // Skip unreadable branches but continue scanning siblings.
+            }
         }
 
-        foreach (var filePath in Directory.EnumerateFiles(folderPath))
+        foreach (var filePath in EnumerateFilesSafe(folderPath))
         {
-            var extension = Path.GetExtension(filePath);
-            if (!SupportedEntryExtensions.Contains(extension))
+            try
             {
-                continue;
-            }
+                var extension = Path.GetExtension(filePath);
+                if (!SupportedEntryExtensions.Contains(extension))
+                {
+                    continue;
+                }
 
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                continue;
-            }
+                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    continue;
+                }
 
-            var normalizedName = fileName.Replace('_', ' ').Trim();
-            folder.Apps.Add(new StartMenuAppEntry
+                var normalizedName = fileName.Replace('_', ' ').Trim();
+                folder.Apps.Add(new StartMenuAppEntry
+                {
+                    DisplayName = normalizedName,
+                    FilePath = filePath,
+                    RelativePath = Path.GetRelativePath(rootPath, filePath),
+                    IconPngBytes = OperatingSystem.IsWindows()
+                        ? WindowsIconService.TryGetIconPngBytes(filePath)
+                        : null
+                });
+            }
+            catch
             {
-                DisplayName = normalizedName,
-                FilePath = filePath,
-                RelativePath = Path.GetRelativePath(rootPath, filePath),
-                IconPngBytes = OperatingSystem.IsWindows()
-                    ? WindowsIconService.TryGetIconPngBytes(filePath)
-                    : null
-            });
+                // Skip unreadable or invalid entries and continue.
+            }
         }
 
         return folder;
+    }
+
+    private static IEnumerable<string> EnumerateDirectoriesSafe(string folderPath)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(folderPath);
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static IEnumerable<string> EnumerateFilesSafe(string folderPath)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(folderPath);
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
     }
 
     private static void MergeFolder(StartMenuFolderNode target, StartMenuFolderNode source)

@@ -86,20 +86,22 @@ public partial class MainWindow
         WallpaperPreviewBackButtonTextBlock.Text = L("button.back_to_windows", "Back to Windows");
         ToolTip.SetTip(BackToWindowsButton, L("tooltip.back_to_windows", "Back to Windows"));
 
-        OpenComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
-        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
-        GridPreviewComponentLibraryTextBlock.Text = L("button.component_library", "编辑桌面");
-        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "编辑桌面"));
-        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "小组件");
+        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        WallpaperPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        GridPreviewComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
+        ToolTip.SetTip(OpenComponentLibraryButton, L("tooltip.component_library", "Edit Desktop"));
+        ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
         ToolTip.SetTip(CloseComponentLibraryButton, L("common.close", "Close"));
         ComponentLibraryEmptyTextBlock.Text = L(
             "component_library.empty",
             "Swipe to pick a category, tap to open, then drag a widget onto the desktop.");
 
-        LauncherTitleTextBlock.Text = L("launcher.title", "应用启动台");
-        LauncherSubtitleTextBlock.Text = L("launcher.subtitle", "按 Windows 开始菜单结构显示所有应用与文件夹");
-        ToolTip.SetTip(LauncherFolderBackButton, L("common.back", "返回"));
-        ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "关闭"));
+        LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
+        LauncherSubtitleTextBlock.Text = L(
+            "launcher.subtitle",
+            "Displays all apps and folders based on the Windows Start menu structure.");
+        ToolTip.SetTip(LauncherFolderBackButton, L("common.back", "Back"));
+        ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "Close"));
 
         SettingsNavHeaderTextBlock.Text = L("settings.nav_header", "Settings");
         SettingsNavWallpaperTextBlock.Text = L("settings.nav.wallpaper", "Wallpaper");
@@ -109,11 +111,13 @@ public partial class MainWindow
         SettingsNavWeatherTextBlock.Text = L("settings.nav.weather", "Weather");
         SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
 
-        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "个性化我们的背景");
-        WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "选择契合度");
-        WallpaperPlacementSettingsExpander.Description = L("settings.wallpaper.placement_desc", "调整图像在桌面上的填充方式。");
-        PickWallpaperButton.Content = L("settings.wallpaper.pick_button", "浏览照片");
-        ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "重置");
+        WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
+        WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
+        WallpaperPlacementSettingsExpander.Description = L(
+            "settings.wallpaper.placement_desc",
+            "Adjust how the image fits on the desktop.");
+        PickWallpaperButton.Content = L("settings.wallpaper.pick_button", "Browse");
+        ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "Reset");
 
         GridPanelTitleTextBlock.Text = L("settings.grid.title", "Grid Layout");
         GridSpacingPresetLabelTextBlock.Text = L("settings.grid.spacing_label", "Grid Spacing");
@@ -265,7 +269,7 @@ public partial class MainWindow
 
     private string GetLocalizedTimeZoneDisplayName(TimeZoneInfo timeZone)
     {
-        var offset = timeZone.BaseUtcOffset;
+        var offset = timeZone.GetUtcOffset(DateTime.UtcNow);
         var sign = offset >= TimeSpan.Zero ? "+" : "-";
         var hours = Math.Abs(offset.Hours);
         var minutes = Math.Abs(offset.Minutes);

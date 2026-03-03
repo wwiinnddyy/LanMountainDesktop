@@ -400,6 +400,7 @@ public partial class MainWindow
             }
 
             ComponentLibraryWindow.IsVisible = false;
+            ClearComponentLibraryPreviewControls();
 
             var shouldReopenSettings = reopenSettings && _reopenSettingsAfterComponentLibraryClose;
             _reopenSettingsAfterComponentLibraryClose = false;
@@ -661,7 +662,8 @@ public partial class MainWindow
             return;
         }
 
-        // 娴犲海缍夐弽闂磋厬缁夊娅庣紒鍕
+        ClearTimeZoneServiceBindings(_selectedDesktopComponentHost);
+
         if (_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
         {
             pageGrid.Children.Remove(_selectedDesktopComponentHost);
@@ -748,7 +750,7 @@ public partial class MainWindow
         RebuildDesktopGrid();
         PersistSettings();
         
-        // 閺囧瓨鏌婇崝銊︹偓浣锋崲閸斺剝鐖弰鍓с仛
+        // Refresh taskbar actions after page count changes.
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
@@ -762,6 +764,11 @@ public partial class MainWindow
         var placementsToRemove = _desktopComponentPlacements
             .Where(p => p.PageIndex == _currentDesktopSurfaceIndex)
             .ToList();
+
+        if (_desktopPageComponentGrids.TryGetValue(_currentDesktopSurfaceIndex, out var pageGrid))
+        {
+            ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
+        }
         
         foreach (var placement in placementsToRemove)
         {
@@ -770,7 +777,7 @@ public partial class MainWindow
 
         _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
         
-        // 鐠嬪啯鏆ｈぐ鎾冲妞ょ敻娼扮槐銏犵穿
+        // Clamp current page index to valid range after deletion.
         _currentDesktopSurfaceIndex = Math.Clamp(_currentDesktopSurfaceIndex, 0, _desktopPageCount - 1);
         
         // Update remaining page indices after deletion.
@@ -785,7 +792,7 @@ public partial class MainWindow
         RebuildDesktopGrid();
         PersistSettings();
         
-        // 閺囧瓨鏌婇崝銊︹偓浣锋崲閸斺剝鐖弰鍓с仛
+        // Refresh taskbar actions after page count changes.
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
@@ -842,6 +849,7 @@ public partial class MainWindow
             return;
         }
 
+        ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
         pageGrid.Children.Clear();
 
         var maxColumns = pageGrid.ColumnDefinitions.Count;
@@ -1062,12 +1070,27 @@ public partial class MainWindow
                 runtimeDescriptor.Definition,
                 span.WidthCells,
                 span.HeightCells);
+            if (runtimeDescriptor.Definition.ResizeMode == DesktopComponentResizeMode.Free)
+            {
+                return normalized;
+            }
+
             return NormalizeAspectRatioForComponent(componentId, normalized);
         }
 
         return NormalizeAspectRatioForComponent(
             componentId,
             (Math.Max(1, span.WidthCells), Math.Max(1, span.HeightCells)));
+    }
+
+    private DesktopComponentResizeMode GetComponentResizeMode(string componentId)
+    {
+        if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
+        {
+            return runtimeDescriptor.Definition.ResizeMode;
+        }
+
+        return DesktopComponentResizeMode.Proportional;
     }
 
     private static (int WidthCells, int HeightCells) NormalizeAspectRatioForComponent(
@@ -1196,6 +1219,30 @@ public partial class MainWindow
         return null;
     }
 
+    private static void ClearTimeZoneServiceBindings(IEnumerable<Control> roots)
+    {
+        foreach (var root in roots)
+        {
+            ClearTimeZoneServiceBindings(root);
+        }
+    }
+
+    private static void ClearTimeZoneServiceBindings(Control root)
+    {
+        if (root is ITimeZoneAwareComponentWidget timeZoneAwareRoot)
+        {
+            timeZoneAwareRoot.ClearTimeZoneService();
+        }
+
+        foreach (var descendant in root.GetVisualDescendants())
+        {
+            if (descendant is ITimeZoneAwareComponentWidget timeZoneAwareChild)
+            {
+                timeZoneAwareChild.ClearTimeZoneService();
+            }
+        }
+    }
+
     private static Border? TryGetResizeHandle(Border host)
     {
         if (host.Child is Grid hostChrome)
@@ -1257,6 +1304,7 @@ public partial class MainWindow
         CancelDesktopComponentResize(restoreOriginalSpan: true);
         ClearDesktopComponentSelection();
         UpdateDesktopComponentHostEditState();
+        ClearComponentLibraryPreviewControls();
         UpdateComponentLibraryLayout(_currentDesktopCellSize);
     }
 
@@ -1615,36 +1663,52 @@ public partial class MainWindow
 
         var deltaX = pointerInViewport.X - _desktopComponentResize.StartPointerInViewport.X;
         var deltaY = pointerInViewport.Y - _desktopComponentResize.StartPointerInViewport.Y;
-        var widthScale = (_desktopComponentResize.StartWidthCells + deltaX / pitch) / _desktopComponentResize.StartWidthCells;
-        var heightScale = (_desktopComponentResize.StartHeightCells + deltaY / pitch) / _desktopComponentResize.StartHeightCells;
-
-        var proposedScale = Math.Max(widthScale, heightScale);
-        var minScale = Math.Max(
-            (double)_desktopComponentResize.MinWidthCells / _desktopComponentResize.StartWidthCells,
-            (double)_desktopComponentResize.MinHeightCells / _desktopComponentResize.StartHeightCells);
-        var maxScale = Math.Min(
-            (double)_desktopComponentResize.MaxWidthCells / _desktopComponentResize.StartWidthCells,
-            (double)_desktopComponentResize.MaxHeightCells / _desktopComponentResize.StartHeightCells);
-
-        if (double.IsNaN(proposedScale) || double.IsInfinity(proposedScale))
+        int widthCells;
+        int heightCells;
+        if (GetComponentResizeMode(_desktopComponentResize.ComponentId) == DesktopComponentResizeMode.Free)
         {
-            proposedScale = minScale;
+            widthCells = Math.Clamp(
+                (int)Math.Round(_desktopComponentResize.StartWidthCells + deltaX / pitch),
+                _desktopComponentResize.MinWidthCells,
+                _desktopComponentResize.MaxWidthCells);
+            heightCells = Math.Clamp(
+                (int)Math.Round(_desktopComponentResize.StartHeightCells + deltaY / pitch),
+                _desktopComponentResize.MinHeightCells,
+                _desktopComponentResize.MaxHeightCells);
         }
-
-        if (maxScale < minScale)
+        else
         {
-            maxScale = minScale;
-        }
+            var widthScale = (_desktopComponentResize.StartWidthCells + deltaX / pitch) / _desktopComponentResize.StartWidthCells;
+            var heightScale = (_desktopComponentResize.StartHeightCells + deltaY / pitch) / _desktopComponentResize.StartHeightCells;
 
-        var scale = Math.Clamp(proposedScale, minScale, maxScale);
-        var widthCells = Math.Clamp(
-            (int)Math.Round(_desktopComponentResize.StartWidthCells * scale),
-            _desktopComponentResize.MinWidthCells,
-            _desktopComponentResize.MaxWidthCells);
-        var heightCells = Math.Clamp(
-            (int)Math.Round(_desktopComponentResize.StartHeightCells * scale),
-            _desktopComponentResize.MinHeightCells,
-            _desktopComponentResize.MaxHeightCells);
+            var proposedScale = Math.Max(widthScale, heightScale);
+            var minScale = Math.Max(
+                (double)_desktopComponentResize.MinWidthCells / _desktopComponentResize.StartWidthCells,
+                (double)_desktopComponentResize.MinHeightCells / _desktopComponentResize.StartHeightCells);
+            var maxScale = Math.Min(
+                (double)_desktopComponentResize.MaxWidthCells / _desktopComponentResize.StartWidthCells,
+                (double)_desktopComponentResize.MaxHeightCells / _desktopComponentResize.StartHeightCells);
+
+            if (double.IsNaN(proposedScale) || double.IsInfinity(proposedScale))
+            {
+                proposedScale = minScale;
+            }
+
+            if (maxScale < minScale)
+            {
+                maxScale = minScale;
+            }
+
+            var scale = Math.Clamp(proposedScale, minScale, maxScale);
+            widthCells = Math.Clamp(
+                (int)Math.Round(_desktopComponentResize.StartWidthCells * scale),
+                _desktopComponentResize.MinWidthCells,
+                _desktopComponentResize.MaxWidthCells);
+            heightCells = Math.Clamp(
+                (int)Math.Round(_desktopComponentResize.StartHeightCells * scale),
+                _desktopComponentResize.MinHeightCells,
+                _desktopComponentResize.MaxHeightCells);
+        }
 
         var normalized = NormalizeComponentCellSpan(_desktopComponentResize.ComponentId, (widthCells, heightCells));
         widthCells = Math.Clamp(normalized.WidthCells, _desktopComponentResize.MinWidthCells, _desktopComponentResize.MaxWidthCells);
@@ -2213,6 +2277,7 @@ public partial class MainWindow
         _componentLibraryActiveComponents = category.Components;
         var componentCount = _componentLibraryActiveComponents.Count;
 
+        ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
@@ -2372,6 +2437,19 @@ public partial class MainWindow
 
         ApplyComponentLibraryComponentOffset();
         UpdateComponentLibraryComponentNavigationButtons();
+    }
+
+    private void ClearComponentLibraryPreviewControls()
+    {
+        if (ComponentLibraryComponentPagesContainer is null)
+        {
+            return;
+        }
+
+        ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
+        ComponentLibraryComponentPagesContainer.Children.Clear();
+        ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
+        ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
     }
 
     private string GetLocalizedComponentDisplayName(DesktopComponentRuntimeDescriptor descriptor)

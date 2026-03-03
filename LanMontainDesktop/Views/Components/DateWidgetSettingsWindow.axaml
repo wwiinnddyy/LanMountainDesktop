@@ -10,7 +10,7 @@
     <Border Background="{DynamicResource AdaptiveBackgroundBrush}"
             Padding="24">
         <StackPanel Spacing="16">
-            <TextBlock Text="日历组件设置"
+            <TextBlock Text="Date Widget Settings"
                        FontSize="20"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />

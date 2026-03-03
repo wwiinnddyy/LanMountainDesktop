@@ -45,14 +45,21 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
     {
-        if (_timeZoneService is not null)
-        {
-            _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
-        }
-
+        ClearTimeZoneService();
         _timeZoneService = timeZoneService;
         _timeZoneService.TimeZoneChanged += OnTimeZoneChanged;
         UpdateClock();
+    }
+
+    public void ClearTimeZoneService()
+    {
+        if (_timeZoneService is null)
+        {
+            return;
+        }
+
+        _timeZoneService.TimeZoneChanged -= OnTimeZoneChanged;
+        _timeZoneService = null;
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

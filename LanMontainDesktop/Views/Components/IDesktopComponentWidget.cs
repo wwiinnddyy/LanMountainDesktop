@@ -10,6 +10,7 @@ public interface IDesktopComponentWidget
 public interface ITimeZoneAwareComponentWidget
 {
     void SetTimeZoneService(TimeZoneService timeZoneService);
+    void ClearTimeZoneService();
 }
 
 public interface IWeatherInfoAwareComponentWidget

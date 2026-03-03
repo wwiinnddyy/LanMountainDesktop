@@ -8,4 +8,5 @@ public sealed record DesktopComponentDefinition(
     int MinWidthCells,
     int MinHeightCells,
     bool AllowStatusBarPlacement,
-    bool AllowDesktopPlacement);
+    bool AllowDesktopPlacement,
+    DesktopComponentResizeMode ResizeMode = DesktopComponentResizeMode.Proportional);

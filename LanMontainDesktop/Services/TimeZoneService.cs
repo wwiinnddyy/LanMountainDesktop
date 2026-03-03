@@ -69,7 +69,7 @@ public sealed class TimeZoneService
     /// </summary>
     public string GetTimeZoneDisplayName(TimeZoneInfo timeZone)
     {
-        var offset = timeZone.BaseUtcOffset;
+        var offset = timeZone.GetUtcOffset(DateTime.UtcNow);
         var sign = offset >= TimeSpan.Zero ? "+" : "-";
         var hours = Math.Abs(offset.Hours);
         var minutes = Math.Abs(offset.Minutes);

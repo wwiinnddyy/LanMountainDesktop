@@ -795,7 +795,7 @@ public partial class MainWindow : Window
         var spacingPx = Math.Max(0, cellSize) * (percent / 100d);
         StatusBarSpacingComputedPxTextBlock.Text = Lf(
             "settings.status_bar.spacing_custom_px_format",
-            "鈮?{0:F1}px",
+            ">= {0:F1}px",
             spacingPx);
     }
 
@@ -863,13 +863,11 @@ public partial class MainWindow : Window
         var shortSidePx = Math.Max(1, Math.Min(hostWidth, hostHeight));
         var baseCell = shortSidePx / cells;
         
-        // --- 姣斾緥鍖栫暀鐧?(Proportional Inset) ---
-        // 鍏佽鐢ㄦ埛鐧惧垎姣旇皟鑺傦紝浣嗚瀹氭洿鍚堢悊鐨勫熀鍑嗗拰闄愬埗
+        // Proportional inset based on user percentage selection.
         var clampedPercent = Math.Clamp(insetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
         var insetRatio = clampedPercent / 100d;
         
-        // 纭繚鏈€灏忕暀鐧借兘瀹圭撼涓€瀹氱殑闃村奖鎵╁睍
-        // 鍏佽 0 杈硅窛锛屾渶澶т笂闄愮淮鎸?80px
+        // Keep inset within a practical visual range.
         return Math.Clamp(baseCell * insetRatio, 0, 80);
     }
 
@@ -1282,7 +1280,7 @@ public partial class MainWindow : Window
             };
             TimeZoneComboBox.Items.Add(item);
 
-            // 閫変腑褰撳墠鏃跺尯
+            // Select current time zone.
             if (tz.Id == _timeZoneService.CurrentTimeZone.Id)
             {
                 TimeZoneComboBox.SelectedItem = item;
