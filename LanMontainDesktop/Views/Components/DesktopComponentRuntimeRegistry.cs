@@ -156,6 +156,16 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new ClassScheduleWidget(),
                     cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopMusicControl,
+                    "component.music_control",
+                    () => new MusicControlWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopAudioRecorder,
+                    "component.audio_recorder",
+                    () => new RecordingWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.36, 16, 34)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWhiteboard,
                     "component.whiteboard",
                     () => new WhiteboardWidget(),

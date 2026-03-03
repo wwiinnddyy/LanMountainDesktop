@@ -8,7 +8,6 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using FluentIcons.Common;
 using LanMontainDesktop.Models;
 using LanMontainDesktop.Services;
 
@@ -54,7 +53,6 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private bool _isRefreshing;
     private bool? _isNightModeApplied;
     private string _languageCode = "zh-CN";
-    private Symbol _activeWeatherSymbol = Symbol.WeatherPartlyCloudyDay;
     private HyperOS3WeatherVisualKind _activeVisualKind = HyperOS3WeatherVisualKind.CloudyDay;
 
     public WeatherClockWidget()
@@ -173,7 +171,9 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         var leftWidthFactor = Math.Clamp(leftContentWidth / 122d, 0.48, 1.35);
         TimeTextBlock.FontSize = Math.Clamp((metrics.PrimaryTemperatureFont * 0.74) * scale * compactFactor * leftWidthFactor, 10, 62);
         DateTextBlock.FontSize = Math.Clamp(metrics.SecondaryTextFont * scale * compactFactor * leftWidthFactor, 8, 30);
-        WeatherIconSymbol.FontSize = Math.Clamp(metrics.IconFont * scale * compactFactor * leftWidthFactor, 9, 32);
+        var weatherIconSize = Math.Clamp(metrics.IconFont * scale * compactFactor * leftWidthFactor, 9, 32);
+        WeatherIconImage.Width = weatherIconSize;
+        WeatherIconImage.Height = weatherIconSize;
 
         TimeTextBlock.FontWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
         DateTextBlock.FontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
@@ -185,10 +185,10 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
 
         var showDateLine = leftContentWidth >= Math.Max(40, TimeTextBlock.FontSize * 1.72);
         DateWeatherStack.IsVisible = showDateLine;
-        WeatherIconSymbol.IsVisible = showDateLine && leftContentWidth >= Math.Max(56, DateTextBlock.FontSize * 2.4);
+        WeatherIconImage.IsVisible = showDateLine && leftContentWidth >= Math.Max(56, DateTextBlock.FontSize * 2.4);
 
-        var dateReservedWidth = WeatherIconSymbol.IsVisible
-            ? WeatherIconSymbol.FontSize + DateWeatherStack.Spacing
+        var dateReservedWidth = WeatherIconImage.IsVisible
+            ? weatherIconSize + DateWeatherStack.Spacing
             : 0;
         DateTextBlock.MaxWidth = Math.Max(12, leftContentWidth - dateReservedWidth);
 
@@ -312,18 +312,16 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     {
         var isNight = ResolveIsNight(snapshot);
         _activeVisualKind = HyperOS3WeatherTheme.ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
-        _activeWeatherSymbol = HyperOS3WeatherTheme.ResolveWeatherSymbol(_activeVisualKind);
-        WeatherIconSymbol.Symbol = _activeWeatherSymbol;
-        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(
+            HyperOS3WeatherTheme.ResolveIconAsset(_activeVisualKind));
     }
 
     private void ApplyDefaultWeatherIcon()
     {
         var isNight = IsNightNow();
         _activeVisualKind = isNight ? HyperOS3WeatherVisualKind.ClearNight : HyperOS3WeatherVisualKind.CloudyDay;
-        _activeWeatherSymbol = HyperOS3WeatherTheme.ResolveWeatherSymbol(_activeVisualKind);
-        WeatherIconSymbol.Symbol = _activeWeatherSymbol;
-        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(
+            HyperOS3WeatherTheme.ResolveIconAsset(_activeVisualKind));
     }
 
     private void UpdateClockVisual()
@@ -430,7 +428,6 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         CenterDotInner.Fill = CreateBrush("#1A74F2");
 
         BuildTicks(isNightMode);
-        WeatherIconSymbol.Foreground = CreateBrush(HyperOS3WeatherTheme.ResolveIconAccent(_activeVisualKind, _activeWeatherSymbol));
     }
 
     private WeatherClockConfig LoadConfig()

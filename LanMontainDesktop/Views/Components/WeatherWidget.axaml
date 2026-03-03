@@ -9,16 +9,16 @@
              x:Class="LanMontainDesktop.Views.Components.WeatherWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="28"
+            CornerRadius="30"
             ClipToBounds="True"
             Background="#68A9EC">
         <Grid>
             <Border x:Name="BackgroundImageLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True" />
 
             <Border x:Name="BackgroundMotionLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.24"
                     RenderTransformOrigin="0.5,0.5">
@@ -32,12 +32,12 @@
             </Border>
 
             <Border x:Name="BackgroundTintLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.20" />
 
             <Border x:Name="BackgroundLightLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.66">
                 <Border.Background>
@@ -54,7 +54,7 @@
             </Border>
 
             <Border x:Name="BackgroundShadeLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.78">
                 <Border.Background>
@@ -73,76 +73,91 @@
                     ClipToBounds="True" />
 
             <Border x:Name="ContentPaddingBorder"
-                    Padding="18"
+                    Padding="16"
                     Background="Transparent">
-                <Viewbox Stretch="Uniform">
-                    <Grid x:Name="LayoutRoot"
-                          Width="300"
-                          Height="300">
-                        <Grid x:Name="ContentGrid"
-                              RowDefinitions="Auto,*,Auto"
-                              RowSpacing="8">
-                            <Grid x:Name="TopRowGrid"
-                                  Grid.Row="0"
-                                  ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="8">
-                                <fi:SymbolIcon x:Name="LocationIcon"
-                                               Symbol="Location"
-                                               FontSize="20"
-                                               VerticalAlignment="Center" />
-
-                                <TextBlock x:Name="CityTextBlock"
-                                           Grid.Column="1"
-                                           Text="Beijing"
-                                           FontSize="30"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-
-                                <fi:SymbolIcon x:Name="WeatherIconSymbol"
-                                               Grid.Column="2"
-                                               Symbol="WeatherSunny"
-                                               IconVariant="Regular"
-                                               FontSize="40"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Center" />
-                            </Grid>
-
+                <Grid x:Name="LayoutRoot">
+                    <Grid x:Name="ContentGrid"
+                          RowDefinitions="Auto,*,Auto"
+                          RowSpacing="2">
+                        <Grid x:Name="TopRowGrid"
+                              Grid.Row="0"
+                              ColumnDefinitions="Auto,*">
                             <TextBlock x:Name="TemperatureTextBlock"
-                                       Grid.Row="1"
-                                       Text="26"
-                                       FontSize="108"
-                                       FontWeight="Bold"
+                                       Grid.Column="0"
+                                       Text="26°"
+                                       FontSize="96"
+                                       FontWeight="Light"
                                        FontFeatures="tnum"
-                                       VerticalAlignment="Center"
-                                       Margin="0,4,0,10"
+                                       VerticalAlignment="Top"
+                                       Margin="0,-1,0,0"
                                        TextTrimming="CharacterEllipsis"
                                        MaxLines="1" />
 
-                            <StackPanel x:Name="BottomInfoStack"
-                                        Grid.Row="2"
-                                        VerticalAlignment="Bottom"
-                                        Spacing="4"
-                                        Margin="0,0,0,10">
+                            <Image x:Name="WeatherIconImage"
+                                    Grid.Column="1"
+                                   Width="76"
+                                   Height="76"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Top"
+                                   Stretch="Uniform" />
+                        </Grid>
+
+                        <Border x:Name="ConditionInfoBadge"
+                                   Grid.Row="1"
+                                   Background="Transparent"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   Padding="0">
+                            <StackPanel Orientation="Vertical"
+                                        Spacing="0"
+                                        VerticalAlignment="Center">
                                 <TextBlock x:Name="ConditionTextBlock"
                                            Text="Clear"
-                                           FontSize="30"
+                                           FontSize="44"
                                            FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis"
                                            MaxLines="1" />
 
                                 <TextBlock x:Name="RangeTextBlock"
-                                           Text="20 / 28"
-                                           FontSize="36"
+                                           Text="20°/28°"
+                                           FontSize="46"
                                            FontWeight="SemiBold"
                                            FontFeatures="tnum"
                                            TextTrimming="CharacterEllipsis"
                                            MaxLines="1" />
                             </StackPanel>
-                        </Grid>
+                        </Border>
+
+                        <StackPanel x:Name="BottomInfoStack"
+                                    Grid.Row="2"
+                                    VerticalAlignment="Bottom"
+                                    Spacing="0"
+                                    Margin="0,0,0,1">
+                            <Border x:Name="CityInfoBadge"
+                                    Background="#24FFFFFF"
+                                    CornerRadius="13"
+                                    Padding="10,5"
+                                    HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="6"
+                                            VerticalAlignment="Center">
+                                    <fi:SymbolIcon x:Name="LocationIcon"
+                                                   Symbol="Location"
+                                                   FontSize="14"
+                                                   IsVisible="False"
+                                                   VerticalAlignment="Center" />
+                                    <TextBlock x:Name="CityTextBlock"
+                                               Text="Beijing"
+                                               FontSize="23"
+                                               FontWeight="Medium"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </Grid>
-                </Viewbox>
+                </Grid>
             </Border>
         </Grid>
     </Border>

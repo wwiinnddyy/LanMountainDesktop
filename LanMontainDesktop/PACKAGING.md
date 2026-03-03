@@ -55,10 +55,12 @@ pwsh ./scripts/package.ps1 -RuntimeIdentifier linux-x64 -SkipArchive
 
 Jobs:
 - `Validate Build (Windows)` runs on every push and pull request.
-- Package jobs run on manual trigger or `v*` tag push:
-  - `Package Windows` (`win-x64` installer)
-  - `Package Linux` (`linux-x64` zip)
-  - `Package macOS` (`osx-x64` zip)
+- Package flow runs on manual trigger or `v*` tag push:
+  - `Resolve Package Version` (single shared version source)
+  - `Package (Windows)` (`win-x64` installer)
+  - `Package (Linux)` (`linux-x64` zip)
+  - `Package (macOS)` (`osx-x64` zip)
+- On `v*` tags, `Attach Artifacts to GitHub Release` uploads Windows/Linux/macOS packages to the release.
 
 ### Trigger manual packaging
 1. Open GitHub Actions.

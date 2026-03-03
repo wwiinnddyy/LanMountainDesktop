@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:fi="using:FluentIcons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="260"
              d:DesignHeight="120"
@@ -46,12 +45,11 @@
                                TextWrapping="NoWrap"
                                TextTrimming="CharacterEllipsis" />
 
-                    <fi:SymbolIcon x:Name="WeatherIconSymbol"
-                                   Symbol="WeatherPartlyCloudyDay"
-                                   FontSize="18"
-                                   Foreground="#5A9CFF"
-                                   VerticalAlignment="Center"
-                                   IconVariant="Regular" />
+                    <Image x:Name="WeatherIconImage"
+                           Width="18"
+                           Height="18"
+                           VerticalAlignment="Center"
+                           Stretch="Uniform" />
                 </StackPanel>
             </StackPanel>
 

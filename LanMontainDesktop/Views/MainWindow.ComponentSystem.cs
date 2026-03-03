@@ -2217,6 +2217,11 @@ public partial class MainWindow
             return Symbol.Edit;
         }
 
+        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Play;
+        }
+
         return Symbol.Apps;
     }
 
@@ -2240,6 +2245,11 @@ public partial class MainWindow
         if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.board", "Board");
+        }
+
+        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.media", "Media");
         }
 
         return categoryId;

@@ -17,4 +17,18 @@ Extracted source paths inside APK:
 - `assets/map_assets/VM3DRes/cross_sky_day.png` -> `hyper_cross_sky_day.png`
 - `assets/map_assets/VM3DRes/cross_sky_night.png` -> `hyper_cross_sky_night.png`
 
+Extracted weather icon paths inside APK (`res/*.webp`):
+- `res/aO.webp` -> `Icons/icon_sunny_day.webp`
+- `res/k2.webp` -> `Icons/icon_moon_clear.webp`
+- `res/Ip.webp` -> `Icons/icon_partly_cloudy_day.webp`
+- `res/HI.webp` -> `Icons/icon_partly_cloudy_night.webp`
+- `res/E4.webp` -> `Icons/icon_cloudy.webp`
+- `res/5f.webp` -> `Icons/icon_rain_light.webp`
+- `res/fO.webp` -> `Icons/icon_rain_heavy.webp`
+- `res/lV1.webp` -> `Icons/icon_thunder.webp`
+- `res/mH1.webp` -> `Icons/icon_snow.webp`
+- `res/jB.webp` -> `Icons/icon_sleet.webp`
+- `res/Wl.webp` -> `Icons/icon_haze.webp`
+- `res/Mg.webp` -> `Icons/icon_windy.webp`
+
 Use only according to Xiaomi's applicable license and usage terms.

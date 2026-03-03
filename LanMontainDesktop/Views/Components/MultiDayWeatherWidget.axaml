@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,16 +9,16 @@
              x:Class="LanMontainDesktop.Views.Components.MultiDayWeatherWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="28"
+            CornerRadius="30"
             ClipToBounds="True"
             Background="#68A9EC">
         <Grid>
             <Border x:Name="BackgroundImageLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True" />
 
             <Border x:Name="BackgroundMotionLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.24"
                     RenderTransformOrigin="0.5,0.5">
@@ -32,12 +32,12 @@
             </Border>
 
             <Border x:Name="BackgroundTintLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.20" />
 
             <Border x:Name="BackgroundLightLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.66">
                 <Border.Background>
@@ -54,7 +54,7 @@
             </Border>
 
             <Border x:Name="BackgroundShadeLayer"
-                    CornerRadius="28"
+                    CornerRadius="30"
                     ClipToBounds="True"
                     Opacity="0.78">
                 <Border.Background>
@@ -73,204 +73,221 @@
                     ClipToBounds="True" />
 
             <Border x:Name="ContentPaddingBorder"
-                    Padding="18"
+                    Padding="16"
                     Background="Transparent">
                 <Grid x:Name="LayoutRoot">
-                        <Grid x:Name="ContentGrid"
-                              RowDefinitions="Auto,Auto,*"
-                              RowSpacing="10">
-                            <Grid x:Name="TopRowGrid"
-                                  Grid.Row="0"
-                                  ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="8">
-                                <fi:SymbolIcon x:Name="LocationIcon"
-                                               Symbol="Location"
-                                               FontSize="20"
-                                               VerticalAlignment="Center" />
+                    <Grid x:Name="ContentGrid"
+                          RowDefinitions="Auto,*"
+                          RowSpacing="6">
+                        <Grid x:Name="TopRowGrid"
+                              Grid.Row="0"
+                              RowDefinitions="Auto,Auto"
+                              ColumnDefinitions="Auto,*,Auto"
+                              RowSpacing="4"
+                              ColumnSpacing="10">
+                            <TextBlock x:Name="TemperatureTextBlock"
+                                       Grid.Column="0"
+                                       Grid.RowSpan="2"
+                                       Text="24°"
+                                       FontSize="98"
+                                       FontWeight="Light"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Top"
+                                       Margin="0,-1,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
 
-                                <TextBlock x:Name="CityTextBlock"
-                                           Grid.Column="1"
-                                           Text="&#x5317;&#x4EAC;"
-                                           FontSize="30"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-
-                                <StackPanel x:Name="ConditionIconStack"
-                                            Grid.Column="2"
-                                            Orientation="Horizontal"
+                            <Border x:Name="CityInfoBadge"
+                                    Grid.Column="1"
+                                    Grid.Row="0"
+                                    Background="#2AFFFFFF"
+                                    CornerRadius="11"
+                                    Padding="10,4"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top">
+                                <StackPanel Orientation="Horizontal"
                                             Spacing="6"
-                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                    <fi:SymbolIcon x:Name="LocationIcon"
+                                                   Symbol="Location"
+                                                   FontSize="14"
+                                                   IsVisible="False"
+                                                   VerticalAlignment="Center" />
+                                    <TextBlock x:Name="CityTextBlock"
+                                               Text="Beijing"
+                                               FontSize="19"
+                                               FontWeight="Medium"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="ConditionInfoBadge"
+                                    Grid.Column="1"
+                                    Grid.Row="1"
+                                    Background="Transparent"
+                                    Padding="0"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Top">
+                                <StackPanel x:Name="ConditionIconStack"
+                                            Orientation="Horizontal"
+                                            Spacing="8"
                                             VerticalAlignment="Center">
                                     <TextBlock x:Name="ConditionTextBlock"
-                                               Text="&#x6674;"
-                                               FontSize="30"
+                                               Text="Clear"
+                                               FontSize="21"
                                                FontWeight="SemiBold"
                                                TextTrimming="CharacterEllipsis"
                                                MaxLines="1" />
-                                    <fi:SymbolIcon x:Name="WeatherIconSymbol"
-                                                   Symbol="WeatherSunny"
-                                                   IconVariant="Regular"
-                                                   FontSize="40"
-                                                   HorizontalAlignment="Right"
-                                                   VerticalAlignment="Center" />
+                                    <TextBlock x:Name="RangeTextBlock"
+                                               Text="20°/28°"
+                                               FontSize="21"
+                                               FontWeight="SemiBold"
+                                               FontFeatures="tnum"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
-                            <Grid Grid.Row="1"
-                                  ColumnDefinitions="Auto,*,Auto">
-                                <TextBlock x:Name="TemperatureTextBlock"
-                                           Grid.Column="0"
-                                           Text="26&#176;"
-                                           FontSize="108"
-                                           FontWeight="Bold"
-                                           FontFeatures="tnum"
-                                           VerticalAlignment="Center"
-                                           Margin="0,4,0,10"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-
-                                <TextBlock x:Name="RangeTextBlock"
-                                           Grid.Column="2"
-                                           Text="&#x7A7A;&#x6C14;&#x4F18; 22"
-                                           FontSize="36"
-                                           FontWeight="SemiBold"
-                                           FontFeatures="tnum"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Bottom"
-                                           Margin="0,0,0,10"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-                            </Grid>
-
-                            <StackPanel x:Name="BottomInfoStack"
-                                        Grid.Row="2"
-                                        VerticalAlignment="Bottom"
-                                        Spacing="4"
-                                        Margin="0,0,0,8">
-                                <Border x:Name="HourlyPanelBorder"
-                                        Background="#1CFFFFFF"
-                                        CornerRadius="18"
-                                        ClipToBounds="True"
-                                        Padding="12,8">
-                                    <Grid x:Name="HourlyGrid"
-                                          ColumnDefinitions="*,*,*,*,*">
-                                        <StackPanel Grid.Column="0"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="2">
-                                            <TextBlock x:Name="HourlyTime0"
-                                                       Text="&#x4ECA;&#x5929;"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" />
-                                            <fi:SymbolIcon x:Name="HourlyIcon0"
-                                                           Symbol="WeatherSunny"
-                                                           FontSize="28"
-                                                           IconVariant="Regular"
-                                                           HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HourlyTemp0"
-                                                       Text="20&#176; / 28&#176;"
-                                                       FontSize="30"
-                                                       FontWeight="SemiBold"
-                                                       FontFeatures="tnum"
-                                                       HorizontalAlignment="Center" />
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="1"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="2">
-                                            <TextBlock x:Name="HourlyTime1"
-                                                       Text="&#x660E;&#x5929;"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" />
-                                            <fi:SymbolIcon x:Name="HourlyIcon1"
-                                                           Symbol="WeatherSunny"
-                                                           FontSize="28"
-                                                           IconVariant="Regular"
-                                                           HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HourlyTemp1"
-                                                       Text="20&#176; / 28&#176;"
-                                                       FontSize="30"
-                                                       FontWeight="SemiBold"
-                                                       FontFeatures="tnum"
-                                                       HorizontalAlignment="Center" />
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="2"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="2">
-                                            <TextBlock x:Name="HourlyTime2"
-                                                       Text="&#x5468;&#x516D;"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" />
-                                            <fi:SymbolIcon x:Name="HourlyIcon2"
-                                                           Symbol="WeatherSunny"
-                                                           FontSize="28"
-                                                           IconVariant="Regular"
-                                                           HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HourlyTemp2"
-                                                       Text="20&#176; / 28&#176;"
-                                                       FontSize="30"
-                                                       FontWeight="SemiBold"
-                                                       FontFeatures="tnum"
-                                                       HorizontalAlignment="Center" />
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="3"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="2">
-                                            <TextBlock x:Name="HourlyTime3"
-                                                       Text="&#x5468;&#x65E5;"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" />
-                                            <fi:SymbolIcon x:Name="HourlyIcon3"
-                                                           Symbol="WeatherSunny"
-                                                           FontSize="28"
-                                                           IconVariant="Regular"
-                                                           HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HourlyTemp3"
-                                                       Text="20&#176; / 28&#176;"
-                                                       FontSize="30"
-                                                       FontWeight="SemiBold"
-                                                       FontFeatures="tnum"
-                                                       HorizontalAlignment="Center" />
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="4"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    Spacing="2">
-                                            <TextBlock x:Name="HourlyTime4"
-                                                       Text="&#x5468;&#x4E00;"
-                                                       FontSize="24"
-                                                       FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" />
-                                            <fi:SymbolIcon x:Name="HourlyIcon4"
-                                                           Symbol="WeatherSunny"
-                                                           FontSize="28"
-                                                           IconVariant="Regular"
-                                                           HorizontalAlignment="Center" />
-                                            <TextBlock x:Name="HourlyTemp4"
-                                                       Text="20&#176; / 28&#176;"
-                                                       FontSize="30"
-                                                       FontWeight="SemiBold"
-                                                       FontFeatures="tnum"
-                                                       HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
+                            <Image x:Name="WeatherIconImage"
+                                   Grid.Column="2"
+                                   Grid.RowSpan="2"
+                                   Width="56"
+                                   Height="56"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Top"
+                                   Stretch="Uniform" />
                         </Grid>
+
+                        <StackPanel x:Name="BottomInfoStack"
+                                    Grid.Row="1"
+                                    VerticalAlignment="Bottom"
+                                    Spacing="2"
+                                    Margin="0,0,0,1">
+                            <Border x:Name="HourlyPanelBorder"
+                                    Background="#0EFFFFFF"
+                                    CornerRadius="15"
+                                    ClipToBounds="True"
+                                    Padding="5,3">
+                                <Grid x:Name="HourlyGrid"
+                                      ColumnDefinitions="*,*,*,*,*"
+                                      ColumnSpacing="8">
+                                    <StackPanel Grid.Column="0"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="1">
+                                        <TextBlock x:Name="HourlyTime0"
+                                                   Text="Today"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <Image x:Name="HourlyIcon0"
+                                               Width="26"
+                                               Height="26"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform" />
+                                        <TextBlock x:Name="HourlyTemp0"
+                                                   Text="20° / 28°"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="1">
+                                        <TextBlock x:Name="HourlyTime1"
+                                                   Text="Tomorrow"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <Image x:Name="HourlyIcon1"
+                                               Width="26"
+                                               Height="26"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform" />
+                                        <TextBlock x:Name="HourlyTemp1"
+                                                   Text="20° / 28°"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="1">
+                                        <TextBlock x:Name="HourlyTime2"
+                                                   Text="Sat"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <Image x:Name="HourlyIcon2"
+                                               Width="26"
+                                               Height="26"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform" />
+                                        <TextBlock x:Name="HourlyTemp2"
+                                                   Text="20° / 28°"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="3"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="1">
+                                        <TextBlock x:Name="HourlyTime3"
+                                                   Text="Sun"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <Image x:Name="HourlyIcon3"
+                                               Width="26"
+                                               Height="26"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform" />
+                                        <TextBlock x:Name="HourlyTemp3"
+                                                   Text="20° / 28°"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="4"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="1">
+                                        <TextBlock x:Name="HourlyTime4"
+                                                   Text="Mon"
+                                                   FontSize="21"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <Image x:Name="HourlyIcon4"
+                                               Width="26"
+                                               Height="26"
+                                               HorizontalAlignment="Center"
+                                               Stretch="Uniform" />
+                                        <TextBlock x:Name="HourlyTemp4"
+                                                   Text="20° / 28°"
+                                                   FontSize="28"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
     </Border>
 </UserControl>
+

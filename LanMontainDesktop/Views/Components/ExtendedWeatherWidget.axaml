@@ -1,19 +1,464 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:local="using:LanMontainDesktop.Views.Components"
              mc:Ignorable="d"
              d:DesignWidth="640"
              d:DesignHeight="640"
              x:Class="LanMontainDesktop.Views.Components.ExtendedWeatherWidget">
 
-    <Grid x:Name="ContainerGrid"
-          RowDefinitions="*,*"
-          RowSpacing="8">
-        <local:HourlyWeatherWidget x:Name="HourlyHost"
-                                   Grid.Row="0" />
-        <local:MultiDayWeatherWidget x:Name="MultiDayHost"
-                                     Grid.Row="1" />
-    </Grid>
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            ClipToBounds="True"
+            Background="#6A8BB3">
+        <Grid>
+            <Border x:Name="BackgroundImageLayer"
+                    CornerRadius="34"
+                    ClipToBounds="True" />
+
+            <Border x:Name="BackgroundMotionLayer"
+                    CornerRadius="34"
+                    ClipToBounds="True"
+                    Opacity="0.24"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1.05"
+                                        ScaleY="1.05" />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Border.RenderTransform>
+            </Border>
+
+            <Border x:Name="BackgroundTintLayer"
+                    CornerRadius="34"
+                    ClipToBounds="True"
+                    Opacity="0.20" />
+
+            <Border x:Name="BackgroundLightLayer"
+                    CornerRadius="34"
+                    ClipToBounds="True"
+                    Opacity="0.64">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="1,1">
+                        <GradientStop Color="#56FFFFFF"
+                                      Offset="0" />
+                        <GradientStop Color="#18FFFFFF"
+                                      Offset="0.30" />
+                        <GradientStop Color="#00000000"
+                                      Offset="0.58" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Border x:Name="BackgroundShadeLayer"
+                    CornerRadius="34"
+                    ClipToBounds="True"
+                    Opacity="0.80">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="0,1">
+                        <GradientStop Color="#00040A16"
+                                      Offset="0.50" />
+                        <GradientStop Color="#2E0B1C34"
+                                      Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Canvas x:Name="ParticleLayer"
+                    IsHitTestVisible="False"
+                    ClipToBounds="True" />
+
+            <Border x:Name="ContentPaddingBorder"
+                    Padding="20"
+                    Background="Transparent">
+                <Grid x:Name="LayoutRoot"
+                      RowDefinitions="Auto,Auto,Auto,*"
+                      RowSpacing="9">
+                    <Grid x:Name="SummaryGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="14">
+                        <TextBlock x:Name="TemperatureTextBlock"
+                                   Grid.Column="0"
+                                   Text="7°"
+                                   FontSize="112"
+                                   FontWeight="Light"
+                                   FontFeatures="tnum"
+                                   VerticalAlignment="Top"
+                                   Margin="0,-2,0,0"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="1" />
+
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Top"
+                                    Spacing="10"
+                                    Margin="0,6,0,0">
+                            <Border x:Name="CityInfoBadge"
+                                    Background="#2AFFFFFF"
+                                    CornerRadius="12"
+                                    Padding="12,5"
+                                    HorizontalAlignment="Left">
+                                <TextBlock x:Name="CityTextBlock"
+                                           Text="Beijing"
+                                           FontSize="24"
+                                           FontWeight="Medium"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxLines="1" />
+                            </Border>
+
+                            <Border x:Name="ConditionInfoBadge"
+                                    Background="#22FFFFFF"
+                                    CornerRadius="12"
+                                    Padding="10,5"
+                                    HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="8"
+                                            VerticalAlignment="Center">
+                                    <TextBlock x:Name="ConditionTextBlock"
+                                               Text="Fog"
+                                               FontSize="30"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                    <TextBlock x:Name="RangeTextBlock"
+                                               Text="11°/4°"
+                                               FontSize="30"
+                                               FontWeight="SemiBold"
+                                               FontFeatures="tnum"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <Image x:Name="WeatherIconImage"
+                               Grid.Column="2"
+                               Width="70"
+                               Height="70"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Top"
+                               Margin="0,2,0,0"
+                               Stretch="Uniform" />
+                    </Grid>
+
+                    <Border x:Name="HourlyPanelBorder"
+                            Grid.Row="1"
+                            Background="#0EFFFFFF"
+                            CornerRadius="16"
+                            ClipToBounds="True"
+                            Padding="8,6">
+                        <Grid x:Name="HourlyGrid"
+                              ColumnDefinitions="*,*,*,*,*,*"
+                              ColumnSpacing="6">
+                            <StackPanel Grid.Column="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp0"
+                                           Text="7°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon0"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime0"
+                                           Text="15:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp1"
+                                           Text="7°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon1"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime1"
+                                           Text="16:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp2"
+                                           Text="7°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon2"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime2"
+                                           Text="17:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp3"
+                                           Text="Sunset"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon3"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime3"
+                                           Text="18:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp4"
+                                           Text="7°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon4"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime4"
+                                           Text="19:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="5"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
+                                <TextBlock x:Name="HourlyTemp5"
+                                           Text="7°"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           FontFeatures="tnum"
+                                           HorizontalAlignment="Center" />
+                                <Image x:Name="HourlyIcon5"
+                                       Width="26"
+                                       Height="26"
+                                       HorizontalAlignment="Center"
+                                       Stretch="Uniform" />
+                                <TextBlock x:Name="HourlyTime5"
+                                           Text="20:00"
+                                           FontSize="22"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="SeparatorLine"
+                            Grid.Row="2"
+                            Height="1"
+                            Margin="0,2,0,2"
+                            Background="#2AFFFFFF" />
+
+                    <Grid x:Name="DailyGrid"
+                          Grid.Row="3"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          RowSpacing="8">
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10">
+                            <Image x:Name="DailyIcon0"
+                                   Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="DailyLabel0"
+                                       Grid.Column="1"
+                                       Text="Tomorrow · Cloudy"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyHigh0"
+                                       Grid.Column="2"
+                                       Text="10"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow0"
+                                       Grid.Column="3"
+                                       Text="5"
+                                       FontSize="30"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10">
+                            <Image x:Name="DailyIcon1"
+                                   Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="DailyLabel1"
+                                       Grid.Column="1"
+                                       Text="Thu · Partly Cloudy"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyHigh1"
+                                       Grid.Column="2"
+                                       Text="13"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow1"
+                                       Grid.Column="3"
+                                       Text="4"
+                                       FontSize="30"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="2"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10">
+                            <Image x:Name="DailyIcon2"
+                                   Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="DailyLabel2"
+                                       Grid.Column="1"
+                                       Text="Fri · Cloudy"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyHigh2"
+                                       Grid.Column="2"
+                                       Text="12"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow2"
+                                       Grid.Column="3"
+                                       Text="3"
+                                       FontSize="30"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="3"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10">
+                            <Image x:Name="DailyIcon3"
+                                   Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="DailyLabel3"
+                                       Grid.Column="1"
+                                       Text="Sat · Partly Cloudy"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyHigh3"
+                                       Grid.Column="2"
+                                       Text="10"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow3"
+                                       Grid.Column="3"
+                                       Text="2"
+                                       FontSize="30"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="4"
+                              ColumnDefinitions="Auto,*,Auto,Auto"
+                              ColumnSpacing="10">
+                            <Image x:Name="DailyIcon4"
+                                   Width="24"
+                                   Height="24"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                            <TextBlock x:Name="DailyLabel4"
+                                       Grid.Column="1"
+                                       Text="Sun · Cloudy"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyHigh4"
+                                       Grid.Column="2"
+                                       Text="11"
+                                       FontSize="30"
+                                       FontWeight="SemiBold"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow4"
+                                       Grid.Column="3"
+                                       Text="3"
+                                       FontSize="30"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </UserControl>
+

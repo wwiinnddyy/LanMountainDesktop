@@ -31,14 +31,11 @@
     <PackageReference Include="FluentIcons.Avalonia" Version="2.0.319" />
     <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="2.0.319" />
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.5" />
+    <PackageReference Include="PortAudioSharp2" Version="1.0.6" />
+    <PackageReference Include="System.Runtime.WindowsRuntime" Version="4.7.0" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23"
-                      Condition="('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')))
-                              or '$(RuntimeIdentifier)' == 'win-x64'
-                              or '$(RuntimeIdentifier)' == 'win-x86'" />
-    <PackageReference Include="VideoLAN.LibVLC.Mac" Version="3.1.3.1"
-                      Condition="('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')))
-                              or '$(RuntimeIdentifier)' == 'osx-x64'" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" Condition="('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')))&#xA;                              or '$(RuntimeIdentifier)' == 'win-x64'&#xA;                              or '$(RuntimeIdentifier)' == 'win-x86'" />
+    <PackageReference Include="VideoLAN.LibVLC.Mac" Version="3.1.3.1" Condition="('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')))&#xA;                              or '$(RuntimeIdentifier)' == 'osx-x64'" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>

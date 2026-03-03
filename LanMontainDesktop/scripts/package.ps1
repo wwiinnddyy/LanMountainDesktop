@@ -89,8 +89,33 @@ function Remove-LibVlcForOtherArch {
     }
 
     foreach ($dir in $dirsToDelete) {
-        if (Test-Path -LiteralPath $dir) {
+        if (-not (Test-Path -LiteralPath $dir)) {
+            continue
+        }
+
+        $pruned = $false
+        try {
             [System.IO.Directory]::Delete($dir, $true)
+            $pruned = $true
+        } catch {
+            if (-not (Test-Path -LiteralPath $dir)) {
+                $pruned = $true
+            } else {
+                Write-Warning "Prune retry for '$dir': $($_.Exception.Message)"
+                try {
+                    Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop
+                    $pruned = $true
+                } catch {
+                    if (-not (Test-Path -LiteralPath $dir)) {
+                        $pruned = $true
+                    } else {
+                        throw "Failed to prune '$dir': $($_.Exception.Message)"
+                    }
+                }
+            }
+        }
+
+        if ($pruned) {
             Write-Host "Pruned: $dir"
         }
     }
