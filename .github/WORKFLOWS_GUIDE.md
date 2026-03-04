@@ -1,8 +1,8 @@
-# GitHub CI/CD Workflow Setup Guide
+﻿# GitHub CI/CD Workflow Setup Guide
 
 ## Overview
 
-This document describes the CI/CD workflows configured for LanMontainDesktop. These workflows are designed to maintain code quality, automate testing, and streamline the release process.
+This document describes the CI/CD workflows configured for LanMountainDesktop. These workflows are designed to maintain code quality, automate testing, and streamline the release process.
 
 ## Workflows
 
@@ -10,7 +10,7 @@ This document describes the CI/CD workflows configured for LanMontainDesktop. Th
 **Trigger:** Every push/PR to main branches, or manual dispatch
 
 **What it does:**
-- Builds both LanMontainDesktop and RecommendationBackend in Debug and Release modes
+- Builds both LanMountainDesktop and RecommendationBackend in Debug and Release modes
 - Runs unit tests (if available)
 - Uploads build artifacts for inspection
 - Runs on Windows (windows-latest)
@@ -54,7 +54,7 @@ QODANA_ENDPOINT=https://qodana.cloud
 | macOS | x64, arm64 (Apple Silicon) | .tar.gz | ✅ Full support |
 
 **Build Scripts:**
-- Windows: Uses PowerShell (`LanMontainDesktop\scripts\package.ps1`)
+- Windows: Uses PowerShell (`LanMountainDesktop\scripts\package.ps1`)
 - Linux/macOS: Uses Bash (`scripts/build.sh`)
 
 **Usage:**
@@ -109,22 +109,22 @@ To align with CI workflows, set up your local environment:
 dotnet restore
 
 # Build (like CI does)
-dotnet build LanMontainDesktop/LanMontainDesktop.csproj
-dotnet build LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+dotnet build LanMountainDesktop/LanMountainDesktop.csproj
+dotnet build LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
 # Format code locally (required by CI)
 dotnet format
 
 # Run tests
-dotnet test LanMontainDesktop/LanMontainDesktop.csproj
-dotnet test LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+dotnet test LanMountainDesktop/LanMountainDesktop.csproj
+dotnet test LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
 # Alternative: Use local build scripts (Linux/macOS)
 ./scripts/build.sh --rid linux-x64 --version 1.0.0
 ./scripts/build.sh --rid osx-x64 --version 1.0.0
 
 # Or on Windows with the PowerShell script
-./LanMontainDesktop/scripts/package.ps1 -RuntimeIdentifier win-x64 -Version 1.0.0
+./LanMountainDesktop/scripts/package.ps1 -RuntimeIdentifier win-x64 -Version 1.0.0
 ```
 
 ### Cross-Platform Build Scripts
@@ -150,10 +150,10 @@ chmod +x scripts/build.sh
 **Windows:**
 ```powershell
 # Using PowerShell script
-.\LanMontainDesktop\scripts\package.ps1 -RuntimeIdentifier win-x64 -Version 1.0.0
+.\LanMountainDesktop\scripts\package.ps1 -RuntimeIdentifier win-x64 -Version 1.0.0
 
 # Or use dotnet directly
-dotnet publish LanMontainDesktop/LanMontainDesktop.csproj `
+dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
     -c Release -r win-x64 -o ./publish/win-x64 `
     -p:PublishSingleFile=true --self-contained
 ```
@@ -210,7 +210,7 @@ git push origin v1.0.0
 ### Status Badge
 Add to your README.md:
 ```markdown
-![Build Status](https://github.com/YOUR_ORG/LanMontainDesktop/workflows/Build%20&%20Test/badge.svg)
+![Build Status](https://github.com/YOUR_ORG/LanMountainDesktop/workflows/Build%20&%20Test/badge.svg)
 ```
 
 ### Check Workflow Status

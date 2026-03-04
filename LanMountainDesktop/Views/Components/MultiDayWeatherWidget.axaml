@@ -1,0 +1,179 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.MultiDayWeatherWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="28"
+            ClipToBounds="True"
+            Background="#6B7B8F">
+        <Grid>
+            <Border x:Name="BackgroundImageLayer" CornerRadius="28" ClipToBounds="True" />
+
+            <Border x:Name="BackgroundMotionLayer"
+                    CornerRadius="28"
+                    ClipToBounds="True"
+                    Opacity="0.25"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="1.07" ScaleY="1.07" />
+                        <TranslateTransform />
+                    </TransformGroup>
+                </Border.RenderTransform>
+            </Border>
+
+            <Border x:Name="BackgroundTintLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.12" />
+
+            <Border x:Name="BackgroundLightLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.52">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#45FFFFFF" Offset="0" />
+                        <GradientStop Color="#16FFFFFF" Offset="0.35" />
+                        <GradientStop Color="#00000000" Offset="0.64" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Border x:Name="BackgroundShadeLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.68">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00000000" Offset="0.42" />
+                        <GradientStop Color="#19000000" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Canvas x:Name="ParticleLayer" IsHitTestVisible="False" ClipToBounds="True" />
+
+            <Border x:Name="ContentPaddingBorder" Padding="24,18" Background="Transparent">
+                <Grid x:Name="LayoutRoot">
+                    <Grid x:Name="ContentGrid" RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                        <Grid x:Name="TopRowGrid" Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <TextBlock x:Name="TemperatureTextBlock"
+                                       Grid.Column="0"
+                                       Text="7°"
+                                       FontSize="54"
+                                       FontWeight="Light"
+                                       FontFeatures="tnum"
+                                       VerticalAlignment="Center"
+                                       Margin="0,-2,0,0"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
+
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="2"
+                                        Margin="2,0,0,0">
+                                <StackPanel x:Name="BottomInfoStack"
+                                            Orientation="Horizontal"
+                                            Spacing="3"
+                                            Margin="0,0,0,1"
+                                            VerticalAlignment="Center">
+                                    <Border x:Name="CityInfoBadge"
+                                            Background="Transparent"
+                                            CornerRadius="0"
+                                            Padding="0">
+                                        <StackPanel Orientation="Horizontal" Spacing="0">
+                                            <fi:SymbolIcon x:Name="LocationIcon"
+                                                           Symbol="Location"
+                                                           FontSize="13"
+                                                           IsVisible="False"
+                                                           VerticalAlignment="Center" />
+                                            <TextBlock x:Name="CityTextBlock"
+                                                       Text="北京"
+                                                       FontSize="17"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxLines="1" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <Border x:Name="ConditionInfoBadge"
+                                        Background="Transparent"
+                                        CornerRadius="0"
+                                        Padding="0"
+                                        Margin="0">
+                                    <StackPanel x:Name="ConditionIconStack"
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Spacing="9">
+                                        <TextBlock x:Name="ConditionTextBlock"
+                                                   Text="雾"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="1" />
+                                        <TextBlock x:Name="RangeTextBlock"
+                                                   Text="11°/4°"
+                                                   FontSize="20"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="tnum"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="1"
+                                                   Opacity="0.92" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <Image x:Name="WeatherIconImage"
+                                   Grid.Column="2"
+                                   Width="66"
+                                   Height="66"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                        </Grid>
+
+                        <Border Grid.Row="1"
+                                Height="1"
+                                Background="#2AFFFFFF"
+                                Margin="0,4,0,0" />
+
+                        <Border x:Name="HourlyPanelBorder"
+                                Grid.Row="2"
+                                Background="Transparent"
+                                CornerRadius="0"
+                                ClipToBounds="True"
+                                Padding="0,2,0,0"
+                                VerticalAlignment="Top">
+                            <Grid x:Name="HourlyGrid" ColumnDefinitions="*,*,*,*,*" ColumnSpacing="5">
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Name="HourlyTemp0" Text="10°/5°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <Image x:Name="HourlyIcon0" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
+                                    <TextBlock x:Name="HourlyTime0" Text="明天" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Name="HourlyTemp1" Text="13°/4°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <Image x:Name="HourlyIcon1" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
+                                    <TextBlock x:Name="HourlyTime1" Text="周四" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Name="HourlyTemp2" Text="12°/3°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <Image x:Name="HourlyIcon2" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
+                                    <TextBlock x:Name="HourlyTime2" Text="周五" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Name="HourlyTemp3" Text="10°/2°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <Image x:Name="HourlyIcon3" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
+                                    <TextBlock x:Name="HourlyTime3" Text="周六" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Name="HourlyTemp4" Text="11°/3°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <Image x:Name="HourlyIcon4" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
+                                    <TextBlock x:Name="HourlyTime4" Text="周日" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

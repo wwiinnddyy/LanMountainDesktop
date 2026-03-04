@@ -1,5 +1,5 @@
-#!/bin/bash
-# Build script for LanMontainDesktop
+﻿#!/bin/bash
+# Build script for LanMountainDesktop
 # Cross-platform build support: Linux, macOS
 
 set -e
@@ -32,7 +32,7 @@ detect_os() {
 
 print_usage() {
     cat << EOF
-LanMontainDesktop Build Script
+LanMountainDesktop Build Script
 
 Usage: $0 [command] [options]
 
@@ -75,7 +75,7 @@ publish_project() {
     cd "$Root_Dir"
     
     dotnet restore
-    dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+    dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
         -c "$config" \
         -o "$output_dir" \
         --self-contained \

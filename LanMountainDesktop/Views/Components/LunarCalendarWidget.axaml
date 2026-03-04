@@ -1,0 +1,87 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="300"
+             d:DesignHeight="300"
+             x:Class="LanMountainDesktop.Views.Components.LunarCalendarWidget">
+
+    <Border x:Name="RootBorder"
+            Background="#EFE6D9"
+            CornerRadius="30"
+            ClipToBounds="True"
+            Padding="16">
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="LayoutRoot"
+                  Width="300"
+                  Height="300"
+                  RowDefinitions="Auto,Auto,Auto,*"
+                  RowSpacing="10">
+                <TextBlock x:Name="GregorianLineTextBlock"
+                           Grid.Row="0"
+                           Text="10/9 Thu"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="#7A5A47"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock x:Name="LunarDateTextBlock"
+                           Grid.Row="1"
+                           Text="Lunar"
+                           FontSize="88"
+                           FontWeight="Bold"
+                           Foreground="#6B4936"
+                           HorizontalAlignment="Center" />
+
+                <Border x:Name="DividerBorder"
+                        Grid.Row="2"
+                        Height="1"
+                        Margin="8,8,8,2"
+                        Background="#D2C6B7" />
+
+                <Grid x:Name="AuspiciousGrid"
+                      Grid.Row="3"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="12">
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="YiLabelTextBlock"
+                                   Grid.Column="0"
+                                   Text="Yi"
+                                   FontSize="30"
+                                   FontWeight="Bold"
+                                   Foreground="#5F6D2E" />
+                        <TextBlock x:Name="YiItemsTextBlock"
+                                   Grid.Column="1"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
+                                   Foreground="#6B4936"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="1" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="JiLabelTextBlock"
+                                   Grid.Column="0"
+                                   Text="Ji"
+                                   FontSize="30"
+                                   FontWeight="Bold"
+                                   Foreground="#8A4A3A" />
+                        <TextBlock x:Name="JiItemsTextBlock"
+                                   Grid.Column="1"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
+                                   Foreground="#6B4936"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="1" />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>
+

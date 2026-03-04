@@ -1,10 +1,10 @@
-# Multi-Platform Build Guide
+﻿# Multi-Platform Build Guide
 
-This document explains how to build LanMontainDesktop for Windows, Linux, and macOS.
+This document explains how to build LanMountainDesktop for Windows, Linux, and macOS.
 
 ## Overview
 
-LanMontainDesktop supports self-contained builds for:
+LanMountainDesktop supports self-contained builds for:
 - **Windows**: x64 (64-bit) and x86 (32-bit)
 - **Linux**: x64 only (AppImage/snap support planned)
 - **macOS**: x64 (Intel) and arm64 (Apple Silicon M1/M2/M3)
@@ -67,19 +67,19 @@ brew install dotnet
 **Windows (x64):**
 ```powershell
 # Using the PowerShell script
-.\LanMontainDesktop\scripts\package.ps1 `
+.\LanMountainDesktop\scripts\package.ps1 `
     -RuntimeIdentifier win-x64 `
     -Version 1.0.0
 
 # Or with dotnet directly
-dotnet publish LanMontainDesktop/LanMontainDesktop.csproj `
+dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
     -c Release -r win-x64 -o ./publish/win-x64 `
     --self-contained -p:PublishSingleFile=true
 ```
 
 **Windows (x86):**
 ```powershell
-.\LanMontainDesktop\scripts\package.ps1 `
+.\LanMountainDesktop\scripts\package.ps1 `
     -RuntimeIdentifier win-x86 `
     -Version 1.0.0
 ```
@@ -119,8 +119,8 @@ After building, you'll have a self-contained directory with:
 
 ```
 publish/[rid]/
-├── LanMontainDesktop.exe (Windows)
-├── LanMontainDesktop (Linux/macOS - executable)
+├── LanMountainDesktop.exe (Windows)
+├── LanMountainDesktop (Linux/macOS - executable)
 ├── libvlc/ (Windows/macOS only)
 ├── Localization/ (i18n files)
 ├── Extensions/ (Component extension manifests)
@@ -134,7 +134,7 @@ publish/[rid]/
 # Create zip package
 $rid = "win-x64"
 $version = "1.0.0"
-$dir = "LanMontainDesktop-$version-$rid"
+$dir = "LanMountainDesktop-$version-$rid"
 Copy-Item -Path "./publish/$rid" -Destination $dir -Recurse
 Compress-Archive -Path $dir -DestinationPath "$dir.zip"
 ```
@@ -144,7 +144,7 @@ Compress-Archive -Path $dir -DestinationPath "$dir.zip"
 # Create tar.gz package
 rid=linux-x64
 version=1.0.0
-dir="LanMontainDesktop-$version-$rid"
+dir="LanMountainDesktop-$version-$rid"
 mkdir -p $dir
 cp -r ./publish/$rid/* $dir/
 tar -czf "$dir.tar.gz" $dir
@@ -218,16 +218,16 @@ tar -czf "$dir.tar.gz" $dir
 
 ```bash
 # Clean and retry
-dotnet clean LanMontainDesktop/LanMontainDesktop.csproj
+dotnet clean LanMountainDesktop/LanMountainDesktop.csproj
 dotnet restore
-dotnet publish LanMontainDesktop/LanMontainDesktop.csproj -c Release -r win-x64 --self-contained
+dotnet publish LanMountainDesktop/LanMountainDesktop.csproj -c Release -r win-x64 --self-contained
 ```
 
 ### Linux Build Fails
 
 ```bash
 # Check dependencies are installed
-ldd ./publish/linux-x64/LanMontainDesktop | grep "not found"
+ldd ./publish/linux-x64/LanMountainDesktop | grep "not found"
 
 # Install missing libraries
 sudo apt-get install -y lib[missing-name]

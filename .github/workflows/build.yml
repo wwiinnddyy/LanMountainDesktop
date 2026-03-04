@@ -1,4 +1,4 @@
-name: Build
+﻿name: Build
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  Solution_Name: LanMontainDesktop.sln
+  Solution_Name: LanMountainDesktop.sln
 
 jobs:
   build-windows:
@@ -41,8 +41,8 @@ jobs:
         with:
           name: build-windows-${{ matrix.configuration }}
           path: |
-            LanMontainDesktop/bin/${{ matrix.configuration }}/
-            LanMontainDesktop.RecommendationBackend/bin/${{ matrix.configuration }}/
+            LanMountainDesktop/bin/${{ matrix.configuration }}/
+            LanMountainDesktop.RecommendationBackend/bin/${{ matrix.configuration }}/
           retention-days: 7
 
   build-linux:
@@ -80,8 +80,8 @@ jobs:
         with:
           name: build-linux
           path: |
-            LanMontainDesktop/bin/Release/
-            LanMontainDesktop.RecommendationBackend/bin/Release/
+            LanMountainDesktop/bin/Release/
+            LanMountainDesktop.RecommendationBackend/bin/Release/
           retention-days: 7
 
   build-macos:
@@ -111,6 +111,6 @@ jobs:
         with:
           name: build-macos
           path: |
-            LanMontainDesktop/bin/Release/
-            LanMontainDesktop.RecommendationBackend/bin/Release/
+            LanMountainDesktop/bin/Release/
+            LanMountainDesktop.RecommendationBackend/bin/Release/
           retention-days: 7

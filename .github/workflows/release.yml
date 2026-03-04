@@ -1,4 +1,4 @@
-name: Release
+﻿name: Release
 
 on:
   push:
@@ -18,7 +18,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  Solution_Name: LanMontainDesktop.sln
+  Solution_Name: LanMountainDesktop.sln
 
 jobs:
   prepare:
@@ -65,8 +65,8 @@ jobs:
         run: |
           $VERSION = "${{ needs.prepare.outputs.version }}"
           $csprojFiles = @(
-            "LanMontainDesktop/LanMontainDesktop.csproj",
-            "LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj"
+            "LanMountainDesktop/LanMountainDesktop.csproj",
+            "LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj"
           )
           
           foreach ($csprojPath in $csprojFiles) {
@@ -85,7 +85,7 @@ jobs:
 
       - name: Publish
         run: |
-          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj `
+          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
             -c Release `
             -o ./publish/windows-${{ matrix.arch }} `
             --self-contained `
@@ -99,7 +99,7 @@ jobs:
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
           $source = "publish/windows-$arch"
-          $package = "LanMontainDesktop-$version-win-$arch"
+          $package = "LanMountainDesktop-$version-win-$arch"
           
           New-Item -ItemType Directory -Path "$package" -Force | Out-Null
           Copy-Item -Path "$source/*" -Destination "$package" -Recurse -Force
@@ -112,7 +112,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-windows-${{ matrix.arch }}
-          path: LanMontainDesktop-*.zip
+          path: LanMountainDesktop-*.zip
           retention-days: 30
 
   build-linux:
@@ -145,11 +145,11 @@ jobs:
       - name: Update version in .csproj
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Updating version in LanMontainDesktop.csproj to $VERSION"
-          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop/LanMontainDesktop.csproj
+          echo "Updating version in LanMountainDesktop.csproj to $VERSION"
+          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
           
-          echo "Updating version in LanMontainDesktop.RecommendationBackend.csproj to $VERSION"
-          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+          echo "Updating version in LanMountainDesktop.RecommendationBackend.csproj to $VERSION"
+          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Publish
         run: |
-          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
             -c Release \
             -o ./publish/linux-x64 \
             --self-contained \
@@ -171,7 +171,7 @@ jobs:
         run: |
           version="${{ needs.prepare.outputs.version }}"
           source="publish/linux-x64"
-          package_name="lanmontaindesktop"
+          package_name="LanMountainDesktop"
           package_version="${version}"
           arch="amd64"
           
@@ -195,7 +195,7 @@ jobs:
           EOF
           
           # Set proper permissions
-          chmod 755 "build-deb/usr/local/bin/LanMontainDesktop"
+          chmod 755 "build-deb/usr/local/bin/LanMountainDesktop"
           
           # Create DEB file
           dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"
@@ -233,11 +233,11 @@ jobs:
       - name: Update version in .csproj
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Updating version in LanMontainDesktop.csproj to $VERSION"
-          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop/LanMontainDesktop.csproj
+          echo "Updating version in LanMountainDesktop.csproj to $VERSION"
+          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
           
-          echo "Updating version in LanMontainDesktop.RecommendationBackend.csproj to $VERSION"
-          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+          echo "Updating version in LanMountainDesktop.RecommendationBackend.csproj to $VERSION"
+          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -247,7 +247,7 @@ jobs:
 
       - name: Publish
         run: |
-          dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
             -c Release \
             -o ./publish/macos-${{ matrix.arch }} \
             --self-contained \
@@ -260,7 +260,7 @@ jobs:
           version="${{ needs.prepare.outputs.version }}"
           arch="${{ matrix.arch }}"
           source="publish/macos-$arch"
-          app_name="LanMontainDesktop"
+          app_name="LanMountainDesktop"
           package_name="${app_name}-${version}-macos-${arch}"
           
           # Create app bundle structure
@@ -277,7 +277,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>CFBundleExecutable</key>
-            <string>LanMontainDesktop</string>
+            <string>LanMountainDesktop</string>
             <key>CFBundleName</key>
             <string>LanMountain Desktop</string>
             <key>CFBundleVersion</key>

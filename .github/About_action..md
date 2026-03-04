@@ -1,6 +1,6 @@
-# LanMontainDesktop GitHub Actions CI/CD
+﻿# LanMountainDesktop GitHub Actions CI/CD
 
-参考 ClassIsland 项目最佳实践，为 LanMontainDesktop 配置的 GitHub Actions 工作流。
+参考 ClassIsland 项目最佳实践，为 LanMountainDesktop 配置的 GitHub Actions 工作流。
 
 ## 📋 工作流说明
 
@@ -98,11 +98,11 @@ git push origin v1.0.0
 
 ```bash
 # 使用现有脚本
-.\LanMontainDesktop\scripts\package.ps1 -RuntimeIdentifier win-x64
+.\LanMountainDesktop\scripts\package.ps1 -RuntimeIdentifier win-x64
 
 # 或用 dotnet 直接构建
 dotnet build -c Release
-dotnet publish LanMontainDesktop/LanMontainDesktop.csproj `
+dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
     -c Release -r win-x64 -o ./publish/win-x64 `
     --self-contained -p:PublishSingleFile=true
 ```
@@ -118,7 +118,7 @@ chmod +x scripts/build.sh
 
 # 或用 dotnet 直接构建
 dotnet build -c Release
-dotnet publish LanMontainDesktop/LanMontainDesktop.csproj \
+dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
     -c Release -r linux-x64 -o ./publish/linux-x64 \
     --self-contained -p:PublishSingleFile=true
 ```

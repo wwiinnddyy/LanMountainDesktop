@@ -1,8 +1,8 @@
-# LanMontainDesktop
+﻿# LanMountainDesktop
 
 > 你的桌面，不止一面。
 
-`LanMontainDesktop` 是一个基于 Avalonia 的桌面壳层项目，目标不是“做一个启动器”，而是把桌面变成可编排的信息与交互空间。
+`LanMountainDesktop` 是一个基于 Avalonia 的桌面壳层项目，目标不是“做一个启动器”，而是把桌面变成可编排的信息与交互空间。
 
 ## 项目定位
 - 以网格化布局组织桌面组件，支持多页桌面与组件自由摆放。
@@ -18,10 +18,10 @@
 - 本地化：内置 `zh-CN` 与 `en-US` 资源。
 
 ## 工程结构
-- `LanMontainDesktop/`：桌面端主程序（Avalonia）。
-- `LanMontainDesktop.RecommendationBackend/`：推荐内容后端服务（ASP.NET Core Minimal API）。
+- `LanMountainDesktop/`：桌面端主程序（Avalonia）。
+- `LanMountainDesktop.RecommendationBackend/`：推荐内容后端服务（ASP.NET Core Minimal API）。
 - `docs/`：视觉与圆角等规范文档。
-- `LanMontainDesktop/ComponentSystem/`：组件定义、注册、放置规则与扩展入口。
+- `LanMountainDesktop/ComponentSystem/`：组件定义、注册、放置规则与扩展入口。
 
 ## 技术栈
 - .NET 10（`net10.0`）
@@ -33,11 +33,11 @@
 ## 扩展机制（摘要）
 - 组件系统通过 `ComponentRegistry` 合并内置组件与扩展组件。
 - 运行时会扫描 `Extensions/Components/*.json`（相对应用输出目录）加载第三方组件清单。
-- 扩展契约与字段说明见组件系统文档：`LanMontainDesktop/ComponentSystem/README.md`。
+- 扩展契约与字段说明见组件系统文档：`LanMountainDesktop/ComponentSystem/README.md`。
 
 ## 当前状态
 - 项目包含桌面端与推荐后端两个子项目，并在同一 solution 中维护。
-- 配置默认写入本地：`%LOCALAPPDATA%\LanMontainDesktop\settings.json`。
+- 配置默认写入本地：`%LOCALAPPDATA%\LanMountainDesktop\settings.json`。
 - 当前体验以 Windows 为主要目标平台。
 
 ## 运行说明

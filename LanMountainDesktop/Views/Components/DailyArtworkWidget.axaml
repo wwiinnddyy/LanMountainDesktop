@@ -1,0 +1,137 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.DailyArtworkWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Background="#D5D5D5">
+        <Grid x:Name="MainLayoutGrid"
+              ColumnDefinitions="2.08*,1*">
+            <Border x:Name="ArtworkPanel"
+                    Grid.Column="0"
+                    ClipToBounds="True"
+                    Background="#B8AE9A">
+                <Grid>
+                    <Image x:Name="ArtworkImage"
+                           Stretch="UniformToFill" />
+
+                    <Border x:Name="ImageBottomShade"
+                            VerticalAlignment="Bottom"
+                            Height="132">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0"
+                                                 EndPoint="0,1">
+                                <GradientStop Color="#00000000"
+                                              Offset="0" />
+                                <GradientStop Color="#AF000000"
+                                              Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+
+                    <StackPanel x:Name="DateInfoStack"
+                                VerticalAlignment="Bottom"
+                                HorizontalAlignment="Left"
+                                Margin="22,0,0,22"
+                                Spacing="2">
+                        <TextBlock x:Name="DateTextBlock"
+                                   Text="03/03"
+                                   Foreground="#F9F9F9"
+                                   FontSize="52"
+                                   FontWeight="Bold"
+                                   FontFeatures="tnum"
+                                   LineHeight="54" />
+                        <TextBlock x:Name="WeekdayTextBlock"
+                                   Text="星期二"
+                                   Foreground="#F9F9F9"
+                                   FontSize="52"
+                                   FontWeight="Bold"
+                                   LineHeight="54" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    x:Name="InfoPanel"
+                    Background="#111418"
+                    Padding="18,14,18,14">
+                <Grid>
+                    <Canvas x:Name="BrickPatternCanvas"
+                            IsHitTestVisible="False"
+                            Opacity="0.44">
+                        <shapes:Path x:Name="BrickHorizontalPath"
+                                     Stroke="#7D838E"
+                                     StrokeThickness="1.2"
+                                     Data="M0,12 L800,12 M0,40 L800,40 M0,68 L800,68 M0,96 L800,96 M0,124 L800,124 M0,152 L800,152 M0,180 L800,180 M0,208 L800,208 M0,236 L800,236 M0,264 L800,264 M0,292 L800,292 M0,320 L800,320" />
+                        <shapes:Path x:Name="BrickVerticalPathA"
+                                     Stroke="#5A606B"
+                                     StrokeThickness="1"
+                                     Opacity="0.55"
+                                     Data="M56,12 L56,40 M116,12 L116,40 M176,12 L176,40 M236,12 L236,40 M26,40 L26,68 M86,40 L86,68 M146,40 L146,68 M206,40 L206,68 M56,68 L56,96 M116,68 L116,96 M176,68 L176,96 M236,68 L236,96" />
+                        <shapes:Path x:Name="BrickVerticalPathB"
+                                     Stroke="#49505A"
+                                     StrokeThickness="1"
+                                     Opacity="0.36"
+                                     Data="M26,96 L26,124 M86,96 L86,124 M146,96 L146,124 M206,96 L206,124 M56,124 L56,152 M116,124 L116,152 M176,124 L176,152 M236,124 L236,152 M26,152 L26,180 M86,152 L86,180 M146,152 L146,180 M206,152 L206,180" />
+                    </Canvas>
+
+                    <Grid RowDefinitions="Auto,*,Auto,Auto">
+                        <TextBlock x:Name="PaintingTitleTextBlock"
+                                   Text="“拉波特夫人”"
+                                   Foreground="#F8F8F8"
+                                   FontSize="44"
+                                   FontWeight="Bold"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2"
+                                   Margin="0,0,0,8" />
+
+                        <Border x:Name="RightPanelSeparator"
+                                Grid.Row="2"
+                                Width="118"
+                                Height="3"
+                                CornerRadius="2"
+                                HorizontalAlignment="Left"
+                                Margin="0,0,0,10"
+                                Background="#F0F0F0" />
+
+                        <StackPanel Grid.Row="3"
+                                    Spacing="3">
+                            <TextBlock x:Name="ArtistTextBlock"
+                                       Text="新南威尔士州艺术画廊"
+                                       Foreground="#ECECEC"
+                                       FontSize="26"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       MaxLines="2" />
+                            <TextBlock x:Name="YearTextBlock"
+                                       Text="1754"
+                                       Foreground="#D7DCE3"
+                                       FontSize="22"
+                                       FontWeight="Medium"
+                                       FontFeatures="tnum"
+                                       TextWrapping="NoWrap"
+                                       MaxLines="1" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       Grid.ColumnSpan="2"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#FFFFFFFF"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

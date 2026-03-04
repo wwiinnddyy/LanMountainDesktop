@@ -1,4 +1,4 @@
-# 版本号自动同步说明
+﻿# 版本号自动同步说明
 
 ## 📋 概述
 
@@ -48,15 +48,15 @@ sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" file.csproj
 ### 3. 构建和发布
 更新后的版本号被用于：
 - 程序集版本 (`AssemblyVersion`)
-- 包文件名 (`LanMontainDesktop-1.0.1-win-x64.zip`)
+- 包文件名 (`LanMountainDesktop-1.0.1-win-x64.zip`)
 - 应用内显示 (About 页面)
 - GitHub Release 标题
 
 ## 📍 涉及的文件
 
 自动更新的文件：
-1. `LanMontainDesktop/LanMontainDesktop.csproj`
-2. `LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj`
+1. `LanMountainDesktop/LanMountainDesktop.csproj`
+2. `LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj`
 
 ## ✅ 使用流程
 

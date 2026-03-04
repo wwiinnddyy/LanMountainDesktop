@@ -1,0 +1,78 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="320"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.AnalogClockWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="42"
+            ClipToBounds="True"
+            Padding="14">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0"
+                                 EndPoint="1,1">
+                <GradientStop Color="#1F2C4B"
+                              Offset="0" />
+                <GradientStop Color="#131B33"
+                              Offset="1" />
+            </LinearGradientBrush>
+        </Border.Background>
+
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="LayoutRoot"
+                  Width="300"
+                  Height="300">
+                <Grid Width="258"
+                      Height="258"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+                    <Border x:Name="DialBorder"
+                            CornerRadius="129"
+                            Background="#F4F4F4"
+                            BorderBrush="#E5E5E5"
+                            BorderThickness="1" />
+
+                    <Canvas x:Name="TickCanvas"
+                            Width="258"
+                            Height="258"
+                            IsHitTestVisible="False" />
+
+                    <Canvas x:Name="NumberCanvas"
+                            Width="258"
+                            Height="258"
+                            IsHitTestVisible="False" />
+
+                    <Canvas x:Name="HandsCanvas"
+                            Width="258"
+                            Height="258"
+                            IsHitTestVisible="False" />
+
+                    <TextBlock x:Name="CityTextBlock"
+                               Text="&#x5317;&#x4EAC;"
+                               FontSize="21"
+                               FontWeight="SemiBold"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center"
+                               Margin="0,76,0,0" />
+
+                    <Ellipse x:Name="CenterDotOuter"
+                             Width="18"
+                             Height="18"
+                             Fill="#1E3C6A"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
+
+                    <Ellipse x:Name="CenterDotInner"
+                             Width="8"
+                             Height="8"
+                             Fill="#1A74F2"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
+                </Grid>
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>

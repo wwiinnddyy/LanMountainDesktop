@@ -1,0 +1,217 @@
+﻿name: Desktop CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version override (for example: 1.2.3)"
+        required: false
+        type: string
+
+concurrency:
+  group: desktop-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  PROJECT_PATH: "LanMountainDesktop.csproj"
+
+jobs:
+  validate:
+    name: Validate Build (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+
+      - name: Restore
+        run: dotnet restore .\${{ env.PROJECT_PATH }}
+
+      - name: Build
+        run: dotnet build .\${{ env.PROJECT_PATH }} -c Release --no-restore
+
+      - name: Test (if test projects exist)
+        shell: pwsh
+        run: |
+          $testProjects = @(Get-ChildItem -Path . -Recurse -Filter *.csproj | Where-Object {
+            Select-String -Path $_.FullName -Pattern '<IsTestProject>\s*true\s*</IsTestProject>|Microsoft.NET.Test.Sdk' -Quiet
+          })
+
+          if ($testProjects.Count -eq 0) {
+            Write-Host "No test projects found. Skipping dotnet test."
+            exit 0
+          }
+
+          foreach ($project in $testProjects) {
+            Write-Host "Running tests in $($project.FullName)"
+            dotnet test $project.FullName -c Release --verbosity normal
+          }
+
+  resolve_version:
+    name: Resolve Package Version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $manualVersion = '${{ github.event.inputs.version }}'
+          if ($manualVersion) {
+            $version = $manualVersion.Trim()
+          } elseif ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF_NAME.Substring(1)
+          } elseif ($env:GITHUB_REF -like "refs/tags/*") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+
+          if (-not $version) {
+            throw "Failed to resolve package version."
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+([\-+][0-9A-Za-z\.-]+)?$') {
+            throw "Invalid version format: $version"
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Using package version: $version"
+
+  package:
+    name: Package (${{ matrix.name }})
+    needs:
+      - validate
+      - resolve_version
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+            rid: win-x64
+            artifact_name: LanMountainDesktop-Setup
+            artifact_path: artifacts/installer/*.exe
+          - name: Linux
+            runner: ubuntu-latest
+            rid: linux-x64
+            artifact_name: LanMountainDesktop-linux-x64
+            artifact_path: artifacts/packages/*linux-x64*.zip
+          - name: macOS
+            runner: macos-latest
+            rid: osx-x64
+            artifact_name: LanMountainDesktop-osx-x64
+            artifact_path: artifacts/packages/*osx-x64*.zip
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+
+      - name: Install Inno Setup
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          if (Get-Command iscc.exe -ErrorAction SilentlyContinue) {
+            Write-Host "Inno Setup is already installed."
+            exit 0
+          }
+
+          if (Get-Command choco -ErrorAction SilentlyContinue) {
+            choco install innosetup --yes --no-progress
+          } elseif (Get-Command winget -ErrorAction SilentlyContinue) {
+            winget install --id JRSoftware.InnoSetup -e --source winget --accept-package-agreements --accept-source-agreements
+          } else {
+            throw "Neither choco nor winget is available to install Inno Setup."
+          }
+
+      - name: Build Package
+        shell: pwsh
+        run: |
+          ./scripts/package.ps1 `
+            -Configuration Release `
+            -RuntimeIdentifier ${{ matrix.rid }} `
+            -Version "${{ needs.resolve_version.outputs.value }}"
+
+      - name: Upload Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-${{ needs.resolve_version.outputs.value }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
+
+      - name: Upload Windows Publish Artifact
+        if: matrix.rid == 'win-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanMountainDesktop-Publish-win-x64-${{ needs.resolve_version.outputs.value }}
+          path: artifacts/publish/win-x64/**
+          if-no-files-found: error
+
+  publish_release_assets:
+    name: Attach Artifacts to GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - package
+      - resolve_version
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows Installer Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LanMountainDesktop-Setup-${{ needs.resolve_version.outputs.value }}
+          path: release-assets/windows
+
+      - name: Download Linux Package Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LanMountainDesktop-linux-x64-${{ needs.resolve_version.outputs.value }}
+          path: release-assets/linux
+
+      - name: Download macOS Package Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LanMountainDesktop-osx-x64-${{ needs.resolve_version.outputs.value }}
+          path: release-assets/macos
+
+      - name: Attach Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/windows/*.exe
+            release-assets/linux/*.zip
+            release-assets/macos/*.zip

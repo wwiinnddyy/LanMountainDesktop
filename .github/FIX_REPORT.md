@@ -1,4 +1,4 @@
-# 修复报告：GitHub Actions CI/CD
+﻿# 修复报告：GitHub Actions CI/CD
 
 ## ✅ 问题已解决
 
@@ -8,16 +8,16 @@ MSBUILD : error MSB1003: Specify a project or solution file.
 The current working directory does not contain a project or solution file.
 ```
 
-**原因**: 项目中缺少 `LanMontainDesktop.sln` 解决方案文件，但工作流尝试执行 `dotnet restore` 而没有指定项目。
+**原因**: 项目中缺少 `LanMountainDesktop.sln` 解决方案文件，但工作流尝试执行 `dotnet restore` 而没有指定项目。
 
 ---
 
 ## 🔧 已采取的修复
 
 ### 1. 创建解决方案文件
-✅ 创建了标准的 `LanMontainDesktop.sln` 文件，包含：
-- `LanMontainDesktop/LanMontainDesktop.csproj`
-- `LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj`
+✅ 创建了标准的 `LanMountainDesktop.sln` 文件，包含：
+- `LanMountainDesktop/LanMountainDesktop.csproj`
+- `LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj`
 
 ### 2. 验证本地构建工作
 ✅ 本地测试通过：
@@ -39,9 +39,9 @@ The current working directory does not contain a project or solution file.
 包含两个项目的标准 Visual Studio 解决方案格式：
 
 ```
-LanMontainDesktop.sln
-├── LanMontainDesktop (Desktop UI - Avalonia)
-└── LanMontainDesktop.RecommendationBackend (Web API - ASP.NET Core)
+LanMountainDesktop.sln
+├── LanMountainDesktop (Desktop UI - Avalonia)
+└── LanMountainDesktop.RecommendationBackend (Web API - ASP.NET Core)
 ```
 
 ---
@@ -52,7 +52,7 @@ LanMontainDesktop.sln
 
 ```bash
 # 1. 添加新创建的解决方案文件
-git add LanMontainDesktop.sln
+git add LanMountainDesktop.sln
 
 # 2. 提交
 git commit -m "Add solution file for multi-project structure"
@@ -94,7 +94,7 @@ git push origin v1.0.1
 | `.github/workflows/code-quality.yml` | 代码质量检查 | ✅ 可用 |
 | `.github/workflows/release.yml` | 多平台发布 | ✅ 可用 |
 | `.github/workflows/issue-management.yml` | Issue自动管理 | ✅ 可用 |
-| `LanMontainDesktop.sln` | 解决方案文件 | ✅ 已修复 |
+| `LanMountainDesktop.sln` | 解决方案文件 | ✅ 已修复 |
 
 ---
 

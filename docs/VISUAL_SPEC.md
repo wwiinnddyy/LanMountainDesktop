@@ -1,4 +1,4 @@
-# LanMontainDesktop 视觉规范（主题色 + 毛玻璃）
+﻿# LanMountainDesktop 视觉规范（主题色 + 毛玻璃）
 
 ## 1. 主题色应用规范
 
