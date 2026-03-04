@@ -8,6 +8,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
+  Solution_Name: LanMontainDesktop.sln
 
 jobs:
   analyze:
@@ -31,10 +32,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build -c Release --no-restore -v minimal
+        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
       - name: Check formatting
         run: dotnet format --verify-no-changes --verbosity diagnostic || true

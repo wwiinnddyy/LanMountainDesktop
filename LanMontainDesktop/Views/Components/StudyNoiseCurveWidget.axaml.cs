@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -6,11 +7,27 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMontainDesktop.Models;
 using LanMontainDesktop.Services;
+using LanMontainDesktop.Theme;
 
 namespace LanMontainDesktop.Views.Components;
 
 public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
+    private const double NormalTextMinContrast = 4.5;
+    private const double LargeTextMinContrast = 3.0;
+
+    private static readonly Color[] LightToneCandidates =
+    {
+        Color.Parse("#FFFFFFFF"),
+        Color.Parse("#FFF8FCFF"),
+        Color.Parse("#FFF0F7FF"),
+        Color.Parse("#FFE8F3FF"),
+        Color.Parse("#FFE0EEFF")
+    };
+
+    private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
+    private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
+
     private readonly object _snapshotSync = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly AppSettingsService _settingsService = new();
@@ -29,6 +46,14 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private bool _isSubscribed;
     private int _framesSinceCompaction;
 
+    private enum StatusVisualKind
+    {
+        Default = 0,
+        Quiet = 1,
+        Noisy = 2,
+        Error = 3
+    }
+
     public StudyNoiseCurveWidget()
     {
         InitializeComponent();
@@ -41,6 +66,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         ApplyDefaultXAxisLabels();
+        ApplyTypographyByBackground(ResolvePanelBackgroundColor());
+        ApplyStatusBadgeStyle(StatusVisualKind.Default, ResolvePanelBackgroundColor());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -53,10 +80,16 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             Math.Clamp(14 * scale, 8, 22),
             Math.Clamp(10 * scale, 6, 16));
 
-        StatusTextBlock.FontSize = Math.Clamp(16 * scale, 11, 30);
-        RealtimeValueTextBlock.FontSize = Math.Clamp(18 * scale, 11, 34);
+        StatusTextBlock.FontSize = Math.Clamp(16 * scale, 12, 30);
+        RealtimeValueTextBlock.FontSize = Math.Clamp(18 * scale, 12, 34);
 
-        var axisFontSize = Math.Clamp(10 * scale, 8.5, 18);
+        StatusBadgeBorder.Padding = new Thickness(
+            Math.Clamp(8 * scale, 4, 11),
+            Math.Clamp(3 * scale, 2, 6));
+        StatusBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(8 * scale, 5, 12));
+        StatusBadgeBorder.BorderThickness = new Thickness(Math.Clamp(1 * scale, 0.8, 1.5));
+
+        var axisFontSize = Math.Clamp(10 * scale, 9.5, 18);
         YTopTextBlock.FontSize = axisFontSize;
         YUpperTextBlock.FontSize = axisFontSize;
         YMiddleTextBlock.FontSize = axisFontSize;
@@ -111,6 +144,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+        var panelColor = ResolvePanelBackgroundColor();
+        ApplyTypographyByBackground(panelColor);
     }
 
     private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
@@ -165,8 +200,12 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
     private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
     {
+        var panelColor = ResolvePanelBackgroundColor();
+        ApplyTypographyByBackground(panelColor);
+
+        var statusKind = ResolveStatusVisualKind(snapshot);
         StatusTextBlock.Text = ResolveStatusText(snapshot);
-        StatusTextBlock.Foreground = ResolveStatusBrush(snapshot);
+        ApplyStatusBadgeStyle(statusKind, panelColor);
 
         if (snapshot.LatestRealtimePoint is { } latestPoint)
         {
@@ -182,6 +221,186 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
         ChartControl.UpdateSeries(snapshot.RealtimeBuffer);
         UpdateXAxisLabels(snapshot);
+    }
+
+    private void ApplyTypographyByBackground(Color panelColor)
+    {
+        var samples = BuildPanelBackgroundSamples(panelColor);
+        var primaryBrush = CreateAdaptiveLightBrush(samples, LargeTextMinContrast, preferredAlpha: 0xF6);
+        var secondaryBrush = CreateAdaptiveLightBrush(samples, NormalTextMinContrast, preferredAlpha: 0xDF);
+
+        RealtimeValueTextBlock.Foreground = primaryBrush;
+        YTopTextBlock.Foreground = secondaryBrush;
+        YUpperTextBlock.Foreground = secondaryBrush;
+        YMiddleTextBlock.Foreground = secondaryBrush;
+        YLowerTextBlock.Foreground = secondaryBrush;
+        YBottomTextBlock.Foreground = secondaryBrush;
+        XLeftTextBlock.Foreground = secondaryBrush;
+        XCenterTextBlock.Foreground = secondaryBrush;
+        XRightTextBlock.Foreground = secondaryBrush;
+    }
+
+    private void ApplyStatusBadgeStyle(StatusVisualKind kind, Color panelColor)
+    {
+        var badgeBaseColor = kind switch
+        {
+            StatusVisualKind.Quiet => Color.Parse("#FF0F6B49"),
+            StatusVisualKind.Noisy => Color.Parse("#FF805018"),
+            StatusVisualKind.Error => Color.Parse("#FF8D2A3A"),
+            _ => Color.Parse("#FF213547")
+        };
+
+        var panelLuminance = RelativeLuminance(ToOpaqueAgainst(panelColor, DarkSubstrate));
+        var badgeAlpha = panelLuminance > 0.58
+            ? (byte)0xE6
+            : panelLuminance > 0.46
+                ? (byte)0xDB
+                : (byte)0xCC;
+
+        var badgeColor = Color.FromArgb(badgeAlpha, badgeBaseColor.R, badgeBaseColor.G, badgeBaseColor.B);
+        var badgeComposite = ToOpaqueAgainst(badgeColor, ToOpaqueAgainst(panelColor, DarkSubstrate));
+
+        StatusBadgeBorder.Background = new SolidColorBrush(badgeColor);
+        StatusBadgeBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x96, 0xFF, 0xFF, 0xFF));
+        StatusTextBlock.Foreground = CreateAdaptiveLightBrush(new[] { badgeComposite }, NormalTextMinContrast, preferredAlpha: 0xFF);
+    }
+
+    private static StatusVisualKind ResolveStatusVisualKind(StudyAnalyticsSnapshot snapshot)
+    {
+        if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported ||
+            snapshot.State == StudyAnalyticsRuntimeState.Error ||
+            snapshot.StreamStatus == NoiseStreamStatus.Error)
+        {
+            return StatusVisualKind.Error;
+        }
+
+        if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
+        {
+            return StatusVisualKind.Noisy;
+        }
+
+        if (snapshot.State == StudyAnalyticsRuntimeState.Running && snapshot.StreamStatus == NoiseStreamStatus.Quiet)
+        {
+            return StatusVisualKind.Quiet;
+        }
+
+        return StatusVisualKind.Default;
+    }
+
+    private Color ResolvePanelBackgroundColor()
+    {
+        if (RootBorder.Background is ISolidColorBrush solidBackground)
+        {
+            return solidBackground.Color;
+        }
+
+        if (TryGetResource("AdaptiveGlassStrongBackgroundBrush", null, out var resource) &&
+            resource is ISolidColorBrush solidBrush)
+        {
+            return solidBrush.Color;
+        }
+
+        return Color.Parse("#FF1E293B");
+    }
+
+    private static IReadOnlyList<Color> BuildPanelBackgroundSamples(Color panelColor)
+    {
+        var opaqueOnDark = ToOpaqueAgainst(panelColor, DarkSubstrate);
+        var opaqueOnLight = ToOpaqueAgainst(panelColor, LightSubstrate);
+
+        return new[]
+        {
+            opaqueOnDark,
+            opaqueOnLight,
+            ColorMath.Blend(opaqueOnDark, DarkSubstrate, 0.28),
+            ColorMath.Blend(opaqueOnDark, Color.Parse("#FFFFFFFF"), 0.16),
+            ColorMath.Blend(opaqueOnLight, Color.Parse("#FFFFFFFF"), 0.08),
+            ColorMath.Blend(opaqueOnLight, DarkSubstrate, 0.18)
+        };
+    }
+
+    private static SolidColorBrush CreateAdaptiveLightBrush(
+        IReadOnlyList<Color> backgroundSamples,
+        double minContrast,
+        byte preferredAlpha)
+    {
+        var alphaCandidates = new byte[]
+        {
+            preferredAlpha,
+            (byte)Math.Clamp(preferredAlpha + 20, 0, 255),
+            0xFF
+        };
+
+        for (var alphaIndex = 0; alphaIndex < alphaCandidates.Length; alphaIndex++)
+        {
+            var alpha = alphaCandidates[alphaIndex];
+            for (var toneIndex = 0; toneIndex < LightToneCandidates.Length; toneIndex++)
+            {
+                var tone = LightToneCandidates[toneIndex];
+                var candidate = Color.FromArgb(alpha, tone.R, tone.G, tone.B);
+                if (MinContrastRatio(candidate, backgroundSamples) >= minContrast)
+                {
+                    return new SolidColorBrush(candidate);
+                }
+            }
+        }
+
+        return new SolidColorBrush(Color.Parse("#FFFFFFFF"));
+    }
+
+    private static double MinContrastRatio(Color foreground, IReadOnlyList<Color> backgrounds)
+    {
+        if (backgrounds.Count == 0)
+        {
+            return 21;
+        }
+
+        var minimum = double.MaxValue;
+        for (var i = 0; i < backgrounds.Count; i++)
+        {
+            var background = backgrounds[i];
+            var visibleForeground = foreground.A >= 0xFF
+                ? Color.FromArgb(0xFF, foreground.R, foreground.G, foreground.B)
+                : ToOpaqueAgainst(foreground, background);
+
+            var ratio = ColorMath.ContrastRatio(visibleForeground, background);
+            if (ratio < minimum)
+            {
+                minimum = ratio;
+            }
+        }
+
+        return minimum;
+    }
+
+    private static Color ToOpaqueAgainst(Color foreground, Color background)
+    {
+        if (foreground.A >= 0xFF)
+        {
+            return Color.FromArgb(0xFF, foreground.R, foreground.G, foreground.B);
+        }
+
+        var alpha = foreground.A / 255d;
+        var red = (byte)Math.Round((foreground.R * alpha) + (background.R * (1 - alpha)));
+        var green = (byte)Math.Round((foreground.G * alpha) + (background.G * (1 - alpha)));
+        var blue = (byte)Math.Round((foreground.B * alpha) + (background.B * (1 - alpha)));
+        return Color.FromArgb(0xFF, red, green, blue);
+    }
+
+    private static double RelativeLuminance(Color color)
+    {
+        static double ToLinear(byte channel)
+        {
+            var c = channel / 255d;
+            return c <= 0.03928
+                ? c / 12.92
+                : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R);
+        var g = ToLinear(color.G);
+        var b = ToLinear(color.B);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private void UpdateXAxisLabels(StudyAnalyticsSnapshot snapshot)
@@ -249,28 +468,6 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         return L("study.environment.status.initializing", "初始化中");
     }
 
-    private IBrush ResolveStatusBrush(StudyAnalyticsSnapshot snapshot)
-    {
-        if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported ||
-            snapshot.State == StudyAnalyticsRuntimeState.Error ||
-            snapshot.StreamStatus == NoiseStreamStatus.Error)
-        {
-            return new SolidColorBrush(Color.Parse("#FFFF9D9D"));
-        }
-
-        if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
-        {
-            return new SolidColorBrush(Color.Parse("#FFFFD791"));
-        }
-
-        if (snapshot.State == StudyAnalyticsRuntimeState.Running && snapshot.StreamStatus == NoiseStreamStatus.Quiet)
-        {
-            return new SolidColorBrush(Color.Parse("#FFCBFFE8"));
-        }
-
-        return TryResolveThemeBrush("AdaptiveTextPrimaryBrush", "#FF1E293B");
-    }
-
     private void ReloadLanguageCode()
     {
         var snapshot = _settingsService.Load();
@@ -280,15 +477,5 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
-    private IBrush TryResolveThemeBrush(string resourceKey, string fallbackHex)
-    {
-        if (TryGetResource(resourceKey, null, out var resource) && resource is IBrush brush)
-        {
-            return brush;
-        }
-
-        return new SolidColorBrush(Color.Parse(fallbackHex));
     }
 }

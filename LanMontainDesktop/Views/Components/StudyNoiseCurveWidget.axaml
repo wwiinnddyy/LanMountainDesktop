@@ -17,12 +17,22 @@
             <Grid Grid.Row="0"
                   ColumnDefinitions="Auto,*"
                   ColumnSpacing="8">
-                <TextBlock x:Name="StatusTextBlock"
-                           Text="安静"
-                           FontSize="16"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                           VerticalAlignment="Center" />
+                <Border x:Name="StatusBadgeBorder"
+                        Padding="8,3"
+                        CornerRadius="8"
+                        Background="#7A0E2235"
+                        BorderBrush="#88FFFFFF"
+                        BorderThickness="1"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusTextBlock"
+                               Text="Quiet"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="#FFFFFFFF"
+                               VerticalAlignment="Center" />
+                </Border>
 
                 <TextBlock x:Name="RealtimeValueTextBlock"
                            Grid.Column="1"
@@ -94,7 +104,7 @@
                     <TextBlock x:Name="XRightTextBlock"
                                Grid.Column="2"
                                HorizontalAlignment="Right"
-                               Text="现在"
+                               Text="Now"
                                FontSize="10"
                                Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                 </Grid>

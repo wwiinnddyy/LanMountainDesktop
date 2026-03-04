@@ -62,10 +62,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build -c Release --no-restore -v minimal
+        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
       - name: Publish
         run: |
@@ -127,10 +127,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build -c Release --no-restore -v minimal
+        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
       - name: Publish
         run: |
@@ -183,10 +183,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build -c Release --no-restore -v minimal
+        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
 
       - name: Publish
         run: |
