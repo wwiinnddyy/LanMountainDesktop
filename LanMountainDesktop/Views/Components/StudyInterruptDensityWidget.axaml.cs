@@ -164,14 +164,24 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         ApplyLocalizedLabels();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
-        ModeTextBlock.Text = isSessionRunning
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
+        var isSessionView = isSessionRunning || isSessionReport;
+        ModeTextBlock.Text = isSessionView
             ? L("study.interrupt_density.mode.session", "Session")
             : L("study.interrupt_density.mode.realtime", "Realtime");
-        ApplyModeBadgeColor(panelColor, isSessionRunning ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
+        ApplyModeBadgeColor(panelColor, isSessionView ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
 
-        var metrics = isSessionRunning
-            ? ComputeSessionDensity(snapshot)
-            : ComputeRealtimeDensity(snapshot);
+        InterruptDensityMetrics? metrics;
+        if (isSessionReport && snapshot.LastSessionReport is not null)
+        {
+            metrics = ComputeReportDensity(snapshot.LastSessionReport, snapshot.Config);
+        }
+        else
+        {
+            metrics = isSessionRunning
+                ? ComputeSessionDensity(snapshot)
+                : ComputeRealtimeDensity(snapshot);
+        }
 
         if (metrics is null)
         {
@@ -425,6 +435,23 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
             DensityPerMin: Math.Round(density, 2),
             SegmentCount: Math.Max(0, metrics.TotalSegmentCount),
             Duration: metrics.EffectiveDuration,
+            ThresholdPerMin: threshold,
+            LevelKind: levelKind);
+    }
+
+    private static InterruptDensityMetrics? ComputeReportDensity(StudySessionReport report, StudyAnalyticsConfig config)
+    {
+        if (!StudySessionReportProjection.TryAggregate(report, config, out var aggregate))
+        {
+            return null;
+        }
+
+        var threshold = Math.Max(1, config.MaxSegmentsPerMin);
+        var levelKind = ResolveLevelKind(aggregate.SegmentsPerMin, threshold);
+        return new InterruptDensityMetrics(
+            DensityPerMin: Math.Round(aggregate.SegmentsPerMin, 2),
+            SegmentCount: aggregate.SegmentCount,
+            Duration: aggregate.Duration,
             ThresholdPerMin: threshold,
             LevelKind: levelKind);
     }

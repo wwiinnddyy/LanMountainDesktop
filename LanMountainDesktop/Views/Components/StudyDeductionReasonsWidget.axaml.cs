@@ -141,14 +141,18 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         ApplyTypographyByBackground(panelColor);
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
-        ModeTextBlock.Text = isSessionRunning
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
+        var isSessionView = isSessionRunning || isSessionReport;
+        ModeTextBlock.Text = isSessionView
             ? L("study.deduction.mode.session", "Session")
             : L("study.deduction.mode.realtime", "Realtime");
-        ApplyModeBadgeColor(panelColor, isSessionRunning ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
+        ApplyModeBadgeColor(panelColor, isSessionView ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
 
         ApplyLocalizedLabels();
 
-        var metrics = ComputeRealtimeDeduction(snapshot);
+        var metrics = isSessionReport && snapshot.LastSessionReport is not null
+            ? ComputeReportDeduction(snapshot.LastSessionReport, snapshot.Config)
+            : ComputeRealtimeDeduction(snapshot);
         if (metrics is null)
         {
             ApplyUnavailableMetrics();
@@ -405,6 +409,24 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
             P50Dbfs: Math.Round(p50Dbfs, 2),
             OverRatio: Math.Round(overRatio, 4),
             SegmentsPerMin: Math.Round(segmentsPerMin, 3));
+    }
+
+    private static DeductionMetrics? ComputeReportDeduction(StudySessionReport report, StudyAnalyticsConfig config)
+    {
+        if (!StudySessionReportProjection.TryAggregate(report, config, out var aggregate))
+        {
+            return null;
+        }
+
+        return new DeductionMetrics(
+            SustainedPenalty: aggregate.SustainedPenalty,
+            TimePenalty: aggregate.TimePenalty,
+            SegmentPenalty: aggregate.SegmentPenalty,
+            TotalPenalty: aggregate.TotalPenalty,
+            Score: aggregate.Score,
+            P50Dbfs: aggregate.P50Dbfs,
+            OverRatio: aggregate.OverRatio,
+            SegmentsPerMin: aggregate.SegmentsPerMin);
     }
 
     private static double Percentile(double[] sortedValues, double percentile)

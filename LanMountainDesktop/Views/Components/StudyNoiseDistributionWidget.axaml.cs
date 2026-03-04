@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -163,15 +163,21 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         ApplyLocalizedAxisLabels();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
-        ModeTextBlock.Text = isSessionRunning
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
+        var isSessionView = isSessionRunning || isSessionReport;
+        ModeTextBlock.Text = isSessionView
             ? L("study.noise_distribution.mode.session", "Session")
             : L("study.noise_distribution.mode.realtime", "Realtime");
-        ApplyModeBadgeColor(panelColor, isSessionRunning ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
+        ApplyModeBadgeColor(panelColor, isSessionView ? Color.Parse("#FF0F6B49") : Color.Parse("#FF2F5DA8"));
 
-        ChartControl.UpdateSeries(snapshot.RealtimeBuffer, snapshot.Config.BaselineDb);
-        UpdateXAxisLabels(snapshot);
+        var points = isSessionReport && snapshot.LastSessionReport is not null
+            ? StudySessionReportProjection.BuildSyntheticRealtimePoints(snapshot.LastSessionReport, snapshot.Config)
+            : snapshot.RealtimeBuffer;
 
-        var stats = ComputeDistributionStats(snapshot.RealtimeBuffer, snapshot.Config.BaselineDb);
+        ChartControl.UpdateSeries(points, snapshot.Config.BaselineDb);
+        UpdateXAxisLabels(points);
+
+        var stats = ComputeDistributionStats(points, snapshot.Config.BaselineDb);
         if (stats is null)
         {
             SummaryTextBlock.Text = string.Format(
@@ -497,9 +503,8 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
-    private void UpdateXAxisLabels(StudyAnalyticsSnapshot snapshot)
+    private void UpdateXAxisLabels(IReadOnlyList<NoiseRealtimePoint> buffer)
     {
-        var buffer = snapshot.RealtimeBuffer;
         if (buffer.Count < 2)
         {
             ApplyDefaultXAxisLabels();
@@ -600,3 +605,5 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         return _localizationService.GetString(_languageCode, key, fallback);
     }
 }
+
+

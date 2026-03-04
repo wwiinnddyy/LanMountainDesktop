@@ -132,6 +132,15 @@ public sealed class ComponentRegistry
                 AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStudySessionControl,
+                "Study Session",
+                "Play",
+                "Study",
+                MinWidthCells: 2,
+                MinHeightCells: 1,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopStudyNoiseCurve,
                 "Noise Curve",
                 "DataLine",

@@ -247,6 +247,31 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
 
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
+        if (isSessionReport && snapshot.LastSessionReport is not null)
+        {
+            StatusTextBlock.Text = L("study.score_overview.mode.session", "Session");
+            ApplyStatusBadgeStyle(StatusVisualKind.Quiet, panelColor);
+
+            var reportPoints = StudySessionReportProjection.BuildSyntheticRealtimePoints(snapshot.LastSessionReport, snapshot.Config);
+            ChartControl.UpdateSeries(reportPoints);
+            UpdateXAxisLabels(reportPoints);
+
+            if (StudySessionReportProjection.TryAggregate(snapshot.LastSessionReport, snapshot.Config, out var aggregate))
+            {
+                RealtimeValueTextBlock.Text = string.Format(
+                    CultureInfo.InvariantCulture,
+                    L("study.noise_curve.value_format", "{0:F1} dB"),
+                    aggregate.AverageDisplayDb);
+            }
+            else
+            {
+                RealtimeValueTextBlock.Text = L("study.environment.value.unavailable", "--");
+            }
+
+            return;
+        }
+
         var statusKind = ResolveStatusVisualKind(snapshot);
         StatusTextBlock.Text = ResolveStatusText(snapshot);
         ApplyStatusBadgeStyle(statusKind, panelColor);
@@ -264,7 +289,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         }
 
         ChartControl.UpdateSeries(snapshot.RealtimeBuffer);
-        UpdateXAxisLabels(snapshot);
+        UpdateXAxisLabels(snapshot.RealtimeBuffer);
     }
 
     private void ApplyTypographyByBackground(Color panelColor)
@@ -454,9 +479,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
-    private void UpdateXAxisLabels(StudyAnalyticsSnapshot snapshot)
+    private void UpdateXAxisLabels(IReadOnlyList<NoiseRealtimePoint> buffer)
     {
-        var buffer = snapshot.RealtimeBuffer;
         if (buffer.Count < 2)
         {
             ApplyDefaultXAxisLabels();

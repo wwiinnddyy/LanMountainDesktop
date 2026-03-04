@@ -140,8 +140,46 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private void RefreshVisual()
     {
         var snapshot = _studyAnalyticsService.GetSnapshot();
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
 
         StatusTitleTextBlock.Text = L("study.environment.status_label", "Environment");
+
+        if (isSessionReport && snapshot.LastSessionReport is not null)
+        {
+            StatusValueTextBlock.Text = L("study.score_overview.mode.session", "Session");
+            StatusValueTextBlock.Foreground = TryResolveThemeBrush("AdaptiveTextPrimaryBrush", "#FFEFF3FF");
+
+            if (!StudySessionReportProjection.TryAggregate(snapshot.LastSessionReport, snapshot.Config, out var aggregate))
+            {
+                NoiseValueTextBlock.Text = L("study.environment.value.unavailable", "--");
+                NoiseSubValueTextBlock.IsVisible = false;
+                UpdateAdaptiveLayout();
+                return;
+            }
+
+            var reportShowDisplay = _showDisplayDb;
+            var reportShowDbfs = _showDbfs;
+            if (!reportShowDisplay && !reportShowDbfs)
+            {
+                reportShowDisplay = true;
+            }
+
+            if (reportShowDisplay && reportShowDbfs)
+            {
+                NoiseValueTextBlock.Text = FormatDisplayDb(aggregate.AverageDisplayDb);
+                NoiseSubValueTextBlock.Text = FormatDbfs(aggregate.AverageDbfs);
+                NoiseSubValueTextBlock.IsVisible = true;
+                return;
+            }
+
+            NoiseValueTextBlock.Text = reportShowDisplay
+                ? FormatDisplayDb(aggregate.AverageDisplayDb)
+                : FormatDbfs(aggregate.AverageDbfs);
+            NoiseSubValueTextBlock.IsVisible = false;
+            UpdateAdaptiveLayout();
+            return;
+        }
+
         StatusValueTextBlock.Text = ResolveStatusText(snapshot);
         StatusValueTextBlock.Foreground = ResolveStatusBrush(snapshot);
 

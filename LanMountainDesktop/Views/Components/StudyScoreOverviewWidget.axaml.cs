@@ -154,7 +154,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         ApplyTypographyByBackground(panelColor);
 
         var realtimeScore = ComputeRealtimeScore(snapshot);
-        if (realtimeScore is { } score)
+        if (snapshot.DataMode == StudyDataMode.Realtime && realtimeScore is { } score)
         {
             PushRealtimeScore(score, DateTimeOffset.UtcNow);
         }
@@ -163,6 +163,12 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         if (isSessionRunning)
         {
             ApplySessionMode(snapshot, realtimeScore, panelColor);
+            return;
+        }
+
+        if (snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null)
+        {
+            ApplySessionReportMode(snapshot, panelColor);
             return;
         }
 
@@ -197,6 +203,24 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         AverageValueTextBlock.Text = FormatScoreOrUnavailable(historyStats.Average);
         MinimumValueTextBlock.Text = FormatScoreOrUnavailable(historyStats.Minimum);
         MaximumValueTextBlock.Text = FormatScoreOrUnavailable(historyStats.Maximum);
+    }
+
+    private void ApplySessionReportMode(StudyAnalyticsSnapshot snapshot, Color panelColor)
+    {
+        var report = snapshot.LastSessionReport;
+        if (report is null)
+        {
+            ApplyRealtimeMode(snapshot, realtimeScore: null, panelColor);
+            return;
+        }
+
+        ModeTextBlock.Text = L("study.score_overview.mode.session", "Session");
+        ApplyModeBadgeColor(panelColor, Color.Parse("#FF0F6B49"));
+
+        CurrentScoreTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.CurrentScore);
+        AverageValueTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.AvgScore);
+        MinimumValueTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.MinScore);
+        MaximumValueTextBlock.Text = FormatScoreOrUnavailable(report.Metrics.MaxScore);
     }
 
     private void ApplyLocalizedLabels()

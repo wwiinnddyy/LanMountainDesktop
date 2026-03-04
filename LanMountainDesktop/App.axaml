@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sty="using:FluentAvalonia.Styling"
              xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="LanMountainDesktop.App"
              xmlns:local="using:LanMountainDesktop"
              RequestedThemeVariant="Default">
@@ -17,6 +18,7 @@
   
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
+        <mi:MaterialIconStyles />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/GlassModule.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsAnimations.axaml" />
 
@@ -57,6 +59,14 @@
 
         <Style Selector="fi|SymbolIcon.icon-l, fi|FluentIcon.icon-l">
             <Setter Property="FontSize" Value="20" />
+        </Style>
+
+        <Style Selector="mi|MaterialIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </Application.Styles>
 </Application>
