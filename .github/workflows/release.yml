@@ -167,23 +167,46 @@ jobs:
             -p:PublishSingleFile=true \
             -p:DebugType=none
 
-      - name: Package
+      - name: Package as DEB
         run: |
           version="${{ needs.prepare.outputs.version }}"
           source="publish/linux-x64"
-          package="LanMontainDesktop-$version-linux-x64"
+          package_name="lanmontaindesktop"
+          package_version="${version}"
+          arch="amd64"
           
-          mkdir -p "$package"
-          cp -r "$source"/* "$package/"
-          tar -czf "$package.tar.gz" "$package"
+          # Create DEB package structure
+          mkdir -p "build-deb/DEBIAN"
+          mkdir -p "build-deb/usr/local/bin"
+          mkdir -p "build-deb/usr/share/applications"
+          mkdir -p "build-deb/usr/share/pixmaps"
           
-          echo "Created: $package.tar.gz"
+          # Copy application files
+          cp -r "$source"/* "build-deb/usr/local/bin/"
+          
+          # Create control file
+          cat > "build-deb/DEBIAN/control" << EOF
+          Package: $package_name
+          Version: $package_version
+          Architecture: $arch
+          Maintainer: LanMountain Team <dev@example.com>
+          Description: LanMountain Desktop Application
+           A desktop application for LanMountain.
+          EOF
+          
+          # Set proper permissions
+          chmod 755 "build-deb/usr/local/bin/LanMontainDesktop"
+          
+          # Create DEB file
+          dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"
+          
+          echo "Created: ${package_name}_${package_version}_${arch}.deb"
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: release-linux
-          path: LanMontainDesktop-*.tar.gz
+          path: "*.deb"
           retention-days: 30
 
   build-macos:
@@ -232,24 +255,58 @@ jobs:
             -p:PublishSingleFile=true \
             -p:DebugType=none
 
-      - name: Package
+      - name: Package as DMG
         run: |
           version="${{ needs.prepare.outputs.version }}"
           arch="${{ matrix.arch }}"
           source="publish/macos-$arch"
-          package="LanMontainDesktop-$version-macos-$arch"
+          app_name="LanMontainDesktop"
+          package_name="${app_name}-${version}-macos-${arch}"
           
-          mkdir -p "$package"
-          cp -r "$source"/* "$package/"
-          tar -czf "$package.tar.gz" "$package"
+          # Create app bundle structure
+          mkdir -p "${app_name}.app/Contents/MacOS"
+          mkdir -p "${app_name}.app/Contents/Resources"
           
-          echo "Created: $package.tar.gz"
+          # Copy application files
+          cp -r "$source"/* "${app_name}.app/Contents/MacOS/"
+          
+          # Create minimal Info.plist
+          cat > "${app_name}.app/Contents/Info.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>LanMontainDesktop</string>
+            <key>CFBundleName</key>
+            <string>LanMountain Desktop</string>
+            <key>CFBundleVersion</key>
+            <string>${version}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${version}</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.lanmountain.desktop</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Create DMG
+          mkdir -p dmg-temp
+          cp -r "${app_name}.app" dmg-temp/
+          hdiutil create -volname "${app_name}" -srcfolder dmg-temp -ov -format UDZO "${package_name}.dmg"
+          
+          # Cleanup
+          rm -rf dmg-temp "${app_name}.app"
+          
+          echo "Created: ${package_name}.dmg"
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: LanMontainDesktop-*.tar.gz
+          path: "*.dmg"
           retention-days: 30
 
   github-release:
