@@ -100,10 +100,6 @@
                                 Background="Transparent"
                                 ClipToBounds="True"
                                 BorderThickness="0"
-                                PointerPressed="OnDesktopPagesPointerPressed"
-                                PointerMoved="OnDesktopPagesPointerMoved"
-                                PointerReleased="OnDesktopPagesPointerReleased"
-                                PointerCaptureLost="OnDesktopPagesPointerCaptureLost"
                                 PointerWheelChanged="OnDesktopPagesPointerWheelChanged">
                             <Grid>
                                 <Grid x:Name="DesktopPagesHost"

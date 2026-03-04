@@ -164,6 +164,7 @@ public partial class MainWindow : Window
         _componentRuntimeRegistry = DesktopComponentRuntimeRegistry.CreateDefault(_componentRegistry);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         PropertyChanged += OnWindowPropertyChanged;
+        InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
     }
 

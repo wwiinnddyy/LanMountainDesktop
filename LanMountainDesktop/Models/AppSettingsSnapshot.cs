@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace LanMountainDesktop.Models;
 
@@ -75,4 +75,5 @@ public sealed class AppSettingsSnapshot
     public bool StudyEnvironmentShowDisplayDb { get; set; } = true;
 
     public bool StudyEnvironmentShowDbfs { get; set; }
+
 }

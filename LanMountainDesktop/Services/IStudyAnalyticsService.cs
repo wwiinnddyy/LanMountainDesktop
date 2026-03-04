@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using LanMountainDesktop.Models;
 
 namespace LanMountainDesktop.Services;
@@ -40,9 +41,25 @@ public interface IStudyAnalyticsService : IDisposable
 
     void ClearLastSessionReport();
 
+    bool SelectSessionReport(string sessionId);
+
+    bool RenameSessionReport(string sessionId, string label);
+
+    bool DeleteSessionReport(string sessionId);
+
+    IReadOnlyList<NoiseSliceTimelineEntry> QueryNoiseSliceTimeline(
+        DateTimeOffset? startAt = null,
+        DateTimeOffset? endAt = null,
+        int limit = 720,
+        bool includeRealtimeSlices = true,
+        bool includeSessionSlices = true);
+
+    void ClearNoiseSliceTimeline(DateTimeOffset? olderThan = null);
+
     event EventHandler<StudyAnalyticsSnapshotChangedEventArgs>? SnapshotUpdated;
 
     event EventHandler<NoiseSliceClosedEventArgs>? SliceClosed;
 
     event EventHandler<StudySessionCompletedEventArgs>? SessionCompleted;
 }
+

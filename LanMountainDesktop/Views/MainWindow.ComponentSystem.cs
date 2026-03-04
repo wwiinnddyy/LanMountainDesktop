@@ -1479,19 +1479,41 @@ public partial class MainWindow
     private void ApplyDesktopEditStateToHost(Border host, bool isEditMode)
     {
         host.IsHitTestVisible = true;
+        var keepContentInteractive = ShouldKeepContentInteractiveInEditMode(host);
 
         if (TryGetContentHost(host) is Border contentHost)
         {
-            // In edit mode, prefer drag interactions over component interactions.
-            contentHost.IsHitTestVisible = !isEditMode;
+            // In edit mode, keep selected interactive widgets usable; drag/resize still uses host border/handles.
+            contentHost.IsHitTestVisible = !isEditMode || keepContentInteractive;
             if (contentHost.Child is Control componentControl)
             {
-                componentControl.IsHitTestVisible = !isEditMode;
+                componentControl.IsHitTestVisible = !isEditMode || keepContentInteractive;
             }
         }
 
         var isSelected = host == _selectedDesktopComponentHost;
         ApplySelectionStateToHost(host, isSelected);
+    }
+
+    private bool ShouldKeepContentInteractiveInEditMode(Border host)
+    {
+        if (!_isComponentLibraryOpen ||
+            host.Tag is not string placementId)
+        {
+            return false;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null)
+        {
+            return false;
+        }
+
+        return string.Equals(
+            placement.ComponentId,
+            BuiltInComponentIds.DesktopStudySessionHistory,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private void OnDesktopComponentHostPointerPressed(object? sender, PointerPressedEventArgs e)

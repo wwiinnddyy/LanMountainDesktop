@@ -92,6 +92,18 @@ public sealed record NoiseSliceSummary(
     double Score,
     NoiseScoreBreakdown ScoreDetail);
 
+public enum NoiseSliceSourceType
+{
+    Realtime = 0,
+    Session = 1
+}
+
+public sealed record NoiseSliceTimelineEntry(
+    long TimelineId,
+    NoiseSliceSourceType SourceType,
+    string? SessionId,
+    NoiseSliceSummary Slice);
+
 public sealed record StudySessionOptions(
     string? Label = null,
     DateTimeOffset? PlannedEndAt = null);
@@ -125,6 +137,15 @@ public sealed record StudySessionReport(
     StudySessionMetrics Metrics,
     IReadOnlyList<NoiseSliceSummary> Slices);
 
+public sealed record StudySessionHistoryEntry(
+    string SessionId,
+    string Label,
+    DateTimeOffset StartedAt,
+    DateTimeOffset EndedAt,
+    TimeSpan Duration,
+    double AverageScore,
+    int SliceCount);
+
 public sealed record StudyAnalyticsSnapshot(
     StudyAnalyticsRuntimeState State,
     NoiseStreamStatus StreamStatus,
@@ -135,4 +156,6 @@ public sealed record StudyAnalyticsSnapshot(
     IReadOnlyList<NoiseRealtimePoint> RealtimeBuffer,
     StudySessionSnapshot Session,
     StudySessionReport? LastSessionReport,
+    string? SelectedSessionReportId,
+    IReadOnlyList<StudySessionHistoryEntry> SessionHistory,
     string LastError);

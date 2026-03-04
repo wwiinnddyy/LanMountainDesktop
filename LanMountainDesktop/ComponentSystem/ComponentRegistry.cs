@@ -141,6 +141,16 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStudySessionHistory,
+                "Session History",
+                "History",
+                "Study",
+                MinWidthCells: 4,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopStudyNoiseCurve,
                 "Noise Curve",
                 "DataLine",

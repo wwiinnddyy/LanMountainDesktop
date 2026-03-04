@@ -358,6 +358,8 @@ internal sealed class SessionAccumulator
 
     public bool IsRunning => _state == StudySessionRuntimeState.Running;
 
+    public string? CurrentSessionId => _sessionId;
+
     public bool Start(DateTimeOffset now, StudySessionOptions options)
     {
         if (IsRunning)

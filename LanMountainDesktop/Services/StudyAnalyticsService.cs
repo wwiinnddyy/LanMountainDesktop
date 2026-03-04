@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using LanMountainDesktop.Models;
 
@@ -18,7 +20,9 @@ public static class StudyAnalyticsServiceFactory
 
 public sealed class StudyAnalyticsService : IStudyAnalyticsService
 {
+    private const int MaxPersistedSessionReports = 120;
     private readonly object _syncRoot = new();
+    private readonly StudyDataStore _studyDataStore = new();
     private readonly IAudioRecorderService _audioRecorderService;
     private readonly Timer _samplingTimer;
     private readonly NoiseFramePipeline _pipeline;
@@ -31,6 +35,8 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
     private NoiseRealtimePoint? _latestRealtime;
     private NoiseSliceSummary? _latestSlice;
     private StudySessionReport? _lastSessionReport;
+    private readonly List<StudySessionReport> _sessionHistory = [];
+    private string? _selectedSessionReportId;
     private string _lastError = string.Empty;
     private bool _disposed;
 
@@ -53,6 +59,9 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             _streamStatus = NoiseStreamStatus.Error;
             _lastError = audioSnapshot.LastError;
         }
+
+        RestoreSessionHistoryFromDatabaseLocked();
+        UpdateDataModeLocked();
     }
 
     public event EventHandler<StudyAnalyticsSnapshotChangedEventArgs>? SnapshotUpdated;
@@ -172,7 +181,10 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             if (_sessionAccumulator.IsRunning)
             {
                 finishedReport = _sessionAccumulator.Stop(DateTimeOffset.UtcNow);
-                _lastSessionReport = finishedReport;
+                if (finishedReport is not null)
+                {
+                    UpsertSessionReportLocked(finishedReport, selectReport: true);
+                }
             }
 
             UpdateDataModeLocked();
@@ -214,6 +226,8 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
                 }
 
                 _lastSessionReport = null;
+                _selectedSessionReportId = null;
+                PersistSessionHistoryLocked();
                 UpdateDataModeLocked();
                 snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
                 started = true;
@@ -237,7 +251,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
                 return false;
             }
 
-            _lastSessionReport = report;
+            UpsertSessionReportLocked(report, selectReport: true);
             UpdateDataModeLocked();
             snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
         }
@@ -273,11 +287,151 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
         {
             ThrowIfDisposedLocked();
             _lastSessionReport = null;
+            _selectedSessionReportId = null;
+            PersistSessionHistoryLocked();
             UpdateDataModeLocked();
             snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
         }
 
         SnapshotUpdated?.Invoke(this, new StudyAnalyticsSnapshotChangedEventArgs(snapshot));
+    }
+
+    public bool SelectSessionReport(string sessionId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return false;
+        }
+
+        StudyAnalyticsSnapshot snapshot;
+        lock (_syncRoot)
+        {
+            ThrowIfDisposedLocked();
+            if (_sessionAccumulator.IsRunning)
+            {
+                return false;
+            }
+
+            if (!TryFindSessionReportLocked(sessionId, out var report))
+            {
+                return false;
+            }
+
+            _selectedSessionReportId = report.SessionId;
+            _lastSessionReport = report;
+            PersistSessionHistoryLocked();
+            UpdateDataModeLocked();
+            snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
+        }
+
+        SnapshotUpdated?.Invoke(this, new StudyAnalyticsSnapshotChangedEventArgs(snapshot));
+        return true;
+    }
+
+    public bool RenameSessionReport(string sessionId, string label)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return false;
+        }
+
+        var normalizedLabel = string.IsNullOrWhiteSpace(label)
+            ? string.Empty
+            : label.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedLabel))
+        {
+            return false;
+        }
+
+        StudyAnalyticsSnapshot snapshot;
+        lock (_syncRoot)
+        {
+            ThrowIfDisposedLocked();
+            var index = FindSessionReportIndexLocked(sessionId);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var updated = _sessionHistory[index] with { Label = normalizedLabel };
+            _sessionHistory[index] = updated;
+            if (string.Equals(_selectedSessionReportId, updated.SessionId, StringComparison.OrdinalIgnoreCase))
+            {
+                _lastSessionReport = updated;
+            }
+
+            PersistSessionHistoryLocked();
+            UpdateDataModeLocked();
+            snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
+        }
+
+        SnapshotUpdated?.Invoke(this, new StudyAnalyticsSnapshotChangedEventArgs(snapshot));
+        return true;
+    }
+
+    public bool DeleteSessionReport(string sessionId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return false;
+        }
+
+        StudyAnalyticsSnapshot snapshot;
+        lock (_syncRoot)
+        {
+            ThrowIfDisposedLocked();
+            var index = FindSessionReportIndexLocked(sessionId);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var removed = _sessionHistory[index];
+            _sessionHistory.RemoveAt(index);
+
+            if (string.Equals(_selectedSessionReportId, removed.SessionId, StringComparison.OrdinalIgnoreCase))
+            {
+                _selectedSessionReportId = null;
+                _lastSessionReport = null;
+            }
+
+            PersistSessionHistoryLocked();
+            UpdateDataModeLocked();
+            snapshot = BuildSnapshotLocked(DateTimeOffset.UtcNow);
+        }
+
+        SnapshotUpdated?.Invoke(this, new StudyAnalyticsSnapshotChangedEventArgs(snapshot));
+        return true;
+    }
+
+    public IReadOnlyList<NoiseSliceTimelineEntry> QueryNoiseSliceTimeline(
+        DateTimeOffset? startAt = null,
+        DateTimeOffset? endAt = null,
+        int limit = 720,
+        bool includeRealtimeSlices = true,
+        bool includeSessionSlices = true)
+    {
+        lock (_syncRoot)
+        {
+            ThrowIfDisposedLocked();
+        }
+
+        return _studyDataStore.LoadNoiseSliceTimeline(
+            startAt: startAt,
+            endAt: endAt,
+            limit: limit,
+            includeRealtimeSlices: includeRealtimeSlices,
+            includeSessionSlices: includeSessionSlices);
+    }
+
+    public void ClearNoiseSliceTimeline(DateTimeOffset? olderThan = null)
+    {
+        lock (_syncRoot)
+        {
+            ThrowIfDisposedLocked();
+        }
+
+        _studyDataStore.ClearNoiseSliceTimeline(olderThan);
     }
 
     public void Dispose()
@@ -299,6 +453,8 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
     {
         StudyAnalyticsSnapshot? snapshot = null;
         NoiseSliceSummary? closedSlice = null;
+        string? closedSliceSessionId = null;
+        var closedSliceSourceType = NoiseSliceSourceType.Realtime;
         lock (_syncRoot)
         {
             if (_disposed || _state != StudyAnalyticsRuntimeState.Running)
@@ -350,6 +506,8 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
                     if (_sessionAccumulator.IsRunning)
                     {
                         _sessionAccumulator.AddSlice(closedSlice);
+                        closedSliceSessionId = _sessionAccumulator.CurrentSessionId;
+                        closedSliceSourceType = NoiseSliceSourceType.Session;
                     }
                 }
 
@@ -357,6 +515,14 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
                 UpdateDataModeLocked();
                 snapshot = BuildSnapshotLocked(now);
             }
+        }
+
+        if (closedSlice is not null)
+        {
+            _studyDataStore.AppendNoiseSlice(
+                slice: closedSlice,
+                sessionId: closedSliceSessionId,
+                sourceType: closedSliceSourceType);
         }
 
         if (snapshot is not null)
@@ -425,6 +591,18 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
 
     private StudyAnalyticsSnapshot BuildSnapshotLocked(DateTimeOffset now)
     {
+        var historyEntries = _sessionHistory
+            .OrderByDescending(report => report.EndedAt)
+            .Select(report => new StudySessionHistoryEntry(
+                SessionId: report.SessionId,
+                Label: report.Label,
+                StartedAt: report.StartedAt,
+                EndedAt: report.EndedAt,
+                Duration: report.Duration,
+                AverageScore: report.Metrics.AvgScore,
+                SliceCount: report.Metrics.SliceCount))
+            .ToArray();
+
         return new StudyAnalyticsSnapshot(
             State: _state,
             StreamStatus: _streamStatus,
@@ -435,6 +613,8 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             RealtimeBuffer: _pipeline.GetRealtimeBufferSnapshot(),
             Session: _sessionAccumulator.GetSnapshot(now),
             LastSessionReport: _lastSessionReport,
+            SelectedSessionReportId: _selectedSessionReportId,
+            SessionHistory: historyEntries,
             LastError: _lastError);
     }
 
@@ -490,4 +670,93 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             throw new ObjectDisposedException(nameof(StudyAnalyticsService));
         }
     }
+
+    private void UpsertSessionReportLocked(StudySessionReport report, bool selectReport)
+    {
+        var index = FindSessionReportIndexLocked(report.SessionId);
+        if (index >= 0)
+        {
+            _sessionHistory[index] = report;
+        }
+        else
+        {
+            _sessionHistory.Add(report);
+        }
+
+        NormalizeSessionHistoryLocked();
+
+        if (selectReport)
+        {
+            _selectedSessionReportId = report.SessionId;
+            _lastSessionReport = report;
+        }
+
+        PersistSessionHistoryLocked();
+    }
+
+    private bool TryFindSessionReportLocked(string sessionId, out StudySessionReport report)
+    {
+        var index = FindSessionReportIndexLocked(sessionId);
+        if (index >= 0)
+        {
+            report = _sessionHistory[index];
+            return true;
+        }
+
+        report = null!;
+        return false;
+    }
+
+    private int FindSessionReportIndexLocked(string sessionId)
+    {
+        return _sessionHistory.FindIndex(report =>
+            string.Equals(report.SessionId, sessionId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void NormalizeSessionHistoryLocked()
+    {
+        _sessionHistory.Sort((left, right) => right.EndedAt.CompareTo(left.EndedAt));
+        if (_sessionHistory.Count > MaxPersistedSessionReports)
+        {
+            _sessionHistory.RemoveRange(MaxPersistedSessionReports, _sessionHistory.Count - MaxPersistedSessionReports);
+        }
+    }
+
+    private void PersistSessionHistoryLocked()
+    {
+        var orderedReports = _sessionHistory
+            .OrderByDescending(report => report.EndedAt)
+            .Take(MaxPersistedSessionReports)
+            .ToList();
+        _studyDataStore.ReplaceSessionReports(orderedReports);
+        _studyDataStore.SetSelectedSessionReportId(_selectedSessionReportId);
+    }
+
+    private void RestoreSessionHistoryFromDatabaseLocked()
+    {
+        _sessionHistory.Clear();
+
+        var restored = _studyDataStore.LoadSessionReports(MaxPersistedSessionReports)
+            .Where(report =>
+                !string.IsNullOrWhiteSpace(report.SessionId) &&
+                report.EndedAt >= report.StartedAt)
+            .GroupBy(report => report.SessionId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderByDescending(report => report.EndedAt)
+            .Take(MaxPersistedSessionReports);
+        _sessionHistory.AddRange(restored);
+
+        _selectedSessionReportId = _studyDataStore.GetSelectedSessionReportId();
+
+        if (!string.IsNullOrWhiteSpace(_selectedSessionReportId) &&
+            TryFindSessionReportLocked(_selectedSessionReportId, out var selectedReport))
+        {
+            _lastSessionReport = selectedReport;
+            return;
+        }
+
+        _selectedSessionReportId = null;
+        _lastSessionReport = null;
+    }
 }
+

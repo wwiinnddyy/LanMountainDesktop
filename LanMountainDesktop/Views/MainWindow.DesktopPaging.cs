@@ -33,8 +33,12 @@ public partial class MainWindow
     private double _desktopSurfacePageWidth;
     private TranslateTransform? _desktopPagesHostTransform;
     private bool _isDesktopSwipeActive;
+    private bool _isDesktopSwipeDirectionLocked;
     private Point _desktopSwipeStartPoint;
     private Point _desktopSwipeCurrentPoint;
+    private Point _desktopSwipeLastPoint;
+    private long _desktopSwipeLastTimestamp;
+    private double _desktopSwipeVelocityX;
     private double _desktopSwipeBaseOffset;
 
     private int LauncherSurfaceIndex => Math.Max(MinDesktopPageCount, _desktopPageCount);
@@ -46,6 +50,15 @@ public partial class MainWindow
         var loadedPageCount = snapshot.DesktopPageCount <= 0 ? MinDesktopPageCount : snapshot.DesktopPageCount;
         _desktopPageCount = Math.Clamp(loadedPageCount, MinDesktopPageCount, MaxDesktopPageCount);
         _currentDesktopSurfaceIndex = Math.Clamp(snapshot.CurrentDesktopSurfaceIndex, 0, LauncherSurfaceIndex);
+    }
+
+    private void InitializeDesktopSurfaceSwipeHandlers()
+    {
+        // Capture swipe intent before child controls consume pointer events.
+        AddHandler(PointerPressedEvent, OnDesktopPagesPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerMovedEvent, OnDesktopPagesPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerReleasedEvent, OnDesktopPagesPointerReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerCaptureLostEvent, OnDesktopPagesPointerCaptureLost, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     private async void LoadLauncherEntriesAsync()
@@ -292,7 +305,12 @@ public partial class MainWindow
             return;
         }
 
-        var target = Math.Clamp(_currentDesktopSurfaceIndex + delta, 0, LauncherSurfaceIndex);
+        MoveSurfaceTo(_currentDesktopSurfaceIndex + delta);
+    }
+
+    private void MoveSurfaceTo(int targetIndex)
+    {
+        var target = Math.Clamp(targetIndex, 0, LauncherSurfaceIndex);
         if (target == _currentDesktopSurfaceIndex)
         {
             ApplyDesktopSurfaceOffset();
@@ -306,12 +324,16 @@ public partial class MainWindow
 
     private bool CanSwipeDesktopSurface()
     {
-        return !_isSettingsOpen && !_isDesktopComponentDragActive && _desktopSurfacePageWidth > 1;
+        return !_isSettingsOpen &&
+               !_isComponentLibraryOpen &&
+               !_isDesktopComponentDragActive &&
+               !_isDesktopComponentResizeActive &&
+               _desktopSurfacePageWidth > 1;
     }
 
     private void OnDesktopPagesPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (DesktopPagesViewport is null)
+        if (!TryGetPointerPositionInDesktopViewport(e, out var pointerInViewport))
         {
             return;
         }
@@ -336,16 +358,24 @@ public partial class MainWindow
             return;
         }
 
+        if (IsDesktopSwipeBlockedPointerSource(e.Source))
+        {
+            return;
+        }
+
         if (!e.GetCurrentPoint(DesktopPagesViewport).Properties.IsLeftButtonPressed)
         {
             return;
         }
 
         _isDesktopSwipeActive = true;
-        _desktopSwipeStartPoint = e.GetPosition(DesktopPagesViewport);
+        _isDesktopSwipeDirectionLocked = false;
+        _desktopSwipeStartPoint = pointerInViewport;
         _desktopSwipeCurrentPoint = _desktopSwipeStartPoint;
+        _desktopSwipeLastPoint = _desktopSwipeStartPoint;
+        _desktopSwipeVelocityX = 0;
+        _desktopSwipeLastTimestamp = Stopwatch.GetTimestamp();
         _desktopSwipeBaseOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
-        e.Pointer.Capture(DesktopPagesViewport);
     }
 
     private static bool IsInteractivePointerSource(object? source)
@@ -376,24 +406,172 @@ public partial class MainWindow
         return false;
     }
 
+    private static bool IsDesktopSwipeBlockedPointerSource(object? source)
+    {
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        var pendingNodes = new Stack<object>();
+        var visitedNodes = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        pendingNodes.Push(visual);
+
+        while (pendingNodes.Count > 0)
+        {
+            var node = pendingNodes.Pop();
+            if (!visitedNodes.Add(node))
+            {
+                continue;
+            }
+
+            if (IsDesktopSwipeBlockingNode(node))
+            {
+                return true;
+            }
+
+            if (node is StyledElement styledElement &&
+                styledElement.TemplatedParent is { } templatedParent)
+            {
+                pendingNodes.Push(templatedParent);
+            }
+
+            if (node is Visual currentVisual &&
+                currentVisual.GetVisualParent() is { } parentVisual)
+            {
+                pendingNodes.Push(parentVisual);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsDesktopSwipeBlockingNode(object node)
+    {
+        if (node is Button or TextBox or ComboBox or Slider or ToggleSwitch or ListBoxItem or ScrollViewer)
+        {
+            return true;
+        }
+
+        if (node is Control control &&
+            (control.Classes.Contains("study-history-action-button") ||
+             control.Classes.Contains("desktop-component") ||
+             control.Classes.Contains("desktop-component-host")))
+        {
+            return true;
+        }
+
+        var typeName = node.GetType().Name;
+        return typeName.Contains("Button", StringComparison.OrdinalIgnoreCase) ||
+               typeName.Contains("WebView", StringComparison.OrdinalIgnoreCase) ||
+               typeName.Contains("ScrollBar", StringComparison.OrdinalIgnoreCase) ||
+               typeName.Contains("NumericUpDown", StringComparison.OrdinalIgnoreCase) ||
+               typeName.Contains("TextPresenter", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool TryGetPointerPositionInDesktopViewport(PointerEventArgs e, out Point point)
+    {
+        point = default;
+        if (DesktopPagesViewport is null)
+        {
+            return false;
+        }
+
+        point = e.GetPosition(DesktopPagesViewport);
+        if (_isDesktopSwipeActive && _isDesktopSwipeDirectionLocked)
+        {
+            return true;
+        }
+
+        var bounds = DesktopPagesViewport.Bounds;
+        return bounds.Width > 1 &&
+               bounds.Height > 1 &&
+               point.X >= 0 &&
+               point.Y >= 0 &&
+               point.X <= bounds.Width &&
+               point.Y <= bounds.Height;
+    }
+
+    private void UpdateDesktopSwipeVelocity(Point pointer)
+    {
+        var now = Stopwatch.GetTimestamp();
+        if (_desktopSwipeLastTimestamp > 0)
+        {
+            var elapsedSeconds = (now - _desktopSwipeLastTimestamp) / (double)Stopwatch.Frequency;
+            if (elapsedSeconds > 0.0001)
+            {
+                var instantVelocity = (pointer.X - _desktopSwipeLastPoint.X) / elapsedSeconds;
+                _desktopSwipeVelocityX = _desktopSwipeVelocityX * 0.7 + instantVelocity * 0.3;
+            }
+        }
+
+        _desktopSwipeLastPoint = pointer;
+        _desktopSwipeLastTimestamp = now;
+    }
+
     private void OnDesktopPagesPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDesktopSwipeActive || DesktopPagesViewport is null || _desktopPagesHostTransform is null)
+        if (!_isDesktopSwipeActive || !TryGetPointerPositionInDesktopViewport(e, out var pointerInViewport))
         {
             return;
         }
 
-        _desktopSwipeCurrentPoint = e.GetPosition(DesktopPagesViewport);
+        if (_desktopPagesHostTransform is null || DesktopPagesViewport is null)
+        {
+            return;
+        }
+
+        _desktopSwipeCurrentPoint = pointerInViewport;
+        UpdateDesktopSwipeVelocity(pointerInViewport);
         var deltaX = _desktopSwipeCurrentPoint.X - _desktopSwipeStartPoint.X;
+        var deltaY = _desktopSwipeCurrentPoint.Y - _desktopSwipeStartPoint.Y;
+
+        if (!_isDesktopSwipeDirectionLocked)
+        {
+            const double activationThreshold = 14;
+            const double horizontalBias = 1.15;
+            var absDeltaX = Math.Abs(deltaX);
+            var absDeltaY = Math.Abs(deltaY);
+
+            if (absDeltaY >= activationThreshold && absDeltaY > absDeltaX * horizontalBias)
+            {
+                CancelDesktopSwipeInteraction(e.Pointer);
+                return;
+            }
+
+            if (absDeltaX < activationThreshold || absDeltaX <= absDeltaY * horizontalBias)
+            {
+                return;
+            }
+
+            _isDesktopSwipeDirectionLocked = true;
+            if (e.Pointer.Captured != DesktopPagesViewport)
+            {
+                e.Pointer.Capture(DesktopPagesViewport);
+            }
+        }
+
         var minOffset = -LauncherSurfaceIndex * _desktopSurfacePageWidth;
         var tentative = _desktopSwipeBaseOffset + deltaX;
-        _desktopPagesHostTransform.X = Math.Clamp(tentative, minOffset, 0);
+        if (tentative > 0)
+        {
+            tentative *= 0.24;
+        }
+        else if (tentative < minOffset)
+        {
+            tentative = minOffset + (tentative - minOffset) * 0.24;
+        }
+
+        _desktopPagesHostTransform.X = tentative;
         e.Handled = true;
     }
 
     private void OnDesktopPagesPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        EndDesktopSwipeInteraction(e.Pointer);
+        if (EndDesktopSwipeInteraction(e.Pointer))
+        {
+            e.Handled = true;
+        }
     }
 
     private void OnDesktopPagesPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
@@ -401,29 +579,83 @@ public partial class MainWindow
         EndDesktopSwipeInteraction(e.Pointer);
     }
 
-    private void EndDesktopSwipeInteraction(IPointer? pointer)
+    private void CancelDesktopSwipeInteraction(IPointer? pointer)
     {
         if (!_isDesktopSwipeActive)
         {
             return;
         }
 
-        _isDesktopSwipeActive = false;
+        var wasDirectionLocked = _isDesktopSwipeDirectionLocked;
         if (pointer?.Captured == DesktopPagesViewport)
         {
             pointer.Capture(null);
         }
 
+        _isDesktopSwipeActive = false;
+        _isDesktopSwipeDirectionLocked = false;
+        _desktopSwipeVelocityX = 0;
+        _desktopSwipeLastTimestamp = 0;
+        if (wasDirectionLocked)
+        {
+            ApplyDesktopSurfaceOffset();
+        }
+    }
+
+    private bool EndDesktopSwipeInteraction(IPointer? pointer)
+    {
+        if (!_isDesktopSwipeActive)
+        {
+            return false;
+        }
+
+        var wasDirectionLocked = _isDesktopSwipeDirectionLocked;
+        _isDesktopSwipeActive = false;
+        _isDesktopSwipeDirectionLocked = false;
+        if (pointer?.Captured == DesktopPagesViewport)
+        {
+            pointer.Capture(null);
+        }
+
+        _desktopSwipeLastTimestamp = 0;
+        if (!wasDirectionLocked)
+        {
+            _desktopSwipeVelocityX = 0;
+            return false;
+        }
+
         var deltaX = _desktopSwipeCurrentPoint.X - _desktopSwipeStartPoint.X;
         var deltaY = _desktopSwipeCurrentPoint.Y - _desktopSwipeStartPoint.Y;
-        var threshold = Math.Max(56, _desktopSurfacePageWidth * 0.16);
-        if (Math.Abs(deltaX) >= threshold && Math.Abs(deltaX) > Math.Abs(deltaY))
+        var absDeltaX = Math.Abs(deltaX);
+        var absDeltaY = Math.Abs(deltaY);
+        var distanceThreshold = Math.Max(48, _desktopSurfacePageWidth * 0.14);
+        var velocityThreshold = Math.Max(860, _desktopSurfacePageWidth * 1.08);
+        var predictedDeltaX = deltaX + _desktopSwipeVelocityX * 0.18;
+        var predictedOffset = _desktopSwipeBaseOffset + predictedDeltaX;
+        var projectedTargetIndex = (int)Math.Round(-predictedOffset / _desktopSurfacePageWidth);
+        projectedTargetIndex = Math.Clamp(projectedTargetIndex, 0, LauncherSurfaceIndex);
+
+        var hasDistanceIntent = absDeltaX >= distanceThreshold && absDeltaX > absDeltaY * 1.05;
+        var hasVelocityIntent = Math.Abs(_desktopSwipeVelocityX) >= velocityThreshold;
+
+        if (projectedTargetIndex == _currentDesktopSurfaceIndex && (hasDistanceIntent || hasVelocityIntent))
         {
-            MoveSurfaceBy(deltaX < 0 ? 1 : -1);
-            return;
+            projectedTargetIndex = Math.Clamp(
+                _currentDesktopSurfaceIndex + (deltaX < 0 ? 1 : -1),
+                0,
+                LauncherSurfaceIndex);
+        }
+
+        _desktopSwipeVelocityX = 0;
+
+        if (projectedTargetIndex != _currentDesktopSurfaceIndex)
+        {
+            MoveSurfaceTo(projectedTargetIndex);
+            return true;
         }
 
         ApplyDesktopSurfaceOffset();
+        return hasDistanceIntent || hasVelocityIntent;
     }
 
     private void OnDesktopPagesPointerWheelChanged(object? sender, PointerWheelEventArgs e)

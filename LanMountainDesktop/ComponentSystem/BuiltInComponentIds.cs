@@ -20,6 +20,7 @@ public static class BuiltInComponentIds
     public const string DesktopStudyDeductionReasons = "DesktopStudyDeductionReasons";
     public const string DesktopStudyInterruptDensity = "DesktopStudyInterruptDensity";
     public const string DesktopStudySessionControl = "DesktopStudySessionControl";
+    public const string DesktopStudySessionHistory = "DesktopStudySessionHistory";
     public const string Blank2x4 = "Blank2x4";
     public const string Date = "Date";
     public const string MonthCalendar = "MonthCalendar";

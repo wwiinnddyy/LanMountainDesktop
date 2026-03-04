@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="220"
+             x:Class="LanMountainDesktop.Views.Components.StudySessionHistoryWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="22"
+            Padding="12,10"
+            ClipToBounds="True">
+        <Grid>
+            <Grid x:Name="ContentRootGrid"
+                  RowDefinitions="Auto,*,Auto"
+                  RowSpacing="8">
+                <TextBlock x:Name="TitleTextBlock"
+                           Grid.Row="0"
+                           Text="Session History"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Border Grid.Row="1"
+                        CornerRadius="10"
+                        Background="#1AFFFFFF"
+                        BorderBrush="#26FFFFFF"
+                        BorderThickness="1"
+                        Padding="6"
+                        ClipToBounds="True">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="SessionListPanel"
+                                    Spacing="6" />
+                    </ScrollViewer>
+                </Border>
+
+                <TextBlock x:Name="StatusTextBlock"
+                           Grid.Row="2"
+                           Text="No session history"
+                           FontSize="11"
+                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+
+            <Border x:Name="DialogOverlayBorder"
+                    IsVisible="False"
+                    Background="#70000000"
+                    Padding="12"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <Border x:Name="DialogCardBorder"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Center"
+                        CornerRadius="12"
+                        BorderThickness="1"
+                        Padding="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="DialogTitleTextBlock"
+                                   Text="Dialog Title"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="DialogMessageTextBlock"
+                                   Text="Dialog message"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                        <TextBox x:Name="DialogRenameTextBox"
+                                 IsVisible="False"
+                                 Watermark="Enter session name"
+                                 MinWidth="120"
+                                 VerticalContentAlignment="Center" />
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="8">
+                            <Button x:Name="DialogCancelButton"
+                                    Grid.Column="0"
+                                    Content="Cancel"
+                                    CornerRadius="8"
+                                    Height="30" />
+                            <Button x:Name="DialogConfirmButton"
+                                    Grid.Column="1"
+                                    Content="Confirm"
+                                    CornerRadius="8"
+                                    Height="30" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

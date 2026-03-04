@@ -185,6 +185,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new StudySessionControlWidget(),
                     cellSize => Math.Clamp(cellSize * 0.36, 10, 24)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStudySessionHistory,
+                    "component.study_session_history",
+                    () => new StudySessionHistoryWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 10, 24)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyNoiseCurve,
                     "component.study_noise_curve",
                     () => new StudyNoiseCurveWidget(),
