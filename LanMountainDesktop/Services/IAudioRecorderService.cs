@@ -42,7 +42,7 @@ public interface IAudioRecorderService : IDisposable
 
 public static class AudioRecorderServiceFactory
 {
-    private static readonly Lazy<IAudioRecorderService> SharedService = new(
+    private static readonly Lazy<IAudioRecorderService> SharedRecorderService = new(
         () =>
         {
             if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
@@ -54,9 +54,31 @@ public static class AudioRecorderServiceFactory
         },
         isThreadSafe: true);
 
+    private static readonly Lazy<IAudioRecorderService> SharedStudyMonitoringService = new(
+        () =>
+        {
+            if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+            {
+                return new NoOpAudioRecorderService("Unsupported platform");
+            }
+
+            return new PortAudioRecorderService();
+        },
+        isThreadSafe: true);
+
+    public static IAudioRecorderService CreateRecorder()
+    {
+        return SharedRecorderService.Value;
+    }
+
+    public static IAudioRecorderService CreateStudyMonitoring()
+    {
+        return SharedStudyMonitoringService.Value;
+    }
+
     public static IAudioRecorderService CreateDefault()
     {
-        return SharedService.Value;
+        return CreateRecorder();
     }
 }
 

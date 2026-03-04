@@ -22,7 +22,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         Interval = TimeSpan.FromMilliseconds(96)
     };
 
-    private readonly IAudioRecorderService _audioRecorderService = AudioRecorderServiceFactory.CreateDefault();
+    private readonly IAudioRecorderService _audioRecorderService = AudioRecorderServiceFactory.CreateRecorder();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly List<Border> _waveBars = [];

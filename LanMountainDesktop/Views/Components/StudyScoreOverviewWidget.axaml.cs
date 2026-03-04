@@ -41,6 +41,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private static readonly FontFamily MiSansVariableFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+    private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
@@ -55,7 +56,9 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private bool _isOnActivePage = true;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _isExpandedMode;
     private string _languageCode = "zh-CN";
+    private IDisposable? _monitoringLease;
 
     public StudyScoreOverviewWidget()
     {
@@ -82,6 +85,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         _ = isEditMode;
         _isOnActivePage = isOnActivePage;
+        UpdateMonitoringLeaseState();
         UpdateTimerState();
     }
 
@@ -89,7 +93,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         _isAttached = true;
         ReloadLanguageCode();
-        _ = _studyAnalyticsService.StartOrResumeMonitoring();
+        UpdateMonitoringLeaseState();
         UpdateTimerState();
         RefreshVisual();
     }
@@ -97,6 +101,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
         _uiTimer.Stop();
     }
 
@@ -124,6 +130,19 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         }
 
         _uiTimer.Stop();
+    }
+
+    private void UpdateMonitoringLeaseState()
+    {
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
+        {
+            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
+            return;
+        }
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 
     private void RefreshVisual()
@@ -205,18 +224,22 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
         _isCompactMode = scale < 0.92 || (Bounds.Width > 1 && Bounds.Width < 320) || (Bounds.Height > 1 && Bounds.Height < 300);
         _isUltraCompactMode = scale < 0.72 || (Bounds.Width > 1 && Bounds.Width < 270) || (Bounds.Height > 1 && Bounds.Height < 250);
+        _isExpandedMode = !_isCompactMode && (scale > 1.12 || (Bounds.Width > 1 && Bounds.Width >= 430) || (Bounds.Height > 1 && Bounds.Height >= 430));
 
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
+        var expandedMultiplier = _isExpandedMode ? 1.12 : 1.0;
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.50, 14, 42));
         RootBorder.Padding = new Thickness(
-            Math.Clamp(16 * scale * compactMultiplier, 8, 24),
-            Math.Clamp(14 * scale * compactMultiplier, 6, 20));
+            Math.Clamp(16 * scale * compactMultiplier * expandedMultiplier, 8, 30),
+            Math.Clamp(14 * scale * compactMultiplier * expandedMultiplier, 6, 26));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 5)
             : _isCompactMode
                 ? Math.Clamp(6 * scale, 3, 7)
-                : Math.Clamp(8 * scale, 4, 10);
+                : _isExpandedMode
+                    ? Math.Clamp(10 * scale, 6, 16)
+                    : Math.Clamp(8 * scale, 4, 10);
         TopRowGrid.ColumnSpacing = _isUltraCompactMode
             ? Math.Clamp(6 * scale, 3, 8)
             : Math.Clamp(8 * scale, 4, 10);
@@ -224,28 +247,52 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
             ? Math.Clamp(5 * scale, 3, 7)
             : _isCompactMode
                 ? Math.Clamp(7 * scale, 4, 9)
-                : Math.Clamp(10 * scale, 6, 12);
+                : _isExpandedMode
+                    ? Math.Clamp(14 * scale, 8, 20)
+                    : Math.Clamp(10 * scale, 6, 12);
 
-        var headlineFactor = _isUltraCompactMode ? 0.62 : _isCompactMode ? 0.80 : 1.0;
-        var statFactor = _isUltraCompactMode ? 0.74 : _isCompactMode ? 0.90 : 1.0;
-        var labelFactor = _isUltraCompactMode ? 0.84 : _isCompactMode ? 0.92 : 1.0;
+        var headlineFactor = _isUltraCompactMode ? 0.62 : _isCompactMode ? 0.80 : _isExpandedMode ? 1.22 : 1.02;
+        var statFactor = _isUltraCompactMode ? 0.74 : _isCompactMode ? 0.90 : _isExpandedMode ? 1.36 : 1.04;
+        var labelFactor = _isUltraCompactMode ? 0.84 : _isCompactMode ? 0.92 : _isExpandedMode ? 1.14 : 1.0;
 
-        TitleTextBlock.FontSize = Math.Clamp(14 * scale * labelFactor, 9, 24);
-        ModeTextBlock.FontSize = Math.Clamp(12 * scale * labelFactor, 8, 18);
-        CurrentLabelTextBlock.FontSize = Math.Clamp(12 * scale * labelFactor, 8, 18);
-        CurrentScoreTextBlock.FontSize = Math.Clamp(76 * scale * headlineFactor, 22, 140);
+        TitleTextBlock.FontSize = Math.Clamp(14 * scale * labelFactor, 9, 30);
+        ModeTextBlock.FontSize = Math.Clamp(12 * scale * labelFactor, 8, 22);
+        CurrentLabelTextBlock.FontSize = Math.Clamp(12 * scale * labelFactor, 8, 22);
+        CurrentScoreTextBlock.FontSize = Math.Clamp(76 * scale * headlineFactor, 22, 190);
 
-        AverageLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 16);
-        MinimumLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 16);
-        MaximumLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 16);
-        AverageValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 38);
-        MinimumValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 38);
-        MaximumValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 38);
+        AverageLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 20);
+        MinimumLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 20);
+        MaximumLabelTextBlock.FontSize = Math.Clamp(11 * scale * labelFactor, 8, 20);
+        AverageValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 64);
+        MinimumValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 64);
+        MaximumValueTextBlock.FontSize = Math.Clamp(22 * scale * statFactor, 11, 64);
 
         ModeBadgeBorder.Padding = new Thickness(
             Math.Clamp(8 * scale * compactMultiplier, 4, 12),
             Math.Clamp(3 * scale * compactMultiplier, 1.6, 6));
         ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(8 * scale, 5, 14));
+
+        var cardPadding = new Thickness(
+            Math.Clamp(10 * scale * compactMultiplier * expandedMultiplier, 6, 20),
+            Math.Clamp(8 * scale * compactMultiplier * expandedMultiplier, 4, 16));
+        var cardCornerRadius = new CornerRadius(Math.Clamp(10 * scale, 6, 18));
+        AverageCardBorder.Padding = cardPadding;
+        MinimumCardBorder.Padding = cardPadding;
+        MaximumCardBorder.Padding = cardPadding;
+        AverageCardBorder.CornerRadius = cardCornerRadius;
+        MinimumCardBorder.CornerRadius = cardCornerRadius;
+        MaximumCardBorder.CornerRadius = cardCornerRadius;
+
+        SummaryGrid.Margin = new Thickness(
+            0,
+            _isUltraCompactMode ? 0 : _isExpandedMode ? Math.Clamp(8 * scale, 4, 18) : Math.Clamp(3 * scale, 1, 8),
+            0,
+            0);
+        CurrentScoreTextBlock.Margin = new Thickness(
+            0,
+            _isUltraCompactMode ? 0 : Math.Clamp(2 * scale, 1, 5),
+            0,
+            _isExpandedMode ? Math.Clamp(8 * scale, 4, 16) : Math.Clamp(4 * scale, 2, 8));
 
         TitleTextBlock.IsVisible = !_isUltraCompactMode;
         CurrentLabelTextBlock.IsVisible = !_isUltraCompactMode;
@@ -444,6 +491,13 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         var samples = BuildPanelBackgroundSamples(panelColor);
         var primary = CreateAdaptiveBrush(samples, ValueColorCandidates, minContrast: 4.5);
         var secondary = CreateAdaptiveBrush(samples, SecondaryColorCandidates, minContrast: 4.5);
+        var panelLuminance = RelativeLuminance(ToOpaqueAgainst(panelColor, DarkSubstrate));
+        var cardBackground = panelLuminance > 0.58
+            ? Color.FromArgb(0x42, 0x00, 0x00, 0x00)
+            : Color.FromArgb(0x2A, 0xFF, 0xFF, 0xFF);
+        var cardBorder = panelLuminance > 0.58
+            ? Color.FromArgb(0x52, 0xFF, 0xFF, 0xFF)
+            : Color.FromArgb(0x34, 0xFF, 0xFF, 0xFF);
 
         TitleTextBlock.Foreground = secondary;
         CurrentLabelTextBlock.Foreground = secondary;
@@ -455,6 +509,13 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         AverageValueTextBlock.Foreground = primary;
         MinimumValueTextBlock.Foreground = primary;
         MaximumValueTextBlock.Foreground = primary;
+
+        AverageCardBorder.Background = new SolidColorBrush(cardBackground);
+        MinimumCardBorder.Background = new SolidColorBrush(cardBackground);
+        MaximumCardBorder.Background = new SolidColorBrush(cardBackground);
+        AverageCardBorder.BorderBrush = new SolidColorBrush(cardBorder);
+        MinimumCardBorder.BorderBrush = new SolidColorBrush(cardBorder);
+        MaximumCardBorder.BorderBrush = new SolidColorBrush(cardBorder);
     }
 
     private void ApplyModeBadgeColor(Color panelColor, Color baseColor)
@@ -604,18 +665,19 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         var weightProgress = Math.Clamp((scale - 0.52) / 1.6, 0, 1);
         var compactDelta = _isUltraCompactMode ? 40 : _isCompactMode ? 20 : 0;
+        var expandedDelta = _isExpandedMode ? 18 : 0;
 
         TitleTextBlock.FontWeight = ToVariableWeight(Lerp(560, 680, weightProgress));
         ModeTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, weightProgress));
         CurrentLabelTextBlock.FontWeight = ToVariableWeight(Lerp(520, 640, weightProgress));
-        CurrentScoreTextBlock.FontWeight = ToVariableWeight(Lerp(640 + compactDelta, 820, weightProgress));
+        CurrentScoreTextBlock.FontWeight = ToVariableWeight(Lerp(640 + compactDelta + expandedDelta, 830, weightProgress));
 
         AverageLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
         MinimumLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
         MaximumLabelTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, weightProgress));
-        AverageValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta, 760, weightProgress));
-        MinimumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta, 760, weightProgress));
-        MaximumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta, 760, weightProgress));
+        AverageValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
+        MinimumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
+        MaximumValueTextBlock.FontWeight = ToVariableWeight(Lerp(620 + compactDelta + expandedDelta, 780, weightProgress));
     }
 
     private static double Lerp(double from, double to, double ratio)

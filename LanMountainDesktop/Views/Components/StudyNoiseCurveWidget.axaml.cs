@@ -54,6 +54,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
     private readonly object _snapshotSync = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+    private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _renderTimer = new()
@@ -69,6 +70,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
     private int _framesSinceCompaction;
+    private IDisposable? _monitoringLease;
 
     private enum StatusVisualKind
     {
@@ -130,6 +132,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     {
         _ = isEditMode;
         _isOnActivePage = isOnActivePage;
+        UpdateMonitoringLeaseState();
         UpdateRenderLoopState();
     }
 
@@ -144,7 +147,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             _isSubscribed = true;
         }
 
-        _ = _studyAnalyticsService.StartOrResumeMonitoring();
+        UpdateMonitoringLeaseState();
 
         lock (_snapshotSync)
         {
@@ -158,6 +161,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
         _renderTimer.Stop();
 
         if (_isSubscribed)
@@ -222,6 +227,19 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         }
 
         _renderTimer.Stop();
+    }
+
+    private void UpdateMonitoringLeaseState()
+    {
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
+        {
+            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
+            return;
+        }
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 
     private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)

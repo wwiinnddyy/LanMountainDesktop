@@ -12,6 +12,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+    private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
@@ -25,6 +26,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private IDisposable? _monitoringLease;
 
     public StudyEnvironmentWidget()
     {
@@ -61,6 +63,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         _ = isEditMode;
         _isOnActivePage = isOnActivePage;
+        UpdateMonitoringLeaseState();
         UpdateTimerState();
     }
 
@@ -74,7 +77,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         _isAttached = true;
         ReloadDisplaySettings();
-        _ = _studyAnalyticsService.StartOrResumeMonitoring();
+        UpdateMonitoringLeaseState();
         UpdateTimerState();
         RefreshVisual();
     }
@@ -82,6 +85,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
         _uiTimer.Stop();
     }
 
@@ -105,6 +110,19 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         }
 
         _uiTimer.Stop();
+    }
+
+    private void UpdateMonitoringLeaseState()
+    {
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
+        {
+            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
+            return;
+        }
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 
     private void ReloadDisplaySettings()

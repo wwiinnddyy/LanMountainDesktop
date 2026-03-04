@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="220"
+             x:Class="LanMountainDesktop.Views.Components.StudyInterruptDensityWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="22"
+            Padding="14,10"
+            ClipToBounds="True">
+        <Grid x:Name="ContentRootGrid"
+              RowDefinitions="Auto,*,Auto"
+              RowSpacing="8">
+            <Grid x:Name="HeaderGrid"
+                  Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+                <TextBlock x:Name="TitleTextBlock"
+                           Text="Interrupt Density"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Border x:Name="ModeBadgeBorder"
+                        Grid.Column="1"
+                        Padding="8,3"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="#88FFFFFF"
+                        Background="#553B82F6"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="ModeTextBlock"
+                               Text="Realtime"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis" />
+                </Border>
+            </Grid>
+
+            <Grid x:Name="MainGrid"
+                  Grid.Row="1"
+                  ColumnDefinitions="2*,*"
+                  ColumnSpacing="10">
+                <StackPanel x:Name="DensityStackPanel"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                    <StackPanel x:Name="DensityValueStack"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Bottom">
+                        <TextBlock x:Name="DensityValueTextBlock"
+                                   Text="--"
+                                   FontSize="56"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Bottom" />
+                        <TextBlock x:Name="DensityUnitTextBlock"
+                                   Text="/min"
+                                   FontSize="15"
+                                   VerticalAlignment="Bottom"
+                                   Margin="0,0,0,6" />
+                    </StackPanel>
+
+                    <TextBlock x:Name="DensityLevelTextBlock"
+                               Text="Level --"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <StackPanel x:Name="StatsPanel"
+                            Grid.Column="1"
+                            Spacing="6"
+                            VerticalAlignment="Center">
+                    <Border x:Name="CountCardBorder"
+                            CornerRadius="10"
+                            Background="#2CFFFFFF"
+                            BorderBrush="#33FFFFFF"
+                            BorderThickness="1"
+                            Padding="10,6">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="2">
+                            <TextBlock x:Name="CountLabelTextBlock"
+                                       Text="Count"
+                                       FontSize="11"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="CountValueTextBlock"
+                                       Grid.Row="1"
+                                       Text="--"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="DurationCardBorder"
+                            CornerRadius="10"
+                            Background="#2CFFFFFF"
+                            BorderBrush="#33FFFFFF"
+                            BorderThickness="1"
+                            Padding="10,6">
+                        <Grid RowDefinitions="Auto,Auto"
+                              RowSpacing="2">
+                            <TextBlock x:Name="DurationLabelTextBlock"
+                                       Text="Duration"
+                                       FontSize="11"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="DurationValueTextBlock"
+                                       Grid.Row="1"
+                                       Text="--"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock x:Name="ThresholdTextBlock"
+                       Grid.Row="2"
+                       Text="Threshold --"
+                       FontSize="11"
+                       MaxLines="1"
+                       TextTrimming="CharacterEllipsis" />
+        </Grid>
+    </Border>
+</UserControl>

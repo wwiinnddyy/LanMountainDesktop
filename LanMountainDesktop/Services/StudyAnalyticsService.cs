@@ -36,7 +36,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
 
     public StudyAnalyticsService(IAudioRecorderService? audioRecorderService = null)
     {
-        _audioRecorderService = audioRecorderService ?? AudioRecorderServiceFactory.CreateDefault();
+        _audioRecorderService = audioRecorderService ?? AudioRecorderServiceFactory.CreateStudyMonitoring();
         _pipeline = new NoiseFramePipeline(_config);
         _samplingTimer = new Timer(OnSamplingTick, null, Timeout.Infinite, Timeout.Infinite);
 

@@ -61,65 +61,87 @@
                        FontWeight="SemiBold"
                        MaxLines="1"
                        TextTrimming="CharacterEllipsis"
-                       VerticalAlignment="Center"
+                       VerticalAlignment="Bottom"
+                       Margin="0,2,0,4"
                        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
 
             <Grid Grid.Row="3"
                   x:Name="SummaryGrid"
                   ColumnDefinitions="*,*,*"
                   ColumnSpacing="10">
-                <StackPanel x:Name="AverageStack"
-                            Spacing="2">
-                    <TextBlock x:Name="AverageLabelTextBlock"
-                               Text="Average"
-                               FontSize="11"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                    <TextBlock x:Name="AverageValueTextBlock"
-                               Text="--"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                </StackPanel>
+                <Border x:Name="AverageCardBorder"
+                        CornerRadius="12"
+                        Background="#24FFFFFF"
+                        BorderBrush="#2EFFFFFF"
+                        BorderThickness="1"
+                        Padding="10,8">
+                    <StackPanel x:Name="AverageStack"
+                                Spacing="2">
+                        <TextBlock x:Name="AverageLabelTextBlock"
+                                   Text="Average"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock x:Name="AverageValueTextBlock"
+                                   Text="--"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
 
-                <StackPanel x:Name="MinimumStack"
-                            Grid.Column="1"
-                            Spacing="2">
-                    <TextBlock x:Name="MinimumLabelTextBlock"
-                               Text="Minimum"
-                               FontSize="11"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                    <TextBlock x:Name="MinimumValueTextBlock"
-                               Text="--"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                </StackPanel>
+                <Border x:Name="MinimumCardBorder"
+                        Grid.Column="1"
+                        CornerRadius="12"
+                        Background="#24FFFFFF"
+                        BorderBrush="#2EFFFFFF"
+                        BorderThickness="1"
+                        Padding="10,8">
+                    <StackPanel x:Name="MinimumStack"
+                                Spacing="2">
+                        <TextBlock x:Name="MinimumLabelTextBlock"
+                                   Text="Minimum"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock x:Name="MinimumValueTextBlock"
+                                   Text="--"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
 
-                <StackPanel x:Name="MaximumStack"
-                            Grid.Column="2"
-                            Spacing="2">
-                    <TextBlock x:Name="MaximumLabelTextBlock"
-                               Text="Maximum"
-                               FontSize="11"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                    <TextBlock x:Name="MaximumValueTextBlock"
-                               Text="--"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               MaxLines="1"
-                               TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                </StackPanel>
+                <Border x:Name="MaximumCardBorder"
+                        Grid.Column="2"
+                        CornerRadius="12"
+                        Background="#24FFFFFF"
+                        BorderBrush="#2EFFFFFF"
+                        BorderThickness="1"
+                        Padding="10,8">
+                    <StackPanel x:Name="MaximumStack"
+                                Spacing="2">
+                        <TextBlock x:Name="MaximumLabelTextBlock"
+                                   Text="Maximum"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                        <TextBlock x:Name="MaximumValueTextBlock"
+                                   Text="--"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </Border>

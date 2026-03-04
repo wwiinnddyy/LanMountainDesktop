@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="220"
+             x:Class="LanMountainDesktop.Views.Components.StudyDeductionReasonsWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="22"
+            Padding="12,10"
+            ClipToBounds="True">
+        <Grid x:Name="ContentRootGrid"
+              RowDefinitions="Auto,*,Auto"
+              RowSpacing="8">
+            <Grid x:Name="HeaderGrid"
+                  Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+                <TextBlock x:Name="TitleTextBlock"
+                           Text="Deduction Reasons"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Border x:Name="ModeBadgeBorder"
+                        Grid.Column="1"
+                        Padding="8,3"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="#88FFFFFF"
+                        Background="#553B82F6"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="ModeTextBlock"
+                               Text="Realtime"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis" />
+                </Border>
+            </Grid>
+
+            <StackPanel x:Name="ReasonsListPanel"
+                        Grid.Row="1"
+                        Spacing="6">
+                <Border x:Name="SustainedRowBorder"
+                        CornerRadius="10"
+                        Background="#2CFFFFFF"
+                        BorderBrush="#33FFFFFF"
+                        BorderThickness="1"
+                        Padding="10,7">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="SustainedReasonTextBlock"
+                                   Text="Sustained"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="SustainedMetricTextBlock"
+                                   Grid.Column="1"
+                                   Text="p50 -- dBFS"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="SustainedLossTextBlock"
+                                   Grid.Column="2"
+                                   Text="--"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <Border x:Name="TimeRowBorder"
+                        CornerRadius="10"
+                        Background="#2CFFFFFF"
+                        BorderBrush="#33FFFFFF"
+                        BorderThickness="1"
+                        Padding="10,7">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="TimeReasonTextBlock"
+                                   Text="Duration"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="TimeMetricTextBlock"
+                                   Grid.Column="1"
+                                   Text="over --%"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="TimeLossTextBlock"
+                                   Grid.Column="2"
+                                   Text="--"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <Border x:Name="SegmentRowBorder"
+                        CornerRadius="10"
+                        Background="#2CFFFFFF"
+                        BorderBrush="#33FFFFFF"
+                        BorderThickness="1"
+                        Padding="10,7">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="8">
+                        <TextBlock x:Name="SegmentReasonTextBlock"
+                                   Text="Interruptions"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="SegmentMetricTextBlock"
+                                   Grid.Column="1"
+                                   Text="-- / min"
+                                   FontSize="11"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="SegmentLossTextBlock"
+                                   Grid.Column="2"
+                                   Text="--"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <Grid Grid.Row="2"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10">
+                <TextBlock x:Name="TotalLossTextBlock"
+                           Text="Total --"
+                           FontSize="12"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="ScoreTextBlock"
+                           Grid.Column="1"
+                           HorizontalAlignment="Right"
+                           Text="Score --"
+                           FontSize="12"
+                           FontWeight="SemiBold" />
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

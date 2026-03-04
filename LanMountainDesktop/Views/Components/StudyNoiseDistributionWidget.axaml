@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="using:LanMountainDesktop.Views.Components"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.StudyNoiseDistributionWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="24"
+            Padding="14,10"
+            ClipToBounds="True">
+        <Grid x:Name="ContentRootGrid"
+              RowDefinitions="Auto,*"
+              RowSpacing="8">
+            <Grid x:Name="HeaderGrid"
+                  Grid.Row="0"
+                  ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="8">
+                <TextBlock x:Name="TitleTextBlock"
+                           Text="Noise Level Distribution"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+
+                <TextBlock x:Name="SummaryTextBlock"
+                           Grid.Column="1"
+                           HorizontalAlignment="Right"
+                           FontSize="12"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+
+                <Border x:Name="ModeBadgeBorder"
+                        Grid.Column="2"
+                        Padding="8,3"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="#88FFFFFF"
+                        Background="#553B82F6"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="ModeTextBlock"
+                               Text="Realtime"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="1"
+                  RowDefinitions="*,Auto"
+                  ColumnDefinitions="Auto,*"
+                  RowSpacing="4"
+                  ColumnSpacing="6">
+                <Grid Grid.Row="0"
+                      Grid.Column="0"
+                      RowDefinitions="Auto,*,*,Auto"
+                      VerticalAlignment="Stretch">
+                    <TextBlock x:Name="YExtremeTextBlock"
+                               Grid.Row="0"
+                               Text="Extreme"
+                               FontSize="10" />
+                    <TextBlock x:Name="YNoisyTextBlock"
+                               Grid.Row="1"
+                               Text="Noisy"
+                               VerticalAlignment="Center"
+                               FontSize="10" />
+                    <TextBlock x:Name="YNormalTextBlock"
+                               Grid.Row="2"
+                               Text="Normal"
+                               VerticalAlignment="Center"
+                               FontSize="10" />
+                    <TextBlock x:Name="YQuietTextBlock"
+                               Grid.Row="3"
+                               Text="Quiet"
+                               FontSize="10" />
+                </Grid>
+
+                <local:StudyNoiseDistributionScatterChartControl x:Name="ChartControl"
+                                                                 Grid.Row="0"
+                                                                 Grid.Column="1"
+                                                                 MinHeight="64" />
+
+                <Grid Grid.Row="1"
+                      Grid.Column="1"
+                      ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock x:Name="XLeftTextBlock"
+                               Text="-12s"
+                               FontSize="10" />
+                    <TextBlock x:Name="XCenterTextBlock"
+                               Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               Text="-6s"
+                               FontSize="10" />
+                    <TextBlock x:Name="XRightTextBlock"
+                               Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               Text="Now"
+                               FontSize="10" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>
