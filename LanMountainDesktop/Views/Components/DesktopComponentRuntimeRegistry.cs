@@ -37,7 +37,11 @@ public sealed class DesktopComponentRuntimeDescriptor
 
     public string DisplayNameLocalizationKey { get; }
 
-    public Control CreateControl(double cellSize, TimeZoneService timeZoneService, IWeatherInfoService weatherInfoService)
+    public Control CreateControl(
+        double cellSize,
+        TimeZoneService timeZoneService,
+        IWeatherInfoService weatherInfoService,
+        IRecommendationInfoService recommendationInfoService)
     {
         var control = _controlFactory();
         if (control is IDesktopComponentWidget sizedComponent)
@@ -53,6 +57,11 @@ public sealed class DesktopComponentRuntimeDescriptor
         if (control is IWeatherInfoAwareComponentWidget weatherInfoAwareComponent)
         {
             weatherInfoAwareComponent.SetWeatherInfoService(weatherInfoService);
+        }
+
+        if (control is IRecommendationInfoAwareComponentWidget recommendationInfoAwareComponent)
+        {
+            recommendationInfoAwareComponent.SetRecommendationInfoService(recommendationInfoService);
         }
 
         return control;

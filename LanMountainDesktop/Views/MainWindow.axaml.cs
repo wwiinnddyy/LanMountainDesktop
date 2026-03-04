@@ -91,6 +91,7 @@ public partial class MainWindow : Window
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
+    private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
         .CreateDefault()
         .RegisterExtensions(
@@ -274,6 +275,10 @@ public partial class MainWindow : Window
         if (_weatherDataService is IDisposable weatherServiceDisposable)
         {
             weatherServiceDisposable.Dispose();
+        }
+        if (_recommendationInfoService is IDisposable recommendationServiceDisposable)
+        {
+            recommendationServiceDisposable.Dispose();
         }
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;

@@ -56,7 +56,6 @@ sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" file.csproj
 
 自动更新的文件：
 1. `LanMountainDesktop/LanMountainDesktop.csproj`
-2. `LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj`
 
 ## ✅ 使用流程
 

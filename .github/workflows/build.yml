@@ -42,7 +42,6 @@ jobs:
           name: build-windows-${{ matrix.configuration }}
           path: |
             LanMountainDesktop/bin/${{ matrix.configuration }}/
-            LanMountainDesktop.RecommendationBackend/bin/${{ matrix.configuration }}/
           retention-days: 7
 
   build-linux:
@@ -81,7 +80,6 @@ jobs:
           name: build-linux
           path: |
             LanMountainDesktop/bin/Release/
-            LanMountainDesktop.RecommendationBackend/bin/Release/
           retention-days: 7
 
   build-macos:
@@ -112,5 +110,4 @@ jobs:
           name: build-macos
           path: |
             LanMountainDesktop/bin/Release/
-            LanMountainDesktop.RecommendationBackend/bin/Release/
           retention-days: 7

@@ -19,22 +19,8 @@ dotnet build LanMountainDesktop.sln -c Debug
 dotnet run --project LanMountainDesktop/LanMountainDesktop.csproj
 ```
 
-## 4. 可选：运行推荐后端
-如果你需要每日诗词/名画等推荐能力，可单独启动后端：
-
-```bash
-dotnet run --project LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
-```
-
-后端默认会输出监听地址（通常是 `http://localhost:5xxx` 或 `https://localhost:7xxx`）。
-
-可用健康检查：
-
-```bash
-curl http://localhost:5000/health
-```
-
-说明：端口以你本机启动日志为准，`5000` 仅为示例。
+## 4. 推荐能力说明
+桌面端已内置推荐数据服务（每日诗词 / 每日名画），默认无需额外启动本地推荐后端。
 
 ## 5. 常见问题
 - 启动失败提示 SDK 版本不匹配：确认 `dotnet --info` 中已安装 .NET 10 SDK。

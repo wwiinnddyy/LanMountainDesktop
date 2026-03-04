@@ -17,7 +17,6 @@ The current working directory does not contain a project or solution file.
 ### 1. 创建解决方案文件
 ✅ 创建了标准的 `LanMountainDesktop.sln` 文件，包含：
 - `LanMountainDesktop/LanMountainDesktop.csproj`
-- `LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj`
 
 ### 2. 验证本地构建工作
 ✅ 本地测试通过：
@@ -36,12 +35,11 @@ The current working directory does not contain a project or solution file.
 
 ## 📋 解决方案文件内容
 
-包含两个项目的标准 Visual Studio 解决方案格式：
+包含主桌面项目的标准 Visual Studio 解决方案格式：
 
 ```
 LanMountainDesktop.sln
-├── LanMountainDesktop (Desktop UI - Avalonia)
-└── LanMountainDesktop.RecommendationBackend (Web API - ASP.NET Core)
+└── LanMountainDesktop (Desktop UI - Avalonia)
 ```
 
 ---
@@ -55,7 +53,7 @@ LanMountainDesktop.sln
 git add LanMountainDesktop.sln
 
 # 2. 提交
-git commit -m "Add solution file for multi-project structure"
+git commit -m "Add solution file for desktop project"
 
 # 3. 推送
 git push origin main

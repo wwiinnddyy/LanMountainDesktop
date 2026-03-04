@@ -10,7 +10,7 @@ This document describes the CI/CD workflows configured for LanMountainDesktop. T
 **Trigger:** Every push/PR to main branches, or manual dispatch
 
 **What it does:**
-- Builds both LanMountainDesktop and RecommendationBackend in Debug and Release modes
+- Builds LanMountainDesktop in Debug and Release modes
 - Runs unit tests (if available)
 - Uploads build artifacts for inspection
 - Runs on Windows (windows-latest)
@@ -110,14 +110,12 @@ dotnet restore
 
 # Build (like CI does)
 dotnet build LanMountainDesktop/LanMountainDesktop.csproj
-dotnet build LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
 # Format code locally (required by CI)
 dotnet format
 
 # Run tests
 dotnet test LanMountainDesktop/LanMountainDesktop.csproj
-dotnet test LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
 # Alternative: Use local build scripts (Linux/macOS)
 ./scripts/build.sh --rid linux-x64 --version 1.0.0
@@ -244,7 +242,6 @@ Consider adding:
 - Multi-platform builds (Linux, macOS)
 - Installer generation (.exe, .msi)
 - Automated changelog generation
-- Docker images for backend
 
 ## References
 

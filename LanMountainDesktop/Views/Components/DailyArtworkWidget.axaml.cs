@@ -16,7 +16,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget
+public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly IReadOnlyDictionary<DayOfWeek, string> ZhWeekdays =
         new Dictionary<DayOfWeek, string>
@@ -45,7 +45,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
 
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationBackendService();
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -111,6 +111,15 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget
         BrickPatternCanvas.Opacity = Math.Clamp(0.44 * scale, 0.20, 0.50);
 
         UpdateAdaptiveLayout();
+    }
+
+    public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
+    {
+        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
+        if (_isAttached)
+        {
+            _ = RefreshArtworkAsync(forceRefresh: false);
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -266,7 +275,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget
         StatusTextBlock.IsVisible = true;
         StatusTextBlock.Text = L("artwork.widget.fetch_failed", "Artwork fetch failed");
         PaintingTitleTextBlock.Text = BuildQuotedTitle(L("artwork.widget.fallback_title", "Daily Artwork"));
-        ArtistTextBlock.Text = L("artwork.widget.fallback_artist", "Recommendation backend unavailable");
+        ArtistTextBlock.Text = L("artwork.widget.fallback_artist", "Recommendation service unavailable");
         YearTextBlock.Text = L("artwork.widget.fallback_year", "Try again later");
         UpdateAdaptiveLayout();
     }

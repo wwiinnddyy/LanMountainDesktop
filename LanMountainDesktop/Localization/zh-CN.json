@@ -246,7 +246,7 @@
     "artwork.widget.loading_subtitle":  "正在获取今日名画",
     "artwork.widget.fetch_failed":  "名画获取失败",
     "artwork.widget.fallback_title":  "每日名画",
-    "artwork.widget.fallback_artist":  "推荐后端不可用",
+    "artwork.widget.fallback_artist":  "推荐服务不可用",
     "artwork.widget.fallback_year":  "稍后重试",
     "artwork.widget.unknown_artist":  "未知作者",
     "music.widget.unsupported":  "当前平台不支持音乐控制",

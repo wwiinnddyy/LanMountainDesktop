@@ -16,7 +16,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget
+public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly char[] NaturalBreakChars =
@@ -40,7 +40,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget
     private static readonly HashSet<char> NaturalBreakCharSet = new(NaturalBreakChars);
 
     private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
-    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationBackendService();
+    private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
@@ -141,6 +141,15 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget
         WavePath.StrokeThickness = Math.Clamp(3.0 * scale, 1.2, 4.2);
 
         ApplyModeVisualIfNeeded(force: true);
+    }
+
+    public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
+    {
+        _recommendationService = recommendationInfoService ?? DefaultRecommendationService;
+        if (_isAttached)
+        {
+            _ = RefreshPoetryAsync(forceRefresh: false);
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)

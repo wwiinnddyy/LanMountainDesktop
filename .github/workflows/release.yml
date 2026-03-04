@@ -65,8 +65,7 @@ jobs:
         run: |
           $VERSION = "${{ needs.prepare.outputs.version }}"
           $csprojFiles = @(
-            "LanMountainDesktop/LanMountainDesktop.csproj",
-            "LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj"
+            "LanMountainDesktop/LanMountainDesktop.csproj"
           )
           
           foreach ($csprojPath in $csprojFiles) {
@@ -147,9 +146,6 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           echo "Updating version in LanMountainDesktop.csproj to $VERSION"
           sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
-          
-          echo "Updating version in LanMountainDesktop.RecommendationBackend.csproj to $VERSION"
-          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -235,9 +231,6 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           echo "Updating version in LanMountainDesktop.csproj to $VERSION"
           sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
-          
-          echo "Updating version in LanMountainDesktop.RecommendationBackend.csproj to $VERSION"
-          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop.RecommendationBackend/LanMountainDesktop.RecommendationBackend.csproj
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}

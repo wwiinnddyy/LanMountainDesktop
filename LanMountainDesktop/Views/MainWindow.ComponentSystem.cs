@@ -1425,7 +1425,11 @@ public partial class MainWindow
             return null;
         }
 
-        var component = runtimeDescriptor.CreateControl(_currentDesktopCellSize, _timeZoneService, _weatherDataService);
+        var component = runtimeDescriptor.CreateControl(
+            _currentDesktopCellSize,
+            _timeZoneService,
+            _weatherDataService,
+            _recommendationInfoService);
         component.Classes.Add(DesktopComponentClass);
         return component;
     }
@@ -2533,7 +2537,11 @@ public partial class MainWindow
             var previewHeight = previewSpan.HeightCells * previewCellSize;
             var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
 
-            var previewControl = descriptor.CreateControl(renderCellSize, _timeZoneService, _weatherDataService);
+            var previewControl = descriptor.CreateControl(
+                renderCellSize,
+                _timeZoneService,
+                _weatherDataService,
+                _recommendationInfoService);
 
             var previewSurface = new Border
             {

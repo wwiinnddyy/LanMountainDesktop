@@ -246,7 +246,7 @@
     "artwork.widget.loading_subtitle":  "Fetching today's masterpiece",
     "artwork.widget.fetch_failed":  "Artwork fetch failed",
     "artwork.widget.fallback_title":  "Daily Artwork",
-    "artwork.widget.fallback_artist":  "Recommendation backend unavailable",
+    "artwork.widget.fallback_artist":  "Recommendation service unavailable",
     "artwork.widget.fallback_year":  "Try again later",
     "artwork.widget.unknown_artist":  "Unknown artist",
     "music.widget.unsupported":  "Music control is not supported on this platform",

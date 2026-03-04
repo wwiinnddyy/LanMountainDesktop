@@ -18,6 +18,11 @@ public interface IWeatherInfoAwareComponentWidget
     void SetWeatherInfoService(IWeatherInfoService weatherInfoService);
 }
 
+public interface IRecommendationInfoAwareComponentWidget
+{
+    void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService);
+}
+
 public interface IDesktopPageVisibilityAwareComponentWidget
 {
     void SetDesktopPageContext(bool isOnActivePage, bool isEditMode);
