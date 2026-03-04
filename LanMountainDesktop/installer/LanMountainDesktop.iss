@@ -27,7 +27,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir={#MyOutputDir}
-OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
+OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}-{#MyAppArch}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -37,6 +37,10 @@ DisableProgramGroupPage=yes
 #if MyAppArch == "x64"
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#else
+#if MyAppArch == "x86"
+ArchitecturesAllowed=x86compatible
+#endif
 #endif
 
 [Languages]

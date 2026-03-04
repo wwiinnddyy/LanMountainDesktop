@@ -98,46 +98,81 @@ jobs:
             -p:PublishReadyToRun=true
         shell: pwsh
 
-      - name: Package
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+        shell: pwsh
+
+      - name: Build Installer
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $source = "publish\windows-$arch"
-          $package = "LanMountainDesktop-$version-win-$arch"
+          $publishDir = "publish\windows-$arch"
+          $installerScript = "LanMountainDesktop\installer\LanMountainDesktop.iss"
+          $outputDir = "build-installer"
           
           # Verify source directory exists
-          if (-not (Test-Path -Path $source)) {
-            Write-Error "Source directory not found: $source"
-            Write-Host "Available directories:"
+          if (-not (Test-Path -Path $publishDir)) {
+            Write-Error "Publish directory not found: $publishDir"
             Get-ChildItem -Path "publish" -Directory -ErrorAction SilentlyContinue | Select-Object Name
             exit 1
           }
           
-          # Create package directory and copy files
-          New-Item -ItemType Directory -Path $package -Force | Out-Null
-          Copy-Item -Path "$source\*" -Destination $package -Recurse -Force
+          # Create output directory
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
           
-          # Verify package has content
-          $itemCount = @(Get-ChildItem $package -Recurse -ErrorAction SilentlyContinue).Count
-          Write-Host "Package contains $itemCount items"
-          
-          if ($itemCount -eq 0) {
-            Write-Error "Package directory is empty after copy"
+          # Verify installer script exists
+          if (-not (Test-Path -Path $installerScript)) {
+            Write-Error "Installer script not found: $installerScript"
             exit 1
           }
           
-          # Create archive
-          Compress-Archive -Path $package -DestinationPath "$package.zip" -Force -ErrorAction Stop
+          # Find Inno Setup compiler
+          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path -Path $isccPath)) {
+            $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          }
           
-          Write-Host "Successfully created: $package.zip"
-          Write-Host "Archive size: $($(Get-Item "$package.zip").Length / 1MB) MB"
+          if (-not (Test-Path -Path $isccPath)) {
+            Write-Error "Inno Setup compiler not found at: $isccPath"
+            exit 1
+          }
+          
+          Write-Host "Found Inno Setup at: $isccPath"
+          
+          # Build installer with iscc.exe
+          Write-Host "Building installer for Windows $arch with version $version..."
+          
+          $compileCmd = @(
+            "`"$isccPath`"",
+            "/DMyAppVersion=$version",
+            "/DPublishDir=..\$publishDir",
+            "/DMyOutputDir=..\$outputDir",
+            "/DMyAppArch=$arch",
+            "`"$installerScript`""
+          ) -join " "
+          
+          Write-Host "Compile command: $compileCmd"
+          
+          # Execute the compiler
+          $output = Invoke-Expression $compileCmd 2>&1
+          Write-Host $output
+          
+          # Check if build was successful
+          $installerFile = Get-ChildItem -Path $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installerFile) {
+            Write-Error "Failed to create installer"
+            exit 1
+          }
+          
+          Write-Host "✅ Successfully created: $($installerFile.Name)"
+          Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Upload
+      - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
           name: release-windows-${{ matrix.arch }}
-          path: LanMountainDesktop-*.zip
+          path: build-installer/*.exe
           retention-days: 30
 
   build-linux:
@@ -403,18 +438,18 @@ EOF
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
             
-            ### Downloads
+            ### Windows
+            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer
+            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer
             
-            **Windows:**
-            - win-x64 (64-bit)
-            - win-x86 (32-bit)
+            Installation: Double-click the .exe file and follow the wizard.
             
-            **Linux:**
-            - linux-x64
+            ### Linux
+            - **LanMountainDesktop-{version}-linux-x64.deb** - Debian package (x64)
             
-            **macOS:**
-            - macos-x64 (Intel)
-            - macos-arm64 (Apple Silicon)
+            ### macOS
+            - **LanMountainDesktop-{version}-macos-x64.dmg** - Intel processor
+            - **LanMountainDesktop-{version}-macos-arm64.dmg** - Apple Silicon (M1/M2/M3)
             
             See commits for changes.
           token: ${{ secrets.GITHUB_TOKEN }}
