@@ -61,6 +61,22 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Update version in .csproj
+        run: |
+          $VERSION = "${{ needs.prepare.outputs.version }}"
+          $csprojFiles = @(
+            "LanMontainDesktop/LanMontainDesktop.csproj",
+            "LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj"
+          )
+          
+          foreach ($csprojPath in $csprojFiles) {
+            Write-Host "Updating version in $csprojPath to $VERSION"
+            $content = Get-Content $csprojPath -Raw
+            $content = $content -replace '<Version>.*?</Version>', "<Version>$VERSION</Version>"
+            Set-Content $csprojPath $content
+          }
+        shell: pwsh
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
@@ -126,6 +142,15 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Update version in .csproj
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          echo "Updating version in LanMontainDesktop.csproj to $VERSION"
+          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop/LanMontainDesktop.csproj
+          
+          echo "Updating version in LanMontainDesktop.RecommendationBackend.csproj to $VERSION"
+          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
@@ -181,6 +206,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Update version in .csproj
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          echo "Updating version in LanMontainDesktop.csproj to $VERSION"
+          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop/LanMontainDesktop.csproj
+          
+          echo "Updating version in LanMontainDesktop.RecommendationBackend.csproj to $VERSION"
+          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMontainDesktop.RecommendationBackend/LanMontainDesktop.RecommendationBackend.csproj
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
