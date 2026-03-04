@@ -15,6 +15,7 @@ public static class BuiltInComponentIds
     public const string DesktopAudioRecorder = "DesktopAudioRecorder";
     public const string DesktopStudyEnvironment = "DesktopStudyEnvironment";
     public const string DesktopStudyNoiseCurve = "DesktopStudyNoiseCurve";
+    public const string DesktopStudyScoreOverview = "DesktopStudyScoreOverview";
     public const string Blank2x4 = "Blank2x4";
     public const string Date = "Date";
     public const string MonthCalendar = "MonthCalendar";

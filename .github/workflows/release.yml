@@ -90,7 +90,12 @@ jobs:
             --self-contained `
             -r win-${{ matrix.arch }} `
             -p:PublishSingleFile=true `
-            -p:DebugType=none
+            -p:SelfContained=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:PublishTrimmed=true `
+            -p:TrimMode=partial `
+            -p:PublishReadyToRun=true
         shell: pwsh
 
       - name: Package
@@ -182,7 +187,12 @@ jobs:
             --self-contained \
             -r linux-x64 \
             -p:PublishSingleFile=true \
-            -p:DebugType=none
+            -p:SelfContained=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:PublishTrimmed=true \
+            -p:TrimMode=partial \
+            -p:PublishReadyToRun=true
 
       - name: Package as DEB
         run: |
@@ -287,7 +297,12 @@ EOF
             --self-contained \
             -r osx-${{ matrix.arch }} \
             -p:PublishSingleFile=true \
-            -p:DebugType=none
+            -p:SelfContained=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:PublishTrimmed=true \
+            -p:TrimMode=partial \
+            -p:PublishReadyToRun=true
 
       - name: Package as DMG
         run: |

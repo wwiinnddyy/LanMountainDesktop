@@ -1216,6 +1216,14 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyScoreOverview, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep score overview widget square: 4x4, 5x5, 6x6...
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 1, HeightUnit: 1, MinScale: 4));
+        }
+
         return span;
     }
 

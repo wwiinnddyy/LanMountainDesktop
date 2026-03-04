@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="360"
+             d:DesignHeight="360"
+             x:Class="LanMountainDesktop.Views.Components.StudyScoreOverviewWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="24"
+            Padding="16,14"
+            ClipToBounds="True">
+        <Grid x:Name="ContentRootGrid"
+              RowDefinitions="Auto,Auto,*,Auto"
+              RowSpacing="8">
+            <Grid x:Name="TopRowGrid"
+                  Grid.Row="0"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8">
+                <TextBlock x:Name="TitleTextBlock"
+                           Text="Study Score"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                           VerticalAlignment="Center" />
+
+                <Border x:Name="ModeBadgeBorder"
+                        Grid.Column="1"
+                        Padding="8,3"
+                        CornerRadius="8"
+                        BorderThickness="1"
+                        BorderBrush="#88FFFFFF"
+                        Background="#553B82F6"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="ModeTextBlock"
+                               Text="Realtime"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="#FFFFFFFF"
+                               VerticalAlignment="Center" />
+                </Border>
+            </Grid>
+
+            <TextBlock x:Name="CurrentLabelTextBlock"
+                       Grid.Row="1"
+                       Text="Current"
+                       FontSize="12"
+                       MaxLines="1"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+
+            <TextBlock x:Name="CurrentScoreTextBlock"
+                       Grid.Row="2"
+                       Text="--"
+                       FontSize="76"
+                       FontWeight="SemiBold"
+                       MaxLines="1"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+            <Grid Grid.Row="3"
+                  x:Name="SummaryGrid"
+                  ColumnDefinitions="*,*,*"
+                  ColumnSpacing="10">
+                <StackPanel x:Name="AverageStack"
+                            Spacing="2">
+                    <TextBlock x:Name="AverageLabelTextBlock"
+                               Text="Average"
+                               FontSize="11"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="AverageValueTextBlock"
+                               Text="--"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                </StackPanel>
+
+                <StackPanel x:Name="MinimumStack"
+                            Grid.Column="1"
+                            Spacing="2">
+                    <TextBlock x:Name="MinimumLabelTextBlock"
+                               Text="Minimum"
+                               FontSize="11"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="MinimumValueTextBlock"
+                               Text="--"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                </StackPanel>
+
+                <StackPanel x:Name="MaximumStack"
+                            Grid.Column="2"
+                            Spacing="2">
+                    <TextBlock x:Name="MaximumLabelTextBlock"
+                               Text="Maximum"
+                               FontSize="11"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="MaximumValueTextBlock"
+                               Text="--"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               MaxLines="1"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

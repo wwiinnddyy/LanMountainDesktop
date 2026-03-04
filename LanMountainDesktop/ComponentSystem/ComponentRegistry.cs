@@ -141,6 +141,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStudyScoreOverview,
+                "Study Score Overview",
+                "DataLine",
+                "Study",
+                MinWidthCells: 4,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopDailyPoetry,
                 "Daily Poetry",
                 "Book",
