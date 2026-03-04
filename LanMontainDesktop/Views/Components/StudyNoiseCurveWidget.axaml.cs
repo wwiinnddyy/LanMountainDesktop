@@ -14,15 +14,39 @@ namespace LanMontainDesktop.Views.Components;
 public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private const double NormalTextMinContrast = 4.5;
-    private const double LargeTextMinContrast = 3.0;
+    private const double LargeTextMinContrast = 4.5;
 
-    private static readonly Color[] LightToneCandidates =
+    // Prefer cool-toned colors first (not plain white), then dark variants when background is bright.
+    private static readonly Color[] ValueToneCandidates =
     {
+        Color.Parse("#FFEAF5FF"),
+        Color.Parse("#FFDCEEFF"),
+        Color.Parse("#FFCEE6FA"),
+        Color.Parse("#FF1A2D42"),
+        Color.Parse("#FF233A54"),
         Color.Parse("#FFFFFFFF"),
-        Color.Parse("#FFF8FCFF"),
-        Color.Parse("#FFF0F7FF"),
-        Color.Parse("#FFE8F3FF"),
-        Color.Parse("#FFE0EEFF")
+        Color.Parse("#FF101C2A")
+    };
+
+    private static readonly Color[] AxisToneCandidates =
+    {
+        Color.Parse("#FFC7D9EC"),
+        Color.Parse("#FFBAD0E8"),
+        Color.Parse("#FFD9E8F6"),
+        Color.Parse("#FF2C445F"),
+        Color.Parse("#FF35516F"),
+        Color.Parse("#FFEAF3FA"),
+        Color.Parse("#FF1A2C40")
+    };
+
+    private static readonly Color[] StatusTextToneCandidates =
+    {
+        Color.Parse("#FFF5FAFF"),
+        Color.Parse("#FFE6F1FB"),
+        Color.Parse("#FF18283A"),
+        Color.Parse("#FF122032"),
+        Color.Parse("#FFFFFFFF"),
+        Color.Parse("#FF111B29")
     };
 
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
@@ -66,8 +90,10 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         ApplyDefaultXAxisLabels();
-        ApplyTypographyByBackground(ResolvePanelBackgroundColor());
-        ApplyStatusBadgeStyle(StatusVisualKind.Default, ResolvePanelBackgroundColor());
+
+        var panelColor = ResolvePanelBackgroundColor();
+        ApplyTypographyByBackground(panelColor);
+        ApplyStatusBadgeStyle(StatusVisualKind.Default, panelColor);
     }
 
     public void ApplyCellSize(double cellSize)
@@ -226,18 +252,18 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private void ApplyTypographyByBackground(Color panelColor)
     {
         var samples = BuildPanelBackgroundSamples(panelColor);
-        var primaryBrush = CreateAdaptiveLightBrush(samples, LargeTextMinContrast, preferredAlpha: 0xF6);
-        var secondaryBrush = CreateAdaptiveLightBrush(samples, NormalTextMinContrast, preferredAlpha: 0xDF);
+        var valueBrush = CreateAdaptiveBrush(samples, ValueToneCandidates, LargeTextMinContrast);
+        var axisBrush = CreateAdaptiveBrush(samples, AxisToneCandidates, NormalTextMinContrast);
 
-        RealtimeValueTextBlock.Foreground = primaryBrush;
-        YTopTextBlock.Foreground = secondaryBrush;
-        YUpperTextBlock.Foreground = secondaryBrush;
-        YMiddleTextBlock.Foreground = secondaryBrush;
-        YLowerTextBlock.Foreground = secondaryBrush;
-        YBottomTextBlock.Foreground = secondaryBrush;
-        XLeftTextBlock.Foreground = secondaryBrush;
-        XCenterTextBlock.Foreground = secondaryBrush;
-        XRightTextBlock.Foreground = secondaryBrush;
+        RealtimeValueTextBlock.Foreground = valueBrush;
+        YTopTextBlock.Foreground = axisBrush;
+        YUpperTextBlock.Foreground = axisBrush;
+        YMiddleTextBlock.Foreground = axisBrush;
+        YLowerTextBlock.Foreground = axisBrush;
+        YBottomTextBlock.Foreground = axisBrush;
+        XLeftTextBlock.Foreground = axisBrush;
+        XCenterTextBlock.Foreground = axisBrush;
+        XRightTextBlock.Foreground = axisBrush;
     }
 
     private void ApplyStatusBadgeStyle(StatusVisualKind kind, Color panelColor)
@@ -262,7 +288,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
         StatusBadgeBorder.Background = new SolidColorBrush(badgeColor);
         StatusBadgeBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(0x96, 0xFF, 0xFF, 0xFF));
-        StatusTextBlock.Foreground = CreateAdaptiveLightBrush(new[] { badgeComposite }, NormalTextMinContrast, preferredAlpha: 0xFF);
+        StatusTextBlock.Foreground = CreateAdaptiveBrush(new[] { badgeComposite }, StatusTextToneCandidates, NormalTextMinContrast);
     }
 
     private static StatusVisualKind ResolveStatusVisualKind(StudyAnalyticsSnapshot snapshot)
@@ -294,7 +320,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             return solidBackground.Color;
         }
 
-        if (TryGetResource("AdaptiveGlassStrongBackgroundBrush", null, out var resource) &&
+        if (Resources.TryGetResource("AdaptiveGlassStrongBackgroundBrush", ActualThemeVariant, out var resource) &&
             resource is ISolidColorBrush solidBrush)
         {
             return solidBrush.Color;
@@ -319,33 +345,40 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         };
     }
 
-    private static SolidColorBrush CreateAdaptiveLightBrush(
+    private static SolidColorBrush CreateAdaptiveBrush(
         IReadOnlyList<Color> backgroundSamples,
-        double minContrast,
-        byte preferredAlpha)
+        IReadOnlyList<Color> colorCandidates,
+        double minContrast)
     {
-        var alphaCandidates = new byte[]
+        if (colorCandidates.Count == 0)
         {
-            preferredAlpha,
-            (byte)Math.Clamp(preferredAlpha + 20, 0, 255),
-            0xFF
-        };
+            return new SolidColorBrush(Color.Parse("#FFFFFFFF"));
+        }
 
-        for (var alphaIndex = 0; alphaIndex < alphaCandidates.Length; alphaIndex++)
+        for (var i = 0; i < colorCandidates.Count; i++)
         {
-            var alpha = alphaCandidates[alphaIndex];
-            for (var toneIndex = 0; toneIndex < LightToneCandidates.Length; toneIndex++)
+            var candidate = colorCandidates[i];
+            if (MinContrastRatio(candidate, backgroundSamples) >= minContrast)
             {
-                var tone = LightToneCandidates[toneIndex];
-                var candidate = Color.FromArgb(alpha, tone.R, tone.G, tone.B);
-                if (MinContrastRatio(candidate, backgroundSamples) >= minContrast)
-                {
-                    return new SolidColorBrush(candidate);
-                }
+                return new SolidColorBrush(candidate);
             }
         }
 
-        return new SolidColorBrush(Color.Parse("#FFFFFFFF"));
+        // If none reaches the target, pick the highest-contrast candidate.
+        var best = colorCandidates[0];
+        var bestContrast = MinContrastRatio(best, backgroundSamples);
+        for (var i = 1; i < colorCandidates.Count; i++)
+        {
+            var candidate = colorCandidates[i];
+            var contrast = MinContrastRatio(candidate, backgroundSamples);
+            if (contrast > bestContrast)
+            {
+                best = candidate;
+                bestContrast = contrast;
+            }
+        }
+
+        return new SolidColorBrush(best);
     }
 
     private static double MinContrastRatio(Color foreground, IReadOnlyList<Color> backgrounds)
@@ -423,49 +456,49 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         var centerSeconds = Math.Round(duration / 2d, MidpointRounding.AwayFromZero);
         XLeftTextBlock.Text = $"-{leftSeconds:0}s";
         XCenterTextBlock.Text = $"-{centerSeconds:0}s";
-        XRightTextBlock.Text = L("study.noise_curve.axis.now", "现在");
+        XRightTextBlock.Text = L("study.noise_curve.axis.now", "Now");
     }
 
     private void ApplyDefaultXAxisLabels()
     {
         XLeftTextBlock.Text = "-12s";
         XCenterTextBlock.Text = "-6s";
-        XRightTextBlock.Text = L("study.noise_curve.axis.now", "现在");
+        XRightTextBlock.Text = L("study.noise_curve.axis.now", "Now");
     }
 
     private string ResolveStatusText(StudyAnalyticsSnapshot snapshot)
     {
         if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported)
         {
-            return L("study.environment.status.unsupported", "不支持");
+            return L("study.environment.status.unsupported", "Unsupported");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Error || snapshot.StreamStatus == NoiseStreamStatus.Error)
         {
-            return L("study.environment.status.error", "错误");
+            return L("study.environment.status.error", "Error");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Paused)
         {
-            return L("study.environment.status.paused", "已暂停");
+            return L("study.environment.status.paused", "Paused");
         }
 
         if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
         {
-            return L("study.environment.status.noisy", "嘈杂");
+            return L("study.environment.status.noisy", "Noisy");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Running && snapshot.StreamStatus == NoiseStreamStatus.Quiet)
         {
-            return L("study.environment.status.quiet", "安静");
+            return L("study.environment.status.quiet", "Quiet");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Ready)
         {
-            return L("study.environment.status.ready", "待机");
+            return L("study.environment.status.ready", "Ready");
         }
 
-        return L("study.environment.status.initializing", "初始化中");
+        return L("study.environment.status.initializing", "Initializing");
     }
 
     private void ReloadLanguageCode()

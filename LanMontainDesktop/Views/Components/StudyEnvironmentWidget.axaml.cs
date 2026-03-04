@@ -54,6 +54,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         StatusValueTextBlock.FontSize = Math.Clamp(20 * scale, 12, 34);
         NoiseValueTextBlock.FontSize = Math.Clamp(22 * scale, 12, 38);
         NoiseSubValueTextBlock.FontSize = Math.Clamp(12 * scale, 9, 18);
+        UpdateAdaptiveLayout();
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
@@ -87,6 +88,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+        UpdateAdaptiveLayout();
     }
 
     private void OnUiTimerTick(object? sender, EventArgs e)
@@ -129,6 +131,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         {
             NoiseValueTextBlock.Text = L("study.environment.value.unavailable", "--");
             NoiseSubValueTextBlock.IsVisible = false;
+            UpdateAdaptiveLayout();
             return;
         }
 
@@ -151,6 +154,28 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             ? FormatDisplayDb(realtimePoint.DisplayDb)
             : FormatDbfs(realtimePoint.Dbfs);
         NoiseSubValueTextBlock.IsVisible = false;
+        UpdateAdaptiveLayout();
+    }
+
+    private void UpdateAdaptiveLayout()
+    {
+        var scale = Math.Clamp(_currentCellSize / 48d, 0.82, 2.2);
+        var width = Bounds.Width;
+        var height = Bounds.Height;
+        var showingDualNoiseLines = _showDisplayDb && _showDbfs;
+
+        // Collapse the "Environment" label when space is tight so core values remain readable.
+        var collapseByCell = _currentCellSize <= 40;
+        var collapseByBounds =
+            (width > 0 && width < (showingDualNoiseLines ? 230 : 200)) ||
+            (height > 0 && height < (showingDualNoiseLines ? 102 : 82));
+        var hideStatusLabel = collapseByCell || collapseByBounds;
+
+        StatusTitleTextBlock.IsVisible = !hideStatusLabel;
+        LeftStatusStack.Spacing = hideStatusLabel ? 0 : Math.Clamp(2 * scale, 1, 4);
+        LayoutGrid.ColumnSpacing = hideStatusLabel
+            ? Math.Clamp(6 * scale, 4, 10)
+            : Math.Clamp(10 * scale, 7, 14);
     }
 
     private string ResolveStatusText(StudyAnalyticsSnapshot snapshot)
@@ -239,7 +264,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private IBrush TryResolveThemeBrush(string resourceKey, string fallbackHex)
     {
-        if (TryGetResource(resourceKey, null, out var resource) && resource is IBrush brush)
+        if (Resources.TryGetResource(resourceKey, ActualThemeVariant, out var resource) && resource is IBrush brush)
         {
             return brush;
         }

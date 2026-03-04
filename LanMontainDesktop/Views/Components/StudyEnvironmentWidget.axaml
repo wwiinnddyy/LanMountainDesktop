@@ -12,18 +12,24 @@
             BorderThickness="1"
             CornerRadius="18"
             Padding="14,10">
-        <Grid ColumnDefinitions="*,Auto"
+        <Grid x:Name="LayoutGrid"
+              ColumnDefinitions="*,Auto"
               ColumnSpacing="10">
-            <StackPanel Spacing="2"
+            <StackPanel x:Name="LeftStatusStack"
+                        Spacing="2"
                         VerticalAlignment="Center">
                 <TextBlock x:Name="StatusTitleTextBlock"
-                           Text="环境状态"
+                           Text="Environment"
                            FontSize="11"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                 <TextBlock x:Name="StatusValueTextBlock"
-                           Text="安静"
+                           Text="Quiet"
                            FontSize="20"
                            FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
             </StackPanel>
 
@@ -35,12 +41,16 @@
                            Text="--"
                            FontSize="22"
                            FontWeight="SemiBold"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
                            TextAlignment="Right"
                            HorizontalAlignment="Right"
                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                 <TextBlock x:Name="NoiseSubValueTextBlock"
                            Text=""
                            FontSize="12"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis"
                            TextAlignment="Right"
                            HorizontalAlignment="Right"
                            Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
