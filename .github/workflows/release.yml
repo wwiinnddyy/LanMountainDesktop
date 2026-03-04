@@ -443,9 +443,13 @@ EOF
         run: |
           echo "📦 Organizing artifacts..."
           mkdir -p release-files
-          find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp {} release-files/ \;
+          find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
+          echo ""
           echo "✅ Files ready for release:"
-          ls -lh release-files/
+          ls -lh release-files/ || echo "⚠️ No files found in release-files"
+          echo ""
+          echo "📋 Total files:"
+          find release-files -type f | wc -l
 
       - name: Create Release
         uses: ncipollo/release-action@v1
@@ -453,7 +457,7 @@ EOF
           tag: ${{ github.ref_name }}
           draft: false
           prerelease: ${{ github.event.inputs.is_prerelease == 'true' }}
-          artifacts: release-files/*
+          artifacts: "release-files/**"
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
             
