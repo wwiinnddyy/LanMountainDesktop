@@ -94,57 +94,56 @@
                         <Grid x:Name="SummaryInfoGrid"
                               Grid.Column="1"
                               VerticalAlignment="Center"
-                              Margin="0,2,0,0"
+                              Margin="2,0,0,0"
                               RowDefinitions="Auto,Auto"
-                              ColumnDefinitions="*,Auto"
-                              RowSpacing="2"
-                              ColumnSpacing="8">
-                            <Border x:Name="CityInfoBadge"
-                                    Grid.Row="0"
-                                    Grid.Column="0"
-                                    Grid.ColumnSpan="2"
-                                    Background="Transparent"
-                                    CornerRadius="0"
-                                    Padding="0">
-                                <TextBlock x:Name="CityTextBlock"
-                                           Text="北京"
-                                           FontSize="18"
-                                           FontWeight="SemiBold"
-                                           TextAlignment="Left"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-                            </Border>
+                              RowSpacing="2">
+                            <StackPanel x:Name="BottomInfoStack"
+                                        Grid.Row="0"
+                                        Orientation="Horizontal"
+                                        Spacing="3"
+                                        Margin="0,0,0,1"
+                                        VerticalAlignment="Center">
+                                <Border x:Name="CityInfoBadge"
+                                        Background="Transparent"
+                                        CornerRadius="0"
+                                        Padding="0">
+                                    <TextBlock x:Name="CityTextBlock"
+                                               Text="北京"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               TextAlignment="Left"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                </Border>
+                            </StackPanel>
 
                             <Border x:Name="ConditionInfoBadge"
                                     Grid.Row="1"
-                                    Grid.Column="0"
                                     Background="Transparent"
                                     CornerRadius="0"
-                                    Padding="0">
-                                <TextBlock x:Name="ConditionTextBlock"
-                                           Text="雾"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           TextAlignment="Left"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1" />
-                            </Border>
-
-                            <Border x:Name="RangeInfoBadge"
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    Background="Transparent"
-                                    CornerRadius="0"
-                                    Padding="0">
-                                <TextBlock x:Name="RangeTextBlock"
-                                           Text="11°/4°"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           FontFeatures="tnum"
-                                           TextAlignment="Left"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1"
-                                           Opacity="0.92" />
+                                    Padding="0"
+                                    Margin="0">
+                                <StackPanel x:Name="ConditionRangeStack"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Spacing="9">
+                                    <TextBlock x:Name="ConditionTextBlock"
+                                               Text="雾"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               TextAlignment="Left"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1" />
+                                    <TextBlock x:Name="RangeTextBlock"
+                                               Text="11°/4°"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               FontFeatures="tnum"
+                                               TextAlignment="Left"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxLines="1"
+                                               Opacity="0.92" />
+                                </StackPanel>
                             </Border>
                         </Grid>
 

@@ -703,6 +703,12 @@ public partial class MainWindow
         if (placement.ComponentId == BuiltInComponentIds.DesktopClassSchedule)
         {
             OpenClassScheduleComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
+        {
+            OpenStudyEnvironmentComponentSettings();
         }
     }
 
@@ -738,6 +744,22 @@ public partial class MainWindow
         ComponentSettingsWindow.Opacity = 1;
     }
 
+    private void OpenStudyEnvironmentComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new StudyEnvironmentWidgetSettingsWindow();
+        settingsContent.SettingsChanged += OnStudyEnvironmentSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
     private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
     {
         if (_selectedDesktopComponentHost is null)
@@ -746,6 +768,21 @@ public partial class MainWindow
         }
 
         if (TryGetContentHost(_selectedDesktopComponentHost)?.Child is ClassScheduleWidget widget)
+        {
+            widget.RefreshFromSettings();
+        }
+    }
+
+    private void OnStudyEnvironmentSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (_selectedDesktopComponentHost is null)
+        {
+            return;
+        }
+
+        if (TryGetContentHost(_selectedDesktopComponentHost)?.Child is StudyEnvironmentWidget widget)
         {
             widget.RefreshFromSettings();
         }
@@ -761,6 +798,11 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is ClassScheduleSettingsWindow classScheduleSettingsWindow)
         {
             classScheduleSettingsWindow.SettingsChanged -= OnClassScheduleSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is StudyEnvironmentWidgetSettingsWindow studyEnvironmentSettingsWindow)
+        {
+            studyEnvironmentSettingsWindow.SettingsChanged -= OnStudyEnvironmentSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;
@@ -1161,6 +1203,22 @@ public partial class MainWindow
         if (string.Equals(componentId, BuiltInComponentIds.DesktopDailyPoetry, StringComparison.OrdinalIgnoreCase))
         {
             // Keep recommendation card at a 2:1 ratio with a minimum footprint of 4x2.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyEnvironment, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep study environment widget in a 2:1 ratio: 2x1, 4x2, 6x3...
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 1));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyNoiseCurve, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep noise curve widget in a 2:1 ratio with minimum 4x2.
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
@@ -2279,6 +2337,11 @@ public partial class MainWindow
             return Symbol.Apps;
         }
 
+        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Apps;
+        }
+
         return Symbol.Apps;
     }
 
@@ -2312,6 +2375,11 @@ public partial class MainWindow
         if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.info", "Info");
+        }
+
+        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.study", "Study");
         }
 
         return categoryId;

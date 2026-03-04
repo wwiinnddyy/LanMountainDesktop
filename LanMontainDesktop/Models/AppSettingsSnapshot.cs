@@ -71,4 +71,8 @@ public sealed class AppSettingsSnapshot
     public List<ImportedClassScheduleSnapshot> ImportedClassSchedules { get; set; } = [];
 
     public string ActiveImportedClassScheduleId { get; set; } = string.Empty;
+
+    public bool StudyEnvironmentShowDisplayDb { get; set; } = true;
+
+    public bool StudyEnvironmentShowDbfs { get; set; }
 }

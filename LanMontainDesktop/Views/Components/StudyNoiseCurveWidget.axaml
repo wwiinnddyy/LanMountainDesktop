@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="using:LanMontainDesktop.Views.Components"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMontainDesktop.Views.Components.StudyNoiseCurveWidget">
+    <Border x:Name="RootBorder"
+            Classes="glass-strong"
+            CornerRadius="24"
+            Padding="14,10"
+            ClipToBounds="True">
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="8">
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto,*"
+                  ColumnSpacing="8">
+                <TextBlock x:Name="StatusTextBlock"
+                           Text="安静"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           VerticalAlignment="Center" />
+
+                <TextBlock x:Name="RealtimeValueTextBlock"
+                           Grid.Column="1"
+                           Text="-- dB"
+                           HorizontalAlignment="Right"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <Grid Grid.Row="1"
+                  RowDefinitions="*,Auto"
+                  ColumnDefinitions="Auto,*"
+                  RowSpacing="4"
+                  ColumnSpacing="6">
+                <Grid Grid.Row="0"
+                      Grid.Column="0"
+                      RowDefinitions="Auto,*,*,*,Auto"
+                      VerticalAlignment="Stretch">
+                    <TextBlock x:Name="YTopTextBlock"
+                               Grid.Row="0"
+                               Text="100"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="YUpperTextBlock"
+                               Grid.Row="1"
+                               Text="80"
+                               VerticalAlignment="Center"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="YMiddleTextBlock"
+                               Grid.Row="2"
+                               Text="60"
+                               VerticalAlignment="Center"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="YLowerTextBlock"
+                               Grid.Row="3"
+                               Text="40"
+                               VerticalAlignment="Center"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="YBottomTextBlock"
+                               Grid.Row="4"
+                               Text="20"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                </Grid>
+
+                <local:StudyNoiseCurveChartControl x:Name="ChartControl"
+                                                   Grid.Row="0"
+                                                   Grid.Column="1"
+                                                   MinHeight="64" />
+
+                <Grid Grid.Row="1"
+                      Grid.Column="1"
+                      ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock x:Name="XLeftTextBlock"
+                               Text="-12s"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="XCenterTextBlock"
+                               Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               Text="-6s"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    <TextBlock x:Name="XRightTextBlock"
+                               Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               Text="现在"
+                               FontSize="10"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

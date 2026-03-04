@@ -166,6 +166,16 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new RecordingWidget(),
                     cellSize => Math.Clamp(cellSize * 0.36, 16, 34)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStudyEnvironment,
+                    "component.study_environment",
+                    () => new StudyEnvironmentWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.36, 12, 26)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStudyNoiseCurve,
+                    "component.study_noise_curve",
+                    () => new StudyNoiseCurveWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 12, 26)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopDailyPoetry,
                     "component.daily_poetry",
                     () => new DailyPoetryWidget(),
