@@ -97,14 +97,35 @@ jobs:
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $source = "publish/windows-$arch"
+          $source = "publish\windows-$arch"
           $package = "LanMountainDesktop-$version-win-$arch"
           
-          New-Item -ItemType Directory -Path "$package" -Force | Out-Null
-          Copy-Item -Path "$source/*" -Destination "$package" -Recurse -Force
-          Compress-Archive -Path "$package" -DestinationPath "$package.zip" -Force
+          # Verify source directory exists
+          if (-not (Test-Path -Path $source)) {
+            Write-Error "Source directory not found: $source"
+            Write-Host "Available directories:"
+            Get-ChildItem -Path "publish" -Directory -ErrorAction SilentlyContinue | Select-Object Name
+            exit 1
+          }
           
-          Write-Host "Created: $package.zip"
+          # Create package directory and copy files
+          New-Item -ItemType Directory -Path $package -Force | Out-Null
+          Copy-Item -Path "$source\*" -Destination $package -Recurse -Force
+          
+          # Verify package has content
+          $itemCount = @(Get-ChildItem $package -Recurse -ErrorAction SilentlyContinue).Count
+          Write-Host "Package contains $itemCount items"
+          
+          if ($itemCount -eq 0) {
+            Write-Error "Package directory is empty after copy"
+            exit 1
+          }
+          
+          # Create archive
+          Compress-Archive -Path $package -DestinationPath "$package.zip" -Force -ErrorAction Stop
+          
+          Write-Host "Successfully created: $package.zip"
+          Write-Host "Archive size: $($(Get-Item "$package.zip").Length / 1MB) MB"
         shell: pwsh
 
       - name: Upload
@@ -171,6 +192,13 @@ jobs:
           package_version="${version}"
           arch="amd64"
           
+          # Verify source directory exists
+          if [ ! -d "$source" ]; then
+            echo "Error: Source directory not found: $source"
+            ls -la publish/ || echo "publish directory not found"
+            exit 1
+          fi
+          
           # Create DEB package structure
           mkdir -p "build-deb/DEBIAN"
           mkdir -p "build-deb/usr/local/bin"
@@ -180,23 +208,36 @@ jobs:
           # Copy application files
           cp -r "$source"/* "build-deb/usr/local/bin/"
           
-          # Create control file
+          # Verify copy was successful
+          item_count=$(find build-deb/usr/local/bin -type f 2>/dev/null | wc -l)
+          echo "DEB package contains $item_count files"
+          
+          if [ "$item_count" -eq 0 ]; then
+            echo "Error: DEB package is empty after copy"
+            exit 1
+          fi
+          
+          # Create control file (NOTE: No leading spaces in control file)
           cat > "build-deb/DEBIAN/control" << EOF
-          Package: $package_name
-          Version: $package_version
-          Architecture: $arch
-          Maintainer: LanMountain Team <dev@example.com>
-          Description: LanMountain Desktop Application
-           A desktop application for LanMountain.
-          EOF
+Package: $package_name
+Version: $package_version
+Architecture: $arch
+Maintainer: LanMountain Team <dev@example.com>
+Description: LanMountain Desktop Application
+ A desktop application for LanMountain.
+EOF
           
           # Set proper permissions
-          chmod 755 "build-deb/usr/local/bin/LanMountainDesktop"
+          chmod 755 "build-deb/usr/local/bin/LanMountainDesktop" || chmod 755 "build-deb/usr/local/bin"/*
           
           # Create DEB file
-          dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"
-          
-          echo "Created: ${package_name}_${package_version}_${arch}.deb"
+          if dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"; then
+            echo "Successfully created: ${package_name}_${package_version}_${arch}.deb"
+            ls -lh "${package_name}_${package_version}_${arch}.deb"
+          else
+            echo "Error: Failed to build DEB package"
+            exit 1
+          fi
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -256,6 +297,13 @@ jobs:
           app_name="LanMountainDesktop"
           package_name="${app_name}-${version}-macos-${arch}"
           
+          # Verify source directory exists
+          if [ ! -d "$source" ]; then
+            echo "Error: Source directory not found: $source"
+            ls -la publish/ || echo "publish directory not found"
+            exit 1
+          fi
+          
           # Create app bundle structure
           mkdir -p "${app_name}.app/Contents/MacOS"
           mkdir -p "${app_name}.app/Contents/Resources"
@@ -263,37 +311,51 @@ jobs:
           # Copy application files
           cp -r "$source"/* "${app_name}.app/Contents/MacOS/"
           
-          # Create minimal Info.plist
-          cat > "${app_name}.app/Contents/Info.plist" << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleExecutable</key>
-            <string>LanMountainDesktop</string>
-            <key>CFBundleName</key>
-            <string>LanMountain Desktop</string>
-            <key>CFBundleVersion</key>
-            <string>${version}</string>
-            <key>CFBundleShortVersionString</key>
-            <string>${version}</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.lanmountain.desktop</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-          </dict>
-          </plist>
-          EOF
+          # Verify copy was successful
+          item_count=$(find "${app_name}.app/Contents/MacOS" -type f | wc -l)
+          echo "App bundle contains $item_count files"
+          
+          if [ "$item_count" -eq 0 ]; then
+            echo "Error: App bundle is empty after copy"
+            exit 1
+          fi
+
+          # Create Info.plist - NOTE: Using unquoted EOF to allow variable expansion
+          cat > "${app_name}.app/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>LanMountainDesktop</string>
+  <key>CFBundleName</key>
+  <string>LanMountain Desktop</string>
+  <key>CFBundleVersion</key>
+  <string>$version</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$version</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.lanmountain.desktop</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+</dict>
+</plist>
+EOF
           
           # Create DMG
           mkdir -p dmg-temp
           cp -r "${app_name}.app" dmg-temp/
-          hdiutil create -volname "${app_name}" -srcfolder dmg-temp -ov -format UDZO "${package_name}.dmg"
+          
+          if hdiutil create -volname "${app_name}" -srcfolder dmg-temp -ov -format UDZO "${package_name}.dmg" 2>&1; then
+            echo "Successfully created: ${package_name}.dmg"
+            ls -lh "${package_name}.dmg"
+          else
+            echo "Error: Failed to create DMG"
+            exit 1
+          fi
           
           # Cleanup
           rm -rf dmg-temp "${app_name}.app"
-          
-          echo "Created: ${package_name}.dmg"
 
       - name: Upload
         uses: actions/upload-artifact@v4
