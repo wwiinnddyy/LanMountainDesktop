@@ -428,13 +428,32 @@ EOF
           path: artifacts
           pattern: release-*
 
+      - name: List artifacts structure
+        run: |
+          echo "🔍 Artifact directory structure:"
+          find artifacts -type f -o -type d | sort
+          echo ""
+          echo "📊 Files found:"
+          find artifacts -type f -exec ls -lh {} \;
+          echo ""
+          echo "📁 Full tree:"
+          tree artifacts || find artifacts -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
+
+      - name: Flatten artifacts for release
+        run: |
+          echo "📦 Organizing artifacts..."
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp {} release-files/ \;
+          echo "✅ Files ready for release:"
+          ls -lh release-files/
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           draft: false
           prerelease: ${{ github.event.inputs.is_prerelease == 'true' }}
-          artifacts: artifacts/**/*
+          artifacts: release-files/*
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
             
