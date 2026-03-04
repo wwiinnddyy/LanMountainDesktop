@@ -1208,14 +1208,6 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyEnvironment, StringComparison.OrdinalIgnoreCase))
-        {
-            // Keep study environment widget in a 2:1 ratio: 2x1, 4x2, 6x3...
-            return SnapSpanToScaleRules(
-                span,
-                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 1));
-        }
-
         if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyNoiseCurve, StringComparison.OrdinalIgnoreCase))
         {
             // Keep noise curve widget in a 2:1 ratio with minimum 4x2.

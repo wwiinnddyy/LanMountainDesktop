@@ -129,7 +129,8 @@ public sealed class ComponentRegistry
                 MinWidthCells: 2,
                 MinHeightCells: 1,
                 AllowStatusBarPlacement: false,
-                AllowDesktopPlacement: true),
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopStudyNoiseCurve,
                 "Noise Curve",
