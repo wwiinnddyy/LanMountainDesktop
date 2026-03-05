@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
@@ -11,6 +12,14 @@ public sealed record DailyArtworkQuery(
     bool ForceRefresh = false);
 
 public sealed record DailyPoetryQuery(
+    string? Locale = null,
+    bool ForceRefresh = false);
+
+public sealed record DailyNewsQuery(
+    string? Locale = null,
+    bool ForceRefresh = false);
+
+public sealed record DailyWordQuery(
     string? Locale = null,
     bool ForceRefresh = false);
 
@@ -46,11 +55,154 @@ public sealed record RecommendationApiOptions
 
     public string DomesticArtworkHost { get; init; } = "https://cn.bing.com";
 
+    public string CnrDailyNewsListUrl { get; init; } = "https://www.cnr.cn/newscenter/native/gd/";
+
+    public IReadOnlyList<string> CnrDailyNewsRssFeedUrls { get; init; } =
+    [
+        "https://www.cnr.cn/rss.xml",
+        "https://news.cnr.cn/rss.xml",
+        "https://www.cnr.cn/newscenter/native/gd/rss.xml",
+        "https://news.cnr.cn/native/gd/rss.xml"
+    ];
+
+    public string YoudaoDictionaryApiTemplate { get; init; } = "https://dict.youdao.com/jsonapi?q={0}";
+
+    public string YoudaoDictionaryWordPageTemplate { get; init; } = "https://dict.youdao.com/w/eng/{0}/";
+
+    public IReadOnlyList<string> YoudaoDailyWordCandidates { get; init; } =
+    [
+        "illustrate",
+        "resilient",
+        "meticulous",
+        "coherent",
+        "subtle",
+        "constrain",
+        "tangible",
+        "versatile",
+        "pragmatic",
+        "derive",
+        "intricate",
+        "notion",
+        "facilitate",
+        "sustain",
+        "clarify",
+        "convey",
+        "nuance",
+        "transform",
+        "navigate",
+        "align",
+        "elevate",
+        "refine",
+        "vivid",
+        "compile",
+        "inspect",
+        "aggregate",
+        "optimize",
+        "resonate",
+        "persist",
+        "adapt",
+        "emerge",
+        "concrete",
+        "articulate",
+        "validate",
+        "insight",
+        "concise",
+        "robust",
+        "reliable",
+        "spectrum",
+        "landscape",
+        "context",
+        "constraint",
+        "iterative",
+        "foundation",
+        "priority",
+        "workflow",
+        "synthesize",
+        "anchor",
+        "precision",
+        "momentum",
+        "integrate",
+        "observe",
+        "structure",
+        "essence",
+        "framework",
+        "drift",
+        "discern",
+        "compose",
+        "modulate",
+        "stability",
+        "trajectory",
+        "analyze",
+        "diagnose",
+        "mitigate",
+        "transparent",
+        "progressive",
+        "boundary",
+        "allocate",
+        "evaluate",
+        "reconcile",
+        "strategic",
+        "holistic",
+        "incremental",
+        "temporal",
+        "semantic",
+        "parallel",
+        "explicit",
+        "objective",
+        "capacity",
+        "durable",
+        "scalable",
+        "residual",
+        "verify",
+        "discover",
+        "curate",
+        "invoke",
+        "artistry",
+        "sincere",
+        "substantive",
+        "deliberate",
+        "dynamic",
+        "intentional",
+        "initiative",
+        "evidence",
+        "infuse",
+        "harmony",
+        "vitality",
+        "polish",
+        "portrait",
+        "rhythm",
+        "accent",
+        "gradient",
+        "palette",
+        "pattern",
+        "eclipse",
+        "horizon",
+        "luminous",
+        "serene",
+        "vantage",
+        "kinetic",
+        "refactor",
+        "calibrate",
+        "orchestrate",
+        "prototype",
+        "curiosity",
+        "discipline",
+        "inscribe",
+        "engage",
+        "spark",
+        "zenith",
+        "clarity",
+        "resolve",
+        "aptitude"
+    ];
+
     public TimeSpan CacheDuration { get; init; } = TimeSpan.FromMinutes(20);
 
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
     public int DefaultArtworkCandidateCount { get; init; } = 50;
+
+    public int DefaultDailyNewsCount { get; init; } = 2;
 }
 
 public interface IRecommendationInfoService
@@ -61,6 +213,14 @@ public interface IRecommendationInfoService
 
     Task<RecommendationQueryResult<DailyPoetrySnapshot>> GetDailyPoetryAsync(
         DailyPoetryQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<DailyNewsSnapshot>> GetDailyNewsAsync(
+        DailyNewsQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<DailyWordSnapshot>> GetDailyWordAsync(
+        DailyWordQuery query,
         CancellationToken cancellationToken = default);
 
     void ClearCache();

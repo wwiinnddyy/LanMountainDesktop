@@ -81,7 +81,7 @@
                                    FontWeight="Bold"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"
-                                   MaxLines="2"
+                                   MaxLines="4"
                                    Margin="0,0,0,8" />
 
                         <Border x:Name="RightPanelSeparator"
@@ -102,16 +102,16 @@
                                        FontWeight="SemiBold"
                                        TextWrapping="Wrap"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxLines="2" />
+                                       MaxLines="3" />
                             <TextBlock x:Name="YearTextBlock"
                                        Text="1754"
                                        Foreground="#D7DCE3"
                                        FontSize="22"
                                        FontWeight="Medium"
                                        FontFeatures="tnum"
-                                       TextWrapping="NoWrap"
+                                       TextWrapping="Wrap"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxLines="1" />
+                                       MaxLines="2" />
                         </StackPanel>
                     </Grid>
                 </Grid>

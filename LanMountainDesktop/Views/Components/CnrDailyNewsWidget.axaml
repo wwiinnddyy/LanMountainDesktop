@@ -1,0 +1,148 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.CnrDailyNewsWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            Background="#D5D5D5"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="16,12,16,12">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#F9F9F9"
+                    CornerRadius="24"
+                    Padding="16,14,16,14">
+                <Grid RowDefinitions="Auto,Auto,Auto"
+                      RowSpacing="10">
+                    <Grid Grid.Row="0"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="0"
+                                    VerticalAlignment="Center">
+                            <TextBlock x:Name="BrandPrimaryTextBlock"
+                                       Text="&#22830;&#24191;&#32593;"
+                                       Foreground="#D6272E"
+                                       FontSize="28"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="BrandSecondaryTextBlock"
+                                       Text="&#183;&#22836;&#26465;"
+                                       Foreground="#202327"
+                                       FontSize="28"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Button x:Name="RefreshButton"
+                                Grid.Column="1"
+                                Width="116"
+                                Height="42"
+                                CornerRadius="21"
+                                Background="#F0F0F0"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="10,0"
+                                Focusable="False">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="4"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="RefreshGlyphTextBlock"
+                                           Text="&#8635;"
+                                           Foreground="#52575F"
+                                           FontSize="19"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" />
+                                <TextBlock x:Name="RefreshLabelTextBlock"
+                                           Text="&#25442;&#19968;&#25442;"
+                                           Foreground="#202327"
+                                           FontSize="25"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Grid x:Name="NewsItem1Grid"
+                          Grid.Row="1"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12"
+                          PointerPressed="OnNewsItem1PointerPressed">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="4"
+                              VerticalAlignment="Center">
+                            <TextBlock x:Name="News1PrefixTextBlock"
+                                       Text="&#28909;&#28857; |"
+                                       Foreground="#D6272E"
+                                       FontSize="25"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Top" />
+                            <TextBlock x:Name="News1TitleTextBlock"
+                                       Grid.Column="1"
+                                       Text="Headline"
+                                       Foreground="#202327"
+                                       FontSize="25"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2" />
+                        </Grid>
+
+                        <Border x:Name="News1ImageHost"
+                                Grid.Column="1"
+                                Width="160"
+                                Height="90"
+                                CornerRadius="16"
+                                ClipToBounds="True"
+                                Background="#E6E6E6">
+                            <Image x:Name="News1Image"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                    </Grid>
+
+                    <Grid x:Name="NewsItem2Grid"
+                          Grid.Row="2"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12"
+                          PointerPressed="OnNewsItem2PointerPressed">
+                        <TextBlock x:Name="News2TitleTextBlock"
+                                   Text="Headline"
+                                   Foreground="#202327"
+                                   FontSize="25"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="2"
+                                   VerticalAlignment="Center" />
+
+                        <Border x:Name="News2ImageHost"
+                                Grid.Column="1"
+                                Width="160"
+                                Height="90"
+                                CornerRadius="16"
+                                ClipToBounds="True"
+                                Background="#E6E6E6">
+                            <Image x:Name="News2Image"
+                                   Stretch="UniformToFill" />
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#6A6F77"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

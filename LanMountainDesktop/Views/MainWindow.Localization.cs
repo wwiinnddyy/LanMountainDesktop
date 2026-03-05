@@ -110,6 +110,7 @@ public partial class MainWindow
         SettingsNavStatusBarTextBlock.Text = L("settings.nav.status_bar", "Status Bar");
         SettingsNavWeatherTextBlock.Text = L("settings.nav.weather", "Weather");
         SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
+        SettingsNavUpdateTextBlock.Text = L("settings.nav.update", "Update");
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -247,6 +248,8 @@ public partial class MainWindow
         TimeZoneSettingsExpander.Description = L(
             "settings.region.timezone_desc",
             "Select a time zone. Clock and calendar widgets will follow this zone.");
+
+        ApplyUpdateLocalization();
 
         SettingsNavAboutTextBlock.Text = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");

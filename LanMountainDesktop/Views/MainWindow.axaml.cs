@@ -91,6 +91,7 @@ public partial class MainWindow : Window
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private readonly WindowsStartupService _windowsStartupService = new();
+    private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
@@ -126,6 +127,19 @@ public partial class MainWindow : Window
     private Media? _videoWallpaperMedia;
     private MediaPlayer? _previewVideoWallpaperPlayer;
     private Media? _previewVideoWallpaperMedia;
+    private readonly object _desktopVideoFrameSync = new();
+    private MediaPlayer.LibVLCVideoLockCb? _desktopVideoLockCallback;
+    private MediaPlayer.LibVLCVideoUnlockCb? _desktopVideoUnlockCallback;
+    private MediaPlayer.LibVLCVideoDisplayCb? _desktopVideoDisplayCallback;
+    private IntPtr _desktopVideoFrameBufferPtr;
+    private byte[]? _desktopVideoStagingBuffer;
+    private WriteableBitmap? _desktopVideoBitmap;
+    private int _desktopVideoFrameWidth;
+    private int _desktopVideoFrameHeight;
+    private int _desktopVideoFramePitch;
+    private int _desktopVideoFrameBufferSize;
+    private int _desktopVideoFrameDirtyFlag;
+    private int _desktopVideoFrameUiRefreshScheduledFlag;
     private string? _wallpaperPath;
     private string _wallpaperStatus = "Current background uses solid color.";
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
@@ -221,7 +235,7 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 6);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 7);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
@@ -231,6 +245,7 @@ public partial class MainWindow : Window
         InitializeWeatherSettings(snapshot);
         _dailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
         InitializeAutoStartWithWindowsSetting(snapshot);
+        InitializeUpdateSettings(snapshot);
         InitializeDesktopSurfaceState(snapshot);
         InitializeDesktopComponentPlacements(snapshot);
         InitializeSettingsIcons();
@@ -262,6 +277,8 @@ public partial class MainWindow : Window
 
         _suppressSettingsPersistence = false;
         PersistSettings();
+
+        TriggerAutoUpdateCheckIfEnabled();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -287,6 +304,7 @@ public partial class MainWindow : Window
         {
             recommendationServiceDisposable.Dispose();
         }
+        _releaseUpdateService.Dispose();
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
         PropertyChanged -= OnWindowPropertyChanged;

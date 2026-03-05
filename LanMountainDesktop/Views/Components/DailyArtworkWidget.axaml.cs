@@ -34,6 +34,9 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
     private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
+    private static readonly FontWeight[] TitleWeightCandidates = new[] { FontWeight.Bold, FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
+    private static readonly FontWeight[] ArtistWeightCandidates = new[] { FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
+    private static readonly FontWeight[] SecondaryWeightCandidates = new[] { FontWeight.Medium, FontWeight.Normal, FontWeight.Light };
 
     private static readonly HttpClient ImageHttpClient = new()
     {
@@ -452,55 +455,98 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var bottomStackSpacing = Math.Clamp(3 * scale, 2, 8);
         var reservedHeight = titleBottomMargin + separatorBottomMargin + bottomStackSpacing + 3;
         var textHeightBudget = Math.Max(24, rightContentHeight - reservedHeight);
-        var titleHeightBudget = Math.Max(16, textHeightBudget * 0.54);
-        var bottomTextBudget = Math.Max(10, textHeightBudget - titleHeightBudget);
-        var artistHeightBudget = Math.Max(8, bottomTextBudget * 0.66);
-        var yearHeightBudget = Math.Max(8, bottomTextBudget - artistHeightBudget);
-
         var titleBase = Math.Clamp(44 * scale, 16, 58);
-        PaintingTitleTextBlock.MaxWidth = rightContentWidth;
-        PaintingTitleTextBlock.Margin = new Thickness(0, 0, 0, titleBottomMargin);
-        PaintingTitleTextBlock.FontSize = FitFontSize(
+        var artistBase = Math.Clamp(26 * scale, 11, 34);
+        var yearBase = Math.Clamp(22 * scale, 10, 30);
+        var titleMin = Math.Max(9.2, titleBase * 0.42);
+        var artistMin = Math.Max(8.4, artistBase * 0.50);
+        var yearMin = Math.Max(8.0, yearBase * 0.54);
+
+        var titleDemand = Math.Clamp(NormalizeCompactText(PaintingTitleTextBlock.Text).Length, 6, 96);
+        var artistDemand = Math.Clamp(NormalizeCompactText(ArtistTextBlock.Text).Length, 4, 72);
+        var yearDemand = Math.Clamp(NormalizeCompactText(YearTextBlock.Text).Length, 2, 48);
+
+        var minTitleHeight = Math.Max(10, titleMin * 1.10 * 2);
+        var minArtistHeight = Math.Max(8, artistMin * 1.14);
+        var minYearHeight = Math.Max(8, yearMin * 1.08);
+        var minTextHeightTotal = minTitleHeight + minArtistHeight + minYearHeight;
+
+        double titleHeightBudget;
+        double artistHeightBudget;
+        double yearHeightBudget;
+        if (textHeightBudget <= minTextHeightTotal + 0.6)
+        {
+            var compression = textHeightBudget / Math.Max(1, minTextHeightTotal);
+            titleHeightBudget = Math.Max(9, minTitleHeight * compression);
+            artistHeightBudget = Math.Max(7, minArtistHeight * compression);
+            yearHeightBudget = Math.Max(7, minYearHeight * compression);
+        }
+        else
+        {
+            var extraHeight = textHeightBudget - minTextHeightTotal;
+            var titleWeight = titleDemand + 8d;
+            var artistWeight = artistDemand + 4d;
+            var yearWeight = yearDemand + 2d;
+            var weightSum = Math.Max(1d, titleWeight + artistWeight + yearWeight);
+
+            titleHeightBudget = minTitleHeight + extraHeight * (titleWeight / weightSum);
+            artistHeightBudget = minArtistHeight + extraHeight * (artistWeight / weightSum);
+            yearHeightBudget = minYearHeight + extraHeight * (yearWeight / weightSum);
+        }
+
+        var titleLayout = FitAdaptiveTextLayout(
             PaintingTitleTextBlock.Text,
             rightContentWidth,
             titleHeightBudget,
-            maxLines: 2,
-            minFontSize: Math.Max(12, titleBase * 0.62),
+            minLines: 2,
+            maxLines: 5,
+            minFontSize: titleMin,
             maxFontSize: titleBase,
-            weight: FontWeight.Bold,
-            lineHeightFactor: 1.12);
-        PaintingTitleTextBlock.LineHeight = PaintingTitleTextBlock.FontSize * 1.12;
+            weightCandidates: TitleWeightCandidates,
+            lineHeightFactor: 1.10);
+        PaintingTitleTextBlock.MaxWidth = rightContentWidth;
+        PaintingTitleTextBlock.Margin = new Thickness(0, 0, 0, titleBottomMargin);
+        PaintingTitleTextBlock.MaxLines = titleLayout.MaxLines;
+        PaintingTitleTextBlock.FontWeight = titleLayout.Weight;
+        PaintingTitleTextBlock.FontSize = titleLayout.FontSize;
+        PaintingTitleTextBlock.LineHeight = titleLayout.LineHeight;
 
-        var artistBase = Math.Clamp(26 * scale, 11, 34);
         if (ArtistTextBlock.Parent is StackPanel artistInfoStack)
         {
             artistInfoStack.Spacing = bottomStackSpacing;
         }
 
-        ArtistTextBlock.MaxWidth = rightContentWidth;
-        ArtistTextBlock.FontSize = FitFontSize(
+        var artistLayout = FitAdaptiveTextLayout(
             ArtistTextBlock.Text,
             rightContentWidth,
             artistHeightBudget,
-            maxLines: 2,
-            minFontSize: Math.Max(10, artistBase * 0.72),
+            minLines: 1,
+            maxLines: 4,
+            minFontSize: artistMin,
             maxFontSize: artistBase,
-            weight: FontWeight.SemiBold,
+            weightCandidates: ArtistWeightCandidates,
             lineHeightFactor: 1.14);
-        ArtistTextBlock.LineHeight = ArtistTextBlock.FontSize * 1.14;
+        ArtistTextBlock.MaxWidth = rightContentWidth;
+        ArtistTextBlock.MaxLines = artistLayout.MaxLines;
+        ArtistTextBlock.FontWeight = artistLayout.Weight;
+        ArtistTextBlock.FontSize = artistLayout.FontSize;
+        ArtistTextBlock.LineHeight = artistLayout.LineHeight;
 
-        var yearBase = Math.Clamp(22 * scale, 10, 30);
-        YearTextBlock.MaxWidth = rightContentWidth;
-        YearTextBlock.FontSize = FitFontSize(
+        var yearLayout = FitAdaptiveTextLayout(
             YearTextBlock.Text,
             rightContentWidth,
             yearHeightBudget,
-            maxLines: 1,
-            minFontSize: Math.Max(9.5, yearBase * 0.78),
+            minLines: 1,
+            maxLines: 3,
+            minFontSize: yearMin,
             maxFontSize: yearBase,
-            weight: FontWeight.Medium,
+            weightCandidates: SecondaryWeightCandidates,
             lineHeightFactor: 1.08);
-        YearTextBlock.LineHeight = YearTextBlock.FontSize * 1.08;
+        YearTextBlock.MaxWidth = rightContentWidth;
+        YearTextBlock.MaxLines = yearLayout.MaxLines;
+        YearTextBlock.FontWeight = yearLayout.Weight;
+        YearTextBlock.FontSize = yearLayout.FontSize;
+        YearTextBlock.LineHeight = yearLayout.LineHeight;
 
         RightPanelSeparator.Width = Math.Clamp(rightContentWidth * 0.58, 42, 136);
         RightPanelSeparator.Margin = new Thickness(0, 0, 0, separatorBottomMargin);
@@ -724,6 +770,170 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         }
 
         return best;
+    }
+
+    private static AdaptiveTextLayout FitAdaptiveTextLayout(
+        string? text,
+        double maxWidth,
+        double maxHeight,
+        int minLines,
+        int maxLines,
+        double minFontSize,
+        double maxFontSize,
+        FontWeight[] weightCandidates,
+        double lineHeightFactor)
+    {
+        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
+        var safeMinLines = Math.Max(1, minLines);
+        var safeMaxLines = Math.Max(safeMinLines, maxLines);
+        var linesByHeight = ResolveMaxLinesByHeight(maxHeight, minFontSize, lineHeightFactor, safeMinLines, safeMaxLines);
+
+        var candidates = weightCandidates is { Length: > 0 }
+            ? weightCandidates
+            : new[] { FontWeight.Normal };
+
+        AdaptiveTextLayout? best = null;
+        foreach (var weight in candidates)
+        {
+            for (var lineLimit = linesByHeight; lineLimit >= safeMinLines; lineLimit--)
+            {
+                var fontSize = FitFontSize(
+                    content,
+                    maxWidth,
+                    maxHeight,
+                    lineLimit,
+                    minFontSize,
+                    maxFontSize,
+                    weight,
+                    lineHeightFactor);
+                var lineHeight = fontSize * lineHeightFactor;
+                var measuredSize = MeasureTextSize(content, fontSize, weight, Math.Max(1, maxWidth), lineHeight);
+                var measuredLineCount = ResolveLineCount(measuredSize.Height, lineHeight);
+                var overflowLines = Math.Max(0, measuredLineCount - lineLimit);
+                var overflowHeight = Math.Max(0, measuredSize.Height - maxHeight);
+                var overflowScore = overflowLines * 1000d + overflowHeight;
+                var fitsCompletely = overflowLines == 0 && overflowHeight <= 0.6;
+                var candidate = new AdaptiveTextLayout(fontSize, weight, lineLimit, lineHeight, overflowScore, fitsCompletely);
+
+                if (best is null || IsBetterAdaptiveTextCandidate(candidate, best.Value))
+                {
+                    best = candidate;
+                }
+            }
+        }
+
+        if (best is not null)
+        {
+            return best.Value;
+        }
+
+        var fallbackFontSize = Math.Max(6, minFontSize);
+        return new AdaptiveTextLayout(
+            fallbackFontSize,
+            FontWeight.Normal,
+            safeMinLines,
+            fallbackFontSize * lineHeightFactor,
+            double.MaxValue,
+            fitsCompletely: false);
+    }
+
+    private static bool IsBetterAdaptiveTextCandidate(AdaptiveTextLayout candidate, AdaptiveTextLayout best)
+    {
+        if (candidate.FitsCompletely && !best.FitsCompletely)
+        {
+            return true;
+        }
+
+        if (!candidate.FitsCompletely && best.FitsCompletely)
+        {
+            return false;
+        }
+
+        if (candidate.FitsCompletely && best.FitsCompletely)
+        {
+            if (candidate.FontSize > best.FontSize + 0.12)
+            {
+                return true;
+            }
+
+            if (Math.Abs(candidate.FontSize - best.FontSize) <= 0.12 && candidate.MaxLines < best.MaxLines)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (candidate.OverflowScore < best.OverflowScore - 0.2)
+        {
+            return true;
+        }
+
+        if (Math.Abs(candidate.OverflowScore - best.OverflowScore) <= 0.2 &&
+            candidate.FontSize > best.FontSize + 0.12)
+        {
+            return true;
+        }
+
+        if (Math.Abs(candidate.OverflowScore - best.OverflowScore) <= 0.2 &&
+            Math.Abs(candidate.FontSize - best.FontSize) <= 0.12 &&
+            candidate.MaxLines > best.MaxLines)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static int ResolveMaxLinesByHeight(
+        double maxHeight,
+        double minFontSize,
+        double lineHeightFactor,
+        int minLines,
+        int maxLines)
+    {
+        var safeMinLines = Math.Max(1, minLines);
+        var safeMaxLines = Math.Max(safeMinLines, maxLines);
+        var lineHeight = Math.Max(1, Math.Max(6, minFontSize) * lineHeightFactor);
+        var maxHeightWithTolerance = Math.Max(1, maxHeight + 0.6);
+        var linesByHeight = (int)Math.Floor(maxHeightWithTolerance / lineHeight);
+        return Math.Clamp(linesByHeight, safeMinLines, safeMaxLines);
+    }
+
+    private static int ResolveLineCount(double measuredHeight, double lineHeight)
+    {
+        return Math.Max(1, (int)Math.Ceiling(measuredHeight / Math.Max(1, lineHeight)));
+    }
+
+    private readonly struct AdaptiveTextLayout
+    {
+        public AdaptiveTextLayout(
+            double fontSize,
+            FontWeight weight,
+            int maxLines,
+            double lineHeight,
+            double overflowScore,
+            bool fitsCompletely)
+        {
+            FontSize = fontSize;
+            Weight = weight;
+            MaxLines = Math.Max(1, maxLines);
+            LineHeight = lineHeight;
+            OverflowScore = overflowScore;
+            FitsCompletely = fitsCompletely;
+        }
+
+        public double FontSize { get; }
+
+        public FontWeight Weight { get; }
+
+        public int MaxLines { get; }
+
+        public double LineHeight { get; }
+
+        public double OverflowScore { get; }
+
+        public bool FitsCompletely { get; }
     }
 
     private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)

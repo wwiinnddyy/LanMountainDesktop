@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace LanMountainDesktop.Models;
 
@@ -19,4 +20,28 @@ public sealed record DailyPoetrySnapshot(
     string? Origin,
     string? Author,
     string? Category,
+    DateTimeOffset FetchedAt);
+
+public sealed record DailyNewsItemSnapshot(
+    string Title,
+    string? Summary,
+    string Url,
+    string? ImageUrl,
+    string? PublishTime);
+
+public sealed record DailyNewsSnapshot(
+    string Provider,
+    string Source,
+    IReadOnlyList<DailyNewsItemSnapshot> Items,
+    DateTimeOffset FetchedAt);
+
+public sealed record DailyWordSnapshot(
+    string Provider,
+    string Word,
+    string? UkPronunciation,
+    string? UsPronunciation,
+    string Meaning,
+    string? ExampleSentence,
+    string? ExampleTranslation,
+    string? SourceUrl,
     DateTimeOffset FetchedAt);

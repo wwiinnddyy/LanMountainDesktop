@@ -83,11 +83,12 @@
                             VerticalAlignment="Stretch"
                             Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
 
-                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
-                                   IsVisible="False"
-                                   IsHitTestVisible="False"
-                                   HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Stretch" />
+                    <Image x:Name="DesktopVideoWallpaperImage"
+                           IsVisible="False"
+                           IsHitTestVisible="False"
+                           Stretch="UniformToFill"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Stretch" />
 
                     <Grid x:Name="DesktopGrid"
                           HorizontalAlignment="Center"
@@ -445,6 +446,12 @@
                                         <StackPanel Orientation="Horizontal" Spacing="12">
                                             <fi:SymbolIcon x:Name="SettingsNavRegionIcon" Symbol="Globe" IconVariant="Regular" />
                                             <TextBlock x:Name="SettingsNavRegionTextBlock" Text="&#22320;&#21306;" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ListBoxItem>
+                                    <ListBoxItem x:Name="SettingsNavUpdateItem" ToolTip.Tip="&#26356;&#26032;">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <fi:SymbolIcon x:Name="SettingsNavUpdateIcon" Symbol="ArrowSync" IconVariant="Regular" />
+                                            <TextBlock x:Name="SettingsNavUpdateTextBlock" Text="&#26356;&#26032;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
                                     <ListBoxItem x:Name="SettingsNavAboutItem" ToolTip.Tip="&#20851;&#20110;">
@@ -1376,6 +1383,114 @@
                                           </ui:SettingsExpander.Footer>
                                       </ui:SettingsExpander>
 </Border>
+                                </StackPanel>
+
+                                <StackPanel x:Name="UpdateSettingsPanel" IsVisible="False" Spacing="16">
+                                    <TextBlock x:Name="UpdatePanelTitleTextBlock"
+                                               FontSize="24"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Text="Update" />
+
+                                    <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
+                                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                                            <TextBlock x:Name="UpdateCurrentVersionLabelTextBlock"
+                                                       Text="Current Version"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                            <TextBlock x:Name="UpdateCurrentVersionValueTextBlock"
+                                                       Grid.Column="1"
+                                                       Text="-"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                                            <TextBlock x:Name="UpdateLatestVersionLabelTextBlock"
+                                                       Grid.Row="1"
+                                                       Text="Latest Release"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                            <TextBlock x:Name="UpdateLatestVersionValueTextBlock"
+                                                       Grid.Row="1" Grid.Column="1"
+                                                       Text="-"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                                            <TextBlock x:Name="UpdatePublishedAtLabelTextBlock"
+                                                       Grid.Row="2"
+                                                       Text="Published At"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                            <TextBlock x:Name="UpdatePublishedAtValueTextBlock"
+                                                       Grid.Row="2" Grid.Column="1"
+                                                       Text="-"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="UpdateOptionsSettingsExpander"
+                                                             Header="Update Options"
+                                                             Description="Configure update checks and release channel."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <ToggleSwitch x:Name="AutoCheckUpdatesToggleSwitch"
+                                                                  Checked="OnAutoCheckUpdatesToggled"
+                                                                  Unchecked="OnAutoCheckUpdatesToggled"
+                                                                  Content="Automatically check for updates on startup" />
+                                                    <TextBlock x:Name="UpdateChannelLabelTextBlock"
+                                                               Text="Update Channel"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                    <ListBox x:Name="UpdateChannelChipListBox"
+                                                             SelectionChanged="OnUpdateChannelSelectionChanged">
+                                                        <ListBox.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                                                            </ItemsPanelTemplate>
+                                                        </ListBox.ItemsPanel>
+                                                        <ListBoxItem x:Name="UpdateChannelStableChipItem"
+                                                                     Tag="Stable"
+                                                                     Content="Stable" />
+                                                        <ListBoxItem x:Name="UpdateChannelPreviewChipItem"
+                                                                     Tag="Preview"
+                                                                     Content="Preview" />
+                                                    </ListBox>
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="UpdateActionsSettingsExpander"
+                                                             Header="Update Actions"
+                                                             Description="Check releases, download installer, and start update."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Button x:Name="CheckForUpdatesButton"
+                                                                MinWidth="140"
+                                                                Click="OnCheckForUpdatesClick"
+                                                                Content="Check for Updates" />
+                                                        <Button x:Name="DownloadAndInstallUpdateButton"
+                                                                MinWidth="180"
+                                                                Click="OnDownloadAndInstallUpdateClick"
+                                                                Content="Download &amp; Install" />
+                                                    </StackPanel>
+                                                    <ProgressBar x:Name="UpdateDownloadProgressBar"
+                                                                 Minimum="0"
+                                                                 Maximum="100"
+                                                                 Height="6"
+                                                                 IsVisible="False" />
+                                                    <TextBlock x:Name="UpdateDownloadProgressTextBlock"
+                                                               Text="Download progress: -"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                                    <TextBlock x:Name="UpdateStatusTextBlock"
+                                                               Text="Ready to check for updates."
+                                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
                                 </StackPanel>
 
                                 <StackPanel x:Name="AboutSettingsPanel" IsVisible="False" Spacing="20">

@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -64,6 +65,7 @@ public partial class MainWindow
             StatusBarSettingsPanel is null ||
             WeatherSettingsPanel is null ||
             RegionSettingsPanel is null ||
+            UpdateSettingsPanel is null ||
             AboutSettingsPanel is null)
         {
             return;
@@ -76,7 +78,8 @@ public partial class MainWindow
         StatusBarSettingsPanel.IsVisible = selectedIndex == 3;
         WeatherSettingsPanel.IsVisible = selectedIndex == 4;
         RegionSettingsPanel.IsVisible = selectedIndex == 5;
-        AboutSettingsPanel.IsVisible = selectedIndex == 6;
+        UpdateSettingsPanel.IsVisible = selectedIndex == 6;
+        AboutSettingsPanel.IsVisible = selectedIndex == 7;
 
         if (selectedIndex == 1)
         {
@@ -547,16 +550,224 @@ public partial class MainWindow
         Core.Initialize();
         _libVlc ??= new LibVLC("--quiet");
 
-        if (_videoWallpaperPlayer is null && DesktopVideoWallpaperView is not null)
+        if (_videoWallpaperPlayer is null)
         {
-            _videoWallpaperPlayer = new MediaPlayer(_libVlc);
-            DesktopVideoWallpaperView.MediaPlayer = _videoWallpaperPlayer;
+            _videoWallpaperPlayer = new MediaPlayer(_libVlc)
+            {
+                EnableHardwareDecoding = false
+            };
         }
 
         if (_previewVideoWallpaperPlayer is null && WallpaperPreviewVideoView is not null)
         {
             _previewVideoWallpaperPlayer = new MediaPlayer(_libVlc);
             WallpaperPreviewVideoView.MediaPlayer = _previewVideoWallpaperPlayer;
+        }
+    }
+
+    private bool ConfigureDesktopVideoRenderer()
+    {
+        if (_videoWallpaperPlayer is null || DesktopVideoWallpaperImage is null)
+        {
+            return false;
+        }
+
+        var (targetWidth, targetHeight) = GetDesktopVideoRenderSize();
+        var targetPitch = targetWidth * 4;
+        var targetBufferSize = targetPitch * targetHeight;
+        if (targetBufferSize <= 0)
+        {
+            return false;
+        }
+
+        if (targetWidth == _desktopVideoFrameWidth &&
+            targetHeight == _desktopVideoFrameHeight &&
+            _desktopVideoFrameBufferPtr != IntPtr.Zero &&
+            _desktopVideoBitmap is not null)
+        {
+            return true;
+        }
+
+        ReleaseDesktopVideoRendererResources();
+
+        try
+        {
+            _desktopVideoFrameWidth = targetWidth;
+            _desktopVideoFrameHeight = targetHeight;
+            _desktopVideoFramePitch = targetPitch;
+            _desktopVideoFrameBufferSize = targetBufferSize;
+            _desktopVideoFrameBufferPtr = Marshal.AllocHGlobal(_desktopVideoFrameBufferSize);
+            _desktopVideoStagingBuffer = new byte[_desktopVideoFrameBufferSize];
+            _desktopVideoBitmap = new WriteableBitmap(
+                new PixelSize(_desktopVideoFrameWidth, _desktopVideoFrameHeight),
+                new Vector(96, 96),
+                PixelFormat.Bgra8888,
+                AlphaFormat.Opaque);
+            EnsureDesktopVideoCallbacks();
+            _videoWallpaperPlayer.SetVideoCallbacks(
+                _desktopVideoLockCallback!,
+                _desktopVideoUnlockCallback!,
+                _desktopVideoDisplayCallback!);
+            _videoWallpaperPlayer.SetVideoFormat(
+                "RV32",
+                (uint)_desktopVideoFrameWidth,
+                (uint)_desktopVideoFrameHeight,
+                (uint)_desktopVideoFramePitch);
+            DesktopVideoWallpaperImage.Source = _desktopVideoBitmap;
+            return true;
+        }
+        catch
+        {
+            ReleaseDesktopVideoRendererResources();
+            return false;
+        }
+    }
+
+    private (int Width, int Height) GetDesktopVideoRenderSize()
+    {
+        var hostWidth = DesktopHost?.Bounds.Width ?? Bounds.Width;
+        var hostHeight = DesktopHost?.Bounds.Height ?? Bounds.Height;
+        var pixelWidth = Math.Max(1, (int)Math.Round(hostWidth * RenderScaling));
+        var pixelHeight = Math.Max(1, (int)Math.Round(hostHeight * RenderScaling));
+
+        const int maxPixelCount = 1920 * 1080;
+        var pixelCount = (long)pixelWidth * pixelHeight;
+        if (pixelCount > maxPixelCount)
+        {
+            var scale = Math.Sqrt((double)maxPixelCount / pixelCount);
+            pixelWidth = Math.Max(1, (int)Math.Round(pixelWidth * scale));
+            pixelHeight = Math.Max(1, (int)Math.Round(pixelHeight * scale));
+        }
+
+        return (pixelWidth, pixelHeight);
+    }
+
+    private void EnsureDesktopVideoCallbacks()
+    {
+        _desktopVideoLockCallback ??= OnDesktopVideoFrameLock;
+        _desktopVideoUnlockCallback ??= OnDesktopVideoFrameUnlock;
+        _desktopVideoDisplayCallback ??= OnDesktopVideoFrameDisplay;
+    }
+
+    private IntPtr OnDesktopVideoFrameLock(IntPtr opaque, IntPtr planes)
+    {
+        Monitor.Enter(_desktopVideoFrameSync);
+        if (_desktopVideoFrameBufferPtr == IntPtr.Zero)
+        {
+            Marshal.WriteIntPtr(planes, IntPtr.Zero);
+            Monitor.Exit(_desktopVideoFrameSync);
+            return IntPtr.Zero;
+        }
+
+        Marshal.WriteIntPtr(planes, _desktopVideoFrameBufferPtr);
+        return IntPtr.Zero;
+    }
+
+    private void OnDesktopVideoFrameUnlock(IntPtr opaque, IntPtr picture, IntPtr planes)
+    {
+        if (Monitor.IsEntered(_desktopVideoFrameSync))
+        {
+            Monitor.Exit(_desktopVideoFrameSync);
+        }
+    }
+
+    private void OnDesktopVideoFrameDisplay(IntPtr opaque, IntPtr picture)
+    {
+        Interlocked.Exchange(ref _desktopVideoFrameDirtyFlag, 1);
+        ScheduleDesktopVideoFrameUiRefresh();
+    }
+
+    private void ScheduleDesktopVideoFrameUiRefresh()
+    {
+        if (Interlocked.Exchange(ref _desktopVideoFrameUiRefreshScheduledFlag, 1) == 1)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                PushDesktopVideoFrameToWallpaperImage();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _desktopVideoFrameUiRefreshScheduledFlag, 0);
+                if (Volatile.Read(ref _desktopVideoFrameDirtyFlag) == 1)
+                {
+                    ScheduleDesktopVideoFrameUiRefresh();
+                }
+            }
+        }, DispatcherPriority.Render);
+    }
+
+    private void PushDesktopVideoFrameToWallpaperImage()
+    {
+        if (Interlocked.Exchange(ref _desktopVideoFrameDirtyFlag, 0) == 0)
+        {
+            return;
+        }
+
+        if (_desktopVideoBitmap is null ||
+            _desktopVideoStagingBuffer is null ||
+            _desktopVideoFrameBufferPtr == IntPtr.Zero ||
+            _desktopVideoFrameBufferSize <= 0)
+        {
+            return;
+        }
+
+        lock (_desktopVideoFrameSync)
+        {
+            if (_desktopVideoFrameBufferPtr == IntPtr.Zero)
+            {
+                return;
+            }
+
+            Marshal.Copy(_desktopVideoFrameBufferPtr, _desktopVideoStagingBuffer, 0, _desktopVideoFrameBufferSize);
+        }
+
+        using var framebuffer = _desktopVideoBitmap.Lock();
+        var rows = Math.Min(framebuffer.Size.Height, _desktopVideoFrameHeight);
+        var bytesPerRow = Math.Min(framebuffer.RowBytes, _desktopVideoFramePitch);
+        for (var row = 0; row < rows; row++)
+        {
+            var sourceOffset = row * _desktopVideoFramePitch;
+            var destinationPtr = IntPtr.Add(framebuffer.Address, row * framebuffer.RowBytes);
+            Marshal.Copy(_desktopVideoStagingBuffer, sourceOffset, destinationPtr, bytesPerRow);
+        }
+
+        if (DesktopVideoWallpaperImage is not null &&
+            !ReferenceEquals(DesktopVideoWallpaperImage.Source, _desktopVideoBitmap))
+        {
+            DesktopVideoWallpaperImage.Source = _desktopVideoBitmap;
+        }
+    }
+
+    private void ReleaseDesktopVideoRendererResources()
+    {
+        Interlocked.Exchange(ref _desktopVideoFrameDirtyFlag, 0);
+        Interlocked.Exchange(ref _desktopVideoFrameUiRefreshScheduledFlag, 0);
+
+        if (DesktopVideoWallpaperImage is not null)
+        {
+            DesktopVideoWallpaperImage.Source = null;
+        }
+
+        _desktopVideoBitmap?.Dispose();
+        _desktopVideoBitmap = null;
+        _desktopVideoStagingBuffer = null;
+        _desktopVideoFrameWidth = 0;
+        _desktopVideoFrameHeight = 0;
+        _desktopVideoFramePitch = 0;
+        _desktopVideoFrameBufferSize = 0;
+
+        lock (_desktopVideoFrameSync)
+        {
+            if (_desktopVideoFrameBufferPtr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_desktopVideoFrameBufferPtr);
+                _desktopVideoFrameBufferPtr = IntPtr.Zero;
+            }
         }
     }
 
@@ -575,8 +786,15 @@ public partial class MainWindow
             if (_videoWallpaperPlayer is null ||
                 _previewVideoWallpaperPlayer is null ||
                 _libVlc is null ||
-                DesktopVideoWallpaperView is null ||
+                DesktopVideoWallpaperImage is null ||
                 WallpaperPreviewVideoView is null)
+            {
+                _wallpaperStatus = L("settings.wallpaper.video_player_unavailable", "Video player is unavailable.");
+                StopVideoWallpaper();
+                return;
+            }
+
+            if (!ConfigureDesktopVideoRenderer())
             {
                 _wallpaperStatus = L("settings.wallpaper.video_player_unavailable", "Video player is unavailable.");
                 StopVideoWallpaper();
@@ -591,7 +809,7 @@ public partial class MainWindow
             _previewVideoWallpaperMedia.AddOption(":input-repeat=65535");
             _videoWallpaperPlayer.Play(_videoWallpaperMedia);
             _previewVideoWallpaperPlayer.Play(_previewVideoWallpaperMedia);
-            DesktopVideoWallpaperView.IsVisible = true;
+            DesktopVideoWallpaperImage.IsVisible = true;
             WallpaperPreviewVideoView.IsVisible = true;
         }
         catch (Exception ex)
@@ -603,9 +821,9 @@ public partial class MainWindow
 
     private void StopVideoWallpaper()
     {
-        if (DesktopVideoWallpaperView is not null)
+        if (DesktopVideoWallpaperImage is not null)
         {
-            DesktopVideoWallpaperView.IsVisible = false;
+            DesktopVideoWallpaperImage.IsVisible = false;
         }
 
         if (WallpaperPreviewVideoView is not null)
@@ -613,16 +831,17 @@ public partial class MainWindow
             WallpaperPreviewVideoView.IsVisible = false;
         }
 
-        if (_videoWallpaperPlayer?.IsPlaying == true)
+        if (_videoWallpaperPlayer is not null)
         {
             _videoWallpaperPlayer.Stop();
         }
 
-        if (_previewVideoWallpaperPlayer?.IsPlaying == true)
+        if (_previewVideoWallpaperPlayer is not null)
         {
             _previewVideoWallpaperPlayer.Stop();
         }
 
+        ReleaseDesktopVideoRendererResources();
         _videoWallpaperMedia?.Dispose();
         _videoWallpaperMedia = null;
         _previewVideoWallpaperMedia?.Dispose();
@@ -660,6 +879,9 @@ public partial class MainWindow
             WeatherNoTlsRequests = _weatherNoTlsRequests,
             DailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(_dailyArtworkMirrorSource),
             AutoStartWithWindows = _autoStartWithWindows,
+            AutoCheckUpdates = _autoCheckUpdates,
+            IncludePrereleaseUpdates = IncludePrereleaseUpdates,
+            UpdateChannel = IncludePrereleaseUpdates ? "Preview" : "Stable",
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
@@ -2008,6 +2230,24 @@ public partial class MainWindow
             TimeZoneSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
                 Symbol = Symbol.GlobeClock,
+                IconVariant = variant
+            };
+        }
+
+        if (UpdateOptionsSettingsExpander is not null)
+        {
+            UpdateOptionsSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.ArrowClockwiseDashesSettings,
+                IconVariant = variant
+            };
+        }
+
+        if (UpdateActionsSettingsExpander is not null)
+        {
+            UpdateActionsSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.ArrowDownload,
                 IconVariant = variant
             };
         }

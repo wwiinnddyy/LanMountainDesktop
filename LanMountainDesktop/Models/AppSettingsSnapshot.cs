@@ -48,6 +48,12 @@ public sealed class AppSettingsSnapshot
 
     public bool AutoStartWithWindows { get; set; }
 
+    public bool AutoCheckUpdates { get; set; } = true;
+
+    public bool IncludePrereleaseUpdates { get; set; }
+
+    public string UpdateChannel { get; set; } = string.Empty;
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =

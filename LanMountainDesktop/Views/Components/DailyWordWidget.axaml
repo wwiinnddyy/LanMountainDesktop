@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.DailyWordWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            Background="#D5D5D5"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="16,12,16,12">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#FBFAF8"
+                    CornerRadius="24"
+                    Padding="16,14,16,14">
+                <Grid>
+                    <Grid IsHitTestVisible="False">
+                        <shapes:Ellipse x:Name="HaloEllipse"
+                                        Width="290"
+                                        Height="290"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,-106,-52,0"
+                                        Fill="#14F3C9B4" />
+
+                        <Border x:Name="AccentCorner"
+                                Width="116"
+                                Height="116"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,-34,-34"
+                                CornerRadius="58"
+                                Background="#23F29A7A" />
+                    </Grid>
+
+                    <Grid RowDefinitions="Auto,Auto,*,Auto"
+                          RowSpacing="7">
+                        <Grid Grid.Row="0"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="WordTextBlock"
+                                       Text="illustrate"
+                                       Foreground="#F07541"
+                                       FontSize="56"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+
+                            <Button x:Name="RefreshButton"
+                                    Grid.Column="1"
+                                    Width="38"
+                                    Height="38"
+                                    CornerRadius="19"
+                                    Background="#14A0A6AF"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0"
+                                    Focusable="False">
+                                <fi:SymbolIcon x:Name="RefreshIcon"
+                                               Symbol="ArrowClockwise"
+                                               IconVariant="Regular"
+                                               FontSize="19"
+                                               Foreground="#626870" />
+                            </Button>
+                        </Grid>
+
+                        <TextBlock x:Name="PronunciationTextBlock"
+                                   Grid.Row="1"
+                                   Text="英 /ˈɪləstreɪt/ · 美 /ˈɪləstreɪt/"
+                                   Foreground="#6B7078"
+                                   FontSize="27"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="1" />
+
+                        <TextBlock x:Name="MeaningTextBlock"
+                                   Grid.Row="2"
+                                   Text="vt. 说明；阐明；举例证明；加插图"
+                                   Foreground="#2B2F35"
+                                   FontSize="25"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="2"
+                                   VerticalAlignment="Top" />
+
+                        <StackPanel Grid.Row="3"
+                                    Spacing="2">
+                            <TextBlock x:Name="ExampleTextBlock"
+                                       Text="One example will suffice to illustrate the point."
+                                       Foreground="#2B2F35"
+                                       FontSize="22"
+                                       FontWeight="Medium"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2" />
+                            <TextBlock x:Name="ExampleTranslationTextBlock"
+                                       Text="一个例子就足以说明这个观点。"
+                                       Foreground="#7A8088"
+                                       FontSize="20"
+                                       FontWeight="Medium"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#6A6F77"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>
