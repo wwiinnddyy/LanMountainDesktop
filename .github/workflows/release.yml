@@ -55,6 +55,7 @@ jobs:
     needs: prepare
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [x64, x86]
     name: Build_Windows_${{ matrix.arch }}
@@ -136,14 +137,36 @@ jobs:
             exit 1
           }
           
-          # Find Inno Setup compiler
-          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path -Path $isccPath)) {
-            $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
+          # Find Inno Setup compiler (choco may install a shim in PATH)
+          $isccPath = $null
+          $isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          if ($isccCommand) {
+            $isccPath = $isccCommand.Source
           }
-          
-          if (-not (Test-Path -Path $isccPath)) {
-            Write-Error "Inno Setup compiler not found at: $isccPath"
+
+          $candidatePaths = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            "$env:ChocolateyInstall\bin\ISCC.exe",
+            "$env:ChocolateyInstall\lib\innosetup\tools\ISCC.exe"
+          )
+
+          if (-not $isccPath) {
+            foreach ($candidate in $candidatePaths) {
+              if ($candidate -and (Test-Path -Path $candidate)) {
+                $isccPath = $candidate
+                break
+              }
+            }
+          }
+
+          if (-not $isccPath) {
+            Write-Host "ISCC.exe was not found in PATH or known locations."
+            Write-Host "Checked locations:"
+            $candidatePaths | ForEach-Object { Write-Host " - $_" }
+            Write-Host "Chocolatey bin listing (if exists):"
+            Get-ChildItem "$env:ChocolateyInstall\bin" -Filter "*iscc*" -ErrorAction SilentlyContinue | Select-Object FullName
+            Write-Error "Inno Setup compiler not found."
             exit 1
           }
           
@@ -158,8 +181,8 @@ jobs:
 
           $compileArgs = @(
             "/DMyAppVersion=$version",
-            "/DPublishDir=$publishDir",
-            "/DMyOutputDir=$outputDir",
+            "/DPublishDir=`"$publishDir`"",
+            "/DMyOutputDir=`"$outputDir`"",
             "/DMyAppArch=$arch",
             $installerScript
           )

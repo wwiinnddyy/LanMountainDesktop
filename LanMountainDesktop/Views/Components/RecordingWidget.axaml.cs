@@ -14,7 +14,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class RecordingWidget : UserControl, IDesktopComponentWidget
+public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private const int WaveBarCount = 22;
 
@@ -34,6 +34,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     private string _lastSavedFilePath = string.Empty;
     private double _currentCellSize = 48;
     private bool _isAttached;
+    private bool _isOnActivePage = true;
     private bool _pausedStudyMonitoringForRecording;
 
     public RecordingWidget()
@@ -106,10 +107,24 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         UpdateWaveformVisual();
     }
 
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
+        _isOnActivePage = isOnActivePage;
+        UpdateUiTimerState();
+
+        if (!wasOnActivePage && _isOnActivePage && _isAttached)
+        {
+            ReloadLanguageCode();
+            RefreshVisual();
+        }
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        _uiTimer.Start();
+        UpdateUiTimerState();
         ReloadLanguageCode();
         RefreshVisual();
     }
@@ -117,7 +132,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _uiTimer.Stop();
+        UpdateUiTimerState();
 
         var snapshot = _audioRecorderService.GetSnapshot();
         if (snapshot.State is not AudioRecorderRuntimeState.Recording and not AudioRecorderRuntimeState.Paused)
@@ -133,12 +148,27 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
 
     private void OnUiTick(object? sender, EventArgs e)
     {
-        if (!_isAttached)
+        if (!_isAttached || !_isOnActivePage)
         {
             return;
         }
 
         RefreshVisual();
+    }
+
+    private void UpdateUiTimerState()
+    {
+        if (_isAttached && _isOnActivePage)
+        {
+            if (!_uiTimer.IsEnabled)
+            {
+                _uiTimer.Start();
+            }
+
+            return;
+        }
+
+        _uiTimer.Stop();
     }
 
     private void OnDiscardButtonPointerPressed(object? sender, PointerPressedEventArgs e)

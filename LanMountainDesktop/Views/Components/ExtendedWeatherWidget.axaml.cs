@@ -14,12 +14,14 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
+public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
 {
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
 
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMinutes(12) };
     private readonly DispatcherTimer _animationTimer = new() { Interval = TimeSpan.FromMilliseconds(48) };
+    private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
+    private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
 
@@ -29,6 +31,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private double _currentCellSize = 48;
     private double _phase;
     private bool _isAttached;
+    private bool _isOnActivePage = true;
     private bool _isRefreshing;
     private string _languageCode = "zh-CN";
     private HyperOS3WeatherVisualKind _activeVisualKind = HyperOS3WeatherVisualKind.ClearDay;
@@ -43,6 +46,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     public ExtendedWeatherWidget()
     {
         InitializeComponent();
+        InitializeMotionTransform();
         _hourlyTempBlocks =
         [
             HourlyTemp0, HourlyTemp1, HourlyTemp2, HourlyTemp3, HourlyTemp4, HourlyTemp5
@@ -74,21 +78,9 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         ConfigureTextOverflowGuards();
         _refreshTimer.Tick += OnRefreshTimerTick;
         _animationTimer.Tick += OnAnimationTick;
-        AttachedToVisualTree += (_, _) =>
-        {
-            _isAttached = true;
-            _refreshTimer.Start();
-            _animationTimer.Start();
-            _ = RefreshWeatherAsync(false);
-        };
-        DetachedFromVisualTree += (_, _) =>
-        {
-            _isAttached = false;
-            _refreshTimer.Stop();
-            _animationTimer.Stop();
-            CancelRefresh();
-        };
-        SizeChanged += (_, _) => ApplyCellSize(_currentCellSize);
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
+        SizeChanged += OnSizeChanged;
         ApplyCellSize(_currentCellSize);
         ApplyVisualTheme(_activeVisualKind);
         ApplyFallback();
@@ -159,7 +151,20 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     public void SetWeatherInfoService(IWeatherInfoService weatherInfoService)
     {
         _weatherInfoService = weatherInfoService ?? DefaultWeatherInfoService;
-        if (_isAttached)
+        if (_isAttached && _isOnActivePage)
+        {
+            _ = RefreshWeatherAsync(false);
+        }
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
+        _isOnActivePage = isOnActivePage;
+        UpdateTimerState();
+
+        if (!wasOnActivePage && _isOnActivePage && _isAttached)
         {
             _ = RefreshWeatherAsync(false);
         }
@@ -167,10 +172,32 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)
     {
-        if (_isAttached)
+        if (_isAttached && _isOnActivePage)
         {
             _ = RefreshWeatherAsync(false);
         }
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = true;
+        UpdateTimerState();
+        if (_isOnActivePage)
+        {
+            _ = RefreshWeatherAsync(false);
+        }
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = false;
+        UpdateTimerState();
+        CancelRefresh();
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        ApplyCellSize(_currentCellSize);
     }
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
@@ -180,18 +207,16 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void OnAnimationTick(object? sender, EventArgs e)
     {
+        if (!_isAttached || !_isOnActivePage)
+        {
+            return;
+        }
+
         _phase += 0.018;
         if (_phase > Math.PI * 2) _phase -= Math.PI * 2;
         var sin = Math.Sin(_phase);
         var cos = Math.Cos(_phase * 0.83);
-        BackgroundMotionLayer.RenderTransform = new TransformGroup
-        {
-            Children = new Transforms
-            {
-                new ScaleTransform(1.05 + (sin * 0.01), 1.05 + (sin * 0.01)),
-                new TranslateTransform(sin * 7.0, cos * 5.0)
-            }
-        };
+        SetMotionTransform(sin * 7.0, cos * 5.0, 1.05 + (sin * 0.01));
         BackgroundMotionLayer.Opacity = Math.Clamp(0.27 + (cos * 0.05), 0.10, 0.90);
         BackgroundLightLayer.Opacity = Math.Clamp(0.62 + (sin * 0.06), 0.20, 0.95);
         BackgroundShadeLayer.Opacity = Math.Clamp(0.80 + (cos * 0.03), 0.45, 0.95);
@@ -199,7 +224,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private async Task RefreshWeatherAsync(bool forceRefresh)
     {
-        if (!_isAttached || _isRefreshing)
+        if (!_isAttached || !_isOnActivePage || _isRefreshing)
         {
             return;
         }
@@ -820,6 +845,48 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     }
 
     private string L(string key, string fallback) => _localizationService.GetString(_languageCode, key, fallback);
+
+    private void InitializeMotionTransform()
+    {
+        BackgroundMotionLayer.RenderTransform = new TransformGroup
+        {
+            Children = new Transforms
+            {
+                _backgroundMotionScaleTransform,
+                _backgroundMotionTranslateTransform
+            }
+        };
+        SetMotionTransform(0, 0, 1.05);
+    }
+
+    private void SetMotionTransform(double translateX, double translateY, double scale)
+    {
+        _backgroundMotionScaleTransform.ScaleX = scale;
+        _backgroundMotionScaleTransform.ScaleY = scale;
+        _backgroundMotionTranslateTransform.X = translateX;
+        _backgroundMotionTranslateTransform.Y = translateY;
+    }
+
+    private void UpdateTimerState()
+    {
+        if (_isAttached && _isOnActivePage)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+
+            if (!_animationTimer.IsEnabled)
+            {
+                _animationTimer.Start();
+            }
+
+            return;
+        }
+
+        _refreshTimer.Stop();
+        _animationTimer.Stop();
+    }
 
     private void CancelRefresh()
     {

@@ -1906,7 +1906,7 @@ public partial class MainWindow
             }
 
             SettingsPage.IsVisible = false;
-        }, TimeSpan.FromMilliseconds(200));
+        }, TimeSpan.FromMilliseconds(SettingsTransitionDurationMs));
     }
 
     private void InitializeSettingsIcons()

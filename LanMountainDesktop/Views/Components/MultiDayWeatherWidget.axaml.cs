@@ -14,7 +14,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
+public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
 {
     private enum WeatherVisualKind
     {
@@ -97,6 +97,8 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     private readonly List<Border> _particleVisuals = new();
     private readonly List<ParticleState> _particleStates = new();
     private readonly Random _particleRandom = new();
+    private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
+    private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
 
     private IWeatherInfoService _weatherInfoService = DefaultWeatherInfoService;
     private TimeZoneService? _timeZoneService;
@@ -108,6 +110,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     private double _animationPhase;
     private int _activeParticleCount;
     private bool _isAttached;
+    private bool _isOnActivePage = true;
     private bool _isRefreshing;
     private readonly TextBlock[] _hourlyTimeBlocks;
     private readonly Image[] _hourlyIconBlocks;
@@ -116,6 +119,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     public MultiDayWeatherWidget()
     {
         InitializeComponent();
+        InitializeMotionTransform();
         _hourlyTimeBlocks =
         [
             HourlyTime0, HourlyTime1, HourlyTime2, HourlyTime3, HourlyTime4
@@ -198,7 +202,20 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     public void SetWeatherInfoService(IWeatherInfoService weatherInfoService)
     {
         _weatherInfoService = weatherInfoService ?? DefaultWeatherInfoService;
-        if (_isAttached)
+        if (_isAttached && _isOnActivePage)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: false);
+        }
+    }
+
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
+        _isOnActivePage = isOnActivePage;
+        UpdateTimerState();
+
+        if (!wasOnActivePage && _isOnActivePage && _isAttached)
         {
             _ = RefreshWeatherAsync(forceRefresh: false);
         }
@@ -229,16 +246,17 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        _refreshTimer.Start();
-        _backgroundAnimationTimer.Start();
-        _ = RefreshWeatherAsync(forceRefresh: false);
+        UpdateTimerState();
+        if (_isOnActivePage)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: false);
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _refreshTimer.Stop();
-        _backgroundAnimationTimer.Stop();
+        UpdateTimerState();
         CancelRefreshRequest();
     }
 
@@ -255,7 +273,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void OnBackgroundAnimationTick(object? sender, EventArgs e)
     {
-        if (!_isAttached)
+        if (!_isAttached || !_isOnActivePage)
         {
             return;
         }
@@ -318,7 +336,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private async Task RefreshWeatherAsync(bool forceRefresh)
     {
-        if (!_isAttached || _isRefreshing)
+        if (!_isAttached || !_isOnActivePage || _isRefreshing)
         {
             return;
         }
@@ -1189,15 +1207,43 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void SetMotionTransform(double translateX, double translateY, double scale)
     {
-        var group = new TransformGroup
+        _backgroundMotionScaleTransform.ScaleX = scale;
+        _backgroundMotionScaleTransform.ScaleY = scale;
+        _backgroundMotionTranslateTransform.X = translateX;
+        _backgroundMotionTranslateTransform.Y = translateY;
+    }
+
+    private void InitializeMotionTransform()
+    {
+        BackgroundMotionLayer.RenderTransform = new TransformGroup
         {
             Children = new Transforms
             {
-                new ScaleTransform(scale, scale),
-                new TranslateTransform(translateX, translateY)
+                _backgroundMotionScaleTransform,
+                _backgroundMotionTranslateTransform
             }
         };
-        BackgroundMotionLayer.RenderTransform = group;
+    }
+
+    private void UpdateTimerState()
+    {
+        if (_isAttached && _isOnActivePage)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+
+            if (!_backgroundAnimationTimer.IsEnabled)
+            {
+                _backgroundAnimationTimer.Start();
+            }
+
+            return;
+        }
+
+        _refreshTimer.Stop();
+        _backgroundAnimationTimer.Stop();
     }
 
     private void InitializeParticleVisuals()

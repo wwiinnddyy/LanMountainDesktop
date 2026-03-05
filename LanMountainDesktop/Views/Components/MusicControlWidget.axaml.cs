@@ -17,7 +17,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MusicControlWidget : UserControl, IDesktopComponentWidget
+public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
 {
     private const Symbol PlaySymbol = Symbol.Play;
     private const Symbol PauseSymbol = Symbol.Pause;
@@ -38,6 +38,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget
     private string _languageCode = "zh-CN";
     private double _currentCellSize = 48;
     private bool _isAttached;
+    private bool _isOnActivePage = true;
     private bool _isRefreshing;
     private bool _isExecutingCommand;
     private double _progressRatio;
@@ -126,17 +127,33 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget
         UpdateProgressVisual(_progressRatio, _isProgressIndeterminate);
     }
 
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
+        _isOnActivePage = isOnActivePage;
+        UpdateRefreshTimerState();
+
+        if (!wasOnActivePage && _isOnActivePage && _isAttached)
+        {
+            _ = RefreshStateAsync();
+        }
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        _refreshTimer.Start();
-        _ = RefreshStateAsync();
+        UpdateRefreshTimerState();
+        if (_isOnActivePage)
+        {
+            _ = RefreshStateAsync();
+        }
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _refreshTimer.Stop();
+        UpdateRefreshTimerState();
         CancelRefreshRequest();
         DisposeCoverBitmap();
     }
@@ -211,7 +228,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget
 
     private async Task RefreshStateAsync()
     {
-        if (!_isAttached || _isRefreshing)
+        if (!_isAttached || !_isOnActivePage || _isRefreshing)
         {
             return;
         }
@@ -255,6 +272,21 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget
             cts.Dispose();
             _isRefreshing = false;
         }
+    }
+
+    private void UpdateRefreshTimerState()
+    {
+        if (_isAttached && _isOnActivePage)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+
+            return;
+        }
+
+        _refreshTimer.Stop();
     }
 
     private void ApplyState(MusicPlaybackState state)
