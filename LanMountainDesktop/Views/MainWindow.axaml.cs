@@ -58,7 +58,7 @@ public partial class MainWindow : Window
     private const int MinEdgeInsetPercent = 0;
     private const int MaxEdgeInsetPercent = 30;
     private const int DefaultEdgeInsetPercent = 18;
-    private const int SettingsTransitionDurationMs = 240;
+    private static readonly int SettingsTransitionDurationMs = (int)UiMotionTokens.Page.TotalMilliseconds;
     private const double WallpaperPreviewMaxWidth = 520;
     private const double LightBackgroundLuminanceThreshold = 0.57;
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";

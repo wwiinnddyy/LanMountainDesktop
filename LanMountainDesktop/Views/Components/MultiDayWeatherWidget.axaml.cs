@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -87,7 +88,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private readonly DispatcherTimer _backgroundAnimationTimer = new()
     {
-        Interval = TimeSpan.FromMilliseconds(48)
+        Interval = UiMotionTokens.WeatherAnimationFrameInterval
     };
 
     private readonly AppSettingsService _settingsService = new();

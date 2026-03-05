@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Behaviors;
 
@@ -109,7 +110,7 @@ public class PanelIntroAnimationBehavior
         var index = 0;
         var timer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(24)
+            Interval = UiMotionTokens.StaggerStepInterval
         };
         timer.Tick += (_, _) =>
         {

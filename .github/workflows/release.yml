@@ -181,8 +181,8 @@ jobs:
 
           $compileArgs = @(
             "/DMyAppVersion=$version",
-            "/DPublishDir=`"$publishDir`"",
-            "/DMyOutputDir=`"$outputDir`"",
+            "/DPublishDir=$publishDir",
+            "/DMyOutputDir=$outputDir",
             "/DMyAppArch=$arch",
             $installerScript
           )

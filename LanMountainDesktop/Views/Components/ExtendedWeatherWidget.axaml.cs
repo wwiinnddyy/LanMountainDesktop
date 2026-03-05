@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -19,7 +20,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
 
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMinutes(12) };
-    private readonly DispatcherTimer _animationTimer = new() { Interval = TimeSpan.FromMilliseconds(48) };
+    private readonly DispatcherTimer _animationTimer = new() { Interval = UiMotionTokens.WeatherAnimationFrameInterval };
     private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
     private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
     private readonly AppSettingsService _settingsService = new();

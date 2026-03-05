@@ -19,6 +19,7 @@
     <Application.Styles>
         <sty:FluentAvaloniaTheme />
         <mi:MaterialIconStyles />
+        <StyleInclude Source="avares://LanMountainDesktop/Styles/MotionTokens.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/GlassModule.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsAnimations.axaml" />
 

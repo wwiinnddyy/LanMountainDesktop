@@ -11,6 +11,13 @@ public sealed class AppSettingsService
     {
         WriteIndented = true
     };
+    private static readonly object CacheGate = new();
+    private static readonly TimeSpan CacheProbeInterval = TimeSpan.FromMilliseconds(400);
+
+    private static string? _cachedPath;
+    private static AppSettingsSnapshot? _cachedSnapshot;
+    private static DateTime _cachedWriteTimeUtc = DateTime.MinValue;
+    private static DateTime _lastProbeUtc = DateTime.MinValue;
 
     private readonly string _settingsPath;
 
@@ -25,14 +32,32 @@ public sealed class AppSettingsService
     {
         try
         {
-            if (!File.Exists(_settingsPath))
+            lock (CacheGate)
             {
-                return new AppSettingsSnapshot();
-            }
+                var nowUtc = DateTime.UtcNow;
+                if (TryGetCachedWithoutProbe(nowUtc, out var cached))
+                {
+                    return cached;
+                }
 
-            var json = File.ReadAllText(_settingsPath);
-            var snapshot = JsonSerializer.Deserialize<AppSettingsSnapshot>(json, SerializerOptions);
-            return snapshot ?? new AppSettingsSnapshot();
+                var hasFile = File.Exists(_settingsPath);
+                var writeTimeUtc = hasFile
+                    ? File.GetLastWriteTimeUtc(_settingsPath)
+                    : DateTime.MinValue;
+
+                _lastProbeUtc = nowUtc;
+                if (TryGetCachedAfterProbe(writeTimeUtc, out cached))
+                {
+                    return cached;
+                }
+
+                var loadedSnapshot = hasFile
+                    ? LoadSnapshotFromDisk()
+                    : new AppSettingsSnapshot();
+
+                UpdateCache(loadedSnapshot, writeTimeUtc, nowUtc);
+                return loadedSnapshot.Clone();
+            }
         }
         catch
         {
@@ -42,6 +67,8 @@ public sealed class AppSettingsService
 
     public void Save(AppSettingsSnapshot snapshot)
     {
+        var snapshotToPersist = snapshot?.Clone() ?? new AppSettingsSnapshot();
+
         try
         {
             var directory = Path.GetDirectoryName(_settingsPath);
@@ -50,13 +77,70 @@ public sealed class AppSettingsService
                 Directory.CreateDirectory(directory);
             }
 
-            var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
+            var json = JsonSerializer.Serialize(snapshotToPersist, SerializerOptions);
             File.WriteAllText(_settingsPath, json);
+
+            var writeTimeUtc = File.Exists(_settingsPath)
+                ? File.GetLastWriteTimeUtc(_settingsPath)
+                : DateTime.UtcNow;
+
+            lock (CacheGate)
+            {
+                UpdateCache(snapshotToPersist, writeTimeUtc, DateTime.UtcNow);
+            }
         }
         catch
         {
             // Swallow persistence errors to keep UI interactions uninterrupted.
         }
     }
-}
 
+    private bool TryGetCachedWithoutProbe(DateTime nowUtc, out AppSettingsSnapshot snapshot)
+    {
+        if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
+            _cachedSnapshot is not null &&
+            nowUtc - _lastProbeUtc < CacheProbeInterval)
+        {
+            snapshot = _cachedSnapshot.Clone();
+            return true;
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private bool TryGetCachedAfterProbe(DateTime writeTimeUtc, out AppSettingsSnapshot snapshot)
+    {
+        if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
+            _cachedSnapshot is not null &&
+            writeTimeUtc == _cachedWriteTimeUtc)
+        {
+            snapshot = _cachedSnapshot.Clone();
+            return true;
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private AppSettingsSnapshot LoadSnapshotFromDisk()
+    {
+        try
+        {
+            var json = File.ReadAllText(_settingsPath);
+            return JsonSerializer.Deserialize<AppSettingsSnapshot>(json, SerializerOptions) ?? new AppSettingsSnapshot();
+        }
+        catch
+        {
+            return new AppSettingsSnapshot();
+        }
+    }
+
+    private void UpdateCache(AppSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc)
+    {
+        _cachedPath = _settingsPath;
+        _cachedSnapshot = snapshot.Clone();
+        _cachedWriteTimeUtc = writeTimeUtc;
+        _lastProbeUtc = probeTimeUtc;
+    }
+}

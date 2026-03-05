@@ -14,6 +14,7 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
@@ -408,7 +409,7 @@ public partial class MainWindow
             {
                 OpenSettingsPage();
             }
-        }, TimeSpan.FromMilliseconds(200));
+        }, UiMotionTokens.Slow);
     }
 
     private void InitializeDesktopComponentDragHandlers()
@@ -872,7 +873,7 @@ public partial class MainWindow
             {
                 ComponentSettingsContentHost.Content = null;
             }
-        }, TimeSpan.FromMilliseconds(200));
+        }, UiMotionTokens.Slow);
     }
 
     private void AddDesktopPage()

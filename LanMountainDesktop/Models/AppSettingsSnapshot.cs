@@ -80,4 +80,61 @@ public sealed class AppSettingsSnapshot
 
     public bool StudyEnvironmentShowDbfs { get; set; }
 
+    public AppSettingsSnapshot Clone()
+    {
+        var clone = (AppSettingsSnapshot)MemberwiseClone();
+
+        clone.TopStatusComponentIds = TopStatusComponentIds is { Count: > 0 }
+            ? new List<string>(TopStatusComponentIds)
+            : [];
+        clone.PinnedTaskbarActions = PinnedTaskbarActions is { Count: > 0 }
+            ? new List<string>(PinnedTaskbarActions)
+            : [];
+
+        var placements = new List<DesktopComponentPlacementSnapshot>(DesktopComponentPlacements?.Count ?? 0);
+        if (DesktopComponentPlacements is not null)
+        {
+            foreach (var placement in DesktopComponentPlacements)
+            {
+                if (placement is null)
+                {
+                    continue;
+                }
+
+                placements.Add(new DesktopComponentPlacementSnapshot
+                {
+                    PlacementId = placement.PlacementId,
+                    PageIndex = placement.PageIndex,
+                    ComponentId = placement.ComponentId,
+                    Row = placement.Row,
+                    Column = placement.Column,
+                    WidthCells = placement.WidthCells,
+                    HeightCells = placement.HeightCells
+                });
+            }
+        }
+        clone.DesktopComponentPlacements = placements;
+
+        var schedules = new List<ImportedClassScheduleSnapshot>(ImportedClassSchedules?.Count ?? 0);
+        if (ImportedClassSchedules is not null)
+        {
+            foreach (var schedule in ImportedClassSchedules)
+            {
+                if (schedule is null)
+                {
+                    continue;
+                }
+
+                schedules.Add(new ImportedClassScheduleSnapshot
+                {
+                    Id = schedule.Id,
+                    DisplayName = schedule.DisplayName,
+                    FilePath = schedule.FilePath
+                });
+            }
+        }
+        clone.ImportedClassSchedules = schedules;
+
+        return clone;
+    }
 }
