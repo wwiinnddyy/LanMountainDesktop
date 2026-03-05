@@ -9,17 +9,19 @@
 
     <Border x:Name="RootBorder"
             CornerRadius="34"
-            Background="#D5D5D5"
+            Background="Transparent"
             ClipToBounds="True"
             BorderThickness="0"
-            Padding="16,12,16,12">
+            Padding="0">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#F9F9F9"
-                    CornerRadius="24"
+                    Background="#FCFCFD"
+                    CornerRadius="34"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
                     Padding="16,14,16,14">
-                <Grid RowDefinitions="Auto,Auto,Auto"
-                      RowSpacing="10">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+                      RowSpacing="8">
                     <Grid Grid.Row="0"
                           ColumnDefinitions="*,Auto"
                           ColumnSpacing="10">
@@ -75,25 +77,16 @@
                           ColumnDefinitions="*,Auto"
                           ColumnSpacing="12"
                           PointerPressed="OnNewsItem1PointerPressed">
-                        <Grid ColumnDefinitions="Auto,*"
-                              ColumnSpacing="4"
-                              VerticalAlignment="Center">
-                            <TextBlock x:Name="News1PrefixTextBlock"
-                                       Text="&#28909;&#28857; |"
-                                       Foreground="#D6272E"
-                                       FontSize="25"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Top" />
-                            <TextBlock x:Name="News1TitleTextBlock"
-                                       Grid.Column="1"
-                                       Text="Headline"
-                                       Foreground="#202327"
-                                       FontSize="25"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"
-                                       TextTrimming="CharacterEllipsis"
-                                       MaxLines="2" />
-                        </Grid>
+                        <TextBlock x:Name="News1TitleTextBlock"
+                                   Text="Headline"
+                                   Foreground="#202327"
+                                   FontSize="21"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="2"
+                                   VerticalAlignment="Top"
+                                   LineHeight="24" />
 
                         <Border x:Name="News1ImageHost"
                                 Grid.Column="1"
@@ -115,12 +108,13 @@
                         <TextBlock x:Name="News2TitleTextBlock"
                                    Text="Headline"
                                    Foreground="#202327"
-                                   FontSize="25"
+                                   FontSize="21"
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"
                                    MaxLines="2"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Top"
+                                   LineHeight="24" />
 
                         <Border x:Name="News2ImageHost"
                                 Grid.Column="1"
@@ -133,6 +127,11 @@
                                    Stretch="UniformToFill" />
                         </Border>
                     </Grid>
+
+                    <StackPanel x:Name="ExtraNewsItemsPanel"
+                                Grid.Row="3"
+                                Spacing="6"
+                                IsVisible="False" />
                 </Grid>
             </Border>
 

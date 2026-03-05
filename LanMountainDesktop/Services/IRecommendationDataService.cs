@@ -17,6 +17,7 @@ public sealed record DailyPoetryQuery(
 
 public sealed record DailyNewsQuery(
     string? Locale = null,
+    int? ItemCount = null,
     bool ForceRefresh = false);
 
 public sealed record DailyWordQuery(

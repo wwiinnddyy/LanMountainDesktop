@@ -223,13 +223,9 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
-        RootBorder.Padding = new Thickness(
-            Math.Clamp(16 * scale, 8, 26),
-            Math.Clamp(12 * scale, 6, 20),
-            Math.Clamp(16 * scale, 8, 26),
-            Math.Clamp(12 * scale, 6, 20));
+        RootBorder.Padding = new Thickness(0);
 
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(24 * scale, 12, 36));
+        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
         CardBorder.Padding = new Thickness(
             Math.Clamp(16 * scale, 8, 24),
             Math.Clamp(14 * scale, 7, 22),

@@ -11,14 +11,16 @@
 
     <Border x:Name="RootBorder"
             CornerRadius="34"
-            Background="#D5D5D5"
+            Background="Transparent"
             ClipToBounds="True"
             BorderThickness="0"
-            Padding="16,12,16,12">
+            Padding="0">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#FBFAF8"
-                    CornerRadius="24"
+                    Background="#FCFBFA"
+                    CornerRadius="34"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
                     Padding="16,14,16,14">
                 <Grid>
                     <Grid IsHitTestVisible="False">

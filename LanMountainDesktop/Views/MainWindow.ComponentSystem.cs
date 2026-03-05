@@ -1366,6 +1366,14 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopDailySentence, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep daily sentence widget at a 2:1 ratio: 4x2, 6x3, 8x4...
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
         if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyNoiseCurve, StringComparison.OrdinalIgnoreCase))
         {
             // Keep noise curve widget in a 2:1 ratio with minimum 4x2.

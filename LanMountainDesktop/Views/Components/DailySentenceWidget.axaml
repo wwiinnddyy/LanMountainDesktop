@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.DailySentenceWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Background="#6F7B8D">
+        <Grid>
+            <Image x:Name="BackgroundImage"
+                   Stretch="UniformToFill" />
+
+            <Border x:Name="OverlayBorder">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0"
+                                         EndPoint="0,1">
+                        <GradientStop Offset="0"
+                                      Color="#56000000" />
+                        <GradientStop Offset="0.52"
+                                      Color="#7A000000" />
+                        <GradientStop Offset="1"
+                                      Color="#8F000000" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Grid x:Name="ContentGrid"
+                  Margin="16,14,16,14"
+                  RowDefinitions="Auto,*,Auto"
+                  RowSpacing="8">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="8">
+                    <TextBlock x:Name="DayTextBlock"
+                               Text="3"
+                               Foreground="#F6F8FB"
+                               FontSize="72"
+                               FontWeight="Bold"
+                               FontFeatures="tnum"
+                               LineHeight="68"
+                               VerticalAlignment="Top"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1" />
+
+                    <TextBlock x:Name="MonthYearTextBlock"
+                               Grid.Column="1"
+                               Text="March 2026"
+                               Foreground="#ECF0F6"
+                               FontSize="44"
+                               FontWeight="Medium"
+                               VerticalAlignment="Center"
+                               Margin="4,0,0,0"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="1" />
+
+                    <Button x:Name="RefreshButton"
+                            Grid.Column="2"
+                            Width="42"
+                            Height="42"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            CornerRadius="21"
+                            Background="#12FFFFFF"
+                            BorderBrush="#3AFFFFFF"
+                            BorderThickness="1"
+                            Padding="0"
+                            Focusable="False">
+                        <fi:SymbolIcon x:Name="RefreshIcon"
+                                       Symbol="ArrowClockwise"
+                                       IconVariant="Regular"
+                                       FontSize="21"
+                                       Foreground="#F0F4FA" />
+                    </Button>
+                </Grid>
+
+                <StackPanel Grid.Row="1"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock x:Name="SentenceTextBlock"
+                               Text="Heard melodies are sweet, but those unheard are sweeter."
+                               Foreground="#F7F9FC"
+                               FontSize="58"
+                               FontWeight="SemiBold"
+                               LineHeight="60"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="3" />
+
+                    <TextBlock x:Name="TranslationTextBlock"
+                               Text="听见的旋律是美妙的，但听不见的会更美。"
+                               Foreground="#DDE3EC"
+                               FontSize="40"
+                               FontWeight="Medium"
+                               LineHeight="44"
+                               TextWrapping="Wrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="2" />
+                </StackPanel>
+
+                <TextBlock x:Name="SourceTextBlock"
+                           Grid.Row="2"
+                           Text="Youdao Dictionary"
+                           Foreground="#C7CFDA"
+                           FontSize="30"
+                           FontWeight="Medium"
+                           TextTrimming="CharacterEllipsis"
+                           MaxLines="1" />
+            </Grid>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#E7EDF6"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

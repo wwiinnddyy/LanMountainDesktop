@@ -235,6 +235,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopDailySentence,
+                "Daily Sentence",
+                "TextQuote",
+                "Info",
+                MinWidthCells: 4,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopCnrDailyNews,
                 "CNR Daily News",
                 "News",
@@ -242,7 +251,8 @@ public sealed class ComponentRegistry
                 MinWidthCells: 4,
                 MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
-                AllowDesktopPlacement: true),
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopWhiteboard,
                 "Blackboard Portrait",

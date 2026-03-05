@@ -235,6 +235,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new DailyWordWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopDailySentence,
+                    "component.daily_sentence",
+                    () => new DailySentenceWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopCnrDailyNews,
                     "component.cnr_daily_news",
                     () => new CnrDailyNewsWidget(),

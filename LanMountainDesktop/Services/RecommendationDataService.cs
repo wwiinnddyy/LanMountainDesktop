@@ -181,14 +181,24 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         CancellationToken cancellationToken = default)
     {
         var normalizedQuery = query ?? new DailyNewsQuery();
-        if (!normalizedQuery.ForceRefresh && TryGetDailyNewsFromCache(out var cached))
+        var targetCount = normalizedQuery.ItemCount.HasValue
+            ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 12)
+            : Math.Clamp(_options.DefaultDailyNewsCount, 1, 12);
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetDailyNewsFromCache(out var cached) &&
+            cached.Items.Count >= targetCount)
         {
-            return RecommendationQueryResult<DailyNewsSnapshot>.Ok(cached);
+            var projectedSnapshot = cached with
+            {
+                Items = cached.Items.Take(targetCount).ToArray()
+            };
+            return RecommendationQueryResult<DailyNewsSnapshot>.Ok(projectedSnapshot);
         }
 
         try
         {
-            var items = await FetchCnrDailyNewsItemsAsync(cancellationToken);
+            var items = await FetchCnrDailyNewsItemsAsync(targetCount, cancellationToken);
             if (items.Count == 0)
             {
                 return RecommendationQueryResult<DailyNewsSnapshot>.Fail(
@@ -196,7 +206,6 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                     "No CNR news items were returned.");
             }
 
-            var targetCount = Math.Clamp(_options.DefaultDailyNewsCount, 1, 4);
             var snapshot = new DailyNewsSnapshot(
                 Provider: "CNR",
                 Source: "央广网·头条",
@@ -837,7 +846,9 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return null;
     }
 
-    private async Task<List<DailyNewsItemSnapshot>> FetchCnrDailyNewsItemsAsync(CancellationToken cancellationToken)
+    private async Task<List<DailyNewsItemSnapshot>> FetchCnrDailyNewsItemsAsync(
+        int requestedItemCount,
+        CancellationToken cancellationToken)
     {
         var requestUrl = string.IsNullOrWhiteSpace(_options.CnrDailyNewsListUrl)
             ? "https://www.cnr.cn/newscenter/native/gd/"
@@ -848,7 +859,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
 
         var html = await FetchHtmlWithCnrEncodingAsync(requestUrl, cancellationToken);
-        var targetCount = Math.Clamp(_options.DefaultDailyNewsCount, 1, 4);
+        var targetCount = Math.Clamp(requestedItemCount, 1, 12);
         var candidateLimit = Math.Max(8, targetCount * 3);
         var htmlCandidates = ParseCnrDailyNewsFromListPage(
             html,
