@@ -35,7 +35,8 @@
                   Margin="16,14,16,14"
                   RowDefinitions="Auto,*,Auto"
                   RowSpacing="8">
-                <Grid Grid.Row="0"
+                <Grid x:Name="HeaderGrid"
+                      Grid.Row="0"
                       ColumnDefinitions="Auto,*,Auto"
                       ColumnSpacing="8">
                     <TextBlock x:Name="DayTextBlock"
@@ -80,7 +81,8 @@
                     </Button>
                 </Grid>
 
-                <StackPanel Grid.Row="1"
+                <StackPanel x:Name="SentenceStack"
+                            Grid.Row="1"
                             VerticalAlignment="Center"
                             Spacing="8">
                     <TextBlock x:Name="SentenceTextBlock"

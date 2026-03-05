@@ -36,6 +36,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
+    private static readonly int[] SupportedAutoRotateIntervalsMinutes = [5, 10, 40, 60, 720, 1440];
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -85,6 +86,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private bool _autoRotateEnabled = true;
 
     public CnrDailyNewsWidget()
     {
@@ -92,7 +94,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         BrandPrimaryTextBlock.FontFamily = MiSansFontFamily;
         BrandSecondaryTextBlock.FontFamily = MiSansFontFamily;
-        RefreshGlyphTextBlock.FontFamily = MiSansFontFamily;
         RefreshLabelTextBlock.FontFamily = MiSansFontFamily;
         News1TitleTextBlock.FontFamily = MiSansFontFamily;
         News2TitleTextBlock.FontFamily = MiSansFontFamily;
@@ -106,6 +107,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
+        ApplyAutoRotateSettings();
         ApplyLoadingState();
         UpdateRefreshButtonState();
     }
@@ -128,6 +130,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     public void RefreshFromSettings()
     {
         _recommendationService.ClearCache();
+        ApplyAutoRotateSettings();
         if (_isAttached)
         {
             _ = RefreshNewsAsync(forceRefresh: true);
@@ -137,8 +140,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
+        ApplyAutoRotateSettings();
         UpdateRefreshButtonState();
-        _refreshTimer.Start();
         _ = RefreshNewsAsync(forceRefresh: false);
     }
 
@@ -155,26 +158,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
-        var desiredCount = ResolveDesiredNewsItemCount();
-        var previousRenderedCount = _renderedNewsCount;
-        if (_activeNewsItems.Count > 0 && desiredCount != previousRenderedCount)
-        {
-            RenderExtraNewsRows(_activeNewsItems.Take(desiredCount).Skip(2).ToArray());
-            UpdateNewsInteractionState();
-        }
-
-        var shouldFetchMoreItems = desiredCount > _activeNewsItems.Count;
-        var shouldReloadExpandedImages =
-            desiredCount > previousRenderedCount &&
-            desiredCount <= _activeNewsItems.Count;
-
-        if (_isAttached &&
-            !_isRefreshing &&
-            _activeNewsItems.Count > 0 &&
-            (shouldFetchMoreItems || shouldReloadExpandedImages))
-        {
-            _ = RefreshNewsAsync(forceRefresh: false);
-        }
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
@@ -190,7 +173,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
-        await RefreshNewsAsync(forceRefresh: false);
+        await RefreshNewsAsync(forceRefresh: true);
     }
 
     private void OnNewsItem1PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -290,10 +273,9 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private async Task ApplySnapshotAsync(DailyNewsSnapshot snapshot, CancellationToken cancellationToken)
     {
-        var desiredCount = ResolveDesiredNewsItemCount();
         var items = snapshot.Items is null
             ? []
-            : snapshot.Items.Take(desiredCount).ToArray();
+            : snapshot.Items.Take(2).ToArray();
         _activeNewsItems = items;
 
         var item1 = items.Length > 0 ? items[0] : null;
@@ -308,52 +290,27 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             _newsUrls.Add(NormalizeHttpUrl(item.Url));
         }
 
-        RenderExtraNewsRows(items.Skip(2).ToArray());
+        RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
 
         StatusTextBlock.IsVisible = false;
         UpdateAdaptiveLayout();
 
-        var loadTasks = items
-            .Select(item => TryDownloadBitmapAsync(item.ImageUrl, cancellationToken))
-            .ToArray();
+        var loadTasks = new[]
+        {
+            TryDownloadBitmapAsync(item1?.ImageUrl, cancellationToken),
+            TryDownloadBitmapAsync(item2?.ImageUrl, cancellationToken)
+        };
         var bitmaps = await Task.WhenAll(loadTasks);
         if (cancellationToken.IsCancellationRequested || !_isAttached)
         {
-            foreach (var bitmap in bitmaps)
-            {
-                bitmap?.Dispose();
-            }
+            bitmaps[0]?.Dispose();
+            bitmaps[1]?.Dispose();
             return;
         }
 
-        var consumed = new bool[bitmaps.Length];
-        Bitmap? TakeBitmapAt(int index)
-        {
-            if (index < 0 || index >= bitmaps.Length)
-            {
-                return null;
-            }
-
-            consumed[index] = true;
-            return bitmaps[index];
-        }
-
-        SetNewsBitmap(0, TakeBitmapAt(0));
-        SetNewsBitmap(1, TakeBitmapAt(1));
-
-        for (var rowIndex = 0; rowIndex < _extraNewsRows.Count; rowIndex++)
-        {
-            SetExtraNewsBitmap(rowIndex, TakeBitmapAt(rowIndex + 2));
-        }
-
-        for (var i = 0; i < bitmaps.Length; i++)
-        {
-            if (!consumed[i])
-            {
-                bitmaps[i]?.Dispose();
-            }
-        }
+        SetNewsBitmap(0, bitmaps[0]);
+        SetNewsBitmap(1, bitmaps[1]);
     }
 
     private void ApplyLoadingState()
@@ -389,24 +346,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private int ResolveDesiredNewsItemCount()
     {
-        var span = ResolveCurrentCellSpan();
-        var baseEquivalentHeight = span.HeightCells * (double)BaseWidthCells / Math.Max(BaseWidthCells, span.WidthCells);
-        var effectiveHeightCells = (int)Math.Round(baseEquivalentHeight, MidpointRounding.AwayFromZero);
-        return Math.Clamp(Math.Max(BaseHeightCells, effectiveHeightCells), 2, 12);
-    }
-
-    private (int WidthCells, int HeightCells) ResolveCurrentCellSpan()
-    {
-        var pitch = Math.Max(1, _currentCellSize);
-        var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
-        var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
-
-        var normalizedWidth = totalWidth + Math.Clamp(pitch * 0.20, 6, 16);
-        var normalizedHeight = totalHeight + Math.Clamp(pitch * 0.18, 4, 12);
-
-        var widthCells = Math.Max(BaseWidthCells, (int)Math.Round(normalizedWidth / pitch, MidpointRounding.AwayFromZero));
-        var heightCells = Math.Max(BaseHeightCells, (int)Math.Round(normalizedHeight / pitch, MidpointRounding.AwayFromZero));
-        return (widthCells, heightCells);
+        return 2;
     }
 
     private void UpdateHotHeadlineText(string? title)
@@ -558,7 +498,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         RefreshButton.Height = refreshHeight;
         RefreshButton.Width = refreshWidth;
         RefreshButton.CornerRadius = new CornerRadius(refreshHeight / 2d);
-        RefreshGlyphTextBlock.FontSize = Math.Clamp(19 * scale, 11, 24);
+        RefreshGlyphIcon.FontSize = Math.Clamp(19 * scale, 11, 24);
         RefreshLabelTextBlock.FontSize = Math.Clamp(22 * scale, 11, 29);
 
         var imageWidth = Math.Clamp(totalWidth * 0.20, 60, 170);
@@ -621,7 +561,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         RefreshButton.IsEnabled = !_isRefreshing;
         RefreshButton.Opacity = _isAttached ? 1.0 : 0.85;
-        RefreshGlyphTextBlock.Opacity = _isRefreshing ? 0.56 : 1.0;
+        RefreshGlyphIcon.Opacity = _isRefreshing ? 0.56 : 1.0;
         RefreshLabelTextBlock.Opacity = _isRefreshing ? 0.56 : 1.0;
     }
 
@@ -772,6 +712,60 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         {
             _languageCode = "zh-CN";
         }
+    }
+
+    private void ApplyAutoRotateSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 60;
+
+        try
+        {
+            var snapshot = _settingsService.Load();
+            enabled = snapshot.CnrDailyNewsAutoRotateEnabled;
+            intervalMinutes = NormalizeAutoRotateIntervalMinutes(snapshot.CnrDailyNewsAutoRotateIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _autoRotateEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        if (_autoRotateEnabled)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+        }
+        else if (_refreshTimer.IsEnabled)
+        {
+            _refreshTimer.Stop();
+        }
+    }
+
+    private static int NormalizeAutoRotateIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 60;
+        }
+
+        if (SupportedAutoRotateIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRotateIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(60);
     }
 
     private void CancelRefreshRequest()

@@ -251,8 +251,7 @@ public sealed class ComponentRegistry
                 MinWidthCells: 4,
                 MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
-                AllowDesktopPlacement: true,
-                ResizeMode: DesktopComponentResizeMode.Free),
+                AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopWhiteboard,
                 "Blackboard Portrait",

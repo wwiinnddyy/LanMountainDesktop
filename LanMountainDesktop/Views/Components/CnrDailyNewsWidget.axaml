@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
              mc:Ignorable="d"
              d:DesignWidth="640"
              d:DesignHeight="320"
@@ -56,12 +57,12 @@
                                         Spacing="4"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center">
-                                <TextBlock x:Name="RefreshGlyphTextBlock"
-                                           Text="&#8635;"
-                                           Foreground="#52575F"
-                                           FontSize="19"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
+                                <fi:SymbolIcon x:Name="RefreshGlyphIcon"
+                                               Symbol="ArrowClockwise"
+                                               IconVariant="Regular"
+                                               Foreground="#52575F"
+                                               FontSize="19"
+                                               VerticalAlignment="Center" />
                                 <TextBlock x:Name="RefreshLabelTextBlock"
                                            Text="&#25442;&#19968;&#25442;"
                                            Foreground="#202327"

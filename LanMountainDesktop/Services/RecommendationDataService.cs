@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -53,6 +53,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private DailyPoetryCacheEntry? _dailyPoetryCache;
     private DailyNewsCacheEntry? _dailyNewsCache;
     private DailyWordCacheEntry? _dailyWordCache;
+    private int _dailyNewsRotationCursor;
 
     static RecommendationDataService()
     {
@@ -206,10 +207,10 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                     "No CNR news items were returned.");
             }
 
-            var snapshot = new DailyNewsSnapshot(
+                        var snapshot = new DailyNewsSnapshot(
                 Provider: "CNR",
                 Source: "央广网·头条",
-                Items: items.Take(targetCount).ToArray(),
+                Items: SelectDailyNewsItems(items, targetCount, normalizedQuery.ForceRefresh),
                 FetchedAt: DateTimeOffset.UtcNow);
 
             SetDailyNewsCache(snapshot);
@@ -521,6 +522,33 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
+    private IReadOnlyList<DailyNewsItemSnapshot> SelectDailyNewsItems(
+        IReadOnlyList<DailyNewsItemSnapshot> items,
+        int targetCount,
+        bool forceRefresh)
+    {
+        if (items.Count == 0 || targetCount <= 0)
+        {
+            return [];
+        }
+
+        var safeCount = Math.Min(targetCount, items.Count);
+        if (!forceRefresh || items.Count <= safeCount)
+        {
+            return items.Take(safeCount).ToArray();
+        }
+
+        var cursor = Math.Abs(Interlocked.Increment(ref _dailyNewsRotationCursor) - 1);
+        var startIndex = cursor % items.Count;
+        var selection = new List<DailyNewsItemSnapshot>(safeCount);
+        for (var i = 0; i < safeCount; i++)
+        {
+            selection.Add(items[(startIndex + i) % items.Count]);
+        }
+
+        return selection;
+    }
+
     private bool TryGetDailyWordFromCache(out DailyWordSnapshot snapshot)
     {
         lock (_cacheGate)
@@ -723,7 +751,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             return null;
         }
 
-        return string.Join("；", lines
+        return string.Join("; ", lines
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(3));
@@ -1646,3 +1674,4 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             : $"{text[..maxLength]}...";
     }
 }
+

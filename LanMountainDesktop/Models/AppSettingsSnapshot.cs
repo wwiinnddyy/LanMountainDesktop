@@ -98,6 +98,14 @@ public sealed class AppSettingsSnapshot
     ];
     public string WorldClockSecondHandMode { get; set; } = "Tick";
 
+    public bool DailySentenceAutoRotateEnabled { get; set; } = true;
+
+    public int DailySentenceAutoRotateIntervalMinutes { get; set; } = 60;
+
+    public bool CnrDailyNewsAutoRotateEnabled { get; set; } = true;
+
+    public int CnrDailyNewsAutoRotateIntervalMinutes { get; set; } = 60;
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -37,6 +38,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
+    private static readonly int[] SupportedAutoRotateIntervalsMinutes = [5, 10, 40, 60, 720, 1440];
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -54,6 +56,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private bool _autoRotateEnabled = true;
 
     public DailySentenceWidget()
     {
@@ -75,6 +78,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
+        ApplyAutoRotateSettings();
         UpdateDateText();
         ApplyLoadingState();
         UpdateRefreshButtonState();
@@ -98,6 +102,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
     public void RefreshFromSettings()
     {
         _recommendationService.ClearCache();
+        ApplyAutoRotateSettings();
         if (_isAttached)
         {
             _ = RefreshSentenceAsync(forceRefresh: true);
@@ -107,8 +112,8 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
+        ApplyAutoRotateSettings();
         UpdateRefreshButtonState();
-        _refreshTimer.Start();
         _ = RefreshSentenceAsync(forceRefresh: false);
     }
 
@@ -139,7 +144,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
-        await RefreshSentenceAsync(forceRefresh: false);
+        await RefreshSentenceAsync(forceRefresh: true);
     }
 
     private void OnSourceTextBlockPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
@@ -400,6 +405,7 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
             Math.Clamp(16 * scale, 8, 28),
             Math.Clamp(14 * scale, 7, 24));
         ContentGrid.RowSpacing = Math.Clamp(8 * scale, 4, 12);
+        HeaderGrid.ColumnSpacing = Math.Clamp(8 * scale, 4, 14);
 
         var refreshSize = Math.Clamp(42 * scale, 24, 54);
         RefreshButton.Width = refreshSize;
@@ -409,14 +415,36 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
 
         var innerWidth = Math.Max(100, totalWidth - ContentGrid.Margin.Left - ContentGrid.Margin.Right);
         var innerHeight = Math.Max(56, totalHeight - ContentGrid.Margin.Top - ContentGrid.Margin.Bottom);
+        var rowSpacingTotal = ContentGrid.RowSpacing * 2d;
+        var availableRowsHeight = Math.Max(1, innerHeight - rowSpacingTotal);
 
-        var topRowHeight = Math.Max(20, innerHeight * 0.22);
-        var bottomRowHeight = Math.Max(14, innerHeight * 0.14);
-        var middleHeight = Math.Max(24, innerHeight - topRowHeight - bottomRowHeight - ContentGrid.RowSpacing * 2);
+        var topRowHeight = Math.Clamp(innerHeight * 0.24, 18, 98);
+        var bottomRowHeight = Math.Clamp(innerHeight * 0.15, 11, 54);
+        var minTopRowHeight = Math.Max(Math.Clamp(14 * scale, 10, 28), refreshSize * 0.60);
+        var minBottomRowHeight = Math.Clamp(10 * scale, 7, 22);
+        var minMiddleRowHeight = Math.Clamp(22 * scale, 14, 46);
+
+        if (topRowHeight + bottomRowHeight + minMiddleRowHeight > availableRowsHeight)
+        {
+            var scaling = availableRowsHeight / Math.Max(1, topRowHeight + bottomRowHeight + minMiddleRowHeight);
+            topRowHeight = Math.Max(minTopRowHeight, topRowHeight * scaling);
+            bottomRowHeight = Math.Max(minBottomRowHeight, bottomRowHeight * scaling);
+        }
+
+        var middleHeight = Math.Max(
+            minMiddleRowHeight,
+            availableRowsHeight - topRowHeight - bottomRowHeight);
+
+        if (ContentGrid.RowDefinitions.Count >= 3)
+        {
+            ContentGrid.RowDefinitions[0].Height = new GridLength(topRowHeight, GridUnitType.Pixel);
+            ContentGrid.RowDefinitions[1].Height = new GridLength(middleHeight, GridUnitType.Pixel);
+            ContentGrid.RowDefinitions[2].Height = new GridLength(bottomRowHeight, GridUnitType.Pixel);
+        }
 
         var topTextWidth = Math.Max(76, innerWidth - refreshSize - ContentGrid.RowSpacing);
-        var dayWidth = Math.Max(20, topTextWidth * 0.16);
-        var monthYearWidth = Math.Max(48, topTextWidth - dayWidth - 6 * scale);
+        var dayWidth = Math.Clamp(topTextWidth * 0.18, 20, Math.Max(24, topTextWidth * 0.32));
+        var monthYearWidth = Math.Max(48, topTextWidth - dayWidth - Math.Clamp(6 * scale, 2, 12));
         DayTextBlock.MaxWidth = dayWidth;
         MonthYearTextBlock.MaxWidth = monthYearWidth;
 
@@ -448,17 +476,50 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
         MonthYearTextBlock.FontWeight = monthLayout.Weight;
         MonthYearTextBlock.LineHeight = monthLayout.LineHeight;
 
-        var sentenceLineLimit = innerHeight < _currentCellSize * 1.78 ? 2 : 3;
-        var sentenceHeight = Math.Max(16, middleHeight * 0.66);
-        var translationHeight = Math.Max(14, middleHeight - sentenceHeight - Math.Clamp(8 * scale, 3, 12));
+        var sentenceTextDemand = Math.Clamp(NormalizeCompactText(SentenceTextBlock.Text).Length, 12, 360);
+        var translationTextDemand = Math.Clamp(NormalizeCompactText(TranslationTextBlock.Text).Length, 8, 260);
+
+        var sentenceMinLines = innerHeight >= _currentCellSize * 1.78 ? 2 : 1;
+        var sentenceMaxLines = innerHeight >= _currentCellSize * 2.7
+            ? 4
+            : innerHeight >= _currentCellSize * 1.92
+                ? 3
+                : 2;
+        var translationMaxLines = innerHeight >= _currentCellSize * 2.35 ? 3 : 2;
+
+        var sentenceMinFont = Math.Clamp(23 * scale, 10, 42);
+        var translationMinFont = Math.Clamp(16 * scale, 8.5, 30);
+        var sentenceMinHeight = sentenceMinFont * 1.06 * sentenceMinLines;
+        var translationMinHeight = translationMinFont * 1.06;
+        var bodyGap = Math.Clamp(8 * scale, 3, 12);
+        SentenceStack.Spacing = bodyGap;
+        var minBodyHeight = sentenceMinHeight + translationMinHeight + bodyGap;
+
+        double sentenceHeight;
+        double translationHeight;
+        if (middleHeight <= minBodyHeight + 0.6)
+        {
+            var compression = middleHeight / Math.Max(1, minBodyHeight);
+            sentenceHeight = Math.Max(10, sentenceMinHeight * compression);
+            translationHeight = Math.Max(8, translationMinHeight * compression);
+        }
+        else
+        {
+            var extraHeight = middleHeight - minBodyHeight;
+            var sentenceWeight = sentenceTextDemand + 16d;
+            var translationWeight = translationTextDemand + 8d;
+            var totalWeight = Math.Max(1d, sentenceWeight + translationWeight);
+            sentenceHeight = sentenceMinHeight + extraHeight * (sentenceWeight / totalWeight);
+            translationHeight = translationMinHeight + extraHeight * (translationWeight / totalWeight);
+        }
 
         var sentenceLayout = FitAdaptiveTextLayout(
             SentenceTextBlock.Text,
             innerWidth,
             sentenceHeight,
-            minLines: 1,
-            maxLines: sentenceLineLimit,
-            minFontSize: Math.Clamp(23 * scale, 10, 42),
+            minLines: sentenceMinLines,
+            maxLines: sentenceMaxLines,
+            minFontSize: sentenceMinFont,
             maxFontSize: Math.Clamp(58 * scale, 18, 80),
             weightCandidates: HeadlineWeightCandidates,
             lineHeightFactor: 1.06);
@@ -473,8 +534,8 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
             innerWidth,
             translationHeight,
             minLines: 1,
-            maxLines: 2,
-            minFontSize: Math.Clamp(16 * scale, 8.5, 30),
+            maxLines: translationMaxLines,
+            minFontSize: translationMinFont,
             maxFontSize: Math.Clamp(40 * scale, 12, 54),
             weightCandidates: BodyWeightCandidates,
             lineHeightFactor: 1.06);
@@ -483,6 +544,8 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
         TranslationTextBlock.FontSize = translationLayout.FontSize;
         TranslationTextBlock.FontWeight = translationLayout.Weight;
         TranslationTextBlock.LineHeight = translationLayout.LineHeight;
+        SentenceTextBlock.MinHeight = Math.Max(0, sentenceLayout.LineHeight * Math.Min(sentenceLayout.MaxLines, Math.Max(1, sentenceMinLines)));
+        TranslationTextBlock.MinHeight = Math.Max(0, translationLayout.LineHeight);
 
         var sourceLayout = FitAdaptiveTextLayout(
             SourceTextBlock.Text,
@@ -530,6 +593,60 @@ public partial class DailySentenceWidget : UserControl, IDesktopComponentWidget,
         {
             _languageCode = "zh-CN";
         }
+    }
+
+    private void ApplyAutoRotateSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 60;
+
+        try
+        {
+            var snapshot = _settingsService.Load();
+            enabled = snapshot.DailySentenceAutoRotateEnabled;
+            intervalMinutes = NormalizeAutoRotateIntervalMinutes(snapshot.DailySentenceAutoRotateIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _autoRotateEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        if (_autoRotateEnabled)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+        }
+        else if (_refreshTimer.IsEnabled)
+        {
+            _refreshTimer.Stop();
+        }
+    }
+
+    private static int NormalizeAutoRotateIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 60;
+        }
+
+        if (SupportedAutoRotateIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRotateIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(60);
     }
 
     private void UpdateDateText()

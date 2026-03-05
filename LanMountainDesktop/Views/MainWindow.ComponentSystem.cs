@@ -725,9 +725,22 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopDailySentence)
+        {
+            OpenDailySentenceComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopCnrDailyNews)
+        {
+            OpenCnrDailyNewsComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
         {
             OpenStudyEnvironmentComponentSettings();
+            return;
         }
     }
 
@@ -820,6 +833,38 @@ public partial class MainWindow
 
         var settingsContent = new DailyArtworkSettingsWindow();
         settingsContent.SettingsChanged += OnDailyArtworkSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenDailySentenceComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new DailySentenceSettingsWindow();
+        settingsContent.SettingsChanged += OnDailySentenceSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenCnrDailyNewsComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new CnrDailyNewsSettingsWindow();
+        settingsContent.SettingsChanged += OnCnrDailyNewsSettingsChanged;
         ComponentSettingsContentHost.Content = settingsContent;
 
         ComponentSettingsWindow.IsVisible = true;
@@ -931,6 +976,54 @@ public partial class MainWindow
         PersistSettings();
     }
 
+    private void OnDailySentenceSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is DailySentenceWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+
+        PersistSettings();
+    }
+
+    private void OnCnrDailyNewsSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is CnrDailyNewsWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+
+        PersistSettings();
+    }
+
     private void CloseComponentSettingsWindow()
     {
         if (ComponentSettingsWindow is null)
@@ -961,6 +1054,16 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is WorldClockWidgetSettingsWindow worldClockSettingsWindow)
         {
             worldClockSettingsWindow.SettingsChanged -= OnWorldClockSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is DailySentenceSettingsWindow dailySentenceSettingsWindow)
+        {
+            dailySentenceSettingsWindow.SettingsChanged -= OnDailySentenceSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is CnrDailyNewsSettingsWindow cnrDailyNewsSettingsWindow)
+        {
+            cnrDailyNewsSettingsWindow.SettingsChanged -= OnCnrDailyNewsSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;
@@ -1369,6 +1472,14 @@ public partial class MainWindow
         if (string.Equals(componentId, BuiltInComponentIds.DesktopDailySentence, StringComparison.OrdinalIgnoreCase))
         {
             // Keep daily sentence widget at a 2:1 ratio: 4x2, 6x3, 8x4...
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopCnrDailyNews, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep CNR widget at a 2:1 ratio: 4x2, 6x3, 8x4...
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
