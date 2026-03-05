@@ -1112,7 +1112,9 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         var stackSpacing = Math.Clamp(2 * hourlyCellScale, 0.2, 10);
         var forecastRangeSize = Math.Clamp(18.0 * hourlyCellScale, 6, 62);
         var forecastLabelSize = Math.Clamp(13.8 * hourlyCellScale, 6, 48);
-        var forecastIconSize = Math.Clamp(32 * hourlyCellScale, 8, 100);
+        var forecastIconSize = Math.Clamp(40 * hourlyCellScale, 9, 124);
+        forecastIconSize = Math.Min(forecastIconSize, Math.Max(10, hourlyCellWidth * 0.88));
+        forecastIconSize = Math.Min(forecastIconSize, Math.Max(10, bottomZoneHeight * 0.50));
 
         for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
         {

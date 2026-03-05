@@ -18,7 +18,8 @@
             <Border x:Name="ArtworkPanel"
                     Grid.Column="0"
                     ClipToBounds="True"
-                    Background="#B8AE9A">
+                    Background="#B8AE9A"
+                    PointerPressed="OnArtworkPanelPointerPressed">
                 <Grid>
                     <Image x:Name="ArtworkImage"
                            Stretch="UniformToFill" />
@@ -34,12 +35,14 @@
                                    FontSize="44"
                                    FontWeight="Bold"
                                    FontFeatures="tnum"
+                                   TextTrimming="CharacterEllipsis"
                                    LineHeight="46" />
                         <TextBlock x:Name="WeekdayTextBlock"
                                    Text="星期二"
                                    Foreground="#F9F9F9"
                                    FontSize="44"
                                    FontWeight="Bold"
+                                   TextTrimming="CharacterEllipsis"
                                    LineHeight="46" />
                     </StackPanel>
                 </Grid>
@@ -48,7 +51,8 @@
             <Border Grid.Column="1"
                     x:Name="InfoPanel"
                     Background="#111418"
-                    Padding="18,14,18,14">
+                    Padding="18,14,18,14"
+                    PointerPressed="OnInfoPanelPointerPressed">
                 <Grid>
                     <Canvas x:Name="BrickPatternCanvas"
                             IsHitTestVisible="False"
@@ -76,6 +80,7 @@
                                    FontSize="44"
                                    FontWeight="Bold"
                                    TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
                                    MaxLines="2"
                                    Margin="0,0,0,8" />
 
@@ -96,6 +101,7 @@
                                        FontSize="26"
                                        FontWeight="SemiBold"
                                        TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
                                        MaxLines="2" />
                             <TextBlock x:Name="YearTextBlock"
                                        Text="1754"
@@ -104,6 +110,7 @@
                                        FontWeight="Medium"
                                        FontFeatures="tnum"
                                        TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
                                        MaxLines="1" />
                         </StackPanel>
                     </Grid>

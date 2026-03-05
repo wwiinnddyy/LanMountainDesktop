@@ -43,6 +43,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private readonly TextBlock[] _dailyHighBlocks;
     private readonly TextBlock[] _dailyLowBlocks;
     private readonly Image[] _dailyIconBlocks;
+    private readonly HyperOS3WeatherVisualKind[] _dailyIconKinds;
 
     public ExtendedWeatherWidget()
     {
@@ -76,6 +77,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         [
             DailyIcon0, DailyIcon1, DailyIcon2, DailyIcon3, DailyIcon4
         ];
+        _dailyIconKinds = Enumerable.Repeat(HyperOS3WeatherVisualKind.CloudyDay, _dailyIconBlocks.Length).ToArray();
         ConfigureTextOverflowGuards();
         _refreshTimer.Tick += OnRefreshTimerTick;
         _animationTimer.Tick += OnAnimationTick;
@@ -344,6 +346,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(date, i + 1)}·{dayText}";
             _dailyHighBlocks[i].Text = FormatTemperatureValue(daily?.HighTemperatureC);
             _dailyLowBlocks[i].Text = FormatTemperatureValue(daily?.LowTemperatureC);
+            _dailyIconKinds[i] = dayKind;
             _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(dayKind));
         }
     }
@@ -371,6 +374,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(DateOnly.FromDateTime(DateTime.Now).AddDays(i + 1), i + 1)}·{L("weather.widget.condition_cloudy", "Cloudy")}";
             _dailyHighBlocks[i].Text = "--";
             _dailyLowBlocks[i].Text = "--";
+            _dailyIconKinds[i] = HyperOS3WeatherVisualKind.CloudyDay;
             _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
         }
     }
@@ -523,7 +527,9 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             3.80);
         var hourlyTempSize = Math.Clamp(19 * hourlyCellScale, 6, 72);
         var hourlyTimeSize = Math.Clamp(14 * hourlyCellScale, 6, 52);
-        var hourlyIconSize = Math.Clamp(34 * hourlyCellScale, 8, 114);
+        var hourlyIconSize = Math.Clamp(42 * hourlyCellScale, 9, 140);
+        hourlyIconSize = Math.Min(hourlyIconSize, Math.Max(10, hourlyCellWidth * 0.86));
+        hourlyIconSize = Math.Min(hourlyIconSize, Math.Max(10, hourlyHeight * 0.56));
         var hourlyStackSpacing = Math.Clamp(2 * hourlyCellScale, 0.2, 10);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
@@ -548,7 +554,9 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
         var dailyLabelSize = Math.Clamp(18.5 * dailyRowScale, 6, 70);
         var dailyTempSize = Math.Clamp(19 * dailyRowScale, 6, 72);
-        var dailyIconSize = Math.Clamp(30 * dailyRowScale, 8, 102);
+        var dailyIconSize = Math.Clamp(43 * dailyRowScale, 9, 132);
+        dailyIconSize = Math.Min(dailyIconSize, Math.Max(10, dailyRowHeight * 0.92));
+        dailyIconSize = Math.Min(dailyIconSize, Math.Max(10, innerWidth * 0.14));
         var dailyLabelMaxWidth = Math.Clamp(innerWidth * 0.52, 28, 460);
         var dailyHighWidth = Math.Clamp(innerWidth * 0.14, 14, 140);
         var dailyLowWidth = Math.Clamp(innerWidth * 0.11, 12, 120);
@@ -570,8 +578,21 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLowBlocks[i].HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             _dailyHighBlocks[i].TextAlignment = TextAlignment.Right;
             _dailyLowBlocks[i].TextAlignment = TextAlignment.Right;
-            _dailyIconBlocks[i].Width = dailyIconSize;
-            _dailyIconBlocks[i].Height = dailyIconSize;
+            if (_dailyIconBlocks[i].Parent is Grid dailyRowGrid)
+            {
+                dailyRowGrid.ColumnSpacing = Math.Clamp(9 * dailyRowScale, 4, 18);
+            }
+
+            var dailyKind = i < _dailyIconKinds.Length
+                ? _dailyIconKinds[i]
+                : HyperOS3WeatherVisualKind.CloudyDay;
+            var dailyIconVisualSize = Math.Clamp(
+                dailyIconSize * ResolveDailyMiniIconScaleBoost(dailyKind),
+                8,
+                148);
+            dailyIconVisualSize = Math.Min(dailyIconVisualSize, Math.Max(10, dailyRowHeight * 0.94));
+            _dailyIconBlocks[i].Width = dailyIconVisualSize;
+            _dailyIconBlocks[i].Height = dailyIconVisualSize;
         }
     }
 
@@ -904,6 +925,21 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy or HyperOS3WeatherVisualKind.Storm or HyperOS3WeatherVisualKind.Snow => 1.16,
             HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.CloudyNight => 1.08,
             _ => 1.0
+        };
+
+    private static double ResolveDailyMiniIconScaleBoost(HyperOS3WeatherVisualKind kind) =>
+        kind switch
+        {
+            HyperOS3WeatherVisualKind.CloudyDay => 1.30,
+            HyperOS3WeatherVisualKind.CloudyNight => 1.28,
+            HyperOS3WeatherVisualKind.ClearDay => 1.26,
+            HyperOS3WeatherVisualKind.ClearNight => 1.24,
+            HyperOS3WeatherVisualKind.Fog => 1.18,
+            HyperOS3WeatherVisualKind.RainLight => 1.14,
+            HyperOS3WeatherVisualKind.RainHeavy => 1.12,
+            HyperOS3WeatherVisualKind.Snow => 1.12,
+            HyperOS3WeatherVisualKind.Storm => 1.08,
+            _ => 1.18
         };
     private static FontWeight ToVariableWeight(double weight) => (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
     private static IBrush CreateSolidBrush(string colorHex) => new SolidColorBrush(Color.Parse(colorHex));

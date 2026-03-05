@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -62,6 +64,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private string? _currentArtworkSourceUrl;
+    private string? _currentArtworkImageUrl;
 
     public DailyArtworkWidget()
     {
@@ -102,7 +106,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             0,
             0,
             Math.Clamp(16 * scale, 8, 26));
-        DateInfoStack.Spacing = Math.Clamp(2 * scale, 1, 6);
+        DateInfoStack.Spacing = Math.Clamp(4 * scale, 2, 10);
 
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 10, 24);
 
@@ -152,6 +156,28 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
     {
         await RefreshArtworkAsync(forceRefresh: false);
+    }
+
+    private void OnArtworkPanelPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        _ = RefreshArtworkAsync(forceRefresh: true);
+        e.Handled = true;
+    }
+
+    private void OnInfoPanelPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        TryOpenArtworkSourceUrl();
+        e.Handled = true;
     }
 
     private async Task RefreshArtworkAsync(bool forceRefresh)
@@ -222,6 +248,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         ArtistTextBlock.Text = NormalizeCompactText(artist);
 
         YearTextBlock.Text = ResolveYearText(snapshot);
+        _currentArtworkSourceUrl = snapshot.ArtworkUrl;
+        _currentArtworkImageUrl = snapshot.ImageUrl;
         StatusTextBlock.IsVisible = false;
 
         UpdateAdaptiveLayout();
@@ -352,6 +380,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyLoadingState()
     {
+        _currentArtworkSourceUrl = null;
+        _currentArtworkImageUrl = null;
         StatusTextBlock.IsVisible = true;
         StatusTextBlock.Text = L("artwork.widget.loading", "Loading...");
         PaintingTitleTextBlock.Text = BuildQuotedTitle(L("artwork.widget.loading_title", "Daily Artwork"));
@@ -362,6 +392,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyFailedState()
     {
+        _currentArtworkSourceUrl = null;
+        _currentArtworkImageUrl = null;
         StatusTextBlock.IsVisible = true;
         StatusTextBlock.Text = L("artwork.widget.fetch_failed", "Artwork fetch failed");
         PaintingTitleTextBlock.Text = BuildQuotedTitle(L("artwork.widget.fallback_title", "Daily Artwork"));
@@ -384,71 +416,94 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var rightContentWidth = Math.Max(58, rightPanelWidth - InfoPanel.Padding.Left - InfoPanel.Padding.Right);
         var leftPanelWidth = Math.Max(84, totalWidth - rightPanelWidth);
         var leftContentWidth = Math.Max(52, leftPanelWidth - DateInfoStack.Margin.Left - 10);
+        var leftContentHeight = Math.Max(30, totalHeight - DateInfoStack.Margin.Bottom - 10);
+
+        var dateStackSpacing = Math.Clamp(4 * scale, 2, 10);
+        DateInfoStack.Spacing = dateStackSpacing;
+        DateInfoStack.MaxWidth = leftContentWidth;
+        var leftSingleLineHeight = Math.Max(12, (leftContentHeight - dateStackSpacing) / 2d);
 
         var dateBase = Math.Clamp(44 * scale, 16, 62);
         DateTextBlock.FontSize = FitFontSize(
             DateTextBlock.Text,
             leftContentWidth,
-            Math.Max(18, totalHeight * 0.20),
+            leftSingleLineHeight,
             maxLines: 1,
             minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.00);
-        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.00;
+            lineHeightFactor: 1.10);
+        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.10;
 
         WeekdayTextBlock.FontSize = FitFontSize(
             WeekdayTextBlock.Text,
             leftContentWidth,
-            Math.Max(18, totalHeight * 0.21),
+            leftSingleLineHeight,
             maxLines: 1,
             minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.00);
-        WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.00;
+            lineHeightFactor: 1.10);
+        WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.10;
+
+        var rightContentHeight = Math.Max(42, totalHeight - InfoPanel.Padding.Top - InfoPanel.Padding.Bottom);
+        var titleBottomMargin = Math.Clamp(8 * scale, 4, 14);
+        var separatorBottomMargin = Math.Clamp(10 * scale, 4, 14);
+        var bottomStackSpacing = Math.Clamp(3 * scale, 2, 8);
+        var reservedHeight = titleBottomMargin + separatorBottomMargin + bottomStackSpacing + 3;
+        var textHeightBudget = Math.Max(24, rightContentHeight - reservedHeight);
+        var titleHeightBudget = Math.Max(16, textHeightBudget * 0.54);
+        var bottomTextBudget = Math.Max(10, textHeightBudget - titleHeightBudget);
+        var artistHeightBudget = Math.Max(8, bottomTextBudget * 0.66);
+        var yearHeightBudget = Math.Max(8, bottomTextBudget - artistHeightBudget);
 
         var titleBase = Math.Clamp(44 * scale, 16, 58);
         PaintingTitleTextBlock.MaxWidth = rightContentWidth;
+        PaintingTitleTextBlock.Margin = new Thickness(0, 0, 0, titleBottomMargin);
         PaintingTitleTextBlock.FontSize = FitFontSize(
             PaintingTitleTextBlock.Text,
             rightContentWidth,
-            Math.Max(20, totalHeight * 0.34),
+            titleHeightBudget,
             maxLines: 2,
             minFontSize: Math.Max(12, titleBase * 0.62),
             maxFontSize: titleBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.08);
-        PaintingTitleTextBlock.LineHeight = PaintingTitleTextBlock.FontSize * 1.08;
+            lineHeightFactor: 1.12);
+        PaintingTitleTextBlock.LineHeight = PaintingTitleTextBlock.FontSize * 1.12;
 
         var artistBase = Math.Clamp(26 * scale, 11, 34);
+        if (ArtistTextBlock.Parent is StackPanel artistInfoStack)
+        {
+            artistInfoStack.Spacing = bottomStackSpacing;
+        }
+
         ArtistTextBlock.MaxWidth = rightContentWidth;
         ArtistTextBlock.FontSize = FitFontSize(
             ArtistTextBlock.Text,
             rightContentWidth,
-            Math.Max(18, totalHeight * 0.24),
+            artistHeightBudget,
             maxLines: 2,
             minFontSize: Math.Max(10, artistBase * 0.72),
             maxFontSize: artistBase,
             weight: FontWeight.SemiBold,
-            lineHeightFactor: 1.12);
-        ArtistTextBlock.LineHeight = ArtistTextBlock.FontSize * 1.12;
+            lineHeightFactor: 1.14);
+        ArtistTextBlock.LineHeight = ArtistTextBlock.FontSize * 1.14;
 
         var yearBase = Math.Clamp(22 * scale, 10, 30);
         YearTextBlock.MaxWidth = rightContentWidth;
         YearTextBlock.FontSize = FitFontSize(
             YearTextBlock.Text,
             rightContentWidth,
-            Math.Max(14, totalHeight * 0.12),
+            yearHeightBudget,
             maxLines: 1,
             minFontSize: Math.Max(9.5, yearBase * 0.78),
             maxFontSize: yearBase,
             weight: FontWeight.Medium,
-            lineHeightFactor: 1.04);
-        YearTextBlock.LineHeight = YearTextBlock.FontSize * 1.04;
+            lineHeightFactor: 1.08);
+        YearTextBlock.LineHeight = YearTextBlock.FontSize * 1.08;
 
         RightPanelSeparator.Width = Math.Clamp(rightContentWidth * 0.58, 42, 136);
-        RightPanelSeparator.Margin = new Thickness(0, 0, 0, Math.Clamp(10 * scale, 4, 14));
+        RightPanelSeparator.Margin = new Thickness(0, 0, 0, separatorBottomMargin);
 
         BrickPatternCanvas.Opacity = totalWidth < _currentCellSize * 4.2
             ? 0.34
@@ -476,6 +531,54 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
         _currentArtworkBitmap.Dispose();
         _currentArtworkBitmap = null;
+    }
+
+    private void TryOpenArtworkSourceUrl()
+    {
+        var candidate = _currentArtworkSourceUrl;
+        if (!TryNormalizeHttpUrl(candidate, out var normalizedUrl) &&
+            !TryNormalizeHttpUrl(_currentArtworkImageUrl, out normalizedUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = normalizedUrl,
+                UseShellExecute = true
+            };
+            Process.Start(startInfo);
+        }
+        catch
+        {
+            // Ignore malformed URLs or shell launch failures.
+        }
+    }
+
+    private static bool TryNormalizeHttpUrl(string? rawUrl, out string normalizedUrl)
+    {
+        normalizedUrl = string.Empty;
+        if (string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return false;
+        }
+
+        var candidate = rawUrl.Trim();
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        normalizedUrl = uri.ToString();
+        return true;
     }
 
     private void UpdateLanguageCode()

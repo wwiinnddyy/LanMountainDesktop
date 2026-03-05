@@ -1264,7 +1264,9 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         var stackSpacing = Math.Clamp(2 * hourlyCellScale, 0.2, 10);
         var hourlyTempSize = Math.Clamp(19.5 * hourlyCellScale, 6, 72);
         var hourlyTimeSize = Math.Clamp(14.5 * hourlyCellScale, 6, 50);
-        var hourlyIconSize = Math.Clamp(34 * hourlyCellScale, 8, 108);
+        var hourlyIconSize = Math.Clamp(42 * hourlyCellScale, 9, 136);
+        hourlyIconSize = Math.Min(hourlyIconSize, Math.Max(10, hourlyCellWidth * 0.86));
+        hourlyIconSize = Math.Min(hourlyIconSize, Math.Max(10, bottomZoneHeight * 0.52));
 
         for (var i = 0; i < _hourlyTimeBlocks.Length; i++)
         {
