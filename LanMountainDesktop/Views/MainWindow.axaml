@@ -1390,6 +1390,19 @@
                                                 <TextBlock x:Name="FontInfoTextBlock" Text="Font: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                             </StackPanel>
                                         </Border>
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="AboutStartupSettingsExpander"
+                                                             Header="Windows Startup"
+                                                             Description="Launch the app automatically when signing in to Windows."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <ToggleSwitch x:Name="AutoStartWithWindowsToggleSwitch"
+                                                              Checked="OnAutoStartWithWindowsToggled"
+                                                              Unchecked="OnAutoStartWithWindowsToggled"
+                                                              Content="Launch at Windows sign-in" />
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
                                 </StackPanel>
                             </Grid>
                         </Border>

@@ -10,6 +10,7 @@ public sealed record DailyArtworkSnapshot(
     string? Museum,
     string? ArtworkUrl,
     string? ImageUrl,
+    string? ThumbnailDataUrl,
     DateTimeOffset FetchedAt);
 
 public sealed record DailyPoetrySnapshot(

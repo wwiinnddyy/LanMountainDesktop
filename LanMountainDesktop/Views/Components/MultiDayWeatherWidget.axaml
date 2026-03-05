@@ -63,7 +63,7 @@
                                        FontFeatures="tnum"
                                        VerticalAlignment="Center"
                                        Margin="0,-2,0,0"
-                                       TextTrimming="CharacterEllipsis"
+                                       TextTrimming="None"
                                        MaxLines="1" />
 
                             <StackPanel Grid.Column="1"

@@ -91,7 +91,7 @@
                                        FontFeatures="tnum"
                                        VerticalAlignment="Top"
                                        Margin="-1,-7,0,0"
-                                       TextTrimming="CharacterEllipsis"
+                                       TextTrimming="None"
                                        MaxLines="1" />
 
                             <Image x:Name="WeatherIconImage"

@@ -90,6 +90,7 @@ public partial class MainWindow : Window
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
+    private readonly WindowsStartupService _windowsStartupService = new();
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
@@ -151,6 +152,9 @@ public partial class MainWindow : Window
     private string _weatherExcludedAlertsRaw = string.Empty;
     private string _weatherIconPackId = "FluentRegular";
     private bool _weatherNoTlsRequests;
+    private string _dailyArtworkMirrorSource = DailyArtworkMirrorSources.Overseas;
+    private bool _autoStartWithWindows;
+    private bool _suppressAutoStartToggleEvents;
     private string _weatherSearchKeyword = string.Empty;
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
@@ -225,6 +229,8 @@ public partial class MainWindow : Window
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
         InitializeWeatherSettings(snapshot);
+        _dailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
+        InitializeAutoStartWithWindowsSetting(snapshot);
         InitializeDesktopSurfaceState(snapshot);
         InitializeDesktopComponentPlacements(snapshot);
         InitializeSettingsIcons();

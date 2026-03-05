@@ -262,6 +262,13 @@ public partial class MainWindow
             "settings.about.font_format",
             "Font: {0}",
             AppFontName);
+        AboutStartupSettingsExpander.Header = L("settings.about.startup_header", "Windows Startup");
+        AboutStartupSettingsExpander.Description = L(
+            "settings.about.startup_desc",
+            "Launch the app automatically when signing in to Windows.");
+        AutoStartWithWindowsToggleSwitch.Content = L(
+            "settings.about.startup_toggle",
+            "Launch at Windows sign-in");
 
         if (WallpaperPlacementComboBox?.ItemCount >= 5)
         {

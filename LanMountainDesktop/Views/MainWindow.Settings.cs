@@ -658,6 +658,8 @@ public partial class MainWindow
             WeatherExcludedAlerts = _weatherExcludedAlertsRaw,
             WeatherIconPackId = _weatherIconPackId,
             WeatherNoTlsRequests = _weatherNoTlsRequests,
+            DailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(_dailyArtworkMirrorSource),
+            AutoStartWithWindows = _autoStartWithWindows,
             TopStatusComponentIds = _topStatusComponentIds.ToList(),
             PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
@@ -790,13 +792,36 @@ public partial class MainWindow
                 weatherCode: null,
                 temperatureText: "--",
                 updatedAt: null);
-
-            UpdateWeatherLocationModePanels();
-            UpdateWeatherLocationStatusText();
         }
         finally
         {
             _suppressWeatherLocationEvents = false;
+        }
+
+        UpdateWeatherLocationModePanels();
+        UpdateWeatherLocationStatusText();
+    }
+
+    private void InitializeAutoStartWithWindowsSetting(AppSettingsSnapshot snapshot)
+    {
+        _autoStartWithWindows = OperatingSystem.IsWindows()
+            ? _windowsStartupService.IsEnabled()
+            : snapshot.AutoStartWithWindows;
+
+        if (AutoStartWithWindowsToggleSwitch is null)
+        {
+            return;
+        }
+
+        _suppressAutoStartToggleEvents = true;
+        try
+        {
+            AutoStartWithWindowsToggleSwitch.IsEnabled = OperatingSystem.IsWindows();
+            AutoStartWithWindowsToggleSwitch.IsChecked = _autoStartWithWindows;
+        }
+        finally
+        {
+            _suppressAutoStartToggleEvents = false;
         }
     }
 
@@ -1019,6 +1044,51 @@ public partial class MainWindow
         }
 
         _weatherNoTlsRequests = WeatherNoTlsToggleSwitch.IsChecked == true;
+        PersistSettings();
+    }
+
+    private void OnAutoStartWithWindowsToggled(object? sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoStartToggleEvents || AutoStartWithWindowsToggleSwitch is null)
+        {
+            return;
+        }
+
+        var requested = AutoStartWithWindowsToggleSwitch.IsChecked == true;
+        if (!OperatingSystem.IsWindows())
+        {
+            _autoStartWithWindows = false;
+            _suppressAutoStartToggleEvents = true;
+            try
+            {
+                AutoStartWithWindowsToggleSwitch.IsEnabled = false;
+                AutoStartWithWindowsToggleSwitch.IsChecked = false;
+            }
+            finally
+            {
+                _suppressAutoStartToggleEvents = false;
+            }
+
+            PersistSettings();
+            return;
+        }
+
+        var applied = _windowsStartupService.SetEnabled(requested);
+        _autoStartWithWindows = _windowsStartupService.IsEnabled();
+
+        if (!applied || _autoStartWithWindows != requested)
+        {
+            _suppressAutoStartToggleEvents = true;
+            try
+            {
+                AutoStartWithWindowsToggleSwitch.IsChecked = _autoStartWithWindows;
+            }
+            finally
+            {
+                _suppressAutoStartToggleEvents = false;
+            }
+        }
+
         PersistSettings();
     }
 
@@ -1938,6 +2008,15 @@ public partial class MainWindow
             TimeZoneSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
             {
                 Symbol = Symbol.GlobeClock,
+                IconVariant = variant
+            };
+        }
+
+        if (AboutStartupSettingsExpander is not null)
+        {
+            AboutStartupSettingsExpander.IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+            {
+                Symbol = Symbol.Play,
                 IconVariant = variant
             };
         }

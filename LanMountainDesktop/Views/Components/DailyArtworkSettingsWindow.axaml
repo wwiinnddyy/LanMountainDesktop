@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="280"
+             x:Class="LanMountainDesktop.Views.Components.DailyArtworkSettingsWindow">
+    <Border Background="{DynamicResource AdaptiveBackgroundBrush}"
+            Padding="16">
+        <StackPanel Spacing="10">
+            <TextBlock x:Name="TitleTextBlock"
+                       Text="每日图片设置"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+            <TextBlock x:Name="DescriptionTextBlock"
+                       Text="切换每日图片的数据源。"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+
+            <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                    BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="10">
+                <StackPanel Spacing="8">
+                    <TextBlock x:Name="MirrorSourceLabelTextBlock"
+                               Text="镜像源"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+                    <ComboBox x:Name="MirrorSourceComboBox"
+                              Width="240"
+                              SelectionChanged="OnMirrorSourceSelectionChanged">
+                        <ComboBoxItem x:Name="MirrorSourceDomesticItem"
+                                      Tag="Domestic"
+                                      Content="国内镜像" />
+                        <ComboBoxItem x:Name="MirrorSourceOverseasItem"
+                                      Tag="Overseas"
+                                      Content="国外镜像" />
+                    </ComboBox>
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       Text="当前源：国内镜像"
+                       FontSize="11"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        </StackPanel>
+    </Border>
+</UserControl>

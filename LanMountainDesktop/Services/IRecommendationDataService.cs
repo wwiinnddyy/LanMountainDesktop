@@ -7,6 +7,7 @@ namespace LanMountainDesktop.Services;
 
 public sealed record DailyArtworkQuery(
     string? Locale = null,
+    string? MirrorSource = null,
     bool ForceRefresh = false);
 
 public sealed record DailyPoetryQuery(
@@ -35,10 +36,15 @@ public sealed record RecommendationApiOptions
     public string JinriShiciPoetryUrl { get; init; } = "https://v1.jinrishici.com/all.json";
 
     public string ArtInstituteArtworkApiTemplate { get; init; } =
-        "https://api.artic.edu/api/v1/artworks?page={0}&limit={1}&fields=id,title,artist_title,artist_display,date_display,image_id,api_link";
+        "https://api.artic.edu/api/v1/artworks?page={0}&limit={1}&fields=id,title,artist_title,artist_display,date_display,image_id,api_link,thumbnail";
 
     public string ArtInstituteImageUrlTemplate { get; init; } =
         "https://www.artic.edu/iiif/2/{0}/full/843,/0/default.jpg";
+
+    public string DomesticArtworkApiUrl { get; init; } =
+        "https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=zh-CN";
+
+    public string DomesticArtworkHost { get; init; } = "https://cn.bing.com";
 
     public TimeSpan CacheDuration { get; init; } = TimeSpan.FromMinutes(20);
 

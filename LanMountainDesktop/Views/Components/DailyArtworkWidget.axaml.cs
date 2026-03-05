@@ -122,6 +122,15 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         }
     }
 
+    public void RefreshFromSettings()
+    {
+        _recommendationService.ClearCache();
+        if (_isAttached)
+        {
+            _ = RefreshArtworkAsync(forceRefresh: true);
+        }
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
@@ -219,7 +228,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
         UpdateAdaptiveLayout();
 
-        var bitmap = await TryLoadArtworkBitmapAsync(snapshot.ImageUrl, cancellationToken);
+        var bitmap = await TryLoadArtworkBitmapAsync(snapshot.ImageUrl, snapshot.ThumbnailDataUrl, cancellationToken);
         if (cancellationToken.IsCancellationRequested || !_isAttached)
         {
             bitmap?.Dispose();
@@ -229,35 +238,118 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         SetArtworkBitmap(bitmap);
     }
 
-    private static async Task<Bitmap?> TryLoadArtworkBitmapAsync(string? imageUrl, CancellationToken cancellationToken)
+    private static async Task<Bitmap?> TryLoadArtworkBitmapAsync(
+        string? imageUrl,
+        string? thumbnailDataUrl,
+        CancellationToken cancellationToken)
+    {
+        foreach (var candidateUrl in BuildImageUrlCandidates(imageUrl))
+        {
+            var remoteBitmap = await TryDownloadBitmapAsync(candidateUrl, cancellationToken);
+            if (remoteBitmap is not null)
+            {
+                return remoteBitmap;
+            }
+        }
+
+        return TryDecodeBitmapFromDataUrl(thumbnailDataUrl);
+    }
+
+    private static IEnumerable<string> BuildImageUrlCandidates(string? imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
         {
+            yield break;
+        }
+
+        var normalizedUrl = imageUrl.Trim();
+        yield return normalizedUrl;
+
+        const string preferredSizeSegment = "/full/843,/0/default.jpg";
+        if (normalizedUrl.Contains(preferredSizeSegment, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return normalizedUrl.Replace(
+                preferredSizeSegment,
+                "/full/1024,/0/default.jpg",
+                StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private static async Task<Bitmap?> TryDownloadBitmapAsync(string imageUrl, CancellationToken cancellationToken)
+    {
+        var withReferrer = await SendImageRequestAsync(imageUrl, includeReferrer: true, cancellationToken);
+        if (withReferrer is not null)
+        {
+            return withReferrer;
+        }
+
+        return await SendImageRequestAsync(imageUrl, includeReferrer: false, cancellationToken);
+    }
+
+    private static async Task<Bitmap?> SendImageRequestAsync(
+        string imageUrl,
+        bool includeReferrer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+            request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
+            request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+            if (includeReferrer && Uri.TryCreate(imageUrl, UriKind.Absolute, out var imageUri))
+            {
+                request.Headers.Referrer = new Uri($"{imageUri.Scheme}://{imageUri.Host}/", UriKind.Absolute);
+            }
+
+            using var response = await ImageHttpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var memory = new MemoryStream();
+            await stream.CopyToAsync(memory, cancellationToken);
+            memory.Position = 0;
+            return new Bitmap(memory);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static Bitmap? TryDecodeBitmapFromDataUrl(string? dataUrl)
+    {
+        if (string.IsNullOrWhiteSpace(dataUrl))
+        {
             return null;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Trim());
-        request.Headers.TryAddWithoutValidation("User-Agent", BrowserUserAgent);
-        request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
-        if (Uri.TryCreate(imageUrl.Trim(), UriKind.Absolute, out var imageUri))
-        {
-            request.Headers.Referrer = new Uri($"{imageUri.Scheme}://{imageUri.Host}/", UriKind.Absolute);
-        }
-
-        using var response = await ImageHttpClient.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        var trimmed = dataUrl.Trim();
+        var markerIndex = trimmed.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
+        if (markerIndex < 0 || markerIndex + 7 >= trimmed.Length)
         {
             return null;
         }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var memory = new MemoryStream();
-        await stream.CopyToAsync(memory, cancellationToken);
-        memory.Position = 0;
-        return new Bitmap(memory);
+        var base64Payload = trimmed[(markerIndex + 7)..];
+        try
+        {
+            var bytes = Convert.FromBase64String(base64Payload);
+            return new Bitmap(new MemoryStream(bytes));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void ApplyLoadingState()

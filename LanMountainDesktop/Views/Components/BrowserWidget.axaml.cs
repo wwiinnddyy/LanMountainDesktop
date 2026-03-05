@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using AvaloniaWebView;
+using LanMountainDesktop.Services;
 using WebViewCore.Events;
 
 namespace LanMountainDesktop.Views.Components;
@@ -20,6 +21,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
     private bool _isOnActiveDesktopPage;
     private bool _isEditMode;
     private bool _isWebViewActive = true;
+    private readonly WebView2RuntimeAvailability _runtimeAvailability;
 
     public BrowserWidget()
     {
@@ -31,7 +33,17 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
         ApplyCellSize(_currentCellSize);
         ApplyTheme(force: true);
-        BrowserWebView.NavigationStarting += OnBrowserWebViewNavigationStarting;
+
+        _runtimeAvailability = WebView2RuntimeProbe.GetAvailability();
+        if (_runtimeAvailability.IsAvailable)
+        {
+            BrowserWebView.NavigationStarting += OnBrowserWebViewNavigationStarting;
+        }
+        else
+        {
+            ApplyRuntimeUnavailableState();
+        }
+
         UpdateWebViewActiveState();
         NavigateTo(DefaultHomeUri);
     }
@@ -169,6 +181,11 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
+        if (!_runtimeAvailability.IsAvailable)
+        {
+            return;
+        }
+
         if (!_isWebViewActive)
         {
             return;
@@ -185,11 +202,21 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void OnGoButtonClick(object? sender, RoutedEventArgs e)
     {
+        if (!_runtimeAvailability.IsAvailable)
+        {
+            return;
+        }
+
         NavigateFromAddressBar();
     }
 
     private void OnAddressTextBoxKeyDown(object? sender, KeyEventArgs e)
     {
+        if (!_runtimeAvailability.IsAvailable)
+        {
+            return;
+        }
+
         if (e.Key != Key.Enter)
         {
             return;
@@ -201,6 +228,11 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void NavigateFromAddressBar()
     {
+        if (!_runtimeAvailability.IsAvailable)
+        {
+            return;
+        }
+
         var target = TryNormalizeUri(AddressTextBox.Text);
         if (target is null)
         {
@@ -240,6 +272,15 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void UpdateWebViewActiveState()
     {
+        if (!_runtimeAvailability.IsAvailable)
+        {
+            _isWebViewActive = false;
+            BrowserWebView.Url = null;
+            BrowserWebView.IsVisible = false;
+            BrowserWebView.IsHitTestVisible = false;
+            return;
+        }
+
         var shouldBeActive = _isOnActiveDesktopPage && !_isEditMode && IsVisible;
         if (_isWebViewActive == shouldBeActive)
         {
@@ -263,6 +304,24 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         BrowserWebView.IsVisible = true;
         BrowserWebView.IsHitTestVisible = true;
         BrowserWebView.Url = _lastKnownUri;
+    }
+
+    private void ApplyRuntimeUnavailableState()
+    {
+        _isWebViewActive = false;
+        BrowserWebView.Url = null;
+        BrowserWebView.IsVisible = false;
+        BrowserWebView.IsHitTestVisible = false;
+
+        RefreshButton.IsEnabled = false;
+        GoButton.IsEnabled = false;
+        AddressTextBox.IsEnabled = false;
+        AddressTextBox.Text = string.Empty;
+
+        UnavailableMessageTextBlock.Text = string.IsNullOrWhiteSpace(_runtimeAvailability.Message)
+            ? "WebView runtime unavailable."
+            : _runtimeAvailability.Message;
+        UnavailableOverlay.IsVisible = true;
     }
 
     private static Uri? TryNormalizeUri(string? rawText)

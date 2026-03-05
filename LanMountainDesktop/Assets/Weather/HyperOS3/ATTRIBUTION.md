@@ -36,3 +36,20 @@ Extracted weather icon paths inside APK (`res/*.webp`):
 - `res/Mg.webp` -> `Icons/icon_windy.webp`
 
 Use only according to Xiaomi's applicable license and usage terms.
+
+## Soft Widget Icon Set (2026-03-05)
+
+To better match the Xiaomi weather time-card visual hierarchy, an additional local icon set was generated for this project:
+
+- `Icons/icon_hero_sun_soft.png`
+- `Icons/icon_hero_moon_soft.png`
+- `Icons/icon_mini_partly_cloudy_day_soft.png`
+- `Icons/icon_mini_partly_cloudy_night_soft.png`
+- `Icons/icon_mini_cloudy_soft.png`
+- `Icons/icon_mini_rain_light_soft.png`
+- `Icons/icon_mini_rain_heavy_soft.png`
+- `Icons/icon_mini_storm_soft.png`
+- `Icons/icon_mini_snow_soft.png`
+- `Icons/icon_mini_fog_soft.png`
+
+These files are original derivative assets generated in-repo with local tooling, using the extracted Xiaomi package visual direction as reference (soft glow hero icon + lightweight forecast icons).

@@ -109,7 +109,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         RangeTextBlock.MaxLines = 1;
 
         TemperatureTextBlock.TextWrapping = TextWrapping.NoWrap;
-        TemperatureTextBlock.TextTrimming = TextTrimming.CharacterEllipsis;
+        TemperatureTextBlock.TextTrimming = TextTrimming.None;
         TemperatureTextBlock.MaxLines = 1;
     }
 
@@ -126,9 +126,11 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         BackgroundTintLayer.CornerRadius = new CornerRadius(radius);
         BackgroundLightLayer.CornerRadius = new CornerRadius(radius);
         BackgroundShadeLayer.CornerRadius = new CornerRadius(radius);
+        var horizontalPadding = Math.Clamp(Math.Min(width * metrics.HorizontalPaddingScale * 0.30, width * 0.11), 4, 34);
+        var verticalPadding = Math.Clamp(Math.Min(height * metrics.VerticalPaddingScale * 0.30, height * 0.11), 4, 34);
         ContentPaddingBorder.Padding = new Thickness(
-            Math.Clamp(width * metrics.HorizontalPaddingScale * 0.30, 10, 30),
-            Math.Clamp(height * metrics.VerticalPaddingScale * 0.30, 10, 30));
+            horizontalPadding,
+            verticalPadding);
         ApplyTypography(width, height);
     }
 
@@ -274,7 +276,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var kind = HyperOS3WeatherTheme.ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
         ApplyVisualTheme(kind);
         SetLoadingSkeleton(false);
-        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(kind));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(kind));
         CityTextBlock.Text = ResolveLocation(snapshot.LocationName, fallbackLocationName);
         ConditionTextBlock.Text = ResolveWeatherText(snapshot.Current.WeatherText, kind);
         TemperatureTextBlock.Text = FormatTemperature(snapshot.Current.TemperatureC);
@@ -302,7 +304,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
                 ? L("weather.hourly.sunset", "Sunset")
                 : FormatTemperature(item?.Source.TemperatureC ?? snapshot.Current.TemperatureC);
             _hourlyTimeBlocks[i].Text = target.ToString("HH:mm", CultureInfo.InvariantCulture);
-            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(hourKind));
+            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(hourKind));
         }
 
         var todayDate = DateOnly.FromDateTime(now);
@@ -316,7 +318,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(date, i + 1)}·{dayText}";
             _dailyHighBlocks[i].Text = FormatTemperatureValue(daily?.HighTemperatureC);
             _dailyLowBlocks[i].Text = FormatTemperatureValue(daily?.LowTemperatureC);
-            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(dayKind));
+            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(dayKind));
         }
     }
 
@@ -324,7 +326,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     {
         ApplyVisualTheme(HyperOS3WeatherVisualKind.CloudyDay);
         SetLoadingSkeleton(false);
-        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
         CityTextBlock.Text = L("weather.widget.location_unknown", "Unknown location");
         ConditionTextBlock.Text = L("weather.widget.loading", "Loading...");
         TemperatureTextBlock.Text = "--°";
@@ -335,7 +337,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         {
             _hourlyTempBlocks[i].Text = i == 3 ? L("weather.hourly.sunset", "Sunset") : "--°";
             _hourlyTimeBlocks[i].Text = timelineStart.AddHours(i).ToString("HH:mm", CultureInfo.InvariantCulture);
-            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
         }
 
         for (var i = 0; i < _dailyLabelBlocks.Length; i++)
@@ -343,7 +345,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(DateOnly.FromDateTime(DateTime.Now).AddDays(i + 1), i + 1)}·{L("weather.widget.condition_cloudy", "Cloudy")}";
             _dailyHighBlocks[i].Text = "--";
             _dailyLowBlocks[i].Text = "--";
-            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
         }
     }
 
@@ -422,78 +424,122 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private void ApplyTypography(double width, double height)
     {
-        var scale = ResolveScale(width, height);
-        var compactness = Math.Clamp((0.90 - scale) / 0.55, 0, 1);
-        LayoutRoot.RowSpacing = Math.Clamp(height * 0.012, 5, 13);
-        SummaryGrid.ColumnSpacing = Math.Clamp(width * 0.016, 8, 22);
-        SummaryInfoGrid.RowSpacing = Math.Clamp(height * 0.003, 1, 4);
-        BottomInfoStack.Spacing = Math.Clamp(2.2 * scale, 1, 6);
-        ConditionRangeStack.Spacing = Math.Clamp(7 * scale, 4, 13);
-        HourlyGrid.ColumnSpacing = Math.Clamp(width * 0.007, 3, 10);
-        DailyGrid.RowSpacing = Math.Clamp(height * 0.009, 4, 10);
-        TemperatureTextBlock.FontSize = Math.Clamp(height * 0.18, 52, 154);
-        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 370, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-        var topScaleH = Math.Clamp(height / 640d, 0.62, 2.0);
-        var topScaleW = Math.Clamp(width / 640d, 0.62, 2.0);
-        var topScale = Math.Clamp((topScaleH * 0.68) + (topScaleW * 0.32), 0.62, 2.0);
-        var cityFontSize = Math.Clamp(18 * topScale, 11, 26);
-        var conditionFontSize = Math.Clamp(19 * topScale, 12, 27);
-        var rangeFontSize = Math.Clamp(20 * topScale, 12, 30);
+        var innerWidth = Math.Max(140, width - ContentPaddingBorder.Padding.Left - ContentPaddingBorder.Padding.Right);
+        var innerHeight = Math.Max(140, height - ContentPaddingBorder.Padding.Top - ContentPaddingBorder.Padding.Bottom);
+        var fitScale = Math.Clamp(Math.Min(innerWidth / 592d, innerHeight / 600d), 0.30, 3.20);
+        var cellScale = Math.Clamp(_currentCellSize / 44d, 0.34, 3.80);
+        var visualScale = Math.Clamp((fitScale * 0.72) + (cellScale * 0.28), 0.30, 3.80);
+        var emphasis = Math.Clamp((visualScale - 0.82) / 1.90, 0, 1);
+
+        LayoutRoot.RowSpacing = Math.Clamp(8 * fitScale, 1, 22);
+        SummaryGrid.ColumnSpacing = Math.Clamp(16 * fitScale, 4, 38);
+        SummaryInfoGrid.RowSpacing = Math.Clamp(2 * fitScale, 0.2, 9);
+        BottomInfoStack.Spacing = Math.Clamp(2 * fitScale, 0.3, 14);
+        ConditionRangeStack.Spacing = Math.Clamp(9 * fitScale, 1, 24);
+        HourlyGrid.ColumnSpacing = Math.Clamp(4 * fitScale, 0.5, 22);
+
+        var summaryHeight = Math.Clamp(innerHeight * 0.22, 34, Math.Max(34, innerHeight * 0.42));
+        var hourlyHeight = Math.Clamp(innerHeight * 0.20, 34, Math.Max(34, innerHeight * 0.36));
+        var separatorBandHeight = Math.Clamp(innerHeight * 0.03, 4, 40);
+        if (LayoutRoot.RowDefinitions.Count >= 4)
+        {
+            LayoutRoot.RowDefinitions[0].Height = new GridLength(summaryHeight, GridUnitType.Pixel);
+            LayoutRoot.RowDefinitions[1].Height = new GridLength(hourlyHeight, GridUnitType.Pixel);
+            LayoutRoot.RowDefinitions[2].Height = new GridLength(separatorBandHeight, GridUnitType.Pixel);
+            LayoutRoot.RowDefinitions[3].Height = new GridLength(1, GridUnitType.Star);
+        }
+
+        var topScale = Math.Clamp(((summaryHeight / 118d) * 0.44) + (visualScale * 0.84), 0.24, 4.00);
+        var iconGrowth = Math.Clamp((visualScale - 0.88) / 1.70, 0, 1);
+        var iconScaleBoost = ResolveHeroIconScaleBoost(_activeVisualKind);
+        var iconSize = Math.Clamp(Lerp(90, 122, iconGrowth) * topScale * iconScaleBoost, 14, 360);
+        iconSize = Math.Min(iconSize, Math.Max(14, innerWidth * Lerp(0.18, 0.26, iconGrowth)));
+        var temperatureSample = string.IsNullOrWhiteSpace(TemperatureTextBlock.Text)
+            ? "00°"
+            : TemperatureTextBlock.Text.Trim();
+        var temperatureGlyphCount = Math.Clamp(temperatureSample.Length, 3, 6);
+        var temperatureMaxWidth = Math.Max(30, innerWidth - iconSize - SummaryGrid.ColumnSpacing - 6);
+        var rawTemperatureSize = Math.Clamp(Lerp(72, 102, iconGrowth) * topScale, 14, 340);
+        var fitTemperatureSize = temperatureMaxWidth / (temperatureGlyphCount * 0.62);
+        TemperatureTextBlock.FontSize = Math.Clamp(Math.Min(rawTemperatureSize, fitTemperatureSize), 10, 340);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 380, emphasis));
+        TemperatureTextBlock.MaxWidth = Math.Clamp(temperatureMaxWidth, 30, Math.Max(300, innerWidth * 0.66));
+        TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(-2.2 * topScale, -12, 0), 0, 0);
+
+        var cityFontSize = Math.Clamp(18.5 * topScale, 7, 86);
+        var conditionFontSize = Math.Clamp(20 * topScale, 7, 90);
+        var rangeFontSize = Math.Clamp(20 * topScale, 7, 90);
         CityTextBlock.FontSize = cityFontSize;
         ConditionTextBlock.FontSize = conditionFontSize;
         RangeTextBlock.FontSize = rangeFontSize;
-        CityTextBlock.FontWeight = ToVariableWeight(540);
-        ConditionTextBlock.FontWeight = ToVariableWeight(600);
-        RangeTextBlock.FontWeight = ToVariableWeight(620);
+        CityTextBlock.FontWeight = ToVariableWeight(Lerp(530, 620, emphasis));
+        ConditionTextBlock.FontWeight = ToVariableWeight(Lerp(580, 660, emphasis));
+        RangeTextBlock.FontWeight = ToVariableWeight(Lerp(600, 680, emphasis));
         CityTextBlock.LineHeight = cityFontSize * 1.08;
         ConditionTextBlock.LineHeight = conditionFontSize * 1.06;
         RangeTextBlock.LineHeight = rangeFontSize * 1.06;
-        var iconSize = Math.Clamp(height * 0.116, 36, 102);
+
         WeatherIconImage.Width = iconSize;
         WeatherIconImage.Height = iconSize;
-        ConditionTextBlock.MaxWidth = Math.Clamp(width * 0.24, 58, 220);
-        RangeTextBlock.MaxWidth = Math.Clamp(width * 0.30, 88, 270);
-        CityTextBlock.MaxWidth = Math.Clamp(width * 0.36, 112, 300);
+        WeatherIconImage.Margin = new Thickness(0, Math.Clamp(-2.4 * topScale, -12, 0), 0, 0);
+        ConditionTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.25, 28, 340);
+        RangeTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.31, 34, 380);
+        CityTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.36, 34, 420);
 
         HourlyPanelBorder.Padding = new Thickness(0);
         HourlyPanelBorder.CornerRadius = new CornerRadius(0);
+        HourlyPanelBorder.Margin = new Thickness(0, Math.Clamp(4 * fitScale, 0, 18), 0, 0);
 
-        var hourlyBandHeight = Math.Clamp(height * 0.195, 74, 160);
-        var hourlyCellWidth = Math.Max(34, (width - HourlyPanelBorder.Padding.Left - HourlyPanelBorder.Padding.Right - (HourlyGrid.ColumnSpacing * 5)) / 6d);
-        var hourlyTempSize = Math.Clamp(hourlyBandHeight * 0.24, 10, 32);
-        var hourlyTimeSize = Math.Clamp(hourlyBandHeight * 0.18, 8, 22);
-        var hourlyIconSize = Math.Clamp(hourlyBandHeight * 0.20, 12, 30);
-        var hourlyStackSpacing = Math.Clamp(hourlyBandHeight * 0.03, 1, 4);
+        var hourlyCellWidth = Math.Max(12, (innerWidth - (HourlyGrid.ColumnSpacing * 5)) / 6d);
+        var hourlyCellScale = Math.Clamp(
+            Math.Min((visualScale * 0.44) + ((hourlyHeight / 120d) * 0.62), hourlyCellWidth / 76d),
+            0.22,
+            3.80);
+        var hourlyTempSize = Math.Clamp(19 * hourlyCellScale, 6, 72);
+        var hourlyTimeSize = Math.Clamp(14 * hourlyCellScale, 6, 52);
+        var hourlyIconSize = Math.Clamp(34 * hourlyCellScale, 8, 114);
+        var hourlyStackSpacing = Math.Clamp(2 * hourlyCellScale, 0.2, 10);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
             _hourlyTempBlocks[i].FontSize = hourlyTempSize;
             _hourlyTimeBlocks[i].FontSize = hourlyTimeSize;
-            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(540, 610, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-            _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(Lerp(450, 530, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-            _hourlyTempBlocks[i].MaxWidth = hourlyCellWidth;
-            _hourlyTimeBlocks[i].MaxWidth = hourlyCellWidth;
+            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(540, 650, emphasis));
+            _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(Lerp(450, 560, emphasis));
+            _hourlyTempBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 12, 260);
+            _hourlyTimeBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 12, 260);
             _hourlyIconBlocks[i].Width = hourlyIconSize;
             _hourlyIconBlocks[i].Height = hourlyIconSize;
             if (_hourlyTempBlocks[i].Parent is StackPanel stack) stack.Spacing = hourlyStackSpacing;
         }
 
-        var dailyLabelSize = Math.Clamp(height * 0.041, 10, 30);
-        var dailyTempSize = Math.Clamp(height * 0.043, 10, 33);
-        var dailyIconSize = Math.Clamp(height * 0.040, 12, 30);
-        var dailyLabelMaxWidth = Math.Clamp(width * (compactness > 0.3 ? 0.48 : 0.56), 120, 380);
-        var dailyHighWidth = Math.Clamp(width * 0.11, 34, 72);
-        var dailyLowWidth = Math.Clamp(width * 0.10, 30, 68);
+        SeparatorLine.Margin = new Thickness(0, Math.Clamp(separatorBandHeight * 0.45, 1, 16), 0, 0);
+        DailyGrid.Margin = new Thickness(0, Math.Clamp(6 * fitScale, 0.5, 24), 0, 0);
+        var dailyAreaHeight = Math.Max(50, innerHeight - summaryHeight - hourlyHeight - separatorBandHeight - (LayoutRoot.RowSpacing * 3) - DailyGrid.Margin.Top);
+        var dailyRowSpacing = Math.Clamp(dailyAreaHeight * 0.028, 1, 22);
+        DailyGrid.RowSpacing = dailyRowSpacing;
+        var dailyRowHeight = Math.Max(8, (dailyAreaHeight - (dailyRowSpacing * 4)) / 5d);
+        var dailyRowScale = Math.Clamp(((dailyRowHeight / 40d) * 0.62) + (visualScale * 0.44), 0.22, 3.80);
+
+        var dailyLabelSize = Math.Clamp(18.5 * dailyRowScale, 6, 70);
+        var dailyTempSize = Math.Clamp(19 * dailyRowScale, 6, 72);
+        var dailyIconSize = Math.Clamp(30 * dailyRowScale, 8, 102);
+        var dailyLabelMaxWidth = Math.Clamp(innerWidth * 0.52, 28, 460);
+        var dailyHighWidth = Math.Clamp(innerWidth * 0.14, 14, 140);
+        var dailyLowWidth = Math.Clamp(innerWidth * 0.11, 12, 120);
+        var dailyHighRightGap = Math.Clamp(innerWidth * 0.018, 1, 28);
         for (var i = 0; i < _dailyLabelBlocks.Length; i++)
         {
             _dailyLabelBlocks[i].FontSize = dailyLabelSize;
             _dailyHighBlocks[i].FontSize = dailyTempSize;
             _dailyLowBlocks[i].FontSize = dailyTempSize;
-            _dailyLabelBlocks[i].FontWeight = ToVariableWeight(Lerp(520, 600, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-            _dailyHighBlocks[i].FontWeight = ToVariableWeight(Lerp(560, 640, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
-            _dailyLowBlocks[i].FontWeight = ToVariableWeight(Lerp(470, 560, Math.Clamp((scale - 0.50) / 1.2, 0, 1)));
+            _dailyLabelBlocks[i].FontWeight = ToVariableWeight(Lerp(520, 620, emphasis));
+            _dailyHighBlocks[i].FontWeight = ToVariableWeight(Lerp(560, 680, emphasis));
+            _dailyLowBlocks[i].FontWeight = ToVariableWeight(Lerp(470, 590, emphasis));
             _dailyLabelBlocks[i].MaxWidth = dailyLabelMaxWidth;
             _dailyHighBlocks[i].Width = dailyHighWidth;
             _dailyLowBlocks[i].Width = dailyLowWidth;
+            _dailyHighBlocks[i].Margin = new Thickness(0, 0, dailyHighRightGap, 0);
+            _dailyLowBlocks[i].Margin = new Thickness(0);
             _dailyHighBlocks[i].HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             _dailyLowBlocks[i].HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             _dailyHighBlocks[i].TextAlignment = TextAlignment.Right;
@@ -784,6 +830,13 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
     private static double ResolveScale(double width, double height) => Math.Clamp(Math.Min(Math.Clamp(width / 620d, 0.42, 2.4), Math.Clamp(height / 620d, 0.42, 2.4)), 0.42, 2.4);
     private static double Lerp(double from, double to, double t) => from + ((to - from) * t);
+    private static double ResolveHeroIconScaleBoost(HyperOS3WeatherVisualKind kind) =>
+        kind switch
+        {
+            HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy or HyperOS3WeatherVisualKind.Storm or HyperOS3WeatherVisualKind.Snow => 1.16,
+            HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.CloudyNight => 1.08,
+            _ => 1.0
+        };
     private static FontWeight ToVariableWeight(double weight) => (FontWeight)(int)Math.Clamp(Math.Round(weight), 1, 1000);
     private static IBrush CreateSolidBrush(string colorHex) => new SolidColorBrush(Color.Parse(colorHex));
     private static IBrush CreateSolidBrush(string colorHex, byte alpha) { var c = Color.Parse(colorHex); return new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B)); }

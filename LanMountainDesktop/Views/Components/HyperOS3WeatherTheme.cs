@@ -102,18 +102,32 @@ public static class HyperOS3WeatherTheme
             [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_back.png"
         };
 
-    private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> IconAssets =
+    private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> HeroIconAssets =
         new Dictionary<HyperOS3WeatherVisualKind, string>
         {
-            [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_sunny_day.webp",
-            [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_moon_clear.webp",
-            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_partly_cloudy_day.webp",
-            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_partly_cloudy_night.webp",
-            [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_rain_light.webp",
-            [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_rain_heavy.webp",
-            [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_thunder.webp",
-            [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_snow.webp",
-            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_haze.webp"
+            [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png",
+            [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_moon_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_moon_soft.png",
+            [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_light_soft.png",
+            [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_heavy_soft.png",
+            [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_storm_soft.png",
+            [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_snow_soft.png",
+            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png"
+        };
+
+    private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> MiniIconAssets =
+        new Dictionary<HyperOS3WeatherVisualKind, string>
+        {
+            [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_day_soft.png",
+            [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_night_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_day_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_night_soft.png",
+            [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_light_soft.png",
+            [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_heavy_soft.png",
+            [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_storm_soft.png",
+            [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_snow_soft.png",
+            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_fog_soft.png"
         };
 
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherPalette> Palettes =
@@ -319,7 +333,17 @@ public static class HyperOS3WeatherTheme
 
     public static string? ResolveIconAsset(HyperOS3WeatherVisualKind kind)
     {
-        return IconAssets.TryGetValue(kind, out var asset) ? asset : null;
+        return ResolveMiniIconAsset(kind);
+    }
+
+    public static string? ResolveHeroIconAsset(HyperOS3WeatherVisualKind kind)
+    {
+        return HeroIconAssets.TryGetValue(kind, out var asset) ? asset : null;
+    }
+
+    public static string? ResolveMiniIconAsset(HyperOS3WeatherVisualKind kind)
+    {
+        return MiniIconAssets.TryGetValue(kind, out var asset) ? asset : null;
     }
 
     public static string ResolveSunCoreAsset()

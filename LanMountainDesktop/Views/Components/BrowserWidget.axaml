@@ -23,7 +23,23 @@
                     Background="#FFFFFFFF"
                     BorderBrush="#22000000"
                     BorderThickness="1">
-                <webview:WebView x:Name="BrowserWebView" />
+                <Grid>
+                    <webview:WebView x:Name="BrowserWebView" />
+                    <Border x:Name="UnavailableOverlay"
+                            IsVisible="False"
+                            Background="#CC0F172A"
+                            Padding="16">
+                        <TextBlock x:Name="UnavailableMessageTextBlock"
+                                   Foreground="#F8FAFC"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   MaxWidth="360"
+                                   FontSize="13"
+                                   Text="Browser runtime unavailable." />
+                    </Border>
+                </Grid>
             </Border>
 
             <Border x:Name="AddressBarBorder"

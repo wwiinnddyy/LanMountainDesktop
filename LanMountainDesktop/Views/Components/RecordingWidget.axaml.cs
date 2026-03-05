@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -23,6 +24,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     };
 
     private readonly IAudioRecorderService _audioRecorderService = AudioRecorderServiceFactory.CreateRecorder();
+    private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly AppSettingsService _settingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly List<Border> _waveBars = [];
@@ -32,6 +34,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     private string _lastSavedFilePath = string.Empty;
     private double _currentCellSize = 48;
     private bool _isAttached;
+    private bool _pausedStudyMonitoringForRecording;
 
     public RecordingWidget()
     {
@@ -115,6 +118,12 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     {
         _isAttached = false;
         _uiTimer.Stop();
+
+        var snapshot = _audioRecorderService.GetSnapshot();
+        if (snapshot.State is not AudioRecorderRuntimeState.Recording and not AudioRecorderRuntimeState.Paused)
+        {
+            ResumeStudyMonitoringIfNeeded();
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -140,6 +149,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         }
 
         _audioRecorderService.Discard();
+        ResumeStudyMonitoringIfNeeded();
         RefreshVisual();
         e.Handled = true;
     }
@@ -165,7 +175,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         }
         else
         {
-            _audioRecorderService.StartOrResume();
+            _ = TryStartRecordingWithMonitoringHandoff();
         }
 
         RefreshVisual();
@@ -201,6 +211,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         }
 
         _ = _audioRecorderService.StopAndSave(outputPath);
+        ResumeStudyMonitoringIfNeeded();
         RefreshVisual();
         e.Handled = true;
     }
@@ -208,6 +219,12 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
     private void RefreshVisual()
     {
         var snapshot = _audioRecorderService.GetSnapshot();
+        if (_pausedStudyMonitoringForRecording &&
+            snapshot.State is AudioRecorderRuntimeState.Ready or AudioRecorderRuntimeState.Error or AudioRecorderRuntimeState.Unsupported)
+        {
+            ResumeStudyMonitoringIfNeeded();
+            snapshot = _audioRecorderService.GetSnapshot();
+        }
 
         TitleTextBlock.Text = L("recording.widget.title", "Recorder");
         TimerTextBlock.Text = FormatDuration(snapshot.Duration);
@@ -298,6 +315,60 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget
         }
 
         HintTextBlock.Text = L("recording.widget.hint.ready", "Tap red button to record");
+    }
+
+    private bool TryStartRecordingWithMonitoringHandoff()
+    {
+        if (_audioRecorderService.StartOrResume())
+        {
+            return true;
+        }
+
+        if (!TryPauseStudyMonitoringForRecording())
+        {
+            return false;
+        }
+
+        if (_audioRecorderService.StartOrResume())
+        {
+            return true;
+        }
+
+        ResumeStudyMonitoringIfNeeded();
+        return false;
+    }
+
+    private bool TryPauseStudyMonitoringForRecording()
+    {
+        if (_pausedStudyMonitoringForRecording)
+        {
+            return true;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
+        if (snapshot.State != StudyAnalyticsRuntimeState.Running)
+        {
+            return false;
+        }
+
+        if (!_studyAnalyticsService.PauseMonitoring())
+        {
+            return false;
+        }
+
+        _pausedStudyMonitoringForRecording = true;
+        return true;
+    }
+
+    private void ResumeStudyMonitoringIfNeeded()
+    {
+        if (!_pausedStudyMonitoringForRecording)
+        {
+            return;
+        }
+
+        _pausedStudyMonitoringForRecording = false;
+        _ = _studyAnalyticsService.StartOrResumeMonitoring();
     }
 
     private void InitializeWaveBars()

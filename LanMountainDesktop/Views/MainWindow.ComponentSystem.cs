@@ -706,6 +706,12 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyArtwork)
+        {
+            OpenDailyArtworkComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
         {
             OpenStudyEnvironmentComponentSettings();
@@ -760,6 +766,22 @@ public partial class MainWindow
         ComponentSettingsWindow.Opacity = 1;
     }
 
+    private void OpenDailyArtworkComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new DailyArtworkSettingsWindow();
+        settingsContent.SettingsChanged += OnDailyArtworkSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
     private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
     {
         if (_selectedDesktopComponentHost is null)
@@ -788,6 +810,34 @@ public partial class MainWindow
         }
     }
 
+    private void OnDailyArtworkSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _dailyArtworkMirrorSource = sender is DailyArtworkSettingsWindow settingsWindow
+            ? DailyArtworkMirrorSources.Normalize(settingsWindow.CurrentSource)
+            : DailyArtworkMirrorSources.Normalize(_appSettingsService.Load().DailyArtworkMirrorSource);
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is DailyArtworkWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+
+        PersistSettings();
+    }
+
     private void CloseComponentSettingsWindow()
     {
         if (ComponentSettingsWindow is null)
@@ -803,6 +853,11 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is StudyEnvironmentWidgetSettingsWindow studyEnvironmentSettingsWindow)
         {
             studyEnvironmentSettingsWindow.SettingsChanged -= OnStudyEnvironmentSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is DailyArtworkSettingsWindow dailyArtworkSettingsWindow)
+        {
+            dailyArtworkSettingsWindow.SettingsChanged -= OnDailyArtworkSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;

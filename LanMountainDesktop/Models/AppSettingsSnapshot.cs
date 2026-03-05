@@ -44,6 +44,10 @@ public sealed class AppSettingsSnapshot
 
     public bool WeatherNoTlsRequests { get; set; }
 
+    public string DailyArtworkMirrorSource { get; set; } = DailyArtworkMirrorSources.Overseas;
+
+    public bool AutoStartWithWindows { get; set; }
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =

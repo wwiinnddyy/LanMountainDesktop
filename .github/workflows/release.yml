@@ -89,13 +89,12 @@ jobs:
             -o ./publish/windows-${{ matrix.arch }} `
             --self-contained `
             -r win-${{ matrix.arch }} `
-            -p:PublishSingleFile=true `
+            -p:PublishSingleFile=false `
             -p:SelfContained=true `
             -p:DebugType=none `
             -p:DebugSymbols=false `
-            -p:PublishTrimmed=true `
-            -p:TrimMode=partial `
-            -p:PublishReadyToRun=true
+            -p:PublishTrimmed=false `
+            -p:PublishReadyToRun=false
         shell: pwsh
 
       - name: Install Inno Setup
@@ -221,13 +220,12 @@ jobs:
             -o ./publish/linux-x64 \
             --self-contained \
             -r linux-x64 \
-            -p:PublishSingleFile=true \
+            -p:PublishSingleFile=false \
             -p:SelfContained=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
-            -p:PublishTrimmed=true \
-            -p:TrimMode=partial \
-            -p:PublishReadyToRun=true
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false
 
       - name: Package as DEB
         run: |
@@ -331,13 +329,12 @@ EOF
             -o ./publish/macos-${{ matrix.arch }} \
             --self-contained \
             -r osx-${{ matrix.arch }} \
-            -p:PublishSingleFile=true \
+            -p:PublishSingleFile=false \
             -p:SelfContained=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
-            -p:PublishTrimmed=true \
-            -p:TrimMode=partial \
-            -p:PublishReadyToRun=true
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false
 
       - name: Package as DMG
         run: |
