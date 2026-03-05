@@ -23,6 +23,11 @@ public interface IRecommendationInfoAwareComponentWidget
     void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService);
 }
 
+public interface ICalculatorInfoAwareComponentWidget
+{
+    void SetCalculatorDataService(ICalculatorDataService calculatorDataService);
+}
+
 public interface IDesktopPageVisibilityAwareComponentWidget
 {
     void SetDesktopPageContext(bool isOnActivePage, bool isEditMode);

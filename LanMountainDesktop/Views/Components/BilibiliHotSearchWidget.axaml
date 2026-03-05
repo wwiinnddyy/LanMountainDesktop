@@ -1,0 +1,196 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.BilibiliHotSearchWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            Background="Transparent"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#FCFCFD"
+                    CornerRadius="34"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    Padding="16,14,16,14">
+                <Grid x:Name="ContentGrid"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="6">
+                    <Grid x:Name="HeaderGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <Border x:Name="SearchBoxBorder"
+                                Height="38"
+                                CornerRadius="19"
+                                Background="#F1F2F4"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="10,0"
+                                HorizontalAlignment="Left"
+                                PointerPressed="OnSearchBoxPointerPressed">
+                            <Grid ColumnDefinitions="Auto,Auto"
+                                  ColumnSpacing="6"
+                                  VerticalAlignment="Center">
+                                <fi:SymbolIcon x:Name="SearchGlyphIcon"
+                                               Symbol="Search"
+                                               IconVariant="Regular"
+                                               Foreground="#7A8088"
+                                               FontSize="17"
+                                               VerticalAlignment="Center" />
+                                <TextBlock x:Name="SearchEntryTextBlock"
+                                           Grid.Column="1"
+                                           Text="Search"
+                                           Foreground="#7A8088"
+                                           FontSize="18"
+                                           FontWeight="Medium"
+                                           VerticalAlignment="Center"
+                                           MaxLines="1"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock x:Name="TopRightTitleTextBlock"
+                                   Grid.Column="1"
+                                   Text="bilibili热搜"
+                                   Foreground="#F44C9F"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis" />
+                    </Grid>
+
+                    <Border x:Name="HotItem1Host"
+                            Grid.Row="1"
+                            Tag="0"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnHotItemPointerPressed">
+                        <Grid x:Name="HotItem1Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="HotItem1IndexTextBlock"
+                                       Text="1"
+                                       Foreground="#F44C9F"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left" />
+                            <TextBlock x:Name="HotItem1TextBlock"
+                                       Grid.Column="1"
+                                       Text="Trending Topic"
+                                       Foreground="#202327"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="HotItem2Host"
+                            Grid.Row="2"
+                            Tag="1"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnHotItemPointerPressed">
+                        <Grid x:Name="HotItem2Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="HotItem2IndexTextBlock"
+                                       Text="2"
+                                       Foreground="#F44C9F"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left" />
+                            <TextBlock x:Name="HotItem2TextBlock"
+                                       Grid.Column="1"
+                                       Text="Trending Topic"
+                                       Foreground="#202327"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="HotItem3Host"
+                            Grid.Row="3"
+                            Tag="2"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnHotItemPointerPressed">
+                        <Grid x:Name="HotItem3Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="HotItem3IndexTextBlock"
+                                       Text="3"
+                                       Foreground="#F44C9F"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left" />
+                            <TextBlock x:Name="HotItem3TextBlock"
+                                       Grid.Column="1"
+                                       Text="Trending Topic"
+                                       Foreground="#202327"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="HotItem4Host"
+                            Grid.Row="4"
+                            Tag="3"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnHotItemPointerPressed">
+                        <Grid x:Name="HotItem4Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <TextBlock x:Name="HotItem4IndexTextBlock"
+                                       Text="4"
+                                       Foreground="#F44C9F"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left" />
+                            <TextBlock x:Name="HotItem4TextBlock"
+                                       Grid.Column="1"
+                                       Text="Trending Topic"
+                                       Foreground="#202327"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#6A6F77"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

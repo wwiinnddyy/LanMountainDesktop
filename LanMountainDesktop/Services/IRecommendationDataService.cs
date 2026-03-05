@@ -20,8 +20,18 @@ public sealed record DailyNewsQuery(
     int? ItemCount = null,
     bool ForceRefresh = false);
 
+public sealed record BilibiliHotSearchQuery(
+    string? Locale = null,
+    int? ItemCount = null,
+    bool ForceRefresh = false);
+
 public sealed record DailyWordQuery(
     string? Locale = null,
+    bool ForceRefresh = false);
+
+public sealed record ExchangeRateQuery(
+    string? BaseCurrency = null,
+    string? TargetCurrency = null,
     bool ForceRefresh = false);
 
 public sealed record RecommendationQueryResult<T>(
@@ -66,9 +76,19 @@ public sealed record RecommendationApiOptions
         "https://news.cnr.cn/native/gd/rss.xml"
     ];
 
+    public string BilibiliHotSearchApiTemplate { get; init; } =
+        "https://api.bilibili.com/x/web-interface/search/square?limit={0}";
+
+    public string BilibiliSearchDefaultApiUrl { get; init; } =
+        "https://api.bilibili.com/x/web-interface/search/default";
+
+    public string BilibiliSearchPageUrl { get; init; } = "https://search.bilibili.com/all";
+
     public string YoudaoDictionaryApiTemplate { get; init; } = "https://dict.youdao.com/jsonapi?q={0}";
 
     public string YoudaoDictionaryWordPageTemplate { get; init; } = "https://dict.youdao.com/w/eng/{0}/";
+
+    public string ExchangeRateApiTemplate { get; init; } = "https://open.er-api.com/v6/latest/{0}";
 
     public IReadOnlyList<string> YoudaoDailyWordCandidates { get; init; } =
     [
@@ -204,6 +224,8 @@ public sealed record RecommendationApiOptions
     public int DefaultArtworkCandidateCount { get; init; } = 50;
 
     public int DefaultDailyNewsCount { get; init; } = 2;
+
+    public int DefaultBilibiliHotSearchCount { get; init; } = 5;
 }
 
 public interface IRecommendationInfoService
@@ -220,8 +242,16 @@ public interface IRecommendationInfoService
         DailyNewsQuery query,
         CancellationToken cancellationToken = default);
 
+    Task<RecommendationQueryResult<BilibiliHotSearchSnapshot>> GetBilibiliHotSearchAsync(
+        BilibiliHotSearchQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<RecommendationQueryResult<DailyWordSnapshot>> GetDailyWordAsync(
         DailyWordQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<ExchangeRateSnapshot>> GetExchangeRateAsync(
+        ExchangeRateQuery query,
         CancellationToken cancellationToken = default);
 
     void ClearCache();

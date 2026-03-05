@@ -35,6 +35,23 @@ public sealed record DailyNewsSnapshot(
     IReadOnlyList<DailyNewsItemSnapshot> Items,
     DateTimeOffset FetchedAt);
 
+public sealed record BilibiliHotSearchItemSnapshot(
+    string Title,
+    string Keyword,
+    string Url,
+    long? HeatScore,
+    bool HasHotTag,
+    string? IconUrl);
+
+public sealed record BilibiliHotSearchSnapshot(
+    string Provider,
+    string Source,
+    string SearchPlaceholder,
+    string SearchUrl,
+    string MoreHotUrl,
+    IReadOnlyList<BilibiliHotSearchItemSnapshot> Items,
+    DateTimeOffset FetchedAt);
+
 public sealed record DailyWordSnapshot(
     string Provider,
     string Word,
@@ -44,4 +61,12 @@ public sealed record DailyWordSnapshot(
     string? ExampleSentence,
     string? ExampleTranslation,
     string? SourceUrl,
+    DateTimeOffset FetchedAt);
+
+public sealed record ExchangeRateSnapshot(
+    string Provider,
+    string Source,
+    string BaseCurrency,
+    string TargetCurrency,
+    decimal Rate,
     DateTimeOffset FetchedAt);

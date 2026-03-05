@@ -94,6 +94,7 @@ public partial class MainWindow : Window
     private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
+    private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
     private readonly ComponentRegistry _componentRegistry = ComponentRegistry
         .CreateDefault()
         .RegisterExtensions(

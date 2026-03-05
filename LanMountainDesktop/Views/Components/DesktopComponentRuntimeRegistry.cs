@@ -41,7 +41,8 @@ public sealed class DesktopComponentRuntimeDescriptor
         double cellSize,
         TimeZoneService timeZoneService,
         IWeatherInfoService weatherInfoService,
-        IRecommendationInfoService recommendationInfoService)
+        IRecommendationInfoService recommendationInfoService,
+        ICalculatorDataService calculatorDataService)
     {
         var control = _controlFactory();
         if (control is IDesktopComponentWidget sizedComponent)
@@ -62,6 +63,11 @@ public sealed class DesktopComponentRuntimeDescriptor
         if (control is IRecommendationInfoAwareComponentWidget recommendationInfoAwareComponent)
         {
             recommendationInfoAwareComponent.SetRecommendationInfoService(recommendationInfoService);
+        }
+
+        if (control is ICalculatorInfoAwareComponentWidget calculatorInfoAwareComponent)
+        {
+            calculatorInfoAwareComponent.SetCalculatorDataService(calculatorDataService);
         }
 
         return control;
@@ -235,15 +241,20 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new DailyWordWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
-                    BuiltInComponentIds.DesktopDailySentence,
-                    "component.daily_sentence",
-                    () => new DailySentenceWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
-                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopCnrDailyNews,
                     "component.cnr_daily_news",
                     () => new CnrDailyNewsWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopBilibiliHotSearch,
+                    "component.bilibili_hot_search",
+                    () => new BilibiliHotSearchWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopExchangeRateCalculator,
+                    "component.exchange_rate_converter",
+                    () => new ExchangeRateCalculatorWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.28, 12, 26)),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWhiteboard,
                     "component.whiteboard",

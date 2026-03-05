@@ -34,7 +34,13 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private sealed record DailyArtworkCacheEntry(DailyArtworkSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyPoetryCacheEntry(DailyPoetrySnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyNewsCacheEntry(DailyNewsSnapshot Snapshot, DateTimeOffset ExpireAt);
+    private sealed record BilibiliHotSearchCacheEntry(BilibiliHotSearchSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyWordCacheEntry(DailyWordSnapshot Snapshot, DateTimeOffset ExpireAt);
+    private sealed record ExchangeRateTableCacheEntry(
+        string BaseCurrency,
+        Dictionary<string, decimal> Rates,
+        DateTimeOffset ExpireAt,
+        DateTimeOffset FetchedAt);
     private sealed record ArtworkCandidate(
         string Title,
         string? Artist,
@@ -52,7 +58,10 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         new(StringComparer.OrdinalIgnoreCase);
     private DailyPoetryCacheEntry? _dailyPoetryCache;
     private DailyNewsCacheEntry? _dailyNewsCache;
+    private BilibiliHotSearchCacheEntry? _bilibiliHotSearchCache;
     private DailyWordCacheEntry? _dailyWordCache;
+    private readonly Dictionary<string, ExchangeRateTableCacheEntry> _exchangeRateCacheByBaseCurrency =
+        new(StringComparer.OrdinalIgnoreCase);
     private int _dailyNewsRotationCursor;
 
     static RecommendationDataService()
@@ -95,7 +104,9 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _dailyArtworkCacheBySource.Clear();
             _dailyPoetryCache = null;
             _dailyNewsCache = null;
+            _bilibiliHotSearchCache = null;
             _dailyWordCache = null;
+            _exchangeRateCacheByBaseCurrency.Clear();
         }
     }
 
@@ -230,6 +241,53 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
+    public async Task<RecommendationQueryResult<BilibiliHotSearchSnapshot>> GetBilibiliHotSearchAsync(
+        BilibiliHotSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new BilibiliHotSearchQuery();
+        var targetCount = normalizedQuery.ItemCount.HasValue
+            ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 20)
+            : Math.Clamp(_options.DefaultBilibiliHotSearchCount, 1, 20);
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetBilibiliHotSearchFromCache(out var cached) &&
+            cached.Items.Count >= targetCount)
+        {
+            var projectedSnapshot = cached with
+            {
+                Items = cached.Items.Take(targetCount).ToArray()
+            };
+            return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Ok(projectedSnapshot);
+        }
+
+        try
+        {
+            var snapshot = await FetchBilibiliHotSearchSnapshotAsync(targetCount, cancellationToken);
+            if (snapshot.Items.Count == 0)
+            {
+                return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Fail(
+                    "upstream_empty_result",
+                    "No Bilibili hot search items were returned.");
+            }
+
+            SetBilibiliHotSearchCache(snapshot);
+            return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
+    }
+
     public async Task<RecommendationQueryResult<DailyWordSnapshot>> GetDailyWordAsync(
         DailyWordQuery query,
         CancellationToken cancellationToken = default)
@@ -280,6 +338,63 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return RecommendationQueryResult<DailyWordSnapshot>.Fail(
             "upstream_empty_result",
             lastError?.Message ?? "No available daily word from Youdao.");
+    }
+
+    public async Task<RecommendationQueryResult<ExchangeRateSnapshot>> GetExchangeRateAsync(
+        ExchangeRateQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new ExchangeRateQuery();
+        var baseCurrency = NormalizeCurrencyCode(normalizedQuery.BaseCurrency, "USD");
+        var targetCurrency = NormalizeCurrencyCode(normalizedQuery.TargetCurrency, "CNY");
+
+        if (string.Equals(baseCurrency, targetCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            return RecommendationQueryResult<ExchangeRateSnapshot>.Ok(
+                new ExchangeRateSnapshot(
+                    Provider: "open.er-api.com",
+                    Source: "open.er-api.com",
+                    BaseCurrency: baseCurrency,
+                    TargetCurrency: targetCurrency,
+                    Rate: 1m,
+                    FetchedAt: DateTimeOffset.UtcNow));
+        }
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetExchangeRateTableFromCache(baseCurrency, out var cached) &&
+            cached.Rates.TryGetValue(targetCurrency, out var cachedRate) &&
+            cachedRate > 0)
+        {
+            return RecommendationQueryResult<ExchangeRateSnapshot>.Ok(
+                new ExchangeRateSnapshot(
+                    Provider: "open.er-api.com",
+                    Source: "open.er-api.com",
+                    BaseCurrency: baseCurrency,
+                    TargetCurrency: targetCurrency,
+                    Rate: cachedRate,
+                    FetchedAt: cached.FetchedAt));
+        }
+
+        try
+        {
+            var snapshot = await FetchExchangeRateSnapshotAsync(
+                baseCurrency,
+                targetCurrency,
+                cancellationToken);
+            return RecommendationQueryResult<ExchangeRateSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<ExchangeRateSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<ExchangeRateSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
     }
 
     private async Task<RecommendationQueryResult<DailyArtworkSnapshot>> GetDailyArtworkFromOverseasSourceAsync(
@@ -522,6 +637,206 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
+    private bool TryGetBilibiliHotSearchFromCache(out BilibiliHotSearchSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            if (_bilibiliHotSearchCache is not null && _bilibiliHotSearchCache.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                snapshot = _bilibiliHotSearchCache.Snapshot;
+                return true;
+            }
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private void SetBilibiliHotSearchCache(BilibiliHotSearchSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            _bilibiliHotSearchCache = new BilibiliHotSearchCacheEntry(
+                snapshot,
+                DateTimeOffset.UtcNow.Add(_options.CacheDuration));
+        }
+    }
+
+    private async Task<BilibiliHotSearchSnapshot> FetchBilibiliHotSearchSnapshotAsync(
+        int targetCount,
+        CancellationToken cancellationToken)
+    {
+        var safeCount = Math.Clamp(targetCount, 1, 20);
+        var requestUrl = string.Format(
+            CultureInfo.InvariantCulture,
+            _options.BilibiliHotSearchApiTemplate,
+            safeCount);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+        request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+        request.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+        }
+
+        using var document = JsonDocument.Parse(responseText);
+        var root = document.RootElement;
+        var responseCode = ReadString(root, "code");
+        if (!string.Equals(responseCode, "0", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Bilibili API returned code={responseCode ?? "unknown"}");
+        }
+
+        var listNode = TryGetNode(root, "data", "trending", "list");
+        if (!listNode.HasValue || listNode.Value.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Bilibili hot search list is missing.");
+        }
+
+        var items = new List<BilibiliHotSearchItemSnapshot>(safeCount);
+        var seenKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var itemNode in listNode.Value.EnumerateArray())
+        {
+            if (itemNode.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var title = NormalizeInlineText(ReadString(itemNode, "show_name") ?? ReadString(itemNode, "keyword"));
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                continue;
+            }
+
+            var keyword = NormalizeInlineText(ReadString(itemNode, "keyword") ?? title);
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = title;
+            }
+
+            if (!seenKeywords.Add(keyword))
+            {
+                continue;
+            }
+
+            long? heatScore = null;
+            var heatScoreText = ReadString(itemNode, "heat_score");
+            if (long.TryParse(heatScoreText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedHeatScore))
+            {
+                heatScore = parsedHeatScore;
+            }
+
+            var iconUrl = NormalizeHttpUrl(ReadString(itemNode, "icon"));
+            var targetUrl = ResolveBilibiliHotSearchTargetUrl(ReadString(itemNode, "uri"), keyword);
+
+            items.Add(new BilibiliHotSearchItemSnapshot(
+                Title: title,
+                Keyword: keyword,
+                Url: targetUrl,
+                HeatScore: heatScore,
+                HasHotTag: !string.IsNullOrWhiteSpace(iconUrl),
+                IconUrl: iconUrl));
+
+            if (items.Count >= safeCount)
+            {
+                break;
+            }
+        }
+
+        var searchPageUrl = BuildBilibiliSearchPageUrl(_options.BilibiliSearchPageUrl);
+        var searchPlaceholder = await TryFetchBilibiliSearchPlaceholderAsync(cancellationToken)
+            ?? items.FirstOrDefault()?.Title
+            ?? "bilibili hot search";
+
+        return new BilibiliHotSearchSnapshot(
+            Provider: "Bilibili",
+            Source: ReadString(root, "data", "trending", "title") ?? "bilibili热搜",
+            SearchPlaceholder: searchPlaceholder,
+            SearchUrl: searchPageUrl,
+            MoreHotUrl: searchPageUrl,
+            Items: items,
+            FetchedAt: DateTimeOffset.UtcNow);
+    }
+
+    private async Task<string?> TryFetchBilibiliSearchPlaceholderAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.BilibiliSearchDefaultApiUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, _options.BilibiliSearchDefaultApiUrl);
+            request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(responseText);
+            var root = document.RootElement;
+            if (!string.Equals(ReadString(root, "code"), "0", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var placeholder = NormalizeInlineText(
+                ReadString(root, "data", "show_name") ??
+                ReadString(root, "data", "name"));
+
+            return string.IsNullOrWhiteSpace(placeholder)
+                ? null
+                : placeholder;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string ResolveBilibiliHotSearchTargetUrl(string? rawUri, string keyword)
+    {
+        var normalizedDirectUrl = NormalizeHttpUrl(rawUri);
+        if (!string.IsNullOrWhiteSpace(normalizedDirectUrl))
+        {
+            return normalizedDirectUrl;
+        }
+
+        return BuildBilibiliSearchUrl(_options.BilibiliSearchPageUrl, keyword);
+    }
+
+    private static string BuildBilibiliSearchPageUrl(string? baseSearchUrl)
+    {
+        var fallback = "https://search.bilibili.com/all";
+        var candidate = string.IsNullOrWhiteSpace(baseSearchUrl)
+            ? fallback
+            : baseSearchUrl.Trim();
+        var normalized = NormalizeHttpUrl(candidate);
+        return string.IsNullOrWhiteSpace(normalized)
+            ? fallback
+            : normalized;
+    }
+
+    private static string BuildBilibiliSearchUrl(string? baseSearchUrl, string keyword)
+    {
+        var searchPage = BuildBilibiliSearchPageUrl(baseSearchUrl);
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return searchPage;
+        }
+
+        var separator = searchPage.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{searchPage}{separator}keyword={Uri.EscapeDataString(keyword)}";
+    }
+
     private IReadOnlyList<DailyNewsItemSnapshot> SelectDailyNewsItems(
         IReadOnlyList<DailyNewsItemSnapshot> items,
         int targetCount,
@@ -572,6 +887,148 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 snapshot,
                 DateTimeOffset.UtcNow.Add(_options.CacheDuration));
         }
+    }
+
+    private bool TryGetExchangeRateTableFromCache(string baseCurrency, out ExchangeRateTableCacheEntry entry)
+    {
+        lock (_cacheGate)
+        {
+            if (_exchangeRateCacheByBaseCurrency.TryGetValue(baseCurrency, out var cached) &&
+                cached.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                entry = cached;
+                return true;
+            }
+
+            _exchangeRateCacheByBaseCurrency.Remove(baseCurrency);
+        }
+
+        entry = null!;
+        return false;
+    }
+
+    private void SetExchangeRateTableCache(string baseCurrency, ExchangeRateTableCacheEntry entry)
+    {
+        lock (_cacheGate)
+        {
+            _exchangeRateCacheByBaseCurrency[baseCurrency] = entry;
+        }
+    }
+
+    private async Task<ExchangeRateSnapshot> FetchExchangeRateSnapshotAsync(
+        string baseCurrency,
+        string targetCurrency,
+        CancellationToken cancellationToken)
+    {
+        var requestUrl = string.Format(
+            CultureInfo.InvariantCulture,
+            _options.ExchangeRateApiTemplate,
+            Uri.EscapeDataString(baseCurrency));
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+        request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+        request.Headers.TryAddWithoutValidation("Accept", "application/json,text/plain,*/*");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+        }
+
+        using var document = JsonDocument.Parse(responseText);
+        var root = document.RootElement;
+        if (!root.TryGetProperty("rates", out var ratesNode) || ratesNode.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException("Exchange rate payload is missing rates.");
+        }
+
+        var rates = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+        {
+            [baseCurrency] = 1m
+        };
+        foreach (var property in ratesNode.EnumerateObject())
+        {
+            var currency = NormalizeCurrencyCode(property.Name, string.Empty);
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                continue;
+            }
+
+            if (TryReadDecimalValue(property.Value, out var value) && value > 0)
+            {
+                rates[currency] = value;
+            }
+        }
+
+        if (!rates.TryGetValue(targetCurrency, out var rate) || rate <= 0)
+        {
+            throw new InvalidOperationException($"Currency {targetCurrency} is not provided by upstream.");
+        }
+
+        var fetchedAt = DateTimeOffset.UtcNow;
+        var cacheEntry = new ExchangeRateTableCacheEntry(
+            baseCurrency,
+            rates,
+            fetchedAt.Add(_options.CacheDuration),
+            fetchedAt);
+        SetExchangeRateTableCache(baseCurrency, cacheEntry);
+        return new ExchangeRateSnapshot(
+            Provider: "open.er-api.com",
+            Source: "open.er-api.com",
+            BaseCurrency: baseCurrency,
+            TargetCurrency: targetCurrency,
+            Rate: rate,
+            FetchedAt: fetchedAt);
+    }
+
+    private static string NormalizeCurrencyCode(string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        var normalized = value.Trim().ToUpperInvariant();
+        if (normalized.Length < 3)
+        {
+            return fallback;
+        }
+
+        return normalized[..3];
+    }
+
+    private static bool TryReadDecimalValue(JsonElement element, out decimal value)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Number:
+                if (element.TryGetDecimal(out value))
+                {
+                    return true;
+                }
+
+                if (element.TryGetDouble(out var numeric))
+                {
+                    value = (decimal)numeric;
+                    return true;
+                }
+
+                break;
+            case JsonValueKind.String:
+                if (decimal.TryParse(
+                    element.GetString(),
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out value))
+                {
+                    return true;
+                }
+
+                break;
+        }
+
+        value = 0m;
+        return false;
     }
 
     private List<string> BuildDailyWordCandidates()
@@ -1660,6 +2117,28 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     {
         var now = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8));
         return DateOnly.FromDateTime(now.Date);
+    }
+
+    private static string? NormalizeHttpUrl(string? rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return null;
+        }
+
+        var candidate = rawUrl.Trim();
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return uri.ToString();
     }
 
     private static string Truncate(string? text, int maxLength)

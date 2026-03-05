@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="320"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.ExchangeRateCalculatorWidget">
+
+    <UserControl.Styles>
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Background" Value="#F8F9FB" />
+            <Setter Property="BorderBrush" Value="#00000000" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#111723" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            ClipToBounds="True"
+            Padding="12"
+            Background="#ECEDEF">
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="LayoutRoot"
+                  Width="304"
+                  Height="304"
+                  RowDefinitions="Auto,Auto,*"
+                  RowSpacing="8">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="*,62"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="8"
+                      ColumnSpacing="8">
+                    <Border x:Name="FromCurrencyRowBorder"
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            CornerRadius="16"
+                            Background="#F8F9FB"
+                            Padding="12,8"
+                            PointerPressed="OnFromCurrencyRowPointerPressed">
+                        <Grid ColumnDefinitions="Auto,Auto,*"
+                              ColumnSpacing="8">
+                            <StackPanel Orientation="Vertical"
+                                        Spacing="1"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="FromCurrencyCodeTextBlock"
+                                           Text="USD"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="#121722" />
+                                <TextBlock x:Name="FromCurrencyNameTextBlock"
+                                           Text="美元"
+                                           FontSize="13"
+                                           Foreground="#6C7382" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text=">"
+                                       FontSize="18"
+                                       Foreground="#A3A9B6"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="InputAmountTextBlock"
+                                       Grid.Column="2"
+                                       Text="100"
+                                       FontSize="42"
+                                       FontWeight="Bold"
+                                       Foreground="#F08D20"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="ToCurrencyRowBorder"
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            CornerRadius="16"
+                            Background="#F8F9FB"
+                            Padding="12,8"
+                            PointerPressed="OnToCurrencyRowPointerPressed">
+                        <Grid ColumnDefinitions="Auto,Auto,*"
+                              ColumnSpacing="8">
+                            <StackPanel Orientation="Vertical"
+                                        Spacing="1"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="ToCurrencyCodeTextBlock"
+                                           Text="CNY"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="#121722" />
+                                <TextBlock x:Name="ToCurrencyNameTextBlock"
+                                           Text="人民币"
+                                           FontSize="13"
+                                           Foreground="#6C7382" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text=">"
+                                       FontSize="18"
+                                       Foreground="#A3A9B6"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="ConvertedAmountTextBlock"
+                                       Grid.Column="2"
+                                       Text="0"
+                                       FontSize="42"
+                                       FontWeight="Bold"
+                                       Foreground="#0F1622"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Border>
+
+                    <Button x:Name="SwapCurrencyButton"
+                            Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            CornerRadius="16"
+                            Background="#F8F9FB"
+                            BorderBrush="#00000000"
+                            BorderThickness="0"
+                            FontSize="30"
+                            Content="⇅"
+                            Click="OnSwapCurrencyButtonClick" />
+                </Grid>
+
+                <TextBlock x:Name="RateTextBlock"
+                           Grid.Row="1"
+                           Text="1 USD = 0 CNY"
+                           FontSize="14"
+                           Foreground="#646D7D"
+                           Margin="4,0,0,0"
+                           MaxLines="1"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Grid Grid.Row="2"
+                      ColumnDefinitions="*,*,*,84"
+                      RowDefinitions="*,*,*,*"
+                      RowSpacing="8"
+                      ColumnSpacing="8">
+                    <Button Grid.Row="0" Grid.Column="0" Content="7" Tag="7" Click="OnInputButtonClick" />
+                    <Button Grid.Row="0" Grid.Column="1" Content="8" Tag="8" Click="OnInputButtonClick" />
+                    <Button Grid.Row="0" Grid.Column="2" Content="9" Tag="9" Click="OnInputButtonClick" />
+
+                    <Button Grid.Row="1" Grid.Column="0" Content="4" Tag="4" Click="OnInputButtonClick" />
+                    <Button Grid.Row="1" Grid.Column="1" Content="5" Tag="5" Click="OnInputButtonClick" />
+                    <Button Grid.Row="1" Grid.Column="2" Content="6" Tag="6" Click="OnInputButtonClick" />
+
+                    <Button Grid.Row="2" Grid.Column="0" Content="1" Tag="1" Click="OnInputButtonClick" />
+                    <Button Grid.Row="2" Grid.Column="1" Content="2" Tag="2" Click="OnInputButtonClick" />
+                    <Button Grid.Row="2" Grid.Column="2" Content="3" Tag="3" Click="OnInputButtonClick" />
+
+                    <Button Grid.Row="3" Grid.Column="0" Content="00" Tag="00" Click="OnInputButtonClick" />
+                    <Button Grid.Row="3" Grid.Column="1" Content="0" Tag="0" Click="OnInputButtonClick" />
+                    <Button Grid.Row="3" Grid.Column="2" Content="." Tag="." Click="OnInputButtonClick" />
+
+                    <Button x:Name="ClearButton"
+                            Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="3"
+                            Content="AC"
+                            Background="#D9DDE4"
+                            Tag="AC"
+                            Click="OnInputButtonClick" />
+
+                    <Button x:Name="BackspaceButton"
+                            Grid.Row="2"
+                            Grid.RowSpan="2"
+                            Grid.Column="3"
+                            Content="⌫"
+                            Background="#D9DDE4"
+                            Tag="BACK"
+                            Click="OnInputButtonClick" />
+                </Grid>
+
+                <TextBlock x:Name="StatusTextBlock"
+                           Grid.RowSpan="3"
+                           IsVisible="False"
+                           Text="Loading"
+                           Foreground="#5E6677"
+                           FontSize="15"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>
