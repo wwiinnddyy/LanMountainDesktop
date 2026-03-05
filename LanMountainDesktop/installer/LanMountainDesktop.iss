@@ -48,7 +48,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "startup"; Description: "Launch LanMountainDesktop when you sign in to Windows"; GroupDescription: "{cm:AdditionalTasks}"; Flags: unchecked
+Name: "startup"; Description: "Launch LanMountainDesktop when you sign in to Windows"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
