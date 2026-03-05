@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="420"
+             d:DesignHeight="210"
+             x:Class="LanMountainDesktop.Views.Components.WorldClockWidget">
+
+    <Border x:Name="RootBorder"
+            Background="#F4F5F7"
+            BorderBrush="#16000000"
+            BorderThickness="1"
+            CornerRadius="26"
+            ClipToBounds="True"
+            Padding="10,8">
+        <Grid x:Name="ClockHostGrid"
+              ColumnDefinitions="*,*,*,*"
+              ColumnSpacing="8" />
+    </Border>
+</UserControl>

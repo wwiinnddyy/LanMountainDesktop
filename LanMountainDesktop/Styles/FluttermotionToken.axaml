@@ -1,0 +1,12 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <x:TimeSpan x:Key="FluttermotionToken.Duration.Fast">0:0:0.12</x:TimeSpan>
+        <x:TimeSpan x:Key="FluttermotionToken.Duration.Standard">0:0:0.16</x:TimeSpan>
+        <x:TimeSpan x:Key="FluttermotionToken.Duration.Slow">0:0:0.20</x:TimeSpan>
+        <x:TimeSpan x:Key="FluttermotionToken.Duration.Page">0:0:0.24</x:TimeSpan>
+        <x:TimeSpan x:Key="FluttermotionToken.Duration.Intro">0:0:0.32</x:TimeSpan>
+
+        <x:Double x:Key="FluttermotionToken.BackdropBlurRadiusStrong">30</x:Double>
+    </Styles.Resources>
+</Styles>

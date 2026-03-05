@@ -25,9 +25,9 @@
         <Setter Property="Padding" Value="16,10" />
         <Setter Property="Transitions">
             <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
-                <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
-                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
             </Transitions>
         </Setter>
     </Style>
@@ -150,7 +150,7 @@
         <Setter Property="BoxShadow" Value="0 12 32 #33000000" />
         <Setter Property="Transitions">
             <Transitions>
-                <ThicknessTransition Property="Padding" Duration="0:0:0.2" Easing="QuarticEaseOut" />
+                <ThicknessTransition Property="Padding" Duration="{StaticResource FluttermotionToken.Duration.Slow}" Easing="QuarticEaseOut" />
             </Transitions>
         </Setter>
     </Style>

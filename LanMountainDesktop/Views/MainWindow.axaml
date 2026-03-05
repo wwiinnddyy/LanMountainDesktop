@@ -67,7 +67,7 @@
               VerticalAlignment="Stretch">
             <Grid.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.24" />
+                    <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Page}" />
                 </Transitions>
             </Grid.Transitions>
 
@@ -109,7 +109,7 @@
                                         <TranslateTransform>
                                             <TranslateTransform.Transitions>
                                                 <Transitions>
-                                                    <DoubleTransition Property="X" Duration="0:0:0.24" />
+                                                    <DoubleTransition Property="X" Duration="{StaticResource FluttermotionToken.Duration.Page}" />
                                                 </Transitions>
                                             </TranslateTransform.Transitions>
                                         </TranslateTransform>
@@ -349,7 +349,7 @@
               VerticalAlignment="Stretch">
             <Grid.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.24" />
+                    <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Page}" />
                 </Transitions>
             </Grid.Transitions>
 
@@ -365,7 +365,7 @@
                     <TranslateTransform Y="30">
                         <TranslateTransform.Transitions>
                             <Transitions>
-                                <DoubleTransition Property="Y" Duration="0:0:0.24" />
+                                <DoubleTransition Property="Y" Duration="{StaticResource FluttermotionToken.Duration.Page}" />
                             </Transitions>
                         </TranslateTransform.Transitions>
                     </TranslateTransform>
@@ -1471,7 +1471,7 @@
                 PointerReleased="OnComponentLibraryWindowPointerReleased">
             <Border.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                    <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Slow}" />
                 </Transitions>
             </Border.Transitions>
 
@@ -1582,7 +1582,7 @@
                                                 <TranslateTransform>
                                                     <TranslateTransform.Transitions>
                                                         <Transitions>
-                                                            <DoubleTransition Property="X" Duration="0:0:0.22" />
+                                                            <DoubleTransition Property="X" Duration="{StaticResource FluttermotionToken.Duration.Page}" />
                                                         </Transitions>
                                                     </TranslateTransform.Transitions>
                                                 </TranslateTransform>

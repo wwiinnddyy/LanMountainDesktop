@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="560"
+             d:DesignHeight="300"
+             x:Class="LanMountainDesktop.Views.Components.AnalogClockWidgetSettingsWindow">
+    <Border Background="{DynamicResource AdaptiveBackgroundBrush}"
+            Padding="16">
+        <Grid RowDefinitions="Auto,Auto,*"
+              RowSpacing="10">
+            <TextBlock x:Name="TitleTextBlock"
+                       Text="时钟设置"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+
+            <TextBlock x:Name="DescriptionTextBlock"
+                       Grid.Row="1"
+                       Text="为单时钟选择时区。"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+
+            <ScrollViewer Grid.Row="2"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="10"
+                            Margin="0,0,6,0">
+                    <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="12">
+                        <StackPanel Spacing="6">
+                            <TextBlock x:Name="TimeZoneLabelTextBlock"
+                                       Text="时区"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                            <ComboBox x:Name="TimeZoneComboBox"
+                                      HorizontalAlignment="Stretch"
+                                      MinWidth="0"
+                                      SelectionChanged="OnTimeZoneSelectionChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="12">
+                        <StackPanel Spacing="6">
+                            <TextBlock x:Name="SecondHandModeLabelTextBlock"
+                                       Text="秒针方式"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="12">
+                                <RadioButton x:Name="SecondHandTickRadioButton"
+                                             GroupName="desktop_clock_second_mode"
+                                             Content="跳针"
+                                             Checked="OnSecondHandModeChanged" />
+                                <RadioButton x:Name="SecondHandSweepRadioButton"
+                                             GroupName="desktop_clock_second_mode"
+                                             Content="扫针"
+                                             Checked="OnSecondHandModeChanged" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</UserControl>

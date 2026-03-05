@@ -110,7 +110,7 @@ public class PanelIntroAnimationBehavior
         var index = 0;
         var timer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = UiMotionTokens.StaggerStepInterval
+            Interval = FluttermotionToken.StaggerStepInterval
         };
         timer.Tick += (_, _) =>
         {

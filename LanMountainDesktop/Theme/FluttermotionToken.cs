@@ -2,7 +2,7 @@ using System;
 
 namespace LanMountainDesktop.Theme;
 
-public static class UiMotionTokens
+public static class FluttermotionToken
 {
     public static readonly TimeSpan Fast = TimeSpan.FromMilliseconds(120);
     public static readonly TimeSpan Standard = TimeSpan.FromMilliseconds(160);

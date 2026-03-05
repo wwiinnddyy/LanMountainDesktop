@@ -90,7 +90,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
 
     private readonly DispatcherTimer _backgroundAnimationTimer = new()
     {
-        Interval = UiMotionTokens.WeatherAnimationFrameInterval
+        Interval = FluttermotionToken.WeatherAnimationFrameInterval
     };
 
     private readonly AppSettingsService _settingsService = new();

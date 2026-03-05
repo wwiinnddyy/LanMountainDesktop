@@ -135,6 +135,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new WeatherClockWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopWorldClock,
+                    "component.world_clock",
+                    () => new WorldClockWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.30, 10, 24)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopTimer,
                     "component.desktop_timer",
                     () => new TimerWidget(),

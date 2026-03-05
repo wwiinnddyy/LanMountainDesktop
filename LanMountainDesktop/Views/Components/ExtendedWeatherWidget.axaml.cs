@@ -20,7 +20,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
 
     private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromMinutes(12) };
-    private readonly DispatcherTimer _animationTimer = new() { Interval = UiMotionTokens.WeatherAnimationFrameInterval };
+    private readonly DispatcherTimer _animationTimer = new() { Interval = FluttermotionToken.WeatherAnimationFrameInterval };
     private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
     private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
     private readonly AppSettingsService _settingsService = new();

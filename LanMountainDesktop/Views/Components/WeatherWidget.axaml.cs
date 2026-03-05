@@ -84,7 +84,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
 
     private readonly DispatcherTimer _backgroundAnimationTimer = new()
     {
-        Interval = UiMotionTokens.WeatherAnimationFrameInterval
+        Interval = FluttermotionToken.WeatherAnimationFrameInterval
     };
 
     private readonly AppSettingsService _settingsService = new();

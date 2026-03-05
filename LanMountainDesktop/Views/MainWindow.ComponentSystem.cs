@@ -409,7 +409,7 @@ public partial class MainWindow
             {
                 OpenSettingsPage();
             }
-        }, UiMotionTokens.Slow);
+        }, FluttermotionToken.Slow);
     }
 
     private void InitializeDesktopComponentDragHandlers()
@@ -701,9 +701,21 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopClock)
+        {
+            OpenDesktopClockComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopClassSchedule)
         {
             OpenClassScheduleComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopWorldClock)
+        {
+            OpenWorldClockComponentSettings();
             return;
         }
 
@@ -744,6 +756,38 @@ public partial class MainWindow
 
         var settingsContent = new ClassScheduleSettingsWindow();
         settingsContent.SettingsChanged += OnClassScheduleSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenDesktopClockComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new AnalogClockWidgetSettingsWindow();
+        settingsContent.SettingsChanged += OnDesktopClockSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenWorldClockComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new WorldClockWidgetSettingsWindow();
+        settingsContent.SettingsChanged += OnWorldClockSettingsChanged;
         ComponentSettingsContentHost.Content = settingsContent;
 
         ComponentSettingsWindow.IsVisible = true;
@@ -796,6 +840,30 @@ public partial class MainWindow
         }
     }
 
+    private void OnDesktopClockSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is AnalogClockWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+
+        PersistSettings();
+    }
+
     private void OnStudyEnvironmentSettingsChanged(object? sender, EventArgs e)
     {
         _ = sender;
@@ -839,6 +907,30 @@ public partial class MainWindow
         PersistSettings();
     }
 
+    private void OnWorldClockSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is WorldClockWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+
+        PersistSettings();
+    }
+
     private void CloseComponentSettingsWindow()
     {
         if (ComponentSettingsWindow is null)
@@ -851,6 +943,11 @@ public partial class MainWindow
             classScheduleSettingsWindow.SettingsChanged -= OnClassScheduleSettingsChanged;
         }
 
+        if (ComponentSettingsContentHost?.Content is AnalogClockWidgetSettingsWindow analogClockSettingsWindow)
+        {
+            analogClockSettingsWindow.SettingsChanged -= OnDesktopClockSettingsChanged;
+        }
+
         if (ComponentSettingsContentHost?.Content is StudyEnvironmentWidgetSettingsWindow studyEnvironmentSettingsWindow)
         {
             studyEnvironmentSettingsWindow.SettingsChanged -= OnStudyEnvironmentSettingsChanged;
@@ -859,6 +956,11 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is DailyArtworkSettingsWindow dailyArtworkSettingsWindow)
         {
             dailyArtworkSettingsWindow.SettingsChanged -= OnDailyArtworkSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is WorldClockWidgetSettingsWindow worldClockSettingsWindow)
+        {
+            worldClockSettingsWindow.SettingsChanged -= OnWorldClockSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;
@@ -873,7 +975,7 @@ public partial class MainWindow
             {
                 ComponentSettingsContentHost.Content = null;
             }
-        }, UiMotionTokens.Slow);
+        }, FluttermotionToken.Slow);
     }
 
     private void AddDesktopPage()
@@ -1267,6 +1369,14 @@ public partial class MainWindow
         if (string.Equals(componentId, BuiltInComponentIds.DesktopStudyNoiseCurve, StringComparison.OrdinalIgnoreCase))
         {
             // Keep noise curve widget in a 2:1 ratio with minimum 4x2.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep world clock widget at 2:1 ratio: 4x2, 6x3, 8x4...
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));

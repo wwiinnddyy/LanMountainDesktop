@@ -86,7 +86,7 @@
                            Opacity="0.62"
                            Stretch="UniformToFill">
                         <Image.Effect>
-                            <BlurEffect Radius="{DynamicResource MotionBackdropBlurRadiusStrong}" />
+                            <BlurEffect Radius="{DynamicResource FluttermotionToken.BackdropBlurRadiusStrong}" />
                         </Image.Effect>
                     </Image>
                 </Border>

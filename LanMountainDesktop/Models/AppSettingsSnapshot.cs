@@ -80,6 +80,18 @@ public sealed class AppSettingsSnapshot
 
     public bool StudyEnvironmentShowDbfs { get; set; }
 
+    public string DesktopClockTimeZoneId { get; set; } = "China Standard Time";
+    public string DesktopClockSecondHandMode { get; set; } = "Tick";
+
+    public List<string> WorldClockTimeZoneIds { get; set; } =
+    [
+        "China Standard Time",
+        "GMT Standard Time",
+        "AUS Eastern Standard Time",
+        "Eastern Standard Time"
+    ];
+    public string WorldClockSecondHandMode { get; set; } = "Tick";
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();
@@ -134,6 +146,10 @@ public sealed class AppSettingsSnapshot
             }
         }
         clone.ImportedClassSchedules = schedules;
+
+        clone.WorldClockTimeZoneIds = WorldClockTimeZoneIds is { Count: > 0 }
+            ? new List<string>(WorldClockTimeZoneIds)
+            : [];
 
         return clone;
     }

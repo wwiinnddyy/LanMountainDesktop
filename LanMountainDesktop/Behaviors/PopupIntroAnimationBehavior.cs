@@ -10,7 +10,7 @@ namespace LanMountainDesktop.Behaviors;
 
 public class PopupIntroAnimationBehavior
 {
-    private static readonly Easing StandardEasing = Easing.Parse(UiMotionTokens.StandardBezier);
+    private static readonly Easing StandardEasing = Easing.Parse(FluttermotionToken.StandardBezier);
 
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<PopupIntroAnimationBehavior, Control, bool>("IsEnabled");
@@ -97,14 +97,14 @@ public class PopupIntroAnimationBehavior
 
         var opacityAnimation = compositor.CreateScalarKeyFrameAnimation();
         opacityAnimation.Target = nameof(compositionVisual.Opacity);
-        opacityAnimation.Duration = UiMotionTokens.Standard;
+        opacityAnimation.Duration = FluttermotionToken.Standard;
         opacityAnimation.InsertKeyFrame(0f, 0f);
         opacityAnimation.InsertKeyFrame(1f, 1f, StandardEasing);
         compositionVisual.StartAnimation(nameof(compositionVisual.Opacity), opacityAnimation);
 
         var scaleAnimation = compositor.CreateVector3DKeyFrameAnimation();
         scaleAnimation.Target = nameof(compositionVisual.Scale);
-        scaleAnimation.Duration = UiMotionTokens.Standard;
+        scaleAnimation.Duration = FluttermotionToken.Standard;
         scaleAnimation.InsertKeyFrame(0f, compositionVisual.Scale with { X = 0.94, Y = 0.94 });
         scaleAnimation.InsertKeyFrame(1f, compositionVisual.Scale with { X = 1, Y = 1 }, StandardEasing);
         compositionVisual.StartAnimation(nameof(compositionVisual.Scale), scaleAnimation);

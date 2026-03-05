@@ -21,7 +21,7 @@
             </Setter>
             <Style Selector="^[(behaviors|PanelIntroAnimationBehavior.IsAnimationPlayed)=True]">
                 <Style.Animations>
-                    <Animation Duration="0:0:0.32"
+                    <Animation Duration="{StaticResource FluttermotionToken.Duration.Intro}"
                                FillMode="Both"
                                Easing="0.22,1,0.36,1">
                         <KeyFrame Cue="0%">
@@ -53,9 +53,9 @@
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.16" Easing="0.22,1,0.36,1" />
-                <BrushTransition Property="BorderBrush" Duration="0:0:0.16" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="0.22,1,0.36,1" />
+                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
+                <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
             </Transitions>
         </Setter>
     </Style>
@@ -74,8 +74,8 @@
     <Style Selector="Grid.settings-scope ComboBox">
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="0:0:0.12" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="0.22,1,0.36,1" />
+                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
             </Transitions>
         </Setter>
     </Style>
@@ -87,8 +87,8 @@
     <Style Selector="Grid.settings-scope ToggleSwitch">
         <Setter Property="Transitions">
             <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="0.22,1,0.36,1" />
+                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
             </Transitions>
         </Setter>
     </Style>

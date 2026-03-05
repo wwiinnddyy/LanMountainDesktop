@@ -88,7 +88,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
     private readonly DispatcherTimer _backgroundAnimationTimer = new()
     {
-        Interval = UiMotionTokens.WeatherAnimationFrameInterval
+        Interval = FluttermotionToken.WeatherAnimationFrameInterval
     };
 
     private readonly AppSettingsService _settingsService = new();

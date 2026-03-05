@@ -5,6 +5,7 @@ public static class BuiltInComponentIds
     public const string Clock = "Clock";
     public const string DesktopClock = "DesktopClock";
     public const string DesktopWeatherClock = "DesktopWeatherClock";
+    public const string DesktopWorldClock = "DesktopWorldClock";
     public const string DesktopTimer = "DesktopTimer";
     public const string DesktopWeather = "DesktopWeather";
     public const string DesktopHourlyWeather = "DesktopHourlyWeather";
