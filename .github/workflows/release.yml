@@ -279,14 +279,14 @@ jobs:
           fi
           
           # Create control file (NOTE: No leading spaces in control file)
-          cat > "build-deb/DEBIAN/control" << EOF
-Package: $package_name
-Version: $package_version
-Architecture: $arch
-Maintainer: LanMountain Team <dev@example.com>
-Description: LanMountain Desktop Application
- A desktop application for LanMountain.
-EOF
+          {
+            printf '%s\n' "Package: $package_name"
+            printf '%s\n' "Version: $package_version"
+            printf '%s\n' "Architecture: $arch"
+            printf '%s\n' "Maintainer: LanMountain Team <dev@example.com>"
+            printf '%s\n' "Description: LanMountain Desktop Application"
+            printf '%s\n' " A desktop application for LanMountain."
+          } > "build-deb/DEBIAN/control"
           
           # Set proper permissions
           chmod 755 "build-deb/usr/local/bin/LanMountainDesktop" || chmod 755 "build-deb/usr/local/bin"/*
@@ -386,27 +386,27 @@ EOF
             exit 1
           fi
 
-          # Create Info.plist - NOTE: Using unquoted EOF to allow variable expansion
-          cat > "${app_name}.app/Contents/Info.plist" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleExecutable</key>
-  <string>LanMountainDesktop</string>
-  <key>CFBundleName</key>
-  <string>LanMountain Desktop</string>
-  <key>CFBundleVersion</key>
-  <string>$version</string>
-  <key>CFBundleShortVersionString</key>
-  <string>$version</string>
-  <key>CFBundleIdentifier</key>
-  <string>com.lanmountain.desktop</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-</dict>
-</plist>
-EOF
+          # Create Info.plist
+          {
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>'
+            printf '%s\n' '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+            printf '%s\n' '<plist version="1.0">'
+            printf '%s\n' '<dict>'
+            printf '%s\n' '  <key>CFBundleExecutable</key>'
+            printf '%s\n' '  <string>LanMountainDesktop</string>'
+            printf '%s\n' '  <key>CFBundleName</key>'
+            printf '%s\n' '  <string>LanMountain Desktop</string>'
+            printf '%s\n' '  <key>CFBundleVersion</key>'
+            printf '%s\n' "  <string>$version</string>"
+            printf '%s\n' '  <key>CFBundleShortVersionString</key>'
+            printf '%s\n' "  <string>$version</string>"
+            printf '%s\n' '  <key>CFBundleIdentifier</key>'
+            printf '%s\n' '  <string>com.lanmountain.desktop</string>'
+            printf '%s\n' '  <key>CFBundlePackageType</key>'
+            printf '%s\n' '  <string>APPL</string>'
+            printf '%s\n' '</dict>'
+            printf '%s\n' '</plist>'
+          } > "${app_name}.app/Contents/Info.plist"
           
           # Create DMG
           mkdir -p dmg-temp
