@@ -98,13 +98,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             Math.Clamp(14 * scale, 8, 22));
 
         DateInfoStack.Margin = new Thickness(
-            Math.Clamp(22 * scale, 10, 36),
+            Math.Clamp(18 * scale, 8, 30),
             0,
             0,
-            Math.Clamp(20 * scale, 10, 34));
+            Math.Clamp(16 * scale, 8, 26));
         DateInfoStack.Spacing = Math.Clamp(2 * scale, 1, 6);
-
-        ImageBottomShade.Height = Math.Clamp(132 * scale, 64, 182);
 
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 10, 24);
 
@@ -387,28 +385,28 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var leftPanelWidth = Math.Max(84, totalWidth - rightPanelWidth);
         var leftContentWidth = Math.Max(52, leftPanelWidth - DateInfoStack.Margin.Left - 10);
 
-        var dateBase = Math.Clamp(52 * scale, 18, 72);
+        var dateBase = Math.Clamp(44 * scale, 16, 62);
         DateTextBlock.FontSize = FitFontSize(
             DateTextBlock.Text,
             leftContentWidth,
-            Math.Max(22, totalHeight * 0.22),
+            Math.Max(18, totalHeight * 0.20),
             maxLines: 1,
-            minFontSize: Math.Max(14, dateBase * 0.70),
+            minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.02);
-        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.02;
+            lineHeightFactor: 1.00);
+        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.00;
 
         WeekdayTextBlock.FontSize = FitFontSize(
             WeekdayTextBlock.Text,
             leftContentWidth,
-            Math.Max(22, totalHeight * 0.24),
+            Math.Max(18, totalHeight * 0.21),
             maxLines: 1,
-            minFontSize: Math.Max(14, dateBase * 0.70),
+            minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.03);
-        WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.03;
+            lineHeightFactor: 1.00);
+        WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.00;
 
         var titleBase = Math.Clamp(44 * scale, 16, 58);
         PaintingTitleTextBlock.MaxWidth = rightContentWidth;

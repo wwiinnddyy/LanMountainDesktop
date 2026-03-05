@@ -36,26 +36,24 @@ QODANA_ENDPOINT=https://qodana.cloud
 ```
 
 ### 3. Release & Publish (`release.yml`)
-**Trigger:** Push git tags (v1.0.0, release-1.0.0), or manual workflow dispatch
+**Trigger:** Push git tags (`v*`, e.g. `v1.0.0`), or manual workflow dispatch
 
 **What it does:**
-- Builds for **Windows** (x64, x86) - self-contained executables
-- Builds for **Linux** (x64) - tar.gz packages
-- Builds for **macOS** (x64, arm64) - universal support
+- Builds **Windows** installers (x64, x86) via Inno Setup
+- Builds **Linux** packages (x64) as `.deb`
+- Builds **macOS** packages (x64, arm64) as `.dmg`
 - Publishes optimized release builds for all platforms
-- Generates GitHub Release with all platform artifacts
+- Generates GitHub Release with installer/package assets
 - Supports pre-release versions
 
 **Supported Platforms:**
 | Platform | Architectures | Output Format | Status |
 |----------|---------------|---------------|--------|
-| Windows | x64, x86 | .zip | ✅ Full support |
-| Linux | x64 | .tar.gz | ✅ Full support |
-| macOS | x64, arm64 (Apple Silicon) | .tar.gz | ✅ Full support |
+| Windows | x64, x86 | .exe (installer) | ✅ Full support |
+| Linux | x64 | .deb | ✅ Full support |
+| macOS | x64, arm64 (Apple Silicon) | .dmg | ✅ Full support |
 
-**Build Scripts:**
-- Windows: Uses PowerShell (`LanMountainDesktop\scripts\package.ps1`)
-- Linux/macOS: Uses Bash (`scripts/build.sh`)
+> Note: GitHub Actions artifacts are downloaded as zip containers. The actual packaged files inside are `.exe`, `.deb`, and `.dmg`.
 
 **Usage:**
 
@@ -66,13 +64,9 @@ git push origin v1.0.0
 # Automatically triggers Windows + Linux + macOS builds
 ```
 
-*Manual trigger with selective platforms:*
+*Manual trigger:*
 Go to GitHub > Actions > Release & Publish > Run workflow
-- Specify version: `1.0.0`
-- Toggle build targets as needed:
-  - ✅ Build Windows (x64/x86)
-  - ✅ Build Linux (x64)
-  - ✅ Build macOS (x64/arm64)
+- Specify release tag: `v1.0.0` (or `1.0.0`, workflow will normalize to `v1.0.0`)
 - Check pre-release option if needed
 
 ### 4. Issue Management (`issue-management.yml`)

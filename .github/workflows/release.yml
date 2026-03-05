@@ -26,19 +26,30 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      checkout_ref: ${{ steps.version.outputs.checkout_ref }}
     
     steps:
       - name: Get release info
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            TAG=${GITHUB_REF#refs/tags/}
+            TAG="${GITHUB_REF#refs/tags/}"
+            CHECKOUT_REF="${GITHUB_REF}"
           else
-            TAG=${{ github.event.inputs.tag }}
+            RAW_TAG="${{ github.event.inputs.tag }}"
+            if [[ "${RAW_TAG}" == refs/tags/* ]]; then
+              TAG="${RAW_TAG#refs/tags/}"
+            elif [[ "${RAW_TAG}" == v* ]]; then
+              TAG="${RAW_TAG}"
+            else
+              TAG="v${RAW_TAG}"
+            fi
+            CHECKOUT_REF="${GITHUB_SHA}"
           fi
-          VERSION=${TAG#v}
+          VERSION="${TAG#v}"
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "checkout_ref=${CHECKOUT_REF}" >> $GITHUB_OUTPUT
 
   build-windows:
     needs: prepare
@@ -54,7 +65,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -141,20 +152,26 @@ jobs:
           # Build installer with iscc.exe
           Write-Host "Building installer for Windows $arch with version $version..."
           
-          $compileCmd = @(
-            "`"$isccPath`"",
+          $publishDir = (Resolve-Path $publishDir).Path
+          $outputDir = (Resolve-Path $outputDir).Path
+          $installerScript = (Resolve-Path $installerScript).Path
+
+          $compileArgs = @(
             "/DMyAppVersion=$version",
-            "/DPublishDir=..\$publishDir",
-            "/DMyOutputDir=..\$outputDir",
+            "/DPublishDir=$publishDir",
+            "/DMyOutputDir=$outputDir",
             "/DMyAppArch=$arch",
-            "`"$installerScript`""
-          ) -join " "
+            $installerScript
+          )
           
-          Write-Host "Compile command: $compileCmd"
+          Write-Host "Compile command: `"$isccPath`" $($compileArgs -join ' ')"
           
           # Execute the compiler
-          $output = Invoke-Expression $compileCmd 2>&1
-          Write-Host $output
+          & $isccPath @compileArgs
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Inno Setup compiler exited with code $LASTEXITCODE"
+            exit 1
+          }
           
           # Check if build was successful
           $installerFile = Get-ChildItem -Path $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -172,6 +189,7 @@ jobs:
         with:
           name: release-windows-${{ matrix.arch }}
           path: build-installer/*.exe
+          if-no-files-found: error
           retention-days: 30
 
   build-linux:
@@ -185,7 +203,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
 
       - name: Install dependencies
         run: |
@@ -287,6 +305,7 @@ EOF
         with:
           name: release-linux
           path: "*.deb"
+          if-no-files-found: error
           retention-days: 30
 
   build-macos:
@@ -303,7 +322,7 @@ EOF
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -409,12 +428,12 @@ EOF
         with:
           name: release-macos-${{ matrix.arch }}
           path: "*.dmg"
+          if-no-files-found: error
           retention-days: 30
 
   github-release:
     needs: [ prepare, build-windows, build-linux, build-macos ]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
     
@@ -446,12 +465,20 @@ EOF
           ls -lh release-files/ || echo "⚠️ No files found in release-files"
           echo ""
           echo "📋 Total files:"
-          find release-files -type f | wc -l
+          file_count=$(find release-files -type f | wc -l)
+          echo "$file_count"
+          if [ "$file_count" -eq 0 ]; then
+            echo "Error: No installer/package files found for release"
+            exit 1
+          fi
 
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref_name }}
+          tag: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          commit: ${{ github.sha }}
+          allowUpdates: true
           draft: false
           prerelease: ${{ github.event.inputs.is_prerelease == 'true' }}
           artifacts: "release-files/**"
