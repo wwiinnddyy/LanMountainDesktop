@@ -754,6 +754,12 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopIfengNews)
+        {
+            OpenIfengNewsComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord ||
             placement.ComponentId == BuiltInComponentIds.DesktopDailyWord2x2)
         {
@@ -764,6 +770,12 @@ public partial class MainWindow
         if (placement.ComponentId == BuiltInComponentIds.DesktopBilibiliHotSearch)
         {
             OpenBilibiliHotSearchComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopBaiduHotSearch)
+        {
+            OpenBaiduHotSearchComponentSettings();
             return;
         }
 
@@ -917,6 +929,22 @@ public partial class MainWindow
         ComponentSettingsWindow.Opacity = 1;
     }
 
+    private void OpenIfengNewsComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new IfengNewsSettingsWindow();
+        settingsContent.SettingsChanged += OnIfengNewsSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
     private void OpenDailyWordComponentSettings()
     {
         if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
@@ -942,6 +970,22 @@ public partial class MainWindow
 
         var settingsContent = new BilibiliHotSearchSettingsWindow();
         settingsContent.SettingsChanged += OnBilibiliHotSearchSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenBaiduHotSearchComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new BaiduHotSearchSettingsWindow();
+        settingsContent.SettingsChanged += OnBaiduHotSearchSettingsChanged;
         ComponentSettingsContentHost.Content = settingsContent;
 
         ComponentSettingsWindow.IsVisible = true;
@@ -1118,6 +1162,28 @@ public partial class MainWindow
         }
     }
 
+    private void OnIfengNewsSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is IfengNewsWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+    }
+
     private void OnDailyWordSettingsChanged(object? sender, EventArgs e)
     {
         _ = sender;
@@ -1160,6 +1226,28 @@ public partial class MainWindow
                 }
 
                 if (TryGetContentHost(host)?.Child is BilibiliHotSearchWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+    }
+
+    private void OnBaiduHotSearchSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is BaiduHotSearchWidget widget)
                 {
                     widget.RefreshFromSettings();
                 }
@@ -1231,6 +1319,11 @@ public partial class MainWindow
             cnrDailyNewsSettingsWindow.SettingsChanged -= OnCnrDailyNewsSettingsChanged;
         }
 
+        if (ComponentSettingsContentHost?.Content is IfengNewsSettingsWindow ifengNewsSettingsWindow)
+        {
+            ifengNewsSettingsWindow.SettingsChanged -= OnIfengNewsSettingsChanged;
+        }
+
         if (ComponentSettingsContentHost?.Content is DailyWordSettingsWindow dailyWordSettingsWindow)
         {
             dailyWordSettingsWindow.SettingsChanged -= OnDailyWordSettingsChanged;
@@ -1239,6 +1332,11 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is BilibiliHotSearchSettingsWindow bilibiliHotSearchSettingsWindow)
         {
             bilibiliHotSearchSettingsWindow.SettingsChanged -= OnBilibiliHotSearchSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is BaiduHotSearchSettingsWindow baiduHotSearchSettingsWindow)
+        {
+            baiduHotSearchSettingsWindow.SettingsChanged -= OnBaiduHotSearchSettingsChanged;
         }
 
         if (ComponentSettingsContentHost?.Content is Stcn24ForumSettingsWindow stcn24ForumSettingsWindow)
@@ -1657,9 +1755,25 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopIfengNews, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep iFeng news widget square with a minimum footprint of 4x4.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 1, HeightUnit: 1, MinScale: 4));
+        }
+
         if (string.Equals(componentId, BuiltInComponentIds.DesktopBilibiliHotSearch, StringComparison.OrdinalIgnoreCase))
         {
             // Keep Bilibili hot search widget at a 2:1 ratio: 4x2, 6x3, 8x4...
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopBaiduHotSearch, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep Baidu hot search widget at a 2:1 ratio: 4x2, 6x3, 8x4...
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));

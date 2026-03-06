@@ -29,12 +29,23 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private static readonly Regex RssDescriptionImageRegex = new(
         "<img[^>]+src=\"(?<url>[^\"]+)\"",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex BaiduHotSearchHeatRegex = new(
+        "^(?<keyword>.+?)\\s*热度[:：]\\s*(?<heat>\\d+)\\s*$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex BaiduTopBoardDataRegex = new(
+        "<!--\\s*s-data:(?<json>\\{.*?\\})\\s*-->",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex IfengNewsStreamRegex = new(
+        "\"newsstream\"\\s*:\\s*(?<json>\\[.*?\\])\\s*,\\s*\"cooperation\"",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
     private static readonly Regex HtmlTagRegex = new("<.*?>", RegexOptions.Compiled | RegexOptions.Singleline);
 
     private sealed record DailyArtworkCacheEntry(DailyArtworkSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyPoetryCacheEntry(DailyPoetrySnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyNewsCacheEntry(DailyNewsSnapshot Snapshot, DateTimeOffset ExpireAt);
+    private sealed record IfengNewsCacheEntry(DailyNewsSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record BilibiliHotSearchCacheEntry(BilibiliHotSearchSnapshot Snapshot, DateTimeOffset ExpireAt);
+    private sealed record BaiduHotSearchCacheEntry(BaiduHotSearchSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyWordCacheEntry(DailyWordSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record Stcn24ForumPostsCacheEntry(Stcn24ForumPostsSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record ExchangeRateTableCacheEntry(
@@ -59,7 +70,11 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         new(StringComparer.OrdinalIgnoreCase);
     private DailyPoetryCacheEntry? _dailyPoetryCache;
     private DailyNewsCacheEntry? _dailyNewsCache;
+    private readonly Dictionary<string, IfengNewsCacheEntry> _ifengNewsCacheByChannel =
+        new(StringComparer.OrdinalIgnoreCase);
     private BilibiliHotSearchCacheEntry? _bilibiliHotSearchCache;
+    private readonly Dictionary<string, BaiduHotSearchCacheEntry> _baiduHotSearchCacheBySource =
+        new(StringComparer.OrdinalIgnoreCase);
     private DailyWordCacheEntry? _dailyWordCache;
     private readonly Dictionary<string, Stcn24ForumPostsCacheEntry> _stcn24ForumPostsCacheBySource =
         new(StringComparer.OrdinalIgnoreCase);
@@ -107,7 +122,9 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _dailyArtworkCacheBySource.Clear();
             _dailyPoetryCache = null;
             _dailyNewsCache = null;
+            _ifengNewsCacheByChannel.Clear();
             _bilibiliHotSearchCache = null;
+            _baiduHotSearchCacheBySource.Clear();
             _dailyWordCache = null;
             _stcn24ForumPostsCacheBySource.Clear();
             _exchangeRateCacheByBaseCurrency.Clear();
@@ -245,6 +262,54 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
+    public async Task<RecommendationQueryResult<DailyNewsSnapshot>> GetIfengNewsAsync(
+        IfengNewsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new IfengNewsQuery();
+        var channelType = IfengNewsChannelTypes.Normalize(normalizedQuery.ChannelType);
+        var targetCount = normalizedQuery.ItemCount.HasValue
+            ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 12)
+            : Math.Clamp(_options.DefaultIfengNewsCount, 1, 12);
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetIfengNewsFromCache(channelType, out var cached) &&
+            cached.Items.Count >= targetCount)
+        {
+            var projectedSnapshot = cached with
+            {
+                Items = cached.Items.Take(targetCount).ToArray()
+            };
+            return RecommendationQueryResult<DailyNewsSnapshot>.Ok(projectedSnapshot);
+        }
+
+        try
+        {
+            var snapshot = await FetchIfengNewsSnapshotAsync(targetCount, channelType, cancellationToken);
+            if (snapshot.Items.Count == 0)
+            {
+                return RecommendationQueryResult<DailyNewsSnapshot>.Fail(
+                    "upstream_empty_result",
+                    "No ifeng news items were returned.");
+            }
+
+            SetIfengNewsCache(channelType, snapshot);
+            return RecommendationQueryResult<DailyNewsSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<DailyNewsSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<DailyNewsSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
+    }
+
     public async Task<RecommendationQueryResult<BilibiliHotSearchSnapshot>> GetBilibiliHotSearchAsync(
         BilibiliHotSearchQuery query,
         CancellationToken cancellationToken = default)
@@ -289,6 +354,54 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         catch (Exception ex)
         {
             return RecommendationQueryResult<BilibiliHotSearchSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
+    }
+
+    public async Task<RecommendationQueryResult<BaiduHotSearchSnapshot>> GetBaiduHotSearchAsync(
+        BaiduHotSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new BaiduHotSearchQuery();
+        var sourceType = BaiduHotSearchSourceTypes.Normalize(normalizedQuery.SourceType);
+        var targetCount = normalizedQuery.ItemCount.HasValue
+            ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 20)
+            : Math.Clamp(_options.DefaultBaiduHotSearchCount, 1, 20);
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetBaiduHotSearchFromCache(sourceType, out var cached) &&
+            cached.Items.Count >= targetCount)
+        {
+            var projectedSnapshot = cached with
+            {
+                Items = cached.Items.Take(targetCount).ToArray()
+            };
+            return RecommendationQueryResult<BaiduHotSearchSnapshot>.Ok(projectedSnapshot);
+        }
+
+        try
+        {
+            var snapshot = await FetchBaiduHotSearchSnapshotAsync(targetCount, sourceType, cancellationToken);
+            if (snapshot.Items.Count == 0)
+            {
+                return RecommendationQueryResult<BaiduHotSearchSnapshot>.Fail(
+                    "upstream_empty_result",
+                    "No Baidu hot search items were returned.");
+            }
+
+            SetBaiduHotSearchCache(sourceType, snapshot);
+            return RecommendationQueryResult<BaiduHotSearchSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<BaiduHotSearchSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<BaiduHotSearchSnapshot>.Fail("upstream_parse_error", ex.Message);
         }
     }
 
@@ -689,6 +802,240 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
+    private bool TryGetIfengNewsFromCache(string channelType, out DailyNewsSnapshot snapshot)
+    {
+        var normalizedChannelType = IfengNewsChannelTypes.Normalize(channelType);
+        lock (_cacheGate)
+        {
+            if (_ifengNewsCacheByChannel.TryGetValue(normalizedChannelType, out var cacheEntry) &&
+                cacheEntry.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                snapshot = cacheEntry.Snapshot;
+                return true;
+            }
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private void SetIfengNewsCache(string channelType, DailyNewsSnapshot snapshot)
+    {
+        var normalizedChannelType = IfengNewsChannelTypes.Normalize(channelType);
+        lock (_cacheGate)
+        {
+            _ifengNewsCacheByChannel[normalizedChannelType] = new IfengNewsCacheEntry(
+                snapshot,
+                DateTimeOffset.UtcNow.Add(_options.CacheDuration));
+        }
+    }
+
+    private async Task<DailyNewsSnapshot> FetchIfengNewsSnapshotAsync(
+        int targetCount,
+        string channelType,
+        CancellationToken cancellationToken)
+    {
+        var safeCount = Math.Clamp(targetCount, 1, 12);
+        var normalizedChannelType = IfengNewsChannelTypes.Normalize(channelType);
+        var candidateLimit = Math.Max(8, safeCount * 3);
+
+        var rssCandidates = new List<DailyNewsItemSnapshot>();
+        foreach (var rssUrl in ResolveIfengNewsRssFeedUrls(normalizedChannelType))
+        {
+            var rssItems = await TryFetchRssNewsItemsAsync(rssUrl, candidateLimit, cancellationToken);
+            if (rssItems.Count == 0)
+            {
+                continue;
+            }
+
+            rssCandidates = rssItems;
+            break;
+        }
+
+        var htmlCandidates = await TryFetchIfengNewsItemsFromHtmlStreamAsync(
+            ResolveIfengNewsListPageUrl(normalizedChannelType),
+            candidateLimit,
+            cancellationToken);
+        var candidates = rssCandidates.Count > 0
+            ? SupplementRssItemsWithHtmlFallback(rssCandidates, htmlCandidates)
+            : htmlCandidates;
+        if (candidates.Count == 0)
+        {
+            return new DailyNewsSnapshot(
+                Provider: "ifeng",
+                Source: ResolveIfengNewsSourceLabel(normalizedChannelType),
+                Items: [],
+                FetchedAt: DateTimeOffset.UtcNow);
+        }
+
+        var hydrateCount = Math.Min(candidates.Count, Math.Max(safeCount * 2, 6));
+        for (var i = 0; i < hydrateCount; i++)
+        {
+            var candidate = candidates[i];
+            if (!string.IsNullOrWhiteSpace(candidate.ImageUrl))
+            {
+                continue;
+            }
+
+            var coverImage = await TryFetchArticleCoverImageAsync(candidate.Url, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(coverImage))
+            {
+                candidates[i] = candidate with { ImageUrl = coverImage };
+            }
+        }
+
+        var ordered = candidates
+            .OrderByDescending(item => TryParseDateTimeOffset(item.PublishTime) ?? DateTimeOffset.MinValue)
+            .ThenByDescending(item => item.Title, StringComparer.OrdinalIgnoreCase)
+            .Take(safeCount)
+            .ToArray();
+
+        return new DailyNewsSnapshot(
+            Provider: "ifeng",
+            Source: ResolveIfengNewsSourceLabel(normalizedChannelType),
+            Items: ordered,
+            FetchedAt: DateTimeOffset.UtcNow);
+    }
+
+    private async Task<List<DailyNewsItemSnapshot>> TryFetchIfengNewsItemsFromHtmlStreamAsync(
+        string listPageUrl,
+        int maxItems,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var html = await FetchTextWithCnrEncodingAsync(
+                listPageUrl,
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                cancellationToken);
+            var streamMatch = IfengNewsStreamRegex.Match(html);
+            if (!streamMatch.Success)
+            {
+                return [];
+            }
+
+            using var document = JsonDocument.Parse(streamMatch.Groups["json"].Value);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var results = new List<DailyNewsItemSnapshot>();
+            var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var limit = Math.Max(1, maxItems);
+            foreach (var node in document.RootElement.EnumerateArray())
+            {
+                if (node.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var title = NormalizeInlineText(ReadString(node, "title"));
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    continue;
+                }
+
+                var link = NormalizeHttpUrl(ReadString(node, "url"));
+                if (string.IsNullOrWhiteSpace(link) || !seenUrls.Add(link))
+                {
+                    continue;
+                }
+
+                var imageUrl = TryExtractIfengThumbnailUrl(node);
+                var publishTime = NormalizeInlineText(ReadString(node, "newsTime"));
+
+                results.Add(new DailyNewsItemSnapshot(
+                    Title: title,
+                    Summary: null,
+                    Url: link,
+                    ImageUrl: imageUrl,
+                    PublishTime: string.IsNullOrWhiteSpace(publishTime) ? null : publishTime));
+                if (results.Count >= limit)
+                {
+                    break;
+                }
+            }
+
+            return results;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static string? TryExtractIfengThumbnailUrl(JsonElement node)
+    {
+        var imagesNode = TryGetNode(node, "thumbnails", "image");
+        if (imagesNode.HasValue && imagesNode.Value.ValueKind == JsonValueKind.Array)
+        {
+            string? candidate = null;
+            foreach (var imageNode in imagesNode.Value.EnumerateArray())
+            {
+                if (imageNode.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var url = NormalizeHttpUrl(ReadString(imageNode, "url"));
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    continue;
+                }
+
+                candidate = url;
+            }
+
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<string> ResolveIfengNewsRssFeedUrls(string channelType)
+    {
+        var normalizedChannelType = IfengNewsChannelTypes.Normalize(channelType);
+        return normalizedChannelType switch
+        {
+            IfengNewsChannelTypes.Mainland => _options.IfengNewsMainlandRssFeedUrls,
+            IfengNewsChannelTypes.Taiwan => _options.IfengNewsTaiwanRssFeedUrls,
+            _ => _options.IfengNewsComprehensiveRssFeedUrls
+        };
+    }
+
+    private string ResolveIfengNewsListPageUrl(string channelType)
+    {
+        var normalizedChannelType = IfengNewsChannelTypes.Normalize(channelType);
+        var url = normalizedChannelType switch
+        {
+            IfengNewsChannelTypes.Mainland => _options.IfengNewsMainlandListPageUrl,
+            IfengNewsChannelTypes.Taiwan => _options.IfengNewsTaiwanListPageUrl,
+            _ => _options.IfengNewsComprehensiveListPageUrl
+        };
+
+        return NormalizeHttpUrl(url)
+               ?? (normalizedChannelType switch
+               {
+                   IfengNewsChannelTypes.Mainland => "https://news.ifeng.com/shanklist/3-35197-/",
+                   IfengNewsChannelTypes.Taiwan => "https://news.ifeng.com/shanklist/3-35199-/",
+                   _ => "https://news.ifeng.com/"
+               });
+    }
+
+    private static string ResolveIfengNewsSourceLabel(string channelType)
+    {
+        return IfengNewsChannelTypes.Normalize(channelType) switch
+        {
+            IfengNewsChannelTypes.Mainland => "凤凰网资讯 · 中国大陆",
+            IfengNewsChannelTypes.Taiwan => "凤凰网资讯 · 台湾",
+            _ => "凤凰网资讯 · 综合"
+        };
+    }
+
     private bool TryGetBilibiliHotSearchFromCache(out BilibiliHotSearchSnapshot snapshot)
     {
         lock (_cacheGate)
@@ -712,6 +1059,215 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 snapshot,
                 DateTimeOffset.UtcNow.Add(_options.CacheDuration));
         }
+    }
+
+    private bool TryGetBaiduHotSearchFromCache(string sourceType, out BaiduHotSearchSnapshot snapshot)
+    {
+        var normalizedSourceType = BaiduHotSearchSourceTypes.Normalize(sourceType);
+        lock (_cacheGate)
+        {
+            if (_baiduHotSearchCacheBySource.TryGetValue(normalizedSourceType, out var cacheEntry) &&
+                cacheEntry.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                snapshot = cacheEntry.Snapshot;
+                return true;
+            }
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private void SetBaiduHotSearchCache(string sourceType, BaiduHotSearchSnapshot snapshot)
+    {
+        var normalizedSourceType = BaiduHotSearchSourceTypes.Normalize(sourceType);
+        lock (_cacheGate)
+        {
+            _baiduHotSearchCacheBySource[normalizedSourceType] = new BaiduHotSearchCacheEntry(
+                snapshot,
+                DateTimeOffset.UtcNow.Add(_options.CacheDuration));
+        }
+    }
+
+    private async Task<BaiduHotSearchSnapshot> FetchBaiduHotSearchSnapshotAsync(
+        int targetCount,
+        string sourceType,
+        CancellationToken cancellationToken)
+    {
+        var safeCount = Math.Clamp(targetCount, 1, 20);
+        var normalizedSourceType = BaiduHotSearchSourceTypes.Normalize(sourceType);
+        var boardUrl = NormalizeHttpUrl(_options.BaiduHotSearchBoardUrl)
+            ?? "https://top.baidu.com/board?tab=realtime";
+
+        var items = string.Equals(
+            normalizedSourceType,
+            BaiduHotSearchSourceTypes.ThirdPartyRss,
+            StringComparison.OrdinalIgnoreCase)
+            ? await FetchBaiduHotSearchItemsFromThirdPartyRssAsync(safeCount, cancellationToken)
+            : await FetchBaiduHotSearchItemsFromOfficialSourceAsync(safeCount, boardUrl, cancellationToken);
+
+        return new BaiduHotSearchSnapshot(
+            Provider: "Baidu",
+            Source: ResolveBaiduHotSearchSourceLabel(normalizedSourceType),
+            BoardUrl: boardUrl,
+            Items: items,
+            FetchedAt: DateTimeOffset.UtcNow);
+    }
+
+    private async Task<IReadOnlyList<BaiduHotSearchItemSnapshot>> FetchBaiduHotSearchItemsFromOfficialSourceAsync(
+        int targetCount,
+        string boardUrl,
+        CancellationToken cancellationToken)
+    {
+        var html = await FetchTextWithCnrEncodingAsync(
+            boardUrl,
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            cancellationToken);
+
+        var sDataMatch = BaiduTopBoardDataRegex.Match(html);
+        if (!sDataMatch.Success)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(sDataMatch.Groups["json"].Value);
+        var root = document.RootElement;
+        var dataNode = TryGetNode(root, "data");
+        if (!dataNode.HasValue || dataNode.Value.ValueKind != JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        var cardsNode = TryGetNode(dataNode.Value, "cards");
+        if (!cardsNode.HasValue || cardsNode.Value.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        JsonElement? hotListNode = null;
+        foreach (var cardNode in cardsNode.Value.EnumerateArray())
+        {
+            if (cardNode.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var component = ReadString(cardNode, "component");
+            if (!string.Equals(component, "hotList", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (cardNode.TryGetProperty("content", out var contentNode) &&
+                contentNode.ValueKind == JsonValueKind.Array)
+            {
+                hotListNode = contentNode;
+                break;
+            }
+        }
+
+        if (!hotListNode.HasValue)
+        {
+            return [];
+        }
+
+        var items = new List<BaiduHotSearchItemSnapshot>(targetCount);
+        var seenTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var itemNode in hotListNode.Value.EnumerateArray())
+        {
+            if (itemNode.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var title = NormalizeInlineText(
+                ReadString(itemNode, "word") ??
+                ReadString(itemNode, "query"));
+            if (string.IsNullOrWhiteSpace(title) || !seenTitles.Add(title))
+            {
+                continue;
+            }
+
+            var targetUrl = NormalizeHttpUrl(
+                ReadString(itemNode, "rawUrl") ??
+                ReadString(itemNode, "url"));
+            if (string.IsNullOrWhiteSpace(targetUrl))
+            {
+                continue;
+            }
+
+            long? heatScore = null;
+            var heatScoreText = ReadString(itemNode, "hotScore");
+            if (long.TryParse(heatScoreText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedHeatScore))
+            {
+                heatScore = parsedHeatScore;
+            }
+
+            items.Add(new BaiduHotSearchItemSnapshot(
+                Title: title,
+                Url: targetUrl,
+                HeatScore: heatScore));
+            if (items.Count >= targetCount)
+            {
+                break;
+            }
+        }
+
+        return items;
+    }
+
+    private async Task<IReadOnlyList<BaiduHotSearchItemSnapshot>> FetchBaiduHotSearchItemsFromThirdPartyRssAsync(
+        int targetCount,
+        CancellationToken cancellationToken)
+    {
+        var requestUrl = string.IsNullOrWhiteSpace(_options.BaiduHotSearchRssFeedUrl)
+            ? "https://rss.aishort.top/?type=baidu"
+            : _options.BaiduHotSearchRssFeedUrl.Trim();
+
+        var rssItems = await TryFetchRssNewsItemsAsync(
+            requestUrl,
+            Math.Max(targetCount * 3, 12),
+            cancellationToken);
+
+        var items = new List<BaiduHotSearchItemSnapshot>(targetCount);
+        var seenTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rssItem in rssItems
+                     .OrderByDescending(item => TryParseDateTimeOffset(item.PublishTime) ?? DateTimeOffset.MinValue))
+        {
+            var (title, heatScore) = ParseBaiduHotSearchTitle(rssItem.Title);
+            if (string.IsNullOrWhiteSpace(title) || !seenTitles.Add(title))
+            {
+                continue;
+            }
+
+            var targetUrl = NormalizeHttpUrl(rssItem.Url);
+            if (string.IsNullOrWhiteSpace(targetUrl))
+            {
+                continue;
+            }
+
+            items.Add(new BaiduHotSearchItemSnapshot(
+                Title: title,
+                Url: targetUrl,
+                HeatScore: heatScore));
+
+            if (items.Count >= targetCount)
+            {
+                break;
+            }
+        }
+
+        return items;
+    }
+
+    private static string ResolveBaiduHotSearchSourceLabel(string sourceType)
+    {
+        return string.Equals(
+            BaiduHotSearchSourceTypes.Normalize(sourceType),
+            BaiduHotSearchSourceTypes.ThirdPartyRss,
+            StringComparison.OrdinalIgnoreCase)
+            ? "百度热搜 · 第三方RSS"
+            : "百度热搜 · 官方";
     }
 
     private async Task<BilibiliHotSearchSnapshot> FetchBilibiliHotSearchSnapshotAsync(
@@ -2373,6 +2929,35 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return long.TryParse(rawValue.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value
             : null;
+    }
+
+    private static (string Title, long? HeatScore) ParseBaiduHotSearchTitle(string? rawTitle)
+    {
+        var normalized = NormalizeInlineText(rawTitle);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return (string.Empty, null);
+        }
+
+        var match = BaiduHotSearchHeatRegex.Match(normalized);
+        if (!match.Success)
+        {
+            return (normalized, null);
+        }
+
+        var title = NormalizeInlineText(match.Groups["keyword"].Value);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            title = normalized;
+        }
+
+        var heatScoreText = match.Groups["heat"].Value;
+        if (long.TryParse(heatScoreText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var heatScore))
+        {
+            return (title, heatScore);
+        }
+
+        return (title, null);
     }
 
     private static string NormalizeInlineText(string? text)

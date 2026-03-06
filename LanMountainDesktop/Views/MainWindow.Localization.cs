@@ -112,6 +112,7 @@ public partial class MainWindow
         SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
         SettingsNavUpdateTextBlock.Text = L("settings.nav.update", "Update");
         SettingsNavLauncherTextBlock.Text = L("settings.nav.launcher", "App Launcher");
+        SettingsNavPluginsTextBlock.Text = L("settings.nav.plugins", "Plugins");
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -261,6 +262,18 @@ public partial class MainWindow
             "settings.launcher.hidden_hint",
             "Right-click an icon in launcher to hide it. Hidden entries appear here.");
         LauncherHiddenItemsEmptyTextBlock.Text = L("settings.launcher.hidden_empty", "No hidden items.");
+
+        PluginSettingsPanelTitleTextBlock.Text = L("settings.plugins.title", "Plugins");
+        PluginSystemSettingsExpander.Header = L("settings.plugins.runtime_header", "Plugin Runtime");
+        PluginSystemSettingsExpander.Description = L(
+            "settings.plugins.runtime_desc",
+            "Manage plugin loading and backend isolation.");
+        PluginSystemDescriptionTextBlock.Text = L(
+            "settings.plugins.runtime_hint",
+            "This page will host installed plugin management, permission review, and sandboxed backend runtime controls.");
+        PluginSystemStatusTextBlock.Text = L(
+            "settings.plugins.runtime_status",
+            "Plugin management UI is not connected yet. Next step is wiring the loader, permissions, and worker isolation state into this panel.");
 
         SettingsNavAboutTextBlock.Text = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");

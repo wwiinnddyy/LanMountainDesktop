@@ -179,10 +179,16 @@ public sealed class ComponentSettingsService
                 WorldClockSecondHandMode = legacy.WorldClockSecondHandMode,
                 CnrDailyNewsAutoRotateEnabled = legacy.CnrDailyNewsAutoRotateEnabled,
                 CnrDailyNewsAutoRotateIntervalMinutes = legacy.CnrDailyNewsAutoRotateIntervalMinutes,
+                IfengNewsAutoRefreshEnabled = legacy.IfengNewsAutoRefreshEnabled,
+                IfengNewsAutoRefreshIntervalMinutes = legacy.IfengNewsAutoRefreshIntervalMinutes,
+                IfengNewsChannelType = legacy.IfengNewsChannelType,
                 DailyWordAutoRefreshEnabled = legacy.DailyWordAutoRefreshEnabled,
                 DailyWordAutoRefreshIntervalMinutes = legacy.DailyWordAutoRefreshIntervalMinutes,
                 BilibiliHotSearchAutoRefreshEnabled = legacy.BilibiliHotSearchAutoRefreshEnabled,
                 BilibiliHotSearchAutoRefreshIntervalMinutes = legacy.BilibiliHotSearchAutoRefreshIntervalMinutes,
+                BaiduHotSearchAutoRefreshEnabled = legacy.BaiduHotSearchAutoRefreshEnabled,
+                BaiduHotSearchAutoRefreshIntervalMinutes = legacy.BaiduHotSearchAutoRefreshIntervalMinutes,
+                BaiduHotSearchSourceType = legacy.BaiduHotSearchSourceType,
                 WeatherAutoRefreshEnabled = legacy.WeatherAutoRefreshEnabled,
                 WeatherAutoRefreshIntervalMinutes = legacy.WeatherAutoRefreshIntervalMinutes,
                 Stcn24ForumAutoRefreshEnabled = legacy.Stcn24ForumAutoRefreshEnabled,
@@ -236,9 +242,14 @@ public sealed class ComponentSettingsService
             .ToList();
         normalized.WorldClockSecondHandMode = ClockSecondHandMode.Normalize(normalized.WorldClockSecondHandMode);
         normalized.CnrDailyNewsAutoRotateIntervalMinutes = NormalizeCnrInterval(normalized.CnrDailyNewsAutoRotateIntervalMinutes);
+        normalized.IfengNewsAutoRefreshIntervalMinutes = NormalizeIfengNewsInterval(normalized.IfengNewsAutoRefreshIntervalMinutes);
+        normalized.IfengNewsChannelType = IfengNewsChannelTypes.Normalize(normalized.IfengNewsChannelType);
         normalized.DailyWordAutoRefreshIntervalMinutes = NormalizeDailyWordInterval(normalized.DailyWordAutoRefreshIntervalMinutes);
         normalized.BilibiliHotSearchAutoRefreshIntervalMinutes = NormalizeBilibiliHotSearchInterval(
             normalized.BilibiliHotSearchAutoRefreshIntervalMinutes);
+        normalized.BaiduHotSearchAutoRefreshIntervalMinutes = NormalizeBaiduHotSearchInterval(
+            normalized.BaiduHotSearchAutoRefreshIntervalMinutes);
+        normalized.BaiduHotSearchSourceType = BaiduHotSearchSourceTypes.Normalize(normalized.BaiduHotSearchSourceType);
         normalized.WeatherAutoRefreshIntervalMinutes = NormalizeWeatherInterval(normalized.WeatherAutoRefreshIntervalMinutes);
         normalized.Stcn24ForumAutoRefreshIntervalMinutes = NormalizeStcn24ForumInterval(normalized.Stcn24ForumAutoRefreshIntervalMinutes);
         normalized.Stcn24ForumSourceType = Stcn24ForumSourceTypes.Normalize(normalized.Stcn24ForumSourceType);
@@ -324,7 +335,17 @@ public sealed class ComponentSettingsService
         return RefreshIntervalCatalog.Normalize(minutes, 360);
     }
 
+    private static int NormalizeIfengNewsInterval(int minutes)
+    {
+        return RefreshIntervalCatalog.Normalize(minutes, 20);
+    }
+
     private static int NormalizeBilibiliHotSearchInterval(int minutes)
+    {
+        return RefreshIntervalCatalog.Normalize(minutes, 15);
+    }
+
+    private static int NormalizeBaiduHotSearchInterval(int minutes)
     {
         return RefreshIntervalCatalog.Normalize(minutes, 15);
     }
@@ -371,6 +392,12 @@ public sealed class ComponentSettingsService
 
         public int CnrDailyNewsAutoRotateIntervalMinutes { get; set; } = 60;
 
+        public bool IfengNewsAutoRefreshEnabled { get; set; } = true;
+
+        public int IfengNewsAutoRefreshIntervalMinutes { get; set; } = 20;
+
+        public string IfengNewsChannelType { get; set; } = IfengNewsChannelTypes.Comprehensive;
+
         public bool DailyWordAutoRefreshEnabled { get; set; } = true;
 
         public int DailyWordAutoRefreshIntervalMinutes { get; set; } = 360;
@@ -378,6 +405,12 @@ public sealed class ComponentSettingsService
         public bool BilibiliHotSearchAutoRefreshEnabled { get; set; } = true;
 
         public int BilibiliHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
+
+        public bool BaiduHotSearchAutoRefreshEnabled { get; set; } = true;
+
+        public int BaiduHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
+
+        public string BaiduHotSearchSourceType { get; set; } = BaiduHotSearchSourceTypes.Official;
 
         public bool WeatherAutoRefreshEnabled { get; set; } = true;
 

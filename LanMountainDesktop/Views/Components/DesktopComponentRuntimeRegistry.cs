@@ -251,9 +251,19 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new CnrDailyNewsWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopIfengNews,
+                    "component.ifeng_news",
+                    () => new IfengNewsWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.30, 12, 24)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBilibiliHotSearch,
                     "component.bilibili_hot_search",
                     () => new BilibiliHotSearchWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopBaiduHotSearch,
+                    "component.baidu_hot_search",
+                    () => new BaiduHotSearchWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStcn24Forum,

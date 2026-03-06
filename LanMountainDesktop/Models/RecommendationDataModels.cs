@@ -52,6 +52,18 @@ public sealed record BilibiliHotSearchSnapshot(
     IReadOnlyList<BilibiliHotSearchItemSnapshot> Items,
     DateTimeOffset FetchedAt);
 
+public sealed record BaiduHotSearchItemSnapshot(
+    string Title,
+    string Url,
+    long? HeatScore);
+
+public sealed record BaiduHotSearchSnapshot(
+    string Provider,
+    string Source,
+    string BoardUrl,
+    IReadOnlyList<BaiduHotSearchItemSnapshot> Items,
+    DateTimeOffset FetchedAt);
+
 public sealed record DailyWordSnapshot(
     string Provider,
     string Word,

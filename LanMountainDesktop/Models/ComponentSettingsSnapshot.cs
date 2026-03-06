@@ -32,6 +32,12 @@ public sealed class ComponentSettingsSnapshot
 
     public int CnrDailyNewsAutoRotateIntervalMinutes { get; set; } = 60;
 
+    public bool IfengNewsAutoRefreshEnabled { get; set; } = true;
+
+    public int IfengNewsAutoRefreshIntervalMinutes { get; set; } = 20;
+
+    public string IfengNewsChannelType { get; set; } = IfengNewsChannelTypes.Comprehensive;
+
     public bool DailyWordAutoRefreshEnabled { get; set; } = true;
 
     public int DailyWordAutoRefreshIntervalMinutes { get; set; } = 360;
@@ -39,6 +45,12 @@ public sealed class ComponentSettingsSnapshot
     public bool BilibiliHotSearchAutoRefreshEnabled { get; set; } = true;
 
     public int BilibiliHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
+
+    public bool BaiduHotSearchAutoRefreshEnabled { get; set; } = true;
+
+    public int BaiduHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
+
+    public string BaiduHotSearchSourceType { get; set; } = BaiduHotSearchSourceTypes.Official;
 
     public bool WeatherAutoRefreshEnabled { get; set; } = true;
 

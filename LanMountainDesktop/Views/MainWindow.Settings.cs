@@ -67,7 +67,8 @@ public partial class MainWindow
             RegionSettingsPanel is null ||
             UpdateSettingsPanel is null ||
             LauncherSettingsPanel is null ||
-            AboutSettingsPanel is null)
+            AboutSettingsPanel is null ||
+            PluginSettingsPanel is null)
         {
             return;
         }
@@ -82,6 +83,7 @@ public partial class MainWindow
         UpdateSettingsPanel.IsVisible = selectedIndex == 6;
         AboutSettingsPanel.IsVisible = selectedIndex == 7;
         LauncherSettingsPanel.IsVisible = selectedIndex == 8;
+        PluginSettingsPanel.IsVisible = selectedIndex == 9;
 
         if (selectedIndex == 8)
         {

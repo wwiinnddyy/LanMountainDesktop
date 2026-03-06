@@ -20,9 +20,21 @@ public sealed record DailyNewsQuery(
     int? ItemCount = null,
     bool ForceRefresh = false);
 
+public sealed record IfengNewsQuery(
+    string? Locale = null,
+    int? ItemCount = null,
+    string? ChannelType = null,
+    bool ForceRefresh = false);
+
 public sealed record BilibiliHotSearchQuery(
     string? Locale = null,
     int? ItemCount = null,
+    bool ForceRefresh = false);
+
+public sealed record BaiduHotSearchQuery(
+    string? Locale = null,
+    int? ItemCount = null,
+    string? SourceType = null,
     bool ForceRefresh = false);
 
 public sealed record DailyWordQuery(
@@ -82,6 +94,30 @@ public sealed record RecommendationApiOptions
         "https://news.cnr.cn/native/gd/rss.xml"
     ];
 
+    public IReadOnlyList<string> IfengNewsComprehensiveRssFeedUrls { get; init; } =
+    [
+        "https://rss.injahow.cn/ifeng/news",
+        "https://rsshub.shuaizheng.org/ifeng/news"
+    ];
+
+    public IReadOnlyList<string> IfengNewsMainlandRssFeedUrls { get; init; } =
+    [
+        "https://rss.injahow.cn/ifeng/news/shanklist/3-35197-/",
+        "https://rsshub.shuaizheng.org/ifeng/news/shanklist/3-35197-/"
+    ];
+
+    public IReadOnlyList<string> IfengNewsTaiwanRssFeedUrls { get; init; } =
+    [
+        "https://rss.injahow.cn/ifeng/news/shanklist/3-35199-/",
+        "https://rsshub.shuaizheng.org/ifeng/news/shanklist/3-35199-/"
+    ];
+
+    public string IfengNewsComprehensiveListPageUrl { get; init; } = "https://news.ifeng.com/";
+
+    public string IfengNewsMainlandListPageUrl { get; init; } = "https://news.ifeng.com/shanklist/3-35197-/";
+
+    public string IfengNewsTaiwanListPageUrl { get; init; } = "https://news.ifeng.com/shanklist/3-35199-/";
+
     public string BilibiliHotSearchApiTemplate { get; init; } =
         "https://api.bilibili.com/x/web-interface/search/square?limit={0}";
 
@@ -89,6 +125,10 @@ public sealed record RecommendationApiOptions
         "https://api.bilibili.com/x/web-interface/search/default";
 
     public string BilibiliSearchPageUrl { get; init; } = "https://search.bilibili.com/all";
+
+    public string BaiduHotSearchRssFeedUrl { get; init; } = "https://rss.aishort.top/?type=baidu";
+
+    public string BaiduHotSearchBoardUrl { get; init; } = "https://top.baidu.com/board?tab=realtime";
 
     public string SmartTeachForumApiTemplate { get; init; } =
         "https://forum.smart-teach.cn/api/discussions?filter[q]={0}&sort=-createdAt&page[limit]={1}&include=user";
@@ -238,7 +278,11 @@ public sealed record RecommendationApiOptions
 
     public int DefaultDailyNewsCount { get; init; } = 2;
 
+    public int DefaultIfengNewsCount { get; init; } = 4;
+
     public int DefaultBilibiliHotSearchCount { get; init; } = 5;
+
+    public int DefaultBaiduHotSearchCount { get; init; } = 4;
 
     public int DefaultStcn24ForumPostCount { get; init; } = 4;
 }
@@ -257,8 +301,16 @@ public interface IRecommendationInfoService
         DailyNewsQuery query,
         CancellationToken cancellationToken = default);
 
+    Task<RecommendationQueryResult<DailyNewsSnapshot>> GetIfengNewsAsync(
+        IfengNewsQuery query,
+        CancellationToken cancellationToken = default);
+
     Task<RecommendationQueryResult<BilibiliHotSearchSnapshot>> GetBilibiliHotSearchAsync(
         BilibiliHotSearchQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<BaiduHotSearchSnapshot>> GetBaiduHotSearchAsync(
+        BaiduHotSearchQuery query,
         CancellationToken cancellationToken = default);
 
     Task<RecommendationQueryResult<DailyWordSnapshot>> GetDailyWordAsync(

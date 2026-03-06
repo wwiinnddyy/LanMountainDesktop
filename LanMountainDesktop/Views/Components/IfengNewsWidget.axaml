@@ -1,0 +1,196 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="640"
+             x:Class="LanMountainDesktop.Views.Components.IfengNewsWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="32"
+            Background="Transparent"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#FCFCFD"
+                    CornerRadius="32"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    Padding="14,14,14,14">
+                <Grid x:Name="ContentGrid"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="8">
+                    <Grid x:Name="HeaderGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10">
+                        <TextBlock x:Name="BrandTextBlock"
+                                   Text="凤凰网新闻"
+                                   Foreground="#E24B2D"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+
+                        <Button x:Name="RefreshButton"
+                                Grid.Column="1"
+                                Width="36"
+                                Height="36"
+                                CornerRadius="18"
+                                Background="#EFF1F5"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Focusable="False"
+                                ToolTip.Tip="刷新"
+                                Click="OnRefreshButtonClick">
+                            <fi:SymbolIcon x:Name="RefreshGlyphIcon"
+                                           Symbol="ArrowClockwise"
+                                           IconVariant="Regular"
+                                           Foreground="#5E6671"
+                                           FontSize="16"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
+
+                    <Border x:Name="NewsItem1Host"
+                            Grid.Row="1"
+                            Tag="0"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnNewsItemPointerPressed">
+                        <Grid x:Name="NewsItem1Grid"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <TextBlock x:Name="NewsItem1TextBlock"
+                                       Text="新闻标题"
+                                       Foreground="#202327"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       VerticalAlignment="Top" />
+                            <Border x:Name="NewsItem1ImageHost"
+                                    Grid.Column="1"
+                                    Width="148"
+                                    Height="84"
+                                    CornerRadius="12"
+                                    ClipToBounds="True"
+                                    Background="#E6E8EC">
+                                <Image x:Name="NewsItem1Image"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="NewsItem2Host"
+                            Grid.Row="2"
+                            Tag="1"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnNewsItemPointerPressed">
+                        <Grid x:Name="NewsItem2Grid"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <TextBlock x:Name="NewsItem2TextBlock"
+                                       Text="新闻标题"
+                                       Foreground="#202327"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       VerticalAlignment="Top" />
+                            <Border x:Name="NewsItem2ImageHost"
+                                    Grid.Column="1"
+                                    Width="148"
+                                    Height="84"
+                                    CornerRadius="12"
+                                    ClipToBounds="True"
+                                    Background="#E6E8EC">
+                                <Image x:Name="NewsItem2Image"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="NewsItem3Host"
+                            Grid.Row="3"
+                            Tag="2"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnNewsItemPointerPressed">
+                        <Grid x:Name="NewsItem3Grid"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <TextBlock x:Name="NewsItem3TextBlock"
+                                       Text="新闻标题"
+                                       Foreground="#202327"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       VerticalAlignment="Top" />
+                            <Border x:Name="NewsItem3ImageHost"
+                                    Grid.Column="1"
+                                    Width="148"
+                                    Height="84"
+                                    CornerRadius="12"
+                                    ClipToBounds="True"
+                                    Background="#E6E8EC">
+                                <Image x:Name="NewsItem3Image"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="NewsItem4Host"
+                            Grid.Row="4"
+                            Tag="3"
+                            Background="Transparent"
+                            Padding="0,2"
+                            PointerPressed="OnNewsItemPointerPressed">
+                        <Grid x:Name="NewsItem4Grid"
+                              ColumnDefinitions="*,Auto"
+                              ColumnSpacing="10">
+                            <TextBlock x:Name="NewsItem4TextBlock"
+                                       Text="新闻标题"
+                                       Foreground="#202327"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       VerticalAlignment="Top" />
+                            <Border x:Name="NewsItem4ImageHost"
+                                    Grid.Column="1"
+                                    Width="148"
+                                    Height="84"
+                                    CornerRadius="12"
+                                    ClipToBounds="True"
+                                    Background="#E6E8EC">
+                                <Image x:Name="NewsItem4Image"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#6A6F77"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

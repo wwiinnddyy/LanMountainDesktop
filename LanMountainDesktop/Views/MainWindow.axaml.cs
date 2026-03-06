@@ -236,7 +236,7 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 8);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 9);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
