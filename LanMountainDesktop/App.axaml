@@ -15,6 +15,21 @@
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/avalonia-logo.ico"
+                      ToolTipText="LanMountainDesktop">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="重启应用" Click="OnTrayRestartClick" />
+                        <NativeMenuItemSeparator />
+                        <NativeMenuItem Header="退出应用" Click="OnTrayExitClick" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
   
     <Application.Styles>
         <sty:FluentAvaloniaTheme />

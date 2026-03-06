@@ -61,7 +61,8 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private DailyNewsCacheEntry? _dailyNewsCache;
     private BilibiliHotSearchCacheEntry? _bilibiliHotSearchCache;
     private DailyWordCacheEntry? _dailyWordCache;
-    private Stcn24ForumPostsCacheEntry? _stcn24ForumPostsCache;
+    private readonly Dictionary<string, Stcn24ForumPostsCacheEntry> _stcn24ForumPostsCacheBySource =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ExchangeRateTableCacheEntry> _exchangeRateCacheByBaseCurrency =
         new(StringComparer.OrdinalIgnoreCase);
     private int _dailyNewsRotationCursor;
@@ -108,7 +109,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _dailyNewsCache = null;
             _bilibiliHotSearchCache = null;
             _dailyWordCache = null;
-            _stcn24ForumPostsCache = null;
+            _stcn24ForumPostsCacheBySource.Clear();
             _exchangeRateCacheByBaseCurrency.Clear();
         }
     }
@@ -348,12 +349,13 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         CancellationToken cancellationToken = default)
     {
         var normalizedQuery = query ?? new Stcn24ForumPostsQuery();
+        var sourceType = Stcn24ForumSourceTypes.Normalize(normalizedQuery.SourceType);
         var targetCount = normalizedQuery.ItemCount.HasValue
             ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 12)
             : Math.Clamp(_options.DefaultStcn24ForumPostCount, 1, 12);
 
         if (!normalizedQuery.ForceRefresh &&
-            TryGetStcn24ForumPostsFromCache(out var cached) &&
+            TryGetStcn24ForumPostsFromCache(sourceType, out var cached) &&
             cached.Items.Count >= targetCount)
         {
             var projectedSnapshot = cached with
@@ -365,7 +367,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
         try
         {
-            var snapshot = await FetchStcn24ForumPostsSnapshotAsync(targetCount, cancellationToken);
+            var snapshot = await FetchStcn24ForumPostsSnapshotAsync(targetCount, sourceType, cancellationToken);
             if (snapshot.Items.Count == 0)
             {
                 return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Fail(
@@ -373,7 +375,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                     "No STCN forum posts were returned.");
             }
 
-            SetStcn24ForumPostsCache(snapshot);
+            SetStcn24ForumPostsCache(sourceType, snapshot);
             return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Ok(snapshot);
         }
         catch (OperationCanceledException)
@@ -814,6 +816,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
     private async Task<Stcn24ForumPostsSnapshot> FetchStcn24ForumPostsSnapshotAsync(
         int targetCount,
+        string sourceType,
         CancellationToken cancellationToken)
     {
         var safeCount = Math.Clamp(targetCount, 1, 12);
@@ -824,11 +827,21 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             keyword = "STCN";
         }
 
+        var sortToken = ResolveSmartTeachDiscussionSortToken(sourceType);
+
         var requestUrl = string.Format(
             CultureInfo.InvariantCulture,
             _options.SmartTeachForumApiTemplate,
             Uri.EscapeDataString(keyword),
-            requestCount);
+            requestCount,
+            Uri.EscapeDataString(sortToken));
+        requestUrl = UpsertHttpQueryParameter(requestUrl, "filter[q]", keyword);
+        requestUrl = UpsertHttpQueryParameter(requestUrl, "sort", sortToken);
+        requestUrl = UpsertHttpQueryParameter(
+            requestUrl,
+            "page[limit]",
+            requestCount.ToString(CultureInfo.InvariantCulture));
+        requestUrl = UpsertHttpQueryParameter(requestUrl, "include", "user");
 
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
         request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
@@ -942,9 +955,92 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
         return new Stcn24ForumPostsSnapshot(
             Provider: "SmartTeachForum",
-            Source: "智教联盟论坛 STCN",
+            Source: ResolveStcn24ForumSourceLabel(sourceType),
             Items: items,
             FetchedAt: DateTimeOffset.UtcNow);
+    }
+
+    private static string ResolveSmartTeachDiscussionSortToken(string sourceType)
+    {
+        return Stcn24ForumSourceTypes.Normalize(sourceType) switch
+        {
+            Stcn24ForumSourceTypes.LatestCreated => "-createdAt",
+            Stcn24ForumSourceTypes.LatestActivity => "-lastPostedAt",
+            Stcn24ForumSourceTypes.MostReplies => "-commentCount",
+            Stcn24ForumSourceTypes.EarliestCreated => "createdAt",
+            Stcn24ForumSourceTypes.EarliestActivity => "lastPostedAt",
+            Stcn24ForumSourceTypes.LeastReplies => "commentCount",
+            Stcn24ForumSourceTypes.FrontpageLatest => "-frontdate",
+            Stcn24ForumSourceTypes.FrontpageEarliest => "frontdate",
+            _ => "-createdAt"
+        };
+    }
+
+    private static string ResolveStcn24ForumSourceLabel(string sourceType)
+    {
+        return Stcn24ForumSourceTypes.Normalize(sourceType) switch
+        {
+            Stcn24ForumSourceTypes.LatestCreated => "智教联盟论坛 STCN · 最新发布",
+            Stcn24ForumSourceTypes.LatestActivity => "智教联盟论坛 STCN · 最新回复",
+            Stcn24ForumSourceTypes.MostReplies => "智教联盟论坛 STCN · 回复最多",
+            Stcn24ForumSourceTypes.EarliestCreated => "智教联盟论坛 STCN · 最早发布",
+            Stcn24ForumSourceTypes.EarliestActivity => "智教联盟论坛 STCN · 最早回复",
+            Stcn24ForumSourceTypes.LeastReplies => "智教联盟论坛 STCN · 回复最少",
+            Stcn24ForumSourceTypes.FrontpageLatest => "智教联盟论坛 STCN · 前台推荐（新）",
+            Stcn24ForumSourceTypes.FrontpageEarliest => "智教联盟论坛 STCN · 前台推荐（旧）",
+            _ => "智教联盟论坛 STCN · 最新发布"
+        };
+    }
+
+    private static string UpsertHttpQueryParameter(string requestUrl, string key, string value)
+    {
+        if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out var uri))
+        {
+            return requestUrl;
+        }
+
+        var parameters = new List<(string Key, string Value)>();
+        var replaced = false;
+        var query = uri.Query.TrimStart('?');
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var parts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var separatorIndex = part.IndexOf('=');
+                var rawKey = separatorIndex >= 0 ? part[..separatorIndex] : part;
+                var rawValue = separatorIndex >= 0 ? part[(separatorIndex + 1)..] : string.Empty;
+                var normalizedKey = Uri.UnescapeDataString(rawKey);
+                if (string.Equals(normalizedKey, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!replaced)
+                    {
+                        parameters.Add((key, value));
+                        replaced = true;
+                    }
+
+                    continue;
+                }
+
+                parameters.Add((normalizedKey, Uri.UnescapeDataString(rawValue)));
+            }
+        }
+
+        if (!replaced)
+        {
+            parameters.Add((key, value));
+        }
+
+        var rebuiltQuery = string.Join(
+            "&",
+            parameters.Select(item =>
+                $"{Uri.EscapeDataString(item.Key)}={Uri.EscapeDataString(item.Value)}"));
+
+        var builder = new UriBuilder(uri)
+        {
+            Query = rebuiltQuery
+        };
+        return builder.Uri.ToString();
     }
 
     private async Task<string?> TryFetchBilibiliSearchPlaceholderAsync(CancellationToken cancellationToken)
@@ -1049,26 +1145,31 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return selection;
     }
 
-    private bool TryGetStcn24ForumPostsFromCache(out Stcn24ForumPostsSnapshot snapshot)
+    private bool TryGetStcn24ForumPostsFromCache(string sourceType, out Stcn24ForumPostsSnapshot snapshot)
     {
+        var normalizedSourceType = Stcn24ForumSourceTypes.Normalize(sourceType);
         lock (_cacheGate)
         {
-            if (_stcn24ForumPostsCache is not null && _stcn24ForumPostsCache.ExpireAt > DateTimeOffset.UtcNow)
+            if (_stcn24ForumPostsCacheBySource.TryGetValue(normalizedSourceType, out var cacheEntry) &&
+                cacheEntry.ExpireAt > DateTimeOffset.UtcNow)
             {
-                snapshot = _stcn24ForumPostsCache.Snapshot;
+                snapshot = cacheEntry.Snapshot;
                 return true;
             }
+
+            _stcn24ForumPostsCacheBySource.Remove(normalizedSourceType);
         }
 
         snapshot = null!;
         return false;
     }
 
-    private void SetStcn24ForumPostsCache(Stcn24ForumPostsSnapshot snapshot)
+    private void SetStcn24ForumPostsCache(string sourceType, Stcn24ForumPostsSnapshot snapshot)
     {
+        var normalizedSourceType = Stcn24ForumSourceTypes.Normalize(sourceType);
         lock (_cacheGate)
         {
-            _stcn24ForumPostsCache = new Stcn24ForumPostsCacheEntry(
+            _stcn24ForumPostsCacheBySource[normalizedSourceType] = new Stcn24ForumPostsCacheEntry(
                 snapshot,
                 DateTimeOffset.UtcNow.Add(_options.CacheDuration));
         }

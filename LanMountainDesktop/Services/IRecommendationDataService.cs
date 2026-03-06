@@ -32,6 +32,7 @@ public sealed record DailyWordQuery(
 public sealed record Stcn24ForumPostsQuery(
     string? Locale = null,
     int? ItemCount = null,
+    string? SourceType = null,
     bool ForceRefresh = false);
 
 public sealed record ExchangeRateQuery(

@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using LanMountainDesktop.Services;
@@ -35,6 +36,57 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnTrayExitClick(object? sender, EventArgs e)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Shutdown();
+        }
+    }
+
+    private void OnTrayRestartClick(object? sender, EventArgs e)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            return;
+        }
+
+        if (TryStartCurrentProcess())
+        {
+            desktop.Shutdown();
+        }
+    }
+
+    private static bool TryStartCurrentProcess()
+    {
+        try
+        {
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+            {
+                return false;
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = args[0],
+                UseShellExecute = false
+            };
+
+            for (var i = 1; i < args.Length; i++)
+            {
+                startInfo.ArgumentList.Add(args[i]);
+            }
+
+            Process.Start(startInfo);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

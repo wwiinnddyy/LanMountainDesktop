@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class BilibiliHotSearchSettingsWindow : UserControl
 {
-    private static readonly int[] SupportedIntervals = [5, 10, 15, 30, 60, 180];
+    private static readonly IReadOnlyList<int> SupportedIntervals = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly ComponentSettingsService _componentSettingsService = new();
@@ -22,6 +24,7 @@ public partial class BilibiliHotSearchSettingsWindow : UserControl
     public BilibiliHotSearchSettingsWindow()
     {
         InitializeComponent();
+        InitializeFrequencyOptions();
         LoadState();
         ApplyLocalization();
     }
@@ -49,12 +52,7 @@ public partial class BilibiliHotSearchSettingsWindow : UserControl
         AutoRefreshLabelTextBlock.Text = L("bilihot.settings.auto_refresh_label", "Auto refresh");
         AutoRefreshCheckBox.Content = L("bilihot.settings.auto_refresh_enabled", "Enable auto refresh");
         FrequencyLabelTextBlock.Text = L("bilihot.settings.frequency_label", "Refresh interval");
-        Frequency5mItem.Content = L("bilihot.settings.frequency_5m", "5 min");
-        Frequency10mItem.Content = L("bilihot.settings.frequency_10m", "10 min");
-        Frequency15mItem.Content = L("bilihot.settings.frequency_15m", "15 min");
-        Frequency30mItem.Content = L("bilihot.settings.frequency_30m", "30 min");
-        Frequency1hItem.Content = L("bilihot.settings.frequency_1h", "1 hour");
-        Frequency3hItem.Content = L("bilihot.settings.frequency_3h", "3 hours");
+        ApplyFrequencyLocalization();
     }
 
     private void OnAutoRefreshChanged(object? sender, RoutedEventArgs e)
@@ -117,19 +115,35 @@ public partial class BilibiliHotSearchSettingsWindow : UserControl
 
     private static int NormalizeInterval(int minutes)
     {
-        if (minutes <= 0)
-        {
-            return 15;
-        }
+        return RefreshIntervalCatalog.Normalize(minutes, 15);
+    }
 
-        if (SupportedIntervals.Contains(minutes))
+    private void InitializeFrequencyOptions()
+    {
+        FrequencyComboBox.Items.Clear();
+        foreach (var minutes in SupportedIntervals)
         {
-            return minutes;
+            FrequencyComboBox.Items.Add(new ComboBoxItem
+            {
+                Tag = minutes.ToString(),
+                Content = RefreshIntervalCatalog.ToEnglishFallbackLabel(minutes)
+            });
         }
+    }
 
-        return SupportedIntervals
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(15);
+    private void ApplyFrequencyLocalization()
+    {
+        foreach (var item in FrequencyComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag is not string tagText ||
+                !int.TryParse(tagText, out var minutes))
+            {
+                continue;
+            }
+
+            var key = $"refresh.frequency.{RefreshIntervalCatalog.ToLocalizationKeySuffix(minutes)}";
+            item.Content = L(key, RefreshIntervalCatalog.ToEnglishFallbackLabel(minutes));
+        }
     }
 
     private string L(string key, string fallback)

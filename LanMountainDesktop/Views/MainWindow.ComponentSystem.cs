@@ -389,6 +389,7 @@ public partial class MainWindow
         CancelDesktopComponentDrag();
         CancelDesktopComponentResize(restoreOriginalSpan: true);
         ClearDesktopComponentSelection();
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         UpdateDesktopComponentHostEditState();
         ComponentLibraryWindow.Opacity = 0;
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -425,6 +426,18 @@ public partial class MainWindow
         if (context == TaskbarContext.Desktop && _isComponentLibraryOpen)
         {
             var actions = new List<TaskbarActionItem>();
+            var isLauncherSurface = _currentDesktopSurfaceIndex == LauncherSurfaceIndex;
+            if (isLauncherSurface && IsLauncherTileSelected())
+            {
+                actions.Add(new TaskbarActionItem(
+                    TaskbarActionId.HideLauncherEntry,
+                    L("launcher.action.hide", "Hide"),
+                    "Hide",
+                    IsVisible: true,
+                    CommandKey: "launcher.hide"));
+                return actions;
+            }
+
             if (_selectedDesktopComponentHost is not null)
             {
                 actions.Add(new TaskbarActionItem(
@@ -537,10 +550,11 @@ public partial class MainWindow
 
             var isDeleteAction = action.Id == TaskbarActionId.DeleteDesktopPage ||
                                  action.Id == TaskbarActionId.DeleteComponent;
+            var isHideAction = action.Id == TaskbarActionId.HideLauncherEntry;
             var isEditAction = action.Id == TaskbarActionId.EditComponent;
 
             Symbol iconSymbol;
-            if (isDeleteAction)
+            if (isDeleteAction || isHideAction)
             {
                 iconSymbol = Symbol.Delete;
             }
@@ -582,7 +596,7 @@ public partial class MainWindow
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(padding),
-                Foreground = isDeleteAction
+                Foreground = (isDeleteAction || isHideAction)
                     ? new SolidColorBrush(Color.Parse("#FFFF6B6B"))
                     : Foreground,
                 Tag = action.CommandKey
@@ -602,7 +616,7 @@ public partial class MainWindow
             {
                 Text = action.Title,
                 FontSize = fontSize * 0.85,
-                Foreground = isDeleteAction
+                Foreground = (isDeleteAction || isHideAction)
                     ? new SolidColorBrush(Color.Parse("#FFFF6B6B"))
                     : Foreground,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
@@ -645,6 +659,9 @@ public partial class MainWindow
                 break;
             case "component.edit":
                 OpenComponentSettings();
+                break;
+            case "launcher.hide":
+                HideSelectedLauncherEntry();
                 break;
         }
     }
@@ -719,6 +736,12 @@ public partial class MainWindow
             return;
         }
 
+        if (IsWeatherComponentId(placement.ComponentId))
+        {
+            OpenWeatherComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopDailyArtwork)
         {
             OpenDailyArtworkComponentSettings();
@@ -743,11 +766,26 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopStcn24Forum)
+        {
+            OpenStcn24ForumComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
         {
             OpenStudyEnvironmentComponentSettings();
             return;
         }
+    }
+
+    private static bool IsWeatherComponentId(string componentId)
+    {
+        return string.Equals(componentId, BuiltInComponentIds.DesktopWeather, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(componentId, BuiltInComponentIds.DesktopWeatherClock, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(componentId, BuiltInComponentIds.DesktopHourlyWeather, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(componentId, BuiltInComponentIds.DesktopMultiDayWeather, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(componentId, BuiltInComponentIds.DesktopExtendedWeather, StringComparison.OrdinalIgnoreCase);
     }
 
     private void OpenDateComponentSettings()
@@ -807,6 +845,22 @@ public partial class MainWindow
 
         var settingsContent = new WorldClockWidgetSettingsWindow();
         settingsContent.SettingsChanged += OnWorldClockSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenWeatherComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new WeatherWidgetSettingsWindow();
+        settingsContent.SettingsChanged += OnWeatherSettingsChanged;
         ComponentSettingsContentHost.Content = settingsContent;
 
         ComponentSettingsWindow.IsVisible = true;
@@ -887,6 +941,22 @@ public partial class MainWindow
 
         var settingsContent = new BilibiliHotSearchSettingsWindow();
         settingsContent.SettingsChanged += OnBilibiliHotSearchSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenStcn24ForumComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new Stcn24ForumSettingsWindow();
+        settingsContent.SettingsChanged += OnStcn24ForumSettingsChanged;
         ComponentSettingsContentHost.Content = settingsContent;
 
         ComponentSettingsWindow.IsVisible = true;
@@ -988,6 +1058,43 @@ public partial class MainWindow
         }
     }
 
+    private void OnWeatherSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                var child = TryGetContentHost(host)?.Child;
+                switch (child)
+                {
+                    case WeatherWidget weatherWidget:
+                        weatherWidget.RefreshFromSettings();
+                        break;
+                    case WeatherClockWidget weatherClockWidget:
+                        weatherClockWidget.RefreshFromSettings();
+                        break;
+                    case HourlyWeatherWidget hourlyWeatherWidget:
+                        hourlyWeatherWidget.RefreshFromSettings();
+                        break;
+                    case MultiDayWeatherWidget multiDayWeatherWidget:
+                        multiDayWeatherWidget.RefreshFromSettings();
+                        break;
+                    case ExtendedWeatherWidget extendedWeatherWidget:
+                        extendedWeatherWidget.RefreshFromSettings();
+                        break;
+                }
+            }
+        }
+    }
+
     private void OnCnrDailyNewsSettingsChanged(object? sender, EventArgs e)
     {
         _ = sender;
@@ -1054,6 +1161,28 @@ public partial class MainWindow
         }
     }
 
+    private void OnStcn24ForumSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is Stcn24ForumWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+    }
+
     private void CloseComponentSettingsWindow()
     {
         if (ComponentSettingsWindow is null)
@@ -1086,6 +1215,11 @@ public partial class MainWindow
             worldClockSettingsWindow.SettingsChanged -= OnWorldClockSettingsChanged;
         }
 
+        if (ComponentSettingsContentHost?.Content is WeatherWidgetSettingsWindow weatherSettingsWindow)
+        {
+            weatherSettingsWindow.SettingsChanged -= OnWeatherSettingsChanged;
+        }
+
         if (ComponentSettingsContentHost?.Content is CnrDailyNewsSettingsWindow cnrDailyNewsSettingsWindow)
         {
             cnrDailyNewsSettingsWindow.SettingsChanged -= OnCnrDailyNewsSettingsChanged;
@@ -1099,6 +1233,11 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is BilibiliHotSearchSettingsWindow bilibiliHotSearchSettingsWindow)
         {
             bilibiliHotSearchSettingsWindow.SettingsChanged -= OnBilibiliHotSearchSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is Stcn24ForumSettingsWindow stcn24ForumSettingsWindow)
+        {
+            stcn24ForumSettingsWindow.SettingsChanged -= OnStcn24ForumSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;
@@ -1792,6 +1931,7 @@ public partial class MainWindow
         CancelDesktopComponentDrag();
         CancelDesktopComponentResize(restoreOriginalSpan: true);
         ClearDesktopComponentSelection();
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         UpdateDesktopComponentHostEditState();
         ClearComponentLibraryPreviewControls();
         UpdateComponentLibraryLayout(_currentDesktopCellSize);
@@ -1901,6 +2041,8 @@ public partial class MainWindow
 
     private void SetSelectedDesktopComponent(Border? host)
     {
+        ClearSelectedLauncherTile(refreshTaskbar: false);
+
         // Clear previous selection
         if (_selectedDesktopComponentHost is not null && _selectedDesktopComponentHost != host)
         {

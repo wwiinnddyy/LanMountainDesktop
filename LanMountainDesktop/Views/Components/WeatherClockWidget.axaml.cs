@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -26,6 +28,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private const double DialCenter = DialDesignSize / 2d;
 
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
+    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _clockTimer = new()
     {
@@ -38,6 +41,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     };
 
     private readonly AppSettingsService _settingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly Line _hourHandLine = CreateHandLine("#232938", 4.0);
     private readonly Line _minuteHandLine = CreateHandLine("#2F3749", 2.8);
@@ -51,6 +55,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private bool _dialInitialized;
     private bool _handsInitialized;
     private bool _isRefreshing;
+    private bool _weatherAutoRefreshEnabled = true;
     private bool? _isNightModeApplied;
     private string _languageCode = "zh-CN";
     private HyperOS3WeatherVisualKind _activeVisualKind = HyperOS3WeatherVisualKind.CloudyDay;
@@ -70,6 +75,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         ApplyCellSize(_currentCellSize);
         ApplyDefaultWeatherIcon();
         UpdateClockVisual();
+        ApplyAutoRefreshSettings();
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
@@ -97,6 +103,15 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         if (_isAttached)
         {
             _ = RefreshWeatherAsync(forceRefresh: false);
+        }
+    }
+
+    public void RefreshFromSettings()
+    {
+        ApplyAutoRefreshSettings();
+        if (_isAttached)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: true);
         }
     }
 
@@ -203,9 +218,10 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
+        ApplyAutoRefreshSettings();
         UpdateClockVisual();
         _clockTimer.Start();
-        _weatherRefreshTimer.Start();
+        UpdateWeatherRefreshTimerState();
         _ = RefreshWeatherAsync(forceRefresh: false);
     }
 
@@ -627,6 +643,59 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         }
 
         return Math.Clamp(value, -180, 180);
+    }
+
+    private void ApplyAutoRefreshSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 12;
+
+        try
+        {
+            var snapshot = _componentSettingsService.Load();
+            enabled = snapshot.WeatherAutoRefreshEnabled;
+            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.WeatherAutoRefreshIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _weatherAutoRefreshEnabled = enabled;
+        _weatherRefreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+        UpdateWeatherRefreshTimerState();
+    }
+
+    private void UpdateWeatherRefreshTimerState()
+    {
+        if (_isAttached && _weatherAutoRefreshEnabled)
+        {
+            if (!_weatherRefreshTimer.IsEnabled)
+            {
+                _weatherRefreshTimer.Start();
+            }
+
+            return;
+        }
+
+        _weatherRefreshTimer.Stop();
+    }
+
+    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 12;
+        }
+
+        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRefreshIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(12);
     }
 
     private void CancelRefreshRequest()

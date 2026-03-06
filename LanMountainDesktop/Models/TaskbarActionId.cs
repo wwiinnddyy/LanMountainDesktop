@@ -7,5 +7,6 @@ public enum TaskbarActionId
     AddDesktopPage,
     DeleteDesktopPage,
     DeleteComponent,
-    EditComponent
+    EditComponent,
+    HideLauncherEntry
 }

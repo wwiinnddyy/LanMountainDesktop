@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,7 +23,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
-    private static readonly int[] SupportedAutoRefreshIntervalsMinutes = [30, 60, 180, 360, 720, 1440];
+    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {

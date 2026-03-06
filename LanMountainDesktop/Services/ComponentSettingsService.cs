@@ -16,9 +16,6 @@ public sealed class ComponentSettingsService
 
     private static readonly object CacheGate = new();
     private static readonly TimeSpan CacheProbeInterval = TimeSpan.FromMilliseconds(400);
-    private static readonly int[] SupportedCnrIntervals = [5, 10, 40, 60, 720, 1440];
-    private static readonly int[] SupportedDailyWordIntervals = [30, 60, 180, 360, 720, 1440];
-    private static readonly int[] SupportedBilibiliHotSearchIntervals = [5, 10, 15, 30, 60, 180];
 
     private static string? _cachedPath;
     private static ComponentSettingsSnapshot? _cachedSnapshot;
@@ -185,7 +182,12 @@ public sealed class ComponentSettingsService
                 DailyWordAutoRefreshEnabled = legacy.DailyWordAutoRefreshEnabled,
                 DailyWordAutoRefreshIntervalMinutes = legacy.DailyWordAutoRefreshIntervalMinutes,
                 BilibiliHotSearchAutoRefreshEnabled = legacy.BilibiliHotSearchAutoRefreshEnabled,
-                BilibiliHotSearchAutoRefreshIntervalMinutes = legacy.BilibiliHotSearchAutoRefreshIntervalMinutes
+                BilibiliHotSearchAutoRefreshIntervalMinutes = legacy.BilibiliHotSearchAutoRefreshIntervalMinutes,
+                WeatherAutoRefreshEnabled = legacy.WeatherAutoRefreshEnabled,
+                WeatherAutoRefreshIntervalMinutes = legacy.WeatherAutoRefreshIntervalMinutes,
+                Stcn24ForumAutoRefreshEnabled = legacy.Stcn24ForumAutoRefreshEnabled,
+                Stcn24ForumAutoRefreshIntervalMinutes = legacy.Stcn24ForumAutoRefreshIntervalMinutes,
+                Stcn24ForumSourceType = legacy.Stcn24ForumSourceType
             };
 
             return true;
@@ -237,6 +239,9 @@ public sealed class ComponentSettingsService
         normalized.DailyWordAutoRefreshIntervalMinutes = NormalizeDailyWordInterval(normalized.DailyWordAutoRefreshIntervalMinutes);
         normalized.BilibiliHotSearchAutoRefreshIntervalMinutes = NormalizeBilibiliHotSearchInterval(
             normalized.BilibiliHotSearchAutoRefreshIntervalMinutes);
+        normalized.WeatherAutoRefreshIntervalMinutes = NormalizeWeatherInterval(normalized.WeatherAutoRefreshIntervalMinutes);
+        normalized.Stcn24ForumAutoRefreshIntervalMinutes = NormalizeStcn24ForumInterval(normalized.Stcn24ForumAutoRefreshIntervalMinutes);
+        normalized.Stcn24ForumSourceType = Stcn24ForumSourceTypes.Normalize(normalized.Stcn24ForumSourceType);
 
         return normalized;
     }
@@ -311,53 +316,27 @@ public sealed class ComponentSettingsService
 
     private static int NormalizeCnrInterval(int minutes)
     {
-        if (minutes <= 0)
-        {
-            return 60;
-        }
-
-        if (SupportedCnrIntervals.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedCnrIntervals
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(60);
+        return RefreshIntervalCatalog.Normalize(minutes, 60);
     }
 
     private static int NormalizeDailyWordInterval(int minutes)
     {
-        if (minutes <= 0)
-        {
-            return 360;
-        }
-
-        if (SupportedDailyWordIntervals.Contains(minutes))
-        {
-            return minutes;
-        }
-
-        return SupportedDailyWordIntervals
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(360);
+        return RefreshIntervalCatalog.Normalize(minutes, 360);
     }
 
     private static int NormalizeBilibiliHotSearchInterval(int minutes)
     {
-        if (minutes <= 0)
-        {
-            return 15;
-        }
+        return RefreshIntervalCatalog.Normalize(minutes, 15);
+    }
 
-        if (SupportedBilibiliHotSearchIntervals.Contains(minutes))
-        {
-            return minutes;
-        }
+    private static int NormalizeWeatherInterval(int minutes)
+    {
+        return RefreshIntervalCatalog.Normalize(minutes, 12);
+    }
 
-        return SupportedBilibiliHotSearchIntervals
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(15);
+    private static int NormalizeStcn24ForumInterval(int minutes)
+    {
+        return RefreshIntervalCatalog.Normalize(minutes, 20);
     }
 
     private void UpdateCache(ComponentSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc)
@@ -399,5 +378,15 @@ public sealed class ComponentSettingsService
         public bool BilibiliHotSearchAutoRefreshEnabled { get; set; } = true;
 
         public int BilibiliHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
+
+        public bool WeatherAutoRefreshEnabled { get; set; } = true;
+
+        public int WeatherAutoRefreshIntervalMinutes { get; set; } = 12;
+
+        public bool Stcn24ForumAutoRefreshEnabled { get; set; } = true;
+
+        public int Stcn24ForumAutoRefreshIntervalMinutes { get; set; } = 20;
+
+        public string Stcn24ForumSourceType { get; set; } = Stcn24ForumSourceTypes.LatestCreated;
     }
 }

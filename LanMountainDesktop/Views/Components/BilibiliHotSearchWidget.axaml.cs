@@ -25,7 +25,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const int MaxDisplayItemCount = 4;
-    private static readonly int[] SupportedAutoRefreshIntervalsMinutes = [5, 10, 15, 30, 60, 180];
+    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {

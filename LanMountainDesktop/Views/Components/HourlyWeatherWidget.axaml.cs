@@ -82,6 +82,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         string TemperatureText);
 
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
+    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -94,6 +95,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
     };
 
     private readonly AppSettingsService _settingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly Dictionary<WeatherVisualKind, IBrush> _backgroundBrushCache = new();
     private readonly Dictionary<HyperOS3WeatherVisualKind, IBrush> _particleBrushCache = new();
@@ -115,6 +117,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isRefreshing;
+    private bool _autoRefreshEnabled = true;
     private readonly TextBlock[] _hourlyTimeBlocks;
     private readonly Image[] _hourlyIconBlocks;
     private readonly TextBlock[] _hourlyTempBlocks;
@@ -147,6 +150,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         ApplyVisualTheme(WeatherVisualKind.ClearDay);
         ApplyNotConfiguredState();
         ApplyCellSize(_currentCellSize);
+        ApplyAutoRefreshSettings();
     }
 
     private void ConfigureTextOverflowGuards()
@@ -211,6 +215,15 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         }
     }
 
+    public void RefreshFromSettings()
+    {
+        ApplyAutoRefreshSettings();
+        if (_isAttached && _isOnActivePage)
+        {
+            _ = RefreshWeatherAsync(forceRefresh: true);
+        }
+    }
+
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
@@ -249,6 +262,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
+        ApplyAutoRefreshSettings();
         UpdateTimerState();
         if (_isOnActivePage)
         {
@@ -1382,9 +1396,13 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
     {
         if (_isAttached && _isOnActivePage)
         {
-            if (!_refreshTimer.IsEnabled)
+            if (_autoRefreshEnabled && !_refreshTimer.IsEnabled)
             {
                 _refreshTimer.Start();
+            }
+            else if (!_autoRefreshEnabled && _refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Stop();
             }
 
             if (!_backgroundAnimationTimer.IsEnabled)
@@ -1397,6 +1415,48 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
 
         _refreshTimer.Stop();
         _backgroundAnimationTimer.Stop();
+    }
+
+    private void ApplyAutoRefreshSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 12;
+
+        try
+        {
+            var snapshot = _componentSettingsService.Load();
+            enabled = snapshot.WeatherAutoRefreshEnabled;
+            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.WeatherAutoRefreshIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _autoRefreshEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (_isAttached)
+        {
+            UpdateTimerState();
+        }
+    }
+
+    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 12;
+        }
+
+        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRefreshIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(12);
     }
 
     private void InitializeParticleVisuals()

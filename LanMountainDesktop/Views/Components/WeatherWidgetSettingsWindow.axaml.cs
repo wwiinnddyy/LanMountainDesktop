@@ -9,7 +9,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyWordSettingsWindow : UserControl
+public partial class WeatherWidgetSettingsWindow : UserControl
 {
     private static readonly IReadOnlyList<int> SupportedIntervals = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
@@ -21,7 +21,7 @@ public partial class DailyWordSettingsWindow : UserControl
 
     public event EventHandler? SettingsChanged;
 
-    public DailyWordSettingsWindow()
+    public WeatherWidgetSettingsWindow()
     {
         InitializeComponent();
         InitializeFrequencyOptions();
@@ -35,8 +35,8 @@ public partial class DailyWordSettingsWindow : UserControl
         var componentSnapshot = _componentSettingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var enabled = componentSnapshot.DailyWordAutoRefreshEnabled;
-        var interval = NormalizeInterval(componentSnapshot.DailyWordAutoRefreshIntervalMinutes);
+        var enabled = componentSnapshot.WeatherAutoRefreshEnabled;
+        var interval = NormalizeInterval(componentSnapshot.WeatherAutoRefreshIntervalMinutes);
 
         _suppressEvents = true;
         AutoRefreshCheckBox.IsChecked = enabled;
@@ -47,11 +47,11 @@ public partial class DailyWordSettingsWindow : UserControl
 
     private void ApplyLocalization()
     {
-        TitleTextBlock.Text = L("dailyword.settings.title", "Daily word settings");
-        DescriptionTextBlock.Text = L("dailyword.settings.desc", "Configure auto refresh and refresh interval.");
-        AutoRefreshLabelTextBlock.Text = L("dailyword.settings.auto_refresh_label", "Auto refresh");
-        AutoRefreshCheckBox.Content = L("dailyword.settings.auto_refresh_enabled", "Enable auto refresh");
-        FrequencyLabelTextBlock.Text = L("dailyword.settings.frequency_label", "Refresh interval");
+        TitleTextBlock.Text = L("weather.widget.settings.title", "Weather widget settings");
+        DescriptionTextBlock.Text = L("weather.widget.settings.desc", "Configure auto refresh and refresh interval for all weather widgets.");
+        AutoRefreshLabelTextBlock.Text = L("weather.widget.settings.auto_refresh_label", "Auto refresh");
+        AutoRefreshCheckBox.Content = L("weather.widget.settings.auto_refresh_enabled", "Enable auto refresh");
+        FrequencyLabelTextBlock.Text = L("weather.widget.settings.frequency_label", "Refresh interval");
         ApplyFrequencyLocalization();
     }
 
@@ -84,8 +84,8 @@ public partial class DailyWordSettingsWindow : UserControl
     private void SaveState()
     {
         var snapshot = _componentSettingsService.Load();
-        snapshot.DailyWordAutoRefreshEnabled = AutoRefreshCheckBox.IsChecked == true;
-        snapshot.DailyWordAutoRefreshIntervalMinutes = GetSelectedInterval();
+        snapshot.WeatherAutoRefreshEnabled = AutoRefreshCheckBox.IsChecked == true;
+        snapshot.WeatherAutoRefreshIntervalMinutes = GetSelectedInterval();
         _componentSettingsService.Save(snapshot);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -99,7 +99,7 @@ public partial class DailyWordSettingsWindow : UserControl
             return NormalizeInterval(minutes);
         }
 
-        return 360;
+        return 12;
     }
 
     private void SelectInterval(int intervalMinutes)
@@ -115,7 +115,7 @@ public partial class DailyWordSettingsWindow : UserControl
 
     private static int NormalizeInterval(int minutes)
     {
-        return RefreshIntervalCatalog.Normalize(minutes, 360);
+        return RefreshIntervalCatalog.Normalize(minutes, 12);
     }
 
     private void InitializeFrequencyOptions()

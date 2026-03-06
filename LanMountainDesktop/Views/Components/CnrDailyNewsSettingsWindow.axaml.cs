@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
 public partial class CnrDailyNewsSettingsWindow : UserControl
 {
-    private static readonly int[] SupportedIntervals = [5, 10, 40, 60, 720, 1440];
+    private static readonly IReadOnlyList<int> SupportedIntervals = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly ComponentSettingsService _componentSettingsService = new();
@@ -22,6 +24,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
     public CnrDailyNewsSettingsWindow()
     {
         InitializeComponent();
+        InitializeFrequencyOptions();
         LoadState();
         ApplyLocalization();
     }
@@ -49,12 +52,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
         AutoRotateLabelTextBlock.Text = L("cnrnews.settings.auto_rotate_label", "Auto-rotation");
         AutoRotateCheckBox.Content = L("cnrnews.settings.auto_rotate_enabled", "Enable auto-rotation");
         FrequencyLabelTextBlock.Text = L("cnrnews.settings.frequency_label", "Rotation interval");
-        Frequency5mItem.Content = L("cnrnews.settings.frequency_5m", "5 min");
-        Frequency10mItem.Content = L("cnrnews.settings.frequency_10m", "10 min");
-        Frequency40mItem.Content = L("cnrnews.settings.frequency_40m", "40 min");
-        Frequency1hItem.Content = L("cnrnews.settings.frequency_1h", "1 hour");
-        Frequency12hItem.Content = L("cnrnews.settings.frequency_12h", "12 hours");
-        Frequency24hItem.Content = L("cnrnews.settings.frequency_24h", "24 hours");
+        ApplyFrequencyLocalization();
     }
 
     private void OnAutoRotateChanged(object? sender, RoutedEventArgs e)
@@ -117,19 +115,35 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
 
     private static int NormalizeInterval(int minutes)
     {
-        if (minutes <= 0)
-        {
-            return 60;
-        }
+        return RefreshIntervalCatalog.Normalize(minutes, 60);
+    }
 
-        if (SupportedIntervals.Contains(minutes))
+    private void InitializeFrequencyOptions()
+    {
+        FrequencyComboBox.Items.Clear();
+        foreach (var minutes in SupportedIntervals)
         {
-            return minutes;
+            FrequencyComboBox.Items.Add(new ComboBoxItem
+            {
+                Tag = minutes.ToString(),
+                Content = RefreshIntervalCatalog.ToEnglishFallbackLabel(minutes)
+            });
         }
+    }
 
-        return SupportedIntervals
-            .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(60);
+    private void ApplyFrequencyLocalization()
+    {
+        foreach (var item in FrequencyComboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (item.Tag is not string tagText ||
+                !int.TryParse(tagText, out var minutes))
+            {
+                continue;
+            }
+
+            var key = $"refresh.frequency.{RefreshIntervalCatalog.ToLocalizationKeySuffix(minutes)}";
+            item.Content = L(key, RefreshIntervalCatalog.ToEnglishFallbackLabel(minutes));
+        }
     }
 
     private string L(string key, string fallback)

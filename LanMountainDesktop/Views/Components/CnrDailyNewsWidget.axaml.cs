@@ -36,7 +36,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
-    private static readonly int[] SupportedAutoRotateIntervalsMinutes = [5, 10, 40, 60, 720, 1440];
+    private static readonly IReadOnlyList<int> SupportedAutoRotateIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {

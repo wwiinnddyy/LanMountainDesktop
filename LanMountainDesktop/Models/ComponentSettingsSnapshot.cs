@@ -40,6 +40,16 @@ public sealed class ComponentSettingsSnapshot
 
     public int BilibiliHotSearchAutoRefreshIntervalMinutes { get; set; } = 15;
 
+    public bool WeatherAutoRefreshEnabled { get; set; } = true;
+
+    public int WeatherAutoRefreshIntervalMinutes { get; set; } = 12;
+
+    public bool Stcn24ForumAutoRefreshEnabled { get; set; } = true;
+
+    public int Stcn24ForumAutoRefreshIntervalMinutes { get; set; } = 20;
+
+    public string Stcn24ForumSourceType { get; set; } = Stcn24ForumSourceTypes.LatestCreated;
+
     public ComponentSettingsSnapshot Clone()
     {
         var clone = (ComponentSettingsSnapshot)MemberwiseClone();

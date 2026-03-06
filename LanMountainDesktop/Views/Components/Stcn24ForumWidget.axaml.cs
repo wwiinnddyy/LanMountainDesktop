@@ -36,6 +36,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
     private const int MaxDisplayItemCount = 4;
+    private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -43,6 +44,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     };
 
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly List<Stcn24ForumPostItemSnapshot> _activeItems = [];
     private readonly List<ForumItemVisual> _itemVisuals = [];
@@ -51,9 +53,11 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
     private string _languageCode = "zh-CN";
+    private string _sourceType = Stcn24ForumSourceTypes.LatestCreated;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private bool _autoRefreshEnabled = true;
 
     private sealed record ForumItemVisual(
         Border Host,
@@ -114,6 +118,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
+        ApplyAutoRefreshSettings();
         ApplyLoadingState();
         UpdateInteractionState();
         UpdateRefreshButtonState();
@@ -134,13 +139,20 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         }
     }
 
+    public void RefreshFromSettings()
+    {
+        _recommendationService.ClearCache();
+        ApplyAutoRefreshSettings();
+        if (_isAttached)
+        {
+            _ = RefreshPostsAsync(forceRefresh: true);
+        }
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        if (!_refreshTimer.IsEnabled)
-        {
-            _refreshTimer.Start();
-        }
+        ApplyAutoRefreshSettings();
 
         _ = RefreshPostsAsync(forceRefresh: false);
     }
@@ -211,6 +223,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             var query = new Stcn24ForumPostsQuery(
                 Locale: _languageCode,
                 ItemCount: MaxDisplayItemCount,
+                SourceType: _sourceType,
                 ForceRefresh: forceRefresh);
             var result = await _recommendationService.GetStcn24ForumPostsAsync(query, cts.Token);
             if (!_isAttached || cts.IsCancellationRequested)
@@ -390,6 +403,62 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         {
             _languageCode = "zh-CN";
         }
+    }
+
+    private void ApplyAutoRefreshSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 20;
+
+        try
+        {
+            var snapshot = _componentSettingsService.Load();
+            _sourceType = Stcn24ForumSourceTypes.Normalize(snapshot.Stcn24ForumSourceType);
+            enabled = snapshot.Stcn24ForumAutoRefreshEnabled;
+            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.Stcn24ForumAutoRefreshIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+            _sourceType = Stcn24ForumSourceTypes.LatestCreated;
+        }
+
+        _autoRefreshEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        if (_autoRefreshEnabled)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+        }
+        else if (_refreshTimer.IsEnabled)
+        {
+            _refreshTimer.Stop();
+        }
+    }
+
+    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 20;
+        }
+
+        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRefreshIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(20);
     }
 
     private void UpdateAdaptiveLayout()

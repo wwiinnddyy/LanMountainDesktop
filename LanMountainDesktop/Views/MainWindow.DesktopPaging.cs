@@ -42,6 +42,9 @@ public partial class MainWindow
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
     private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _hiddenLauncherAppPaths = new(StringComparer.OrdinalIgnoreCase);
+    private Button? _selectedLauncherTileButton;
+    private LauncherEntryKind? _selectedLauncherEntryKind;
+    private string? _selectedLauncherEntryKey;
     private StartMenuFolderNode _startMenuRoot = new("All Apps", string.Empty);
     private byte[]? _launcherFolderIconPngBytes;
     private Bitmap? _launcherFolderIconBitmap;
@@ -341,6 +344,7 @@ public partial class MainWindow
         if (_currentDesktopSurfaceIndex != LauncherSurfaceIndex)
         {
             CloseLauncherFolderOverlay();
+            ClearSelectedLauncherTile(refreshTaskbar: false);
         }
 
         UpdateDesktopPageAwareComponentContext();
@@ -386,12 +390,14 @@ public partial class MainWindow
             return;
         }
 
-        // 如果在组件编辑模式下点击空白区域，取消组件选中
-        if (_isComponentLibraryOpen && _selectedDesktopComponentHost is not null)
+        // 如果在组件编辑模式下点击空白区域，取消选中（组件或启动台图标）
+        if (_isComponentLibraryOpen &&
+            (_selectedDesktopComponentHost is not null || _selectedLauncherTileButton is not null))
         {
             if (!IsInteractivePointerSource(e.Source))
             {
                 ClearDesktopComponentSelection();
+                ClearSelectedLauncherTile(refreshTaskbar: false);
                 ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
             }
         }
@@ -737,6 +743,7 @@ public partial class MainWindow
             return;
         }
 
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         LauncherRootTilePanel.Children.Clear();
         var folders = _startMenuRoot.Folders;
         var apps = _startMenuRoot.Apps;
@@ -784,7 +791,8 @@ public partial class MainWindow
             monogram: "DIR",
             iconBitmap: folderIconBitmap,
             () => OpenLauncherFolder(folder),
-            hideAction: string.IsNullOrWhiteSpace(folderKey) ? null : () => HideLauncherFolder(folder));
+            LauncherEntryKind.Folder,
+            folderKey);
     }
 
     private Button CreateLauncherAppTile(StartMenuAppEntry app)
@@ -798,7 +806,8 @@ public partial class MainWindow
             monogram,
             iconBitmap,
             () => LaunchStartMenuEntry(app),
-            hideAction: string.IsNullOrWhiteSpace(appKey) ? null : () => HideLauncherApp(app));
+            LauncherEntryKind.Shortcut,
+            appKey);
     }
 
     private Control CreateLauncherHintTile(string title, string subtitle)
@@ -842,7 +851,8 @@ public partial class MainWindow
         string monogram,
         Bitmap? iconBitmap,
         Action clickAction,
-        Action? hideAction = null)
+        LauncherEntryKind entryKind,
+        string entryKey)
     {
         Control iconControl = iconBitmap is not null
             ? new Image
@@ -910,13 +920,26 @@ public partial class MainWindow
             Classes = { "glass-panel" },
             Margin = new Thickness(0, 0, 12, 12),
             BorderThickness = new Thickness(0),
+            BorderBrush = Brushes.Transparent,
             CornerRadius = new CornerRadius(20),
             Padding = new Thickness(10),
             Content = content
             // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
         };
-        button.Click += (_, _) => clickAction();
-        AttachLauncherTileContextMenu(button, hideAction);
+        button.Click += (_, _) =>
+        {
+            if (_isComponentLibraryOpen)
+            {
+                if (!string.IsNullOrWhiteSpace(entryKey))
+                {
+                    SetSelectedLauncherTile(button, entryKind, entryKey);
+                }
+
+                return;
+            }
+
+            clickAction();
+        };
         return button;
     }
 
@@ -937,49 +960,100 @@ public partial class MainWindow
         return string.IsNullOrWhiteSpace(key) || !_hiddenLauncherAppPaths.Contains(key);
     }
 
-    private void AttachLauncherTileContextMenu(Button tileButton, Action? hideAction)
+    private bool IsLauncherTileSelected()
     {
-        if (hideAction is null)
+        return _selectedLauncherEntryKind.HasValue && !string.IsNullOrWhiteSpace(_selectedLauncherEntryKey);
+    }
+
+    private void SetSelectedLauncherTile(Button button, LauncherEntryKind entryKind, string entryKey)
+    {
+        if (!_isComponentLibraryOpen || string.IsNullOrWhiteSpace(entryKey))
         {
-            tileButton.ContextMenu = null;
             return;
         }
 
-        var hideItem = new MenuItem
+        var normalizedKey = NormalizeLauncherHiddenKey(entryKey);
+        if (string.IsNullOrWhiteSpace(normalizedKey))
         {
-            Header = L("launcher.context.hide_icon", "Hide Icon")
+            return;
+        }
+
+        if (_selectedDesktopComponentHost is not null)
+        {
+            ClearDesktopComponentSelection();
+        }
+
+        if (_selectedLauncherTileButton is not null && _selectedLauncherTileButton != button)
+        {
+            ApplyLauncherTileSelectionVisual(_selectedLauncherTileButton, isSelected: false);
+        }
+
+        _selectedLauncherTileButton = button;
+        _selectedLauncherEntryKind = entryKind;
+        _selectedLauncherEntryKey = normalizedKey;
+        ApplyLauncherTileSelectionVisual(button, isSelected: true);
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+    }
+
+    private void ClearSelectedLauncherTile(bool refreshTaskbar)
+    {
+        if (_selectedLauncherTileButton is not null)
+        {
+            ApplyLauncherTileSelectionVisual(_selectedLauncherTileButton, isSelected: false);
+        }
+
+        _selectedLauncherTileButton = null;
+        _selectedLauncherEntryKind = null;
+        _selectedLauncherEntryKey = null;
+
+        if (refreshTaskbar)
+        {
+            ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+        }
+    }
+
+    private void ApplyLauncherTileSelectionVisual(Button button, bool isSelected)
+    {
+        var showSelection = isSelected && _isComponentLibraryOpen;
+        button.BorderThickness = showSelection
+            ? new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3))
+            : new Thickness(0);
+        button.BorderBrush = showSelection ? GetThemeBrush("AdaptiveAccentBrush") : Brushes.Transparent;
+    }
+
+    private void HideSelectedLauncherEntry()
+    {
+        if (!_isComponentLibraryOpen ||
+            _currentDesktopSurfaceIndex != LauncherSurfaceIndex ||
+            _selectedLauncherEntryKind is null ||
+            string.IsNullOrWhiteSpace(_selectedLauncherEntryKey))
+        {
+            return;
+        }
+
+        var entryKind = _selectedLauncherEntryKind.Value;
+        var entryKey = _selectedLauncherEntryKey!;
+        ClearSelectedLauncherTile(refreshTaskbar: false);
+
+        var changed = entryKind switch
+        {
+            LauncherEntryKind.Folder => _hiddenLauncherFolderPaths.Add(entryKey),
+            LauncherEntryKind.Shortcut => _hiddenLauncherAppPaths.Add(entryKey),
+            _ => false
         };
-        hideItem.Click += (_, _) => hideAction();
 
-        var contextMenu = new ContextMenu();
-        contextMenu.Items.Add(hideItem);
-        tileButton.ContextMenu = contextMenu;
-    }
-
-    private void HideLauncherFolder(StartMenuFolderNode folder)
-    {
-        var key = NormalizeLauncherHiddenKey(folder.RelativePath);
-        if (string.IsNullOrWhiteSpace(key) || !_hiddenLauncherFolderPaths.Add(key))
+        if (changed)
         {
+            ApplyLauncherVisibilitySettingsChange();
             return;
         }
 
-        ApplyLauncherVisibilitySettingsChange();
-    }
-
-    private void HideLauncherApp(StartMenuAppEntry app)
-    {
-        var key = NormalizeLauncherHiddenKey(app.RelativePath);
-        if (string.IsNullOrWhiteSpace(key) || !_hiddenLauncherAppPaths.Add(key))
-        {
-            return;
-        }
-
-        ApplyLauncherVisibilitySettingsChange();
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
     private void ApplyLauncherVisibilitySettingsChange()
     {
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         RenderLauncherRootTiles();
         if (_launcherFolderStack.Count > 0)
         {
@@ -1278,6 +1352,7 @@ public partial class MainWindow
 
     private void CloseLauncherFolderOverlay()
     {
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         _launcherFolderStack.Clear();
         if (LauncherFolderOverlay is not null)
         {
@@ -1300,6 +1375,7 @@ public partial class MainWindow
             return;
         }
 
+        ClearSelectedLauncherTile(refreshTaskbar: false);
         if (_launcherFolderStack.Count == 0)
         {
             CloseLauncherFolderOverlay();
