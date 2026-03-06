@@ -88,6 +88,7 @@ public partial class MainWindow : Window
     }
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private readonly WindowsStartupService _windowsStartupService = new();
@@ -167,7 +168,6 @@ public partial class MainWindow : Window
     private string _weatherExcludedAlertsRaw = string.Empty;
     private string _weatherIconPackId = "FluentRegular";
     private bool _weatherNoTlsRequests;
-    private string _dailyArtworkMirrorSource = DailyArtworkMirrorSources.Overseas;
     private bool _autoStartWithWindows;
     private bool _suppressAutoStartToggleEvents;
     private string _weatherSearchKeyword = string.Empty;
@@ -236,7 +236,7 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 7);
+        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 8);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
@@ -244,10 +244,11 @@ public partial class MainWindow : Window
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
         InitializeWeatherSettings(snapshot);
-        _dailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
+        _ = _componentSettingsService.Load();
         InitializeAutoStartWithWindowsSetting(snapshot);
         InitializeUpdateSettings(snapshot);
         InitializeDesktopSurfaceState(snapshot);
+        InitializeLauncherVisibilitySettings(snapshot);
         InitializeDesktopComponentPlacements(snapshot);
         InitializeSettingsIcons();
 

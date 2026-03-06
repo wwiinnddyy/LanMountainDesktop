@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,13 +22,15 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
+    private static readonly int[] SupportedAutoRefreshIntervalsMinutes = [30, 60, 180, 360, 720, 1440];
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
         Interval = TimeSpan.FromHours(6)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
@@ -36,6 +39,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private bool _autoRefreshEnabled = true;
 
     public DailyWordWidget()
     {
@@ -56,6 +60,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
+        ApplyAutoRefreshSettings();
         ApplyLoadingState();
         UpdateRefreshButtonState();
     }
@@ -78,6 +83,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     public void RefreshFromSettings()
     {
         _recommendationService.ClearCache();
+        ApplyAutoRefreshSettings();
         if (_isAttached)
         {
             _ = RefreshWordAsync(forceRefresh: true);
@@ -87,8 +93,8 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
+        ApplyAutoRefreshSettings();
         UpdateRefreshButtonState();
-        _refreshTimer.Start();
         _ = RefreshWordAsync(forceRefresh: false);
     }
 
@@ -343,13 +349,67 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     {
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _appSettingsService.Load();
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch
         {
             _languageCode = "zh-CN";
         }
+    }
+
+    private void ApplyAutoRefreshSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 360;
+
+        try
+        {
+            var snapshot = _componentSettingsService.Load();
+            enabled = snapshot.DailyWordAutoRefreshEnabled;
+            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.DailyWordAutoRefreshIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _autoRefreshEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        if (_autoRefreshEnabled)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+        }
+        else if (_refreshTimer.IsEnabled)
+        {
+            _refreshTimer.Stop();
+        }
+    }
+
+    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 360;
+        }
+
+        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRefreshIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(360);
     }
 
     private void CancelRefreshRequest()

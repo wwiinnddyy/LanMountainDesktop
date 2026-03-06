@@ -88,7 +88,8 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         Interval = TimeSpan.FromSeconds(1)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly ClockEntryVisual[] _entryVisuals = new ClockEntryVisual[WorldClockTimeZoneCatalog.ClockCount];
     private readonly TimeZoneInfo[] _entryTimeZones = new TimeZoneInfo[WorldClockTimeZoneCatalog.ClockCount];
@@ -445,17 +446,18 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
 
     private void LoadFromSettings()
     {
-        var snapshot = _settingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var ids = WorldClockTimeZoneCatalog.NormalizeTimeZoneIds(snapshot.WorldClockTimeZoneIds);
+        var ids = WorldClockTimeZoneCatalog.NormalizeTimeZoneIds(componentSnapshot.WorldClockTimeZoneIds);
         for (var index = 0; index < WorldClockTimeZoneCatalog.ClockCount; index++)
         {
             var resolvedId = ids[index];
             _entryTimeZones[index] = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal(resolvedId);
         }
 
-        _secondHandMode = ClockSecondHandMode.Normalize(snapshot.WorldClockSecondHandMode);
+        _secondHandMode = ClockSecondHandMode.Normalize(componentSnapshot.WorldClockSecondHandMode);
     }
 
     private void ApplySecondHandTimerInterval()
@@ -533,7 +535,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         _nextLanguageProbeUtc = utcNow.AddSeconds(25);
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _appSettingsService.Load();
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch

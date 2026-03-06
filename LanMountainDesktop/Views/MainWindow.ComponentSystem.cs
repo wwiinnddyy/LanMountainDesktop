@@ -731,6 +731,18 @@ public partial class MainWindow
             return;
         }
 
+        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord)
+        {
+            OpenDailyWordComponentSettings();
+            return;
+        }
+
+        if (placement.ComponentId == BuiltInComponentIds.DesktopBilibiliHotSearch)
+        {
+            OpenBilibiliHotSearchComponentSettings();
+            return;
+        }
+
         if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
         {
             OpenStudyEnvironmentComponentSettings();
@@ -850,6 +862,38 @@ public partial class MainWindow
         ComponentSettingsWindow.Opacity = 1;
     }
 
+    private void OpenDailyWordComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new DailyWordSettingsWindow();
+        settingsContent.SettingsChanged += OnDailyWordSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
+    private void OpenBilibiliHotSearchComponentSettings()
+    {
+        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
+        {
+            return;
+        }
+
+        var settingsContent = new BilibiliHotSearchSettingsWindow();
+        settingsContent.SettingsChanged += OnBilibiliHotSearchSettingsChanged;
+        ComponentSettingsContentHost.Content = settingsContent;
+
+        ComponentSettingsWindow.IsVisible = true;
+        ComponentSettingsWindow.Opacity = 0;
+        ComponentSettingsWindow.Opacity = 1;
+    }
+
     private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
     {
         if (_selectedDesktopComponentHost is null)
@@ -883,8 +927,6 @@ public partial class MainWindow
                 }
             }
         }
-
-        PersistSettings();
     }
 
     private void OnStudyEnvironmentSettingsChanged(object? sender, EventArgs e)
@@ -907,10 +949,6 @@ public partial class MainWindow
         _ = sender;
         _ = e;
 
-        _dailyArtworkMirrorSource = sender is DailyArtworkSettingsWindow settingsWindow
-            ? DailyArtworkMirrorSources.Normalize(settingsWindow.CurrentSource)
-            : DailyArtworkMirrorSources.Normalize(_appSettingsService.Load().DailyArtworkMirrorSource);
-
         foreach (var pageGrid in _desktopPageComponentGrids.Values)
         {
             foreach (var host in pageGrid.Children.OfType<Border>())
@@ -926,8 +964,6 @@ public partial class MainWindow
                 }
             }
         }
-
-        PersistSettings();
     }
 
     private void OnWorldClockSettingsChanged(object? sender, EventArgs e)
@@ -950,8 +986,6 @@ public partial class MainWindow
                 }
             }
         }
-
-        PersistSettings();
     }
 
     private void OnCnrDailyNewsSettingsChanged(object? sender, EventArgs e)
@@ -974,8 +1008,50 @@ public partial class MainWindow
                 }
             }
         }
+    }
 
-        PersistSettings();
+    private void OnDailyWordSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is DailyWordWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
+    }
+
+    private void OnBilibiliHotSearchSettingsChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                if (!host.Classes.Contains(DesktopComponentHostClass))
+                {
+                    continue;
+                }
+
+                if (TryGetContentHost(host)?.Child is BilibiliHotSearchWidget widget)
+                {
+                    widget.RefreshFromSettings();
+                }
+            }
+        }
     }
 
     private void CloseComponentSettingsWindow()
@@ -1013,6 +1089,16 @@ public partial class MainWindow
         if (ComponentSettingsContentHost?.Content is CnrDailyNewsSettingsWindow cnrDailyNewsSettingsWindow)
         {
             cnrDailyNewsSettingsWindow.SettingsChanged -= OnCnrDailyNewsSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is DailyWordSettingsWindow dailyWordSettingsWindow)
+        {
+            dailyWordSettingsWindow.SettingsChanged -= OnDailyWordSettingsChanged;
+        }
+
+        if (ComponentSettingsContentHost?.Content is BilibiliHotSearchSettingsWindow bilibiliHotSearchSettingsWindow)
+        {
+            bilibiliHotSearchSettingsWindow.SettingsChanged -= OnBilibiliHotSearchSettingsChanged;
         }
 
         ComponentSettingsWindow.Opacity = 0;
@@ -1432,6 +1518,14 @@ public partial class MainWindow
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
+        }
+
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopStcn24Forum, StringComparison.OrdinalIgnoreCase))
+        {
+            // Keep STCN forum widget square with a minimum footprint of 4x4.
+            return SnapSpanToScaleRules(
+                span,
+                new ComponentScaleRule(WidthUnit: 1, HeightUnit: 1, MinScale: 4));
         }
 
         if (string.Equals(componentId, BuiltInComponentIds.DesktopExchangeRateCalculator, StringComparison.OrdinalIgnoreCase))
@@ -2826,12 +2920,16 @@ public partial class MainWindow
                 _weatherDataService,
                 _recommendationInfoService,
                 _calculatorDataService);
+            // Component library previews must stay non-interactive so drag gesture is reliable.
+            previewControl.IsHitTestVisible = false;
+            previewControl.Focusable = false;
 
             var previewSurface = new Border
             {
                 Width = previewSpan.WidthCells * renderCellSize,
                 Height = previewSpan.HeightCells * renderCellSize,
                 Background = Brushes.Transparent,
+                IsHitTestVisible = false,
                 Child = previewControl
             };
 

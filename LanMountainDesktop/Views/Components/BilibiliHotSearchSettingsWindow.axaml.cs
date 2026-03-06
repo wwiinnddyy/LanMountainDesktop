@@ -7,9 +7,9 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class CnrDailyNewsSettingsWindow : UserControl
+public partial class BilibiliHotSearchSettingsWindow : UserControl
 {
-    private static readonly int[] SupportedIntervals = [5, 10, 40, 60, 720, 1440];
+    private static readonly int[] SupportedIntervals = [5, 10, 15, 30, 60, 180];
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly ComponentSettingsService _componentSettingsService = new();
@@ -19,7 +19,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
 
     public event EventHandler? SettingsChanged;
 
-    public CnrDailyNewsSettingsWindow()
+    public BilibiliHotSearchSettingsWindow()
     {
         InitializeComponent();
         LoadState();
@@ -32,11 +32,11 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
         var componentSnapshot = _componentSettingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var enabled = componentSnapshot.CnrDailyNewsAutoRotateEnabled;
-        var interval = NormalizeInterval(componentSnapshot.CnrDailyNewsAutoRotateIntervalMinutes);
+        var enabled = componentSnapshot.BilibiliHotSearchAutoRefreshEnabled;
+        var interval = NormalizeInterval(componentSnapshot.BilibiliHotSearchAutoRefreshIntervalMinutes);
 
         _suppressEvents = true;
-        AutoRotateCheckBox.IsChecked = enabled;
+        AutoRefreshCheckBox.IsChecked = enabled;
         SelectInterval(interval);
         FrequencyCardBorder.IsVisible = enabled;
         _suppressEvents = false;
@@ -44,20 +44,20 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
 
     private void ApplyLocalization()
     {
-        TitleTextBlock.Text = L("cnrnews.settings.title", "CNR news settings");
-        DescriptionTextBlock.Text = L("cnrnews.settings.desc", "Configure auto-rotation and refresh interval.");
-        AutoRotateLabelTextBlock.Text = L("cnrnews.settings.auto_rotate_label", "Auto-rotation");
-        AutoRotateCheckBox.Content = L("cnrnews.settings.auto_rotate_enabled", "Enable auto-rotation");
-        FrequencyLabelTextBlock.Text = L("cnrnews.settings.frequency_label", "Rotation interval");
-        Frequency5mItem.Content = L("cnrnews.settings.frequency_5m", "5 min");
-        Frequency10mItem.Content = L("cnrnews.settings.frequency_10m", "10 min");
-        Frequency40mItem.Content = L("cnrnews.settings.frequency_40m", "40 min");
-        Frequency1hItem.Content = L("cnrnews.settings.frequency_1h", "1 hour");
-        Frequency12hItem.Content = L("cnrnews.settings.frequency_12h", "12 hours");
-        Frequency24hItem.Content = L("cnrnews.settings.frequency_24h", "24 hours");
+        TitleTextBlock.Text = L("bilihot.settings.title", "Bilibili hot search settings");
+        DescriptionTextBlock.Text = L("bilihot.settings.desc", "Configure auto refresh and refresh interval.");
+        AutoRefreshLabelTextBlock.Text = L("bilihot.settings.auto_refresh_label", "Auto refresh");
+        AutoRefreshCheckBox.Content = L("bilihot.settings.auto_refresh_enabled", "Enable auto refresh");
+        FrequencyLabelTextBlock.Text = L("bilihot.settings.frequency_label", "Refresh interval");
+        Frequency5mItem.Content = L("bilihot.settings.frequency_5m", "5 min");
+        Frequency10mItem.Content = L("bilihot.settings.frequency_10m", "10 min");
+        Frequency15mItem.Content = L("bilihot.settings.frequency_15m", "15 min");
+        Frequency30mItem.Content = L("bilihot.settings.frequency_30m", "30 min");
+        Frequency1hItem.Content = L("bilihot.settings.frequency_1h", "1 hour");
+        Frequency3hItem.Content = L("bilihot.settings.frequency_3h", "3 hours");
     }
 
-    private void OnAutoRotateChanged(object? sender, RoutedEventArgs e)
+    private void OnAutoRefreshChanged(object? sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
@@ -66,7 +66,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
             return;
         }
 
-        var enabled = AutoRotateCheckBox.IsChecked == true;
+        var enabled = AutoRefreshCheckBox.IsChecked == true;
         FrequencyCardBorder.IsVisible = enabled;
         SaveState();
     }
@@ -86,8 +86,8 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
     private void SaveState()
     {
         var snapshot = _componentSettingsService.Load();
-        snapshot.CnrDailyNewsAutoRotateEnabled = AutoRotateCheckBox.IsChecked == true;
-        snapshot.CnrDailyNewsAutoRotateIntervalMinutes = GetSelectedInterval();
+        snapshot.BilibiliHotSearchAutoRefreshEnabled = AutoRefreshCheckBox.IsChecked == true;
+        snapshot.BilibiliHotSearchAutoRefreshIntervalMinutes = GetSelectedInterval();
         _componentSettingsService.Save(snapshot);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -101,7 +101,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
             return NormalizeInterval(minutes);
         }
 
-        return 60;
+        return 15;
     }
 
     private void SelectInterval(int intervalMinutes)
@@ -119,7 +119,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
     {
         if (minutes <= 0)
         {
-            return 60;
+            return 15;
         }
 
         if (SupportedIntervals.Contains(minutes))
@@ -129,7 +129,7 @@ public partial class CnrDailyNewsSettingsWindow : UserControl
 
         return SupportedIntervals
             .OrderBy(value => Math.Abs(value - minutes))
-            .FirstOrDefault(60);
+            .FirstOrDefault(15);
     }
 
     private string L(string key, string fallback)

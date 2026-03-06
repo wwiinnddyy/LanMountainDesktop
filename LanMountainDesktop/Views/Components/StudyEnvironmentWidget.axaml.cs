@@ -13,7 +13,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 {
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
     {
@@ -127,10 +128,11 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void ReloadDisplaySettings()
     {
-        var snapshot = _settingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        _showDisplayDb = snapshot.StudyEnvironmentShowDisplayDb;
-        _showDbfs = snapshot.StudyEnvironmentShowDbfs;
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
+        _showDisplayDb = componentSnapshot.StudyEnvironmentShowDisplayDb;
+        _showDbfs = componentSnapshot.StudyEnvironmentShowDbfs;
         if (!_showDisplayDb && !_showDbfs)
         {
             _showDisplayDb = true;

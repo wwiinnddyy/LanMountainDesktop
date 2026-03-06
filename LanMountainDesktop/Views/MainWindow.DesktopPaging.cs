@@ -22,9 +22,26 @@ public partial class MainWindow
 {
     private const int MinDesktopPageCount = 1;
     private const int MaxDesktopPageCount = 12;
+    private enum LauncherEntryKind
+    {
+        Folder,
+        Shortcut
+    }
+
+    private sealed record LauncherHiddenItemToken(LauncherEntryKind Kind, string Key);
+
+    private sealed record LauncherHiddenItemView(
+        LauncherEntryKind Kind,
+        string Key,
+        string DisplayName,
+        string Monogram,
+        Bitmap? IconBitmap);
+
     private readonly WindowsStartMenuService _windowsStartMenuService = new();
     private readonly Dictionary<string, Bitmap> _launcherIconCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
+    private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _hiddenLauncherAppPaths = new(StringComparer.OrdinalIgnoreCase);
     private StartMenuFolderNode _startMenuRoot = new("All Apps", string.Empty);
     private byte[]? _launcherFolderIconPngBytes;
     private Bitmap? _launcherFolderIconBitmap;
@@ -50,6 +67,35 @@ public partial class MainWindow
         var loadedPageCount = snapshot.DesktopPageCount <= 0 ? MinDesktopPageCount : snapshot.DesktopPageCount;
         _desktopPageCount = Math.Clamp(loadedPageCount, MinDesktopPageCount, MaxDesktopPageCount);
         _currentDesktopSurfaceIndex = Math.Clamp(snapshot.CurrentDesktopSurfaceIndex, 0, LauncherSurfaceIndex);
+    }
+
+    private void InitializeLauncherVisibilitySettings(AppSettingsSnapshot snapshot)
+    {
+        _hiddenLauncherFolderPaths.Clear();
+        if (snapshot.HiddenLauncherFolderPaths is not null)
+        {
+            foreach (var folderPath in snapshot.HiddenLauncherFolderPaths)
+            {
+                var key = NormalizeLauncherHiddenKey(folderPath);
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    _hiddenLauncherFolderPaths.Add(key);
+                }
+            }
+        }
+
+        _hiddenLauncherAppPaths.Clear();
+        if (snapshot.HiddenLauncherAppPaths is not null)
+        {
+            foreach (var appPath in snapshot.HiddenLauncherAppPaths)
+            {
+                var key = NormalizeLauncherHiddenKey(appPath);
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    _hiddenLauncherAppPaths.Add(key);
+                }
+            }
+        }
     }
 
     private void InitializeDesktopSurfaceSwipeHandlers()
@@ -80,6 +126,7 @@ public partial class MainWindow
                 _launcherFolderIconBitmap?.Dispose();
                 _launcherFolderIconBitmap = null;
                 RenderLauncherRootTiles();
+                RenderLauncherHiddenItemsList();
             }, DispatcherPriority.Background);
         }
         catch
@@ -89,6 +136,7 @@ public partial class MainWindow
             _launcherFolderIconBitmap?.Dispose();
             _launcherFolderIconBitmap = null;
             RenderLauncherRootTiles();
+            RenderLauncherHiddenItemsList();
         }
     }
 
@@ -695,11 +743,21 @@ public partial class MainWindow
 
         foreach (var folder in folders)
         {
+            if (!IsLauncherFolderVisible(folder))
+            {
+                continue;
+            }
+
             LauncherRootTilePanel.Children.Add(CreateLauncherFolderTile(folder));
         }
 
         foreach (var app in apps)
         {
+            if (!IsLauncherAppVisible(app))
+            {
+                continue;
+            }
+
             LauncherRootTilePanel.Children.Add(CreateLauncherAppTile(app));
         }
 
@@ -719,24 +777,28 @@ public partial class MainWindow
         var title = folder.Name;
         var subtitle = Lf("launcher.folder_items_format", "{0} apps", folder.TotalAppCount);
         var folderIconBitmap = GetLauncherFolderIconBitmap();
+        var folderKey = NormalizeLauncherHiddenKey(folder.RelativePath);
         return CreateLauncherTileButton(
             title,
             subtitle,
             monogram: "DIR",
             iconBitmap: folderIconBitmap,
-            () => OpenLauncherFolder(folder));
+            () => OpenLauncherFolder(folder),
+            hideAction: string.IsNullOrWhiteSpace(folderKey) ? null : () => HideLauncherFolder(folder));
     }
 
     private Button CreateLauncherAppTile(StartMenuAppEntry app)
     {
         var iconBitmap = GetLauncherIconBitmap(app);
         var monogram = BuildMonogram(app.DisplayName);
+        var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
         return CreateLauncherTileButton(
             app.DisplayName,
             subtitle: string.Empty,
             monogram,
             iconBitmap,
-            () => LaunchStartMenuEntry(app));
+            () => LaunchStartMenuEntry(app),
+            hideAction: string.IsNullOrWhiteSpace(appKey) ? null : () => HideLauncherApp(app));
     }
 
     private Control CreateLauncherHintTile(string title, string subtitle)
@@ -779,7 +841,8 @@ public partial class MainWindow
         string subtitle,
         string monogram,
         Bitmap? iconBitmap,
-        Action clickAction)
+        Action clickAction,
+        Action? hideAction = null)
     {
         Control iconControl = iconBitmap is not null
             ? new Image
@@ -853,7 +916,308 @@ public partial class MainWindow
             // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
         };
         button.Click += (_, _) => clickAction();
+        AttachLauncherTileContextMenu(button, hideAction);
         return button;
+    }
+
+    private static string NormalizeLauncherHiddenKey(string? key)
+    {
+        return string.IsNullOrWhiteSpace(key) ? string.Empty : key.Trim();
+    }
+
+    private bool IsLauncherFolderVisible(StartMenuFolderNode folder)
+    {
+        var key = NormalizeLauncherHiddenKey(folder.RelativePath);
+        return string.IsNullOrWhiteSpace(key) || !_hiddenLauncherFolderPaths.Contains(key);
+    }
+
+    private bool IsLauncherAppVisible(StartMenuAppEntry app)
+    {
+        var key = NormalizeLauncherHiddenKey(app.RelativePath);
+        return string.IsNullOrWhiteSpace(key) || !_hiddenLauncherAppPaths.Contains(key);
+    }
+
+    private void AttachLauncherTileContextMenu(Button tileButton, Action? hideAction)
+    {
+        if (hideAction is null)
+        {
+            tileButton.ContextMenu = null;
+            return;
+        }
+
+        var hideItem = new MenuItem
+        {
+            Header = L("launcher.context.hide_icon", "Hide Icon")
+        };
+        hideItem.Click += (_, _) => hideAction();
+
+        var contextMenu = new ContextMenu();
+        contextMenu.Items.Add(hideItem);
+        tileButton.ContextMenu = contextMenu;
+    }
+
+    private void HideLauncherFolder(StartMenuFolderNode folder)
+    {
+        var key = NormalizeLauncherHiddenKey(folder.RelativePath);
+        if (string.IsNullOrWhiteSpace(key) || !_hiddenLauncherFolderPaths.Add(key))
+        {
+            return;
+        }
+
+        ApplyLauncherVisibilitySettingsChange();
+    }
+
+    private void HideLauncherApp(StartMenuAppEntry app)
+    {
+        var key = NormalizeLauncherHiddenKey(app.RelativePath);
+        if (string.IsNullOrWhiteSpace(key) || !_hiddenLauncherAppPaths.Add(key))
+        {
+            return;
+        }
+
+        ApplyLauncherVisibilitySettingsChange();
+    }
+
+    private void ApplyLauncherVisibilitySettingsChange()
+    {
+        RenderLauncherRootTiles();
+        if (_launcherFolderStack.Count > 0)
+        {
+            RenderLauncherFolderFromStack();
+        }
+
+        RenderLauncherHiddenItemsList();
+        PersistSettings();
+    }
+
+    private void RenderLauncherHiddenItemsList()
+    {
+        if (LauncherHiddenItemsListPanel is null || LauncherHiddenItemsEmptyTextBlock is null)
+        {
+            return;
+        }
+
+        LauncherHiddenItemsListPanel.Children.Clear();
+        var hiddenItems = BuildLauncherHiddenItems();
+        LauncherHiddenItemsEmptyTextBlock.IsVisible = hiddenItems.Count == 0;
+        if (hiddenItems.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var hiddenItem in hiddenItems)
+        {
+            LauncherHiddenItemsListPanel.Children.Add(CreateLauncherHiddenItemRow(hiddenItem));
+        }
+    }
+
+    private IReadOnlyList<LauncherHiddenItemView> BuildLauncherHiddenItems()
+    {
+        var items = new List<LauncherHiddenItemView>();
+        var seenFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenApps = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        CollectHiddenLauncherItems(_startMenuRoot, items, seenFolders, seenApps);
+
+        foreach (var key in _hiddenLauncherFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!seenFolders.Contains(key))
+            {
+                items.Add(new LauncherHiddenItemView(
+                    LauncherEntryKind.Folder,
+                    key,
+                    BuildLauncherHiddenFallbackDisplayName(key),
+                    "DIR",
+                    GetLauncherFolderIconBitmap()));
+            }
+        }
+
+        foreach (var key in _hiddenLauncherAppPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!seenApps.Contains(key))
+            {
+                var fallbackName = BuildLauncherHiddenFallbackDisplayName(key);
+                items.Add(new LauncherHiddenItemView(
+                    LauncherEntryKind.Shortcut,
+                    key,
+                    fallbackName,
+                    BuildMonogram(fallbackName),
+                    IconBitmap: null));
+            }
+        }
+
+        return items
+            .OrderBy(item => item.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void CollectHiddenLauncherItems(
+        StartMenuFolderNode folder,
+        List<LauncherHiddenItemView> items,
+        HashSet<string> seenFolders,
+        HashSet<string> seenApps)
+    {
+        foreach (var subFolder in folder.Folders)
+        {
+            var folderKey = NormalizeLauncherHiddenKey(subFolder.RelativePath);
+            if (!string.IsNullOrWhiteSpace(folderKey) &&
+                _hiddenLauncherFolderPaths.Contains(folderKey) &&
+                seenFolders.Add(folderKey))
+            {
+                items.Add(new LauncherHiddenItemView(
+                    LauncherEntryKind.Folder,
+                    folderKey,
+                    subFolder.Name,
+                    "DIR",
+                    GetLauncherFolderIconBitmap()));
+            }
+
+            CollectHiddenLauncherItems(subFolder, items, seenFolders, seenApps);
+        }
+
+        foreach (var app in folder.Apps)
+        {
+            var appKey = NormalizeLauncherHiddenKey(app.RelativePath);
+            if (string.IsNullOrWhiteSpace(appKey) ||
+                !_hiddenLauncherAppPaths.Contains(appKey) ||
+                !seenApps.Add(appKey))
+            {
+                continue;
+            }
+
+            items.Add(new LauncherHiddenItemView(
+                LauncherEntryKind.Shortcut,
+                appKey,
+                app.DisplayName,
+                BuildMonogram(app.DisplayName),
+                GetLauncherIconBitmap(app)));
+        }
+    }
+
+    private static string BuildLauncherHiddenFallbackDisplayName(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return "Unknown";
+        }
+
+        var normalized = key.Replace('\\', '/');
+        var fileName = Path.GetFileNameWithoutExtension(normalized);
+        return string.IsNullOrWhiteSpace(fileName)
+            ? key
+            : fileName;
+    }
+
+    private Control CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)
+    {
+        Control icon = hiddenItem.IconBitmap is not null
+            ? new Image
+            {
+                Source = hiddenItem.IconBitmap,
+                Width = 24,
+                Height = 24,
+                Stretch = Stretch.Uniform
+            }
+            : new Border
+            {
+                Width = 24,
+                Height = 24,
+                CornerRadius = new CornerRadius(999),
+                Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
+                Child = new TextBlock
+                {
+                    Text = hiddenItem.Monogram,
+                    FontSize = 10,
+                    FontWeight = FontWeight.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+
+        var typeText = hiddenItem.Kind == LauncherEntryKind.Folder
+            ? L("settings.launcher.hidden_type_folder", "Folder")
+            : L("settings.launcher.hidden_type_shortcut", "Shortcut");
+
+        var infoPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 10,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        infoPanel.Children.Add(icon);
+        infoPanel.Children.Add(new StackPanel
+        {
+            Spacing = 2,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = hiddenItem.DisplayName,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxLines = 1
+                },
+                new TextBlock
+                {
+                    Text = typeText,
+                    FontSize = 11,
+                    Opacity = 0.7
+                }
+            }
+        });
+
+        var restoreButton = new Button
+        {
+            Content = L("settings.launcher.restore_button", "Show Again"),
+            MinWidth = 110,
+            Padding = new Thickness(12, 6),
+            Tag = new LauncherHiddenItemToken(hiddenItem.Kind, hiddenItem.Key)
+        };
+        restoreButton.Click += OnRestoreLauncherHiddenItemClick;
+
+        var row = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 10
+        };
+        row.Children.Add(infoPanel);
+        Grid.SetColumn(infoPanel, 0);
+        row.Children.Add(restoreButton);
+        Grid.SetColumn(restoreButton, 1);
+
+        return new Border
+        {
+            Classes = { "glass-panel" },
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(10, 8),
+            Child = row
+        };
+    }
+
+    private void OnRestoreLauncherHiddenItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: LauncherHiddenItemToken token })
+        {
+            return;
+        }
+
+        var removed = token.Kind switch
+        {
+            LauncherEntryKind.Folder => _hiddenLauncherFolderPaths.Remove(token.Key),
+            LauncherEntryKind.Shortcut => _hiddenLauncherAppPaths.Remove(token.Key),
+            _ => false
+        };
+
+        if (!removed)
+        {
+            return;
+        }
+
+        ApplyLauncherVisibilitySettingsChange();
     }
 
     private Bitmap? GetLauncherIconBitmap(StartMenuAppEntry app)
@@ -950,11 +1314,21 @@ public partial class MainWindow
         LauncherFolderTilePanel.Children.Clear();
         foreach (var subFolder in folder.Folders)
         {
+            if (!IsLauncherFolderVisible(subFolder))
+            {
+                continue;
+            }
+
             LauncherFolderTilePanel.Children.Add(CreateLauncherFolderTile(subFolder));
         }
 
         foreach (var app in folder.Apps)
         {
+            if (!IsLauncherAppVisible(app))
+            {
+                continue;
+            }
+
             LauncherFolderTilePanel.Children.Add(CreateLauncherAppTile(app));
         }
 

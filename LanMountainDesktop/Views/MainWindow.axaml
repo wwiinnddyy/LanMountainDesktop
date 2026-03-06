@@ -460,6 +460,12 @@
                                             <TextBlock x:Name="SettingsNavAboutTextBlock" Text="&#20851;&#20110;" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </ListBoxItem>
+                                    <ListBoxItem x:Name="SettingsNavLauncherItem" ToolTip.Tip="&#24212;&#29992;&#21551;&#21160;&#21488;">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <fi:FluentIcon x:Name="SettingsNavLauncherIcon" Icon="Apps" IconVariant="Regular" />
+                                            <TextBlock x:Name="SettingsNavLauncherTextBlock" Text="&#24212;&#29992;&#21551;&#21160;&#21488;" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ListBoxItem>
                                 </ListBox>
                             </StackPanel>
                         </Border>
@@ -1493,6 +1499,39 @@
                                     </Border>
                                 </StackPanel>
 
+                                <StackPanel x:Name="LauncherSettingsPanel" IsVisible="False" Spacing="16">
+                                    <TextBlock x:Name="LauncherSettingsPanelTitleTextBlock"
+                                               FontSize="24"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Text="App Launcher" />
+
+                                    <Border Classes="settings-expander-shell">
+                                        <ui:SettingsExpander x:Name="LauncherHiddenItemsSettingsExpander"
+                                                             Header="Hidden Items"
+                                                             Description="Review hidden launcher entries and show them again."
+                                                             IsExpanded="True">
+                                            <ui:SettingsExpander.Footer>
+                                                <StackPanel Spacing="10">
+                                                    <TextBlock x:Name="LauncherHiddenItemsDescriptionTextBlock"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               Text="Right-click an icon in launcher to hide it. Hidden entries appear here." />
+                                                    <TextBlock x:Name="LauncherHiddenItemsEmptyTextBlock"
+                                                               IsVisible="False"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               Text="No hidden items." />
+                                                    <ScrollViewer MaxHeight="420"
+                                                                  VerticalScrollBarVisibility="Auto"
+                                                                  HorizontalScrollBarVisibility="Disabled">
+                                                        <StackPanel x:Name="LauncherHiddenItemsListPanel"
+                                                                    Spacing="8" />
+                                                    </ScrollViewer>
+                                                </StackPanel>
+                                            </ui:SettingsExpander.Footer>
+                                        </ui:SettingsExpander>
+                                    </Border>
+                                </StackPanel>
+
                                 <StackPanel x:Name="AboutSettingsPanel" IsVisible="False" Spacing="20">
                                     <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="About" />
                                         <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
@@ -1513,8 +1552,7 @@
                                             <ui:SettingsExpander.Footer>
                                                 <ToggleSwitch x:Name="AutoStartWithWindowsToggleSwitch"
                                                               Checked="OnAutoStartWithWindowsToggled"
-                                                              Unchecked="OnAutoStartWithWindowsToggled"
-                                                              Content="Launch at Windows sign-in" />
+                                                              Unchecked="OnAutoStartWithWindowsToggled" />
                                             </ui:SettingsExpander.Footer>
                                         </ui:SettingsExpander>
                                     </Border>

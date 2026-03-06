@@ -44,8 +44,6 @@ public sealed class AppSettingsSnapshot
 
     public bool WeatherNoTlsRequests { get; set; }
 
-    public string DailyArtworkMirrorSource { get; set; } = DailyArtworkMirrorSources.Overseas;
-
     public bool AutoStartWithWindows { get; set; }
 
     public bool AutoCheckUpdates { get; set; } = true;
@@ -78,29 +76,9 @@ public sealed class AppSettingsSnapshot
 
     public List<DesktopComponentPlacementSnapshot> DesktopComponentPlacements { get; set; } = [];
 
-    public List<ImportedClassScheduleSnapshot> ImportedClassSchedules { get; set; } = [];
+    public List<string> HiddenLauncherFolderPaths { get; set; } = [];
 
-    public string ActiveImportedClassScheduleId { get; set; } = string.Empty;
-
-    public bool StudyEnvironmentShowDisplayDb { get; set; } = true;
-
-    public bool StudyEnvironmentShowDbfs { get; set; }
-
-    public string DesktopClockTimeZoneId { get; set; } = "China Standard Time";
-    public string DesktopClockSecondHandMode { get; set; } = "Tick";
-
-    public List<string> WorldClockTimeZoneIds { get; set; } =
-    [
-        "China Standard Time",
-        "GMT Standard Time",
-        "AUS Eastern Standard Time",
-        "Eastern Standard Time"
-    ];
-    public string WorldClockSecondHandMode { get; set; } = "Tick";
-
-    public bool CnrDailyNewsAutoRotateEnabled { get; set; } = true;
-
-    public int CnrDailyNewsAutoRotateIntervalMinutes { get; set; } = 60;
+    public List<string> HiddenLauncherAppPaths { get; set; } = [];
 
     public AppSettingsSnapshot Clone()
     {
@@ -136,29 +114,11 @@ public sealed class AppSettingsSnapshot
             }
         }
         clone.DesktopComponentPlacements = placements;
-
-        var schedules = new List<ImportedClassScheduleSnapshot>(ImportedClassSchedules?.Count ?? 0);
-        if (ImportedClassSchedules is not null)
-        {
-            foreach (var schedule in ImportedClassSchedules)
-            {
-                if (schedule is null)
-                {
-                    continue;
-                }
-
-                schedules.Add(new ImportedClassScheduleSnapshot
-                {
-                    Id = schedule.Id,
-                    DisplayName = schedule.DisplayName,
-                    FilePath = schedule.FilePath
-                });
-            }
-        }
-        clone.ImportedClassSchedules = schedules;
-
-        clone.WorldClockTimeZoneIds = WorldClockTimeZoneIds is { Count: > 0 }
-            ? new List<string>(WorldClockTimeZoneIds)
+        clone.HiddenLauncherFolderPaths = HiddenLauncherFolderPaths is { Count: > 0 }
+            ? new List<string>(HiddenLauncherFolderPaths)
+            : [];
+        clone.HiddenLauncherAppPaths = HiddenLauncherAppPaths is { Count: > 0 }
+            ? new List<string>(HiddenLauncherAppPaths)
             : [];
 
         return clone;

@@ -253,6 +253,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStcn24Forum,
+                "STCN 24",
+                "News",
+                "Info",
+                MinWidthCells: 4,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopExchangeRateCalculator,
                 "Exchange Rate Converter",
                 "Calculator",

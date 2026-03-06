@@ -18,6 +18,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class ClassScheduleSettingsWindow : UserControl
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly List<ImportedClassScheduleSnapshot> _importedSchedules = [];
     private string _activeScheduleId = string.Empty;
@@ -35,11 +36,12 @@ public partial class ClassScheduleSettingsWindow : UserControl
 
     private void LoadState()
     {
-        var snapshot = _appSettingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         _importedSchedules.Clear();
-        foreach (var item in snapshot.ImportedClassSchedules)
+        foreach (var item in componentSnapshot.ImportedClassSchedules)
         {
             if (string.IsNullOrWhiteSpace(item.Id) ||
                 string.IsNullOrWhiteSpace(item.FilePath))
@@ -55,7 +57,7 @@ public partial class ClassScheduleSettingsWindow : UserControl
             });
         }
 
-        _activeScheduleId = snapshot.ActiveImportedClassScheduleId?.Trim() ?? string.Empty;
+        _activeScheduleId = componentSnapshot.ActiveImportedClassScheduleId?.Trim() ?? string.Empty;
         if (_importedSchedules.Count > 0 &&
             !_importedSchedules.Any(item => string.Equals(item.Id, _activeScheduleId, StringComparison.OrdinalIgnoreCase)))
         {
@@ -297,7 +299,7 @@ public partial class ClassScheduleSettingsWindow : UserControl
 
     private void SaveState()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _componentSettingsService.Load();
         snapshot.ImportedClassSchedules = _importedSchedules
             .Select(item => new ImportedClassScheduleSnapshot
             {
@@ -307,7 +309,7 @@ public partial class ClassScheduleSettingsWindow : UserControl
             })
             .ToList();
         snapshot.ActiveImportedClassScheduleId = _activeScheduleId ?? string.Empty;
-        _appSettingsService.Save(snapshot);
+        _componentSettingsService.Save(snapshot);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 

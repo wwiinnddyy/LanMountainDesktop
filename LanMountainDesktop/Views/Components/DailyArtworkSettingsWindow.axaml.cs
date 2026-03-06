@@ -10,13 +10,12 @@ namespace LanMountainDesktop.Views.Components;
 public partial class DailyArtworkSettingsWindow : UserControl
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private string _languageCode = "zh-CN";
     private bool _suppressEvents;
 
     public event EventHandler? SettingsChanged;
-
-    public string CurrentSource => GetSelectedSource();
 
     public DailyArtworkSettingsWindow()
     {
@@ -27,10 +26,11 @@ public partial class DailyArtworkSettingsWindow : UserControl
 
     private void LoadState()
     {
-        var snapshot = _appSettingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var source = DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
+        var source = DailyArtworkMirrorSources.Normalize(componentSnapshot.DailyArtworkMirrorSource);
         _suppressEvents = true;
         MirrorSourceComboBox.SelectedIndex = string.Equals(source, DailyArtworkMirrorSources.Domestic, StringComparison.OrdinalIgnoreCase)
             ? 0
@@ -59,9 +59,9 @@ public partial class DailyArtworkSettingsWindow : UserControl
         }
 
         var source = GetSelectedSource();
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _componentSettingsService.Load();
         snapshot.DailyArtworkMirrorSource = source;
-        _appSettingsService.Save(snapshot);
+        _componentSettingsService.Save(snapshot);
 
         UpdateSourceStatus(source);
         SettingsChanged?.Invoke(this, EventArgs.Empty);

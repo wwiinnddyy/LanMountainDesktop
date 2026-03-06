@@ -55,7 +55,8 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private const double DialSize = 258;
     private const double Center = DialSize / 2;
 
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
@@ -357,15 +358,16 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void LoadClockSettings()
     {
-        var snapshot = _settingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var configuredTimeZoneId = string.IsNullOrWhiteSpace(snapshot.DesktopClockTimeZoneId)
+        var configuredTimeZoneId = string.IsNullOrWhiteSpace(componentSnapshot.DesktopClockTimeZoneId)
             ? "China Standard Time"
-            : snapshot.DesktopClockTimeZoneId.Trim();
+            : componentSnapshot.DesktopClockTimeZoneId.Trim();
 
         _clockTimeZone = WorldClockTimeZoneCatalog.ResolveTimeZoneOrLocal(configuredTimeZoneId);
-        _secondHandMode = ClockSecondHandMode.Normalize(snapshot.DesktopClockSecondHandMode);
+        _secondHandMode = ClockSecondHandMode.Normalize(componentSnapshot.DesktopClockSecondHandMode);
     }
 
     private void ApplySecondHandTimerInterval()

@@ -26,6 +26,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     };
 
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly IClassIslandScheduleDataService _scheduleService = new ClassIslandScheduleDataService();
 
@@ -115,11 +116,12 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private void RefreshSchedule()
     {
         var appSettings = _appSettingsService.Load();
+        var componentSettings = _componentSettingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         UpdateHeader(now);
 
-        var importedSchedulePath = ResolveImportedSchedulePath(appSettings);
+        var importedSchedulePath = ResolveImportedSchedulePath(componentSettings);
         var readResult = _scheduleService.Load(importedSchedulePath);
         if (!readResult.Success || readResult.Snapshot is null)
         {
@@ -273,7 +275,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         return dayOfWeek.ToString()[..3];
     }
 
-    private static string? ResolveImportedSchedulePath(AppSettingsSnapshot snapshot)
+    private static string? ResolveImportedSchedulePath(ComponentSettingsSnapshot snapshot)
     {
         if (snapshot.ImportedClassSchedules.Count == 0)
         {

@@ -66,6 +66,7 @@ public partial class MainWindow
             WeatherSettingsPanel is null ||
             RegionSettingsPanel is null ||
             UpdateSettingsPanel is null ||
+            LauncherSettingsPanel is null ||
             AboutSettingsPanel is null)
         {
             return;
@@ -80,6 +81,12 @@ public partial class MainWindow
         RegionSettingsPanel.IsVisible = selectedIndex == 5;
         UpdateSettingsPanel.IsVisible = selectedIndex == 6;
         AboutSettingsPanel.IsVisible = selectedIndex == 7;
+        LauncherSettingsPanel.IsVisible = selectedIndex == 8;
+
+        if (selectedIndex == 8)
+        {
+            RenderLauncherHiddenItemsList();
+        }
 
         if (selectedIndex == 1)
         {
@@ -877,7 +884,6 @@ public partial class MainWindow
             WeatherExcludedAlerts = _weatherExcludedAlertsRaw,
             WeatherIconPackId = _weatherIconPackId,
             WeatherNoTlsRequests = _weatherNoTlsRequests,
-            DailyArtworkMirrorSource = DailyArtworkMirrorSources.Normalize(_dailyArtworkMirrorSource),
             AutoStartWithWindows = _autoStartWithWindows,
             AutoCheckUpdates = _autoCheckUpdates,
             IncludePrereleaseUpdates = IncludePrereleaseUpdates,
@@ -891,7 +897,9 @@ public partial class MainWindow
             StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent,
             DesktopPageCount = _desktopPageCount,
             CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex,
-            DesktopComponentPlacements = _desktopComponentPlacements.ToList()
+            DesktopComponentPlacements = _desktopComponentPlacements.ToList(),
+            HiddenLauncherFolderPaths = _hiddenLauncherFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
+            HiddenLauncherAppPaths = _hiddenLauncherAppPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList()
         };
 
         _appSettingsService.Save(snapshot);

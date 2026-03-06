@@ -111,6 +111,7 @@ public partial class MainWindow
         SettingsNavWeatherTextBlock.Text = L("settings.nav.weather", "Weather");
         SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
         SettingsNavUpdateTextBlock.Text = L("settings.nav.update", "Update");
+        SettingsNavLauncherTextBlock.Text = L("settings.nav.launcher", "App Launcher");
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -251,6 +252,16 @@ public partial class MainWindow
 
         ApplyUpdateLocalization();
 
+        LauncherSettingsPanelTitleTextBlock.Text = L("settings.launcher.title", "App Launcher");
+        LauncherHiddenItemsSettingsExpander.Header = L("settings.launcher.hidden_header", "Hidden Items");
+        LauncherHiddenItemsSettingsExpander.Description = L(
+            "settings.launcher.hidden_desc",
+            "Review hidden launcher entries and show them again.");
+        LauncherHiddenItemsDescriptionTextBlock.Text = L(
+            "settings.launcher.hidden_hint",
+            "Right-click an icon in launcher to hide it. Hidden entries appear here.");
+        LauncherHiddenItemsEmptyTextBlock.Text = L("settings.launcher.hidden_empty", "No hidden items.");
+
         SettingsNavAboutTextBlock.Text = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
         VersionTextBlock.Text = Lf(
@@ -269,9 +280,6 @@ public partial class MainWindow
         AboutStartupSettingsExpander.Description = L(
             "settings.about.startup_desc",
             "Launch the app automatically when signing in to Windows.");
-        AutoStartWithWindowsToggleSwitch.Content = L(
-            "settings.about.startup_toggle",
-            "Launch at Windows sign-in");
 
         if (WallpaperPlacementComboBox?.ItemCount >= 5)
         {
@@ -293,6 +301,7 @@ public partial class MainWindow
         InitializeTimeZoneSettings();
         BuildComponentLibraryCategoryPages();
         RenderLauncherRootTiles();
+        RenderLauncherHiddenItemsList();
         UpdateOpenSettingsActionVisualState();
         UpdateWallpaperDisplay();
     }

@@ -1,0 +1,246 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="320"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.Stcn24ForumWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="28"
+            Background="Transparent"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#FCFCFD"
+                    CornerRadius="28"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    Padding="12,12,12,12">
+                <Grid x:Name="ContentGrid"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="6">
+                    <Grid x:Name="HeaderGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center">
+                            <Border x:Name="HeaderDot"
+                                    Width="8"
+                                    Height="8"
+                                    CornerRadius="4"
+                                    Background="#FF4D4F"
+                                    VerticalAlignment="Center" />
+                            <TextBlock x:Name="HeaderTitleTextBlock"
+                                       Text="STCN 24"
+                                       Foreground="#202327"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <Button x:Name="RefreshButton"
+                                Grid.Column="1"
+                                Width="34"
+                                Height="34"
+                                CornerRadius="17"
+                                Background="#EFF1F5"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Focusable="False"
+                                Click="OnRefreshButtonClick">
+                            <fi:SymbolIcon x:Name="RefreshGlyphIcon"
+                                           Symbol="ArrowClockwise"
+                                           IconVariant="Regular"
+                                           Foreground="#5E6671"
+                                           FontSize="16"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
+
+                    <Border x:Name="PostItem1Host"
+                            Grid.Row="1"
+                            Tag="0"
+                            Background="#F7F8FA"
+                            CornerRadius="10"
+                            Padding="8,6"
+                            PointerPressed="OnPostItemPointerPressed">
+                        <Grid x:Name="PostItem1Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <Border x:Name="PostItem1AvatarHost"
+                                    Width="30"
+                                    Height="30"
+                                    CornerRadius="15"
+                                    Background="#E7EBF4"
+                                    ClipToBounds="True">
+                                <Grid>
+                                    <Image x:Name="PostItem1AvatarImage"
+                                           Stretch="UniformToFill" />
+                                    <TextBlock x:Name="PostItem1AvatarFallbackText"
+                                               Text="?"
+                                               Foreground="#4A5466"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <TextBlock x:Name="PostItem1TitleTextBlock"
+                                       Grid.Column="1"
+                                       Text="Loading..."
+                                       Foreground="#202327"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="PostItem2Host"
+                            Grid.Row="2"
+                            Tag="1"
+                            Background="#F7F8FA"
+                            CornerRadius="10"
+                            Padding="8,6"
+                            PointerPressed="OnPostItemPointerPressed">
+                        <Grid x:Name="PostItem2Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <Border x:Name="PostItem2AvatarHost"
+                                    Width="30"
+                                    Height="30"
+                                    CornerRadius="15"
+                                    Background="#E7EBF4"
+                                    ClipToBounds="True">
+                                <Grid>
+                                    <Image x:Name="PostItem2AvatarImage"
+                                           Stretch="UniformToFill" />
+                                    <TextBlock x:Name="PostItem2AvatarFallbackText"
+                                               Text="?"
+                                               Foreground="#4A5466"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <TextBlock x:Name="PostItem2TitleTextBlock"
+                                       Grid.Column="1"
+                                       Text="Loading..."
+                                       Foreground="#202327"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="PostItem3Host"
+                            Grid.Row="3"
+                            Tag="2"
+                            Background="#F7F8FA"
+                            CornerRadius="10"
+                            Padding="8,6"
+                            PointerPressed="OnPostItemPointerPressed">
+                        <Grid x:Name="PostItem3Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <Border x:Name="PostItem3AvatarHost"
+                                    Width="30"
+                                    Height="30"
+                                    CornerRadius="15"
+                                    Background="#E7EBF4"
+                                    ClipToBounds="True">
+                                <Grid>
+                                    <Image x:Name="PostItem3AvatarImage"
+                                           Stretch="UniformToFill" />
+                                    <TextBlock x:Name="PostItem3AvatarFallbackText"
+                                               Text="?"
+                                               Foreground="#4A5466"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <TextBlock x:Name="PostItem3TitleTextBlock"
+                                       Grid.Column="1"
+                                       Text="Loading..."
+                                       Foreground="#202327"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border x:Name="PostItem4Host"
+                            Grid.Row="4"
+                            Tag="3"
+                            Background="#F7F8FA"
+                            CornerRadius="10"
+                            Padding="8,6"
+                            PointerPressed="OnPostItemPointerPressed">
+                        <Grid x:Name="PostItem4Grid"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8">
+                            <Border x:Name="PostItem4AvatarHost"
+                                    Width="30"
+                                    Height="30"
+                                    CornerRadius="15"
+                                    Background="#E7EBF4"
+                                    ClipToBounds="True">
+                                <Grid>
+                                    <Image x:Name="PostItem4AvatarImage"
+                                           Stretch="UniformToFill" />
+                                    <TextBlock x:Name="PostItem4AvatarFallbackText"
+                                               Text="?"
+                                               Foreground="#4A5466"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <TextBlock x:Name="PostItem4TitleTextBlock"
+                                       Grid.Column="1"
+                                       Text="Loading..."
+                                       Foreground="#202327"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       MaxLines="1"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading..."
+                       Foreground="#6A6F77"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

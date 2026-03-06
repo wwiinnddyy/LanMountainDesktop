@@ -251,6 +251,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new BilibiliHotSearchWidget(),
                     cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStcn24Forum,
+                    "component.stcn24_forum",
+                    () => new Stcn24ForumWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.28, 12, 24)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopExchangeRateCalculator,
                     "component.exchange_rate_converter",
                     () => new ExchangeRateCalculatorWidget(),

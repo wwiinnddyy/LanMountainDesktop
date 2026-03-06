@@ -36,6 +36,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private sealed record DailyNewsCacheEntry(DailyNewsSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record BilibiliHotSearchCacheEntry(BilibiliHotSearchSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record DailyWordCacheEntry(DailyWordSnapshot Snapshot, DateTimeOffset ExpireAt);
+    private sealed record Stcn24ForumPostsCacheEntry(Stcn24ForumPostsSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record ExchangeRateTableCacheEntry(
         string BaseCurrency,
         Dictionary<string, decimal> Rates,
@@ -52,7 +53,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private readonly RecommendationApiOptions _options;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly object _cacheGate = new();
     private readonly Dictionary<string, DailyArtworkCacheEntry> _dailyArtworkCacheBySource =
         new(StringComparer.OrdinalIgnoreCase);
@@ -60,6 +61,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     private DailyNewsCacheEntry? _dailyNewsCache;
     private BilibiliHotSearchCacheEntry? _bilibiliHotSearchCache;
     private DailyWordCacheEntry? _dailyWordCache;
+    private Stcn24ForumPostsCacheEntry? _stcn24ForumPostsCache;
     private readonly Dictionary<string, ExchangeRateTableCacheEntry> _exchangeRateCacheByBaseCurrency =
         new(StringComparer.OrdinalIgnoreCase);
     private int _dailyNewsRotationCursor;
@@ -106,6 +108,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _dailyNewsCache = null;
             _bilibiliHotSearchCache = null;
             _dailyWordCache = null;
+            _stcn24ForumPostsCache = null;
             _exchangeRateCacheByBaseCurrency.Clear();
         }
     }
@@ -338,6 +341,53 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return RecommendationQueryResult<DailyWordSnapshot>.Fail(
             "upstream_empty_result",
             lastError?.Message ?? "No available daily word from Youdao.");
+    }
+
+    public async Task<RecommendationQueryResult<Stcn24ForumPostsSnapshot>> GetStcn24ForumPostsAsync(
+        Stcn24ForumPostsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new Stcn24ForumPostsQuery();
+        var targetCount = normalizedQuery.ItemCount.HasValue
+            ? Math.Clamp(normalizedQuery.ItemCount.Value, 1, 12)
+            : Math.Clamp(_options.DefaultStcn24ForumPostCount, 1, 12);
+
+        if (!normalizedQuery.ForceRefresh &&
+            TryGetStcn24ForumPostsFromCache(out var cached) &&
+            cached.Items.Count >= targetCount)
+        {
+            var projectedSnapshot = cached with
+            {
+                Items = cached.Items.Take(targetCount).ToArray()
+            };
+            return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Ok(projectedSnapshot);
+        }
+
+        try
+        {
+            var snapshot = await FetchStcn24ForumPostsSnapshotAsync(targetCount, cancellationToken);
+            if (snapshot.Items.Count == 0)
+            {
+                return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Fail(
+                    "upstream_empty_result",
+                    "No STCN forum posts were returned.");
+            }
+
+            SetStcn24ForumPostsCache(snapshot);
+            return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<Stcn24ForumPostsSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
     }
 
     public async Task<RecommendationQueryResult<ExchangeRateSnapshot>> GetExchangeRateAsync(
@@ -762,6 +812,141 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             FetchedAt: DateTimeOffset.UtcNow);
     }
 
+    private async Task<Stcn24ForumPostsSnapshot> FetchStcn24ForumPostsSnapshotAsync(
+        int targetCount,
+        CancellationToken cancellationToken)
+    {
+        var safeCount = Math.Clamp(targetCount, 1, 12);
+        var requestCount = Math.Clamp(Math.Max(safeCount * 3, 12), safeCount, 40);
+        var keyword = NormalizeInlineText(_options.SmartTeachStcnKeyword);
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            keyword = "STCN";
+        }
+
+        var requestUrl = string.Format(
+            CultureInfo.InvariantCulture,
+            _options.SmartTeachForumApiTemplate,
+            Uri.EscapeDataString(keyword),
+            requestCount);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+        request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+        request.Headers.TryAddWithoutValidation("Accept", "application/vnd.api+json, application/json;q=0.9, */*;q=0.8");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+        }
+
+        using var document = JsonDocument.Parse(responseText);
+        var root = document.RootElement;
+        if (!root.TryGetProperty("data", out var dataArray) || dataArray.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Forum discussion list is missing.");
+        }
+
+        var usersById = new Dictionary<string, (string? DisplayName, string? AvatarUrl)>(StringComparer.OrdinalIgnoreCase);
+        if (root.TryGetProperty("included", out var includedArray) && includedArray.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var entity in includedArray.EnumerateArray())
+            {
+                if (entity.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var entityType = ReadString(entity, "type");
+                if (!string.Equals(entityType, "users", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var userId = ReadString(entity, "id");
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    continue;
+                }
+
+                var displayName = NormalizeInlineText(
+                    ReadString(entity, "attributes", "displayName") ??
+                    ReadString(entity, "attributes", "username"));
+                var avatarUrl = ResolveSmartTeachForumUrl(
+                    ReadString(entity, "attributes", "avatarUrl"),
+                    _options.SmartTeachForumBaseUrl);
+                usersById[userId.Trim()] = (
+                    string.IsNullOrWhiteSpace(displayName) ? null : displayName,
+                    avatarUrl);
+            }
+        }
+
+        var items = new List<Stcn24ForumPostItemSnapshot>(safeCount);
+        foreach (var discussionNode in dataArray.EnumerateArray())
+        {
+            if (discussionNode.ValueKind != JsonValueKind.Object || IsSmartTeachPinnedDiscussion(discussionNode))
+            {
+                continue;
+            }
+
+            var discussionId = ReadString(discussionNode, "id")?.Trim();
+            if (string.IsNullOrWhiteSpace(discussionId))
+            {
+                continue;
+            }
+
+            var title = NormalizeInlineText(ReadString(discussionNode, "attributes", "title"));
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                continue;
+            }
+
+            var slug = NormalizeInlineText(ReadString(discussionNode, "attributes", "slug"));
+            var shareUrl = ResolveSmartTeachForumUrl(
+                ReadString(discussionNode, "attributes", "shareUrl"),
+                _options.SmartTeachForumBaseUrl);
+            var targetUrl = !string.IsNullOrWhiteSpace(shareUrl)
+                ? shareUrl
+                : BuildSmartTeachDiscussionUrl(_options.SmartTeachForumBaseUrl, discussionId, slug);
+            if (string.IsNullOrWhiteSpace(targetUrl))
+            {
+                continue;
+            }
+
+            var authorId = ReadString(discussionNode, "relationships", "user", "data", "id");
+            string? authorDisplayName = null;
+            string? authorAvatarUrl = null;
+            if (!string.IsNullOrWhiteSpace(authorId) &&
+                usersById.TryGetValue(authorId.Trim(), out var userInfo))
+            {
+                authorDisplayName = userInfo.DisplayName;
+                authorAvatarUrl = userInfo.AvatarUrl;
+            }
+
+            var createdAtText = ReadString(discussionNode, "attributes", "createdAt");
+            var createdAt = TryParseDateTimeOffset(createdAtText);
+
+            items.Add(new Stcn24ForumPostItemSnapshot(
+                Title: title,
+                Url: targetUrl,
+                AuthorDisplayName: authorDisplayName,
+                AuthorAvatarUrl: authorAvatarUrl,
+                CreatedAt: createdAt));
+
+            if (items.Count >= safeCount)
+            {
+                break;
+            }
+        }
+
+        return new Stcn24ForumPostsSnapshot(
+            Provider: "SmartTeachForum",
+            Source: "智教联盟论坛 STCN",
+            Items: items,
+            FetchedAt: DateTimeOffset.UtcNow);
+    }
+
     private async Task<string?> TryFetchBilibiliSearchPlaceholderAsync(CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.BilibiliSearchDefaultApiUrl))
@@ -862,6 +1047,31 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
 
         return selection;
+    }
+
+    private bool TryGetStcn24ForumPostsFromCache(out Stcn24ForumPostsSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            if (_stcn24ForumPostsCache is not null && _stcn24ForumPostsCache.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                snapshot = _stcn24ForumPostsCache.Snapshot;
+                return true;
+            }
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private void SetStcn24ForumPostsCache(Stcn24ForumPostsSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            _stcn24ForumPostsCache = new Stcn24ForumPostsCacheEntry(
+                snapshot,
+                DateTimeOffset.UtcNow.Add(_options.CacheDuration));
+        }
     }
 
     private bool TryGetDailyWordFromCache(out DailyWordSnapshot snapshot)
@@ -1942,6 +2152,84 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             : null;
     }
 
+    private static bool IsSmartTeachPinnedDiscussion(JsonElement discussionNode)
+    {
+        return ReadBoolean(discussionNode, "attributes", "isStickiest") ||
+               ReadBoolean(discussionNode, "attributes", "isSticky") ||
+               ReadBoolean(discussionNode, "attributes", "isTagSticky") ||
+               ReadBoolean(discussionNode, "attributes", "front") ||
+               ReadBoolean(discussionNode, "attributes", "frontpage");
+    }
+
+    private static string? ResolveSmartTeachForumUrl(string? rawUrl, string? baseUrl)
+    {
+        var normalizedAbsolute = NormalizeHttpUrl(rawUrl);
+        if (!string.IsNullOrWhiteSpace(normalizedAbsolute))
+        {
+            return normalizedAbsolute;
+        }
+
+        if (string.IsNullOrWhiteSpace(rawUrl) || string.IsNullOrWhiteSpace(baseUrl))
+        {
+            return null;
+        }
+
+        if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var baseUri))
+        {
+            return null;
+        }
+
+        var normalized = ResolveAbsoluteUrl(rawUrl, baseUri);
+        return NormalizeHttpUrl(normalized);
+    }
+
+    private static string? BuildSmartTeachDiscussionUrl(string? baseUrl, string discussionId, string slug)
+    {
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(discussionId))
+        {
+            return null;
+        }
+
+        if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var baseUri))
+        {
+            return null;
+        }
+
+        var normalizedId = discussionId.Trim();
+        var normalizedSlug = slug.Trim();
+        string path;
+        if (string.IsNullOrWhiteSpace(normalizedSlug))
+        {
+            path = $"/d/{normalizedId}";
+        }
+        else if (normalizedSlug.StartsWith($"{normalizedId}-", StringComparison.OrdinalIgnoreCase))
+        {
+            path = $"/d/{normalizedSlug}";
+        }
+        else
+        {
+            path = $"/d/{normalizedId}-{normalizedSlug}";
+        }
+
+        return new Uri(baseUri, path).ToString();
+    }
+
+    private static DateTimeOffset? TryParseDateTimeOffset(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(
+            rawValue,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var value)
+            ? value
+            : null;
+    }
+
     private static string NormalizeInlineText(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -1970,6 +2258,30 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             JsonValueKind.False => "false",
             _ => null
         };
+    }
+
+    private static bool ReadBoolean(JsonElement node, params string[] path)
+    {
+        var target = TryGetNode(node, path);
+        if (!target.HasValue)
+        {
+            return false;
+        }
+
+        var value = target.Value;
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            case JsonValueKind.String:
+                return bool.TryParse(value.GetString(), out var boolValue) && boolValue;
+            case JsonValueKind.Number:
+                return value.TryGetInt32(out var intValue) && intValue != 0;
+            default:
+                return false;
+        }
     }
 
     private static JsonElement? TryGetNode(JsonElement node, params string[] path)
@@ -2010,7 +2322,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
         try
         {
-            var snapshot = _appSettingsService.Load();
+            var snapshot = _componentSettingsService.Load();
             return DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
         }
         catch

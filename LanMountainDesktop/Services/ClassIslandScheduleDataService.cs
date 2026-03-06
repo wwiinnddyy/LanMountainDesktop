@@ -50,7 +50,7 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
-                inputPath = ResolveImportedSchedulePathFromAppSettings();
+                inputPath = ResolveImportedSchedulePathFromComponentSettings();
             }
 
             var source = ResolveSource(inputPath, profileFileName, warnings);
@@ -180,11 +180,11 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
         return result;
     }
 
-    private static string? ResolveImportedSchedulePathFromAppSettings()
+    private static string? ResolveImportedSchedulePathFromComponentSettings()
     {
         try
         {
-            var snapshot = new AppSettingsService().Load();
+            var snapshot = new ComponentSettingsService().Load();
             if (snapshot.ImportedClassSchedules.Count == 0)
             {
                 return null;

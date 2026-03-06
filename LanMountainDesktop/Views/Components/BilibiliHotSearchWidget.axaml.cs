@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,13 +25,15 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
     private const int MaxDisplayItemCount = 4;
+    private static readonly int[] SupportedAutoRefreshIntervalsMinutes = [5, 10, 15, 30, 60, 180];
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
         Interval = TimeSpan.FromMinutes(15)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly List<BilibiliHotSearchItemSnapshot> _activeItems = [];
     private readonly List<HotItemVisual> _hotItemVisuals = [];
@@ -42,6 +45,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private bool _autoRefreshEnabled = true;
 
     private sealed record HotItemVisual(
         Border Host,
@@ -77,6 +81,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
+        ApplyAutoRefreshSettings();
         ApplyLoadingState();
     }
 
@@ -98,6 +103,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     public void RefreshFromSettings()
     {
         _recommendationService.ClearCache();
+        ApplyAutoRefreshSettings();
         if (_isAttached)
         {
             _ = RefreshHotSearchAsync(forceRefresh: true);
@@ -107,7 +113,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        _refreshTimer.Start();
+        ApplyAutoRefreshSettings();
         _ = RefreshHotSearchAsync(forceRefresh: false);
     }
 
@@ -417,13 +423,67 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     {
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _appSettingsService.Load();
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch
         {
             _languageCode = "zh-CN";
         }
+    }
+
+    private void ApplyAutoRefreshSettings()
+    {
+        var enabled = true;
+        var intervalMinutes = 15;
+
+        try
+        {
+            var snapshot = _componentSettingsService.Load();
+            enabled = snapshot.BilibiliHotSearchAutoRefreshEnabled;
+            intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.BilibiliHotSearchAutoRefreshIntervalMinutes);
+        }
+        catch
+        {
+            // Keep fallback defaults.
+        }
+
+        _autoRefreshEnabled = enabled;
+        _refreshTimer.Interval = TimeSpan.FromMinutes(intervalMinutes);
+
+        if (!_isAttached)
+        {
+            return;
+        }
+
+        if (_autoRefreshEnabled)
+        {
+            if (!_refreshTimer.IsEnabled)
+            {
+                _refreshTimer.Start();
+            }
+        }
+        else if (_refreshTimer.IsEnabled)
+        {
+            _refreshTimer.Stop();
+        }
+    }
+
+    private static int NormalizeAutoRefreshIntervalMinutes(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return 15;
+        }
+
+        if (SupportedAutoRefreshIntervalsMinutes.Contains(minutes))
+        {
+            return minutes;
+        }
+
+        return SupportedAutoRefreshIntervalsMinutes
+            .OrderBy(value => Math.Abs(value - minutes))
+            .FirstOrDefault(15);
     }
 
     private static string NormalizeCompactText(string? text)

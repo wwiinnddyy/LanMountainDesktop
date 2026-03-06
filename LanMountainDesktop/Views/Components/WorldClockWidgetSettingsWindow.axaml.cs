@@ -28,6 +28,7 @@ public partial class WorldClockWidgetSettingsWindow : UserControl
         };
 
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private readonly ComboBox[] _timeZoneComboBoxes;
@@ -58,8 +59,9 @@ public partial class WorldClockWidgetSettingsWindow : UserControl
 
     private void LoadState()
     {
-        var snapshot = _appSettingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         _allTimeZones = _timeZoneService
             .GetAllTimeZones()
@@ -68,9 +70,9 @@ public partial class WorldClockWidgetSettingsWindow : UserControl
             .ToList();
 
         _selectedTimeZoneIds = WorldClockTimeZoneCatalog.NormalizeTimeZoneIds(
-            snapshot.WorldClockTimeZoneIds,
+            componentSnapshot.WorldClockTimeZoneIds,
             _allTimeZones);
-        _secondHandMode = ClockSecondHandMode.Normalize(snapshot.WorldClockSecondHandMode);
+        _secondHandMode = ClockSecondHandMode.Normalize(componentSnapshot.WorldClockSecondHandMode);
     }
 
     private void ApplyLocalization()
@@ -165,10 +167,10 @@ public partial class WorldClockWidgetSettingsWindow : UserControl
         var normalizedIds = WorldClockTimeZoneCatalog.NormalizeTimeZoneIds(selectedIds, _allTimeZones);
         _secondHandMode = GetSelectedSecondHandMode();
 
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _componentSettingsService.Load();
         snapshot.WorldClockTimeZoneIds = normalizedIds.ToList();
         snapshot.WorldClockSecondHandMode = _secondHandMode;
-        _appSettingsService.Save(snapshot);
+        _componentSettingsService.Save(snapshot);
 
         _selectedTimeZoneIds = normalizedIds;
         SettingsChanged?.Invoke(this, EventArgs.Empty);

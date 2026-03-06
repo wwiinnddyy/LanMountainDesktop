@@ -43,7 +43,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromMinutes(30)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly Bitmap?[] _newsBitmaps = new Bitmap?[2];
     private readonly List<string?> _newsUrls = [];
@@ -705,7 +706,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _appSettingsService.Load();
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch
@@ -721,7 +722,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _componentSettingsService.Load();
             enabled = snapshot.CnrDailyNewsAutoRotateEnabled;
             intervalMinutes = NormalizeAutoRotateIntervalMinutes(snapshot.CnrDailyNewsAutoRotateIntervalMinutes);
         }

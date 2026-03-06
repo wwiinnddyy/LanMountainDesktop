@@ -70,3 +70,16 @@ public sealed record ExchangeRateSnapshot(
     string TargetCurrency,
     decimal Rate,
     DateTimeOffset FetchedAt);
+
+public sealed record Stcn24ForumPostItemSnapshot(
+    string Title,
+    string Url,
+    string? AuthorDisplayName,
+    string? AuthorAvatarUrl,
+    DateTimeOffset? CreatedAt);
+
+public sealed record Stcn24ForumPostsSnapshot(
+    string Provider,
+    string Source,
+    IReadOnlyList<Stcn24ForumPostItemSnapshot> Items,
+    DateTimeOffset FetchedAt);

@@ -8,6 +8,7 @@ namespace LanMountainDesktop.Views.Components;
 public partial class StudyEnvironmentWidgetSettingsWindow : UserControl
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private string _languageCode = "zh-CN";
     private bool _suppressEvents;
@@ -23,11 +24,12 @@ public partial class StudyEnvironmentWidgetSettingsWindow : UserControl
 
     private void LoadState()
     {
-        var snapshot = _appSettingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
-        var showDisplayDb = snapshot.StudyEnvironmentShowDisplayDb;
-        var showDbfs = snapshot.StudyEnvironmentShowDbfs;
+        var showDisplayDb = componentSnapshot.StudyEnvironmentShowDisplayDb;
+        var showDbfs = componentSnapshot.StudyEnvironmentShowDbfs;
         if (!showDisplayDb && !showDbfs)
         {
             showDisplayDb = true;
@@ -75,10 +77,10 @@ public partial class StudyEnvironmentWidgetSettingsWindow : UserControl
             showDisplayDb = true;
         }
 
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _componentSettingsService.Load();
         snapshot.StudyEnvironmentShowDisplayDb = showDisplayDb;
         snapshot.StudyEnvironmentShowDbfs = showDbfs;
-        _appSettingsService.Save(snapshot);
+        _componentSettingsService.Save(snapshot);
 
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }

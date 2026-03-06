@@ -28,6 +28,7 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
         };
 
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private bool _suppressEvents;
@@ -48,12 +49,13 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
 
     private void LoadState()
     {
-        var snapshot = _appSettingsService.Load();
-        _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        _selectedTimeZoneId = string.IsNullOrWhiteSpace(snapshot.DesktopClockTimeZoneId)
+        var appSnapshot = _appSettingsService.Load();
+        var componentSnapshot = _componentSettingsService.Load();
+        _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
+        _selectedTimeZoneId = string.IsNullOrWhiteSpace(componentSnapshot.DesktopClockTimeZoneId)
             ? "China Standard Time"
-            : snapshot.DesktopClockTimeZoneId.Trim();
-        _secondHandMode = ClockSecondHandMode.Normalize(snapshot.DesktopClockSecondHandMode);
+            : componentSnapshot.DesktopClockTimeZoneId.Trim();
+        _secondHandMode = ClockSecondHandMode.Normalize(componentSnapshot.DesktopClockSecondHandMode);
 
         _allTimeZones = _timeZoneService
             .GetAllTimeZones()
@@ -147,10 +149,10 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
         _selectedTimeZoneId = normalizedId;
         _secondHandMode = GetSelectedSecondHandMode();
 
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _componentSettingsService.Load();
         snapshot.DesktopClockTimeZoneId = normalizedId;
         snapshot.DesktopClockSecondHandMode = _secondHandMode;
-        _appSettingsService.Save(snapshot);
+        _componentSettingsService.Save(snapshot);
 
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }

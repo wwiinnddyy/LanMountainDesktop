@@ -29,6 +29,11 @@ public sealed record DailyWordQuery(
     string? Locale = null,
     bool ForceRefresh = false);
 
+public sealed record Stcn24ForumPostsQuery(
+    string? Locale = null,
+    int? ItemCount = null,
+    bool ForceRefresh = false);
+
 public sealed record ExchangeRateQuery(
     string? BaseCurrency = null,
     string? TargetCurrency = null,
@@ -83,6 +88,13 @@ public sealed record RecommendationApiOptions
         "https://api.bilibili.com/x/web-interface/search/default";
 
     public string BilibiliSearchPageUrl { get; init; } = "https://search.bilibili.com/all";
+
+    public string SmartTeachForumApiTemplate { get; init; } =
+        "https://forum.smart-teach.cn/api/discussions?filter[q]={0}&sort=-createdAt&page[limit]={1}&include=user";
+
+    public string SmartTeachForumBaseUrl { get; init; } = "https://forum.smart-teach.cn";
+
+    public string SmartTeachStcnKeyword { get; init; } = "STCN";
 
     public string YoudaoDictionaryApiTemplate { get; init; } = "https://dict.youdao.com/jsonapi?q={0}";
 
@@ -226,6 +238,8 @@ public sealed record RecommendationApiOptions
     public int DefaultDailyNewsCount { get; init; } = 2;
 
     public int DefaultBilibiliHotSearchCount { get; init; } = 5;
+
+    public int DefaultStcn24ForumPostCount { get; init; } = 4;
 }
 
 public interface IRecommendationInfoService
@@ -248,6 +262,10 @@ public interface IRecommendationInfoService
 
     Task<RecommendationQueryResult<DailyWordSnapshot>> GetDailyWordAsync(
         DailyWordQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<Stcn24ForumPostsSnapshot>> GetStcn24ForumPostsAsync(
+        Stcn24ForumPostsQuery query,
         CancellationToken cancellationToken = default);
 
     Task<RecommendationQueryResult<ExchangeRateSnapshot>> GetExchangeRateAsync(
