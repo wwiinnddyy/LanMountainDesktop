@@ -141,6 +141,33 @@ function Create-PackageArchive {
     return $archivePath
 }
 
+function Add-LinuxDesktopAssets {
+    param(
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$RepoRoot
+    )
+
+    $resourcesRoot = Join-Path $RepoRoot "packaging/linux"
+    $desktopTemplate = Join-Path $resourcesRoot "LanMountainDesktop.desktop"
+    $iconSource = Join-Path $resourcesRoot "lanmountaindesktop.png"
+    $installScriptSource = Join-Path $resourcesRoot "install.sh"
+
+    foreach ($requiredPath in @($desktopTemplate, $iconSource, $installScriptSource)) {
+        if (-not (Test-Path -LiteralPath $requiredPath)) {
+            throw "Linux packaging resource is missing: $requiredPath"
+        }
+    }
+
+    $applicationsDir = Join-Path $PublishedDirectory "share/applications"
+    $iconsDir = Join-Path $PublishedDirectory "share/icons/hicolor/256x256/apps"
+    [System.IO.Directory]::CreateDirectory($applicationsDir) | Out-Null
+    [System.IO.Directory]::CreateDirectory($iconsDir) | Out-Null
+
+    Copy-Item -LiteralPath $desktopTemplate -Destination (Join-Path $applicationsDir "LanMountainDesktop.desktop") -Force
+    Copy-Item -LiteralPath $iconSource -Destination (Join-Path $iconsDir "lanmountaindesktop.png") -Force
+    Copy-Item -LiteralPath $installScriptSource -Destination (Join-Path $PublishedDirectory "install.sh") -Force
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-ExistingPath -PathValue (Join-Path $scriptRoot "..")
 
@@ -183,6 +210,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
+
+if ($RuntimeIdentifier -like "linux-*") {
+    Add-LinuxDesktopAssets -PublishedDirectory $PublishDir -RepoRoot $repoRoot
+}
 
 if (-not $KeepSymbols) {
     Get-ChildItem -Path $PublishDir -Recurse -File -Filter "*.pdb" | ForEach-Object {

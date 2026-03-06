@@ -38,6 +38,7 @@ public partial class MainWindow
         Bitmap? IconBitmap);
 
     private readonly WindowsStartMenuService _windowsStartMenuService = new();
+    private readonly LinuxDesktopEntryService _linuxDesktopEntryService = new();
     private readonly Dictionary<string, Bitmap> _launcherIconCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
     private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
@@ -116,7 +117,9 @@ public partial class MainWindow
         {
             var loadResult = await Task.Run(() =>
             {
-                var loadedRoot = _windowsStartMenuService.Load();
+                var loadedRoot = OperatingSystem.IsLinux()
+                    ? _linuxDesktopEntryService.Load()
+                    : _windowsStartMenuService.Load();
                 var folderIconBytes = OperatingSystem.IsWindows()
                     ? WindowsIconService.TryGetSystemFolderIconPngBytes()
                     : null;
@@ -771,7 +774,7 @@ public partial class MainWindow
         if (LauncherRootTilePanel.Children.Count == 0)
         {
             LauncherRootTilePanel.Children.Add(CreateLauncherHintTile(
-                L("launcher.empty", "No Start Menu entries found."),
+                GetLauncherEmptyText(),
                 string.Empty));
         }
 
@@ -1440,10 +1443,40 @@ public partial class MainWindow
         return new string(letters).ToUpperInvariant();
     }
 
+    private string GetLauncherEmptyText()
+    {
+        return OperatingSystem.IsLinux()
+            ? L("launcher.empty_linux", "No Linux desktop entries were found.")
+            : L("launcher.empty", "No Start Menu entries found.");
+    }
+
     private static void LaunchStartMenuEntry(StartMenuAppEntry app)
     {
         try
         {
+            if (OperatingSystem.IsLinux() &&
+                !string.IsNullOrWhiteSpace(app.LaunchExecutable))
+            {
+                var linuxStartInfo = new ProcessStartInfo
+                {
+                    FileName = app.LaunchExecutable,
+                    UseShellExecute = false
+                };
+
+                if (!string.IsNullOrWhiteSpace(app.WorkingDirectory))
+                {
+                    linuxStartInfo.WorkingDirectory = app.WorkingDirectory;
+                }
+
+                foreach (var argument in app.LaunchArguments)
+                {
+                    linuxStartInfo.ArgumentList.Add(argument);
+                }
+
+                Process.Start(linuxStartInfo);
+                return;
+            }
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = app.FilePath,

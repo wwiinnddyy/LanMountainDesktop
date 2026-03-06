@@ -97,9 +97,13 @@ public partial class MainWindow
             "Swipe to pick a category, tap to open, then drag a widget onto the desktop.");
 
         LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
-        LauncherSubtitleTextBlock.Text = L(
-            "launcher.subtitle",
-            "Displays all apps and folders based on the Windows Start menu structure.");
+        LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()
+            ? L(
+                "launcher.subtitle_linux",
+                "Displays installed apps discovered from Linux desktop entries.")
+            : L(
+                "launcher.subtitle",
+                "Displays all apps and folders based on the Windows Start menu structure.");
         ToolTip.SetTip(LauncherFolderBackButton, L("common.back", "Back"));
         ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "Close"));
 

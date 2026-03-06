@@ -275,6 +275,8 @@ jobs:
           package_name="LanMountainDesktop"
           package_version="${version}"
           arch="amd64"
+          desktop_template="LanMountainDesktop/packaging/linux/LanMountainDesktop.desktop"
+          icon_source="LanMountainDesktop/packaging/linux/lanmountaindesktop.png"
           
           # Verify source directory exists
           if [ ! -d "$source" ]; then
@@ -288,6 +290,7 @@ jobs:
           mkdir -p "build-deb/usr/local/bin"
           mkdir -p "build-deb/usr/share/applications"
           mkdir -p "build-deb/usr/share/pixmaps"
+          mkdir -p "build-deb/usr/share/icons/hicolor/256x256/apps"
           
           # Copy application files
           cp -r "$source"/* "build-deb/usr/local/bin/"
@@ -300,6 +303,31 @@ jobs:
             echo "Error: DEB package is empty after copy"
             exit 1
           fi
+
+          if [ ! -f "$desktop_template" ] || [ ! -f "$icon_source" ]; then
+            echo "Error: Linux desktop resources are missing"
+            ls -la "LanMountainDesktop/packaging/linux" || true
+            exit 1
+          fi
+
+          sed \
+            -e "s|@@EXEC@@|/usr/local/bin/LanMountainDesktop|g" \
+            -e "s|@@ICON@@|lanmountaindesktop|g" \
+            "$desktop_template" > "build-deb/usr/share/applications/LanMountainDesktop.desktop"
+
+          cp "$icon_source" "build-deb/usr/share/pixmaps/lanmountaindesktop.png"
+          cp "$icon_source" "build-deb/usr/share/icons/hicolor/256x256/apps/lanmountaindesktop.png"
+
+          {
+            printf '%s\n' '#!/bin/sh'
+            printf '%s\n' 'set -e'
+            printf '%s\n' 'if command -v update-desktop-database >/dev/null 2>&1; then'
+            printf '%s\n' '  update-desktop-database /usr/share/applications >/dev/null 2>&1 || true'
+            printf '%s\n' 'fi'
+            printf '%s\n' 'if command -v gtk-update-icon-cache >/dev/null 2>&1; then'
+            printf '%s\n' '  gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true'
+            printf '%s\n' 'fi'
+          } > "build-deb/DEBIAN/postinst"
           
           # Create control file (NOTE: No leading spaces in control file)
           {
@@ -313,6 +341,10 @@ jobs:
           
           # Set proper permissions
           chmod 755 "build-deb/usr/local/bin/LanMountainDesktop" || chmod 755 "build-deb/usr/local/bin"/*
+          chmod 644 "build-deb/usr/share/applications/LanMountainDesktop.desktop"
+          chmod 644 "build-deb/usr/share/pixmaps/lanmountaindesktop.png"
+          chmod 644 "build-deb/usr/share/icons/hicolor/256x256/apps/lanmountaindesktop.png"
+          chmod 755 "build-deb/DEBIAN/postinst"
           
           # Create DEB file
           if dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"; then
