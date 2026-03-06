@@ -754,7 +754,8 @@ public partial class MainWindow
             return;
         }
 
-        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord)
+        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord ||
+            placement.ComponentId == BuiltInComponentIds.DesktopDailyWord2x2)
         {
             OpenDailyWordComponentSettings();
             return;
@@ -1131,9 +1132,14 @@ public partial class MainWindow
                     continue;
                 }
 
-                if (TryGetContentHost(host)?.Child is DailyWordWidget widget)
+                var widget = TryGetContentHost(host)?.Child;
+                if (widget is DailyWordWidget dailyWordWidget)
                 {
-                    widget.RefreshFromSettings();
+                    dailyWordWidget.RefreshFromSettings();
+                }
+                else if (widget is DailyWord2x2Widget dailyWord2x2Widget)
+                {
+                    dailyWord2x2Widget.RefreshFromSettings();
                 }
             }
         }

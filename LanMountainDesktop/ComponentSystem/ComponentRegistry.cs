@@ -235,6 +235,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopDailyWord2x2,
+                "Daily Word 2x2",
+                "Book",
+                "Info",
+                MinWidthCells: 2,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopCnrDailyNews,
                 "CNR Daily News",
                 "News",

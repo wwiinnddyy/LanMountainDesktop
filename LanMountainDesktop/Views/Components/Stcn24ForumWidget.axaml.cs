@@ -35,7 +35,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
-    private const int MaxDisplayItemCount = 4;
+    private const int BaseDisplayItemCount = 4;
+    private const int MaxDisplayItemCount = 8;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
@@ -55,6 +56,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     private string _languageCode = "zh-CN";
     private string _sourceType = Stcn24ForumSourceTypes.LatestCreated;
     private double _currentCellSize = BaseCellSize;
+    private int _visibleItemCount = BaseDisplayItemCount;
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
@@ -76,10 +78,18 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         PostItem2TitleTextBlock.FontFamily = MiSansFontFamily;
         PostItem3TitleTextBlock.FontFamily = MiSansFontFamily;
         PostItem4TitleTextBlock.FontFamily = MiSansFontFamily;
+        PostItem5TitleTextBlock.FontFamily = MiSansFontFamily;
+        PostItem6TitleTextBlock.FontFamily = MiSansFontFamily;
+        PostItem7TitleTextBlock.FontFamily = MiSansFontFamily;
+        PostItem8TitleTextBlock.FontFamily = MiSansFontFamily;
         PostItem1AvatarFallbackText.FontFamily = MiSansFontFamily;
         PostItem2AvatarFallbackText.FontFamily = MiSansFontFamily;
         PostItem3AvatarFallbackText.FontFamily = MiSansFontFamily;
         PostItem4AvatarFallbackText.FontFamily = MiSansFontFamily;
+        PostItem5AvatarFallbackText.FontFamily = MiSansFontFamily;
+        PostItem6AvatarFallbackText.FontFamily = MiSansFontFamily;
+        PostItem7AvatarFallbackText.FontFamily = MiSansFontFamily;
+        PostItem8AvatarFallbackText.FontFamily = MiSansFontFamily;
         StatusTextBlock.FontFamily = MiSansFontFamily;
 
         _itemVisuals.Add(new ForumItemVisual(
@@ -110,6 +120,34 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             PostItem4AvatarImage,
             PostItem4AvatarFallbackText,
             PostItem4TitleTextBlock));
+        _itemVisuals.Add(new ForumItemVisual(
+            PostItem5Host,
+            PostItem5Grid,
+            PostItem5AvatarHost,
+            PostItem5AvatarImage,
+            PostItem5AvatarFallbackText,
+            PostItem5TitleTextBlock));
+        _itemVisuals.Add(new ForumItemVisual(
+            PostItem6Host,
+            PostItem6Grid,
+            PostItem6AvatarHost,
+            PostItem6AvatarImage,
+            PostItem6AvatarFallbackText,
+            PostItem6TitleTextBlock));
+        _itemVisuals.Add(new ForumItemVisual(
+            PostItem7Host,
+            PostItem7Grid,
+            PostItem7AvatarHost,
+            PostItem7AvatarImage,
+            PostItem7AvatarFallbackText,
+            PostItem7TitleTextBlock));
+        _itemVisuals.Add(new ForumItemVisual(
+            PostItem8Host,
+            PostItem8Grid,
+            PostItem8AvatarHost,
+            PostItem8AvatarImage,
+            PostItem8AvatarFallbackText,
+            PostItem8TitleTextBlock));
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -222,7 +260,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         {
             var query = new Stcn24ForumPostsQuery(
                 Locale: _languageCode,
-                ItemCount: MaxDisplayItemCount,
+                ItemCount: _visibleItemCount,
                 SourceType: _sourceType,
                 ForceRefresh: forceRefresh);
             var result = await _recommendationService.GetStcn24ForumPostsAsync(query, cts.Token);
@@ -274,7 +312,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             }
 
             _activeItems.Add(item);
-            if (_activeItems.Count >= MaxDisplayItemCount)
+            if (_activeItems.Count >= _visibleItemCount)
             {
                 break;
             }
@@ -284,6 +322,14 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var visual = _itemVisuals[i];
+            var isRowVisible = i < _visibleItemCount;
+            visual.Host.IsVisible = isRowVisible;
+            if (!isRowVisible)
+            {
+                SetAvatarBitmap(i, null);
+                continue;
+            }
+
             if (i < _activeItems.Count)
             {
                 var item = _activeItems[i];
@@ -304,6 +350,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         UpdateAdaptiveLayout();
 
         var tasks = _activeItems
+            .Take(_visibleItemCount)
             .Select(item => TryDownloadAvatarBitmapAsync(item.AuthorAvatarUrl, cancellationToken))
             .ToArray();
         if (tasks.Length == 0)
@@ -338,6 +385,14 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var visual = _itemVisuals[i];
+            var isRowVisible = i < _visibleItemCount;
+            visual.Host.IsVisible = isRowVisible;
+            if (!isRowVisible)
+            {
+                SetAvatarBitmap(i, null);
+                continue;
+            }
+
             visual.TitleTextBlock.Text = loadingText;
             visual.AvatarFallbackText.Text = "?";
             SetAvatarBitmap(i, null);
@@ -357,6 +412,14 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var visual = _itemVisuals[i];
+            var isRowVisible = i < _visibleItemCount;
+            visual.Host.IsVisible = isRowVisible;
+            if (!isRowVisible)
+            {
+                SetAvatarBitmap(i, null);
+                continue;
+            }
+
             visual.TitleTextBlock.Text = fallbackText;
             visual.AvatarFallbackText.Text = "?";
             SetAvatarBitmap(i, null);
@@ -374,7 +437,11 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         for (var i = 0; i < _itemVisuals.Count; i++)
         {
             var visual = _itemVisuals[i];
-            var enabled = i < _activeItems.Count && !string.IsNullOrWhiteSpace(_activeItems[i].Url);
+            var inVisibleRange = i < _visibleItemCount;
+            visual.Host.IsVisible = inVisibleRange;
+            var enabled = inVisibleRange &&
+                          i < _activeItems.Count &&
+                          !string.IsNullOrWhiteSpace(_activeItems[i].Url);
             visual.Host.IsHitTestVisible = enabled;
             visual.Host.Opacity = enabled ? 1.0 : 0.72;
             visual.Host.Cursor = enabled
@@ -500,6 +567,28 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var titleFont = Math.Clamp(14 * softScale, 10, 19);
         var titleMaxWidth = Math.Max(60, innerWidth - avatarSize - (rowPaddingHorizontal * 2d) - 18);
 
+        var estimatedHeaderHeight = Math.Max(
+            Math.Clamp(20 * softScale, 12, 28) + Math.Clamp(4 * softScale, 2, 8),
+            Math.Clamp(34 * softScale, 22, 42));
+        var estimatedRowHeight = avatarSize + (rowPaddingVertical * 2d);
+        var availablePostsHeight = Math.Max(
+            0d,
+            totalHeight -
+            CardBorder.Padding.Top -
+            CardBorder.Padding.Bottom -
+            estimatedHeaderHeight -
+            rowSpacing);
+        var rowFootprint = Math.Max(1d, estimatedRowHeight + rowSpacing);
+        var capacityByHeight = (int)Math.Floor((availablePostsHeight + rowSpacing) / rowFootprint);
+        var resolvedItemCount = Math.Clamp(capacityByHeight, BaseDisplayItemCount, MaxDisplayItemCount);
+        if (scale < 1.08d)
+        {
+            resolvedItemCount = Math.Min(resolvedItemCount, BaseDisplayItemCount);
+        }
+
+        var previousVisibleItemCount = _visibleItemCount;
+        _visibleItemCount = resolvedItemCount;
+
         foreach (var visual in _itemVisuals)
         {
             visual.Host.CornerRadius = new CornerRadius(itemCornerRadius);
@@ -516,6 +605,14 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         }
 
         StatusTextBlock.FontSize = Math.Clamp(14 * softScale, 10, 18);
+
+        if (_visibleItemCount != previousVisibleItemCount &&
+            _isAttached &&
+            !_isRefreshing &&
+            _activeItems.Count < _visibleItemCount)
+        {
+            _ = RefreshPostsAsync(forceRefresh: false);
+        }
     }
 
     private static string NormalizeCompactText(string? text)

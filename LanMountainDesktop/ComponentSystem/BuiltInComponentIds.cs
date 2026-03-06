@@ -30,6 +30,7 @@ public static class BuiltInComponentIds
     public const string DesktopDailyPoetry = "DesktopDailyPoetry";
     public const string DesktopDailyArtwork = "DesktopDailyArtwork";
     public const string DesktopDailyWord = "DesktopDailyWord";
+    public const string DesktopDailyWord2x2 = "DesktopDailyWord2x2";
     public const string DesktopCnrDailyNews = "DesktopCnrDailyNews";
     public const string DesktopBilibiliHotSearch = "DesktopBilibiliHotSearch";
     public const string DesktopStcn24Forum = "DesktopStcn24Forum";

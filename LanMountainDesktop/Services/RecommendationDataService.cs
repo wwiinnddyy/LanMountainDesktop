@@ -819,15 +819,25 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         string sourceType,
         CancellationToken cancellationToken)
     {
+        var normalizedSourceType = Stcn24ForumSourceTypes.Normalize(sourceType);
+        var isLatestCreatedSource = string.Equals(
+            normalizedSourceType,
+            Stcn24ForumSourceTypes.LatestCreated,
+            StringComparison.OrdinalIgnoreCase);
         var safeCount = Math.Clamp(targetCount, 1, 12);
         var requestCount = Math.Clamp(Math.Max(safeCount * 3, 12), safeCount, 40);
         var keyword = NormalizeInlineText(_options.SmartTeachStcnKeyword);
-        if (string.IsNullOrWhiteSpace(keyword))
+        if (isLatestCreatedSource)
+        {
+            // For latest posts, rely on discussion id ordering from the full discussion stream.
+            keyword = string.Empty;
+        }
+        else if (string.IsNullOrWhiteSpace(keyword))
         {
             keyword = "STCN";
         }
 
-        var sortToken = ResolveSmartTeachDiscussionSortToken(sourceType);
+        var sortToken = ResolveSmartTeachDiscussionSortToken(normalizedSourceType);
 
         var requestUrl = string.Format(
             CultureInfo.InvariantCulture,
@@ -895,10 +905,17 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             }
         }
 
-        var items = new List<Stcn24ForumPostItemSnapshot>(safeCount);
+        var candidates = new List<(Stcn24ForumPostItemSnapshot Item, long? DiscussionId)>(requestCount);
         foreach (var discussionNode in dataArray.EnumerateArray())
         {
-            if (discussionNode.ValueKind != JsonValueKind.Object || IsSmartTeachPinnedDiscussion(discussionNode))
+            if (discussionNode.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var discussionType = ReadString(discussionNode, "type");
+            if (!string.Equals(discussionType, "discussions", StringComparison.OrdinalIgnoreCase) ||
+                IsSmartTeachPinnedDiscussion(discussionNode))
             {
                 continue;
             }
@@ -940,22 +957,37 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             var createdAtText = ReadString(discussionNode, "attributes", "createdAt");
             var createdAt = TryParseDateTimeOffset(createdAtText);
 
-            items.Add(new Stcn24ForumPostItemSnapshot(
+            candidates.Add((
+                new Stcn24ForumPostItemSnapshot(
                 Title: title,
                 Url: targetUrl,
                 AuthorDisplayName: authorDisplayName,
                 AuthorAvatarUrl: authorAvatarUrl,
-                CreatedAt: createdAt));
+                CreatedAt: createdAt),
+                TryParseSmartTeachDiscussionId(discussionId)));
+        }
 
-            if (items.Count >= safeCount)
-            {
-                break;
-            }
+        IReadOnlyList<Stcn24ForumPostItemSnapshot> items;
+        if (isLatestCreatedSource)
+        {
+            items = candidates
+                .OrderByDescending(candidate => candidate.DiscussionId ?? long.MinValue)
+                .ThenByDescending(candidate => candidate.Item.CreatedAt ?? DateTimeOffset.MinValue)
+                .Take(safeCount)
+                .Select(candidate => candidate.Item)
+                .ToArray();
+        }
+        else
+        {
+            items = candidates
+                .Take(safeCount)
+                .Select(candidate => candidate.Item)
+                .ToArray();
         }
 
         return new Stcn24ForumPostsSnapshot(
             Provider: "SmartTeachForum",
-            Source: ResolveStcn24ForumSourceLabel(sourceType),
+            Source: ResolveStcn24ForumSourceLabel(normalizedSourceType),
             Items: items,
             FetchedAt: DateTimeOffset.UtcNow);
     }
@@ -2331,6 +2363,18 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             : null;
     }
 
+    private static long? TryParseSmartTeachDiscussionId(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        return long.TryParse(rawValue.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+    }
+
     private static string NormalizeInlineText(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -2566,4 +2610,3 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             : $"{text[..maxLength]}...";
     }
 }
-

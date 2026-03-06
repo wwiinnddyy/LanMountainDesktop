@@ -46,6 +46,8 @@ public sealed class LocalizationService
             if (File.Exists(filePath))
             {
                 var json = File.ReadAllText(filePath);
+                // Defensive: tolerate accidentally duplicated UTF-8 BOM characters at file start.
+                json = json.TrimStart('\uFEFF');
                 var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
                 if (data is not null)
                 {
@@ -62,4 +64,3 @@ public sealed class LocalizationService
         return result;
     }
 }
-

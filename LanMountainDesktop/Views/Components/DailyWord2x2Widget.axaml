@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="220"
+             d:DesignHeight="220"
+             x:Class="LanMountainDesktop.Views.Components.DailyWord2x2Widget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="30"
+            Background="Transparent"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#FCFBFA"
+                    CornerRadius="30"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    Padding="12,11,12,11"
+                    PointerPressed="OnCardPointerPressed">
+                <Grid RowDefinitions="Auto,*"
+                      RowSpacing="8">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="6">
+                        <TextBlock x:Name="WordTextBlock"
+                                   Text="design"
+                                   Foreground="#2B2F35"
+                                   FontSize="38"
+                                   FontWeight="Bold"
+                                   MaxLines="1"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+
+                        <Button x:Name="RefreshButton"
+                                Grid.Column="1"
+                                Width="30"
+                                Height="30"
+                                CornerRadius="15"
+                                Background="#EEF1F4"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                Focusable="False"
+                                Click="OnRefreshButtonClick">
+                            <fi:SymbolIcon x:Name="RefreshIcon"
+                                           Symbol="ArrowClockwise"
+                                           IconVariant="Regular"
+                                           FontSize="14"
+                                           Foreground="#5E6671" />
+                        </Button>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <TextBlock x:Name="MeaningTextBlock"
+                                   Text="n. design; plan; layout"
+                                   Foreground="#5A6069"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="5"
+                                   IsVisible="False" />
+
+                        <TextBlock x:Name="HiddenHintTextBlock"
+                                   Text="Tap to reveal meaning"
+                                   Foreground="#8A9099"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxLines="4" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading..."
+                       Foreground="#6A6F77"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>
