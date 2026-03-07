@@ -93,8 +93,16 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
+        
         UpdateMonitoringLeaseState();
+        
+        if (isOnActivePage && !wasOnActivePage)
+        {
+            RefreshVisual();
+        }
+        
         UpdateTimerState();
     }
 
@@ -143,8 +151,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void UpdateMonitoringLeaseState()
     {
-        var shouldMonitor = _isAttached && _isOnActivePage;
-        if (shouldMonitor)
+        if (_isAttached)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
             return;

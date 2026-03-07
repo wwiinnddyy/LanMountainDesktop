@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -11,7 +11,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private const double NormalTextMinContrast = 4.5;
     private const double LargeTextMinContrast = 4.5;
@@ -69,6 +69,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
+    private bool _isDisposed;
     private int _framesSinceCompaction;
     private IDisposable? _monitoringLease;
 
@@ -131,8 +132,20 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
+        
         UpdateMonitoringLeaseState();
+        
+        if (isOnActivePage && !wasOnActivePage)
+        {
+            lock (_snapshotSync)
+            {
+                _pendingSnapshot = _studyAnalyticsService.GetSnapshot();
+                _hasPendingSnapshot = true;
+            }
+        }
+        
         UpdateRenderLoopState();
     }
 
@@ -231,8 +244,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
     private void UpdateMonitoringLeaseState()
     {
-        var shouldMonitor = _isAttached && _isOnActivePage;
-        if (shouldMonitor)
+        if (_isAttached)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
             return;
@@ -552,5 +564,30 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        _renderTimer.Stop();
+        _renderTimer.Tick -= OnRenderTimerTick;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 }

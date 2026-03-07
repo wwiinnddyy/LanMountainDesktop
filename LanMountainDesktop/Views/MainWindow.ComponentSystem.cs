@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
@@ -681,21 +681,31 @@ public partial class MainWindow
         }
 
         ClearTimeZoneServiceBindings(_selectedDesktopComponentHost);
+        DisposeComponentIfNeeded(_selectedDesktopComponentHost);
 
         if (_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
         {
             pageGrid.Children.Remove(_selectedDesktopComponentHost);
         }
 
-        // Remove from persisted placement list as well.
         _desktopComponentPlacements.Remove(placement);
 
         ClearDesktopComponentSelection();
 
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
-        // 娣囨繂鐡ㄧ拋鍓х枂
         PersistSettings();
+    }
+
+    private static void DisposeComponentIfNeeded(Border host)
+    {
+        if (TryGetContentHost(host) is Border contentHost && contentHost.Child is Control componentControl)
+        {
+            if (componentControl is IDisposable disposableComponent)
+            {
+                disposableComponent.Dispose();
+            }
+        }
     }
 
     private void OpenComponentSettings()
@@ -1389,6 +1399,10 @@ public partial class MainWindow
         if (_desktopPageComponentGrids.TryGetValue(_currentDesktopSurfaceIndex, out var pageGrid))
         {
             ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
+            foreach (var child in pageGrid.Children.OfType<Border>())
+            {
+                DisposeComponentIfNeeded(child);
+            }
         }
         
         foreach (var placement in placementsToRemove)

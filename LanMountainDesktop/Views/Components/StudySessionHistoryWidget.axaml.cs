@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -15,7 +15,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private const double MinTextContrast = 4.5;
     private enum HistoryDialogMode
@@ -55,6 +55,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
+    private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private string? _loadingSessionId;
@@ -732,6 +733,29 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         }
 
         return min;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
+        DialogCancelButton.Click -= (_, _) => CloseDialog();
+        DialogConfirmButton.Click -= (_, _) => ConfirmDialog();
+        DialogRenameTextBox.KeyDown -= OnDialogRenameTextBoxKeyDown;
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 }
 
