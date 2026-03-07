@@ -864,7 +864,14 @@ public partial class MainWindow
             return;
         }
 
-        var snapshot = new AppSettingsSnapshot
+        _appSettingsService.Save(BuildAppSettingsSnapshot());
+        _desktopLayoutSettingsService.Save(BuildDesktopLayoutSettingsSnapshot());
+        _launcherSettingsService.Save(BuildLauncherSettingsSnapshot());
+    }
+
+    private AppSettingsSnapshot BuildAppSettingsSnapshot()
+    {
+        return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
             GridSpacingPreset = _gridSpacingPreset,
@@ -896,15 +903,27 @@ public partial class MainWindow
             TaskbarLayoutMode = _taskbarLayoutMode,
             ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
             StatusBarSpacingMode = _statusBarSpacingMode,
-            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent,
+            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent
+        };
+    }
+
+    private DesktopLayoutSettingsSnapshot BuildDesktopLayoutSettingsSnapshot()
+    {
+        return new DesktopLayoutSettingsSnapshot
+        {
             DesktopPageCount = _desktopPageCount,
             CurrentDesktopSurfaceIndex = _currentDesktopSurfaceIndex,
-            DesktopComponentPlacements = _desktopComponentPlacements.ToList(),
+            DesktopComponentPlacements = _desktopComponentPlacements.ToList()
+        };
+    }
+
+    private LauncherSettingsSnapshot BuildLauncherSettingsSnapshot()
+    {
+        return new LauncherSettingsSnapshot
+        {
             HiddenLauncherFolderPaths = _hiddenLauncherFolderPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
             HiddenLauncherAppPaths = _hiddenLauncherAppPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList()
         };
-
-        _appSettingsService.Save(snapshot);
     }
 
     private IDisposable? _persistSettingsDebounceTimer;
@@ -2288,4 +2307,3 @@ public partial class MainWindow
         };
     }
 }
-

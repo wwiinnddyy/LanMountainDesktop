@@ -66,14 +66,14 @@ public partial class MainWindow
 
     private int TotalSurfaceCount => LauncherSurfaceIndex + 1;
 
-    private void InitializeDesktopSurfaceState(AppSettingsSnapshot snapshot)
+    private void InitializeDesktopSurfaceState(DesktopLayoutSettingsSnapshot snapshot)
     {
         var loadedPageCount = snapshot.DesktopPageCount <= 0 ? MinDesktopPageCount : snapshot.DesktopPageCount;
         _desktopPageCount = Math.Clamp(loadedPageCount, MinDesktopPageCount, MaxDesktopPageCount);
         _currentDesktopSurfaceIndex = Math.Clamp(snapshot.CurrentDesktopSurfaceIndex, 0, LauncherSurfaceIndex);
     }
 
-    private void InitializeLauncherVisibilitySettings(AppSettingsSnapshot snapshot)
+    private void InitializeLauncherVisibilitySettings(LauncherSettingsSnapshot snapshot)
     {
         _hiddenLauncherFolderPaths.Clear();
         if (snapshot.HiddenLauncherFolderPaths is not null)

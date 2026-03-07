@@ -1431,7 +1431,7 @@ public partial class MainWindow
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
-    private void InitializeDesktopComponentPlacements(AppSettingsSnapshot snapshot)
+    private void InitializeDesktopComponentPlacements(DesktopLayoutSettingsSnapshot snapshot)
     {
         _desktopComponentPlacements.Clear();
 
@@ -3598,4 +3598,3 @@ public partial class MainWindow
         ApplyComponentLibraryComponentOffset();
     }
 }
-

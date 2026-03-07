@@ -88,6 +88,8 @@ public partial class MainWindow : Window
     }
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly DesktopLayoutSettingsService _desktopLayoutSettingsService = new();
+    private readonly LauncherSettingsService _launcherSettingsService = new();
     private readonly ComponentSettingsService _componentSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
@@ -193,6 +195,8 @@ public partial class MainWindow : Window
 
         _suppressSettingsPersistence = true;
         var snapshot = _appSettingsService.Load();
+        var desktopLayoutSnapshot = _desktopLayoutSettingsService.Load();
+        var launcherSnapshot = _launcherSettingsService.Load();
 
         if (!string.IsNullOrWhiteSpace(snapshot.TimeZoneId))
         {
@@ -247,9 +251,9 @@ public partial class MainWindow : Window
         _ = _componentSettingsService.Load();
         InitializeAutoStartWithWindowsSetting(snapshot);
         InitializeUpdateSettings(snapshot);
-        InitializeDesktopSurfaceState(snapshot);
-        InitializeLauncherVisibilitySettings(snapshot);
-        InitializeDesktopComponentPlacements(snapshot);
+        InitializeDesktopSurfaceState(desktopLayoutSnapshot);
+        InitializeLauncherVisibilitySettings(launcherSnapshot);
+        InitializeDesktopComponentPlacements(desktopLayoutSnapshot);
         InitializeSettingsIcons();
 
         TryRestoreWallpaper(snapshot.WallpaperPath);
@@ -1341,4 +1345,3 @@ public partial class MainWindow : Window
         PersistSettings();
     }
 }
-

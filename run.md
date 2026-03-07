@@ -1,4 +1,4 @@
-﻿# LanMountainDesktop 运行指南
+﻿﻿# LanMountainDesktop 运行指南
 
 本文档只负责“怎么跑起来”。项目介绍请看 [README.md](./README.md)。
 

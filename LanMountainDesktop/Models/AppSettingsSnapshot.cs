@@ -70,16 +70,6 @@ public sealed class AppSettingsSnapshot
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;
 
-    public int DesktopPageCount { get; set; } = 1;
-
-    public int CurrentDesktopSurfaceIndex { get; set; } = 0;
-
-    public List<DesktopComponentPlacementSnapshot> DesktopComponentPlacements { get; set; } = [];
-
-    public List<string> HiddenLauncherFolderPaths { get; set; } = [];
-
-    public List<string> HiddenLauncherAppPaths { get; set; } = [];
-
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();
@@ -89,36 +79,6 @@ public sealed class AppSettingsSnapshot
             : [];
         clone.PinnedTaskbarActions = PinnedTaskbarActions is { Count: > 0 }
             ? new List<string>(PinnedTaskbarActions)
-            : [];
-
-        var placements = new List<DesktopComponentPlacementSnapshot>(DesktopComponentPlacements?.Count ?? 0);
-        if (DesktopComponentPlacements is not null)
-        {
-            foreach (var placement in DesktopComponentPlacements)
-            {
-                if (placement is null)
-                {
-                    continue;
-                }
-
-                placements.Add(new DesktopComponentPlacementSnapshot
-                {
-                    PlacementId = placement.PlacementId,
-                    PageIndex = placement.PageIndex,
-                    ComponentId = placement.ComponentId,
-                    Row = placement.Row,
-                    Column = placement.Column,
-                    WidthCells = placement.WidthCells,
-                    HeightCells = placement.HeightCells
-                });
-            }
-        }
-        clone.DesktopComponentPlacements = placements;
-        clone.HiddenLauncherFolderPaths = HiddenLauncherFolderPaths is { Count: > 0 }
-            ? new List<string>(HiddenLauncherFolderPaths)
-            : [];
-        clone.HiddenLauncherAppPaths = HiddenLauncherAppPaths is { Count: > 0 }
-            ? new List<string>(HiddenLauncherAppPaths)
             : [];
 
         return clone;
