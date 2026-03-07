@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -41,6 +42,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
+    private bool _isNightVisual = true;
 
     public DailyWordWidget()
     {
@@ -58,6 +60,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -110,6 +113,64 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightVisual = ResolveNightMode();
+        ApplyNightModeVisual();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
+
+        WordTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF9D6C") : Color.Parse("#F07541"));
+        PronunciationTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#6B7078"));
+        MeaningTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#2B2F35"));
+        ExampleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#2B2F35"));
+        ExampleTranslationTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#7A8088"));
+
+        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#14A0A6AF"));
+        RefreshIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#626870"));
+
+        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
@@ -229,6 +290,14 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
+        var isFourByThree = false;
+        if (Bounds.Width > 1 && Bounds.Height > 1)
+        {
+            var widthRatio = Bounds.Width / (_currentCellSize * BaseWidthCells);
+            var heightRatio = Bounds.Height / (_currentCellSize * BaseHeightCells);
+            isFourByThree = widthRatio >= 0.9 && heightRatio >= 1.35;
+        }
+
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
         RootBorder.Padding = new Thickness(0);
 
@@ -261,15 +330,15 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         ExampleTranslationTextBlock.MaxWidth = contentWidth;
 
         var compactLayout = totalHeight < _currentCellSize * 1.72;
-        MeaningTextBlock.MaxLines = compactLayout ? 1 : 2;
-        ExampleTextBlock.MaxLines = compactLayout ? 1 : 2;
-        ExampleTranslationTextBlock.IsVisible = !compactLayout;
-        ExampleTranslationTextBlock.MaxLines = 1;
+        MeaningTextBlock.MaxLines = compactLayout ? 1 : (isFourByThree ? 3 : 2);
+        ExampleTextBlock.MaxLines = compactLayout ? 1 : (isFourByThree ? 4 : 2);
+        ExampleTranslationTextBlock.IsVisible = !compactLayout || isFourByThree;
+        ExampleTranslationTextBlock.MaxLines = isFourByThree ? 2 : 1;
 
         var contentHeight = Math.Max(52, totalHeight - RootBorder.Padding.Top - RootBorder.Padding.Bottom - CardBorder.Padding.Top - CardBorder.Padding.Bottom);
         var wordHeightBudget = Math.Max(18, contentHeight * 0.24);
         var pronunciationHeightBudget = Math.Max(14, contentHeight * 0.16);
-        var meaningHeightBudget = Math.Max(16, contentHeight * (compactLayout ? 0.26 : 0.30));
+        var meaningHeightBudget = Math.Max(16, contentHeight * (compactLayout ? 0.26 : (isFourByThree ? 0.35 : 0.30)));
         var exampleHeightBudget = Math.Max(16, contentHeight - wordHeightBudget - pronunciationHeightBudget - meaningHeightBudget - Math.Clamp(16 * scale, 8, 24));
         if (!ExampleTranslationTextBlock.IsVisible)
         {
@@ -433,11 +502,26 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     private double ResolveScale()
     {
         var cellScale = Math.Clamp(_currentCellSize / BaseCellSize, 0.56, 2.0);
+        
+        var widthCells = BaseWidthCells;
+        var heightCells = BaseHeightCells;
+        
+        if (Bounds.Width > 1 && Bounds.Height > 1)
+        {
+            var widthRatio = Bounds.Width / (_currentCellSize * widthCells);
+            var heightRatio = Bounds.Height / (_currentCellSize * heightCells);
+            
+            if (widthRatio >= 0.9 && heightRatio >= 1.35)
+            {
+                heightCells = 3;
+            }
+        }
+        
         var widthScale = Bounds.Width > 1
-            ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * BaseWidthCells), 0.56, 2.0)
+            ? Math.Clamp(Bounds.Width / Math.Max(1, _currentCellSize * widthCells), 0.56, 2.0)
             : 1;
         var heightScale = Bounds.Height > 1
-            ? Math.Clamp(Bounds.Height / Math.Max(1, _currentCellSize * BaseHeightCells), 0.56, 2.0)
+            ? Math.Clamp(Bounds.Height / Math.Max(1, _currentCellSize * heightCells), 0.56, 2.0)
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }

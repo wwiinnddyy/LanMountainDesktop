@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -46,6 +47,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
+    private bool _isNightVisual = true;
 
     private sealed record HotItemVisual(
         Border Host,
@@ -78,6 +80,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -127,6 +130,69 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightVisual = ResolveNightMode();
+        UpdateAdaptiveLayout();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
+
+        SearchBoxBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#ECF2FA"));
+        SearchBoxBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3FFFFFFF") : Color.Parse("#22000000"));
+        SearchEntryTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        SearchGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+
+        TopRightTitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#F472C4") : Color.Parse("#F44C9F"));
+
+        foreach (var visual in _hotItemVisuals)
+        {
+            visual.IndexTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#F472C4") : Color.Parse("#F44C9F"));
+            visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        }
+
+        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
     }
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
@@ -396,6 +462,7 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         }
 
         StatusTextBlock.FontSize = Math.Clamp(itemFont, 10, 20);
+        ApplyNightModeVisual();
     }
 
     private void UpdateInteractionState()

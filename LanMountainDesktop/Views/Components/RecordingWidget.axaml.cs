@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -36,6 +37,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _pausedStudyMonitoringForRecording;
+    private bool _isNightVisual = true;
 
     public RecordingWidget()
     {
@@ -45,6 +47,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         InitializeWaveBars();
         ReloadLanguageCode();
@@ -144,6 +147,68 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightVisual = ResolveNightMode();
+        ApplyNightModeVisual();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        RootBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#ECEFF3"));
+        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#D9DEE7"));
+
+        TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#11151D"));
+        TimerTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A4A9B2"));
+        FutureLine.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#A3A8B3"));
+
+        DiscardButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
+        DiscardButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
+        DiscardIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#141922"));
+
+        SaveButtonBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F8FAFD"));
+        SaveButtonBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4451") : Color.Parse("#E0E5EC"));
+        SaveIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#141922"));
+
+        HintTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#7A818E"));
     }
 
     private void OnUiTick(object? sender, EventArgs e)
@@ -291,11 +356,18 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         SaveButtonBorder.Opacity = SaveButtonBorder.IsHitTestVisible ? 1 : 0.42;
         RecordToggleButtonBorder.Opacity = RecordToggleButtonBorder.IsHitTestVisible ? 1 : 0.54;
 
-        TimerTextBlock.Foreground = CreateBrush(!isSupported
-            ? "#B2B7C0"
-            : isReady
-                ? "#A4A9B2"
-                : "#151922");
+        if (!isSupported)
+        {
+            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#A8B1C2" : "#B2B7C0");
+        }
+        else if (isReady)
+        {
+            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#A8B1C2" : "#A4A9B2");
+        }
+        else
+        {
+            TimerTextBlock.Foreground = CreateBrush(_isNightVisual ? "#E8EAED" : "#151922");
+        }
         HintTextBlock.IsVisible = !isReady || !isSupported;
 
         RecordDot.IsVisible = snapshot.State == AudioRecorderRuntimeState.Ready;

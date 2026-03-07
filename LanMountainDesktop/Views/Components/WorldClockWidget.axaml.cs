@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
 
@@ -81,6 +82,8 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         public required TextBlock OffsetTextBlock { get; init; }
 
         public bool? IsNightApplied { get; set; }
+
+        public bool? IsSystemNightApplied { get; set; }
     }
 
     private readonly DispatcherTimer _clockTimer = new()
@@ -99,6 +102,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private double _currentCellSize = BaseCellSize;
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
+    private bool _isNightVisual = true;
 
     public WorldClockWidget()
     {
@@ -114,6 +118,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
@@ -209,6 +214,79 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         _ = sender;
         _ = e;
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _isNightVisual = ResolveNightMode();
+        ApplyNightModeVisual();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        RootBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#F4F5F7"));
+        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#16000000"));
+
+        foreach (var entry in _entryVisuals)
+        {
+            ApplyTextThemeForSystemNight(entry, _isNightVisual);
+        }
+    }
+
+    private void ApplyTextThemeForSystemNight(ClockEntryVisual entry, bool isSystemNight)
+    {
+        if (entry.IsSystemNightApplied.HasValue && entry.IsSystemNightApplied.Value == isSystemNight)
+        {
+            return;
+        }
+
+        entry.IsSystemNightApplied = isSystemNight;
+
+        var cityForeground = isSystemNight ? "#E8EAED" : "#20232A";
+        var dayForeground = isSystemNight ? "#A8B1C2" : "#646C79";
+        var offsetForeground = isSystemNight ? "#A8B1C2" : "#7A7F89";
+
+        entry.CityTextBlock.Foreground = CreateBrush(cityForeground);
+        entry.DayTextBlock.Foreground = CreateBrush(dayForeground);
+        entry.OffsetTextBlock.Foreground = CreateBrush(offsetForeground);
     }
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)

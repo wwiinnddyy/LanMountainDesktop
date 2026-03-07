@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
@@ -44,6 +45,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
+    private bool _isNightVisual = true;
     private bool _isMeaningVisible;
 
     public DailyWord2x2Widget()
@@ -59,6 +61,7 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -111,6 +114,62 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightVisual = ResolveNightMode();
+        ApplyNightModeVisual();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFBFA"));
+
+        WordTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#2B2F35"));
+        MeaningTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5A6069"));
+        HiddenHintTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#8A9099"));
+
+        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EEF1F4"));
+        RefreshIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+
+        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)

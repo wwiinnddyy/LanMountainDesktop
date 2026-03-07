@@ -14,6 +14,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -88,6 +89,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private bool _isAttached;
     private bool _isRefreshing;
     private bool _autoRotateEnabled = true;
+    private bool _isNightVisual = true;
 
     public CnrDailyNewsWidget()
     {
@@ -105,6 +107,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -159,6 +162,66 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightVisual = ResolveNightMode();
+        UpdateAdaptiveLayout();
+    }
+
+    private bool ResolveNightMode()
+    {
+        if (ActualThemeVariant == ThemeVariant.Dark)
+        {
+            return true;
+        }
+
+        if (ActualThemeVariant == ThemeVariant.Light)
+        {
+            return false;
+        }
+
+        if (this.TryFindResource("AdaptiveSurfaceBaseBrush", out var value) &&
+            value is ISolidColorBrush brush)
+        {
+            return CalculateRelativeLuminance(brush.Color) < 0.45;
+        }
+
+        return true;
+    }
+
+    private static double CalculateRelativeLuminance(Color color)
+    {
+        static double ToLinear(double channel)
+        {
+            return channel <= 0.03928
+                ? channel / 12.92
+                : Math.Pow((channel + 0.055) / 1.055, 2.4);
+        }
+
+        var r = ToLinear(color.R / 255d);
+        var g = ToLinear(color.G / 255d);
+        var b = ToLinear(color.B / 255d);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    private void ApplyNightModeVisual()
+    {
+        CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
+        RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
+
+        BrandPrimaryTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        BrandSecondaryTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#6A6F77"));
+
+        RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
+        RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+        RefreshLabelTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
+
+        News1TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        News2TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+
+        StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
     }
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
@@ -354,9 +417,11 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         var normalizedTitle = NormalizeCompactText(title);
         var hotLabel = L("cnrnews.widget.hot_label", "Hot");
+        var primaryForeground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
         if (News1TitleTextBlock.Inlines is null)
         {
             News1TitleTextBlock.Text = $"{hotLabel} | {normalizedTitle}";
+            News1TitleTextBlock.Foreground = primaryForeground;
             return;
         }
 
@@ -368,7 +433,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         });
         News1TitleTextBlock.Inlines.Add(new Run(normalizedTitle)
         {
-            Foreground = new SolidColorBrush(Color.Parse("#202327")),
+            Foreground = primaryForeground,
             FontWeight = FontWeight.SemiBold
         });
     }
@@ -401,7 +466,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             var textBlock = new TextBlock
             {
                 Text = NormalizeCompactText(item.Title),
-                Foreground = new SolidColorBrush(Color.Parse("#202327")),
+                Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
                 FontFamily = MiSansFontFamily,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
@@ -556,6 +621,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         }
 
         ExtraNewsItemsPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
+
+        ApplyNightModeVisual();
     }
 
     private void UpdateRefreshButtonState()
