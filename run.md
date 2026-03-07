@@ -26,3 +26,29 @@ dotnet run --project LanMountainDesktop/LanMountainDesktop.csproj
 - 启动失败提示 SDK 版本不匹配：确认 `dotnet --info` 中已安装 .NET 10 SDK。
 - 桌面端视频相关能力异常：优先在 Windows 环境下验证。
 - 配置重置：删除 `%LOCALAPPDATA%\LanMountainDesktop\settings.json` 后重启应用。
+
+## 6. Linux 音频功能依赖
+
+如果在 Linux 上使用录音机组件或自习监测组件，需要安装以下音频库：
+
+### Debian/Ubuntu
+```bash
+sudo apt install libportaudio2 libasound2
+```
+
+### Fedora/RHEL
+```bash
+sudo dnf install portaudio-libs alsa-lib
+```
+
+### Arch Linux
+```bash
+sudo pacman -S portaudio alsa-lib
+```
+
+### Alpine Linux
+```bash
+sudo apk add portaudio alsa-lib
+```
+
+> 注：如果未安装这些依赖，录音和自习监测功能将不可用，但应用其他功能可以正常运行。

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -12,7 +12,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudyNoiseDistributionWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class StudyNoiseDistributionWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private static readonly Color[] ValueColorCandidates =
     {
@@ -46,13 +46,14 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
     {
-        Interval = TimeSpan.FromMilliseconds(250)
+        Interval = TimeSpan.FromMilliseconds(100)
     };
 
     private double _currentCellSize = 48;
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private IDisposable? _monitoringLease;
@@ -603,6 +604,25 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        _uiTimer.Stop();
+        _uiTimer.Tick -= OnUiTimerTick;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 }
 

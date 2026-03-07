@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -14,9 +14,9 @@
             BorderThickness="0"
             Background="#C20A0A"
             Padding="20,16,20,14">
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid RowDefinitions="*,Auto">
             <Canvas x:Name="DayDecorationCanvas"
-                    Grid.RowSpan="3"
+                    Grid.RowSpan="2"
                     IsVisible="False"
                     Width="212"
                     Height="148"
@@ -43,34 +43,32 @@
                              Data="M8,54 L38,24 L64,52 L8,54 Z" />
             </Canvas>
 
-            <TextBlock x:Name="QuoteMarkTextBlock"
-                       Text="&#8220;"
-                       Foreground="#5CFAD0B7"
-                       FontSize="96"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Left"
-                       VerticalAlignment="Top"
-                       Margin="1,0,0,0"
-                       LineHeight="86" />
+            <Grid Grid.Row="0" RowDefinitions="Auto,*">
+                <TextBlock x:Name="QuoteMarkTextBlock"
+                           Text="&#8220;"
+                           Foreground="#5CFAD0B7"
+                           FontSize="72"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"
+                           Margin="1,0,0,0"
+                           LineHeight="65" />
 
-            <TextBlock x:Name="PoetryContentTextBlock"
-                       Grid.Row="1"
-                       Text="芳草年年惹恨幽。想前事悠悠。"
-                       Foreground="#F8D8A8"
-                       FontSize="54"
-                       FontWeight="Medium"
-                       LineHeight="60"
-                       TextWrapping="Wrap"
-                       VerticalAlignment="Top"
-                       Margin="8,2,0,0" />
+                <TextBlock x:Name="PoetryContentTextBlock"
+                           Grid.Row="1"
+                           Text="芳草年年惹恨幽。想前事悠悠。"
+                           Foreground="#F8D8A8"
+                           FontSize="54"
+                           FontWeight="Medium"
+                           LineHeight="60"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           VerticalAlignment="Top"
+                           HorizontalAlignment="Left"
+                           Margin="8,2,0,0" />
+            </Grid>
 
-            <Grid x:Name="AuthorPanel"
-                  Grid.Row="2"
-                  ColumnDefinitions="Auto,*"
-                  HorizontalAlignment="Right"
-                  VerticalAlignment="Bottom"
-                  Margin="0,6,4,0"
-                  IsHitTestVisible="False">
+            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" VerticalAlignment="Bottom" Margin="0,6,0,0">
                 <Border x:Name="AuthorAccent"
                         Grid.Column="0"
                         Width="6"
@@ -92,6 +90,7 @@
             </Grid>
 
             <TextBlock x:Name="StatusTextBlock"
+                       Grid.Row="0"
                        Text="Loading..."
                        IsVisible="False"
                        Foreground="#D9FFFFFF"
@@ -100,10 +99,10 @@
                        VerticalAlignment="Top" />
 
             <Button x:Name="RefreshButton"
-                    Grid.RowSpan="3"
+                    Grid.Row="1"
                     HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,12,16,0"
+                    VerticalAlignment="Bottom"
+                    Margin="0,8,4,0"
                     Width="42"
                     Height="42"
                     CornerRadius="21"
@@ -113,13 +112,12 @@
                     Padding="0"
                     Focusable="False">
                 <TextBlock x:Name="RefreshGlyphTextBlock"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Text="&#8635;"
+                           Text="&#xE72C;"
+                           FontFamily="{StaticResource SymbolFontFamily}"
+                           FontSize="22"
                            Foreground="#8C9097"
-                           FontSize="26"
-                           FontWeight="SemiLight"
-                           LineHeight="26" />
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
             </Button>
         </Grid>
     </Border>

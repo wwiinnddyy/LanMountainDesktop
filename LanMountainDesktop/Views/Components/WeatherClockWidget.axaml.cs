@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -69,6 +69,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         InitializeDialIfNeeded();
         InitializeHandsIfNeeded();
@@ -236,6 +237,12 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        _isNightModeApplied = null;
+        ApplyModeVisualIfNeeded();
     }
 
     private void OnClockTimerTick(object? sender, EventArgs e)

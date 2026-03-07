@@ -14,10 +14,10 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
     private static readonly Pen GridPen = new(GridBrush, 1);
     private static readonly Pen AxisPen = new(AxisBrush, 1.1);
 
-    private static readonly IBrush QuietPointBrush = new SolidColorBrush(Color.Parse("#FF34D399"));
-    private static readonly IBrush NormalPointBrush = new SolidColorBrush(Color.Parse("#FF60A5FA"));
-    private static readonly IBrush NoisyPointBrush = new SolidColorBrush(Color.Parse("#FFF59E0B"));
-    private static readonly IBrush ExtremePointBrush = new SolidColorBrush(Color.Parse("#FFEF4444"));
+    private static readonly IBrush QuietBrush = new SolidColorBrush(Color.Parse("#FF34D399"));
+    private static readonly IBrush NormalBrush = new SolidColorBrush(Color.Parse("#FF60A5FA"));
+    private static readonly IBrush NoisyBrush = new SolidColorBrush(Color.Parse("#FFF59E0B"));
+    private static readonly IBrush ExtremeBrush = new SolidColorBrush(Color.Parse("#FFEF4444"));
 
     private IReadOnlyList<NoiseRealtimePoint> _points = Array.Empty<NoiseRealtimePoint>();
     private double _baselineDb = 45;
@@ -47,34 +47,102 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
 
         DrawGrid(context, plot);
 
-        if (_points.Count == 0)
+        if (_points.Count < 2)
         {
             return;
         }
 
+        DrawElectronCloud(context, plot);
+    }
+
+    private void DrawElectronCloud(DrawingContext context, Rect plot)
+    {
         var start = _points[0].Timestamp;
         var end = _points[^1].Timestamp;
         var totalTicks = Math.Max(1, (end - start).Ticks);
 
-        var maxRenderPoints = Math.Clamp((int)Math.Floor(plot.Width * 1.5), 80, 520);
-        var step = Math.Max(1, _points.Count / Math.Max(1, maxRenderPoints));
-        var radius = Math.Clamp(Math.Min(plot.Width, plot.Height) / 88d, 1.4, 3.8);
-
-        for (var i = 0; i < _points.Count; i += step)
+        var pointCount = _points.Count;
+        var cloudLayers = 8;
+        var baseRadius = Math.Clamp(Math.Min(plot.Width, plot.Height) / 45d, 3, 12);
+        
+        var sortedPoints = new List<(double X, double Y, NoiseDistributionLevel Level)>();
+        for (var i = 0; i < pointCount; i++)
         {
             var point = _points[i];
-            var level = ResolveLevel(point.DisplayDb, _baselineDb);
             var x = MapX(plot, point.Timestamp, start, totalTicks);
-            var y = MapY(plot, level, point.Timestamp);
-            context.DrawEllipse(GetLevelBrush(level), pen: null, center: new Point(x, y), radiusX: radius, radiusY: radius);
+            var y = MapYContinuous(plot, point.DisplayDb);
+            var level = ResolveLevel(point.DisplayDb, _baselineDb);
+            sortedPoints.Add((x, y, level));
         }
 
-        // Ensure latest point is always visible.
+        sortedPoints.Sort((a, b) => a.X.CompareTo(b.X));
+
+        for (var layer = cloudLayers - 1; layer >= 0; layer--)
+        {
+            var layerRatio = (double)layer / (cloudLayers - 1);
+            var layerRadius = baseRadius * (1.2 + layerRatio * 0.8);
+            var layerAlpha = (byte)(40 + layerRatio * 25);
+
+            foreach (var pt in sortedPoints)
+            {
+                var brush = GetLevelBrushWithAlpha(pt.Level, layerAlpha);
+                var jitterX = ComputeJitter(pt.X * 1000 + layer) * layerRadius * 0.3;
+                var jitterY = ComputeJitter(pt.Y * 1000 + layer) * layerRadius * 0.3;
+                
+                context.DrawEllipse(
+                    brush,
+                    pen: null,
+                    center: new Point(pt.X + jitterX, pt.Y + jitterY),
+                    radiusX: layerRadius,
+                    radiusY: layerRadius * 0.7);
+            }
+        }
+
+        var glowLayers = 5;
+        for (var layer = glowLayers - 1; layer >= 0; layer--)
+        {
+            var layerRatio = (double)layer / (glowLayers - 1);
+            var layerRadius = baseRadius * (0.8 + layerRatio * 0.6);
+            var layerAlpha = (byte)(20 + layerRatio * 15);
+
+            foreach (var pt in sortedPoints)
+            {
+                var brush = GetLevelBrushWithAlpha(pt.Level, layerAlpha);
+                context.DrawEllipse(
+                    brush,
+                    pen: null,
+                    center: new Point(pt.X, pt.Y),
+                    radiusX: layerRadius,
+                    radiusY: layerRadius * 0.6);
+            }
+        }
+
         var latest = _points[^1];
-        var latestLevel = ResolveLevel(latest.DisplayDb, _baselineDb);
         var latestX = MapX(plot, latest.Timestamp, start, totalTicks);
-        var latestY = MapY(plot, latestLevel, latest.Timestamp);
-        context.DrawEllipse(GetLevelBrush(latestLevel), pen: new Pen(Brushes.White, 1), center: new Point(latestX, latestY), radiusX: radius + 0.8, radiusY: radius + 0.8);
+        var latestY = MapYContinuous(plot, latest.DisplayDb);
+        var latestLevel = ResolveLevel(latest.DisplayDb, _baselineDb);
+
+        for (var i = 3; i >= 0; i--)
+        {
+            var radius = baseRadius * (1.5 + i * 0.8);
+            var alpha = (byte)(30 - i * 6);
+            var glowBrush = GetLevelBrushWithAlpha(latestLevel, alpha);
+            context.DrawEllipse(glowBrush, null, new Point(latestX, latestY), radius, radius * 0.6);
+        }
+
+        context.DrawEllipse(
+            GetLevelBrush(latestLevel),
+            new Pen(Brushes.White, 1.5),
+            new Point(latestX, latestY),
+            baseRadius + 1,
+            baseRadius * 0.7 + 1);
+
+        context.DrawEllipse(
+            Brushes.White,
+            null,
+            new Point(latestX, latestY),
+            2,
+            2);
     }
 
     private static void DrawGrid(DrawingContext context, Rect plot)
@@ -103,34 +171,28 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
         return plot.Left + plot.Width * (offsetTicks / (double)totalTicks);
     }
 
-    private static double MapY(Rect plot, NoiseDistributionLevel level, DateTimeOffset timestamp)
+    private double MapYContinuous(Rect plot, double displayDb)
     {
-        // 4 bands: quiet(bottom) -> extreme(top). Add deterministic jitter in each band.
-        var bandHeight = plot.Height / 4d;
-        var levelIndex = level switch
-        {
-            NoiseDistributionLevel.Quiet => 0,
-            NoiseDistributionLevel.Normal => 1,
-            NoiseDistributionLevel.Noisy => 2,
-            NoiseDistributionLevel.Extreme => 3,
-            _ => 1
-        };
+        var minDb = _baselineDb - 5;
+        var maxDb = _baselineDb + 25;
+        var dbRange = maxDb - minDb;
+        if (dbRange <= 0) dbRange = 30;
 
-        var centerY = plot.Bottom - ((levelIndex + 0.5) * bandHeight);
-        var jitter = ComputeJitter(timestamp.Ticks) * bandHeight * 0.26;
-        return Math.Clamp(centerY + jitter, plot.Top + 1.5, plot.Bottom - 1.5);
+        var normalizedDb = (displayDb - minDb) / dbRange;
+        normalizedDb = Math.Clamp(normalizedDb, 0, 1);
+
+        return plot.Bottom - (normalizedDb * plot.Height);
     }
 
-    private static double ComputeJitter(long ticks)
+    private static double ComputeJitter(double value)
     {
-        // Deterministic pseudo-random value in [-1, 1] to avoid overlap without animation noise.
-        var value = (ulong)ticks;
-        value ^= value >> 33;
-        value *= 0xff51afd7ed558ccdUL;
-        value ^= value >> 33;
-        value *= 0xc4ceb9fe1a85ec53UL;
-        value ^= value >> 33;
-        var normalized = (value & 0xFFFF) / 65535d;
+        var hash = (ulong)(value * 1000000);
+        hash ^= hash >> 33;
+        hash *= 0xff51afd7ed558ccdUL;
+        hash ^= hash >> 33;
+        hash *= 0xc4ceb9fe1a85ec53UL;
+        hash ^= hash >> 33;
+        var normalized = (hash & 0xFFFF) / 65535d;
         return (normalized * 2d) - 1d;
     }
 
@@ -162,11 +224,23 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
     {
         return level switch
         {
-            NoiseDistributionLevel.Quiet => QuietPointBrush,
-            NoiseDistributionLevel.Normal => NormalPointBrush,
-            NoiseDistributionLevel.Noisy => NoisyPointBrush,
-            NoiseDistributionLevel.Extreme => ExtremePointBrush,
-            _ => NormalPointBrush
+            NoiseDistributionLevel.Quiet => QuietBrush,
+            NoiseDistributionLevel.Normal => NormalBrush,
+            NoiseDistributionLevel.Noisy => NoisyBrush,
+            NoiseDistributionLevel.Extreme => ExtremeBrush,
+            _ => NormalBrush
+        };
+    }
+
+    private static IBrush GetLevelBrushWithAlpha(NoiseDistributionLevel level, byte alpha)
+    {
+        return level switch
+        {
+            NoiseDistributionLevel.Quiet => new SolidColorBrush(Color.FromArgb(alpha, 0x34, 0xD3, 0x99)),
+            NoiseDistributionLevel.Normal => new SolidColorBrush(Color.FromArgb(alpha, 0x60, 0xA5, 0xFA)),
+            NoiseDistributionLevel.Noisy => new SolidColorBrush(Color.FromArgb(alpha, 0xF5, 0x9E, 0x0B)),
+            NoiseDistributionLevel.Extreme => new SolidColorBrush(Color.FromArgb(alpha, 0xEF, 0x44, 0x44)),
+            _ => new SolidColorBrush(Color.FromArgb(alpha, 0x60, 0xA5, 0xFA))
         };
     }
 }

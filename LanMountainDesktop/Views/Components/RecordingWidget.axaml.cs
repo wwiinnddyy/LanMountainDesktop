@@ -15,7 +15,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private const int WaveBarCount = 22;
 
@@ -38,6 +38,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
     private bool _isOnActivePage = true;
     private bool _pausedStudyMonitoringForRecording;
     private bool _isNightVisual = true;
+    private bool _isDisposed;
 
     public RecordingWidget()
     {
@@ -611,5 +612,24 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         }
 
         return (false, path.LocalPath);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        _uiTimer.Stop();
+        _uiTimer.Tick -= OnUiTick;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
+        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+
+        _audioRecorderService.Dispose();
     }
 }

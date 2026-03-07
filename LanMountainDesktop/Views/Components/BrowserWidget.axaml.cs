@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -12,7 +12,7 @@ using WebViewCore.Events;
 namespace LanMountainDesktop.Views.Components;
 
 public partial class BrowserWidget : UserControl, IDesktopComponentWidget
-    , IDesktopPageVisibilityAwareComponentWidget
+    , IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private static readonly Uri DefaultHomeUri = new("https://www.bing.com");
     private double _currentCellSize = 48;
@@ -22,6 +22,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
     private bool _isEditMode;
     private bool _isWebViewActive = true;
     private readonly WebView2RuntimeAvailability _runtimeAvailability;
+    private bool _isDisposed;
 
     public BrowserWidget()
     {
@@ -46,6 +47,26 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
         UpdateWebViewActiveState();
         NavigateTo(DefaultHomeUri);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        SizeChanged -= OnSizeChanged;
+        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+
+        if (_runtimeAvailability.IsAvailable)
+        {
+            BrowserWebView.NavigationStarting -= OnBrowserWebViewNavigationStarting;
+        }
     }
 
     public void ApplyCellSize(double cellSize)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,7 +9,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
@@ -27,6 +27,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isDisposed;
     private IDisposable? _monitoringLease;
 
     public StudyEnvironmentWidget()
@@ -328,5 +329,24 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         }
 
         return CreateBrush(fallbackHex);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        _uiTimer.Stop();
+        _uiTimer.Tick -= OnUiTimerTick;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 }

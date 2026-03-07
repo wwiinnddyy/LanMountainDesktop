@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -45,8 +45,8 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
-    private const double MinPoetryFontSize = 12;
-    private const double MinAuthorFontSize = 10.5;
+    private const double MinPoetryFontSize = 8;
+    private const double MinAuthorFontSize = 7;
 
     private readonly record struct TextFitResult(double FontSize, FontWeight FontWeight, double LineHeight);
 
@@ -109,7 +109,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             0,
             0);
 
-        AuthorPanel.Margin = new Thickness(0, Math.Clamp(5 * scale, 2, 10), Math.Clamp(4 * scale, 2, 8), 0);
         AuthorAccent.Width = Math.Clamp(6 * scale, 3.2, 9.5);
         AuthorAccent.Height = Math.Clamp(24 * scale, 12, 34);
         AuthorAccent.Margin = new Thickness(0, 0, Math.Clamp(8 * scale, 4, 13), 0);
@@ -351,11 +350,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
             AuthorTextBlock.Foreground = CreateBrush("#F4D7A7");
             AuthorAccent.Background = CreateBrush("#63F2AF90");
-            AuthorPanel.Margin = new Thickness(
-                0,
-                Math.Clamp(6 * scale, 2, 10),
-                Math.Clamp(6 * scale, 2, 10),
-                Math.Clamp(1 * scale, 0, 3));
 
             DayDecorationCanvas.IsVisible = false;
             RefreshButton.IsVisible = true;
@@ -380,11 +374,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
             AuthorTextBlock.Foreground = CreateBrush("#272D38");
             AuthorAccent.Background = CreateBrush("#C8090D");
-            AuthorPanel.Margin = new Thickness(
-                0,
-                Math.Clamp(6 * scale, 2, 10),
-                Math.Clamp(6 * scale, 2, 10),
-                Math.Clamp(2 * scale, 0, 4));
 
             DayDecorationCanvas.IsVisible = true;
             RefreshButton.IsVisible = true;
@@ -475,83 +464,19 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         DayDecorationCanvas.IsVisible = showDayDecorations;
         RefreshButton.IsVisible = true;
 
-        var refreshReservedWidth = RefreshButton.Width + Math.Clamp(8 * scale, 5, 14);
-        var decorationReservedWidth = showDayDecorations
-            ? Math.Clamp(innerWidth * 0.24, 34, 96)
-            : 0;
-        var quoteReservedWidth = QuoteMarkTextBlock.IsVisible
-            ? Math.Clamp(10 * scale, 5, 16)
-            : 0;
-        var poemReservedRight = Math.Max(refreshReservedWidth, decorationReservedWidth);
-        var poemWidth = innerWidth - poemReservedRight - quoteReservedWidth;
-        var poemMinWidth = Math.Max(66, innerWidth * 0.56);
-        if (poemWidth < poemMinWidth)
-        {
-            poemWidth = poemMinWidth;
-        }
-        poemWidth = Math.Min(Math.Max(64, poemWidth), innerWidth);
+        var refreshButtonWidth = 42 + Math.Clamp(8 * scale, 5, 14);
+        var quoteMarkWidth = QuoteMarkTextBlock.IsVisible ? Math.Clamp(10 * scale, 5, 16) : 0;
+        
+        var poemWidth = innerWidth - quoteMarkWidth - Math.Clamp(12 * scale, 6, 20);
+        poemWidth = Math.Min(Math.Max(64, poemWidth), innerWidth - Math.Clamp(16 * scale, 8, 24));
 
-        var authorMaxLines = innerWidth < Math.Max(_currentCellSize * 5.2, 252) ? 2 : 1;
-        var authorUnitsTarget = authorMaxLines == 1 ? 20 : 12;
-        var authorWidth = Math.Max(72, Math.Min(innerWidth * (isNightMode ? 0.5 : 0.56), innerWidth - 8));
-        var authorPrepared = PrepareAuthorText(_authorRawText, authorUnitsTarget, authorMaxLines);
-        var authorPreferredFontSize = Math.Clamp((isNightMode ? 25 : 23) * scale, 12, 34);
-        var authorMinFontSize = Math.Clamp(authorPreferredFontSize * 0.72, MinAuthorFontSize, authorPreferredFontSize);
-        var authorMinWeight = isNightMode ? 500 : 470;
-        var authorMaxWeight = isNightMode ? 650 : 600;
-        authorPrepared = EnsureTextFitsAtMinSize(
-            preparedText: authorPrepared,
-            sourceText: _authorRawText,
-            targetUnits: authorUnitsTarget,
-            maxLines: authorMaxLines,
-            maxWidth: authorWidth,
-            maxHeight: Math.Max(20, innerHeight * (authorMaxLines > 1 ? 0.38 : 0.28)),
-            minFontSize: authorMinFontSize,
-            minFontWeight: ToVariableWeight(authorMinWeight),
-            lineHeightFactor: 1.12);
-
-        var authorFit = FitTextStable(
-            authorPrepared,
-            authorWidth,
-            Math.Max(20, innerHeight * (authorMaxLines > 1 ? 0.38 : 0.28)),
-            minFontSize: authorMinFontSize,
-            maxFontSize: Math.Clamp(authorPreferredFontSize * 1.15, authorMinFontSize, 42),
-            maxLines: authorMaxLines,
-            lineHeightFactor: 1.12,
-            minWeight: authorMinWeight,
-            maxWeight: authorMaxWeight);
-
-        AuthorTextBlock.Text = authorPrepared;
-        AuthorTextBlock.TextWrapping = authorMaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        AuthorTextBlock.MaxLines = authorMaxLines;
-        AuthorTextBlock.MaxWidth = authorWidth;
-        AuthorTextBlock.FontSize = authorFit.FontSize;
-        AuthorTextBlock.LineHeight = authorFit.LineHeight;
-        AuthorTextBlock.FontWeight = authorFit.FontWeight;
-        AuthorPanel.MaxWidth = authorWidth + AuthorAccent.Width + AuthorAccent.Margin.Right + Math.Clamp(4 * scale, 2, 8);
-
-        var authorMeasured = MeasureTextSize(
-            authorPrepared,
-            authorFit.FontSize,
-            authorFit.FontWeight,
-            authorWidth,
-            authorFit.LineHeight);
-        var authorHeight = Math.Min(authorMeasured.Height, authorFit.LineHeight * authorMaxLines);
-        var authorBlockHeight = Math.Max(authorHeight, AuthorAccent.Height) +
-                                AuthorPanel.Margin.Top +
-                                AuthorPanel.Margin.Bottom +
-                                Math.Clamp(4 * scale, 2, 8);
-
-        var poemMaxLines = innerHeight < _currentCellSize * 1.58
-            ? 4
-            : innerHeight < _currentCellSize * 2.05
-                ? 3
-                : 2;
+        var poemMaxLines = 2;
         var poemUnitsTarget = EstimateTargetUnitsPerLine(poemWidth, scale, isNightMode);
         var poemPrepared = PreparePoetryText(_poetryRawText, poemUnitsTarget, poemMaxLines);
-        var poemHeight = Math.Max(30, innerHeight - authorBlockHeight);
-        var poemPreferredFontSize = Math.Clamp((isNightMode ? 34 : 32) * scale, 16, 56);
-        var poemMinFontSize = Math.Clamp(poemPreferredFontSize * 0.72, MinPoetryFontSize, poemPreferredFontSize);
+        
+        var availablePoemHeight = innerHeight * 0.72;
+        var poemPreferredFontSize = Math.Clamp((isNightMode ? 34 : 32) * scale, 14, 56);
+        var poemMinFontSize = Math.Clamp(poemPreferredFontSize * 0.65, MinPoetryFontSize, poemPreferredFontSize);
         var poemMinWeight = isNightMode ? 540 : 500;
         var poemMaxWeight = isNightMode ? 760 : 680;
         poemPrepared = EnsureTextFitsAtMinSize(
@@ -560,19 +485,19 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             targetUnits: poemUnitsTarget,
             maxLines: poemMaxLines,
             maxWidth: poemWidth,
-            maxHeight: poemHeight,
+            maxHeight: availablePoemHeight,
             minFontSize: poemMinFontSize,
             minFontWeight: ToVariableWeight(poemMinWeight),
-            lineHeightFactor: 1.1);
+            lineHeightFactor: 1.12);
 
         var poemFit = FitTextStable(
             poemPrepared,
             poemWidth,
-            poemHeight,
+            availablePoemHeight,
             minFontSize: poemMinFontSize,
             maxFontSize: Math.Clamp(poemPreferredFontSize * 1.20, poemMinFontSize, 62),
             maxLines: poemMaxLines,
-            lineHeightFactor: 1.10,
+            lineHeightFactor: 1.12,
             minWeight: poemMinWeight,
             maxWeight: poemMaxWeight);
 
@@ -582,6 +507,43 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         PoetryContentTextBlock.FontSize = poemFit.FontSize;
         PoetryContentTextBlock.LineHeight = poemFit.LineHeight;
         PoetryContentTextBlock.FontWeight = poemFit.FontWeight;
+
+        var authorWidth = Math.Max(72, Math.Min(innerWidth * (isNightMode ? 0.5 : 0.56), innerWidth - 8));
+        var authorUnitsTarget = 20;
+        var authorPrepared = PrepareAuthorText(_authorRawText, authorUnitsTarget, 1);
+        var authorPreferredFontSize = Math.Clamp((isNightMode ? 25 : 23) * scale, 10, 34);
+        var authorMinFontSize = Math.Clamp(authorPreferredFontSize * 0.65, MinAuthorFontSize, authorPreferredFontSize);
+        var authorMinWeight = isNightMode ? 500 : 470;
+        var authorMaxWeight = isNightMode ? 650 : 600;
+        authorPrepared = EnsureTextFitsAtMinSize(
+            preparedText: authorPrepared,
+            sourceText: _authorRawText,
+            targetUnits: authorUnitsTarget,
+            maxLines: 1,
+            maxWidth: authorWidth,
+            maxHeight: AuthorAccent.Height,
+            minFontSize: authorMinFontSize,
+            minFontWeight: ToVariableWeight(authorMinWeight),
+            lineHeightFactor: 1.12);
+
+        var authorFit = FitTextStable(
+            authorPrepared,
+            authorWidth,
+            AuthorAccent.Height,
+            minFontSize: authorMinFontSize,
+            maxFontSize: Math.Clamp(authorPreferredFontSize * 1.15, authorMinFontSize, 42),
+            maxLines: 1,
+            lineHeightFactor: 1.12,
+            minWeight: authorMinWeight,
+            maxWeight: authorMaxWeight);
+
+        AuthorTextBlock.Text = authorPrepared;
+        AuthorTextBlock.TextWrapping = TextWrapping.NoWrap;
+        AuthorTextBlock.MaxLines = 1;
+        AuthorTextBlock.MaxWidth = authorWidth;
+        AuthorTextBlock.FontSize = authorFit.FontSize;
+        AuthorTextBlock.LineHeight = authorFit.LineHeight;
+        AuthorTextBlock.FontWeight = authorFit.FontWeight;
     }
 
     private void UpdateRefreshButtonState()

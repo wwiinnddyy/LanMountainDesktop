@@ -11,7 +11,7 @@ using Material.Icons;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class StudySessionControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class StudySessionControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private static readonly Color[] PrimaryColorCandidates =
     {
@@ -61,6 +61,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private IDisposable? _monitoringLease;
@@ -467,5 +468,21 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+
+        _uiTimer.Stop();
+        _uiTimer.Tick -= OnUiTimerTick;
+        AttachedToVisualTree -= OnAttachedToVisualTree;
+        DetachedFromVisualTree -= OnDetachedFromVisualTree;
+        SizeChanged -= OnSizeChanged;
     }
 }
