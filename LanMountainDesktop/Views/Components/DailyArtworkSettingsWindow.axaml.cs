@@ -2,18 +2,21 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyArtworkSettingsWindow : UserControl
+public partial class DailyArtworkSettingsWindow : UserControl, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private string _languageCode = "zh-CN";
     private bool _suppressEvents;
+    private string _componentId = BuiltInComponentIds.DesktopDailyArtwork;
+    private string _placementId = string.Empty;
 
     public event EventHandler? SettingsChanged;
 
@@ -24,10 +27,27 @@ public partial class DailyArtworkSettingsWindow : UserControl
         ApplyLocalization();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopDailyArtwork
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        LoadState();
+        ApplyLocalization();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        LoadState();
+        ApplyLocalization();
+    }
+
     private void LoadState()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         var source = DailyArtworkMirrorSources.Normalize(componentSnapshot.DailyArtworkMirrorSource);
@@ -59,9 +79,9 @@ public partial class DailyArtworkSettingsWindow : UserControl
         }
 
         var source = GetSelectedSource();
-        var snapshot = _componentSettingsService.Load();
+        var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         snapshot.DailyArtworkMirrorSource = source;
-        _componentSettingsService.Save(snapshot);
+        _componentSettingsStore.SaveForComponent(_componentId, _placementId, snapshot);
 
         UpdateSourceStatus(source);
         SettingsChanged?.Invoke(this, EventArgs.Empty);

@@ -13,12 +13,13 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
+public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private static readonly IReadOnlyDictionary<DayOfWeek, string> ZhWeekdays =
         new Dictionary<DayOfWeek, string>
@@ -58,6 +59,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     };
 
     private readonly AppSettingsService _settingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
@@ -67,6 +69,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
     private bool _isRefreshing;
+    private string _componentId = BuiltInComponentIds.DesktopDailyArtwork;
+    private string _placementId = string.Empty;
     private string? _currentArtworkSourceUrl;
     private string? _currentArtworkImageUrl;
 
@@ -136,6 +140,21 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         }
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopDailyArtwork
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshFromSettings();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshFromSettings();
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
@@ -203,6 +222,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         {
             var query = new DailyArtworkQuery(
                 Locale: _languageCode,
+                MirrorSource: ResolveMirrorSource(),
                 ForceRefresh: forceRefresh);
             var result = await _recommendationService.GetDailyArtworkAsync(query, cts.Token);
             if (!_isAttached || cts.IsCancellationRequested)
@@ -637,6 +657,19 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         catch
         {
             _languageCode = "zh-CN";
+        }
+    }
+
+    private string ResolveMirrorSource()
+    {
+        try
+        {
+            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+            return DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
+        }
+        catch
+        {
+            return DailyArtworkMirrorSources.Overseas;
         }
     }
 

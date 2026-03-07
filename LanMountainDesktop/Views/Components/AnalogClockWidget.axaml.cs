@@ -7,11 +7,12 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -54,9 +55,11 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private const double DialSize = 258;
     private const double Center = DialSize / 2;
+    private string _componentId = BuiltInComponentIds.DesktopClock;
+    private string _placementId = string.Empty;
 
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
@@ -110,6 +113,21 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         LoadClockSettings();
         ApplySecondHandTimerInterval();
         UpdateClock();
+    }
+
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopClock
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshFromSettings();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshFromSettings();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -359,7 +377,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void LoadClockSettings()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         var configuredTimeZoneId = string.IsNullOrWhiteSpace(componentSnapshot.DesktopClockTimeZoneId)

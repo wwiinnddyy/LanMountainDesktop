@@ -10,19 +10,22 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ClassScheduleSettingsWindow : UserControl
+public partial class ClassScheduleSettingsWindow : UserControl, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly List<ImportedClassScheduleSnapshot> _importedSchedules = [];
     private string _activeScheduleId = string.Empty;
     private string _languageCode = "zh-CN";
+    private string _componentId = BuiltInComponentIds.DesktopClassSchedule;
+    private string _placementId = string.Empty;
 
     public event EventHandler? SettingsChanged;
 
@@ -34,10 +37,29 @@ public partial class ClassScheduleSettingsWindow : UserControl
         RenderImportedSchedules();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopClassSchedule
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        LoadState();
+        ApplyLocalization();
+        RenderImportedSchedules();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        LoadState();
+        ApplyLocalization();
+        RenderImportedSchedules();
+    }
+
     private void LoadState()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         _importedSchedules.Clear();
@@ -299,7 +321,7 @@ public partial class ClassScheduleSettingsWindow : UserControl
 
     private void SaveState()
     {
-        var snapshot = _componentSettingsService.Load();
+        var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         snapshot.ImportedClassSchedules = _importedSchedules
             .Select(item => new ImportedClassScheduleSnapshot
             {
@@ -309,7 +331,7 @@ public partial class ClassScheduleSettingsWindow : UserControl
             })
             .ToList();
         snapshot.ActiveImportedClassScheduleId = _activeScheduleId ?? string.Empty;
-        _componentSettingsService.Save(snapshot);
+        _componentSettingsStore.SaveForComponent(_componentId, _placementId, snapshot);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 

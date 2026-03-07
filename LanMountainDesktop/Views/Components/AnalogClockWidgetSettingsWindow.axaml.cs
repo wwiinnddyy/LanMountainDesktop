@@ -4,11 +4,12 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidgetSettingsWindow : UserControl
+public partial class AnalogClockWidgetSettingsWindow : UserControl, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private static readonly IReadOnlyDictionary<string, string> ZhTimeZoneNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -28,11 +29,13 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
         };
 
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService = new();
     private bool _suppressEvents;
     private string _languageCode = "zh-CN";
+    private string _componentId = BuiltInComponentIds.DesktopClock;
+    private string _placementId = string.Empty;
     private IReadOnlyList<TimeZoneInfo> _allTimeZones = Array.Empty<TimeZoneInfo>();
     private string _selectedTimeZoneId = string.Empty;
     private string _secondHandMode = ClockSecondHandMode.Tick;
@@ -47,10 +50,29 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
         PopulateTimeZoneComboBox();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopClock
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        LoadState();
+        ApplyLocalization();
+        PopulateTimeZoneComboBox();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        LoadState();
+        ApplyLocalization();
+        PopulateTimeZoneComboBox();
+    }
+
     private void LoadState()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
         _selectedTimeZoneId = string.IsNullOrWhiteSpace(componentSnapshot.DesktopClockTimeZoneId)
             ? "China Standard Time"
@@ -149,10 +171,10 @@ public partial class AnalogClockWidgetSettingsWindow : UserControl
         _selectedTimeZoneId = normalizedId;
         _secondHandMode = GetSelectedSecondHandMode();
 
-        var snapshot = _componentSettingsService.Load();
+        var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         snapshot.DesktopClockTimeZoneId = normalizedId;
         snapshot.DesktopClockSecondHandMode = _secondHandMode;
-        _componentSettingsService.Save(snapshot);
+        _componentSettingsStore.SaveForComponent(_componentId, _placementId, snapshot);
 
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }

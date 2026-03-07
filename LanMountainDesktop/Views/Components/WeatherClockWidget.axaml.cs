@@ -10,12 +10,13 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
+public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private sealed record WeatherClockConfig(
         string LanguageCode,
@@ -41,7 +42,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     };
 
     private readonly AppSettingsService _settingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly Line _hourHandLine = CreateHandLine("#232938", 4.0);
     private readonly Line _minuteHandLine = CreateHandLine("#2F3749", 2.8);
@@ -59,6 +60,8 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private bool? _isNightModeApplied;
     private string _languageCode = "zh-CN";
     private HyperOS3WeatherVisualKind _activeVisualKind = HyperOS3WeatherVisualKind.CloudyDay;
+    private string _componentId = BuiltInComponentIds.DesktopWeatherClock;
+    private string _placementId = string.Empty;
 
     public WeatherClockWidget()
     {
@@ -114,6 +117,21 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         {
             _ = RefreshWeatherAsync(forceRefresh: true);
         }
+    }
+
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopWeatherClock
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshFromSettings();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshFromSettings();
     }
 
     public void ApplyCellSize(double cellSize)
@@ -659,7 +677,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
 
         try
         {
-            var snapshot = _componentSettingsService.Load();
+            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
             enabled = snapshot.WeatherAutoRefreshEnabled;
             intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.WeatherAutoRefreshIntervalMinutes);
         }

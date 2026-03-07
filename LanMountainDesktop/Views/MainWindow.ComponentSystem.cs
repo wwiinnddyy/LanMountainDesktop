@@ -14,6 +14,7 @@ using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
@@ -689,6 +690,7 @@ public partial class MainWindow
         }
 
         _desktopComponentPlacements.Remove(placement);
+        _componentSettingsService.DeleteForComponent(placement.ComponentId, placement.PlacementId);
 
         ClearDesktopComponentSelection();
 
@@ -724,80 +726,80 @@ public partial class MainWindow
 
         if (placement.ComponentId == BuiltInComponentIds.Date)
         {
-            OpenDateComponentSettings();
+            OpenDateComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopClock)
         {
-            OpenDesktopClockComponentSettings();
+            OpenDesktopClockComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopClassSchedule)
         {
-            OpenClassScheduleComponentSettings();
+            OpenClassScheduleComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopWorldClock)
         {
-            OpenWorldClockComponentSettings();
+            OpenWorldClockComponentSettings(placement);
             return;
         }
 
         if (IsWeatherComponentId(placement.ComponentId))
         {
-            OpenWeatherComponentSettings();
+            OpenWeatherComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopDailyArtwork)
         {
-            OpenDailyArtworkComponentSettings();
+            OpenDailyArtworkComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopCnrDailyNews)
         {
-            OpenCnrDailyNewsComponentSettings();
+            OpenCnrDailyNewsComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopIfengNews)
         {
-            OpenIfengNewsComponentSettings();
+            OpenIfengNewsComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord ||
             placement.ComponentId == BuiltInComponentIds.DesktopDailyWord2x2)
         {
-            OpenDailyWordComponentSettings();
+            OpenDailyWordComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopBilibiliHotSearch)
         {
-            OpenBilibiliHotSearchComponentSettings();
+            OpenBilibiliHotSearchComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopBaiduHotSearch)
         {
-            OpenBaiduHotSearchComponentSettings();
+            OpenBaiduHotSearchComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopStcn24Forum)
         {
-            OpenStcn24ForumComponentSettings();
+            OpenStcn24ForumComponentSettings(placement);
             return;
         }
 
         if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
         {
-            OpenStudyEnvironmentComponentSettings();
+            OpenStudyEnvironmentComponentSettings(placement);
             return;
         }
     }
@@ -811,212 +813,129 @@ public partial class MainWindow
                string.Equals(componentId, BuiltInComponentIds.DesktopExtendedWeather, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void OpenDateComponentSettings()
+    private void ShowComponentSettings(Control settingsContent, DesktopComponentPlacementSnapshot placement)
     {
         if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
         {
             return;
         }
 
-        var settingsContent = new DateWidgetSettingsWindow();
+        var runtimeContext = new DesktopComponentRuntimeContext(
+            placement.ComponentId,
+            placement.PlacementId,
+            _componentSettingsService);
+
+        if (settingsContent is IComponentRuntimeContextAware runtimeContextAwareComponent)
+        {
+            runtimeContextAwareComponent.SetComponentRuntimeContext(runtimeContext);
+        }
+
+        if (settingsContent is IComponentPlacementContextAware placementAwareComponent)
+        {
+            placementAwareComponent.SetComponentPlacementContext(placement.ComponentId, placement.PlacementId);
+        }
+
+        if (settingsContent is IComponentSettingsStoreAware settingsStoreAwareComponent)
+        {
+            settingsStoreAwareComponent.SetComponentSettingsStore(_componentSettingsService);
+        }
+
+        ComponentSettingsService.ApplyScopedContextToTarget(settingsContent, placement.ComponentId, placement.PlacementId);
+
         ComponentSettingsContentHost.Content = settingsContent;
-        
         ComponentSettingsWindow.IsVisible = true;
         ComponentSettingsWindow.Opacity = 0;
-        
         ComponentSettingsWindow.Opacity = 1;
     }
 
-    private void OpenClassScheduleComponentSettings()
+    private void OpenDateComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
+        var settingsContent = new DateWidgetSettingsWindow();
+        ShowComponentSettings(settingsContent, placement);
+    }
 
+    private void OpenClassScheduleComponentSettings(DesktopComponentPlacementSnapshot placement)
+    {
         var settingsContent = new ClassScheduleSettingsWindow();
         settingsContent.SettingsChanged += OnClassScheduleSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenDesktopClockComponentSettings()
+    private void OpenDesktopClockComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new AnalogClockWidgetSettingsWindow();
         settingsContent.SettingsChanged += OnDesktopClockSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenWorldClockComponentSettings()
+    private void OpenWorldClockComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new WorldClockWidgetSettingsWindow();
         settingsContent.SettingsChanged += OnWorldClockSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenWeatherComponentSettings()
+    private void OpenWeatherComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new WeatherWidgetSettingsWindow();
         settingsContent.SettingsChanged += OnWeatherSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenStudyEnvironmentComponentSettings()
+    private void OpenStudyEnvironmentComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new StudyEnvironmentWidgetSettingsWindow();
         settingsContent.SettingsChanged += OnStudyEnvironmentSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenDailyArtworkComponentSettings()
+    private void OpenDailyArtworkComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new DailyArtworkSettingsWindow();
         settingsContent.SettingsChanged += OnDailyArtworkSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenCnrDailyNewsComponentSettings()
+    private void OpenCnrDailyNewsComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new CnrDailyNewsSettingsWindow();
         settingsContent.SettingsChanged += OnCnrDailyNewsSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenIfengNewsComponentSettings()
+    private void OpenIfengNewsComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new IfengNewsSettingsWindow();
         settingsContent.SettingsChanged += OnIfengNewsSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenDailyWordComponentSettings()
+    private void OpenDailyWordComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new DailyWordSettingsWindow();
         settingsContent.SettingsChanged += OnDailyWordSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenBilibiliHotSearchComponentSettings()
+    private void OpenBilibiliHotSearchComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new BilibiliHotSearchSettingsWindow();
         settingsContent.SettingsChanged += OnBilibiliHotSearchSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenBaiduHotSearchComponentSettings()
+    private void OpenBaiduHotSearchComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new BaiduHotSearchSettingsWindow();
         settingsContent.SettingsChanged += OnBaiduHotSearchSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
-    private void OpenStcn24ForumComponentSettings()
+    private void OpenStcn24ForumComponentSettings(DesktopComponentPlacementSnapshot placement)
     {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
         var settingsContent = new Stcn24ForumSettingsWindow();
         settingsContent.SettingsChanged += OnStcn24ForumSettingsChanged;
-        ComponentSettingsContentHost.Content = settingsContent;
-
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
+        ShowComponentSettings(settingsContent, placement);
     }
 
     private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
@@ -1408,6 +1327,7 @@ public partial class MainWindow
         foreach (var placement in placementsToRemove)
         {
             _desktopComponentPlacements.Remove(placement);
+            _componentSettingsService.DeleteForComponent(placement.ComponentId, placement.PlacementId);
         }
 
         _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
@@ -1601,7 +1521,7 @@ public partial class MainWindow
             placement.PlacementId = Guid.NewGuid().ToString("N");
         }
 
-        var component = CreateDesktopComponentControl(placement.ComponentId);
+        var component = CreateDesktopComponentControl(placement.ComponentId, placement.PlacementId);
         if (component is null)
         {
             return null;
@@ -2035,7 +1955,7 @@ public partial class MainWindow
         return onLeft || onRight || onTop || onBottom;
     }
 
-    private Control? CreateDesktopComponentControl(string componentId)
+    private Control? CreateDesktopComponentControl(string componentId, string? placementId = null)
     {
         if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
@@ -2047,7 +1967,9 @@ public partial class MainWindow
             _timeZoneService,
             _weatherDataService,
             _recommendationInfoService,
-            _calculatorDataService);
+            _calculatorDataService,
+            _componentSettingsService,
+            placementId);
         component.Classes.Add(DesktopComponentClass);
         return component;
     }
@@ -3195,7 +3117,8 @@ public partial class MainWindow
                 _timeZoneService,
                 _weatherDataService,
                 _recommendationInfoService,
-                _calculatorDataService);
+                _calculatorDataService,
+                _componentSettingsService);
             // Component library previews must stay non-interactive so drag gesture is reliable.
             previewControl.IsHitTestVisible = false;
             previewControl.Focusable = false;

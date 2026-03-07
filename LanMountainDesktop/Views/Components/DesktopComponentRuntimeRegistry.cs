@@ -42,9 +42,33 @@ public sealed class DesktopComponentRuntimeDescriptor
         TimeZoneService timeZoneService,
         IWeatherInfoService weatherInfoService,
         IRecommendationInfoService recommendationInfoService,
-        ICalculatorDataService calculatorDataService)
+        ICalculatorDataService calculatorDataService,
+        IComponentInstanceSettingsStore componentSettingsStore,
+        string? placementId = null)
     {
         var control = _controlFactory();
+        var runtimeContext = new DesktopComponentRuntimeContext(
+            Definition.Id,
+            placementId,
+            componentSettingsStore);
+
+        if (control is IComponentRuntimeContextAware runtimeContextAwareComponent)
+        {
+            runtimeContextAwareComponent.SetComponentRuntimeContext(runtimeContext);
+        }
+
+        if (control is IComponentPlacementContextAware placementAwareComponent)
+        {
+            placementAwareComponent.SetComponentPlacementContext(Definition.Id, placementId);
+        }
+
+        if (control is IComponentSettingsStoreAware settingsStoreAwareComponent)
+        {
+            settingsStoreAwareComponent.SetComponentSettingsStore(componentSettingsStore);
+        }
+
+        ComponentSettingsService.ApplyScopedContextToTarget(control, Definition.Id, placementId);
+
         if (control is IDesktopComponentWidget sizedComponent)
         {
             sizedComponent.ApplyCellSize(cellSize);

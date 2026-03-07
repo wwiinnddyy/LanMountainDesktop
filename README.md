@@ -38,8 +38,9 @@
 
 ## 当前状态
 - 项目包含桌面端与推荐后端两个子项目，并在同一 solution 中维护。
-- 配置默认写入本地：`%LOCALAPPDATA%\LanMountainDesktop\settings.json`。
-- 启动台与桌面布局现已拆分到独立文件：`%LOCALAPPDATA%\LanMountainDesktop\launcher-settings.json`、`%LOCALAPPDATA%\LanMountainDesktop\desktop-layout-settings.json`。
+- 通用应用配置默认写入本地：`%LOCALAPPDATA%\LanMountainDesktop\settings.json`。
+- 启动台与桌面布局已拆分到独立文件：`%LOCALAPPDATA%\LanMountainDesktop\launcher-settings.json`、`%LOCALAPPDATA%\LanMountainDesktop\desktop-layout-settings.json`。
+- 组件配置统一写入：`%LOCALAPPDATA%\LanMountainDesktop\component-settings.json`；同类组件按实例 `componentId::placementId` 隔离存储，同时预留插件专属配置区。
 - 当前体验以 Windows 为主要目标平台。
 
 ## 运行说明

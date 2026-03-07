@@ -9,13 +9,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget
+public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private enum WeatherVisualKind
     {
@@ -93,7 +94,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     };
 
     private readonly AppSettingsService _settingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly Dictionary<WeatherVisualKind, IBrush> _backgroundBrushCache = new();
     private readonly Dictionary<HyperOS3WeatherVisualKind, IBrush> _particleBrushCache = new();
@@ -116,6 +117,8 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
     private bool _isOnActivePage = true;
     private bool _isRefreshing;
     private bool _autoRefreshEnabled = true;
+    private string _componentId = BuiltInComponentIds.DesktopMultiDayWeather;
+    private string _placementId = string.Empty;
     private readonly TextBlock[] _hourlyTimeBlocks;
     private readonly Image[] _hourlyIconBlocks;
     private readonly TextBlock[] _hourlyTempBlocks;
@@ -220,6 +223,21 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
         {
             _ = RefreshWeatherAsync(forceRefresh: true);
         }
+    }
+
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopMultiDayWeather
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshFromSettings();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshFromSettings();
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
@@ -1274,7 +1292,7 @@ public partial class MultiDayWeatherWidget : UserControl, IDesktopComponentWidge
 
         try
         {
-            var snapshot = _componentSettingsService.Load();
+            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
             enabled = snapshot.WeatherAutoRefreshEnabled;
             intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.WeatherAutoRefreshIntervalMinutes);
         }

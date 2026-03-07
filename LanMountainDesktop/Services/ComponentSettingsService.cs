@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using LanMountainDesktop.Models;
 
 namespace LanMountainDesktop.Services;
 
-public sealed class ComponentSettingsService
+public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -18,12 +19,14 @@ public sealed class ComponentSettingsService
     private static readonly TimeSpan CacheProbeInterval = TimeSpan.FromMilliseconds(400);
 
     private static string? _cachedPath;
-    private static ComponentSettingsSnapshot? _cachedSnapshot;
+    private static ComponentSettingsDocumentSnapshot? _cachedSnapshot;
     private static DateTime _cachedWriteTimeUtc = DateTime.MinValue;
     private static DateTime _lastProbeUtc = DateTime.MinValue;
 
     private readonly string _settingsPath;
     private readonly string _legacyAppSettingsPath;
+    private string _scopedComponentId = string.Empty;
+    private string _scopedPlacementId = string.Empty;
 
     public ComponentSettingsService()
     {
@@ -35,51 +38,17 @@ public sealed class ComponentSettingsService
 
     public ComponentSettingsSnapshot Load()
     {
+        if (HasScopedComponentContext())
+        {
+            return LoadForComponent(_scopedComponentId, _scopedPlacementId);
+        }
+
         try
         {
             lock (CacheGate)
             {
-                var nowUtc = DateTime.UtcNow;
-                if (TryGetCachedWithoutProbe(nowUtc, out var cached))
-                {
-                    return cached;
-                }
-
-                var hasFile = File.Exists(_settingsPath);
-                var writeTimeUtc = hasFile
-                    ? File.GetLastWriteTimeUtc(_settingsPath)
-                    : DateTime.MinValue;
-
-                _lastProbeUtc = nowUtc;
-                if (TryGetCachedAfterProbe(writeTimeUtc, out cached))
-                {
-                    return cached;
-                }
-
-                ComponentSettingsSnapshot loadedSnapshot;
-                var loadedFromLegacy = false;
-                if (hasFile)
-                {
-                    loadedSnapshot = LoadSnapshotFromDisk();
-                }
-                else if (TryLoadLegacySnapshot(out var migratedSnapshot))
-                {
-                    loadedSnapshot = migratedSnapshot;
-                    loadedFromLegacy = true;
-                }
-                else
-                {
-                    loadedSnapshot = new ComponentSettingsSnapshot();
-                }
-
-                var normalizedSnapshot = NormalizeSnapshot(loadedSnapshot);
-                if (loadedFromLegacy)
-                {
-                    writeTimeUtc = PersistSnapshotToDisk(normalizedSnapshot);
-                }
-
-                UpdateCache(normalizedSnapshot, writeTimeUtc, nowUtc);
-                return normalizedSnapshot.Clone();
+                var document = LoadDocumentLocked();
+                return document.DefaultSettings.Clone();
             }
         }
         catch
@@ -90,15 +59,21 @@ public sealed class ComponentSettingsService
 
     public void Save(ComponentSettingsSnapshot snapshot)
     {
+        if (HasScopedComponentContext())
+        {
+            SaveForComponent(_scopedComponentId, _scopedPlacementId, snapshot);
+            return;
+        }
+
         var snapshotToPersist = NormalizeSnapshot(snapshot);
 
         try
         {
-            var writeTimeUtc = PersistSnapshotToDisk(snapshotToPersist);
-
             lock (CacheGate)
             {
-                UpdateCache(snapshotToPersist, writeTimeUtc, DateTime.UtcNow);
+                var document = LoadDocumentLocked();
+                document.DefaultSettings = snapshotToPersist;
+                PersistDocumentLocked(document);
             }
         }
         catch
@@ -107,7 +82,201 @@ public sealed class ComponentSettingsService
         }
     }
 
-    private bool TryGetCachedWithoutProbe(DateTime nowUtc, out ComponentSettingsSnapshot snapshot)
+    public ComponentSettingsSnapshot LoadForComponent(string componentId, string? placementId)
+    {
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                var instanceKey = BuildInstanceKey(componentId, placementId);
+                if (!string.IsNullOrWhiteSpace(instanceKey) &&
+                    document.InstanceSettings.TryGetValue(instanceKey, out var snapshot))
+                {
+                    return snapshot.Clone();
+                }
+
+                return document.DefaultSettings.Clone();
+            }
+        }
+        catch
+        {
+            return new ComponentSettingsSnapshot();
+        }
+    }
+
+    public void SaveForComponent(string componentId, string? placementId, ComponentSettingsSnapshot snapshot)
+    {
+        var normalizedSnapshot = NormalizeSnapshot(snapshot);
+        var instanceKey = BuildInstanceKey(componentId, placementId);
+        if (string.IsNullOrWhiteSpace(instanceKey))
+        {
+            Save(normalizedSnapshot);
+            return;
+        }
+
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                document.InstanceSettings[instanceKey] = normalizedSnapshot;
+                PersistDocumentLocked(document);
+            }
+        }
+        catch
+        {
+            // Swallow persistence errors to keep UI interactions uninterrupted.
+        }
+    }
+
+    public void DeleteForComponent(string componentId, string? placementId)
+    {
+        var instanceKey = BuildInstanceKey(componentId, placementId);
+        if (string.IsNullOrWhiteSpace(instanceKey))
+        {
+            return;
+        }
+
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                var changed = document.InstanceSettings.Remove(instanceKey);
+                changed |= document.PluginSettings.Remove(instanceKey);
+                if (changed)
+                {
+                    PersistDocumentLocked(document);
+                }
+            }
+        }
+        catch
+        {
+            // Swallow persistence errors to keep UI interactions uninterrupted.
+        }
+    }
+
+    public T LoadPluginSettings<T>(string componentId, string? placementId) where T : new()
+    {
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                var instanceKey = BuildInstanceKey(componentId, placementId);
+                if (string.IsNullOrWhiteSpace(instanceKey) ||
+                    !document.PluginSettings.TryGetValue(instanceKey, out var settingsElement))
+                {
+                    return new T();
+                }
+
+                return JsonSerializer.Deserialize<T>(settingsElement.GetRawText(), SerializerOptions) ?? new T();
+            }
+        }
+        catch
+        {
+            return new T();
+        }
+    }
+
+    public void SavePluginSettings<T>(string componentId, string? placementId, T settings)
+    {
+        var instanceKey = BuildInstanceKey(componentId, placementId);
+        if (string.IsNullOrWhiteSpace(instanceKey))
+        {
+            return;
+        }
+
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                document.PluginSettings[instanceKey] = JsonSerializer.SerializeToElement(settings, SerializerOptions).Clone();
+                PersistDocumentLocked(document);
+            }
+        }
+        catch
+        {
+            // Swallow persistence errors to keep UI interactions uninterrupted.
+        }
+    }
+
+    public void DeletePluginSettings(string componentId, string? placementId)
+    {
+        var instanceKey = BuildInstanceKey(componentId, placementId);
+        if (string.IsNullOrWhiteSpace(instanceKey))
+        {
+            return;
+        }
+
+        try
+        {
+            lock (CacheGate)
+            {
+                var document = LoadDocumentLocked();
+                if (document.PluginSettings.Remove(instanceKey))
+                {
+                    PersistDocumentLocked(document);
+                }
+            }
+        }
+        catch
+        {
+            // Swallow persistence errors to keep UI interactions uninterrupted.
+        }
+    }
+
+    public void SetScopedComponentContext(string componentId, string? placementId)
+    {
+        _scopedComponentId = componentId?.Trim() ?? string.Empty;
+        _scopedPlacementId = placementId?.Trim() ?? string.Empty;
+    }
+
+    public void ClearScopedComponentContext()
+    {
+        _scopedComponentId = string.Empty;
+        _scopedPlacementId = string.Empty;
+    }
+
+    public static void ApplyScopedContextToTarget(object? target, string componentId, string? placementId)
+    {
+        if (target is null)
+        {
+            return;
+        }
+
+        var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        foreach (var field in target.GetType().GetFields(flags))
+        {
+            if (field.FieldType != typeof(ComponentSettingsService))
+            {
+                continue;
+            }
+
+            if (field.GetValue(target) is ComponentSettingsService settingsService)
+            {
+                settingsService.SetScopedComponentContext(componentId, placementId);
+            }
+        }
+
+        foreach (var property in target.GetType().GetProperties(flags))
+        {
+            if (property.PropertyType != typeof(ComponentSettingsService) ||
+                !property.CanRead)
+            {
+                continue;
+            }
+
+            if (property.GetValue(target) is ComponentSettingsService settingsService)
+            {
+                settingsService.SetScopedComponentContext(componentId, placementId);
+            }
+        }
+    }
+
+    private bool TryGetCachedWithoutProbe(DateTime nowUtc, out ComponentSettingsDocumentSnapshot snapshot)
     {
         if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
             _cachedSnapshot is not null &&
@@ -121,7 +290,7 @@ public sealed class ComponentSettingsService
         return false;
     }
 
-    private bool TryGetCachedAfterProbe(DateTime writeTimeUtc, out ComponentSettingsSnapshot snapshot)
+    private bool TryGetCachedAfterProbe(DateTime writeTimeUtc, out ComponentSettingsDocumentSnapshot snapshot)
     {
         if (string.Equals(_cachedPath, _settingsPath, StringComparison.Ordinal) &&
             _cachedSnapshot is not null &&
@@ -135,17 +304,78 @@ public sealed class ComponentSettingsService
         return false;
     }
 
-    private ComponentSettingsSnapshot LoadSnapshotFromDisk()
+    private ComponentSettingsDocumentSnapshot LoadDocumentLocked()
+    {
+        var nowUtc = DateTime.UtcNow;
+        if (TryGetCachedWithoutProbe(nowUtc, out var cached))
+        {
+            return cached;
+        }
+
+        var hasFile = File.Exists(_settingsPath);
+        var writeTimeUtc = hasFile
+            ? File.GetLastWriteTimeUtc(_settingsPath)
+            : DateTime.MinValue;
+
+        _lastProbeUtc = nowUtc;
+        if (TryGetCachedAfterProbe(writeTimeUtc, out cached))
+        {
+            return cached;
+        }
+
+        ComponentSettingsDocumentSnapshot loadedSnapshot;
+        var loadedFromLegacy = false;
+        if (hasFile)
+        {
+            loadedSnapshot = LoadSnapshotFromDisk();
+        }
+        else if (TryLoadLegacySnapshot(out var migratedSnapshot))
+        {
+            loadedSnapshot = new ComponentSettingsDocumentSnapshot
+            {
+                DefaultSettings = NormalizeSnapshot(migratedSnapshot)
+            };
+            loadedFromLegacy = true;
+        }
+        else
+        {
+            loadedSnapshot = new ComponentSettingsDocumentSnapshot();
+        }
+
+        var normalizedSnapshot = NormalizeDocument(loadedSnapshot);
+        if (loadedFromLegacy)
+        {
+            writeTimeUtc = PersistSnapshotToDisk(normalizedSnapshot);
+        }
+
+        UpdateCache(normalizedSnapshot, writeTimeUtc, nowUtc);
+        return normalizedSnapshot.Clone();
+    }
+
+    private ComponentSettingsDocumentSnapshot LoadSnapshotFromDisk()
     {
         try
         {
             var json = File.ReadAllText(_settingsPath);
-            var snapshot = JsonSerializer.Deserialize<ComponentSettingsSnapshot>(json, SerializerOptions);
-            return NormalizeSnapshot(snapshot);
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                (document.RootElement.TryGetProperty("defaultSettings", out _) ||
+                 document.RootElement.TryGetProperty("instanceSettings", out _) ||
+                 document.RootElement.TryGetProperty("pluginSettings", out _)))
+            {
+                var snapshot = JsonSerializer.Deserialize<ComponentSettingsDocumentSnapshot>(json, SerializerOptions);
+                return NormalizeDocument(snapshot);
+            }
+
+            var legacySnapshot = JsonSerializer.Deserialize<ComponentSettingsSnapshot>(json, SerializerOptions);
+            return new ComponentSettingsDocumentSnapshot
+            {
+                DefaultSettings = NormalizeSnapshot(legacySnapshot)
+            };
         }
         catch
         {
-            return new ComponentSettingsSnapshot();
+            return new ComponentSettingsDocumentSnapshot();
         }
     }
 
@@ -204,7 +434,13 @@ public sealed class ComponentSettingsService
         }
     }
 
-    private DateTime PersistSnapshotToDisk(ComponentSettingsSnapshot snapshot)
+    private void PersistDocumentLocked(ComponentSettingsDocumentSnapshot snapshot)
+    {
+        var writeTimeUtc = PersistSnapshotToDisk(snapshot);
+        UpdateCache(snapshot, writeTimeUtc, DateTime.UtcNow);
+    }
+
+    private DateTime PersistSnapshotToDisk(ComponentSettingsDocumentSnapshot snapshot)
     {
         var directory = Path.GetDirectoryName(_settingsPath);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -254,6 +490,40 @@ public sealed class ComponentSettingsService
         normalized.Stcn24ForumAutoRefreshIntervalMinutes = NormalizeStcn24ForumInterval(normalized.Stcn24ForumAutoRefreshIntervalMinutes);
         normalized.Stcn24ForumSourceType = Stcn24ForumSourceTypes.Normalize(normalized.Stcn24ForumSourceType);
 
+        return normalized;
+    }
+
+    private static ComponentSettingsDocumentSnapshot NormalizeDocument(ComponentSettingsDocumentSnapshot? snapshot)
+    {
+        var normalized = snapshot?.Clone() ?? new ComponentSettingsDocumentSnapshot();
+        normalized.DefaultSettings = NormalizeSnapshot(normalized.DefaultSettings);
+
+        var instanceSettings = new Dictionary<string, ComponentSettingsSnapshot>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in normalized.InstanceSettings)
+        {
+            var key = NormalizeInstanceKey(pair.Key);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            instanceSettings[key] = NormalizeSnapshot(pair.Value);
+        }
+
+        var pluginSettings = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in normalized.PluginSettings)
+        {
+            var key = NormalizeInstanceKey(pair.Key);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            pluginSettings[key] = pair.Value.Clone();
+        }
+
+        normalized.InstanceSettings = instanceSettings;
+        normalized.PluginSettings = pluginSettings;
         return normalized;
     }
 
@@ -360,12 +630,68 @@ public sealed class ComponentSettingsService
         return RefreshIntervalCatalog.Normalize(minutes, 20);
     }
 
-    private void UpdateCache(ComponentSettingsSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc)
+    private static string BuildInstanceKey(string componentId, string? placementId)
+    {
+        var normalizedComponentId = componentId?.Trim() ?? string.Empty;
+        var normalizedPlacementId = placementId?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedComponentId) || string.IsNullOrWhiteSpace(normalizedPlacementId))
+        {
+            return string.Empty;
+        }
+
+        return $"{normalizedComponentId}::{normalizedPlacementId}";
+    }
+
+    private static string NormalizeInstanceKey(string? key)
+    {
+        return key?.Trim() ?? string.Empty;
+    }
+
+    private bool HasScopedComponentContext()
+    {
+        return !string.IsNullOrWhiteSpace(_scopedComponentId) &&
+               !string.IsNullOrWhiteSpace(_scopedPlacementId);
+    }
+
+    private void UpdateCache(ComponentSettingsDocumentSnapshot snapshot, DateTime writeTimeUtc, DateTime probeTimeUtc)
     {
         _cachedPath = _settingsPath;
         _cachedSnapshot = snapshot.Clone();
         _cachedWriteTimeUtc = writeTimeUtc;
         _lastProbeUtc = probeTimeUtc;
+    }
+
+    private sealed class ComponentSettingsDocumentSnapshot
+    {
+        public ComponentSettingsSnapshot DefaultSettings { get; set; } = new();
+
+        public Dictionary<string, ComponentSettingsSnapshot> InstanceSettings { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        public Dictionary<string, JsonElement> PluginSettings { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        public ComponentSettingsDocumentSnapshot Clone()
+        {
+            var clone = new ComponentSettingsDocumentSnapshot
+            {
+                DefaultSettings = DefaultSettings?.Clone() ?? new ComponentSettingsSnapshot(),
+                InstanceSettings = new Dictionary<string, ComponentSettingsSnapshot>(StringComparer.OrdinalIgnoreCase),
+                PluginSettings = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase)
+            };
+
+            foreach (var pair in InstanceSettings)
+            {
+                clone.InstanceSettings[pair.Key] = pair.Value?.Clone() ?? new ComponentSettingsSnapshot();
+            }
+
+            foreach (var pair in PluginSettings)
+            {
+                clone.PluginSettings[pair.Key] = pair.Value.Clone();
+            }
+
+            return clone;
+        }
     }
 
     private sealed class LegacyComponentSettingsSnapshot

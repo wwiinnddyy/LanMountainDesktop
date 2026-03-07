@@ -7,12 +7,13 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
+public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private sealed record CourseItemViewModel(
         string Name,
@@ -26,7 +27,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     };
 
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly IClassIslandScheduleDataService _scheduleService = new ClassIslandScheduleDataService();
 
@@ -35,6 +36,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private IReadOnlyList<CourseItemViewModel> _courseItems = Array.Empty<CourseItemViewModel>();
     private bool _isNightVisual = true;
     private string _languageCode = "zh-CN";
+    private string _componentId = BuiltInComponentIds.DesktopClassSchedule;
+    private string _placementId = string.Empty;
 
     public ClassScheduleWidget()
     {
@@ -113,10 +116,25 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         RefreshSchedule();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopClassSchedule
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshSchedule();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshSchedule();
+    }
+
     private void RefreshSchedule()
     {
         var appSettings = _appSettingsService.Load();
-        var componentSettings = _componentSettingsService.Load();
+        var componentSettings = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         UpdateHeader(now);

@@ -4,20 +4,23 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WeatherWidgetSettingsWindow : UserControl
+public partial class WeatherWidgetSettingsWindow : UserControl, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private static readonly IReadOnlyList<int> SupportedIntervals = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private bool _suppressEvents;
     private string _languageCode = "zh-CN";
+    private string _componentId = BuiltInComponentIds.DesktopWeather;
+    private string _placementId = string.Empty;
 
     public event EventHandler? SettingsChanged;
 
@@ -29,10 +32,27 @@ public partial class WeatherWidgetSettingsWindow : UserControl
         ApplyLocalization();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopWeather
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        LoadState();
+        ApplyLocalization();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        LoadState();
+        ApplyLocalization();
+    }
+
     private void LoadState()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         var enabled = componentSnapshot.WeatherAutoRefreshEnabled;
@@ -83,10 +103,10 @@ public partial class WeatherWidgetSettingsWindow : UserControl
 
     private void SaveState()
     {
-        var snapshot = _componentSettingsService.Load();
+        var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         snapshot.WeatherAutoRefreshEnabled = AutoRefreshCheckBox.IsChecked == true;
         snapshot.WeatherAutoRefreshIntervalMinutes = GetSelectedInterval();
-        _componentSettingsService.Save(snapshot);
+        _componentSettingsStore.SaveForComponent(_componentId, _placementId, snapshot);
         SettingsChanged?.Invoke(this, EventArgs.Empty);
     }
 

@@ -8,11 +8,12 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget
+public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -92,7 +93,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     };
 
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
     private readonly ClockEntryVisual[] _entryVisuals = new ClockEntryVisual[WorldClockTimeZoneCatalog.ClockCount];
     private readonly TimeZoneInfo[] _entryTimeZones = new TimeZoneInfo[WorldClockTimeZoneCatalog.ClockCount];
@@ -103,6 +104,8 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
     private bool _isNightVisual = true;
+    private string _componentId = BuiltInComponentIds.DesktopWorldClock;
+    private string _placementId = string.Empty;
 
     public WorldClockWidget()
     {
@@ -145,6 +148,21 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         LoadFromSettings();
         ApplySecondHandTimerInterval();
         UpdateClockVisuals();
+    }
+
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopWorldClock
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        RefreshFromSettings();
+    }
+
+    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
+    {
+        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
+        RefreshFromSettings();
     }
 
     public void ApplyCellSize(double cellSize)
@@ -525,7 +543,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private void LoadFromSettings()
     {
         var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsService.Load();
+        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         var ids = WorldClockTimeZoneCatalog.NormalizeTimeZoneIds(componentSnapshot.WorldClockTimeZoneIds);
