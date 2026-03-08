@@ -1,0 +1,179 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+        xmlns:pages="using:LanMountainDesktop.Views.SettingsPages"
+        xmlns:comp="using:LanMountainDesktop.Views.Components"
+        x:Class="LanMountainDesktop.Views.SettingsWindow"
+        Title="Settings"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1360"
+        Height="900"
+        MinWidth="1120"
+        MinHeight="760"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="SystemChrome"
+        Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+
+    <Grid x:Name="DesktopHost">
+        <Border x:Name="DesktopWallpaperLayer"
+                Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
+
+        <Grid x:Name="SettingsPage"
+              Classes="settings-scope"
+              IsVisible="True"
+              Opacity="1"
+              Margin="20">
+            <Border x:Name="SettingsContentPanel"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Margin="0"
+                    Padding="0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Grid.Row="0"
+                            Classes="mica-strong"
+                            CornerRadius="24,24,0,0"
+                            Padding="20,16">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Border Width="40"
+                                    Height="40"
+                                    CornerRadius="20"
+                                    Background="{DynamicResource AdaptiveAccentBrush}">
+                                <fi:FluentIcon Icon="Settings"
+                                               IconVariant="Regular"
+                                               Foreground="White"
+                                               FontSize="18"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1"
+                                        Margin="14,0,0,0"
+                                        Spacing="2"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="WindowTitleTextBlock"
+                                           FontSize="24"
+                                           FontWeight="SemiBold"
+                                           Text="Settings" />
+                                <TextBlock x:Name="WindowSubtitleTextBlock"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           Text="LanMountainDesktop preferences" />
+                            </StackPanel>
+                            <Button Grid.Column="2"
+                                    Padding="10,8"
+                                    HorizontalAlignment="Right"
+                                    Click="OnCloseWindowClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <fi:FluentIcon Icon="Dismiss" IconVariant="Regular" />
+                                    <TextBlock Text="Close" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1"
+                            Classes="mica-strong"
+                            CornerRadius="0,0,24,24"
+                            Padding="18">
+                        <ui:NavigationView x:Name="SettingsNavView"
+                                           PaneDisplayMode="Left"
+                                           IsSettingsVisible="False"
+                                           OpenPaneLength="240"
+                                           SelectionChanged="OnSettingsNavSelectionChanged">
+                            <ui:NavigationView.MenuItems>
+                                <ui:NavigationViewItem x:Name="SettingsNavWallpaperItem" Content="壁纸" Tag="Wallpaper">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Wallpaper" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavGridItem" Content="网格" Tag="Grid">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Grid" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavColorItem" Content="颜色" Tag="Color">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Color" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavStatusBarItem" Content="状态栏" Tag="StatusBar">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Status" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavWeatherItem" Content="天气" Tag="Weather">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="WeatherSunny" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavRegionItem" Content="地区" Tag="Region">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Globe" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavUpdateItem" Content="更新" Tag="Update">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="ArrowSync" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavAboutItem" Content="关于" Tag="About">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Info" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavLauncherItem" Content="应用启动台" Tag="Launcher">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="Apps" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavPluginsItem" Content="插件" Tag="Plugins">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="PuzzlePiece" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
+                            </ui:NavigationView.MenuItems>
+
+                            <ScrollViewer x:Name="SettingsContentScrollViewer"
+                                          Padding="0,0,16,0"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Grid>
+                                    <pages:WallpaperSettingsPage x:Name="WallpaperSettingsPanel" IsVisible="True" />
+                                    <pages:GridSettingsPage x:Name="GridSettingsPanel" IsVisible="False" />
+                                    <pages:ColorSettingsPage x:Name="ColorSettingsPanel" IsVisible="False" />
+                                    <pages:StatusBarSettingsPage x:Name="StatusBarSettingsPanel" IsVisible="False" />
+                                    <pages:WeatherSettingsPage x:Name="WeatherSettingsPanel" IsVisible="False" />
+                                    <pages:RegionSettingsPage x:Name="RegionSettingsPanel" IsVisible="False" />
+                                    <pages:UpdateSettingsPage x:Name="UpdateSettingsPanel" IsVisible="False" />
+                                    <pages:LauncherSettingsPage x:Name="LauncherSettingsPanel" IsVisible="False" />
+                                    <pages:AboutSettingsPage x:Name="AboutSettingsPanel" IsVisible="False" />
+                                    <pages:PluginSettingsPage x:Name="PluginSettingsPanel" IsVisible="False" />
+                                </Grid>
+                            </ScrollViewer>
+                        </ui:NavigationView>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid IsVisible="False">
+            <Button x:Name="BackToWindowsButton" />
+            <Button x:Name="OpenComponentLibraryButton" />
+            <Button x:Name="OpenSettingsButton" />
+            <TextBlock x:Name="OpenSettingsButtonTextBlock" />
+            <Border x:Name="TaskbarFixedActionsHost" />
+            <Border x:Name="TaskbarSettingsActionHost" />
+            <StackPanel x:Name="TaskbarDynamicActionsHost" />
+            <Border x:Name="TopStatusBarHost">
+                <StackPanel x:Name="TopStatusComponentsPanel">
+                    <comp:ClockWidget x:Name="ClockWidget" />
+                </StackPanel>
+            </Border>
+            <Border x:Name="BottomTaskbarContainer" />
+        </Grid>
+    </Grid>
+</Window>

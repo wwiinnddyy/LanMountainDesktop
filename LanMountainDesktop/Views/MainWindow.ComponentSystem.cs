@@ -256,14 +256,15 @@ public partial class MainWindow
             return TaskbarContext.Desktop;
         }
 
-        return SettingsNavListBox?.SelectedIndex switch
+        var selectedItem = SettingsNavView?.SelectedItem as FluentAvalonia.UI.Controls.NavigationViewItem;
+        return selectedItem?.Tag?.ToString() switch
         {
-            0 => TaskbarContext.SettingsWallpaper,
-            1 => TaskbarContext.SettingsGrid,
-            2 => TaskbarContext.SettingsColor,
-            3 => TaskbarContext.SettingsStatusBar,
-            4 => TaskbarContext.SettingsWeather,
-            5 => TaskbarContext.SettingsRegion,
+            "Wallpaper" => TaskbarContext.SettingsWallpaper,
+            "Grid" => TaskbarContext.SettingsGrid,
+            "Color" => TaskbarContext.SettingsColor,
+            "StatusBar" => TaskbarContext.SettingsStatusBar,
+            "Weather" => TaskbarContext.SettingsWeather,
+            "Region" => TaskbarContext.SettingsRegion,
             _ => TaskbarContext.Desktop
         };
     }

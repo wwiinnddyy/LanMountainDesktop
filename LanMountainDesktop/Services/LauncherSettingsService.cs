@@ -9,6 +9,8 @@ namespace LanMountainDesktop.Services;
 
 public sealed class LauncherSettingsService
 {
+    public static event Action<string>? SettingsSaved;
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true
@@ -23,6 +25,8 @@ public sealed class LauncherSettingsService
 
     private readonly string _settingsPath;
     private readonly string _legacyAppSettingsPath;
+
+    public string InstanceId { get; } = Guid.NewGuid().ToString("N");
 
     public LauncherSettingsService()
     {
@@ -99,6 +103,8 @@ public sealed class LauncherSettingsService
             {
                 UpdateCache(snapshotToPersist, writeTimeUtc, DateTime.UtcNow);
             }
+
+            SettingsSaved?.Invoke(InstanceId);
         }
         catch
         {

@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -15,6 +16,8 @@ namespace LanMountainDesktop;
 
 public partial class App : Application
 {
+    private SettingsWindow? _traySettingsWindow;
+
     public override void Initialize()
     {
         ConfigureWebViewUserDataFolder();
@@ -31,6 +34,7 @@ public partial class App : Application
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
+            desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
@@ -46,6 +50,44 @@ public partial class App : Application
         {
             desktop.Shutdown();
         }
+    }
+
+    private void OnTraySettingsClick(object? sender, EventArgs e)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                if (_traySettingsWindow is { } existingWindow && existingWindow.IsVisible)
+                {
+                    existingWindow.WindowState = Avalonia.Controls.WindowState.Normal;
+                    existingWindow.Activate();
+                    return;
+                }
+
+                var settingsWindow = new SettingsWindow();
+                settingsWindow.Closed += (_, _) =>
+                {
+                    if (ReferenceEquals(_traySettingsWindow, settingsWindow))
+                    {
+                        _traySettingsWindow = null;
+                    }
+                };
+
+                _traySettingsWindow = settingsWindow;
+                settingsWindow.Show();
+                settingsWindow.Activate();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TraySettings] Failed to open settings window: {ex}");
+            }
+        }, DispatcherPriority.Normal);
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)

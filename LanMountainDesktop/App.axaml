@@ -22,6 +22,8 @@
                       ToolTipText="LanMountainDesktop">
                 <TrayIcon.Menu>
                     <NativeMenu>
+                        <NativeMenuItem Header="设置" Click="OnTraySettingsClick" />
+                        <NativeMenuItemSeparator />
                         <NativeMenuItem Header="重启应用" Click="OnTrayRestartClick" />
                         <NativeMenuItemSeparator />
                         <NativeMenuItem Header="退出应用" Click="OnTrayExitClick" />

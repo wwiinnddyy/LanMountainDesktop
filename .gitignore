@@ -482,3 +482,5 @@ $RECYCLE.BIN/
 *.swp
 nul
 /publish-test
+/_build_verify
+/_build_verify_tray

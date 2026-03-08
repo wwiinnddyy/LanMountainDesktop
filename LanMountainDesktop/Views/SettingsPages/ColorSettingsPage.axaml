@@ -1,0 +1,204 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="LanMountainDesktop.Views.SettingsPages.ColorSettingsPage">
+    <StackPanel x:Name="ColorSettingsPanel"
+                Spacing="16">
+        <TextBlock x:Name="ColorPanelTitleTextBlock"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Text="Color" />
+
+        <Border Classes="settings-expander-shell">
+            <ui:SettingsExpander x:Name="ThemeModeSettingsExpander"
+                                 Header="&#26085;&#22812;&#27169;&#24335;"
+                                 Description="&#20999;&#25442;&#24212;&#29992;&#30340;&#27973;&#33394;&#25110;&#28145;&#33394;&#20027;&#39064;&#12290;">
+                <ui:SettingsExpander.IconSource>
+
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch x:Name="NightModeToggleSwitch"
+                                  OffContent="Day"
+                                  OnContent="Night" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </Border>
+
+        <Border Classes="settings-expander-shell">
+            <ui:SettingsExpander x:Name="ThemeColorSettingsExpander"
+                                 Header="&#20027;&#39064;&#33394;"
+                                 Description="&#36873;&#25321;&#24212;&#29992;&#30340;&#20027;&#39064;&#28857;&#32512;&#33394;&#12290;">
+                <ui:SettingsExpander.IconSource>
+
+                </ui:SettingsExpander.IconSource>
+                
+                <ui:SettingsExpanderItem>
+                    <ui:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Name="RecommendedColorsLabelTextBlock"
+                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Text="Recommended Colors" />
+                            <WrapPanel ItemWidth="72"
+                                       ItemHeight="56"
+                                       Orientation="Horizontal">
+                                <Button x:Name="RecommendedColorButton1"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch1"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="RecommendedColorButton2"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch2"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="RecommendedColorButton3"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch3"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="RecommendedColorButton4"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch4"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="RecommendedColorButton5"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch5"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="RecommendedColorButton6"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="RecommendedColorSwatch6"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                            </WrapPanel>
+                        </StackPanel>
+                    </ui:SettingsExpanderItem.Footer>
+                </ui:SettingsExpanderItem>
+
+                <ui:SettingsExpanderItem>
+                    <ui:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="10">
+                                <TextBlock x:Name="SystemMonetColorsLabelTextBlock"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           Text="System Monet Colors" />
+                                <Button x:Name="RefreshMonetColorsButton"
+                                        Grid.Column="1"
+                                        Padding="10,6"
+                                        Content="Refresh" />
+                            </Grid>
+
+                            <WrapPanel ItemWidth="72"
+                                       ItemHeight="56"
+                                       Orientation="Horizontal">
+                                <Button x:Name="MonetColorButton1"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch1"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="MonetColorButton2"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch2"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="MonetColorButton3"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch3"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="MonetColorButton4"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch4"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="MonetColorButton5"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch5"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                                <Button x:Name="MonetColorButton6"
+                                        Width="68"
+                                        Height="50"
+                                        Padding="8">
+                                    <Border x:Name="MonetColorSwatch6"
+                                            Width="26"
+                                            Height="26"
+                                            CornerRadius="12"
+                                            BorderThickness="0" />
+                                </Button>
+                            </WrapPanel>
+                        </StackPanel>
+                    </ui:SettingsExpanderItem.Footer>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+        </Border>
+
+        <TextBlock x:Name="ThemeColorStatusTextBlock"
+                   Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                   Text="Theme color is ready." />
+    </StackPanel>
+</UserControl>

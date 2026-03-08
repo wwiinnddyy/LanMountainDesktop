@@ -7,6 +7,8 @@ namespace LanMountainDesktop.Services;
 
 public sealed class AppSettingsService
 {
+    public static event Action<string>? SettingsSaved;
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true
@@ -20,6 +22,8 @@ public sealed class AppSettingsService
     private static DateTime _lastProbeUtc = DateTime.MinValue;
 
     private readonly string _settingsPath;
+
+    public string InstanceId { get; } = Guid.NewGuid().ToString("N");
 
     public AppSettingsService()
     {
@@ -88,6 +92,8 @@ public sealed class AppSettingsService
             {
                 UpdateCache(snapshotToPersist, writeTimeUtc, DateTime.UtcNow);
             }
+
+            SettingsSaved?.Invoke(InstanceId);
         }
         catch
         {

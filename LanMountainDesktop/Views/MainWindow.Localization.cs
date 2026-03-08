@@ -107,16 +107,16 @@ public partial class MainWindow
         ToolTip.SetTip(LauncherFolderBackButton, L("common.back", "Back"));
         ToolTip.SetTip(LauncherFolderCloseButton, L("common.close", "Close"));
 
-        SettingsNavHeaderTextBlock.Text = L("settings.nav_header", "Settings");
-        SettingsNavWallpaperTextBlock.Text = L("settings.nav.wallpaper", "Wallpaper");
-        SettingsNavGridTextBlock.Text = L("settings.nav.grid", "Grid");
-        SettingsNavColorTextBlock.Text = L("settings.nav.color", "Color");
-        SettingsNavStatusBarTextBlock.Text = L("settings.nav.status_bar", "Status Bar");
-        SettingsNavWeatherTextBlock.Text = L("settings.nav.weather", "Weather");
-        SettingsNavRegionTextBlock.Text = L("settings.nav.region", "Region");
-        SettingsNavUpdateTextBlock.Text = L("settings.nav.update", "Update");
-        SettingsNavLauncherTextBlock.Text = L("settings.nav.launcher", "App Launcher");
-        SettingsNavPluginsTextBlock.Text = L("settings.nav.plugins", "Plugins");
+        // SettingsNavHeaderTextBlock no longer exists
+        SettingsNavWallpaperItem.Content = L("settings.nav.wallpaper", "Wallpaper");
+        SettingsNavGridItem.Content = L("settings.nav.grid", "Grid");
+        SettingsNavColorItem.Content = L("settings.nav.color", "Color");
+        SettingsNavStatusBarItem.Content = L("settings.nav.status_bar", "Status Bar");
+        SettingsNavWeatherItem.Content = L("settings.nav.weather", "Weather");
+        SettingsNavRegionItem.Content = L("settings.nav.region", "Region");
+        SettingsNavUpdateItem.Content = L("settings.nav.update", "Update");
+        SettingsNavLauncherItem.Content = L("settings.nav.launcher", "App Launcher");
+        SettingsNavPluginsItem.Content = L("settings.nav.plugins", "Plugins");
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -127,10 +127,10 @@ public partial class MainWindow
         ClearWallpaperButton.Content = L("settings.wallpaper.clear_button", "Reset");
 
         GridPanelTitleTextBlock.Text = L("settings.grid.title", "Grid Layout");
-        GridSpacingPresetLabelTextBlock.Text = L("settings.grid.spacing_label", "Grid Spacing");
+        GridSpacingSettingsExpander.Header = L("settings.grid.spacing_label", "Grid Spacing");
         GridSpacingRelaxedComboBoxItem.Content = L("settings.grid.spacing_relaxed", "Relaxed");
         GridSpacingCompactComboBoxItem.Content = L("settings.grid.spacing_compact", "Compact");
-        GridEdgeInsetLabelTextBlock.Text = L("settings.grid.edge_inset_label", "Screen Inset");
+        GridEdgeInsetSettingsExpander.Header = L("settings.grid.edge_inset_label", "Screen Inset");
         ApplyGridButton.Content = L("settings.grid.apply_button", "Apply");
         UpdateGridEdgeInsetComputedPxText(_currentDesktopCellSize);
 
@@ -175,7 +175,7 @@ public partial class MainWindow
         StatusBarSpacingModeCompactItem.Content = L("settings.status_bar.spacing_mode_compact", "Compact");
         StatusBarSpacingModeRelaxedItem.Content = L("settings.status_bar.spacing_mode_relaxed", "Relaxed");
         StatusBarSpacingModeCustomItem.Content = L("settings.status_bar.spacing_mode_custom", "Custom");
-        StatusBarSpacingCustomLabelTextBlock.Text = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
+        StatusBarSpacingCustomPanel.Content = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
 
         WeatherPanelTitleTextBlock.Text = L("settings.weather.title", "Weather");
         WeatherLocationSettingsExpander.Header = L("settings.weather.location_source_header", "Location Source");
@@ -211,6 +211,14 @@ public partial class MainWindow
             "settings.weather.preview_panel_desc",
             "Refresh and verify current weather service status.");
         WeatherPreviewButton.Content = L("settings.weather.refresh_button", "Refresh");
+
+        WeatherLocationSettingsExpander.Header = L("settings.weather.location_msg_header", "Location Source");
+        WeatherLocationSettingsExpander.Description = L(
+            "settings.weather.location_msg_desc",
+            "Choose how weather widgets resolve location.");
+        WeatherLocationModeCityChipItem.Content = L("settings.weather.mode_city", "City Search");
+        WeatherLocationModeCoordinatesChipItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
+        WeatherAutoRefreshToggleSwitch.Content = L("settings.weather.auto_location_toggle", "Auto refresh location on startup");
 
         WeatherAlertFilterSettingsExpander.Header = L("settings.weather.alert_filter_header", "Excluded Alerts");
         WeatherAlertFilterSettingsExpander.Description = L(
@@ -248,6 +256,7 @@ public partial class MainWindow
 
         RegionPanelTitleTextBlock.Text = L("settings.region.title", "Region");
         LanguageSettingsExpander.Header = L("settings.region.language_header", "Language");
+        LanguageSettingsExpander.Description = L("settings.region.language_desc", "Select application language. Changes apply immediately.");
         LanguageChineseItem.Content = L("settings.region.language_zh", "Chinese");
         LanguageEnglishItem.Content = L("settings.region.language_en", "English");
         TimeZoneSettingsExpander.Header = L("settings.region.timezone_header", "Time Zone");
@@ -279,7 +288,7 @@ public partial class MainWindow
             "settings.plugins.runtime_status",
             "Plugin management UI is not connected yet. Next step is wiring the loader, permissions, and worker isolation state into this panel.");
 
-        SettingsNavAboutTextBlock.Text = L("settings.nav.about", "About");
+        SettingsNavAboutItem.Content = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
         VersionTextBlock.Text = Lf(
             "settings.about.version_format",

@@ -176,6 +176,7 @@ public partial class MainWindow : Window
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
     private ClockDisplayFormat _clockDisplayFormat = ClockDisplayFormat.HourMinuteSecond;
+    private bool _externalSettingsReloadPending;
 
     private double CurrentDesktopPitch => _currentDesktopCellSize + _currentDesktopCellGap;
 
@@ -184,9 +185,68 @@ public partial class MainWindow : Window
         InitializeComponent();
         _componentRuntimeRegistry = DesktopComponentRuntimeRegistry.CreateDefault(_componentRegistry);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
+        AppSettingsService.SettingsSaved += OnExternalAppSettingsSaved;
+        LauncherSettingsService.SettingsSaved += OnExternalLauncherSettingsSaved;
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
+
+        PickWallpaperButton.Click += OnPickWallpaperClick;
+        ClearWallpaperButton.Click += OnClearWallpaperClick;
+        WallpaperPlacementComboBox.SelectionChanged += OnWallpaperPlacementSelectionChanged;
+
+        GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
+        GridSpacingPresetComboBox.SelectionChanged += OnGridSpacingPresetSelectionChanged;
+        GridEdgeInsetSlider.ValueChanged += OnGridEdgeInsetSliderChanged;
+        ApplyGridButton.Click += OnApplyGridSizeClick;
+
+        NightModeToggleSwitch.Checked += OnNightModeChecked;
+        NightModeToggleSwitch.Unchecked += OnNightModeUnchecked;
+        RecommendedColorButton1.Click += OnRecommendedColorClick;
+        RecommendedColorButton2.Click += OnRecommendedColorClick;
+        RecommendedColorButton3.Click += OnRecommendedColorClick;
+        RecommendedColorButton4.Click += OnRecommendedColorClick;
+        RecommendedColorButton5.Click += OnRecommendedColorClick;
+        RecommendedColorButton6.Click += OnRecommendedColorClick;
+        RefreshMonetColorsButton.Click += OnRefreshMonetColorsClick;
+        MonetColorButton1.Click += OnMonetColorClick;
+        MonetColorButton2.Click += OnMonetColorClick;
+        MonetColorButton3.Click += OnMonetColorClick;
+        MonetColorButton4.Click += OnMonetColorClick;
+        MonetColorButton5.Click += OnMonetColorClick;
+        MonetColorButton6.Click += OnMonetColorClick;
+
+        StatusBarClockToggleSwitch.Checked += OnStatusBarClockChecked;
+        StatusBarClockToggleSwitch.Unchecked += OnStatusBarClockUnchecked;
+        ClockFormatHMSSRadio.Checked += OnClockFormatChanged;
+        ClockFormatHMRadio.Checked += OnClockFormatChanged;
+        StatusBarSpacingModeComboBox.SelectionChanged += OnStatusBarSpacingModeChanged;
+        StatusBarSpacingSlider.ValueChanged += OnStatusBarSpacingSliderChanged;
+
+        WeatherPreviewButton.Click += OnTestWeatherRequestClick;
+        WeatherLocationModeComboBox.SelectionChanged += OnWeatherLocationModeSelectionChanged;
+        WeatherLocationModeChipListBox.SelectionChanged += OnWeatherLocationModeChipSelectionChanged;
+        WeatherAutoRefreshToggleSwitch.Checked += OnWeatherAutoRefreshToggled;
+        WeatherAutoRefreshToggleSwitch.Unchecked += OnWeatherAutoRefreshToggled;
+        WeatherSearchButton.Click += OnSearchWeatherCityClick;
+        WeatherApplyCityButton.Click += OnApplyWeatherCitySelectionClick;
+        WeatherApplyCoordinatesButton.Click += OnApplyWeatherCoordinatesClick;
+        WeatherExcludedAlertsTextBox.LostFocus += OnWeatherExcludedAlertsLostFocus;
+        WeatherIconPackComboBox.SelectionChanged += OnWeatherIconPackSelectionChanged;
+        WeatherNoTlsToggleSwitch.Checked += OnWeatherNoTlsToggled;
+        WeatherNoTlsToggleSwitch.Unchecked += OnWeatherNoTlsToggled;
+
+        LanguageComboBox.SelectionChanged += OnLanguageSelectionChanged;
+        TimeZoneComboBox.SelectionChanged += OnTimeZoneSelectionChanged;
+
+        AutoCheckUpdatesToggleSwitch.Checked += OnAutoCheckUpdatesToggled;
+        AutoCheckUpdatesToggleSwitch.Unchecked += OnAutoCheckUpdatesToggled;
+        UpdateChannelChipListBox.SelectionChanged += OnUpdateChannelSelectionChanged;
+        CheckForUpdatesButton.Click += OnCheckForUpdatesClick;
+        DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
+
+        AutoStartWithWindowsToggleSwitch.Checked += OnAutoStartWithWindowsToggled;
+        AutoStartWithWindowsToggleSwitch.Unchecked += OnAutoStartWithWindowsToggled;
     }
 
     protected override void OnOpened(EventArgs e)
@@ -240,7 +300,10 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        SettingsNavListBox.SelectedIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, 9);
+        if (SettingsNavView.MenuItems.ElementAtOrDefault(Math.Clamp(snapshot.SettingsTabIndex, 0, 9)) is FluentAvalonia.UI.Controls.NavigationViewItem navItem)
+        {
+            SettingsNavView.SelectedItem = navItem;
+        }
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
@@ -313,6 +376,8 @@ public partial class MainWindow : Window
         _releaseUpdateService.Dispose();
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
+        AppSettingsService.SettingsSaved -= OnExternalAppSettingsSaved;
+        LauncherSettingsService.SettingsSaved -= OnExternalLauncherSettingsSaved;
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged -= OnWallpaperPreviewHostSizeChanged;
@@ -1327,6 +1392,7 @@ public partial class MainWindow : Window
         }
         _suppressTimeZoneSelectionEvents = false;
     }
+
 
     private void OnTimeZoneSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {

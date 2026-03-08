@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="1000"
+             x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage">
+
+    <StackPanel x:Name="AboutSettingsPanel" Spacing="20">
+        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="About" />
+        
+        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="LanMountainDesktop" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                <TextBlock Text="Modern desktop shell experience." FontSize="13" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                <Separator Background="{DynamicResource AdaptiveButtonBorderBrush}" Margin="0,8" />
+                <TextBlock x:Name="VersionTextBlock" Text="Version: 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                <TextBlock x:Name="CodeNameTextBlock" Text="Code Name: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
+                <TextBlock x:Name="FontInfoTextBlock" Text="Font: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-expander-shell">
+            <ui:SettingsExpander x:Name="AboutStartupSettingsExpander"
+                                 Header="Windows Startup"
+                                 Description="Launch the app automatically when signing in to Windows."
+                                 IsExpanded="True">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Window" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch x:Name="AutoStartWithWindowsToggleSwitch" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </Border>
+    </StackPanel>
+</UserControl>
