@@ -93,7 +93,7 @@ public partial class SettingsWindow : Window
     private readonly WindowsStartupService _windowsStartupService = new();
     private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
-    private readonly ComponentRegistry _componentRegistry = ComponentRegistry.CreateDefault();
+    private readonly ComponentRegistry _componentRegistry;
     private readonly WindowsStartMenuService _windowsStartMenuService = new();
     private readonly LinuxDesktopEntryService _linuxDesktopEntryService = new();
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
@@ -158,7 +158,9 @@ public partial class SettingsWindow : Window
 
     public SettingsWindow()
     {
+        _componentRegistry = DesktopComponentRegistryFactory.Create((Application.Current as App)?.PluginRuntimeService);
         InitializeComponent();
+        InitializePluginSettingsNavigation();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         RequestedThemeVariant = Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default;
         HookEvents();
@@ -278,6 +280,7 @@ public partial class SettingsWindow : Window
         WindowTitleTextBlock.Text = L("settings.title", "Settings");
         WindowSubtitleTextBlock.Text = L("settings.footer", "LanMountainDesktop Settings");
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
+        RestoreSettingsTabSelection(snapshot);
         UpdateSettingsTabContent();
         UpdateWallpaperDisplay();
         UpdateWallpaperPreviewLayout();

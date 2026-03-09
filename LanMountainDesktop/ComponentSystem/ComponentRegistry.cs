@@ -385,6 +385,13 @@ public sealed class ComponentRegistry
         return new ComponentRegistry(merged);
     }
 
+    public ComponentRegistry RegisterComponents(IEnumerable<DesktopComponentDefinition> definitions)
+    {
+        var merged = _definitions.Values.ToList();
+        merged.AddRange(definitions);
+        return new ComponentRegistry(merged);
+    }
+
     public bool TryGetDefinition(string componentId, out DesktopComponentDefinition definition)
     {
         return _definitions.TryGetValue(componentId, out definition!);

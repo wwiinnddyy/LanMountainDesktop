@@ -100,24 +100,7 @@ public partial class MainWindow
 
     private int GetSettingsTabIndex()
     {
-        if (SettingsNavView?.SelectedItem is FluentAvalonia.UI.Controls.NavigationViewItem item)
-        {
-            return item.Tag?.ToString() switch
-            {
-                "Wallpaper" => 0,
-                "Grid" => 1,
-                "Color" => 2,
-                "StatusBar" => 3,
-                "Weather" => 4,
-                "Region" => 5,
-                "Update" => 6,
-                "About" => 7,
-                "Launcher" => 8,
-                "Plugins" => 9,
-                _ => 0
-            };
-        }
-        return 0;
+        return ResolveSelectedSettingsTabIndex();
     }
 
     private void UpdateSettingsTabContent()
@@ -150,6 +133,7 @@ public partial class MainWindow
         AboutSettingsPanel.IsVisible = tag == "About";
         LauncherSettingsPanel.IsVisible = tag == "Launcher";
         PluginSettingsPanel.IsVisible = tag == "Plugins";
+        UpdatePluginSettingsPageVisibility(tag);
 
         if (tag == "Launcher")
         {
@@ -984,10 +968,7 @@ public partial class MainWindow
             GridSizeNumberBox.Value = _targetShortSideCells;
             GridSizeSlider.Value = _targetShortSideCells;
 
-            if (SettingsNavView.MenuItems.ElementAtOrDefault(Math.Clamp(snapshot.SettingsTabIndex, 0, 9)) is FluentAvalonia.UI.Controls.NavigationViewItem navItem)
-            {
-                SettingsNavView.SelectedItem = navItem;
-            }
+            RestoreSettingsTabSelection(snapshot);
 
             UpdateSettingsTabContent();
             WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
@@ -1036,42 +1017,41 @@ public partial class MainWindow
 
     private AppSettingsSnapshot BuildAppSettingsSnapshot()
     {
-        return new AppSettingsSnapshot
-        {
-            GridShortSideCells = _targetShortSideCells,
-            GridSpacingPreset = _gridSpacingPreset,
-            DesktopEdgeInsetPercent = _desktopEdgeInsetPercent,
-            IsNightMode = _isNightMode,
-            ThemeColor = _selectedThemeColor.ToString(),
-            WallpaperPath = _wallpaperPath,
-            WallpaperPlacement = GetPlacementDisplayName(GetSelectedWallpaperPlacement()),
-            SettingsTabIndex = Math.Max(0, GetSettingsTabIndex()),
-            LanguageCode = _languageCode,
-            TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
-            WeatherLocationMode = ToWeatherLocationModeTag(_weatherLocationMode),
-            WeatherLocationKey = _weatherLocationKey,
-            WeatherLocationName = _weatherLocationName,
-            WeatherLatitude = _weatherLatitude,
-            WeatherLongitude = _weatherLongitude,
-            WeatherAutoRefreshLocation = _weatherAutoRefreshLocation,
-            WeatherLocationQuery = BuildLegacyWeatherLocationQuery(),
-            WeatherExcludedAlerts = _weatherExcludedAlertsRaw,
-            WeatherIconPackId = _weatherIconPackId,
-            WeatherNoTlsRequests = _weatherNoTlsRequests,
-            AutoStartWithWindows = _autoStartWithWindows,
-            AutoCheckUpdates = _autoCheckUpdates,
-            IncludePrereleaseUpdates = IncludePrereleaseUpdates,
-            UpdateChannel = IncludePrereleaseUpdates ? "Preview" : "Stable",
-            TopStatusComponentIds = _topStatusComponentIds.ToList(),
-            PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList(),
-            EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
-            TaskbarLayoutMode = _taskbarLayoutMode,
-            ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
-            StatusBarSpacingMode = _statusBarSpacingMode,
-            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent
-        };
+        var snapshot = _appSettingsService.Load();
+        snapshot.GridShortSideCells = _targetShortSideCells;
+        snapshot.GridSpacingPreset = _gridSpacingPreset;
+        snapshot.DesktopEdgeInsetPercent = _desktopEdgeInsetPercent;
+        snapshot.IsNightMode = _isNightMode;
+        snapshot.ThemeColor = _selectedThemeColor.ToString();
+        snapshot.WallpaperPath = _wallpaperPath;
+        snapshot.WallpaperPlacement = GetPlacementDisplayName(GetSelectedWallpaperPlacement());
+        snapshot.SettingsTabIndex = Math.Max(0, GetSettingsTabIndex());
+        snapshot.SettingsTabTag = GetSelectedSettingsTabTag();
+        snapshot.LanguageCode = _languageCode;
+        snapshot.TimeZoneId = _timeZoneService.CurrentTimeZone.Id;
+        snapshot.WeatherLocationMode = ToWeatherLocationModeTag(_weatherLocationMode);
+        snapshot.WeatherLocationKey = _weatherLocationKey;
+        snapshot.WeatherLocationName = _weatherLocationName;
+        snapshot.WeatherLatitude = _weatherLatitude;
+        snapshot.WeatherLongitude = _weatherLongitude;
+        snapshot.WeatherAutoRefreshLocation = _weatherAutoRefreshLocation;
+        snapshot.WeatherLocationQuery = BuildLegacyWeatherLocationQuery();
+        snapshot.WeatherExcludedAlerts = _weatherExcludedAlertsRaw;
+        snapshot.WeatherIconPackId = _weatherIconPackId;
+        snapshot.WeatherNoTlsRequests = _weatherNoTlsRequests;
+        snapshot.AutoStartWithWindows = _autoStartWithWindows;
+        snapshot.AutoCheckUpdates = _autoCheckUpdates;
+        snapshot.IncludePrereleaseUpdates = IncludePrereleaseUpdates;
+        snapshot.UpdateChannel = IncludePrereleaseUpdates ? UpdateChannelPreview : UpdateChannelStable;
+        snapshot.TopStatusComponentIds = _topStatusComponentIds.ToList();
+        snapshot.PinnedTaskbarActions = _pinnedTaskbarActions.Select(action => action.ToString()).ToList();
+        snapshot.EnableDynamicTaskbarActions = _enableDynamicTaskbarActions;
+        snapshot.TaskbarLayoutMode = _taskbarLayoutMode;
+        snapshot.ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond";
+        snapshot.StatusBarSpacingMode = _statusBarSpacingMode;
+        snapshot.StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent;
+        return snapshot;
     }
-
     private DesktopLayoutSettingsSnapshot BuildDesktopLayoutSettingsSnapshot()
     {
         return new DesktopLayoutSettingsSnapshot
@@ -1081,7 +1061,6 @@ public partial class MainWindow
             DesktopComponentPlacements = _desktopComponentPlacements.ToList()
         };
     }
-
     private LauncherSettingsSnapshot BuildLauncherSettingsSnapshot()
     {
         return new LauncherSettingsSnapshot
@@ -2678,4 +2657,10 @@ public partial class MainWindow
     internal FluentAvalonia.UI.Controls.SettingsExpander PluginSystemSettingsExpander => PluginSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("PluginSystemSettingsExpander")!;
     internal TextBlock PluginSystemDescriptionTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginSystemDescriptionTextBlock")!;
     internal TextBlock PluginSystemStatusTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginSystemStatusTextBlock")!;
+    internal FluentAvalonia.UI.Controls.SettingsExpander InstalledPluginsSettingsExpander => PluginSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("InstalledPluginsSettingsExpander")!;
+    internal TextBlock PluginRestartHintTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginRestartHintTextBlock")!;
+    internal TextBlock PluginCatalogEmptyTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginCatalogEmptyTextBlock")!;
 }
+
+
+

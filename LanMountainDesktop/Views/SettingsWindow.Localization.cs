@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Avalonia.Controls;
 
@@ -111,9 +111,14 @@ public partial class SettingsWindow
 
         PluginSettingsPanelTitleTextBlock.Text = L("settings.plugins.title", "Plugins");
         PluginSystemSettingsExpander.Header = L("settings.plugins.runtime_header", "Plugin Runtime");
-        PluginSystemSettingsExpander.Description = L("settings.plugins.runtime_desc", "Manage plugin loading and backend isolation.");
-        PluginSystemDescriptionTextBlock.Text = L("settings.plugins.runtime_hint", "This page will host installed plugin management, permission review, and sandboxed backend runtime controls.");
-        PluginSystemStatusTextBlock.Text = L("settings.plugins.runtime_status", "Plugin management UI is not connected yet. Next step is wiring the loader, permissions, and worker isolation state into this panel.");
+        PluginSystemSettingsExpander.Description = L("settings.plugins.runtime_desc", "Review plugin runtime state and load results.");
+        PluginSystemDescriptionTextBlock.Text = L("settings.plugins.runtime_hint", "This page shows discovery status, load results, and runtime diagnostics for installed plugins.");
+        PluginSystemStatusTextBlock.Text = L("settings.plugins.runtime_status", "Plugin runtime status will appear here after plugin discovery completes.");
+        InstalledPluginsSettingsExpander.Header = L("settings.plugins.installed_header", "Installed Plugins");
+        InstalledPluginsSettingsExpander.Description = L("settings.plugins.installed_desc", "Enable or disable plugins here. Detailed plugin settings appear as separate settings pages.");
+        PluginRestartHintTextBlock.Text = L("settings.plugins.restart_hint", "Plugin enable state changes take effect after restarting the app.");
+        PluginCatalogEmptyTextBlock.Text = L("settings.plugins.empty", "No plugins found.");
+        PluginSettingsPanel.RefreshFromRuntime();
 
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
         VersionTextBlock.Text = Lf("settings.about.version_format", "Version: {0}", GetAppVersionText());
@@ -183,3 +188,4 @@ public partial class SettingsWindow
         PersistSettings();
     }
 }
+

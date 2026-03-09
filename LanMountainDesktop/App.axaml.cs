@@ -17,6 +17,9 @@ namespace LanMountainDesktop;
 public partial class App : Application
 {
     private SettingsWindow? _traySettingsWindow;
+    private PluginRuntimeService? _pluginRuntimeService;
+
+    public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
 
     public override void Initialize()
     {
@@ -28,6 +31,7 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         LinuxDesktopEntryInstaller.EnsureInstalled();
+        InitializePluginRuntime();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -170,6 +174,20 @@ public partial class App : Application
         catch
         {
             // Keep startup resilient if user profile folders are unavailable.
+        }
+    }
+
+    private void InitializePluginRuntime()
+    {
+        try
+        {
+            _pluginRuntimeService?.Dispose();
+            _pluginRuntimeService = new PluginRuntimeService();
+            _pluginRuntimeService.LoadInstalledPlugins();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[PluginRuntime] Failed to initialize plugin runtime: {ex}");
         }
     }
 }

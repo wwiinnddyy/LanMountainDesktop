@@ -7,24 +7,65 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public sealed record DesktopComponentRuntimeRegistration(
-    string ComponentId,
-    string DisplayNameLocalizationKey,
-    Func<Control> ControlFactory,
-    Func<double, double>? CornerRadiusResolver = null);
+public sealed record DesktopComponentControlFactoryContext(
+    DesktopComponentDefinition Definition,
+    double CellSize,
+    TimeZoneService TimeZoneService,
+    IWeatherInfoService WeatherInfoService,
+    IRecommendationInfoService RecommendationInfoService,
+    ICalculatorDataService CalculatorDataService,
+    IComponentInstanceSettingsStore ComponentSettingsStore,
+    string? PlacementId = null);
+
+public sealed class DesktopComponentRuntimeRegistration
+{
+    public DesktopComponentRuntimeRegistration(
+        string componentId,
+        string? displayNameLocalizationKey,
+        Func<Control> controlFactory,
+        Func<double, double>? cornerRadiusResolver = null)
+        : this(componentId, displayNameLocalizationKey, _ => controlFactory(), cornerRadiusResolver)
+    {
+    }
+
+    public DesktopComponentRuntimeRegistration(
+        string componentId,
+        string? displayNameLocalizationKey,
+        Func<DesktopComponentControlFactoryContext, Control> controlFactory,
+        Func<double, double>? cornerRadiusResolver = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
+        ArgumentNullException.ThrowIfNull(controlFactory);
+
+        ComponentId = componentId.Trim();
+        DisplayNameLocalizationKey = string.IsNullOrWhiteSpace(displayNameLocalizationKey)
+            ? null
+            : displayNameLocalizationKey.Trim();
+        ControlFactory = controlFactory;
+        CornerRadiusResolver = cornerRadiusResolver;
+    }
+
+    public string ComponentId { get; }
+
+    public string? DisplayNameLocalizationKey { get; }
+
+    public Func<DesktopComponentControlFactoryContext, Control> ControlFactory { get; }
+
+    public Func<double, double>? CornerRadiusResolver { get; }
+}
 
 public sealed class DesktopComponentRuntimeDescriptor
 {
     private static readonly Func<double, double> DefaultCornerRadiusResolver =
         cellSize => Math.Clamp(cellSize * 0.22, 8, 18);
 
-    private readonly Func<Control> _controlFactory;
+    private readonly Func<DesktopComponentControlFactoryContext, Control> _controlFactory;
     private readonly Func<double, double> _cornerRadiusResolver;
 
     internal DesktopComponentRuntimeDescriptor(
         DesktopComponentDefinition definition,
-        string displayNameLocalizationKey,
-        Func<Control> controlFactory,
+        string? displayNameLocalizationKey,
+        Func<DesktopComponentControlFactoryContext, Control> controlFactory,
         Func<double, double>? cornerRadiusResolver)
     {
         Definition = definition;
@@ -35,7 +76,7 @@ public sealed class DesktopComponentRuntimeDescriptor
 
     public DesktopComponentDefinition Definition { get; }
 
-    public string DisplayNameLocalizationKey { get; }
+    public string? DisplayNameLocalizationKey { get; }
 
     public Control CreateControl(
         double cellSize,
@@ -46,7 +87,15 @@ public sealed class DesktopComponentRuntimeDescriptor
         IComponentInstanceSettingsStore componentSettingsStore,
         string? placementId = null)
     {
-        var control = _controlFactory();
+        var control = _controlFactory(new DesktopComponentControlFactoryContext(
+            Definition,
+            cellSize,
+            timeZoneService,
+            weatherInfoService,
+            recommendationInfoService,
+            calculatorDataService,
+            componentSettingsStore,
+            placementId));
         var runtimeContext = new DesktopComponentRuntimeContext(
             Definition.Id,
             placementId,
@@ -133,12 +182,10 @@ public sealed class DesktopComponentRuntimeRegistry
                 StringComparer.OrdinalIgnoreCase);
     }
 
-    public static DesktopComponentRuntimeRegistry CreateDefault(ComponentRegistry componentRegistry)
+    public static IReadOnlyList<DesktopComponentRuntimeRegistration> GetDefaultRegistrations()
     {
-        return new DesktopComponentRuntimeRegistry(
-            componentRegistry,
-            new[]
-            {
+        return
+        [
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.Date,
                     "component.date",
@@ -319,7 +366,12 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.holiday_calendar",
                     () => new HolidayCalendarWidget(),
                     cellSize => Math.Clamp(cellSize * 0.32, 12, 28))
-            });
+        ];
+    }
+
+    public static DesktopComponentRuntimeRegistry CreateDefault(ComponentRegistry componentRegistry)
+    {
+        return new DesktopComponentRuntimeRegistry(componentRegistry, GetDefaultRegistrations());
     }
 
     public bool TryGetDescriptor(string componentId, out DesktopComponentRuntimeDescriptor descriptor)

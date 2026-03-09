@@ -104,7 +104,7 @@
                                 ClipToBounds="True"
                                 BorderThickness="0"
                                 PointerWheelChanged="OnDesktopPagesPointerWheelChanged">
-                            <Grid>
+                            <Grid x:Name="SettingsContentPagesHost">
                                 <Grid x:Name="DesktopPagesHost"
                                       HorizontalAlignment="Left"
                                       VerticalAlignment="Top">

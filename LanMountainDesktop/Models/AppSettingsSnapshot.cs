@@ -20,6 +20,8 @@ public sealed class AppSettingsSnapshot
 
     public int SettingsTabIndex { get; set; } = 0;
 
+    public string? SettingsTabTag { get; set; }
+
     public string LanguageCode { get; set; } = "zh-CN";
 
     public string? TimeZoneId { get; set; }
@@ -70,6 +72,8 @@ public sealed class AppSettingsSnapshot
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;
 
+    public List<string> DisabledPluginIds { get; set; } = [];
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();
@@ -79,6 +83,9 @@ public sealed class AppSettingsSnapshot
             : [];
         clone.PinnedTaskbarActions = PinnedTaskbarActions is { Count: > 0 }
             ? new List<string>(PinnedTaskbarActions)
+            : [];
+        clone.DisabledPluginIds = DisabledPluginIds is { Count: > 0 }
+            ? new List<string>(DisabledPluginIds)
             : [];
 
         return clone;

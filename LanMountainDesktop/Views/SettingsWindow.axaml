@@ -141,7 +141,7 @@
                                           Padding="0,0,16,0"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
-                                <Grid>
+                                <Grid x:Name="SettingsContentPagesHost">
                                     <pages:WallpaperSettingsPage x:Name="WallpaperSettingsPanel" IsVisible="True" />
                                     <pages:GridSettingsPage x:Name="GridSettingsPanel" IsVisible="False" />
                                     <pages:ColorSettingsPage x:Name="ColorSettingsPanel" IsVisible="False" />

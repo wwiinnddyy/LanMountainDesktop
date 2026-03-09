@@ -3216,7 +3216,9 @@ public partial class MainWindow
 
     private string GetLocalizedComponentDisplayName(DesktopComponentRuntimeDescriptor descriptor)
     {
-        return L(descriptor.DisplayNameLocalizationKey, descriptor.Definition.DisplayName);
+        return string.IsNullOrWhiteSpace(descriptor.DisplayNameLocalizationKey)
+            ? descriptor.Definition.DisplayName
+            : L(descriptor.DisplayNameLocalizationKey, descriptor.Definition.DisplayName);
     }
 
     private void OnComponentLibraryComponentPreviewPointerPressed(object? sender, PointerPressedEventArgs e)

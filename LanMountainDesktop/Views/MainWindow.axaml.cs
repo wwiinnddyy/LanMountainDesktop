@@ -19,7 +19,6 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.ComponentSystem.Extensions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -98,11 +97,7 @@ public partial class MainWindow : Window
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
-    private readonly ComponentRegistry _componentRegistry = ComponentRegistry
-        .CreateDefault()
-        .RegisterExtensions(
-            JsonComponentExtensionProvider.LoadProvidersFromDirectory(
-                Path.Combine(AppContext.BaseDirectory, "Extensions", "Components")));
+    private readonly ComponentRegistry _componentRegistry;
     private readonly DesktopComponentRuntimeRegistry _componentRuntimeRegistry;
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
@@ -182,8 +177,14 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+        _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
+
         InitializeComponent();
-        _componentRuntimeRegistry = DesktopComponentRuntimeRegistry.CreateDefault(_componentRegistry);
+        InitializePluginSettingsNavigation();
+        _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
+            _componentRegistry,
+            pluginRuntimeService);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         AppSettingsService.SettingsSaved += OnExternalAppSettingsSaved;
         LauncherSettingsService.SettingsSaved += OnExternalLauncherSettingsSaved;
@@ -300,10 +301,7 @@ public partial class MainWindow : Window
         GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
         GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
 
-        if (SettingsNavView.MenuItems.ElementAtOrDefault(Math.Clamp(snapshot.SettingsTabIndex, 0, 9)) is FluentAvalonia.UI.Controls.NavigationViewItem navItem)
-        {
-            SettingsNavView.SelectedItem = navItem;
-        }
+        RestoreSettingsTabSelection(snapshot);
         UpdateSettingsTabContent();
 
         WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);

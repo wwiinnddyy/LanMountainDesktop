@@ -280,13 +280,22 @@ public partial class MainWindow
         PluginSystemSettingsExpander.Header = L("settings.plugins.runtime_header", "Plugin Runtime");
         PluginSystemSettingsExpander.Description = L(
             "settings.plugins.runtime_desc",
-            "Manage plugin loading and backend isolation.");
+            "Review plugin runtime state and load results.");
         PluginSystemDescriptionTextBlock.Text = L(
             "settings.plugins.runtime_hint",
-            "This page will host installed plugin management, permission review, and sandboxed backend runtime controls.");
+            "This page shows discovery status, load results, and runtime diagnostics for installed plugins.");
         PluginSystemStatusTextBlock.Text = L(
             "settings.plugins.runtime_status",
-            "Plugin management UI is not connected yet. Next step is wiring the loader, permissions, and worker isolation state into this panel.");
+            "Plugin runtime status will appear here after plugin discovery completes.");
+        InstalledPluginsSettingsExpander.Header = L("settings.plugins.installed_header", "Installed Plugins");
+        InstalledPluginsSettingsExpander.Description = L(
+            "settings.plugins.installed_desc",
+            "Enable or disable plugins here. Detailed plugin settings appear as separate settings pages.");
+        PluginRestartHintTextBlock.Text = L(
+            "settings.plugins.restart_hint",
+            "Plugin enable state changes take effect after restarting the app.");
+        PluginCatalogEmptyTextBlock.Text = L("settings.plugins.empty", "No plugins found.");
+        PluginSettingsPanel.RefreshFromRuntime();
 
         SettingsNavAboutItem.Content = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
@@ -428,3 +437,4 @@ public partial class MainWindow
                 : _weatherLocationKey);
     }
 }
+
