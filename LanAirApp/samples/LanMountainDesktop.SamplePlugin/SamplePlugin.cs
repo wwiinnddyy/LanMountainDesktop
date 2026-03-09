@@ -11,10 +11,11 @@ public sealed class SamplePlugin : PluginBase, IDisposable
     public override void Initialize(IPluginContext context)
     {
         Directory.CreateDirectory(context.DataDirectory);
+        var localizer = PluginLocalizer.Create(context);
 
-        var hostName = GetHostProperty(context, "HostApplicationName", "UnknownHost");
-        var hostVersion = GetHostProperty(context, "HostVersion", "UnknownVersion");
-        var sdkApiVersion = GetHostProperty(context, "PluginSdkApiVersion", "UnknownApiVersion");
+        var hostName = GetHostProperty(context, PluginHostPropertyKeys.HostApplicationName, "UnknownHost");
+        var hostVersion = GetHostProperty(context, PluginHostPropertyKeys.HostVersion, "UnknownVersion");
+        var sdkApiVersion = GetHostProperty(context, PluginHostPropertyKeys.PluginSdkApiVersion, "UnknownApiVersion");
         var messageBus = context.GetService<IPluginMessageBus>()
             ?? throw new InvalidOperationException("Plugin message bus is not available.");
 
@@ -25,10 +26,11 @@ public sealed class SamplePlugin : PluginBase, IDisposable
             hostName,
             hostVersion,
             sdkApiVersion,
-            messageBus);
+            messageBus,
+            localizer);
         context.RegisterService(_stateService);
 
-        _clockService = new SamplePluginClockService(context.DataDirectory, _stateService, messageBus);
+        _clockService = new SamplePluginClockService(context.DataDirectory, _stateService, messageBus, localizer);
         context.RegisterService(_clockService);
         _stateService.AttachClockService(_clockService);
 
@@ -39,11 +41,17 @@ public sealed class SamplePlugin : PluginBase, IDisposable
         try
         {
             File.AppendAllText(logPath, initMessage + Environment.NewLine);
-            _stateService.MarkBackendReady($"Initialization log written to {logPath}.");
+            _stateService.MarkBackendReady(localizer.Format(
+                "status.backend.detail.log_written",
+                "初始化日志已写入：{0}",
+                logPath));
         }
         catch (Exception ex)
         {
-            _stateService.MarkBackendFaulted($"Initialization log write failed: {ex.Message}");
+            _stateService.MarkBackendFaulted(localizer.Format(
+                "status.backend.detail.log_write_failed",
+                "初始化日志写入失败：{0}",
+                ex.Message));
             throw;
         }
 
@@ -51,15 +59,15 @@ public sealed class SamplePlugin : PluginBase, IDisposable
 
         context.RegisterSettingsPage(new PluginSettingsPageRegistration(
             "status",
-            "Plugin Status",
+            localizer.GetString("settings.page_title", "插件状态"),
             () => new SamplePluginSettingsView(context)));
 
         context.RegisterDesktopComponent(new PluginDesktopComponentRegistration(
             "LanMountainDesktop.SamplePlugin.StatusClock",
-            "Sample Plugin Status Clock",
+            localizer.GetString("widget.display_name", "示例插件状态时钟"),
             widgetContext => new SamplePluginStatusClockWidget(widgetContext),
             iconKey: "PuzzlePiece",
-            category: "Plugins",
+            category: localizer.GetString("widget.category", "插件"),
             minWidthCells: 4,
             minHeightCells: 4,
             allowDesktopPlacement: true,

@@ -48,11 +48,14 @@ public sealed class PluginRuntimeService : IDisposable
         UnloadInstalledPlugins();
 
         var disabledPluginIds = GetDisabledPluginIds();
+        var settingsSnapshot = _appSettingsService.Load();
+        var hostLanguageCode = PluginLocalizer.NormalizeLanguageCode(settingsSnapshot.LanguageCode);
         var hostProperties = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["HostApplicationName"] = "LanMountainDesktop",
-            ["HostVersion"] = typeof(App).Assembly.GetName().Version?.ToString(),
-            ["PluginSdkApiVersion"] = PluginSdkInfo.ApiVersion
+            [PluginHostPropertyKeys.HostApplicationName] = "LanMountainDesktop",
+            [PluginHostPropertyKeys.HostVersion] = typeof(App).Assembly.GetName().Version?.ToString(),
+            [PluginHostPropertyKeys.PluginSdkApiVersion] = PluginSdkInfo.ApiVersion,
+            [PluginHostPropertyKeys.HostLanguageCode] = hostLanguageCode
         };
 
         var discoveryFailures = new List<PluginLoadResult>();

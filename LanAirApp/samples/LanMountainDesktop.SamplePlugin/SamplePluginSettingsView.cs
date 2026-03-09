@@ -10,6 +10,7 @@ namespace LanMountainDesktop.SamplePlugin;
 internal sealed class SamplePluginSettingsView : UserControl
 {
     private readonly IPluginContext _context;
+    private readonly PluginLocalizer _localizer;
     private readonly SamplePluginRuntimeStateService _stateService;
     private readonly SamplePluginClockService _clockService;
     private readonly IPluginMessageBus _messageBus;
@@ -21,6 +22,7 @@ internal sealed class SamplePluginSettingsView : UserControl
     public SamplePluginSettingsView(IPluginContext context)
     {
         _context = context;
+        _localizer = PluginLocalizer.Create(context);
         _stateService = context.GetService<SamplePluginRuntimeStateService>()
             ?? throw new InvalidOperationException("SamplePluginRuntimeStateService is not available.");
         _clockService = context.GetService<SamplePluginClockService>()
@@ -28,7 +30,9 @@ internal sealed class SamplePluginSettingsView : UserControl
         _messageBus = context.GetService<IPluginMessageBus>()
             ?? throw new InvalidOperationException("IPluginMessageBus is not available.");
 
-        _stateService.MarkFrontendReady("Settings page is connected to plugin services and communication.");
+        _stateService.MarkFrontendReady(T(
+            "status.frontend.detail.settings_connected",
+            "设置页已接入插件服务与通信。"));
 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
@@ -56,14 +60,14 @@ internal sealed class SamplePluginSettingsView : UserControl
                 {
                     new TextBlock
                     {
-                        Text = "Sample Plugin Capability Inspector",
+                        Text = T("settings.header.title", "示例插件能力检查器"),
                         FontSize = 22,
                         FontWeight = FontWeight.SemiBold,
                         Foreground = Brushes.White
                     },
-                    CreateSection("Plugin Info", _pluginInfoPanel),
-                    CreateSection("Accessible Capabilities", _capabilityPanel),
-                    CreateSection("Live Runtime Status", _statusPanel)
+                    CreateSection(T("settings.section.info", "插件信息"), _pluginInfoPanel),
+                    CreateSection(T("settings.section.capabilities", "可访问能力"), _capabilityPanel),
+                    CreateSection(T("settings.section.status", "实时运行状态"), _statusPanel)
                 }
             }
         };
@@ -112,31 +116,45 @@ internal sealed class SamplePluginSettingsView : UserControl
     private void RefreshPluginInfo(SamplePluginRuntimeSnapshot snapshot)
     {
         _pluginInfoPanel.Children.Clear();
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Name", snapshot.Manifest.Name));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Id", snapshot.Manifest.Id));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Version", snapshot.Manifest.Version ?? "dev"));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Author", snapshot.Manifest.Author ?? "(none)"));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Description", snapshot.Manifest.Description ?? "(none)"));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Directory", snapshot.PluginDirectory));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Data Directory", snapshot.DataDirectory));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Host Application", snapshot.HostApplicationName));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Host Version", snapshot.HostVersion));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("SDK API Version", snapshot.SdkApiVersion));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("State Service Resolved", (_context.GetService<SamplePluginRuntimeStateService>() is not null).ToString()));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Clock Service Resolved", (_context.GetService<SamplePluginClockService>() is not null).ToString()));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Message Bus Resolved", (_context.GetService<IPluginMessageBus>() is not null).ToString()));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Component Placed", snapshot.HasPlacedComponent ? "Yes" : "No"));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Placed Count", snapshot.PlacedCount.ToString()));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Preview Count", snapshot.PreviewCount.ToString()));
         _pluginInfoPanel.Children.Add(CreateInfoLine(
-            "Placement Ids",
-            snapshot.PlacementIds.Count == 0 ? "(none)" : string.Join(", ", snapshot.PlacementIds)));
-        _pluginInfoPanel.Children.Add(CreateInfoLine("Last Component Id", snapshot.LastComponentId ?? "(none)"));
+            T("settings.info.plugin_name", "插件名称"),
+            T("plugin.name", snapshot.Manifest.Name)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.plugin_id", "插件 Id"), snapshot.Manifest.Id));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.version", "版本"), snapshot.Manifest.Version ?? T("common.dev", "开发版")));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.author", "作者"), snapshot.Manifest.Author ?? T("common.none", "（无）")));
         _pluginInfoPanel.Children.Add(CreateInfoLine(
-            "Last Cell Size",
-            snapshot.LastCellSize > 0 ? $"{snapshot.LastCellSize:F0}px" : "(unknown)"));
+            T("settings.info.description", "描述"),
+            T("plugin.description", snapshot.Manifest.Description ?? T("common.none", "（无）"))));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.plugin_directory", "插件目录"), snapshot.PluginDirectory));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.data_directory", "数据目录"), snapshot.DataDirectory));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.host_application", "宿主应用"), snapshot.HostApplicationName));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.host_version", "宿主版本"), snapshot.HostVersion));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.sdk_api_version", "SDK API 版本"), snapshot.SdkApiVersion));
         _pluginInfoPanel.Children.Add(CreateInfoLine(
-            "Clock Service Time",
+            T("settings.info.state_service_resolved", "状态服务已解析"),
+            FormatBoolean(_context.GetService<SamplePluginRuntimeStateService>() is not null)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.clock_service_resolved", "时钟服务已解析"),
+            FormatBoolean(_context.GetService<SamplePluginClockService>() is not null)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.message_bus_resolved", "消息总线已解析"),
+            FormatBoolean(_context.GetService<IPluginMessageBus>() is not null)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.component_placed", "组件是否已放置"),
+            snapshot.HasPlacedComponent ? T("common.yes", "是") : T("common.no", "否")));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.placed_count", "已放置数量"), snapshot.PlacedCount.ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(T("settings.info.preview_count", "预览数量"), snapshot.PreviewCount.ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.placement_ids", "放置位置 Id"),
+            snapshot.PlacementIds.Count == 0 ? T("common.none", "（无）") : string.Join(", ", snapshot.PlacementIds)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.last_component_id", "最近组件 Id"),
+            snapshot.LastComponentId ?? T("common.none", "（无）")));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.last_cell_size", "最近单元尺寸"),
+            snapshot.LastCellSize > 0 ? $"{snapshot.LastCellSize:F0}px" : T("common.unknown", "（未知）")));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            T("settings.info.clock_service_time", "时钟服务时间"),
             _clockService.CurrentTime.LocalDateTime.ToString("HH:mm:ss")));
     }
 
@@ -183,7 +201,7 @@ internal sealed class SamplePluginSettingsView : UserControl
                         },
                         new TextBlock
                         {
-                            Text = $"Updated: {entry.UpdatedAt.LocalDateTime:HH:mm:ss}",
+                            Text = Tf("settings.status.updated_at", "更新时间：{0}", entry.UpdatedAt.LocalDateTime.ToString("HH:mm:ss")),
                             Foreground = new SolidColorBrush(Color.Parse("#FF93C5FD"))
                         }
                     }
@@ -335,5 +353,22 @@ internal sealed class SamplePluginSettingsView : UserControl
                 Color.Parse("#66FBBF24"),
                 Color.Parse("#FBBF24"))
         };
+    }
+
+    private string T(string key, string fallback)
+    {
+        return _localizer.GetString(key, fallback);
+    }
+
+    private string Tf(string key, string fallback, params object[] args)
+    {
+        return _localizer.Format(key, fallback, args);
+    }
+
+    private string FormatBoolean(bool value)
+    {
+        return value
+            ? T("common.true", "是")
+            : T("common.false", "否");
     }
 }

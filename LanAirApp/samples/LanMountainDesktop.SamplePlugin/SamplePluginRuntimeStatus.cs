@@ -66,6 +66,7 @@ internal sealed class SamplePluginRuntimeStateService
     private readonly string _hostApplicationName;
     private readonly string _hostVersion;
     private readonly string _sdkApiVersion;
+    private readonly PluginLocalizer _localizer;
 
     private SamplePluginStatusEntry _frontend;
     private SamplePluginStatusEntry _component;
@@ -82,7 +83,8 @@ internal sealed class SamplePluginRuntimeStateService
         string hostApplicationName,
         string hostVersion,
         string sdkApiVersion,
-        IPluginMessageBus messageBus)
+        IPluginMessageBus messageBus,
+        PluginLocalizer localizer)
     {
         _manifest = manifest;
         _pluginDirectory = pluginDirectory;
@@ -91,34 +93,35 @@ internal sealed class SamplePluginRuntimeStateService
         _hostVersion = hostVersion;
         _sdkApiVersion = sdkApiVersion;
         _messageBus = messageBus;
+        _localizer = localizer;
 
         _frontend = CreateEntry(
             "frontend",
-            "Frontend",
+            T("status.frontend.title", "前端状态"),
             SamplePluginHealthState.Pending,
-            "Pending",
-            "Waiting for a plugin UI surface to connect.");
+            T("status.summary.pending", "等待中"),
+            T("status.frontend.detail.pending", "等待插件界面接入。"));
 
         _component = CreateEntry(
             "component",
-            "Component",
+            T("status.component.title", "组件状态"),
             SamplePluginHealthState.Pending,
-            "Pending",
-            "No component instance has been created yet.");
+            T("status.summary.pending", "等待中"),
+            T("status.component.detail.pending", "当前还没有创建组件实例。"));
 
         _backend = CreateEntry(
             "backend",
-            "Backend",
+            T("status.backend.title", "后端状态"),
             SamplePluginHealthState.Pending,
-            "Pending",
-            "Plugin initialization is in progress.");
+            T("status.summary.pending", "等待中"),
+            T("status.backend.detail.pending", "插件初始化进行中。"));
 
         _service = CreateEntry(
             "service",
-            "Clock Service",
+            T("status.service.title", "时钟服务"),
             SamplePluginHealthState.Pending,
-            "Pending",
-            "Clock service is not attached yet.");
+            T("status.summary.pending", "等待中"),
+            T("status.service.detail.pending", "时钟服务尚未挂接。"));
     }
 
     public void AttachClockService(SamplePluginClockService clockService)
@@ -130,10 +133,10 @@ internal sealed class SamplePluginRuntimeStateService
             _serviceClockTime = clockService.CurrentTime;
             _service = CreateEntry(
                 "service",
-                "Clock Service",
+                T("status.service.title", "时钟服务"),
                 SamplePluginHealthState.Pending,
-                "Attached",
-                "Clock service was attached and is waiting for the first tick.");
+                T("status.summary.attached", "已挂接"),
+                T("status.service.detail.attached", "时钟服务已挂接，正在等待第一次心跳。"));
         }
 
         PublishStateChanged("Clock service attached");
@@ -145,9 +148,9 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _frontend = CreateEntry(
                 "frontend",
-                "Frontend",
+                T("status.frontend.title", "前端状态"),
                 SamplePluginHealthState.Healthy,
-                "Healthy",
+                T("status.summary.healthy", "正常"),
                 detail);
         }
 
@@ -160,9 +163,9 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _backend = CreateEntry(
                 "backend",
-                "Backend",
+                T("status.backend.title", "后端状态"),
                 SamplePluginHealthState.Healthy,
-                "Healthy",
+                T("status.summary.healthy", "正常"),
                 detail);
         }
 
@@ -175,9 +178,9 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _backend = CreateEntry(
                 "backend",
-                "Backend",
+                T("status.backend.title", "后端状态"),
                 SamplePluginHealthState.Faulted,
-                "Faulted",
+                T("status.summary.faulted", "异常"),
                 detail);
         }
 
@@ -191,10 +194,13 @@ internal sealed class SamplePluginRuntimeStateService
             _serviceClockTime = currentTime;
             _service = CreateEntry(
                 "service",
-                "Clock Service",
+                T("status.service.title", "时钟服务"),
                 SamplePluginHealthState.Healthy,
-                "Healthy",
-                $"Clock service is running. Current service time: {currentTime.LocalDateTime:HH:mm:ss}");
+                T("status.summary.healthy", "正常"),
+                Tf(
+                    "status.service.detail.running",
+                    "时钟服务运行中，当前服务时间：{0}",
+                    currentTime.LocalDateTime.ToString("HH:mm:ss")));
         }
 
         PublishStateChanged("Clock service tick");
@@ -206,9 +212,9 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _service = CreateEntry(
                 "service",
-                "Clock Service",
+                T("status.service.title", "时钟服务"),
                 SamplePluginHealthState.Faulted,
-                "Faulted",
+                T("status.summary.faulted", "异常"),
                 detail);
         }
 
@@ -291,32 +297,54 @@ internal sealed class SamplePluginRuntimeStateService
         ArgumentNullException.ThrowIfNull(context);
 
         var propertyNames = context.Properties.Count == 0
-            ? "(none)"
+            ? T("common.none", "（无）")
             : string.Join(", ", context.Properties.Keys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
 
         return
         [
             new SamplePluginCapabilityItem(
-                "IPluginContext.Manifest",
-                $"Readable. Current plugin id: {context.Manifest.Id}; version: {context.Manifest.Version ?? "dev"}."),
+                T("capability.manifest.title", "IPluginContext.Manifest"),
+                Tf(
+                    "capability.manifest.detail",
+                    "可读取。当前插件 id：{0}；版本：{1}。",
+                    context.Manifest.Id,
+                    context.Manifest.Version ?? T("common.dev", "开发版"))),
             new SamplePluginCapabilityItem(
-                "IPluginContext.PluginDirectory / DataDirectory",
-                $"Readable. Plugin directory: {context.PluginDirectory}; data directory: {context.DataDirectory}."),
+                T("capability.directories.title", "IPluginContext.PluginDirectory / DataDirectory"),
+                Tf(
+                    "capability.directories.detail",
+                    "可读取。插件目录：{0}；数据目录：{1}。",
+                    context.PluginDirectory,
+                    context.DataDirectory)),
             new SamplePluginCapabilityItem(
-                "IPluginContext.Properties",
-                $"Readable. Host properties currently exposed: {propertyNames}."),
+                T("capability.properties.title", "IPluginContext.Properties"),
+                Tf(
+                    "capability.properties.detail",
+                    "可读取。宿主当前暴露的属性：{0}。",
+                    propertyNames)),
             new SamplePluginCapabilityItem(
-                "IPluginContext.GetService<T>()",
-                $"Callable. State service resolved: {hasStateService}; clock service resolved: {hasClockService}; message bus resolved: {hasMessageBus}."),
+                T("capability.get_service.title", "IPluginContext.GetService<T>()"),
+                Tf(
+                    "capability.get_service.detail",
+                    "可调用。状态服务已解析：{0}；时钟服务已解析：{1}；消息总线已解析：{2}。",
+                    FormatBoolean(hasStateService),
+                    FormatBoolean(hasClockService),
+                    FormatBoolean(hasMessageBus))),
             new SamplePluginCapabilityItem(
-                "IPluginContext.RegisterService<TService>()",
-                "Callable during plugin initialization. This plugin registers SamplePluginRuntimeStateService and SamplePluginClockService into the plugin service container."),
+                T("capability.register_service.title", "IPluginContext.RegisterService<TService>()"),
+                T(
+                    "capability.register_service.detail",
+                    "可在插件初始化阶段调用。这个示例插件会把 SamplePluginRuntimeStateService 和 SamplePluginClockService 注册进插件服务容器。")),
             new SamplePluginCapabilityItem(
-                "Plugin communication bus",
-                "This plugin uses IPluginMessageBus to push clock ticks and state change notifications into plugin UI surfaces."),
+                T("capability.message_bus.title", "插件通信总线"),
+                T(
+                    "capability.message_bus.detail",
+                    "这个示例插件通过 IPluginMessageBus 向插件 UI 推送时钟心跳和状态变化通知。")),
             new SamplePluginCapabilityItem(
-                "PluginDesktopComponentContext",
-                "Widgets can read ComponentId, PlacementId, CellSize, and call GetService<T>() against the same plugin service container.")
+                T("capability.widget_context.title", "PluginDesktopComponentContext"),
+                T(
+                    "capability.widget_context.detail",
+                    "组件可以读取 ComponentId、PlacementId、CellSize，并能在同一个插件服务容器上调用 GetService<T>()。"))
         ];
     }
 
@@ -335,10 +363,15 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _component = CreateEntry(
                 "component",
-                "Component",
+                T("status.component.title", "组件状态"),
                 SamplePluginHealthState.Healthy,
-                "Placed",
-                $"Placed count: {placementIds.Length}; preview count: {previewCount}; placements: {string.Join(", ", placementIds)}");
+                T("status.summary.placed", "已放置"),
+                Tf(
+                    "status.component.detail.placed",
+                    "已放置数量：{0}；预览数量：{1}；放置位置：{2}",
+                    placementIds.Length,
+                    previewCount,
+                    string.Join(", ", placementIds)));
             return;
         }
 
@@ -346,19 +379,22 @@ internal sealed class SamplePluginRuntimeStateService
         {
             _component = CreateEntry(
                 "component",
-                "Component",
+                T("status.component.title", "组件状态"),
                 SamplePluginHealthState.Healthy,
-                "Preview",
-                $"Preview instances: {previewCount}; no placed desktop instance is active yet.");
+                T("status.summary.preview", "预览中"),
+                Tf(
+                    "status.component.detail.preview",
+                    "当前预览实例数量：{0}；尚未有已放置的桌面实例。",
+                    previewCount));
             return;
         }
 
         _component = CreateEntry(
             "component",
-            "Component",
+            T("status.component.title", "组件状态"),
             SamplePluginHealthState.Pending,
-            "Pending",
-            "No component instance is active.");
+            T("status.summary.pending", "等待中"),
+            T("status.component.detail.none", "当前没有活动中的组件实例。"));
     }
 
     private void PublishStateChanged(string reason)
@@ -381,6 +417,23 @@ internal sealed class SamplePluginRuntimeStateService
             detail,
             DateTimeOffset.Now);
     }
+
+    private string T(string key, string fallback)
+    {
+        return _localizer.GetString(key, fallback);
+    }
+
+    private string Tf(string key, string fallback, params object[] args)
+    {
+        return _localizer.Format(key, fallback, args);
+    }
+
+    private string FormatBoolean(bool value)
+    {
+        return value
+            ? T("common.true", "是")
+            : T("common.false", "否");
+    }
 }
 
 internal sealed class SamplePluginClockService : IDisposable
@@ -389,6 +442,7 @@ internal sealed class SamplePluginClockService : IDisposable
     private readonly string _clockStateFilePath;
     private readonly SamplePluginRuntimeStateService _stateService;
     private readonly IPluginMessageBus _messageBus;
+    private readonly PluginLocalizer _localizer;
     private readonly Timer _timer;
     private DateTimeOffset _currentTime = DateTimeOffset.Now;
     private int _disposed;
@@ -396,11 +450,13 @@ internal sealed class SamplePluginClockService : IDisposable
     public SamplePluginClockService(
         string dataDirectory,
         SamplePluginRuntimeStateService stateService,
-        IPluginMessageBus messageBus)
+        IPluginMessageBus messageBus,
+        PluginLocalizer localizer)
     {
         _clockStateFilePath = Path.Combine(dataDirectory, "clock-service.txt");
         _stateService = stateService;
         _messageBus = messageBus;
+        _localizer = localizer;
         _timer = new Timer(OnTimerTick);
     }
 
@@ -459,7 +515,10 @@ internal sealed class SamplePluginClockService : IDisposable
         }
         catch (Exception ex)
         {
-            _stateService.MarkClockServiceFaulted($"Clock state write failed: {ex.Message}");
+            _stateService.MarkClockServiceFaulted(_localizer.Format(
+                "status.service.detail.write_failed",
+                "时钟状态写入失败：{0}",
+                ex.Message));
         }
     }
 }

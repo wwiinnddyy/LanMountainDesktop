@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" Private="false" />
     <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CreateLaappPackage" AfterTargets="Build">

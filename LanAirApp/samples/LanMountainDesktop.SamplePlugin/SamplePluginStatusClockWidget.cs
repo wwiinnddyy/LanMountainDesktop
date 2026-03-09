@@ -10,6 +10,7 @@ namespace LanMountainDesktop.SamplePlugin;
 internal sealed class SamplePluginStatusClockWidget : Border
 {
     private readonly PluginDesktopComponentContext _context;
+    private readonly PluginLocalizer _localizer;
     private readonly SamplePluginRuntimeStateService _stateService;
     private readonly SamplePluginClockService _clockService;
     private readonly IPluginMessageBus _messageBus;
@@ -23,6 +24,7 @@ internal sealed class SamplePluginStatusClockWidget : Border
     public SamplePluginStatusClockWidget(PluginDesktopComponentContext context)
     {
         _context = context;
+        _localizer = PluginLocalizer.Create(context);
         _stateService = context.GetService<SamplePluginRuntimeStateService>()
             ?? throw new InvalidOperationException("SamplePluginRuntimeStateService is not available.");
         _clockService = context.GetService<SamplePluginClockService>()
@@ -111,7 +113,9 @@ internal sealed class SamplePluginStatusClockWidget : Border
                 _context.CellSize);
         }
 
-        _stateService.MarkFrontendReady("Widget surface is connected to plugin services and communication.");
+        _stateService.MarkFrontendReady(T(
+            "status.frontend.detail.widget_connected",
+            "组件界面已接入插件服务与通信。"));
         SubscribeToPluginBus();
 
         RefreshClock(_clockService.CurrentTime);
@@ -170,8 +174,8 @@ internal sealed class SamplePluginStatusClockWidget : Border
     {
         var snapshot = _stateService.GetSnapshot();
         _subtitleTextBlock.Text = string.IsNullOrWhiteSpace(_context.PlacementId)
-            ? $"Preview surface | placed: {snapshot.PlacedCount}"
-            : $"Placement {_context.PlacementId} | placed: {snapshot.PlacedCount}";
+            ? Tf("widget.subtitle.preview", "预览界面 | 已放置：{0}", snapshot.PlacedCount)
+            : Tf("widget.subtitle.placement", "位置 {0} | 已放置：{1}", _context.PlacementId!, snapshot.PlacedCount);
     }
 
     private void RefreshStatusPanel()
@@ -280,5 +284,15 @@ internal sealed class SamplePluginStatusClockWidget : Border
                 Color.Parse("#66FDBA74"),
                 Color.Parse("#FDBA74"))
         };
+    }
+
+    private string T(string key, string fallback)
+    {
+        return _localizer.GetString(key, fallback);
+    }
+
+    private string Tf(string key, string fallback, params object[] args)
+    {
+        return _localizer.Format(key, fallback, args);
     }
 }
