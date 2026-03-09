@@ -79,7 +79,10 @@
                             Classes="mica-strong"
                             CornerRadius="0,0,24,24"
                             Padding="18">
+                        <Grid RowDefinitions="*,Auto"
+                              RowSpacing="14">
                         <ui:NavigationView x:Name="SettingsNavView"
+                                           Grid.Row="0"
                                            PaneDisplayMode="Left"
                                            IsSettingsVisible="False"
                                            OpenPaneLength="240"
@@ -155,6 +158,53 @@
                                 </Grid>
                             </ScrollViewer>
                         </ui:NavigationView>
+
+                        <Border x:Name="PendingRestartDock"
+                                Grid.Row="1"
+                                IsVisible="False"
+                                Classes="glass-panel"
+                                CornerRadius="18"
+                                Padding="14,12">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="12">
+                                <Border Width="34"
+                                        Height="34"
+                                        CornerRadius="17"
+                                        Background="{DynamicResource AdaptiveAccentBrush}">
+                                    <fi:FluentIcon Icon="ArrowSync"
+                                                   IconVariant="Regular"
+                                                   FontSize="16"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="2"
+                                            VerticalAlignment="Center">
+                                    <TextBlock x:Name="PendingRestartDockTitleTextBlock"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Text="Restart required" />
+                                    <TextBlock x:Name="PendingRestartDockDescriptionTextBlock"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                               Text="Your changes will apply after restarting the app." />
+                                </StackPanel>
+                                <Button x:Name="PendingRestartDockButton"
+                                        Grid.Column="2"
+                                        Padding="14,8"
+                                        Click="OnPendingRestartDockButtonClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <fi:FluentIcon Icon="ArrowSync"
+                                                       IconVariant="Regular" />
+                                        <TextBlock x:Name="PendingRestartDockButtonTextBlock"
+                                                   VerticalAlignment="Center"
+                                                   Text="Restart app" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </Border>
+                        </Grid>
                     </Border>
                 </Grid>
             </Border>

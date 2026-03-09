@@ -327,6 +327,7 @@ public partial class MainWindow
         SetAppRenderModeComboItemContent(AppRenderingModeHelper.Wgl, L("settings.about.render_mode.wgl", "WGL"));
         SetAppRenderModeComboItemContent(AppRenderingModeHelper.Vulkan, L("settings.about.render_mode.vulkan", "Vulkan"));
         UpdateCurrentRenderBackendStatus();
+        UpdatePendingRestartDock();
 
         if (WallpaperPlacementComboBox?.ItemCount >= 5)
         {

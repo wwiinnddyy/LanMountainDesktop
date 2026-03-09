@@ -169,6 +169,7 @@ public partial class MainWindow : Window
     private bool _suppressAutoStartToggleEvents;
     private bool _suppressAppRenderModeSelectionEvents;
     private string _selectedAppRenderMode = AppRenderingModeHelper.Default;
+    private string _runningAppRenderMode = AppRenderingModeHelper.Default;
     private string _weatherSearchKeyword = string.Empty;
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
@@ -190,6 +191,7 @@ public partial class MainWindow : Window
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         AppSettingsService.SettingsSaved += OnExternalAppSettingsSaved;
         LauncherSettingsService.SettingsSaved += OnExternalLauncherSettingsSaved;
+        PendingRestartStateService.StateChanged += OnPendingRestartStateChanged;
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
@@ -314,6 +316,7 @@ public partial class MainWindow : Window
         InitializeWeatherSettings(snapshot);
         _ = _componentSettingsService.Load();
         InitializeAutoStartWithWindowsSetting(snapshot);
+        InitializeAppRenderModeSetting(snapshot);
         InitializeUpdateSettings(snapshot);
         InitializeDesktopSurfaceState(desktopLayoutSnapshot);
         InitializeLauncherVisibilitySettings(launcherSnapshot);
@@ -379,6 +382,7 @@ public partial class MainWindow : Window
         _wallpaperBitmap = null;
         AppSettingsService.SettingsSaved -= OnExternalAppSettingsSaved;
         LauncherSettingsService.SettingsSaved -= OnExternalLauncherSettingsSaved;
+        PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
         WallpaperPreviewHost.SizeChanged -= OnWallpaperPreviewHostSizeChanged;

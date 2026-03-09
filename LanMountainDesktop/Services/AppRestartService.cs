@@ -3,11 +3,28 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace LanMountainDesktop.Services;
 
 public static class AppRestartService
 {
+    public static bool TryRestartApplication()
+    {
+        if (!TryRestartCurrentProcess())
+        {
+            return false;
+        }
+
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Shutdown();
+        }
+
+        return true;
+    }
+
     public static bool TryRestartCurrentProcess()
     {
         try

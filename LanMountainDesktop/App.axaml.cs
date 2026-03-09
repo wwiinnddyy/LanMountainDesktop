@@ -96,15 +96,7 @@ public partial class App : Application
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
     {
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            return;
-        }
-
-        if (AppRestartService.TryRestartCurrentProcess())
-        {
-            desktop.Shutdown();
-        }
+        AppRestartService.TryRestartApplication();
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

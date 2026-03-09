@@ -64,6 +64,7 @@
                 <ui:SettingsExpander.Footer>
                     <ComboBox x:Name="AppRenderModeComboBox"
                               MinWidth="180"
+                              SelectedIndex="0"
                               HorizontalAlignment="Right">
                         <ComboBoxItem Content="Default" Tag="Default" />
                         <ComboBoxItem Content="Software" Tag="Software" />

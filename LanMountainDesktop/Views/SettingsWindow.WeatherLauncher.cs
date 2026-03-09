@@ -92,12 +92,16 @@ public partial class SettingsWindow
     private void InitializeAppRenderModeSetting(AppSettingsSnapshot snapshot)
     {
         _selectedAppRenderMode = AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
+        _runningAppRenderMode = ResolveActiveAppRenderModeForUi(_selectedAppRenderMode);
+        var renderModeForUi = PendingRestartStateService.HasPendingReason(PendingRestartStateService.RenderModeReason)
+            ? _selectedAppRenderMode
+            : _runningAppRenderMode;
 
         _suppressAppRenderModeSelectionEvents = true;
         try
         {
             AppRenderModeComboBox.IsEnabled = OperatingSystem.IsWindows();
-            SelectAppRenderModeInUi(_selectedAppRenderMode);
+            SelectAppRenderModeInUi(renderModeForUi);
         }
         finally
         {
@@ -107,13 +111,27 @@ public partial class SettingsWindow
 
     private void SelectAppRenderModeInUi(string renderMode)
     {
-        var selectedItem = AppRenderModeComboBox.Items
-            .OfType<ComboBoxItem>()
-            .FirstOrDefault(item =>
-                string.Equals(item.Tag?.ToString(), renderMode, StringComparison.OrdinalIgnoreCase));
+        AppRenderModeComboBox.SelectedIndex = GetAppRenderModeComboBoxIndex(renderMode);
+    }
 
-        AppRenderModeComboBox.SelectedItem = selectedItem
-            ?? AppRenderModeComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+    private static int GetAppRenderModeComboBoxIndex(string renderMode)
+    {
+        return AppRenderingModeHelper.Normalize(renderMode) switch
+        {
+            AppRenderingModeHelper.Software => 1,
+            AppRenderingModeHelper.AngleEgl => 2,
+            AppRenderingModeHelper.Wgl => 3,
+            AppRenderingModeHelper.Vulkan => 4,
+            _ => 0
+        };
+    }
+
+    private static string ResolveActiveAppRenderModeForUi(string configuredRenderMode)
+    {
+        var detectedRenderMode = AppRenderBackendDiagnostics.Detect().ActualBackend;
+        return string.Equals(detectedRenderMode, AppRenderBackendDiagnostics.Unknown, StringComparison.Ordinal)
+            ? configuredRenderMode
+            : AppRenderingModeHelper.Normalize(detectedRenderMode);
     }
 
     private static WeatherLocationMode ParseWeatherLocationMode(string? value)
@@ -354,7 +372,7 @@ public partial class SettingsWindow
         }
 
         var selectedMode = AppRenderingModeHelper.Normalize(
-            (AppRenderModeComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString());
+            TryGetSelectedComboBoxTag(AppRenderModeComboBox));
 
         if (string.Equals(_selectedAppRenderMode, selectedMode, StringComparison.Ordinal))
         {
@@ -363,6 +381,14 @@ public partial class SettingsWindow
 
         _selectedAppRenderMode = selectedMode;
         PersistSettings();
+        var requiresRestart = !string.Equals(_runningAppRenderMode, selectedMode, StringComparison.Ordinal);
+        PendingRestartStateService.SetPending(PendingRestartStateService.RenderModeReason, requiresRestart);
+        UpdatePendingRestartDock();
+
+        if (requiresRestart)
+        {
+            _ = ShowRenderModeRestartPromptAsync(selectedMode);
+        }
     }
 
     private async void OnSearchWeatherCityClick(object? sender, RoutedEventArgs e)

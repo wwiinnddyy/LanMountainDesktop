@@ -142,6 +142,7 @@ public partial class SettingsWindow : Window
     private int _statusBarCustomSpacingPercent = 12;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _selectedAppRenderMode = AppRenderingModeHelper.Default;
+    private string _runningAppRenderMode = AppRenderingModeHelper.Default;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
     private WeatherLocationMode _weatherLocationMode = WeatherLocationMode.CitySearch;
@@ -165,6 +166,7 @@ public partial class SettingsWindow : Window
         InitializePluginSettingsNavigation();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         RequestedThemeVariant = Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default;
+        PendingRestartStateService.StateChanged += OnPendingRestartStateChanged;
         HookEvents();
     }
 

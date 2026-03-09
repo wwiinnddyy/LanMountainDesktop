@@ -12,6 +12,7 @@ using FluentIcons.Avalonia.Fluent;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
@@ -43,6 +44,7 @@ public partial class SettingsWindow
         }
 
         _launcherIconCache.Clear();
+        PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
         base.OnClosed(e);
     }
 
