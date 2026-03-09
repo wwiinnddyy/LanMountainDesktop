@@ -1,4 +1,8 @@
-namespace LanMountainDesktop.PluginSdk;
+using System;
+
+using LanMountainDesktop.PluginSdk;
+
+namespace LanMountainDesktop.Plugins;
 
 public sealed record PluginLoadResult(
     string SourcePath,

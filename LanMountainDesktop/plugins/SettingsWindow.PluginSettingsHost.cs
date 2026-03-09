@@ -139,6 +139,30 @@ public partial class SettingsWindow
         }
     }
 
+    internal void RefreshPluginSettingsNavigation()
+    {
+        if (SettingsNavView?.MenuItems is null)
+        {
+            return;
+        }
+
+        foreach (var pair in _pluginSettingsPageHosts.ToArray())
+        {
+            var navItem = SettingsNavView.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), pair.Key, StringComparison.OrdinalIgnoreCase));
+            if (navItem is not null)
+            {
+                SettingsNavView.MenuItems.Remove(navItem);
+            }
+
+            SettingsContentPagesHost.Children.Remove(pair.Value);
+        }
+
+        _pluginSettingsPageHosts.Clear();
+        InitializePluginSettingsNavigation();
+    }
+
     private string? GetSelectedSettingsTabTag()
     {
         return (SettingsNavView?.SelectedItem as NavigationViewItem)?.Tag?.ToString();

@@ -1,19 +1,28 @@
-﻿using System;
+using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using FluentAvalonia.UI.Controls;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
 public partial class PluginSettingsPage : UserControl
 {
+    private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#FF0F766E"));
+    private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#FFC42B1C"));
+
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
+    private string? _packageImportStatusMessage;
+    private bool _packageImportStatusIsError;
 
     public PluginSettingsPage()
     {
@@ -24,6 +33,7 @@ public partial class PluginSettingsPage : UserControl
     public void RefreshFromRuntime()
     {
         var runtime = (Application.Current as App)?.PluginRuntimeService;
+        UpdateInstallerUi(runtime);
         if (runtime is null)
         {
             PluginSystemStatusTextBlock.Text = L("settings.plugins.runtime_unavailable", "Plugin runtime is not available.");
@@ -35,6 +45,24 @@ public partial class PluginSettingsPage : UserControl
 
         BuildRuntimeSummary(runtime);
         BuildPluginCatalog(runtime);
+    }
+
+    private void UpdateInstallerUi(PluginRuntimeService? runtime)
+    {
+        InstallPluginPackageButton.Content = L("settings.plugins.install_button", "Open .laapp package");
+        InstallPluginPackageButton.IsEnabled = runtime is not null;
+        PluginPackageImportHintTextBlock.Text = runtime is null
+            ? L(
+                "settings.plugins.install_unavailable",
+                "Plugin runtime is unavailable, so .laapp packages cannot be installed right now.")
+            : F(
+                "settings.plugins.install_hint_format",
+                "Open a .laapp package to install it into: {0}",
+                runtime.PluginsDirectory);
+
+        PluginPackageImportStatusTextBlock.IsVisible = !string.IsNullOrWhiteSpace(_packageImportStatusMessage);
+        PluginPackageImportStatusTextBlock.Text = _packageImportStatusMessage ?? string.Empty;
+        PluginPackageImportStatusTextBlock.Foreground = _packageImportStatusIsError ? ErrorBrush : SuccessBrush;
     }
 
     private void BuildRuntimeSummary(PluginRuntimeService runtime)
@@ -165,6 +193,116 @@ public partial class PluginSettingsPage : UserControl
                 : L("settings.plugins.toggle_state_disabled", "disabled"));
     }
 
+    private async void OnInstallPluginPackageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var runtime = (Application.Current as App)?.PluginRuntimeService;
+        if (runtime is null)
+        {
+            SetPackageImportStatus(
+                L(
+                    "settings.plugins.install_unavailable",
+                    "Plugin runtime is unavailable, so .laapp packages cannot be installed right now."),
+                isError: true);
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        var storageProvider = topLevel?.StorageProvider;
+        if (storageProvider is null)
+        {
+            SetPackageImportStatus(
+                L("settings.plugins.install_picker_unavailable", "Storage provider is unavailable."),
+                isError: true);
+            return;
+        }
+
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = L("settings.plugins.install_picker_title", "Select plugin package"),
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType(L("settings.plugins.install_file_type", ".laapp plugin package"))
+                {
+                    Patterns = [$"*{PluginSdkInfo.PackageFileExtension}"]
+                }
+            ]
+        });
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        string? temporaryPackagePath = null;
+        try
+        {
+            temporaryPackagePath = await CopyPackageToTemporaryFileAsync(files[0]);
+            if (string.IsNullOrWhiteSpace(temporaryPackagePath))
+            {
+                SetPackageImportStatus(
+                    L("settings.plugins.install_copy_failed", "Failed to copy the selected .laapp package."),
+                    isError: true);
+                return;
+            }
+
+            var manifest = runtime.InstallPluginPackage(temporaryPackagePath);
+            runtime.LoadInstalledPlugins();
+            RefreshPluginNavigation(topLevel);
+            PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+            RefreshFromRuntime();
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.install_success_format",
+                    "Installed plugin '{0}'. Restart the app to apply newly added settings pages and widgets.",
+                    manifest.Name),
+                isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.install_failed_format",
+                    "Failed to install plugin package: {0}",
+                    ex.Message),
+                isError: true);
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(temporaryPackagePath))
+            {
+                try
+                {
+                    File.Delete(temporaryPackagePath);
+                }
+                catch
+                {
+                    // Ignore temporary file cleanup errors.
+                }
+            }
+        }
+    }
+
+    private void RefreshPluginNavigation(TopLevel? topLevel)
+    {
+        switch (topLevel)
+        {
+            case MainWindow mainWindow:
+                mainWindow.RefreshPluginSettingsNavigation();
+                break;
+            case SettingsWindow settingsWindow:
+                settingsWindow.RefreshPluginSettingsNavigation();
+                break;
+        }
+    }
+
+    private void SetPackageImportStatus(string message, bool isError)
+    {
+        _packageImportStatusMessage = string.IsNullOrWhiteSpace(message) ? null : message;
+        _packageImportStatusIsError = isError;
+        UpdateInstallerUi((Application.Current as App)?.PluginRuntimeService);
+    }
+
     private string BuildPluginSubtitle(PluginCatalogEntry entry)
     {
         var source = entry.IsPackage
@@ -215,8 +353,35 @@ public partial class PluginSettingsPage : UserControl
     {
         return string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
     }
+
+    private static async Task<string?> CopyPackageToTemporaryFileAsync(IStorageFile file)
+    {
+        try
+        {
+            var extension = Path.GetExtension(file.Name);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = PluginSdkInfo.PackageFileExtension;
+            }
+
+            var temporaryDirectory = Path.Combine(
+                Path.GetTempPath(),
+                "LanMountainDesktop",
+                "PluginImports");
+            Directory.CreateDirectory(temporaryDirectory);
+
+            var temporaryPackagePath = Path.Combine(
+                temporaryDirectory,
+                $"{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}{extension}");
+
+            await using var sourceStream = await file.OpenReadAsync();
+            await using var destinationStream = File.Create(temporaryPackagePath);
+            await sourceStream.CopyToAsync(destinationStream);
+            return temporaryPackagePath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
-
-
-
-

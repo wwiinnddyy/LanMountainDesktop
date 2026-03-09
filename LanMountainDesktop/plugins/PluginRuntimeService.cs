@@ -9,6 +9,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Plugins;
 using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Services;
@@ -174,6 +175,36 @@ public sealed class PluginRuntimeService : IDisposable
         return true;
     }
 
+    public PluginManifest InstallPluginPackage(string packagePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
+
+        var fullPackagePath = Path.GetFullPath(packagePath);
+        if (!File.Exists(fullPackagePath))
+        {
+            throw new FileNotFoundException($"Plugin package '{fullPackagePath}' was not found.", fullPackagePath);
+        }
+
+        if (!string.Equals(Path.GetExtension(fullPackagePath), PluginSdkInfo.PackageFileExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Plugin package must use the '{PluginSdkInfo.PackageFileExtension}' extension.");
+        }
+
+        Directory.CreateDirectory(PluginsDirectory);
+
+        var manifest = ReadManifestFromPackage(fullPackagePath);
+        RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
+
+        var destinationPath = Path.Combine(PluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
+        if (!string.Equals(fullPackagePath, Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
+        {
+            File.Copy(fullPackagePath, destinationPath, overwrite: true);
+        }
+
+        return manifest;
+    }
+
     public void Dispose()
     {
         UnloadInstalledPlugins();
@@ -267,6 +298,42 @@ public sealed class PluginRuntimeService : IDisposable
 
         using var stream = entries[0].Open();
         return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
+    }
+
+    private void RemoveExistingPluginPackages(string pluginId, string packagePathToKeep)
+    {
+        foreach (var existingPackagePath in EnumerateCandidatePaths($"*{PluginSdkInfo.PackageFileExtension}"))
+        {
+            if (string.Equals(
+                    Path.GetFullPath(existingPackagePath),
+                    Path.GetFullPath(packagePathToKeep),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                var existingManifest = ReadManifestFromPackage(existingPackagePath);
+                if (!string.Equals(existingManifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                File.Delete(existingPackagePath);
+            }
+            catch
+            {
+                // Ignore unrelated or invalid packages during replacement.
+            }
+        }
+    }
+
+    private static string BuildInstalledPackageFileName(string pluginId)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var fileName = new string(pluginId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
+        return fileName + PluginSdkInfo.PackageFileExtension;
     }
 
     private static string EnsureTrailingSeparator(string path)

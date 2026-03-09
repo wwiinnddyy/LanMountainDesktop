@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.PluginSdk;
+
+namespace LanMountainDesktop.Plugins;
 
 public sealed class PluginLoadContext : AssemblyLoadContext
 {

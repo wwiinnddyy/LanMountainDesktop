@@ -1,4 +1,9 @@
-namespace LanMountainDesktop.PluginSdk;
+using System;
+using System.Collections.Generic;
+
+using LanMountainDesktop.PluginSdk;
+
+namespace LanMountainDesktop.Plugins;
 
 public sealed class PluginLoaderOptions
 {

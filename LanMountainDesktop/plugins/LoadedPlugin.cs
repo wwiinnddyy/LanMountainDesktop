@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 
-namespace LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.PluginSdk;
+
+namespace LanMountainDesktop.Plugins;
 
 public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
 {

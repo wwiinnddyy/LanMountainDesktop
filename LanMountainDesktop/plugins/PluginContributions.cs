@@ -1,3 +1,4 @@
+using LanMountainDesktop.Plugins;
 using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Services;

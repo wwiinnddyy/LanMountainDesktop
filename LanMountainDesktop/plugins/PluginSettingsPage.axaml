@@ -51,6 +51,24 @@
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
+                        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                Padding="14">
+                            <StackPanel Spacing="10">
+                                <Button x:Name="InstallPluginPackageButton"
+                                        HorizontalAlignment="Left"
+                                        Click="OnInstallPluginPackageClick"
+                                        Content="Open .laapp package" />
+                                <TextBlock x:Name="PluginPackageImportHintTextBlock"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           Text="Open a .laapp package to install it into the local plugin directory." />
+                                <TextBlock x:Name="PluginPackageImportStatusTextBlock"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="False" />
+                            </StackPanel>
+                        </Border>
                         <TextBlock x:Name="PluginRestartHintTextBlock"
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    TextWrapping="Wrap"

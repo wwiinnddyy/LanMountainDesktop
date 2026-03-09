@@ -490,4 +490,5 @@ nul
 /_build_verify_sample_plugin_capabilities
 /_build_verify_plugin_page_host
 /_build_verify_plugin_services
+/LanMountainDesktop.PluginSdk/_build_verify_*/
 /_build_obj
