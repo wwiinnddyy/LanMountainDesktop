@@ -189,7 +189,9 @@ public partial class SettingsWindow
     // --- AboutSettingsPage ---
     internal TextBlock AboutPanelTitleTextBlock => AboutSettingsPanel.FindControl<TextBlock>("AboutPanelTitleTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander AboutStartupSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutStartupSettingsExpander")!;
+    internal FluentAvalonia.UI.Controls.SettingsExpander AboutRenderModeSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutRenderModeSettingsExpander")!;
     internal ToggleSwitch AutoStartWithWindowsToggleSwitch => AboutSettingsPanel.FindControl<ToggleSwitch>("AutoStartWithWindowsToggleSwitch")!;
+    internal ComboBox AppRenderModeComboBox => AboutSettingsPanel.FindControl<ComboBox>("AppRenderModeComboBox")!;
     internal TextBlock VersionTextBlock => AboutSettingsPanel.FindControl<TextBlock>("VersionTextBlock")!;
     internal TextBlock CodeNameTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CodeNameTextBlock")!;
     internal TextBlock FontInfoTextBlock => AboutSettingsPanel.FindControl<TextBlock>("FontInfoTextBlock")!;

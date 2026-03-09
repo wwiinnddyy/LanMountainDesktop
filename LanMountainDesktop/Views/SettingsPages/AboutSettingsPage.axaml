@@ -34,5 +34,27 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
         </Border>
+
+        <Border Classes="settings-expander-shell">
+            <ui:SettingsExpander x:Name="AboutRenderModeSettingsExpander"
+                                 Header="Rendering Mode"
+                                 Description="Choose the rendering backend. Restart the app after changing this option. Unsupported modes fall back to software."
+                                 IsExpanded="True">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Window" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox x:Name="AppRenderModeComboBox"
+                              MinWidth="180"
+                              HorizontalAlignment="Right">
+                        <ComboBoxItem Content="Default" Tag="Default" />
+                        <ComboBoxItem Content="Software" Tag="Software" />
+                        <ComboBoxItem Content="angleEgl" Tag="AngleEgl" />
+                        <ComboBoxItem Content="WGL" Tag="Wgl" />
+                        <ComboBoxItem Content="Vulkan" Tag="Vulkan" />
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </Border>
     </StackPanel>
 </UserControl>

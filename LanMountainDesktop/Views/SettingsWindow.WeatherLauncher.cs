@@ -89,6 +89,33 @@ public partial class SettingsWindow
         }
     }
 
+    private void InitializeAppRenderModeSetting(AppSettingsSnapshot snapshot)
+    {
+        _selectedAppRenderMode = AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
+
+        _suppressAppRenderModeSelectionEvents = true;
+        try
+        {
+            AppRenderModeComboBox.IsEnabled = OperatingSystem.IsWindows();
+            SelectAppRenderModeInUi(_selectedAppRenderMode);
+        }
+        finally
+        {
+            _suppressAppRenderModeSelectionEvents = false;
+        }
+    }
+
+    private void SelectAppRenderModeInUi(string renderMode)
+    {
+        var selectedItem = AppRenderModeComboBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item =>
+                string.Equals(item.Tag?.ToString(), renderMode, StringComparison.OrdinalIgnoreCase));
+
+        AppRenderModeComboBox.SelectedItem = selectedItem
+            ?? AppRenderModeComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+    }
+
     private static WeatherLocationMode ParseWeatherLocationMode(string? value)
     {
         return string.Equals(value, "Coordinates", StringComparison.OrdinalIgnoreCase)
@@ -316,6 +343,25 @@ public partial class SettingsWindow
             }
         }
 
+        PersistSettings();
+    }
+
+    private void OnAppRenderModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressAppRenderModeSelectionEvents)
+        {
+            return;
+        }
+
+        var selectedMode = AppRenderingModeHelper.Normalize(
+            (AppRenderModeComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString());
+
+        if (string.Equals(_selectedAppRenderMode, selectedMode, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _selectedAppRenderMode = selectedMode;
         PersistSettings();
     }
 

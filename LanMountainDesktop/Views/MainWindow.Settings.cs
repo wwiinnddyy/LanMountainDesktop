@@ -978,6 +978,7 @@ public partial class MainWindow
             InitializeWeatherSettings(snapshot);
             _ = _componentSettingsService.Load();
             InitializeAutoStartWithWindowsSetting(snapshot);
+            InitializeAppRenderModeSetting(snapshot);
             InitializeUpdateSettings(snapshot);
             InitializeDesktopSurfaceState(desktopLayoutSnapshot);
             InitializeLauncherVisibilitySettings(launcherSnapshot);
@@ -1040,6 +1041,7 @@ public partial class MainWindow
         snapshot.WeatherIconPackId = _weatherIconPackId;
         snapshot.WeatherNoTlsRequests = _weatherNoTlsRequests;
         snapshot.AutoStartWithWindows = _autoStartWithWindows;
+        snapshot.AppRenderMode = _selectedAppRenderMode;
         snapshot.AutoCheckUpdates = _autoCheckUpdates;
         snapshot.IncludePrereleaseUpdates = IncludePrereleaseUpdates;
         snapshot.UpdateChannel = IncludePrereleaseUpdates ? UpdateChannelPreview : UpdateChannelStable;
@@ -1218,6 +1220,43 @@ public partial class MainWindow
         {
             _suppressAutoStartToggleEvents = false;
         }
+    }
+
+    private void InitializeAppRenderModeSetting(AppSettingsSnapshot snapshot)
+    {
+        _selectedAppRenderMode = AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
+
+        if (AppRenderModeComboBox is null)
+        {
+            return;
+        }
+
+        _suppressAppRenderModeSelectionEvents = true;
+        try
+        {
+            AppRenderModeComboBox.IsEnabled = OperatingSystem.IsWindows();
+            SelectAppRenderModeInUi(_selectedAppRenderMode);
+        }
+        finally
+        {
+            _suppressAppRenderModeSelectionEvents = false;
+        }
+    }
+
+    private void SelectAppRenderModeInUi(string renderMode)
+    {
+        if (AppRenderModeComboBox is null)
+        {
+            return;
+        }
+
+        var selectedItem = AppRenderModeComboBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item =>
+                string.Equals(item.Tag?.ToString(), renderMode, StringComparison.OrdinalIgnoreCase));
+
+        AppRenderModeComboBox.SelectedItem = selectedItem
+            ?? AppRenderModeComboBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
     }
 
     private static WeatherLocationMode ParseWeatherLocationMode(string? value)
@@ -1484,6 +1523,25 @@ public partial class MainWindow
             }
         }
 
+        PersistSettings();
+    }
+
+    private void OnAppRenderModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressAppRenderModeSelectionEvents || AppRenderModeComboBox is null)
+        {
+            return;
+        }
+
+        var selectedMode = AppRenderingModeHelper.Normalize(
+            (AppRenderModeComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString());
+
+        if (string.Equals(_selectedAppRenderMode, selectedMode, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _selectedAppRenderMode = selectedMode;
         PersistSettings();
     }
 
@@ -2640,7 +2698,9 @@ public partial class MainWindow
     // --- AboutSettingsPage ---
     internal TextBlock AboutPanelTitleTextBlock => AboutSettingsPanel.FindControl<TextBlock>("AboutPanelTitleTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander AboutStartupSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutStartupSettingsExpander")!;
+    internal FluentAvalonia.UI.Controls.SettingsExpander AboutRenderModeSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutRenderModeSettingsExpander")!;
     internal ToggleSwitch AutoStartWithWindowsToggleSwitch => AboutSettingsPanel.FindControl<ToggleSwitch>("AutoStartWithWindowsToggleSwitch")!;
+    internal ComboBox AppRenderModeComboBox => AboutSettingsPanel.FindControl<ComboBox>("AppRenderModeComboBox")!;
     internal TextBlock VersionTextBlock => AboutSettingsPanel.FindControl<TextBlock>("VersionTextBlock")!;
     internal TextBlock CodeNameTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CodeNameTextBlock")!;
     internal TextBlock FontInfoTextBlock => AboutSettingsPanel.FindControl<TextBlock>("FontInfoTextBlock")!;

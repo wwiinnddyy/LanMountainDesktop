@@ -128,6 +128,7 @@ public partial class SettingsWindow
         snapshot.WeatherIconPackId = _weatherIconPackId;
         snapshot.WeatherNoTlsRequests = _weatherNoTlsRequests;
         snapshot.AutoStartWithWindows = _autoStartWithWindows;
+        snapshot.AppRenderMode = _selectedAppRenderMode;
         snapshot.AutoCheckUpdates = _autoCheckUpdates;
         snapshot.IncludePrereleaseUpdates = IncludePrereleaseUpdates;
         snapshot.UpdateChannel = IncludePrereleaseUpdates ? UpdateChannelPreview : UpdateChannelStable;

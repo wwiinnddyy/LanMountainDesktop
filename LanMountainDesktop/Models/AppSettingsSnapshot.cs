@@ -48,6 +48,8 @@ public sealed class AppSettingsSnapshot
 
     public bool AutoStartWithWindows { get; set; }
 
+    public string AppRenderMode { get; set; } = "Default";
+
     public bool AutoCheckUpdates { get; set; } = true;
 
     public bool IncludePrereleaseUpdates { get; set; }

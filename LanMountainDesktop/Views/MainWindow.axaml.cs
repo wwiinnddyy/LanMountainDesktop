@@ -167,6 +167,8 @@ public partial class MainWindow : Window
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private bool _suppressAutoStartToggleEvents;
+    private bool _suppressAppRenderModeSelectionEvents;
+    private string _selectedAppRenderMode = AppRenderingModeHelper.Default;
     private string _weatherSearchKeyword = string.Empty;
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
@@ -248,6 +250,7 @@ public partial class MainWindow : Window
 
         AutoStartWithWindowsToggleSwitch.Checked += OnAutoStartWithWindowsToggled;
         AutoStartWithWindowsToggleSwitch.Unchecked += OnAutoStartWithWindowsToggled;
+        AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
     }
 
     protected override void OnOpened(EventArgs e)

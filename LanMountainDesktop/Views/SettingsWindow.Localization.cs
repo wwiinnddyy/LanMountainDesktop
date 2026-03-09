@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Avalonia.Controls;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
 
@@ -126,6 +127,15 @@ public partial class SettingsWindow
         FontInfoTextBlock.Text = Lf("settings.about.font_format", "Font: {0}", AppFontName);
         AboutStartupSettingsExpander.Header = L("settings.about.startup_header", "Windows Startup");
         AboutStartupSettingsExpander.Description = L("settings.about.startup_desc", "Launch the app automatically when signing in to Windows.");
+        AboutRenderModeSettingsExpander.Header = L("settings.about.render_mode_header", "Rendering Mode");
+        AboutRenderModeSettingsExpander.Description = L(
+            "settings.about.render_mode_desc",
+            "Choose the rendering backend. Restart the app after changing this option. Unsupported modes fall back to software.");
+        SetAppRenderModeComboItemContent(AppRenderingModeHelper.Default, L("settings.about.render_mode.default", "Default"));
+        SetAppRenderModeComboItemContent(AppRenderingModeHelper.Software, L("settings.about.render_mode.software", "Software"));
+        SetAppRenderModeComboItemContent(AppRenderingModeHelper.AngleEgl, L("settings.about.render_mode.angle_egl", "angleEgl"));
+        SetAppRenderModeComboItemContent(AppRenderingModeHelper.Wgl, L("settings.about.render_mode.wgl", "WGL"));
+        SetAppRenderModeComboItemContent(AppRenderingModeHelper.Vulkan, L("settings.about.render_mode.vulkan", "Vulkan"));
 
         var placementItems = WallpaperPlacementComboBox.Items.OfType<ComboBoxItem>().ToList();
         if (placementItems.Count >= 5)
@@ -140,6 +150,19 @@ public partial class SettingsWindow
         ApplyUpdateLocalization();
         UpdateWallpaperDisplay();
         RenderLauncherHiddenItemsList();
+    }
+
+    private void SetAppRenderModeComboItemContent(string tag, string content)
+    {
+        var item = AppRenderModeComboBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(candidate =>
+                string.Equals(candidate.Tag?.ToString(), tag, StringComparison.OrdinalIgnoreCase));
+
+        if (item is not null)
+        {
+            item.Content = content;
+        }
     }
 
     private string GetLocalizedTimeZoneDisplayName(TimeZoneInfo timeZone)

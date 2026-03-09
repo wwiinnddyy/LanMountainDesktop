@@ -120,6 +120,7 @@ public partial class SettingsWindow : Window
     private bool _suppressGridInsetEvents;
     private bool _suppressStatusBarSpacingEvents;
     private bool _suppressAutoStartToggleEvents;
+    private bool _suppressAppRenderModeSelectionEvents;
     private bool _isUpdatingWallpaperPreviewLayout;
     private IBrush? _defaultDesktopBackground;
     private Bitmap? _wallpaperBitmap;
@@ -140,6 +141,7 @@ public partial class SettingsWindow : Window
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
+    private string _selectedAppRenderMode = AppRenderingModeHelper.Default;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
     private WeatherLocationMode _weatherLocationMode = WeatherLocationMode.CitySearch;
@@ -222,6 +224,7 @@ public partial class SettingsWindow : Window
         DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
         AutoStartWithWindowsToggleSwitch.Checked += OnAutoStartWithWindowsToggled;
         AutoStartWithWindowsToggleSwitch.Unchecked += OnAutoStartWithWindowsToggled;
+        AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
         Opened += OnWindowOpened;
     }
 
@@ -260,6 +263,7 @@ public partial class SettingsWindow : Window
         InitializeLocalization(snapshot.LanguageCode);
         InitializeWeatherSettings(snapshot);
         InitializeAutoStartWithWindowsSetting(snapshot);
+        InitializeAppRenderModeSetting(snapshot);
         InitializeUpdateSettings(snapshot);
         InitializeLauncherVisibilitySettings(launcherSnapshot);
         InitializeSettingsIcons();
