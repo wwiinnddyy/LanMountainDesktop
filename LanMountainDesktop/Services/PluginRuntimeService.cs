@@ -280,9 +280,22 @@ public sealed class PluginRuntimeService : IDisposable
     {
         var options = new PluginLoaderOptions();
         AddSharedAssembly(options, typeof(App).Assembly);
-        AddSharedAssembly(options, typeof(Application).Assembly);
-        AddSharedAssembly(options, typeof(Control).Assembly);
-        AddSharedAssembly(options, typeof(AvaloniaXamlLoader).Assembly);
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var assemblyName = assembly.GetName().Name;
+            if (string.IsNullOrWhiteSpace(assemblyName))
+            {
+                continue;
+            }
+
+            if (assemblyName.StartsWith("Avalonia", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(assemblyName, "MicroCom.Runtime", StringComparison.OrdinalIgnoreCase))
+            {
+                AddSharedAssembly(options, assembly);
+            }
+        }
+
         return options;
     }
 

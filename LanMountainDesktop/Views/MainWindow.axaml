@@ -104,7 +104,7 @@
                                 ClipToBounds="True"
                                 BorderThickness="0"
                                 PointerWheelChanged="OnDesktopPagesPointerWheelChanged">
-                            <Grid x:Name="SettingsContentPagesHost">
+                            <Grid>
                                 <Grid x:Name="DesktopPagesHost"
                                       HorizontalAlignment="Left"
                                       VerticalAlignment="Top">
@@ -439,7 +439,7 @@
                                       Padding="0,0,16,0"
                                       HorizontalScrollBarVisibility="Disabled"
                                       VerticalScrollBarVisibility="Auto">
-                            <Grid>
+                            <Grid x:Name="SettingsContentPagesHost">
                                     <pages:WallpaperSettingsPage x:Name="WallpaperSettingsPanel" IsVisible="True" />
 
                                 <pages:GridSettingsPage x:Name="GridSettingsPanel" IsVisible="False" />

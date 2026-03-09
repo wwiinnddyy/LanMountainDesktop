@@ -18,6 +18,9 @@ public interface IPluginContext
 
     bool TryGetProperty<T>(string key, out T? value);
 
+    void RegisterService<TService>(TService service)
+        where TService : class;
+
     void RegisterSettingsPage(PluginSettingsPageRegistration registration);
 
     void RegisterDesktopComponent(PluginDesktopComponentRegistration registration);

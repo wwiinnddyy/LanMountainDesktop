@@ -9,31 +9,27 @@ namespace LanMountainDesktop.SamplePlugin;
 
 internal sealed class SamplePluginSettingsView : UserControl
 {
-    private readonly DispatcherTimer _refreshTimer = new()
-    {
-        Interval = TimeSpan.FromSeconds(1)
-    };
-
     private readonly IPluginContext _context;
-    private readonly TextBlock _summaryTextBlock;
-    private readonly StackPanel _statusPanel;
+    private readonly SamplePluginRuntimeStateService _stateService;
+    private readonly SamplePluginClockService _clockService;
+    private readonly IPluginMessageBus _messageBus;
+    private readonly StackPanel _pluginInfoPanel = new() { Spacing = 8 };
+    private readonly StackPanel _capabilityPanel = new() { Spacing = 8 };
+    private readonly StackPanel _statusPanel = new() { Spacing = 10 };
+    private readonly List<IDisposable> _subscriptions = [];
 
     public SamplePluginSettingsView(IPluginContext context)
     {
         _context = context;
-        _summaryTextBlock = new TextBlock
-        {
-            Foreground = new SolidColorBrush(Color.Parse("#FFBAE6FD")),
-            TextWrapping = TextWrapping.Wrap
-        };
-        _statusPanel = new StackPanel
-        {
-            Spacing = 10
-        };
+        _stateService = context.GetService<SamplePluginRuntimeStateService>()
+            ?? throw new InvalidOperationException("SamplePluginRuntimeStateService is not available.");
+        _clockService = context.GetService<SamplePluginClockService>()
+            ?? throw new InvalidOperationException("SamplePluginClockService is not available.");
+        _messageBus = context.GetService<IPluginMessageBus>()
+            ?? throw new InvalidOperationException("IPluginMessageBus is not available.");
 
-        SamplePluginRuntimeStatus.MarkFrontendReady("Settings page rendered successfully.");
+        _stateService.MarkFrontendReady("Settings page is connected to plugin services and communication.");
 
-        _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
 
@@ -60,51 +56,110 @@ internal sealed class SamplePluginSettingsView : UserControl
                 {
                     new TextBlock
                     {
-                        Text = "Sample Plugin Runtime Status",
+                        Text = "Sample Plugin Capability Inspector",
                         FontSize = 22,
                         FontWeight = FontWeight.SemiBold,
                         Foreground = Brushes.White
                     },
-                    _summaryTextBlock,
-                    new Border
-                    {
-                        Background = new SolidColorBrush(Color.Parse("#14000000")),
-                        BorderBrush = new SolidColorBrush(Color.Parse("#3328B2FF")),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(14),
-                        Padding = new Thickness(14),
-                        Child = _statusPanel
-                    }
+                    CreateSection("Plugin Info", _pluginInfoPanel),
+                    CreateSection("Accessible Capabilities", _capabilityPanel),
+                    CreateSection("Live Runtime Status", _statusPanel)
                 }
             }
         };
 
-        RefreshStatuses();
+        RefreshView();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        RefreshStatuses();
-        _refreshTimer.Start();
+        SubscribeToPluginBus();
+        RefreshView();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _refreshTimer.Stop();
+        foreach (var subscription in _subscriptions)
+        {
+            subscription.Dispose();
+        }
+
+        _subscriptions.Clear();
     }
 
-    private void OnRefreshTimerTick(object? sender, EventArgs e)
+    private void SubscribeToPluginBus()
     {
-        RefreshStatuses();
+        if (_subscriptions.Count > 0)
+        {
+            return;
+        }
+
+        _subscriptions.Add(_messageBus.Subscribe<SamplePluginClockTickMessage>(_ =>
+            Dispatcher.UIThread.Post(RefreshView)));
+
+        _subscriptions.Add(_messageBus.Subscribe<SamplePluginStateChangedMessage>(_ =>
+            Dispatcher.UIThread.Post(RefreshView)));
     }
 
-    private void RefreshStatuses()
+    private void RefreshView()
     {
-        _summaryTextBlock.Text =
-            $"Plugin Id: {_context.Manifest.Id}\nVersion: {_context.Manifest.Version ?? "dev"}\nData Path: {_context.DataDirectory}";
+        var snapshot = _stateService.GetSnapshot();
+        RefreshPluginInfo(snapshot);
+        RefreshCapabilities();
+        RefreshStatuses(snapshot);
+    }
 
+    private void RefreshPluginInfo(SamplePluginRuntimeSnapshot snapshot)
+    {
+        _pluginInfoPanel.Children.Clear();
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Name", snapshot.Manifest.Name));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Id", snapshot.Manifest.Id));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Version", snapshot.Manifest.Version ?? "dev"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Author", snapshot.Manifest.Author ?? "(none)"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Description", snapshot.Manifest.Description ?? "(none)"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Plugin Directory", snapshot.PluginDirectory));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Data Directory", snapshot.DataDirectory));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Host Application", snapshot.HostApplicationName));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Host Version", snapshot.HostVersion));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("SDK API Version", snapshot.SdkApiVersion));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("State Service Resolved", (_context.GetService<SamplePluginRuntimeStateService>() is not null).ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Clock Service Resolved", (_context.GetService<SamplePluginClockService>() is not null).ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Message Bus Resolved", (_context.GetService<IPluginMessageBus>() is not null).ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Component Placed", snapshot.HasPlacedComponent ? "Yes" : "No"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Placed Count", snapshot.PlacedCount.ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Preview Count", snapshot.PreviewCount.ToString()));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            "Placement Ids",
+            snapshot.PlacementIds.Count == 0 ? "(none)" : string.Join(", ", snapshot.PlacementIds)));
+        _pluginInfoPanel.Children.Add(CreateInfoLine("Last Component Id", snapshot.LastComponentId ?? "(none)"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            "Last Cell Size",
+            snapshot.LastCellSize > 0 ? $"{snapshot.LastCellSize:F0}px" : "(unknown)"));
+        _pluginInfoPanel.Children.Add(CreateInfoLine(
+            "Clock Service Time",
+            _clockService.CurrentTime.LocalDateTime.ToString("HH:mm:ss")));
+    }
+
+    private void RefreshCapabilities()
+    {
+        var capabilities = _stateService.GetCapabilities(
+            _context,
+            _context.GetService<SamplePluginRuntimeStateService>() is not null,
+            _context.GetService<SamplePluginClockService>() is not null,
+            _context.GetService<IPluginMessageBus>() is not null);
+
+        _capabilityPanel.Children.Clear();
+        foreach (var capability in capabilities)
+        {
+            _capabilityPanel.Children.Add(CreateCapabilityCard(capability));
+        }
+    }
+
+    private void RefreshStatuses(SamplePluginRuntimeSnapshot snapshot)
+    {
         _statusPanel.Children.Clear();
-        foreach (var entry in SamplePluginRuntimeStatus.GetSnapshot())
+
+        foreach (var entry in snapshot.StatusEntries)
         {
             var palette = GetPalette(entry.State);
             _statusPanel.Children.Add(new Border
@@ -119,35 +174,7 @@ internal sealed class SamplePluginSettingsView : UserControl
                     Spacing = 4,
                     Children =
                     {
-                        new Grid
-                        {
-                            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-                            ColumnSpacing = 8,
-                            Children =
-                            {
-                                new Border
-                                {
-                                    Width = 10,
-                                    Height = 10,
-                                    CornerRadius = new CornerRadius(999),
-                                    Background = new SolidColorBrush(palette.Dot),
-                                    VerticalAlignment = VerticalAlignment.Center
-                                },
-                                new TextBlock
-                                {
-                                    Text = entry.Title,
-                                    FontSize = 15,
-                                    FontWeight = FontWeight.SemiBold,
-                                    Foreground = Brushes.White
-                                },
-                                new TextBlock
-                                {
-                                    Text = entry.Summary,
-                                    Foreground = new SolidColorBrush(Color.Parse("#FFD7F2FF")),
-                                    HorizontalAlignment = HorizontalAlignment.Right
-                                }
-                            }
-                        },
+                        CreateStatusHeader(entry, palette),
                         new TextBlock
                         {
                             Text = entry.Detail,
@@ -162,11 +189,133 @@ internal sealed class SamplePluginSettingsView : UserControl
                     }
                 }
             });
-
-            var row = (Grid)((StackPanel)((Border)_statusPanel.Children[^1]).Child!).Children[0];
-            Grid.SetColumn(row.Children[1], 1);
-            Grid.SetColumn(row.Children[2], 2);
         }
+    }
+
+    private Border CreateSection(string title, Control content)
+    {
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#14000000")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#3328B2FF")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14),
+            Child = new StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = title,
+                        FontSize = 16,
+                        FontWeight = FontWeight.SemiBold,
+                        Foreground = Brushes.White
+                    },
+                    content
+                }
+            }
+        };
+    }
+
+    private Control CreateInfoLine(string label, string value)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("180,*"),
+            ColumnSpacing = 10
+        };
+
+        var labelText = new TextBlock
+        {
+            Text = label,
+            Foreground = new SolidColorBrush(Color.Parse("#FFBAE6FD")),
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        };
+        var valueText = new TextBlock
+        {
+            Text = value,
+            Foreground = Brushes.White,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        grid.Children.Add(labelText);
+        grid.Children.Add(valueText);
+        Grid.SetColumn(valueText, 1);
+        return grid;
+    }
+
+    private Control CreateCapabilityCard(SamplePluginCapabilityItem item)
+    {
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#0F082F49")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#3338BDF8")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12, 10),
+            Child = new StackPanel
+            {
+                Spacing = 4,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = item.Title,
+                        Foreground = Brushes.White,
+                        FontWeight = FontWeight.SemiBold
+                    },
+                    new TextBlock
+                    {
+                        Text = item.Detail,
+                        Foreground = new SolidColorBrush(Color.Parse("#FFE0F2FE")),
+                        TextWrapping = TextWrapping.Wrap
+                    }
+                }
+            }
+        };
+    }
+
+    private static Control CreateStatusHeader(
+        SamplePluginStatusEntry entry,
+        (Color Background, Color Border, Color Dot) palette)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+            ColumnSpacing = 8
+        };
+
+        var dot = new Border
+        {
+            Width = 10,
+            Height = 10,
+            CornerRadius = new CornerRadius(999),
+            Background = new SolidColorBrush(palette.Dot),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var title = new TextBlock
+        {
+            Text = entry.Title,
+            FontSize = 15,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = Brushes.White
+        };
+        var summary = new TextBlock
+        {
+            Text = entry.Summary,
+            Foreground = new SolidColorBrush(Color.Parse("#FFD7F2FF")),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        grid.Children.Add(dot);
+        grid.Children.Add(title);
+        grid.Children.Add(summary);
+        Grid.SetColumn(title, 1);
+        Grid.SetColumn(summary, 2);
+        return grid;
     }
 
     private static (Color Background, Color Border, Color Dot) GetPalette(SamplePluginHealthState state)

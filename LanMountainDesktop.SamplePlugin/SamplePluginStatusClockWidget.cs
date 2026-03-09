@@ -9,34 +9,49 @@ namespace LanMountainDesktop.SamplePlugin;
 
 internal sealed class SamplePluginStatusClockWidget : Border
 {
-    private readonly DispatcherTimer _timer = new()
-    {
-        Interval = TimeSpan.FromSeconds(1)
-    };
-
     private readonly PluginDesktopComponentContext _context;
+    private readonly SamplePluginRuntimeStateService _stateService;
+    private readonly SamplePluginClockService _clockService;
+    private readonly IPluginMessageBus _messageBus;
     private readonly TextBlock _timeTextBlock;
-    private readonly TextBlock _titleTextBlock;
+    private readonly TextBlock _subtitleTextBlock;
     private readonly StackPanel _statusPanel;
+    private readonly Border _statusHost;
+    private readonly List<IDisposable> _subscriptions = [];
+    private string? _instanceId;
 
     public SamplePluginStatusClockWidget(PluginDesktopComponentContext context)
     {
         _context = context;
+        _stateService = context.GetService<SamplePluginRuntimeStateService>()
+            ?? throw new InvalidOperationException("SamplePluginRuntimeStateService is not available.");
+        _clockService = context.GetService<SamplePluginClockService>()
+            ?? throw new InvalidOperationException("SamplePluginClockService is not available.");
+        _messageBus = context.GetService<IPluginMessageBus>()
+            ?? throw new InvalidOperationException("IPluginMessageBus is not available.");
+
         _timeTextBlock = new TextBlock
         {
             Foreground = Brushes.White,
             FontWeight = FontWeight.Bold,
             HorizontalAlignment = HorizontalAlignment.Left
         };
-        _titleTextBlock = new TextBlock
+        _subtitleTextBlock = new TextBlock
         {
-            Text = "Plugin Status",
             Foreground = new SolidColorBrush(Color.Parse("#FFBFE9FF")),
-            HorizontalAlignment = HorizontalAlignment.Left
+            HorizontalAlignment = HorizontalAlignment.Left,
+            TextWrapping = TextWrapping.Wrap
         };
         _statusPanel = new StackPanel
         {
             Spacing = 8
+        };
+        _statusHost = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#1F082F49")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#5538BDF8")),
+            BorderThickness = new Thickness(1),
+            Child = _statusPanel
         };
 
         Background = new LinearGradientBrush
@@ -67,55 +82,59 @@ internal sealed class SamplePluginStatusClockWidget : Border
                     Children =
                     {
                         _timeTextBlock,
-                        _titleTextBlock
+                        _subtitleTextBlock
                     }
                 },
-                new Border
-                {
-                    Background = new SolidColorBrush(Color.Parse("#1F082F49")),
-                    BorderBrush = new SolidColorBrush(Color.Parse("#5538BDF8")),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(18),
-                    Padding = new Thickness(12),
-                    Child = _statusPanel
-                }
+                _statusHost
             }
         };
 
         Grid.SetRow(((Grid)Child).Children[1], 1);
 
-        _timer.Tick += OnTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
 
-        var placementText = string.IsNullOrWhiteSpace(context.PlacementId)
-            ? "Preview instance created."
-            : $"Widget created for placement {context.PlacementId}.";
-        SamplePluginRuntimeStatus.MarkFrontendReady("Widget frontend surface rendered successfully.");
-        SamplePluginRuntimeStatus.MarkComponentCreated($"{placementText} Baseline footprint: 4x4.");
-
-        RefreshClock();
+        RefreshClock(_clockService.CurrentTime);
+        UpdateSubtitle();
         RefreshStatusPanel();
         ApplyScale();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        RefreshClock();
+        if (string.IsNullOrWhiteSpace(_instanceId))
+        {
+            _instanceId = _stateService.RegisterComponentInstance(
+                _context.ComponentId,
+                _context.PlacementId,
+                _context.CellSize);
+        }
+
+        _stateService.MarkFrontendReady("Widget surface is connected to plugin services and communication.");
+        SubscribeToPluginBus();
+
+        RefreshClock(_clockService.CurrentTime);
+        UpdateSubtitle();
         RefreshStatusPanel();
-        _timer.Start();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        _timer.Stop();
-    }
+        foreach (var subscription in _subscriptions)
+        {
+            subscription.Dispose();
+        }
 
-    private void OnTimerTick(object? sender, EventArgs e)
-    {
-        RefreshClock();
-        RefreshStatusPanel();
+        _subscriptions.Clear();
+
+        if (string.IsNullOrWhiteSpace(_instanceId))
+        {
+            return;
+        }
+
+        _stateService.UnregisterComponentInstance(_instanceId);
+        _instanceId = null;
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -124,24 +143,49 @@ internal sealed class SamplePluginStatusClockWidget : Border
         RefreshStatusPanel();
     }
 
-    private void RefreshClock()
+    private void SubscribeToPluginBus()
     {
-        _timeTextBlock.Text = DateTime.Now.ToString("HH:mm:ss");
+        if (_subscriptions.Count > 0)
+        {
+            return;
+        }
+
+        _subscriptions.Add(_messageBus.Subscribe<SamplePluginClockTickMessage>(message =>
+            Dispatcher.UIThread.Post(() => RefreshClock(message.CurrentTime))));
+
+        _subscriptions.Add(_messageBus.Subscribe<SamplePluginStateChangedMessage>(_ =>
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateSubtitle();
+                RefreshStatusPanel();
+            })));
+    }
+
+    private void RefreshClock(DateTimeOffset currentTime)
+    {
+        _timeTextBlock.Text = currentTime.LocalDateTime.ToString("HH:mm:ss");
+    }
+
+    private void UpdateSubtitle()
+    {
+        var snapshot = _stateService.GetSnapshot();
+        _subtitleTextBlock.Text = string.IsNullOrWhiteSpace(_context.PlacementId)
+            ? $"Preview surface | placed: {snapshot.PlacedCount}"
+            : $"Placement {_context.PlacementId} | placed: {snapshot.PlacedCount}";
     }
 
     private void RefreshStatusPanel()
     {
         _statusPanel.Children.Clear();
 
+        var snapshot = _stateService.GetSnapshot();
         var basis = GetLayoutBasis();
-        var titleSize = Math.Clamp(basis * 0.072, 11, 16);
-        var detailSize = Math.Clamp(basis * 0.055, 10, 13);
+        var titleSize = Math.Clamp(basis * 0.068, 11, 16);
+        var detailSize = Math.Clamp(basis * 0.052, 9, 13);
 
-        foreach (var entry in SamplePluginRuntimeStatus.GetSnapshot())
+        foreach (var entry in snapshot.StatusEntries)
         {
             var palette = GetPalette(entry.State);
-            var summaryText = $"{entry.Summary} - {entry.UpdatedAt.LocalDateTime:HH:mm:ss}";
-
             _statusPanel.Children.Add(new Border
             {
                 Background = new SolidColorBrush(palette.Background),
@@ -151,6 +195,7 @@ internal sealed class SamplePluginStatusClockWidget : Border
                 Padding = new Thickness(10, 8),
                 Child = new Grid
                 {
+                    RowDefinitions = new RowDefinitions("Auto,Auto"),
                     ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
                     ColumnSpacing = 8,
                     Children =
@@ -173,12 +218,19 @@ internal sealed class SamplePluginStatusClockWidget : Border
                         },
                         new TextBlock
                         {
-                            Text = summaryText,
+                            Text = entry.Summary,
                             FontSize = detailSize,
                             Foreground = new SolidColorBrush(Color.Parse("#FFD7F2FF")),
                             HorizontalAlignment = HorizontalAlignment.Right,
                             TextAlignment = TextAlignment.Right,
                             VerticalAlignment = VerticalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = entry.Detail,
+                            FontSize = detailSize,
+                            Foreground = new SolidColorBrush(Color.Parse("#FFD7F2FF")),
+                            TextWrapping = TextWrapping.Wrap
                         }
                     }
                 }
@@ -187,6 +239,8 @@ internal sealed class SamplePluginStatusClockWidget : Border
             var row = (Grid)((Border)_statusPanel.Children[^1]).Child!;
             Grid.SetColumn(row.Children[1], 1);
             Grid.SetColumn(row.Children[2], 2);
+            Grid.SetColumnSpan(row.Children[3], 3);
+            Grid.SetRow(row.Children[3], 1);
         }
     }
 
@@ -196,7 +250,10 @@ internal sealed class SamplePluginStatusClockWidget : Border
         Padding = new Thickness(Math.Clamp(basis * 0.09, 16, 26));
         CornerRadius = new CornerRadius(Math.Clamp(basis * 0.14, 20, 34));
         _timeTextBlock.FontSize = Math.Clamp(basis * 0.22, 30, 58);
-        _titleTextBlock.FontSize = Math.Clamp(basis * 0.07, 12, 18);
+        _subtitleTextBlock.FontSize = Math.Clamp(basis * 0.062, 11, 17);
+        _statusHost.Padding = new Thickness(Math.Clamp(basis * 0.045, 10, 18));
+        _statusHost.CornerRadius = new CornerRadius(Math.Clamp(basis * 0.09, 14, 22));
+        _statusPanel.Spacing = Math.Clamp(basis * 0.024, 6, 10);
     }
 
     private double GetLayoutBasis()

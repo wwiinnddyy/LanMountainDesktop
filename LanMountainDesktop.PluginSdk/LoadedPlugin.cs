@@ -68,6 +68,15 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
             disposable.Dispose();
         }
 
+        if (Context is IAsyncDisposable asyncContext)
+        {
+            await asyncContext.DisposeAsync();
+        }
+        else if (Context is IDisposable disposableContext)
+        {
+            disposableContext.Dispose();
+        }
+
         LoadContext.Unload();
         GC.SuppressFinalize(this);
     }

@@ -5,39 +5,49 @@ namespace LanMountainDesktop.SamplePlugin;
 [PluginEntrance]
 public sealed class SamplePlugin : PluginBase, IDisposable
 {
-    private SamplePluginHeartbeatService? _heartbeatService;
+    private SamplePluginRuntimeStateService? _stateService;
+    private SamplePluginClockService? _clockService;
 
     public override void Initialize(IPluginContext context)
     {
         Directory.CreateDirectory(context.DataDirectory);
 
-        var hostName = context.TryGetProperty<string>("HostApplicationName", out var configuredHostName) &&
-                       !string.IsNullOrWhiteSpace(configuredHostName)
-            ? configuredHostName
-            : "UnknownHost";
+        var hostName = GetHostProperty(context, "HostApplicationName", "UnknownHost");
+        var hostVersion = GetHostProperty(context, "HostVersion", "UnknownVersion");
+        var sdkApiVersion = GetHostProperty(context, "PluginSdkApiVersion", "UnknownApiVersion");
+        var messageBus = context.GetService<IPluginMessageBus>()
+            ?? throw new InvalidOperationException("Plugin message bus is not available.");
 
-        var version = context.Manifest.Version ?? "dev";
-        SamplePluginRuntimeStatus.Reset(hostName, version, context.DataDirectory);
+        _stateService = new SamplePluginRuntimeStateService(
+            context.Manifest,
+            context.PluginDirectory,
+            context.DataDirectory,
+            hostName,
+            hostVersion,
+            sdkApiVersion,
+            messageBus);
+        context.RegisterService(_stateService);
 
-        var message =
-            $"[{DateTimeOffset.UtcNow:O}] {context.Manifest.Name} initialized in {hostName} (plugin version {version}).";
+        _clockService = new SamplePluginClockService(context.DataDirectory, _stateService, messageBus);
+        context.RegisterService(_clockService);
+        _stateService.AttachClockService(_clockService);
+
+        var logPath = Path.Combine(context.DataDirectory, "sample-plugin.log");
+        var initMessage =
+            $"[{DateTimeOffset.UtcNow:O}] {context.Manifest.Name} initialized in {hostName} (plugin version {context.Manifest.Version ?? "dev"}).";
 
         try
         {
-            File.AppendAllText(
-                Path.Combine(context.DataDirectory, "sample-plugin.log"),
-                message + Environment.NewLine);
-            SamplePluginRuntimeStatus.MarkBackendReady(
-                $"Plugin entry initialized successfully. Host: {hostName}; Version: {version}");
+            File.AppendAllText(logPath, initMessage + Environment.NewLine);
+            _stateService.MarkBackendReady($"Initialization log written to {logPath}.");
         }
         catch (Exception ex)
         {
-            SamplePluginRuntimeStatus.MarkBackendFaulted($"Initialization log write failed: {ex.Message}");
+            _stateService.MarkBackendFaulted($"Initialization log write failed: {ex.Message}");
             throw;
         }
 
-        _heartbeatService = new SamplePluginHeartbeatService(context.DataDirectory);
-        _heartbeatService.Start();
+        _clockService.Start();
 
         context.RegisterSettingsPage(new PluginSettingsPageRegistration(
             "status",
@@ -60,7 +70,15 @@ public sealed class SamplePlugin : PluginBase, IDisposable
 
     public void Dispose()
     {
-        _heartbeatService?.Dispose();
-        _heartbeatService = null;
+        _clockService?.Dispose();
+        _clockService = null;
+        _stateService = null;
+    }
+
+    private static string GetHostProperty(IPluginContext context, string key, string fallback)
+    {
+        return context.TryGetProperty<string>(key, out var value) && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : fallback;
     }
 }

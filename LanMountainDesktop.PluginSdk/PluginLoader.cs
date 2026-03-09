@@ -125,14 +125,16 @@ public sealed class PluginLoader
         IReadOnlyDictionary<string, object?>? properties)
     {
         PluginLoadContext? loadContext = null;
+        IPlugin? plugin = null;
+        PluginContext? context = null;
 
         try
         {
             loadContext = new PluginLoadContext(assemblyPath, _options.SharedAssemblyNames);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
             var pluginType = ResolvePluginType(assembly);
-            var plugin = CreatePluginInstance(pluginType);
-            var context = CreateContext(manifest, pluginDirectory, dataDirectory, services, properties);
+            plugin = CreatePluginInstance(pluginType);
+            context = CreateContext(manifest, pluginDirectory, dataDirectory, services, properties);
 
             plugin.Initialize(context);
             var settingsPages = context.GetSettingsPagesSnapshot();
@@ -153,6 +155,8 @@ public sealed class PluginLoader
         }
         catch (Exception ex)
         {
+            DisposeInstance(plugin);
+            DisposeInstance(context);
             loadContext?.Unload();
             return PluginLoadResult.Failure(sourcePath, manifest, ex);
         }
@@ -477,6 +481,33 @@ public sealed class PluginLoader
         return plugin;
     }
 
+    private static void DisposeInstance(object? instance)
+    {
+        if (instance is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (instance is IAsyncDisposable asyncDisposable)
+            {
+                asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                return;
+            }
+
+            if (instance is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+        catch (Exception disposeError)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[PluginLoader] Disposal of '{instance.GetType().FullName}' failed: {disposeError}");
+        }
+    }
+
     private static Type[] GetLoadableTypes(Assembly assembly)
     {
         try
@@ -500,12 +531,17 @@ public sealed class PluginLoader
         }
     }
 
-    private sealed class PluginContext : IPluginContext
+    private sealed class PluginContext : IPluginContext, IDisposable, IAsyncDisposable
     {
         private readonly Dictionary<string, PluginSettingsPageRegistration> _settingsPages =
             new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, PluginDesktopComponentRegistration> _desktopComponents =
             new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<Type, object> _registeredServices = [];
+        private readonly List<object> _serviceRegistrationOrder = [];
+        private readonly object _serviceGate = new();
+        private readonly IServiceProvider _hostServices;
+        private int _disposed;
 
         public PluginContext(
             PluginManifest manifest,
@@ -517,8 +553,12 @@ public sealed class PluginLoader
             Manifest = manifest;
             PluginDirectory = pluginDirectory;
             DataDirectory = dataDirectory;
-            Services = services;
+            _hostServices = services;
+            Services = new PluginCompositeServiceProvider(this);
             Properties = properties;
+
+            RegisterBuiltInService<IPluginContext>(this);
+            RegisterBuiltInService<IPluginMessageBus>(new PluginMessageBus());
         }
 
         public PluginManifest Manifest { get; }
@@ -550,9 +590,16 @@ public sealed class PluginLoader
             return false;
         }
 
+        public void RegisterService<TService>(TService service)
+            where TService : class
+        {
+            RegisterServiceCore(typeof(TService), service, allowOverride: false);
+        }
+
         public void RegisterSettingsPage(PluginSettingsPageRegistration registration)
         {
             ArgumentNullException.ThrowIfNull(registration);
+            ThrowIfDisposed();
 
             if (!_settingsPages.TryAdd(registration.Id, registration))
             {
@@ -564,6 +611,7 @@ public sealed class PluginLoader
         public void RegisterDesktopComponent(PluginDesktopComponentRegistration registration)
         {
             ArgumentNullException.ThrowIfNull(registration);
+            ThrowIfDisposed();
 
             if (!_desktopComponents.TryAdd(registration.ComponentId, registration))
             {
@@ -574,6 +622,7 @@ public sealed class PluginLoader
 
         public IReadOnlyList<PluginSettingsPageRegistration> GetSettingsPagesSnapshot()
         {
+            ThrowIfDisposed();
             return _settingsPages.Values
                 .OrderBy(page => page.SortOrder)
                 .ThenBy(page => page.Title, StringComparer.OrdinalIgnoreCase)
@@ -582,10 +631,269 @@ public sealed class PluginLoader
 
         public IReadOnlyList<PluginDesktopComponentRegistration> GetDesktopComponentsSnapshot()
         {
+            ThrowIfDisposed();
             return _desktopComponents.Values
                 .OrderBy(component => component.Category, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+        }
+
+        internal object? ResolveService(Type serviceType)
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return null;
+            }
+
+            if (serviceType == typeof(IServiceProvider))
+            {
+                return Services;
+            }
+
+            lock (_serviceGate)
+            {
+                if (_registeredServices.TryGetValue(serviceType, out var service))
+                {
+                    return service;
+                }
+
+                foreach (var registeredService in _registeredServices.Values)
+                {
+                    if (serviceType.IsInstanceOfType(registeredService))
+                    {
+                        return registeredService;
+                    }
+                }
+            }
+
+            return _hostServices.GetService(serviceType);
+        }
+
+        private void RegisterBuiltInService<TService>(TService service)
+            where TService : class
+        {
+            RegisterServiceCore(typeof(TService), service, allowOverride: true);
+        }
+
+        public void Dispose()
+        {
+            DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            object[] services;
+            lock (_serviceGate)
+            {
+                services = _serviceRegistrationOrder.ToArray();
+                _registeredServices.Clear();
+                _serviceRegistrationOrder.Clear();
+            }
+
+            _settingsPages.Clear();
+            _desktopComponents.Clear();
+
+            var disposedServices = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            for (var i = services.Length - 1; i >= 0; i--)
+            {
+                var service = services[i];
+                if (ReferenceEquals(service, this) || !disposedServices.Add(service))
+                {
+                    continue;
+                }
+
+                if (service is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync();
+                }
+                else if (service is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+        }
+
+        private void RegisterServiceCore(Type serviceType, object service, bool allowOverride)
+        {
+            ArgumentNullException.ThrowIfNull(serviceType);
+            ArgumentNullException.ThrowIfNull(service);
+            ThrowIfDisposed();
+
+            if (!serviceType.IsInstanceOfType(service))
+            {
+                throw new InvalidOperationException(
+                    $"Service instance '{service.GetType().FullName}' is not assignable to '{serviceType.FullName}'.");
+            }
+
+            lock (_serviceGate)
+            {
+                if (!allowOverride && _registeredServices.ContainsKey(serviceType))
+                {
+                    throw new InvalidOperationException(
+                        $"Plugin '{Manifest.Id}' already registered a service for '{serviceType.FullName}'.");
+                }
+
+                _registeredServices[serviceType] = service;
+                _serviceRegistrationOrder.Add(service);
+            }
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                throw new ObjectDisposedException(nameof(PluginContext));
+            }
+        }
+    }
+
+    private sealed class PluginCompositeServiceProvider : IServiceProvider
+    {
+        private readonly PluginContext _context;
+
+        public PluginCompositeServiceProvider(PluginContext context)
+        {
+            _context = context;
+        }
+
+        public object? GetService(Type serviceType)
+        {
+            ArgumentNullException.ThrowIfNull(serviceType);
+            return _context.ResolveService(serviceType);
+        }
+    }
+
+    private sealed class PluginMessageBus : IPluginMessageBus, IDisposable
+    {
+        private readonly Dictionary<Type, List<Subscription>> _subscriptions = [];
+        private readonly object _gate = new();
+        private int _disposed;
+
+        public IDisposable Subscribe<TMessage>(Action<TMessage> handler)
+        {
+            ArgumentNullException.ThrowIfNull(handler);
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                throw new ObjectDisposedException(nameof(PluginMessageBus));
+            }
+
+            var subscription = new Subscription(this, typeof(TMessage), message => handler((TMessage)message!));
+            lock (_gate)
+            {
+                if (!_subscriptions.TryGetValue(subscription.MessageType, out var handlers))
+                {
+                    handlers = [];
+                    _subscriptions[subscription.MessageType] = handlers;
+                }
+
+                handlers.Add(subscription);
+            }
+
+            return subscription;
+        }
+
+        public void Publish<TMessage>(TMessage message)
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            Subscription[] handlers;
+            lock (_gate)
+            {
+                if (!_subscriptions.TryGetValue(typeof(TMessage), out var subscriptions) || subscriptions.Count == 0)
+                {
+                    return;
+                }
+
+                handlers = subscriptions.ToArray();
+            }
+
+            foreach (var handler in handlers)
+            {
+                try
+                {
+                    handler.Invoke(message);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[PluginMessageBus] Handler for '{typeof(TMessage).FullName}' failed: {ex}");
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            lock (_gate)
+            {
+                _subscriptions.Clear();
+            }
+        }
+
+        private void Unsubscribe(Subscription subscription)
+        {
+            lock (_gate)
+            {
+                if (!_subscriptions.TryGetValue(subscription.MessageType, out var handlers))
+                {
+                    return;
+                }
+
+                handlers.Remove(subscription);
+                if (handlers.Count == 0)
+                {
+                    _subscriptions.Remove(subscription.MessageType);
+                }
+            }
+        }
+
+        private sealed class Subscription : IDisposable
+        {
+            private readonly PluginMessageBus _owner;
+            private int _disposed;
+
+            public Subscription(PluginMessageBus owner, Type messageType, Action<object?> handler)
+            {
+                _owner = owner;
+                MessageType = messageType;
+                Handler = handler;
+            }
+
+            public Type MessageType { get; }
+
+            public Action<object?> Handler { get; }
+
+            public void Invoke(object? message)
+            {
+                if (_disposed != 0)
+                {
+                    return;
+                }
+
+                Handler(message);
+            }
+
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                {
+                    return;
+                }
+
+                _owner.Unsubscribe(this);
+            }
         }
     }
 
