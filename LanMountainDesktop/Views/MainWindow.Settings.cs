@@ -2701,6 +2701,9 @@ public partial class MainWindow
     internal FluentAvalonia.UI.Controls.SettingsExpander AboutRenderModeSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutRenderModeSettingsExpander")!;
     internal ToggleSwitch AutoStartWithWindowsToggleSwitch => AboutSettingsPanel.FindControl<ToggleSwitch>("AutoStartWithWindowsToggleSwitch")!;
     internal ComboBox AppRenderModeComboBox => AboutSettingsPanel.FindControl<ComboBox>("AppRenderModeComboBox")!;
+    internal TextBlock CurrentRenderBackendLabelTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendLabelTextBlock")!;
+    internal TextBlock CurrentRenderBackendValueTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendValueTextBlock")!;
+    internal TextBlock CurrentRenderBackendImplementationTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendImplementationTextBlock")!;
     internal TextBlock VersionTextBlock => AboutSettingsPanel.FindControl<TextBlock>("VersionTextBlock")!;
     internal TextBlock CodeNameTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CodeNameTextBlock")!;
     internal TextBlock FontInfoTextBlock => AboutSettingsPanel.FindControl<TextBlock>("FontInfoTextBlock")!;

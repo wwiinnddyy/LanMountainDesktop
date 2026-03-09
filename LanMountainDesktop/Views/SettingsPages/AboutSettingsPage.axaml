@@ -43,6 +43,24 @@
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Window" />
                 </ui:SettingsExpander.IconSource>
+                <StackPanel Spacing="4"
+                            Margin="0,4,0,0">
+                    <TextBlock x:Name="CurrentRenderBackendLabelTextBlock"
+                               Text="Current actual backend"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    <TextBlock x:Name="CurrentRenderBackendValueTextBlock"
+                               Text="Current backend: Software"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    <TextBlock x:Name="CurrentRenderBackendImplementationTextBlock"
+                               Text="Runtime implementation is unavailable."
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                </StackPanel>
                 <ui:SettingsExpander.Footer>
                     <ComboBox x:Name="AppRenderModeComboBox"
                               MinWidth="180"

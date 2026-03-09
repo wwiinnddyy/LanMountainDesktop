@@ -101,39 +101,9 @@ public partial class App : Application
             return;
         }
 
-        if (TryStartCurrentProcess())
+        if (AppRestartService.TryRestartCurrentProcess())
         {
             desktop.Shutdown();
-        }
-    }
-
-    private static bool TryStartCurrentProcess()
-    {
-        try
-        {
-            var args = Environment.GetCommandLineArgs();
-            if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
-            {
-                return false;
-            }
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = args[0],
-                UseShellExecute = false
-            };
-
-            for (var i = 1; i < args.Length; i++)
-            {
-                startInfo.ArgumentList.Add(args[i]);
-            }
-
-            Process.Start(startInfo);
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 
