@@ -1,27 +1,21 @@
 # LanAirApp
 
-`LanAirApp` 是阑山桌面插件生态的对外发布工作区。
+## 中文
 
-这里集中放置：
-- 插件开发标准
-- 插件打包与构建工具
-- 插件开发与打包文档
-- 示例插件
+`LanAirApp` 是阑山桌面插件生态的对外工作区。这个目录是宿主仓库中的镜像副本，权威版本以独立 `LanAirApp` 仓库为准。
 
-目录结构：
-- `docs/`：插件开发文档、打包文档
-- `plugins/`：第一方插件项目，例如插件市场插件
-- `releases/`：已经打包完成、可直接分享与安装的 `.laapp` 插件包
-- `samples/`：示例插件，其中 `LanMountainDesktop.SamplePlugin` 是示例开发插件
-- `standards/`：插件标准文件与模板
-- `tools/`：插件打包与构建工具
+### 目录说明
 
-面向用户的安装流程：
-1. 将插件构建或打包为 `.laapp` 文件。
-2. 打开 `设置 -> 插件`。
-3. 点击 `打开 .laapp 插件包`。
-4. 选择插件包完成安装。
+- `docs/`：插件开发与打包文档。
+- `samples/`：示例插件与参考项目。
+- `standards/`：插件清单和目录结构约定。
+- `tools/`：插件打包与辅助工具。
 
-宿主侧的插件加载、安装、发现、解析与设置页接入逻辑，保留在 `LanMountainDesktop/plugins/`。
+### 与宿主的关系
 
-`LanMountainDesktop.PluginSdk` 仅作为插件开发 SDK 使用，提供 `IPlugin`、`IPluginContext`、清单模型与扩展注册接口。
+- 宿主程序只连接独立 `LanAirApp` 仓库中的官方市场索引。
+- 每个插件项目应在仓库根目录提供 `.laapp` 和 `README.md`。
+
+## English
+
+`LanAirApp` is the external-facing workspace for the LanMountainDesktop plugin ecosystem. This copy is only a mirror inside the host repository; the standalone `LanAirApp` repository remains the source of truth.

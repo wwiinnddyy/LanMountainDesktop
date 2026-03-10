@@ -1,23 +1,17 @@
-# AirAppMarket
+# AirApp Market 目录说明
 
-`airappmarket/` 是阑山桌面的官方插件市场源目录。
+## 中文
 
-当前阶段职责：
-- 提供官方插件市场索引 `index.json`
-- 提供索引 schema
-- 提供静态图标资产
-- 提供本地与 CI 使用的索引校验工具
+这个目录是阑山桌面仓库里遗留的市场原型目录，只用于历史参考，不再作为官方权威市场源。
 
-Bootstrap 方式：
-1. 用户先通过阑山桌面内置的 `设置 -> 插件 -> 打开 .laapp 插件包` 手动安装 `LanMountainDesktop.PluginMarketplace`。
-2. 市场插件启动后，会从这里的官方索引拉取插件列表。
-3. 后续插件安装与更新都通过市场插件完成。
+### 当前结论
 
-官方索引地址：
+- 官方市场源以独立 `LanAirApp` 仓库中的 `airappmarket/index.json` 为准
+- 阑山桌面程序应连接 `LanAirApp` 仓库，而不是以本目录为权威数据源
+- 如无特殊需要，不应继续向这里添加正式市场数据
 
-`https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/airappmarket/index.json`
+## English
 
-约束：
-- 这里只维护官方市场源，不做多源聚合。
-- 第一阶段不提供独立 GitHub Pages 页面。
-- 索引中的下载链接默认指向本仓库已提交的 `.laapp` 发布包。
+This directory is a legacy market prototype kept in the LanMountainDesktop repository for historical reference only.
+
+The authoritative market source now lives in the standalone `LanAirApp` repository.

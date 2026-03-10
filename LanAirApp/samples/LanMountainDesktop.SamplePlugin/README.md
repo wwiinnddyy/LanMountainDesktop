@@ -1,16 +1,9 @@
 # LanMountainDesktop.SamplePlugin
 
-这是阑山桌面的**示例开发插件**。
+## 中文
 
-它用于演示以下能力：
-- 插件入口与 `plugin.json` 清单
-- 插件服务注册
-- 插件设置页注册
-- 插件桌面组件注册
-- 插件内通信与状态更新
-- `.laapp` 打包与安装流程
-- 插件多语言资源组织方式
+这是阑山桌面的标准示例插件，用于演示插件清单、设置页、桌面组件、服务注册、本地化和 `.laapp` 打包流程。
 
-如果你要开发自己的插件，建议以这个目录为模板开始。
+## English
 
-这个目录仅用于示例开发与打包发布，不承载宿主应用内部的插件加载逻辑。
+This is the standard sample plugin used to demonstrate manifests, settings pages, desktop components, service registration, localization, and `.laapp` packaging.

@@ -1,9 +1,12 @@
-# Weather Background Assets
+# 天气背景资源署名
 
-Weather card background images are sourced from **Pexels** and used under the Pexels license:
-https://www.pexels.com/license/
+## 中文
 
-## Sources
+本目录中的天气背景图像主要来自 **Pexels**，并按 Pexels License 使用：
+
+- License: https://www.pexels.com/license/
+
+### 原始来源
 
 - `clear_sky.jpg`
   - https://www.pexels.com/photo/a-clear-blue-sky-with-few-clouds-on-a-sunny-day-29390199/
@@ -14,16 +17,24 @@ https://www.pexels.com/license/
 - `storm.jpg`
   - https://www.pexels.com/photo/sea-under-a-stormy-sky-4609228/
 
-## Derived Variants (for widget scene mapping)
+### 派生资源
 
-The following files are generated from the above base assets by color grading/brightness adjustments to match the ColorOS-like weather card style:
+以下文件由上述基础图片经过色彩、亮度或风格调整后生成，用于适配阑山桌面的天气组件视觉：
 
-- `clear_day.jpg` (from `clear_sky.jpg`)
-- `clear_night.jpg` (from `clear_sky.jpg`)
-- `cloudy_day.jpg` (from `clear_sky.jpg`)
-- `cloudy_night.jpg` (from `clear_sky.jpg`)
-- `rain_light.jpg` (from `rain.jpg`)
-- `rain_heavy.jpg` (from `rain.jpg`)
-- `storm_dark.jpg` (from `storm.jpg`)
-- `fog_haze.jpg` (from `storm.jpg`)
-- `snow_soft.jpg` (from `snow.jpg`)
+- `clear_day.jpg`
+- `clear_night.jpg`
+- `cloudy_day.jpg`
+- `cloudy_night.jpg`
+- `rain_light.jpg`
+- `rain_heavy.jpg`
+- `storm_dark.jpg`
+- `fog_haze.jpg`
+- `snow_soft.jpg`
+
+## English
+
+The weather background images in this directory are primarily sourced from **Pexels** and used under the Pexels License:
+
+- License: https://www.pexels.com/license/
+
+Derived variants in this repository are adjusted from the listed base assets for widget presentation.

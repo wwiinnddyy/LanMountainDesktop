@@ -1,11 +1,9 @@
-# 插件标准文件
+# 插件标准说明
 
-这里存放 LanMountainDesktop 插件开发所使用的标准模板与约定文件。
+## 中文
 
-当前标准：
-- 安装包扩展名：`.laapp`
-- 插件清单文件名：`plugin.json`
-- 多语言资源目录：`Localization/`
-- 建议内置语言文件：`zh-CN.json`、`en-US.json`
+本目录存放插件开发需要遵循的基础约定，包括 `.laapp`、`plugin.json`、`Localization/` 以及仓库根目录 README 和安装包等要求。
 
-创建新插件时，建议优先参考本目录中的模板文件。
+## English
+
+This directory stores the baseline conventions for plugin development, including `.laapp`, `plugin.json`, `Localization/`, and repository-root deliverables.

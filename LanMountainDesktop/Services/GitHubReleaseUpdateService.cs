@@ -242,6 +242,23 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         }
     }
 
+    public async Task<GitHubReleaseInfo?> GetReleaseByTagAsync(
+        string tagName,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(tagName))
+        {
+            return null;
+        }
+
+        var url =
+            $"https://api.github.com/repos/{_owner}/{_repo}/releases/tags/{Uri.EscapeDataString(tagName.Trim())}";
+        var responseText = await GetResponseTextAsync(url, cancellationToken);
+
+        using var document = JsonDocument.Parse(responseText);
+        return ParseRelease(document.RootElement);
+    }
+
     private async Task<GitHubReleaseInfo?> GetLatestStableReleaseAsync(CancellationToken cancellationToken)
     {
         var url = $"https://api.github.com/repos/{_owner}/{_repo}/releases/latest";

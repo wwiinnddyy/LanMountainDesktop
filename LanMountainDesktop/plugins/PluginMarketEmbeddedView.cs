@@ -27,6 +27,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private readonly PluginRuntimeService _runtime;
     private readonly AirAppMarketIndexService _indexService;
     private readonly AirAppMarketInstallService _installService;
+    private readonly AirAppMarketReadmeService _readmeService;
     private readonly Version? _hostVersion;
 
     private readonly TextBox _searchTextBox;
@@ -38,7 +39,10 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private AirAppMarketIndexDocument? _document;
     private AirAppMarketPluginEntry? _selectedPlugin;
     private Dictionary<string, PluginCatalogEntry> _installedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _readmeContents = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _readmeErrors = new(StringComparer.OrdinalIgnoreCase);
     private string _marketSourceDisplay = AirAppMarketDefaults.DefaultIndexUrl;
+    private string? _loadingReadmePluginId;
     private bool _isRefreshing;
     private bool _isInstalling;
     private bool _hasLoadedOnce;
@@ -49,6 +53,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         var dataDirectory = Path.Combine(AppContext.BaseDirectory, "Data", "AirAppMarket");
         _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(dataDirectory));
         _installService = new AirAppMarketInstallService(runtime, dataDirectory);
+        _readmeService = new AirAppMarketReadmeService();
         _hostVersion = typeof(App).Assembly.GetName().Version;
 
         _searchTextBox = new TextBox
@@ -114,6 +119,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
     public void Dispose()
     {
+        _readmeService.Dispose();
         _installService.Dispose();
         _indexService.Dispose();
     }
@@ -223,6 +229,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
             SetStatus(statusMessage, result.Source == AirAppMarketLoadSource.Cache ? WarningBrush : SuccessBrush);
             RebuildSurface();
+            await EnsureReadmeLoadedAsync(_selectedPlugin);
         }
         finally
         {
@@ -245,6 +252,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         BuildPluginList(filteredPlugins);
         BuildDetailPanel();
+        _ = EnsureReadmeLoadedAsync(_selectedPlugin);
     }
 
     private List<AirAppMarketPluginEntry> GetFilteredPlugins()
@@ -372,10 +380,11 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             }
         };
 
-        button.Click += (_, _) =>
+        button.Click += async (_, _) =>
         {
             _selectedPlugin = plugin;
             RebuildSurface();
+            await EnsureReadmeLoadedAsync(plugin);
         };
 
         return button;
@@ -454,11 +463,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
                 CreateInfoRow(T("market.detail.min_host_version", "最低宿主版本"), plugin.MinHostVersion),
                 CreateInfoRow(T("market.detail.installed_version", "当前已安装版本"), installedPlugin?.Manifest.Version ?? T("market.detail.not_installed", "未安装")),
                 CreateInfoRow(T("market.detail.market_source", "市场源"), _marketSourceDisplay),
+                CreateInfoRow(T("market.detail.project", "Project"), plugin.ProjectUrl),
                 CreateInfoRow(T("market.detail.homepage", "主页"), plugin.HomepageUrl),
                 CreateInfoRow(T("market.detail.repository", "仓库"), plugin.RepositoryUrl),
                 new TextBlock
                 {
-                    Text = T("market.detail.release_notes", "发布说明"),
+                    Text = T("market.detail.readme", "README"),
                     FontSize = 18,
                     FontWeight = FontWeight.SemiBold
                 },
@@ -469,7 +479,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
                     Padding = new Thickness(14),
                     Child = new TextBlock
                     {
-                        Text = plugin.ReleaseNotes,
+                        Text = GetReadmeContent(plugin),
                         TextWrapping = TextWrapping.Wrap
                     }
                 }
@@ -538,6 +548,63 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             _isInstalling = false;
             BuildDetailPanel();
         }
+    }
+
+    private async Task EnsureReadmeLoadedAsync(AirAppMarketPluginEntry? plugin)
+    {
+        if (plugin is null ||
+            _readmeContents.ContainsKey(plugin.Id) ||
+            string.Equals(_loadingReadmePluginId, plugin.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _loadingReadmePluginId = plugin.Id;
+        _readmeErrors.Remove(plugin.Id);
+        BuildDetailPanel();
+
+        try
+        {
+            var readme = await _readmeService.LoadAsync(plugin);
+            _readmeContents[plugin.Id] = string.IsNullOrWhiteSpace(readme)
+                ? T("market.detail.readme_empty", "README is empty.")
+                : readme.Trim();
+        }
+        catch (Exception ex)
+        {
+            _readmeErrors[plugin.Id] = ex.Message;
+        }
+        finally
+        {
+            _loadingReadmePluginId = null;
+            if (string.Equals(_selectedPlugin?.Id, plugin.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                BuildDetailPanel();
+            }
+        }
+    }
+
+    private string GetReadmeContent(AirAppMarketPluginEntry plugin)
+    {
+        if (_readmeContents.TryGetValue(plugin.Id, out var readme))
+        {
+            return readme;
+        }
+
+        if (_readmeErrors.TryGetValue(plugin.Id, out var error))
+        {
+            return F(
+                "market.detail.readme_error_format",
+                "README could not be loaded: {0}",
+                error);
+        }
+
+        if (string.Equals(_loadingReadmePluginId, plugin.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return T("market.detail.readme_loading", "Loading README...");
+        }
+
+        return plugin.ReleaseNotes;
     }
 
     private AirAppMarketPluginEntry? ResolveSelectedPlugin(

@@ -1,75 +1,51 @@
-﻿# Desktop Packaging Guide
+# 桌面端打包指南
 
-## Prerequisites
-- Install `.NET SDK 10`
-- Windows installer build only:
-  - Install `Inno Setup 6` (`ISCC.exe`)
+## 中文
 
-## Local packaging commands
+本指南说明阑山桌面的本地打包和 CI 打包流程。
 
-### Windows installer (`win-x64`)
+### 前置条件
+
+- 安装 .NET SDK 10
+- Windows 安装包需要 Inno Setup 6（`ISCC.exe`）
+
+### 本地打包命令
+
+#### Windows 安装包
+
 ```powershell
 .\scripts\package.ps1 -RuntimeIdentifier win-x64 -Version 1.0.1
 ```
 
-Output:
-- Published files: `artifacts/publish/win-x64`
-- Installer: `artifacts/installer`
+#### Linux 包
 
-### Linux package (`linux-x64`)
 ```powershell
 pwsh ./scripts/package.ps1 -RuntimeIdentifier linux-x64 -Version 1.0.1
 ```
 
-Output:
-- Published files: `artifacts/publish/linux-x64`
-- Zip package: `artifacts/packages/LanMountainDesktop-1.0.1-linux-x64.zip`
+#### macOS 包
 
-### macOS package (`osx-x64`)
 ```powershell
 pwsh ./scripts/package.ps1 -RuntimeIdentifier osx-x64 -Version 1.0.1
 ```
 
-Output:
-- Published files: `artifacts/publish/osx-x64`
-- Zip package: `artifacts/packages/LanMountainDesktop-1.0.1-osx-x64.zip`
+### 产物位置
 
-## Optional script flags
-```powershell
-# Publish only (skip Windows installer step)
-.\scripts\package.ps1 -RuntimeIdentifier win-x64 -SkipInstaller
+- 发布目录：`artifacts/publish/<rid>`
+- 安装包或压缩包：`artifacts/installer` 或 `artifacts/packages`
 
-# Publish only (skip Linux/macOS zip package step)
-pwsh ./scripts/package.ps1 -RuntimeIdentifier linux-x64 -SkipArchive
-```
+### CI 流程
 
-## Runtime dependency notes
-- Linux build does not bundle a native `libvlc` package from NuGet.
-  - Install VLC runtime on target machine, for example:
-    - Ubuntu/Debian: `sudo apt install vlc libvlc-dev`
-- macOS packaging target in CI is currently `osx-x64`.
+- 工作流文件：`.github/workflows/windows-ci.yml`
+- 日常构建会验证桌面端可编译
+- 手动触发或 `v*` 标签可生成正式包并上传到 Release
 
-## CI workflow
-- Workflow file: `.github/workflows/windows-ci.yml`
-- Workflow name: `Desktop CI`
+## English
 
-Jobs:
-- `Validate Build (Windows)` runs on every push and pull request.
-- Package flow runs on manual trigger or `v*` tag push:
-  - `Resolve Package Version` (single shared version source)
-  - `Package (Windows)` (`win-x64` installer)
-  - `Package (Linux)` (`linux-x64` zip)
-  - `Package (macOS)` (`osx-x64` zip)
-- On `v*` tags, `Attach Artifacts to GitHub Release` uploads Windows/Linux/macOS packages to the release.
+This guide covers local packaging and CI packaging for LanMountainDesktop.
 
-### Trigger manual packaging
-1. Open GitHub Actions.
-2. Choose `Desktop CI`.
-3. Click `Run workflow`.
-4. Optional: set `version` input, for example `1.0.1`.
+### Key points
 
-### Trigger by tag
-```powershell
-git tag v1.0.1
-git push origin v1.0.1
-```
+- use `scripts/package.ps1` with the target runtime identifier
+- Windows installer requires Inno Setup
+- CI can publish artifacts and attach them to GitHub Releases

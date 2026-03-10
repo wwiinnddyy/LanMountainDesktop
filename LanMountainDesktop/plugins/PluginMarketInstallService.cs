@@ -14,6 +14,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
 {
     private readonly PluginRuntimeService _runtime;
     private readonly HttpClient _httpClient;
+    private readonly AirAppMarketReleaseResolverService _releaseResolverService;
     private readonly string _downloadsDirectory;
 
     public AirAppMarketInstallService(PluginRuntimeService runtime, string dataDirectory)
@@ -25,6 +26,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             Timeout = TimeSpan.FromMinutes(2)
         };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-PluginMarketplace/1.0");
+        _releaseResolverService = new AirAppMarketReleaseResolverService(_httpClient);
     }
 
     public async Task<AirAppMarketInstallResult> InstallAsync(
@@ -40,7 +42,9 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
         try
         {
-            if (AirAppMarketDefaults.TryResolveWorkspaceFile(plugin.DownloadUrl, out var localPackagePath))
+            var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, cancellationToken);
+
+            if (AirAppMarketDefaults.TryResolveWorkspaceFile(resolvedDownloadUrl, out var localPackagePath))
             {
                 await using var sourceStream = File.OpenRead(localPackagePath);
                 await using var destinationStream = File.Create(downloadPath);
@@ -49,7 +53,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             else
             {
                 using var response = await _httpClient.GetAsync(
-                    plugin.DownloadUrl,
+                    resolvedDownloadUrl,
                     HttpCompletionOption.ResponseHeadersRead,
                     cancellationToken);
                 response.EnsureSuccessStatusCode();

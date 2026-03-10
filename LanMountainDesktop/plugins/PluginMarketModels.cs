@@ -13,11 +13,25 @@ internal static class AirAppMarketDefaults
     public const string DefaultIndexUrl =
         "https://raw.githubusercontent.com/wwiinnddyy/LanAirApp/main/airappmarket/index.json";
 
-    private const string RawGitHubLanAirAppPathPrefix = "/wwiinnddyy/LanAirApp/main/";
+    public static string BuildGitHubReleaseDownloadUrl(
+        string owner,
+        string repositoryName,
+        string releaseTag,
+        string assetName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(owner);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(releaseTag);
+        ArgumentException.ThrowIfNullOrWhiteSpace(assetName);
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"https://github.com/{owner.Trim()}/{repositoryName.Trim()}/releases/download/{Uri.EscapeDataString(releaseTag.Trim())}/{Uri.EscapeDataString(assetName.Trim())}");
+    }
 
     public static string? TryGetWorkspaceIndexPath()
     {
-        var repositoryRoot = TryGetWorkspaceLanAirAppRepositoryRoot();
+        var repositoryRoot = TryGetWorkspaceRepositoryRoot("LanAirApp");
         if (repositoryRoot is null)
         {
             return null;
@@ -31,17 +45,24 @@ internal static class AirAppMarketDefaults
     {
         localPath = string.Empty;
 
-        var repositoryRoot = TryGetWorkspaceLanAirAppRepositoryRoot();
-        if (repositoryRoot is null ||
-            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            !string.Equals(uri.Host, "raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase) ||
-            !uri.AbsolutePath.StartsWith(RawGitHubLanAirAppPathPrefix, StringComparison.OrdinalIgnoreCase))
+        string repositoryName;
+        string relativePath;
+
+        if (TryParseGitHubReleaseDownloadUrl(url, out repositoryName, out var releaseAssetName))
+        {
+            relativePath = releaseAssetName;
+        }
+        else if (!TryParseRawGitHubUrl(url, out repositoryName, out relativePath))
         {
             return false;
         }
 
-        var relativePath = Uri.UnescapeDataString(uri.AbsolutePath[RawGitHubLanAirAppPathPrefix.Length..])
-            .Replace('/', Path.DirectorySeparatorChar);
+        var repositoryRoot = TryGetWorkspaceRepositoryRoot(repositoryName);
+        if (repositoryRoot is null)
+        {
+            return false;
+        }
+
         var candidatePath = Path.GetFullPath(Path.Combine(repositoryRoot, relativePath));
         if (!File.Exists(candidatePath))
         {
@@ -52,13 +73,39 @@ internal static class AirAppMarketDefaults
         return true;
     }
 
-    private static string? TryGetWorkspaceLanAirAppRepositoryRoot()
+    public static bool TryParseGitHubRepositoryUrl(
+        string? url,
+        out string owner,
+        out string repositoryName)
+    {
+        owner = string.Empty;
+        repositoryName = string.Empty;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            !string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length != 2)
+        {
+            return false;
+        }
+
+        owner = segments[0];
+        repositoryName = segments[1];
+        return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repositoryName);
+    }
+
+    private static string? TryGetWorkspaceRepositoryRoot(string repositoryName)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            var candidate = Path.Combine(current.FullName, "LanAirApp");
-            if (File.Exists(Path.Combine(candidate, "airappmarket", "index.json")))
+            var candidate = Path.Combine(current.FullName, repositoryName);
+            if (Directory.Exists(candidate))
             {
                 return candidate;
             }
@@ -67,6 +114,60 @@ internal static class AirAppMarketDefaults
         }
 
         return null;
+    }
+
+    private static bool TryParseRawGitHubUrl(
+        string url,
+        out string repositoryName,
+        out string relativePath)
+    {
+        repositoryName = string.Empty;
+        relativePath = string.Empty;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            !string.Equals(uri.Host, "raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length < 4)
+        {
+            return false;
+        }
+
+        repositoryName = segments[1];
+        relativePath = Path.Combine(segments[3..]).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        return !string.IsNullOrWhiteSpace(repositoryName) && !string.IsNullOrWhiteSpace(relativePath);
+    }
+
+    private static bool TryParseGitHubReleaseDownloadUrl(
+        string url,
+        out string repositoryName,
+        out string assetName)
+    {
+        repositoryName = string.Empty;
+        assetName = string.Empty;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            !string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length != 6 ||
+            !string.Equals(segments[2], "releases", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(segments[3], "download", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        repositoryName = segments[1];
+        assetName = Uri.UnescapeDataString(segments[5]);
+        return !string.IsNullOrWhiteSpace(repositoryName) && !string.IsNullOrWhiteSpace(assetName);
     }
 }
 
@@ -193,6 +294,24 @@ internal sealed class AirAppMarketIndexDocument
         return normalized;
     }
 
+    internal static string NormalizeReleaseTag(string? value, string propertyName, string sourceName)
+    {
+        var normalized = RequireValue(value, propertyName, sourceName);
+        if (!normalized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' declares invalid release tag '{normalized}' for '{propertyName}'. Expected format 'v1.2.3'.");
+        }
+
+        if (!TryParseVersion(normalized[1..], out _))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' declares invalid release tag '{normalized}' for '{propertyName}'.");
+        }
+
+        return normalized;
+    }
+
     internal static void EnsureUrl(string url, string propertyName, string sourceName)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
@@ -201,6 +320,24 @@ internal sealed class AirAppMarketIndexDocument
             throw new InvalidOperationException(
                 $"Market index '{sourceName}' declares invalid URL '{url}' for '{propertyName}'.");
         }
+    }
+
+    internal static string NormalizeGitHubRepositoryUrl(
+        string url,
+        string propertyName,
+        string sourceName)
+    {
+        EnsureUrl(url, propertyName, sourceName);
+
+        if (!AirAppMarketDefaults.TryParseGitHubRepositoryUrl(url, out var owner, out var repositoryName))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' declares invalid GitHub repository url '{url}' for '{propertyName}'.");
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"https://github.com/{owner}/{repositoryName}");
     }
 
     internal static bool TryParseVersion(string? value, out Version? version)
@@ -260,6 +397,14 @@ internal sealed class AirAppMarketPluginEntry
 
     public string IconUrl { get; init; } = string.Empty;
 
+    public string ReleaseTag { get; init; } = string.Empty;
+
+    public string ReleaseAssetName { get; init; } = string.Empty;
+
+    public string ProjectUrl { get; init; } = string.Empty;
+
+    public string ReadmeUrl { get; init; } = string.Empty;
+
     public string HomepageUrl { get; init; } = string.Empty;
 
     public string RepositoryUrl { get; init; } = string.Empty;
@@ -271,6 +416,10 @@ internal sealed class AirAppMarketPluginEntry
     public DateTimeOffset UpdatedAt { get; init; }
 
     public string ReleaseNotes { get; init; } = string.Empty;
+
+    public bool HasReleaseDownloadMetadata =>
+        !string.IsNullOrWhiteSpace(ReleaseTag) &&
+        !string.IsNullOrWhiteSpace(ReleaseAssetName);
 
     public AirAppMarketPluginEntry ValidateAndNormalize(string sourceName)
     {
@@ -298,6 +447,14 @@ internal sealed class AirAppMarketPluginEntry
         var normalizedIconUrl = AirAppMarketIndexDocument.NormalizeValue(IconUrl)
             ?? throw new InvalidOperationException(
                 $"Market index '{sourceName}' is missing required property '{nameof(IconUrl)}'.");
+        var normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeValue(ReleaseTag);
+        var normalizedReleaseAssetName = AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName);
+        var normalizedProjectUrl = AirAppMarketIndexDocument.NormalizeValue(ProjectUrl)
+            ?? throw new InvalidOperationException(
+                $"Market index '{sourceName}' is missing required property '{nameof(ProjectUrl)}'.");
+        var normalizedReadmeUrl = AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl)
+            ?? throw new InvalidOperationException(
+                $"Market index '{sourceName}' is missing required property '{nameof(ReadmeUrl)}'.");
         var normalizedHomepageUrl = AirAppMarketIndexDocument.NormalizeValue(HomepageUrl)
             ?? throw new InvalidOperationException(
                 $"Market index '{sourceName}' is missing required property '{nameof(HomepageUrl)}'.");
@@ -307,8 +464,30 @@ internal sealed class AirAppMarketPluginEntry
 
         AirAppMarketIndexDocument.EnsureUrl(normalizedDownloadUrl, nameof(DownloadUrl), sourceName);
         AirAppMarketIndexDocument.EnsureUrl(normalizedIconUrl, nameof(IconUrl), sourceName);
+        normalizedProjectUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
+            normalizedProjectUrl,
+            nameof(ProjectUrl),
+            sourceName);
+        normalizedRepositoryUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
+            normalizedRepositoryUrl,
+            nameof(RepositoryUrl),
+            sourceName);
+        AirAppMarketIndexDocument.EnsureUrl(normalizedReadmeUrl, nameof(ReadmeUrl), sourceName);
         AirAppMarketIndexDocument.EnsureUrl(normalizedHomepageUrl, nameof(HomepageUrl), sourceName);
-        AirAppMarketIndexDocument.EnsureUrl(normalizedRepositoryUrl, nameof(RepositoryUrl), sourceName);
+
+        if (string.IsNullOrWhiteSpace(normalizedReleaseTag) != string.IsNullOrWhiteSpace(normalizedReleaseAssetName))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' must declare both '{nameof(ReleaseTag)}' and '{nameof(ReleaseAssetName)}' together for plugin '{Id}'.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedReleaseTag))
+        {
+            normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeReleaseTag(
+                normalizedReleaseTag,
+                nameof(ReleaseTag),
+                sourceName);
+        }
 
         if (PackageSizeBytes <= 0)
         {
@@ -339,6 +518,10 @@ internal sealed class AirAppMarketPluginEntry
             Sha256 = normalizedSha,
             PackageSizeBytes = PackageSizeBytes,
             IconUrl = normalizedIconUrl,
+            ReleaseTag = normalizedReleaseTag ?? string.Empty,
+            ReleaseAssetName = normalizedReleaseAssetName ?? string.Empty,
+            ProjectUrl = normalizedProjectUrl,
+            ReadmeUrl = normalizedReadmeUrl,
             HomepageUrl = normalizedHomepageUrl,
             RepositoryUrl = normalizedRepositoryUrl,
             Tags = normalizedTags,
