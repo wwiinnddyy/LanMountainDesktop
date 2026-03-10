@@ -13,6 +13,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
 internal sealed class AirAppMarketInstallService : IDisposable
 {
     private readonly PluginRuntimeService _runtime;
+    private readonly PluginsInstallHelperClient _helperClient = new();
     private readonly HttpClient _httpClient;
     private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
@@ -89,7 +90,28 @@ internal sealed class AirAppMarketInstallService : IDisposable
                     $"SHA-256 mismatch. Expected {plugin.Sha256}, actual {actualHash}.");
             }
 
-            var manifest = _runtime.InstallPluginPackage(downloadPath);
+            PluginManifest manifest;
+            if (OperatingSystem.IsWindows())
+            {
+                var helperResult = await _helperClient.InstallPackageAsync(
+                    downloadPath,
+                    _runtime.PluginsDirectory,
+                    cancellationToken);
+                if (!helperResult.Success || string.IsNullOrWhiteSpace(helperResult.InstalledPackagePath))
+                {
+                    return new AirAppMarketInstallResult(
+                        false,
+                        null,
+                        helperResult.ErrorMessage ?? "Plugins install helper failed.");
+                }
+
+                manifest = _runtime.RegisterInstalledPluginPackage(helperResult.InstalledPackagePath);
+            }
+            else
+            {
+                manifest = _runtime.InstallPluginPackage(downloadPath);
+            }
+
             AppLogger.Info(
                 "PluginMarket",
                 $"Install staged successfully. PluginId='{manifest.Id}'; InstalledName='{manifest.Name}'; PackagePath='{downloadPath}'.");

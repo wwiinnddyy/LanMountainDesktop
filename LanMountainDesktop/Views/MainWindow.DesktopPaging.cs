@@ -1195,11 +1195,22 @@ public partial class MainWindow
 
         var restoreButton = new Button
         {
-            Content = L("settings.launcher.restore_button", "Unhide"),
-            MinWidth = 110,
-            Padding = new Thickness(12, 6),
+            Width = 36,
+            Height = 36,
+            Padding = new Thickness(0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
             Tag = new LauncherHiddenItemToken(hiddenItem.Kind, hiddenItem.Key)
         };
+        restoreButton.Content = new FluentIcons.Avalonia.Fluent.SymbolIcon
+        {
+            Symbol = FluentIcons.Common.Symbol.Eye,
+            IconVariant = FluentIcons.Common.IconVariant.Regular,
+            FontSize = 18,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        ToolTip.SetTip(restoreButton, L("settings.launcher.restore_button", "Unhide"));
         restoreButton.Click += OnRestoreLauncherHiddenItemClick;
 
         return new SettingsExpanderItem

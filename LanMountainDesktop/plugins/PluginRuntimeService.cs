@@ -196,6 +196,14 @@ public sealed class PluginRuntimeService : IDisposable
         }
     }
 
+    public PluginManifest RegisterInstalledPluginPackage(string packagePath)
+    {
+        lock (_packageMutationGate)
+        {
+            return RegisterInstalledPluginPackageCore(packagePath);
+        }
+    }
+
     public bool DeleteInstalledPlugin(string pluginId)
     {
         lock (_packageMutationGate)
@@ -286,6 +294,25 @@ public sealed class PluginRuntimeService : IDisposable
             $"Package staged. PluginId='{manifest.Id}'; Destination='{destinationPath}'; ReplacedExisting={replacedExisting}.");
 
         return new PluginPackageInstallResult(manifest, replacedExisting, RestartRequired: true);
+    }
+
+    private PluginManifest RegisterInstalledPluginPackageCore(string packagePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
+
+        var fullPackagePath = Path.GetFullPath(packagePath);
+        if (!File.Exists(fullPackagePath))
+        {
+            throw new FileNotFoundException($"Plugin package '{fullPackagePath}' was not found.", fullPackagePath);
+        }
+
+        var manifest = ReadManifestFromPackage(fullPackagePath);
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Registering externally installed package. PluginId='{manifest.Id}'; Source='{fullPackagePath}'.");
+        UpdateCatalogAfterPackageInstall(manifest, fullPackagePath);
+        PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+        return manifest;
     }
 
     public void Dispose()

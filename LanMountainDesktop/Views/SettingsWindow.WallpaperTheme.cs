@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,6 +13,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LibVLCSharp.Shared;
@@ -157,7 +159,7 @@ public partial class SettingsWindow
         {
             DesktopWallpaperLayer.Background = Brushes.Transparent;
             WallpaperPreviewViewport.Background = GetThemeDefaultDesktopBackground();
-            PlayVideoWallpaper(_wallpaperVideoPath);
+            SyncVideoWallpaperPreviewPlayback();
             return;
         }
 
@@ -173,6 +175,36 @@ public partial class SettingsWindow
         var placement = GetSelectedWallpaperPlacement();
         DesktopWallpaperLayer.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, false);
         WallpaperPreviewViewport.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, true);
+    }
+
+    private void SyncVideoWallpaperPreviewPlayback()
+    {
+        var shouldPlay =
+            _wallpaperMediaType == WallpaperMediaType.Video &&
+            !string.IsNullOrWhiteSpace(_wallpaperVideoPath) &&
+            WallpaperSettingsPanel.IsVisible;
+
+        if (!shouldPlay)
+        {
+            if (_previewVideoWallpaperPlayer?.IsPlaying == true)
+            {
+                StopPreviewVideoCapture(clearSnapshot: false);
+            }
+
+            WallpaperPreviewVideoImage.IsVisible = WallpaperPreviewVideoImage.Source is not null && WallpaperSettingsPanel.IsVisible;
+            return;
+        }
+
+        if (WallpaperPreviewVideoImage.Source is not null)
+        {
+            WallpaperPreviewVideoImage.IsVisible = true;
+            return;
+        }
+
+        if (_previewVideoWallpaperMedia is null || _previewVideoSnapshotPending)
+        {
+            PlayVideoWallpaper(_wallpaperVideoPath!);
+        }
     }
 
     private void UpdateWallpaperDisplay()
@@ -417,11 +449,239 @@ public partial class SettingsWindow
     private void EnsureVideoWallpaperPlayers()
     {
         Core.Initialize();
-        _libVlc ??= new LibVLC();
-        _previewVideoWallpaperPlayer ??= new MediaPlayer(_libVlc);
-        if (WallpaperPreviewVideoView is not null)
+        _libVlc ??= new LibVLC("--quiet");
+        if (_previewVideoWallpaperPlayer is null)
         {
-            WallpaperPreviewVideoView.MediaPlayer = _previewVideoWallpaperPlayer;
+            _previewVideoWallpaperPlayer = new MediaPlayer(_libVlc)
+            {
+                EnableHardwareDecoding = false
+            };
+        }
+    }
+
+    private void EnsurePreviewVideoFrameRefreshTimer()
+    {
+        if (_previewVideoFrameRefreshTimer is not null)
+        {
+            return;
+        }
+
+        _previewVideoFrameRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(33)
+        };
+        _previewVideoFrameRefreshTimer.Tick += OnPreviewVideoFrameRefreshTimerTick;
+    }
+
+    private void StartPreviewVideoFrameRefreshTimer()
+    {
+        EnsurePreviewVideoFrameRefreshTimer();
+        if (_previewVideoFrameRefreshTimer?.IsEnabled == false)
+        {
+            _previewVideoFrameRefreshTimer.Start();
+        }
+    }
+
+    private void StopPreviewVideoFrameRefreshTimer()
+    {
+        if (_previewVideoFrameRefreshTimer?.IsEnabled == true)
+        {
+            _previewVideoFrameRefreshTimer.Stop();
+        }
+    }
+
+    private void OnPreviewVideoFrameRefreshTimerTick(object? sender, EventArgs e)
+    {
+        PushPreviewVideoFrameToWallpaperImage();
+    }
+
+    private void StopPreviewVideoCapture(bool clearSnapshot)
+    {
+        WallpaperPreviewVideoImage.IsVisible = false;
+        _previewVideoWallpaperPlayer?.Stop();
+        StopPreviewVideoFrameRefreshTimer();
+        _previewVideoWallpaperMedia?.Dispose();
+        _previewVideoWallpaperMedia = null;
+        _previewVideoSnapshotPending = false;
+
+        if (clearSnapshot)
+        {
+            ReleasePreviewVideoRendererResources();
+        }
+    }
+
+    private bool ConfigurePreviewVideoRenderer()
+    {
+        if (_previewVideoWallpaperPlayer is null)
+        {
+            return false;
+        }
+
+        var hostWidth = Math.Max(1, WallpaperPreviewViewport.Bounds.Width);
+        var hostHeight = Math.Max(1, WallpaperPreviewViewport.Bounds.Height);
+        var pixelWidth = Math.Max(1, (int)Math.Round(hostWidth * RenderScaling));
+        var pixelHeight = Math.Max(1, (int)Math.Round(hostHeight * RenderScaling));
+        const int maxPixelCount = 1280 * 720;
+        var pixelCount = (long)pixelWidth * pixelHeight;
+        if (pixelCount > maxPixelCount)
+        {
+            var scale = Math.Sqrt((double)maxPixelCount / pixelCount);
+            pixelWidth = Math.Max(1, (int)Math.Round(pixelWidth * scale));
+            pixelHeight = Math.Max(1, (int)Math.Round(pixelHeight * scale));
+        }
+
+        var pitch = pixelWidth * 4;
+        var bufferSize = pitch * pixelHeight;
+        if (bufferSize <= 0)
+        {
+            return false;
+        }
+
+        if (pixelWidth == _previewVideoFrameWidth &&
+            pixelHeight == _previewVideoFrameHeight &&
+            _previewVideoFrameBufferPtr != IntPtr.Zero &&
+            _previewVideoBitmap is not null)
+        {
+            return true;
+        }
+
+        ReleasePreviewVideoRendererResources();
+
+        try
+        {
+            _previewVideoFrameWidth = pixelWidth;
+            _previewVideoFrameHeight = pixelHeight;
+            _previewVideoFramePitch = pitch;
+            _previewVideoFrameBufferSize = bufferSize;
+            _previewVideoFrameBufferPtr = Marshal.AllocHGlobal(_previewVideoFrameBufferSize);
+            _previewVideoStagingBuffer = new byte[_previewVideoFrameBufferSize];
+            _previewVideoBitmap = new WriteableBitmap(
+                new PixelSize(_previewVideoFrameWidth, _previewVideoFrameHeight),
+                new Vector(96, 96),
+                PixelFormat.Bgra8888,
+                AlphaFormat.Opaque);
+            EnsurePreviewVideoCallbacks();
+            _previewVideoWallpaperPlayer.SetVideoCallbacks(
+                _previewVideoLockCallback!,
+                _previewVideoUnlockCallback!,
+                _previewVideoDisplayCallback!);
+            _previewVideoWallpaperPlayer.SetVideoFormat(
+                "RV32",
+                (uint)_previewVideoFrameWidth,
+                (uint)_previewVideoFrameHeight,
+                (uint)_previewVideoFramePitch);
+            WallpaperPreviewVideoImage.Source = _previewVideoBitmap;
+            return true;
+        }
+        catch
+        {
+            ReleasePreviewVideoRendererResources();
+            return false;
+        }
+    }
+
+    private void EnsurePreviewVideoCallbacks()
+    {
+        _previewVideoLockCallback ??= OnPreviewVideoFrameLock;
+        _previewVideoUnlockCallback ??= OnPreviewVideoFrameUnlock;
+        _previewVideoDisplayCallback ??= OnPreviewVideoFrameDisplay;
+    }
+
+    private IntPtr OnPreviewVideoFrameLock(IntPtr opaque, IntPtr planes)
+    {
+        Monitor.Enter(_previewVideoFrameSync);
+        if (_previewVideoFrameBufferPtr == IntPtr.Zero)
+        {
+            Marshal.WriteIntPtr(planes, IntPtr.Zero);
+            Monitor.Exit(_previewVideoFrameSync);
+            return IntPtr.Zero;
+        }
+
+        Marshal.WriteIntPtr(planes, _previewVideoFrameBufferPtr);
+        return IntPtr.Zero;
+    }
+
+    private void OnPreviewVideoFrameUnlock(IntPtr opaque, IntPtr picture, IntPtr planes)
+    {
+        if (Monitor.IsEntered(_previewVideoFrameSync))
+        {
+            Monitor.Exit(_previewVideoFrameSync);
+        }
+    }
+
+    private void OnPreviewVideoFrameDisplay(IntPtr opaque, IntPtr picture)
+    {
+        Interlocked.Exchange(ref _previewVideoFrameDirtyFlag, 1);
+    }
+
+    private void PushPreviewVideoFrameToWallpaperImage()
+    {
+        if (Interlocked.Exchange(ref _previewVideoFrameDirtyFlag, 0) == 0)
+        {
+            return;
+        }
+
+        if (_previewVideoBitmap is null ||
+            _previewVideoStagingBuffer is null ||
+            _previewVideoFrameBufferPtr == IntPtr.Zero ||
+            _previewVideoFrameBufferSize <= 0)
+        {
+            return;
+        }
+
+        lock (_previewVideoFrameSync)
+        {
+            if (_previewVideoFrameBufferPtr == IntPtr.Zero)
+            {
+                return;
+            }
+
+            Marshal.Copy(_previewVideoFrameBufferPtr, _previewVideoStagingBuffer, 0, _previewVideoFrameBufferSize);
+        }
+
+        using var framebuffer = _previewVideoBitmap.Lock();
+        var rows = Math.Min(framebuffer.Size.Height, _previewVideoFrameHeight);
+        var bytesPerRow = Math.Min(framebuffer.RowBytes, _previewVideoFramePitch);
+        for (var row = 0; row < rows; row++)
+        {
+            var sourceOffset = row * _previewVideoFramePitch;
+            var destinationPtr = IntPtr.Add(framebuffer.Address, row * framebuffer.RowBytes);
+            Marshal.Copy(_previewVideoStagingBuffer, sourceOffset, destinationPtr, bytesPerRow);
+        }
+
+        if (!ReferenceEquals(WallpaperPreviewVideoImage.Source, _previewVideoBitmap))
+        {
+            WallpaperPreviewVideoImage.Source = _previewVideoBitmap;
+        }
+
+        if (_previewVideoSnapshotPending)
+        {
+            _previewVideoSnapshotPending = false;
+            WallpaperPreviewVideoImage.IsVisible = WallpaperSettingsPanel.IsVisible;
+            StopPreviewVideoCapture(clearSnapshot: false);
+            WallpaperPreviewVideoImage.IsVisible = WallpaperSettingsPanel.IsVisible;
+        }
+    }
+
+    private void ReleasePreviewVideoRendererResources()
+    {
+        Interlocked.Exchange(ref _previewVideoFrameDirtyFlag, 0);
+        WallpaperPreviewVideoImage.Source = null;
+        _previewVideoBitmap?.Dispose();
+        _previewVideoBitmap = null;
+        _previewVideoStagingBuffer = null;
+        _previewVideoFrameWidth = 0;
+        _previewVideoFrameHeight = 0;
+        _previewVideoFramePitch = 0;
+        _previewVideoFrameBufferSize = 0;
+
+        lock (_previewVideoFrameSync)
+        {
+            if (_previewVideoFrameBufferPtr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_previewVideoFrameBufferPtr);
+                _previewVideoFrameBufferPtr = IntPtr.Zero;
+            }
         }
     }
 
@@ -437,7 +697,14 @@ public partial class SettingsWindow
         try
         {
             EnsureVideoWallpaperPlayers();
-            if (_previewVideoWallpaperPlayer is null || _libVlc is null || WallpaperPreviewVideoView is null)
+            if (_previewVideoWallpaperPlayer is null || _libVlc is null)
+            {
+                _wallpaperStatus = L("settings.wallpaper.video_player_unavailable", "Video player is unavailable.");
+                StopVideoWallpaper();
+                return;
+            }
+
+            if (!ConfigurePreviewVideoRenderer())
             {
                 _wallpaperStatus = L("settings.wallpaper.video_player_unavailable", "Video player is unavailable.");
                 StopVideoWallpaper();
@@ -447,8 +714,10 @@ public partial class SettingsWindow
             _previewVideoWallpaperMedia?.Dispose();
             _previewVideoWallpaperMedia = new Media(_libVlc, new Uri(videoPath));
             _previewVideoWallpaperMedia.AddOption(":input-repeat=65535");
+            _previewVideoSnapshotPending = true;
+            WallpaperPreviewVideoImage.IsVisible = false;
             _previewVideoWallpaperPlayer.Play(_previewVideoWallpaperMedia);
-            WallpaperPreviewVideoView.IsVisible = true;
+            StartPreviewVideoFrameRefreshTimer();
         }
         catch (Exception ex)
         {
@@ -459,14 +728,7 @@ public partial class SettingsWindow
 
     private void StopVideoWallpaper()
     {
-        if (WallpaperPreviewVideoView is not null)
-        {
-            WallpaperPreviewVideoView.IsVisible = false;
-        }
-
-        _previewVideoWallpaperPlayer?.Stop();
-        _previewVideoWallpaperMedia?.Dispose();
-        _previewVideoWallpaperMedia = null;
+        StopPreviewVideoCapture(clearSnapshot: true);
     }
 
     private void OnRecommendedColorClick(object? sender, RoutedEventArgs e)

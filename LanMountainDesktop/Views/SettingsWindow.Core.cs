@@ -29,6 +29,8 @@ public partial class SettingsWindow
         _previewVideoWallpaperPlayer = null;
         _previewVideoWallpaperMedia?.Dispose();
         _previewVideoWallpaperMedia = null;
+        _previewVideoFrameRefreshTimer?.Stop();
+        _previewVideoFrameRefreshTimer = null;
         _libVlc?.Dispose();
         _libVlc = null;
 
@@ -254,6 +256,7 @@ public partial class SettingsWindow
         }
 
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+        SyncVideoWallpaperPreviewPlayback();
     }
 
     private void PersistSettings()

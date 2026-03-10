@@ -124,21 +124,21 @@ public partial class MainWindow : Window
     private LibVLC? _libVlc;
     private MediaPlayer? _videoWallpaperPlayer;
     private Media? _videoWallpaperMedia;
-    private MediaPlayer? _previewVideoWallpaperPlayer;
-    private Media? _previewVideoWallpaperMedia;
     private readonly object _desktopVideoFrameSync = new();
     private MediaPlayer.LibVLCVideoLockCb? _desktopVideoLockCallback;
     private MediaPlayer.LibVLCVideoUnlockCb? _desktopVideoUnlockCallback;
     private MediaPlayer.LibVLCVideoDisplayCb? _desktopVideoDisplayCallback;
+    private DispatcherTimer? _desktopVideoFrameRefreshTimer;
     private IntPtr _desktopVideoFrameBufferPtr;
     private byte[]? _desktopVideoStagingBuffer;
     private WriteableBitmap? _desktopVideoBitmap;
+    private WriteableBitmap? _wallpaperPreviewSnapshotBitmap;
     private int _desktopVideoFrameWidth;
     private int _desktopVideoFrameHeight;
     private int _desktopVideoFramePitch;
     private int _desktopVideoFrameBufferSize;
     private int _desktopVideoFrameDirtyFlag;
-    private int _desktopVideoFrameUiRefreshScheduledFlag;
+    private bool _wallpaperPreviewSnapshotPending;
     private string? _wallpaperPath;
     private string _wallpaperStatus = "Current background uses solid color.";
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
@@ -384,15 +384,15 @@ public partial class MainWindow : Window
     {
         PersistSettings();
         StopVideoWallpaper();
-        _previewVideoWallpaperMedia?.Dispose();
-        _previewVideoWallpaperMedia = null;
-        _previewVideoWallpaperPlayer?.Dispose();
-        _previewVideoWallpaperPlayer = null;
         DisposeLauncherResources();
         _videoWallpaperMedia?.Dispose();
         _videoWallpaperMedia = null;
         _videoWallpaperPlayer?.Dispose();
         _videoWallpaperPlayer = null;
+        _desktopVideoFrameRefreshTimer?.Stop();
+        _desktopVideoFrameRefreshTimer = null;
+        _wallpaperPreviewSnapshotBitmap?.Dispose();
+        _wallpaperPreviewSnapshotBitmap = null;
         _libVlc?.Dispose();
         _libVlc = null;
         if (_weatherDataService is IDisposable weatherServiceDisposable)

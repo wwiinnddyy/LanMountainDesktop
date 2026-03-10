@@ -6,7 +6,6 @@
              xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:ic="using:FluentIcons.Avalonia.Fluent"
              xmlns:comp="using:LanMountainDesktop.Views.Components"
-             xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage">
     <Grid x:Name="WallpaperSettingsPanel"
@@ -37,11 +36,12 @@
                         CornerRadius="12"
                         Background="#30111827">
                     <Grid>
-                        <vlc:VideoView x:Name="WallpaperPreviewVideoView"
-                                       IsVisible="False"
-                                       IsHitTestVisible="False"
-                                       HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Stretch" />
+                        <Image x:Name="WallpaperPreviewVideoImage"
+                               IsVisible="False"
+                               IsHitTestVisible="False"
+                               Stretch="UniformToFill"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Stretch" />
 
                         <Grid x:Name="WallpaperPreviewGrid"
                               HorizontalAlignment="Center"

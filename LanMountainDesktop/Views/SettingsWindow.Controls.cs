@@ -1,7 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using LibVLCSharp.Avalonia;
 namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow
@@ -14,7 +13,7 @@ public partial class SettingsWindow
     internal Border WallpaperPreviewHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewHost")!;
     internal Border WallpaperPreviewFrame => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewFrame")!;
     internal Border WallpaperPreviewViewport => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewViewport")!;
-    internal LibVLCSharp.Avalonia.VideoView? WallpaperPreviewVideoView => WallpaperSettingsPanel.FindControl<LibVLCSharp.Avalonia.VideoView>("WallpaperPreviewVideoView");
+    internal Image WallpaperPreviewVideoImage => WallpaperSettingsPanel.FindControl<Image>("WallpaperPreviewVideoImage")!;
     internal Grid WallpaperPreviewGrid => WallpaperSettingsPanel.FindControl<Grid>("WallpaperPreviewGrid")!;
     internal Border WallpaperPreviewTopStatusBarHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewTopStatusBarHost")!;
     internal StackPanel WallpaperPreviewTopStatusComponentsPanel => WallpaperSettingsPanel.FindControl<StackPanel>("WallpaperPreviewTopStatusComponentsPanel")!;
