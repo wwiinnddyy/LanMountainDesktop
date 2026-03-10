@@ -69,6 +69,7 @@ public partial class SettingsWindow
         AddSettingsNavItem(SettingsSecondaryNavHost, "Update", Symbol.ArrowSync, "Update");
         AddSettingsNavItem(SettingsSecondaryNavHost, "About", Symbol.Info, "About");
         AddSettingsNavItem(SettingsSecondaryNavHost, "Plugins", Symbol.PuzzlePiece, "Plugins");
+        AddSettingsNavItem(SettingsSecondaryNavHost, "PluginMarket", Symbol.PuzzlePiece, "Plugin Market");
     }
 
     private void OnSettingsNavItemClick(object? sender, RoutedEventArgs e)
@@ -229,11 +230,22 @@ public partial class SettingsWindow
         AboutSettingsPanel.IsVisible = tag == "About";
         LauncherSettingsPanel.IsVisible = tag == "Launcher";
         PluginSettingsPanel.IsVisible = tag == "Plugins";
+        PluginMarketSettingsPanel.IsVisible = tag == "PluginMarket";
         UpdatePluginSettingsPageVisibility(tag);
 
         if (tag == "Launcher")
         {
             RenderLauncherHiddenItemsList();
+        }
+
+        if (tag == "Plugins")
+        {
+            PluginSettingsPanel.RefreshFromRuntime();
+        }
+
+        if (tag == "PluginMarket")
+        {
+            PluginMarketSettingsPanel.RefreshFromRuntime();
         }
 
         if (tag == "Grid")

@@ -115,7 +115,8 @@ public partial class MainWindow
             UpdateSettingsPanel is null ||
             LauncherSettingsPanel is null ||
             AboutSettingsPanel is null ||
-            PluginSettingsPanel is null)
+            PluginSettingsPanel is null ||
+            PluginMarketSettingsPanel is null)
         {
             return;
         }
@@ -133,11 +134,22 @@ public partial class MainWindow
         AboutSettingsPanel.IsVisible = tag == "About";
         LauncherSettingsPanel.IsVisible = tag == "Launcher";
         PluginSettingsPanel.IsVisible = tag == "Plugins";
+        PluginMarketSettingsPanel.IsVisible = tag == "PluginMarket";
         UpdatePluginSettingsPageVisibility(tag);
 
         if (tag == "Launcher")
         {
             RenderLauncherHiddenItemsList();
+        }
+
+        if (tag == "Plugins")
+        {
+            PluginSettingsPanel.RefreshFromRuntime();
+        }
+
+        if (tag == "PluginMarket")
+        {
+            PluginMarketSettingsPanel.RefreshFromRuntime();
         }
 
         if (tag == "Grid")

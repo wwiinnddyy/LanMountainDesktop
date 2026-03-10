@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="960"
+             d:DesignHeight="1000"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PluginMarketSettingsPage">
+
+    <StackPanel x:Name="PluginMarketPanel"
+                Spacing="16">
+        <TextBlock x:Name="PluginMarketPanelTitleTextBlock"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Text="Plugin Market" />
+
+        <TextBlock x:Name="PluginMarketPanelSubtitleTextBlock"
+                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Browse plugins from the official LanAirApp source and stage installs." />
+
+        <ContentControl x:Name="PluginMarketContentHost" />
+    </StackPanel>
+</UserControl>

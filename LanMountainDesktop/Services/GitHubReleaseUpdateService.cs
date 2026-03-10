@@ -45,6 +45,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
     private readonly string _owner;
     private readonly string _repo;
     private readonly HttpClient _httpClient;
+    private readonly ResumableDownloadService _downloadService;
     private readonly bool _ownsHttpClient;
 
     public GitHubReleaseUpdateService(
@@ -68,6 +69,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             _httpClient = httpClient;
             _ownsHttpClient = false;
         }
+
+        _downloadService = new ResumableDownloadService(_httpClient);
 
         if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
         {
@@ -187,59 +190,20 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             return new UpdateDownloadResult(false, null, "Destination file path is empty.");
         }
 
-        try
-        {
-            var directory = Path.GetDirectoryName(destinationFilePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+        var progressAdapter = progress is null
+            ? null
+            : new Progress<DownloadProgressInfo>(info => progress.Report(info.Progress));
 
-            using var response = await _httpClient.GetAsync(
-                asset.BrowserDownloadUrl,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+        var result = await _downloadService.DownloadAsync(
+            asset.BrowserDownloadUrl,
+            destinationFilePath,
+            new DownloadOptions(ExpectedSizeBytes: asset.SizeBytes > 0 ? asset.SizeBytes : null),
+            progressAdapter,
+            cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                return new UpdateDownloadResult(
-                    false,
-                    null,
-                    $"HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
-            }
-
-            var contentLength = response.Content.Headers.ContentLength ??
-                                (asset.SizeBytes > 0 ? asset.SizeBytes : -1);
-
-            await using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            await using var destinationStream = File.Create(destinationFilePath);
-
-            var buffer = new byte[81920];
-            long totalRead = 0;
-            int read;
-            while ((read = await sourceStream.ReadAsync(buffer, cancellationToken)) > 0)
-            {
-                await destinationStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-                totalRead += read;
-
-                if (contentLength > 0)
-                {
-                    progress?.Report(Math.Clamp(totalRead / (double)contentLength, 0d, 1d));
-                }
-            }
-
-            progress?.Report(1d);
-
-            return new UpdateDownloadResult(true, destinationFilePath, null);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return new UpdateDownloadResult(false, null, ex.Message);
-        }
+        return result.Success
+            ? new UpdateDownloadResult(true, result.FilePath ?? destinationFilePath, null)
+            : new UpdateDownloadResult(false, null, result.ErrorMessage);
     }
 
     public async Task<GitHubReleaseInfo?> GetReleaseByTagAsync(

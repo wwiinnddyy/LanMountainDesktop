@@ -14,6 +14,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
 {
     private readonly PluginRuntimeService _runtime;
     private readonly HttpClient _httpClient;
+    private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
     private readonly string _downloadsDirectory;
 
@@ -26,6 +27,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             Timeout = TimeSpan.FromMinutes(2)
         };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-PluginMarketplace/1.0");
+        _downloadService = new ResumableDownloadService(_httpClient);
         _releaseResolverService = new AirAppMarketReleaseResolverService(_httpClient);
     }
 
@@ -46,21 +48,27 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
             if (AirAppMarketDefaults.TryResolveWorkspaceFile(resolvedDownloadUrl, out var localPackagePath))
             {
-                await using var sourceStream = File.OpenRead(localPackagePath);
-                await using var destinationStream = File.Create(downloadPath);
-                await sourceStream.CopyToAsync(destinationStream, cancellationToken);
+                var localCopyResult = await _downloadService.DownloadAsync(
+                    localPackagePath,
+                    downloadPath,
+                    new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes),
+                    cancellationToken: cancellationToken);
+                if (!localCopyResult.Success)
+                {
+                    return new AirAppMarketInstallResult(false, null, localCopyResult.ErrorMessage);
+                }
             }
             else
             {
-                using var response = await _httpClient.GetAsync(
+                var downloadResult = await _downloadService.DownloadAsync(
                     resolvedDownloadUrl,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken);
-                response.EnsureSuccessStatusCode();
-
-                await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                await using var destinationStream = File.Create(downloadPath);
-                await responseStream.CopyToAsync(destinationStream, cancellationToken);
+                    downloadPath,
+                    new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes),
+                    cancellationToken: cancellationToken);
+                if (!downloadResult.Success)
+                {
+                    return new AirAppMarketInstallResult(false, null, downloadResult.ErrorMessage);
+                }
             }
 
             await using var hashStream = File.OpenRead(downloadPath);

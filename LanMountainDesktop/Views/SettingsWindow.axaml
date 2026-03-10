@@ -253,6 +253,7 @@
                                     <pages:LauncherSettingsPage x:Name="LauncherSettingsPanel" IsVisible="False" />
                                     <pages:AboutSettingsPage x:Name="AboutSettingsPanel" IsVisible="False" />
                                     <pages:PluginSettingsPage x:Name="PluginSettingsPanel" IsVisible="False" />
+                                    <pages:PluginMarketSettingsPage x:Name="PluginMarketSettingsPanel" IsVisible="False" />
                                 </Grid>
                             </ScrollViewer>
                         </Border>

@@ -74,6 +74,7 @@ public partial class SettingsWindow
         SetSettingsNavItemLabel(GetSettingsNavItem("About"), L("settings.nav.about", "About"));
         SetSettingsNavItemLabel(GetSettingsNavItem("Launcher"), L("settings.nav.launcher", "App Launcher"));
         SetSettingsNavItemLabel(GetSettingsNavItem("Plugins"), L("settings.nav.plugins", "Plugins"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("PluginMarket"), L("settings.nav.plugin_market", "Plugin Market"));
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -177,6 +178,7 @@ public partial class SettingsWindow
         LauncherHiddenItemsEmptyTextBlock.Text = L("settings.launcher.hidden_empty", "No hidden items.");
 
         ApplyPluginSettingsLocalization();
+        ApplyPluginMarketSettingsLocalization();
 
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
         VersionTextBlock.Text = Lf("settings.about.version_format", "Version: {0}", GetAppVersionText());

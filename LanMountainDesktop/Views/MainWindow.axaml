@@ -436,6 +436,11 @@
                                         <ic:SymbolIconSource Symbol="PuzzlePiece" IconVariant="Regular" />
                                     </ui:NavigationViewItem.IconSource>
                                 </ui:NavigationViewItem>
+                                <ui:NavigationViewItem x:Name="SettingsNavPluginMarketItem" Content="插件市场" Tag="PluginMarket" ToolTip.Tip="插件市场">
+                                    <ui:NavigationViewItem.IconSource>
+                                        <ic:SymbolIconSource Symbol="PuzzlePiece" IconVariant="Regular" />
+                                    </ui:NavigationViewItem.IconSource>
+                                </ui:NavigationViewItem>
                             </ui:NavigationView.MenuItems>
 
                             <ScrollViewer x:Name="SettingsContentScrollViewer"
@@ -459,6 +464,7 @@
                                     <pages:LauncherSettingsPage x:Name="LauncherSettingsPanel" IsVisible="False" />
                                     <pages:AboutSettingsPage x:Name="AboutSettingsPanel" IsVisible="False" />
                                     <pages:PluginSettingsPage x:Name="PluginSettingsPanel" IsVisible="False" />
+                                    <pages:PluginMarketSettingsPage x:Name="PluginMarketSettingsPanel" IsVisible="False" />
                                 </Grid>
                             </ScrollViewer>
                         </ui:NavigationView>

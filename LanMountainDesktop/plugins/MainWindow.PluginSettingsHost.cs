@@ -39,7 +39,7 @@ public partial class MainWindow
             .GroupBy(contribution => contribution.Plugin.Manifest.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
-        var insertIndex = SettingsNavView.MenuItems.IndexOf(SettingsNavPluginsItem) + 1;
+        var insertIndex = SettingsNavView.MenuItems.IndexOf(SettingsNavPluginMarketItem) + 1;
         foreach (var contribution in contributions)
         {
             var tag = BuildPluginSettingsTag(contribution);

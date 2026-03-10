@@ -1,9 +1,0 @@
-{
-  "id": "LanMountainDesktop.PluginMarketplace",
-  "name": "LanMountain Plugin Marketplace",
-  "description": "Official plugin marketplace for browsing and installing LanMountainDesktop plugins.",
-  "author": "LanMountainDesktop",
-  "version": "1.0.0",
-  "apiVersion": "1.0.0",
-  "entranceAssembly": "LanMountainDesktop.PluginMarketplace.dll"
-}

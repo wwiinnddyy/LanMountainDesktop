@@ -83,24 +83,5 @@
             </ui:SettingsExpander>
         </Border>
 
-        <Border Classes="settings-expander-shell">
-            <ui:SettingsExpander x:Name="PluginMarketSettingsExpander"
-                                 Header="Official Market"
-                                 Description="Browse plugins from the official LanAirApp source and stage installs."
-                                 IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
-                    <ui:FontIconSource Glyph="&#xe719;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <StackPanel Spacing="10">
-                        <TextBlock x:Name="PluginMarketDescriptionTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Text="Use the official market source hosted in LanAirApp to discover and stage plugin installs." />
-                        <ContentControl x:Name="PluginMarketContentHost" />
-                    </StackPanel>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
-        </Border>
     </StackPanel>
 </UserControl>

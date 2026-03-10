@@ -119,6 +119,7 @@ public partial class MainWindow
         SettingsNavUpdateItem.Content = L("settings.nav.update", "Update");
         SettingsNavLauncherItem.Content = L("settings.nav.launcher", "App Launcher");
         SettingsNavPluginsItem.Content = L("settings.nav.plugins", "Plugins");
+        SettingsNavPluginMarketItem.Content = L("settings.nav.plugin_market", "Plugin Market");
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -283,6 +284,7 @@ public partial class MainWindow
         LauncherHiddenItemsEmptyTextBlock.Text = L("settings.launcher.hidden_empty", "No hidden items.");
 
         ApplyPluginSettingsLocalization();
+        ApplyPluginMarketSettingsLocalization();
 
         SettingsNavAboutItem.Content = L("settings.nav.about", "About");
         AboutPanelTitleTextBlock.Text = L("settings.about.title", "About");
