@@ -1,4 +1,5 @@
-锘縰sing Avalonia;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
@@ -6,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
@@ -16,7 +18,11 @@ namespace LanMountainDesktop;
 
 public partial class App : Application
 {
+    private readonly AppSettingsService _appSettingsService = new();
+    private readonly LocalizationService _localizationService = new();
+
     private SettingsWindow? _traySettingsWindow;
+    private TrayIcons? _trayIcons;
     private PluginRuntimeService? _pluginRuntimeService;
 
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
@@ -32,13 +38,20 @@ public partial class App : Application
     {
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePluginRuntime();
+        AppSettingsService.SettingsSaved += OnAppSettingsSaved;
+        InitializeTrayIcon();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
+            // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
             desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
+            desktop.Exit += (_, _) =>
+            {
+                AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
+                DisposeTrayIcon();
+            };
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
@@ -50,6 +63,8 @@ public partial class App : Application
 
     private void OnTrayExitClick(object? sender, EventArgs e)
     {
+        DisposeTrayIcon();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Shutdown();
@@ -97,6 +112,17 @@ public partial class App : Application
     private void OnTrayRestartClick(object? sender, EventArgs e)
     {
         AppRestartService.TryRestartApplication();
+    }
+
+    private void OnAppSettingsSaved(string _)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_trayIcons is not null)
+            {
+                InitializeTrayIcon();
+            }
+        }, DispatcherPriority.Background);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -151,5 +177,75 @@ public partial class App : Application
         {
             Debug.WriteLine($"[PluginRuntime] Failed to initialize plugin runtime: {ex}");
         }
+    }
+
+    private void InitializeTrayIcon()
+    {
+        try
+        {
+            DisposeTrayIcon();
+
+            using var iconStream = AssetLoader.Open(new Uri("avares://LanMountainDesktop/Assets/avalonia-logo.ico"));
+            var trayIcon = new TrayIcon
+            {
+                Icon = new WindowIcon(iconStream),
+                ToolTipText = L("tray.tooltip", "LanMountainDesktop"),
+                Menu = BuildTrayMenu(),
+                IsVisible = true
+            };
+
+            _trayIcons = [trayIcon];
+            TrayIcon.SetIcons(this, _trayIcons);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TrayIcon] Failed to initialize tray icon: {ex}");
+        }
+    }
+
+    private NativeMenu BuildTrayMenu()
+    {
+        var menu = new NativeMenu();
+
+        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "设置"));
+        settingsItem.Click += OnTraySettingsClick;
+        menu.Items.Add(settingsItem);
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+
+        var restartItem = new NativeMenuItem(L("tray.menu.restart", "重启应用"));
+        restartItem.Click += OnTrayRestartClick;
+        menu.Items.Add(restartItem);
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+
+        var exitItem = new NativeMenuItem(L("tray.menu.exit", "退出应用"));
+        exitItem.Click += OnTrayExitClick;
+        menu.Items.Add(exitItem);
+
+        return menu;
+    }
+
+    private void DisposeTrayIcon()
+    {
+        if (_trayIcons is null)
+        {
+            return;
+        }
+
+        TrayIcon.SetIcons(this, null);
+        foreach (var trayIcon in _trayIcons)
+        {
+            trayIcon.Dispose();
+        }
+
+        _trayIcons = null;
+    }
+
+    private string L(string key, string fallback)
+    {
+        var snapshot = _appSettingsService.Load();
+        var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        return _localizationService.GetString(languageCode, key, fallback);
     }
 }

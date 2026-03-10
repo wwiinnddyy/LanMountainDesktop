@@ -6,9 +6,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
@@ -17,7 +19,12 @@ namespace LanMountainDesktop.Views.SettingsPages;
 internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 {
     private static readonly IBrush SurfaceBrush = new SolidColorBrush(Color.Parse("#14000000"));
-    private static readonly IBrush SelectedSurfaceBrush = new SolidColorBrush(Color.Parse("#1F0EA5E9"));
+    private static readonly IBrush SelectedSurfaceBrush = new SolidColorBrush(Color.Parse("#1A0EA5E9"));
+    private static readonly IBrush CardBorderBrush = new SolidColorBrush(Color.Parse("#24FFFFFF"));
+    private static readonly IBrush SelectedBorderBrush = new SolidColorBrush(Color.Parse("#7C0EA5E9"));
+    private static readonly IBrush IconSurfaceBrush = new SolidColorBrush(Color.Parse("#221E3A8A"));
+    private static readonly IBrush ChipBrush = new SolidColorBrush(Color.Parse("#22000000"));
+    private static readonly IBrush MutedBrush = new SolidColorBrush(Color.Parse("#CC94A3B8"));
     private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#FF0F766E"));
     private static readonly IBrush WarningBrush = new SolidColorBrush(Color.Parse("#FF9A6700"));
     private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#FFC42B1C"));
@@ -28,6 +35,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private readonly AirAppMarketIndexService _indexService;
     private readonly AirAppMarketInstallService _installService;
     private readonly AirAppMarketReadmeService _readmeService;
+    private readonly AirAppMarketIconService _iconService;
     private readonly Version? _hostVersion;
 
     private readonly TextBox _searchTextBox;
@@ -41,8 +49,11 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private Dictionary<string, PluginCatalogEntry> _installedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _readmeContents = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _readmeErrors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Bitmap?> _iconBitmaps = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _loadingIconPluginIds = new(StringComparer.OrdinalIgnoreCase);
     private string _marketSourceDisplay = AirAppMarketDefaults.DefaultIndexUrl;
     private string? _loadingReadmePluginId;
+    private string? _installingPluginId;
     private bool _isRefreshing;
     private bool _isInstalling;
     private bool _hasLoadedOnce;
@@ -54,12 +65,13 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(dataDirectory));
         _installService = new AirAppMarketInstallService(runtime, dataDirectory);
         _readmeService = new AirAppMarketReadmeService();
+        _iconService = new AirAppMarketIconService();
         _hostVersion = typeof(App).Assembly.GetName().Version;
 
         _searchTextBox = new TextBox
         {
-            MinWidth = 240,
-            Watermark = T("market.toolbar.search_placeholder", "搜索插件")
+            MinWidth = 260,
+            Watermark = T("market.toolbar.search_placeholder", "Search plugins")
         };
         _searchTextBox.PropertyChanged += (_, e) =>
         {
@@ -71,14 +83,14 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         _refreshButton = new Button
         {
-            Content = T("market.toolbar.refresh", "刷新"),
-            HorizontalAlignment = HorizontalAlignment.Left
+            Content = T("market.toolbar.refresh", "Refresh"),
+            HorizontalAlignment = HorizontalAlignment.Right
         };
         _refreshButton.Click += OnRefreshClick;
 
         _statusTextBlock = new TextBlock
         {
-            Text = T("market.status.loading", "正在加载官方插件市场…"),
+            Text = T("market.status.loading", "Loading the official plugin market..."),
             TextWrapping = TextWrapping.Wrap,
             Foreground = WarningBrush
         };
@@ -88,7 +100,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Spacing = 10
         };
 
-        _detailBorder = CreatePanelShell();
+        _detailBorder = CreatePanelShell(18);
 
         Content = BuildLayout();
         AttachedToVisualTree += async (_, _) =>
@@ -119,6 +131,13 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
     public void Dispose()
     {
+        foreach (var bitmap in _iconBitmaps.Values)
+        {
+            bitmap?.Dispose();
+        }
+
+        _iconBitmaps.Clear();
+        _iconService.Dispose();
         _readmeService.Dispose();
         _installService.Dispose();
         _indexService.Dispose();
@@ -134,39 +153,34 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         var toolbar = new Grid
         {
+            RowDefinitions = new RowDefinitions("Auto,Auto"),
+            RowSpacing = 8
+        };
+
+        var actionRow = new Grid
+        {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
             ColumnSpacing = 12
         };
+        actionRow.Children.Add(_searchTextBox);
+        actionRow.Children.Add(_refreshButton);
+        Grid.SetColumn(_refreshButton, 1);
 
-        toolbar.Children.Add(new StackPanel
-        {
-            Spacing = 8,
-            Children =
-            {
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 10,
-                    Children =
-                    {
-                        _searchTextBox,
-                        _refreshButton
-                    }
-                },
-                _statusTextBlock
-            }
-        });
+        toolbar.Children.Add(actionRow);
+        toolbar.Children.Add(_statusTextBlock);
+        Grid.SetRow(_statusTextBlock, 1);
 
         var contentGrid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("360,*"),
+            ColumnDefinitions = new ColumnDefinitions("430,*"),
             ColumnSpacing = 16
         };
 
-        var listShell = CreatePanelShell();
+        var listShell = CreatePanelShell(14);
         listShell.Child = new ScrollViewer
         {
-            Content = _pluginListHost
+            Content = _pluginListHost,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
 
         contentGrid.Children.Add(listShell);
@@ -194,7 +208,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         _isRefreshing = true;
         _refreshButton.IsEnabled = false;
-        SetStatus(T("market.status.loading", "正在加载官方插件市场…"), WarningBrush);
+        SetStatus(T("market.status.loading", "Loading the official plugin market..."), WarningBrush);
 
         try
         {
@@ -206,7 +220,10 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
                 _document = null;
                 _selectedPlugin = null;
                 SetStatus(
-                    F("market.status.load_failed_format", "加载插件市场失败：{0}", result.ErrorMessage ?? T("market.detail.unknown", "未知错误")),
+                    F(
+                        "market.status.load_failed_format",
+                        "Failed to load the plugin market: {0}",
+                        result.ErrorMessage ?? T("market.detail.unknown", "Unknown")),
                     ErrorBrush);
                 RebuildSurface();
                 return;
@@ -219,12 +236,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             var statusMessage = result.Source == AirAppMarketLoadSource.Cache
                 ? F(
                     "market.status.loaded_cache_format",
-                    "官方源不可用，已从缓存加载 {0} 个插件。原因：{1}",
+                    "Official source unavailable. Loaded {0} plugin(s) from cache. Reason: {1}",
                     result.Document.Plugins.Count,
-                    result.WarningMessage ?? T("market.detail.unknown", "未知错误"))
+                    result.WarningMessage ?? T("market.detail.unknown", "Unknown"))
                 : F(
                     "market.status.loaded_network_format",
-                    "已从官方源加载 {0} 个插件。",
+                    "Loaded {0} plugin(s) from the official source.",
                     result.Document.Plugins.Count);
 
             SetStatus(statusMessage, result.Source == AirAppMarketLoadSource.Cache ? WarningBrush : SuccessBrush);
@@ -241,18 +258,18 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private void RebuildSurface()
     {
         var filteredPlugins = GetFilteredPlugins();
-        if (filteredPlugins.Count > 0)
-        {
-            _selectedPlugin = ResolveSelectedPlugin(_selectedPlugin?.Id, filteredPlugins);
-        }
-        else
-        {
-            _selectedPlugin = null;
-        }
+        _selectedPlugin = filteredPlugins.Count > 0
+            ? ResolveSelectedPlugin(_selectedPlugin?.Id, filteredPlugins)
+            : null;
 
         BuildPluginList(filteredPlugins);
         BuildDetailPanel();
+
         _ = EnsureReadmeLoadedAsync(_selectedPlugin);
+        foreach (var plugin in filteredPlugins)
+        {
+            _ = EnsureIconLoadedAsync(plugin);
+        }
     }
 
     private List<AirAppMarketPluginEntry> GetFilteredPlugins()
@@ -263,13 +280,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         }
 
         var query = (_searchTextBox.Text ?? string.Empty).Trim();
-        var source = _document.Plugins;
         if (string.IsNullOrWhiteSpace(query))
         {
-            return source.ToList();
+            return _document.Plugins.ToList();
         }
 
-        return source
+        return _document.Plugins
             .Where(plugin =>
                 plugin.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 plugin.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
@@ -285,99 +301,323 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         if (_document is null)
         {
-            _pluginListHost.Children.Add(CreateEmptyState(T("market.list.empty", "插件市场尚未加载。")));
+            _pluginListHost.Children.Add(CreateEmptyState(T("market.list.empty", "The plugin market has not been loaded yet.")));
             return;
         }
 
         if (plugins.Count == 0)
         {
-            _pluginListHost.Children.Add(CreateEmptyState(T("market.list.no_results", "没有匹配的插件。")));
+            _pluginListHost.Children.Add(CreateEmptyState(T("market.list.no_results", "No plugins match the current search.")));
             return;
         }
 
         foreach (var plugin in plugins)
         {
-            _pluginListHost.Children.Add(CreatePluginCard(plugin));
+            _pluginListHost.Children.Add(CreatePluginListItem(plugin));
         }
     }
 
-    private Control CreatePluginCard(AirAppMarketPluginEntry plugin)
+    private Control CreatePluginListItem(AirAppMarketPluginEntry plugin)
     {
         var installState = ResolveInstallState(plugin, out var installedPlugin);
+        var isCompatible = IsCompatibleWithHost(plugin);
         var isSelected = string.Equals(_selectedPlugin?.Id, plugin.Id, StringComparison.OrdinalIgnoreCase);
+
+        var titleBlock = new TextBlock
+        {
+            Text = plugin.Name,
+            FontSize = 16,
+            FontWeight = FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        var subtitleBlock = new TextBlock
+        {
+            Text = F("market.card.subtitle_format", "{0} | v{1}", plugin.Author, plugin.Version),
+            Foreground = MutedBrush,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        var descriptionBlock = new TextBlock
+        {
+            Text = plugin.Description,
+            TextWrapping = TextWrapping.Wrap,
+            MaxHeight = 40
+        };
+
+        var chips = CreateChipWrapPanel(
+            CreateStateChip(T(StateKey(installState), StateFallback(installState))));
+
+        if (installedPlugin is not null)
+        {
+            chips.Children.Add(CreateStateChip(installedPlugin.IsLoaded
+                ? T("market.card.loaded", "Loaded")
+                : T("market.card.pending_restart", "Restart required")));
+        }
+
+        foreach (var tag in plugin.Tags.Take(3))
+        {
+            chips.Children.Add(CreateStateChip(tag));
+        }
+
+        var summaryStack = new StackPanel
+        {
+            Spacing = 6,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                titleBlock,
+                subtitleBlock,
+                descriptionBlock,
+                chips
+            }
+        };
+
+        var selectGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 14,
+            Children =
+            {
+                CreatePluginIcon(plugin, 56),
+                summaryStack
+            }
+        };
+        Grid.SetColumn(summaryStack, 1);
+
+        var selectButton = new Button
+        {
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            Content = selectGrid
+        };
+        selectButton.Click += async (_, _) => await SelectPluginAsync(plugin);
+
+        var rightPanel = new StackPanel
+        {
+            Spacing = 8,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Children =
+            {
+                CreateInstallButton(plugin, installState, isCompatible, 96),
+                new TextBlock
+                {
+                    Text = installedPlugin is null
+                        ? string.Empty
+                        : installedPlugin.IsLoaded
+                            ? T("market.card.loaded", "Loaded")
+                            : T("market.card.pending_restart", "Restart required"),
+                    FontSize = 12,
+                    Foreground = MutedBrush,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    IsVisible = installedPlugin is not null
+                }
+            }
+        };
+
+        var layoutGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 14,
+            Children =
+            {
+                selectButton,
+                rightPanel
+            }
+        };
+        Grid.SetColumn(rightPanel, 1);
+
+        return new Border
+        {
+            Background = isSelected ? SelectedSurfaceBrush : SurfaceBrush,
+            BorderBrush = isSelected ? SelectedBorderBrush : CardBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(18),
+            Padding = new Thickness(14),
+            Child = layoutGrid
+        };
+    }
+
+    private void BuildDetailPanel()
+    {
+        if (_selectedPlugin is null)
+        {
+            _detailBorder.Child = CreateEmptyState(T("market.detail.placeholder", "Select a plugin on the left to inspect details."));
+            return;
+        }
+
+        var plugin = _selectedPlugin;
+        var installState = ResolveInstallState(plugin, out var installedPlugin);
+        var isCompatible = IsCompatibleWithHost(plugin);
+
+        var headerSummary = new StackPanel
+        {
+            Spacing = 6,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = plugin.Name,
+                    FontSize = 26,
+                    FontWeight = FontWeight.SemiBold,
+                    TextWrapping = TextWrapping.Wrap
+                },
+                new TextBlock
+                {
+                    Text = F("market.detail.author_subtitle_format", "By {0}", plugin.Author),
+                    Foreground = MutedBrush,
+                    TextWrapping = TextWrapping.Wrap
+                },
+                new TextBlock
+                {
+                    Text = plugin.Description,
+                    TextWrapping = TextWrapping.Wrap
+                }
+            }
+        };
+
+        var headerChips = CreateChipWrapPanel(
+            CreateStateChip(T(StateKey(installState), StateFallback(installState))),
+            CreateStateChip(plugin.GetVersionSummary()));
+        foreach (var tag in plugin.Tags)
+        {
+            headerChips.Children.Add(CreateStateChip(tag));
+        }
+
+        headerSummary.Children.Add(headerChips);
+
+        var headerGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+            ColumnSpacing = 16,
+            Children =
+            {
+                CreatePluginIcon(plugin, 76),
+                headerSummary,
+                CreateInstallButton(plugin, installState, isCompatible, 120)
+            }
+        };
+        Grid.SetColumn(headerSummary, 1);
+        Grid.SetColumn(headerGrid.Children[2], 2);
+
+        var detailPanel = new StackPanel
+        {
+            Spacing = 18,
+            Children =
+            {
+                headerGrid
+            }
+        };
+
+        if (!isCompatible)
+        {
+            detailPanel.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#24FFC42B1C")),
+                CornerRadius = new CornerRadius(14),
+                Padding = new Thickness(12),
+                Child = new TextBlock
+                {
+                    Text = F(
+                        "market.status.host_incompatible_format",
+                        "This host is too old. Version {0} or newer is required.",
+                        plugin.MinHostVersion),
+                    Foreground = ErrorBrush,
+                    TextWrapping = TextWrapping.Wrap
+                }
+            });
+        }
+
+        detailPanel.Children.Add(CreateSectionTitle(T("market.detail.readme", "README")));
+        detailPanel.Children.Add(new Border
+        {
+            Background = SurfaceBrush,
+            BorderBrush = CardBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(16),
+            Child = new TextBlock
+            {
+                Text = GetReadmeContent(plugin),
+                TextWrapping = TextWrapping.Wrap
+            }
+        });
+
+        detailPanel.Children.Add(CreateSectionTitle(T("market.detail.plugin_information", "Plugin Information")));
+        detailPanel.Children.Add(CreatePluginInfoSection(plugin, installedPlugin, installState));
+
+        _detailBorder.Child = new ScrollViewer
+        {
+            Content = detailPanel,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+    }
+
+    private Control CreatePluginInfoSection(
+        AirAppMarketPluginEntry plugin,
+        PluginCatalogEntry? installedPlugin,
+        AirAppMarketInstallState installState)
+    {
+        var infoPanel = new StackPanel
+        {
+            Spacing = 14
+        };
+
+        var cardWrap = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal
+        };
+
+        foreach (var card in new[]
+        {
+            CreateInfoCard(T("market.detail.version", "Version"), $"v{plugin.Version}"),
+            CreateInfoCard(T("market.detail.installed_version", "Installed Version"), installedPlugin?.Manifest.Version ?? T("market.detail.not_installed", "Not installed")),
+            CreateInfoCard(T("market.detail.api_version", "API Version"), plugin.ApiVersion),
+            CreateInfoCard(T("market.detail.min_host_version", "Minimum Host Version"), plugin.MinHostVersion),
+            CreateInfoCard(T("market.detail.package_size", "Package Size"), FormatPackageSize(plugin.PackageSizeBytes)),
+            CreateInfoCard(T("market.detail.published_at", "Published At"), FormatTimestamp(plugin.PublishedAt)),
+            CreateInfoCard(T("market.detail.updated_at", "Updated At"), FormatTimestamp(plugin.UpdatedAt)),
+            CreateInfoCard(T("market.detail.state", "Install State"), T(StateKey(installState), StateFallback(installState)))
+        })
+        {
+            cardWrap.Children.Add(card);
+        }
+
+        infoPanel.Children.Add(cardWrap);
+        infoPanel.Children.Add(CreateInfoRow(T("market.detail.tags", "Tags"), plugin.Tags.Count == 0 ? T("market.detail.unknown", "Unknown") : string.Join(", ", plugin.Tags)));
+        infoPanel.Children.Add(CreateInfoRow(T("market.detail.project", "Project"), plugin.ProjectUrl));
+        infoPanel.Children.Add(CreateInfoRow(T("market.detail.homepage", "Homepage"), plugin.HomepageUrl));
+        infoPanel.Children.Add(CreateInfoRow(T("market.detail.repository", "Repository"), plugin.RepositoryUrl));
+        infoPanel.Children.Add(CreateInfoRow(T("market.detail.market_source", "Market Source"), _marketSourceDisplay));
+
+        if (!string.IsNullOrWhiteSpace(plugin.ReleaseNotes))
+        {
+            infoPanel.Children.Add(CreateInfoRow(T("market.detail.release_notes", "Release Notes"), plugin.ReleaseNotes));
+        }
+
+        return infoPanel;
+    }
+
+    private Button CreateInstallButton(
+        AirAppMarketPluginEntry plugin,
+        AirAppMarketInstallState installState,
+        bool isCompatible,
+        double minWidth)
+    {
+        var isThisInstalling = _isInstalling &&
+            string.Equals(_installingPluginId, plugin.Id, StringComparison.OrdinalIgnoreCase);
 
         var button = new Button
         {
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(0),
-            Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Content = new Border
-            {
-                Background = isSelected ? SelectedSurfaceBrush : SurfaceBrush,
-                CornerRadius = new CornerRadius(16),
-                Padding = new Thickness(14),
-                Child = new StackPanel
-                {
-                    Spacing = 10,
-                    Children =
-                    {
-                        new Grid
-                        {
-                            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-                            ColumnSpacing = 12,
-                            Children =
-                            {
-                                CreateMonogramIcon(plugin.Name, 42),
-                                new StackPanel
-                                {
-                                    Spacing = 4,
-                                    Children =
-                                    {
-                                        new TextBlock
-                                        {
-                                            Text = plugin.Name,
-                                            FontSize = 16,
-                                            FontWeight = FontWeight.SemiBold,
-                                            TextWrapping = TextWrapping.Wrap
-                                        },
-                                        new TextBlock
-                                        {
-                                            Text = F("market.card.subtitle_format", "{0} · v{1}", plugin.Author, plugin.Version),
-                                            Foreground = Brushes.Gray,
-                                            TextWrapping = TextWrapping.Wrap
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        new TextBlock
-                        {
-                            Text = plugin.Description,
-                            TextWrapping = TextWrapping.Wrap,
-                            MaxHeight = 56
-                        },
-                        new StackPanel
-                        {
-                            Orientation = Orientation.Horizontal,
-                            Spacing = 8,
-                            Children =
-                            {
-                                CreateStateChip(T(StateKey(installState), StateFallback(installState))),
-                                CreateStateChip(installedPlugin?.IsLoaded == true
-                                    ? T("market.card.loaded", "已加载")
-                                    : T("market.card.pending_restart", "需重启")),
-                                new TextBlock
-                                {
-                                    Text = string.Join("  ", plugin.Tags.Take(3)),
-                                    VerticalAlignment = VerticalAlignment.Center,
-                                    Foreground = Brushes.Gray
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Content = isThisInstalling
+                ? T("market.button.installing", "Installing...")
+                : T(ButtonKey(installState), ButtonFallback(installState)),
+            IsEnabled = !_isInstalling && isCompatible && installState != AirAppMarketInstallState.Installed,
+            MinWidth = minWidth,
+            HorizontalAlignment = HorizontalAlignment.Right
         };
 
         button.Click += async (_, _) =>
@@ -385,126 +625,17 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             _selectedPlugin = plugin;
             RebuildSurface();
             await EnsureReadmeLoadedAsync(plugin);
+            await InstallSelectedPluginAsync(plugin);
         };
 
         return button;
     }
 
-    private void BuildDetailPanel()
+    private async Task SelectPluginAsync(AirAppMarketPluginEntry plugin)
     {
-        if (_selectedPlugin is null)
-        {
-            _detailBorder.Child = CreateEmptyState(T("market.detail.placeholder", "从左侧选择一个插件以查看详情。"));
-            return;
-        }
-
-        var plugin = _selectedPlugin;
-        var installState = ResolveInstallState(plugin, out var installedPlugin);
-        var isCompatible = IsCompatibleWithHost(plugin);
-        var installButton = new Button
-        {
-            Content = _isInstalling
-                ? T("market.button.installing", "安装中…")
-                : T(ButtonKey(installState), ButtonFallback(installState)),
-            IsEnabled = !_isInstalling && isCompatible && installState != AirAppMarketInstallState.Installed,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            MinWidth = 120
-        };
-        installButton.Click += async (_, _) => await InstallSelectedPluginAsync(plugin);
-
-        var detailPanel = new StackPanel
-        {
-            Spacing = 14,
-            Children =
-            {
-                new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-                    ColumnSpacing = 14,
-                    Children =
-                    {
-                        CreateMonogramIcon(plugin.Name, 64),
-                        new StackPanel
-                        {
-                            Spacing = 4,
-                            Children =
-                            {
-                                new TextBlock
-                                {
-                                    Text = plugin.Name,
-                                    FontSize = 24,
-                                    FontWeight = FontWeight.SemiBold,
-                                    TextWrapping = TextWrapping.Wrap
-                                },
-                                new TextBlock
-                                {
-                                    Text = plugin.Description,
-                                    TextWrapping = TextWrapping.Wrap
-                                }
-                            }
-                        }
-                    }
-                },
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 8,
-                    Children =
-                    {
-                        CreateStateChip(T(StateKey(installState), StateFallback(installState))),
-                        CreateStateChip(plugin.GetVersionSummary()),
-                        CreateStateChip(string.Join(", ", plugin.Tags))
-                    }
-                },
-                installButton,
-                CreateInfoRow(T("market.detail.author", "作者"), plugin.Author),
-                CreateInfoRow(T("market.detail.version", "版本"), plugin.Version),
-                CreateInfoRow(T("market.detail.api_version", "API 版本"), plugin.ApiVersion),
-                CreateInfoRow(T("market.detail.min_host_version", "最低宿主版本"), plugin.MinHostVersion),
-                CreateInfoRow(T("market.detail.installed_version", "当前已安装版本"), installedPlugin?.Manifest.Version ?? T("market.detail.not_installed", "未安装")),
-                CreateInfoRow(T("market.detail.market_source", "市场源"), _marketSourceDisplay),
-                CreateInfoRow(T("market.detail.project", "Project"), plugin.ProjectUrl),
-                CreateInfoRow(T("market.detail.homepage", "主页"), plugin.HomepageUrl),
-                CreateInfoRow(T("market.detail.repository", "仓库"), plugin.RepositoryUrl),
-                new TextBlock
-                {
-                    Text = T("market.detail.readme", "README"),
-                    FontSize = 18,
-                    FontWeight = FontWeight.SemiBold
-                },
-                new Border
-                {
-                    Background = SurfaceBrush,
-                    CornerRadius = new CornerRadius(16),
-                    Padding = new Thickness(14),
-                    Child = new TextBlock
-                    {
-                        Text = GetReadmeContent(plugin),
-                        TextWrapping = TextWrapping.Wrap
-                    }
-                }
-            }
-        };
-
-        if (!isCompatible)
-        {
-            detailPanel.Children.Insert(
-                3,
-                new TextBlock
-                {
-                    Text = F(
-                        "market.status.host_incompatible_format",
-                        "当前宿主版本过低，至少需要 {0}。",
-                        plugin.MinHostVersion),
-                    Foreground = ErrorBrush,
-                    TextWrapping = TextWrapping.Wrap
-                });
-        }
-
-        _detailBorder.Child = new ScrollViewer
-        {
-            Content = detailPanel
-        };
+        _selectedPlugin = plugin;
+        RebuildSurface();
+        await EnsureReadmeLoadedAsync(plugin);
     }
 
     private async Task InstallSelectedPluginAsync(AirAppMarketPluginEntry plugin)
@@ -515,9 +646,11 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         }
 
         _isInstalling = true;
+        _installingPluginId = plugin.Id;
         BuildDetailPanel();
+        BuildPluginList(GetFilteredPlugins());
         SetStatus(
-            F("market.status.installing_format", "正在下载并暂存插件“{0}”…", plugin.Name),
+            F("market.status.installing_format", "Downloading and staging plugin '{0}'...", plugin.Name),
             WarningBrush);
 
         try
@@ -528,8 +661,8 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
                 SetStatus(
                     F(
                         "market.status.install_failed_format",
-                        "安装插件失败：{0}",
-                        result.ErrorMessage ?? T("market.detail.unknown", "未知错误")),
+                        "Failed to install plugin: {0}",
+                        result.ErrorMessage ?? T("market.detail.unknown", "Unknown")),
                     ErrorBrush);
                 return;
             }
@@ -538,7 +671,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             SetStatus(
                 F(
                     "market.status.install_success_format",
-                    "插件“{0}”已暂存完成，重启应用后生效。",
+                    "Plugin '{0}' has been staged. Restart the app to apply it.",
                     result.Manifest.Name),
                 SuccessBrush);
             RebuildSurface();
@@ -546,7 +679,8 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         finally
         {
             _isInstalling = false;
-            BuildDetailPanel();
+            _installingPluginId = null;
+            RebuildSurface();
         }
     }
 
@@ -581,6 +715,30 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             {
                 BuildDetailPanel();
             }
+        }
+    }
+
+    private async Task EnsureIconLoadedAsync(AirAppMarketPluginEntry? plugin)
+    {
+        if (plugin is null ||
+            _iconBitmaps.ContainsKey(plugin.Id) ||
+            !_loadingIconPluginIds.Add(plugin.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            _iconBitmaps[plugin.Id] = await _iconService.LoadAsync(plugin);
+        }
+        catch
+        {
+            _iconBitmaps[plugin.Id] = null;
+        }
+        finally
+        {
+            _loadingIconPluginIds.Remove(plugin.Id);
+            RebuildSurface();
         }
     }
 
@@ -676,13 +834,13 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         return (leftVersion ?? new Version(0, 0, 0)).CompareTo(rightVersion ?? new Version(0, 0, 0));
     }
 
-    private Border CreatePanelShell()
+    private Border CreatePanelShell(double padding)
     {
         return new Border
         {
             Background = SurfaceBrush,
             CornerRadius = new CornerRadius(18),
-            Padding = new Thickness(16)
+            Padding = new Thickness(padding)
         };
     }
 
@@ -692,6 +850,8 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         {
             Background = SurfaceBrush,
             CornerRadius = new CornerRadius(16),
+            BorderBrush = CardBorderBrush,
+            BorderThickness = new Thickness(1),
             Padding = new Thickness(18),
             Child = new TextBlock
             {
@@ -701,32 +861,68 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         };
     }
 
-    private Border CreateMonogramIcon(string text, double size)
+    private Control CreatePluginIcon(AirAppMarketPluginEntry plugin, double size)
     {
-        var glyph = string.IsNullOrWhiteSpace(text) ? "?" : text.Trim()[0].ToString().ToUpperInvariant();
-        return new Border
+        if (!_iconBitmaps.ContainsKey(plugin.Id))
         {
-            Width = size,
-            Height = size,
-            CornerRadius = new CornerRadius(size / 2),
-            Background = new SolidColorBrush(Color.Parse("#FF0EA5E9")),
-            Child = new TextBlock
+            _ = EnsureIconLoadedAsync(plugin);
+        }
+
+        Control iconChild;
+        if (_iconBitmaps.TryGetValue(plugin.Id, out var bitmap) && bitmap is not null)
+        {
+            iconChild = new Image
+            {
+                Source = bitmap,
+                Stretch = Stretch.UniformToFill
+            };
+        }
+        else
+        {
+            var glyph = string.IsNullOrWhiteSpace(plugin.Name) ? "?" : plugin.Name.Trim()[0].ToString().ToUpperInvariant();
+            iconChild = new TextBlock
             {
                 Text = glyph,
-                FontSize = Math.Max(16, size * 0.36),
+                FontSize = Math.Max(18, size * 0.32),
                 FontWeight = FontWeight.Bold,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextAlignment = TextAlignment.Center
-            }
+            };
+        }
+
+        return new Border
+        {
+            Width = size,
+            Height = size,
+            CornerRadius = new CornerRadius(Math.Max(12, size * 0.24)),
+            ClipToBounds = true,
+            Background = IconSurfaceBrush,
+            Child = iconChild
         };
+    }
+
+    private WrapPanel CreateChipWrapPanel(params Control[] chips)
+    {
+        var panel = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal
+        };
+
+        foreach (var chip in chips)
+        {
+            chip.Margin = new Thickness(0, 0, 8, 8);
+            panel.Children.Add(chip);
+        }
+
+        return panel;
     }
 
     private Border CreateStateChip(string text)
     {
         return new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#22000000")),
+            Background = ChipBrush,
             CornerRadius = new CornerRadius(999),
             Padding = new Thickness(10, 4),
             Child = new TextBlock
@@ -737,26 +933,106 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         };
     }
 
-    private Control CreateInfoRow(string label, string value)
+    private TextBlock CreateSectionTitle(string text)
     {
-        return new StackPanel
+        return new TextBlock
         {
-            Spacing = 4,
-            Children =
+            Text = text,
+            FontSize = 18,
+            FontWeight = FontWeight.SemiBold
+        };
+    }
+
+    private Border CreateInfoCard(string label, string value)
+    {
+        return new Border
+        {
+            Width = 190,
+            Margin = new Thickness(0, 0, 12, 12),
+            Background = SurfaceBrush,
+            BorderBrush = CardBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14),
+            Child = new StackPanel
             {
-                new TextBlock
+                Spacing = 6,
+                Children =
                 {
-                    Text = label,
-                    FontSize = 12,
-                    Foreground = Brushes.Gray
-                },
-                new TextBlock
-                {
-                    Text = string.IsNullOrWhiteSpace(value) ? T("market.detail.unknown", "未知") : value,
-                    TextWrapping = TextWrapping.Wrap
+                    new TextBlock
+                    {
+                        Text = label,
+                        FontSize = 12,
+                        Foreground = MutedBrush
+                    },
+                    new TextBlock
+                    {
+                        Text = string.IsNullOrWhiteSpace(value) ? T("market.detail.unknown", "Unknown") : value,
+                        TextWrapping = TextWrapping.Wrap
+                    }
                 }
             }
         };
+    }
+
+    private Control CreateInfoRow(string label, string value)
+    {
+        return new Border
+        {
+            Background = SurfaceBrush,
+            BorderBrush = CardBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14),
+            Child = new StackPanel
+            {
+                Spacing = 6,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = label,
+                        FontSize = 12,
+                        Foreground = MutedBrush
+                    },
+                    new TextBlock
+                    {
+                        Text = string.IsNullOrWhiteSpace(value) ? T("market.detail.unknown", "Unknown") : value,
+                        TextWrapping = TextWrapping.Wrap
+                    }
+                }
+            }
+        };
+    }
+
+    private static string FormatPackageSize(long packageSizeBytes)
+    {
+        var size = packageSizeBytes;
+        string[] units = ["B", "KB", "MB", "GB"];
+        var unitIndex = 0;
+        decimal display = size;
+
+        while (display >= 1024 && unitIndex < units.Length - 1)
+        {
+            display /= 1024;
+            unitIndex++;
+        }
+
+        return string.Format(
+            CultureInfo.CurrentCulture,
+            display >= 10 || unitIndex == 0 ? "{0:0} {1}" : "{0:0.0} {1}",
+            display,
+            units[unitIndex]);
+    }
+
+    private static string FormatTimestamp(DateTimeOffset timestamp)
+    {
+        if (timestamp == default)
+        {
+            return string.Empty;
+        }
+
+        return timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture);
     }
 
     private string T(string key, string fallback)
@@ -784,9 +1060,9 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
-            AirAppMarketInstallState.UpdateAvailable => "可更新",
-            AirAppMarketInstallState.Installed => "已安装",
-            _ => "未安装"
+            AirAppMarketInstallState.UpdateAvailable => "Update available",
+            AirAppMarketInstallState.Installed => "Installed",
+            _ => "Not installed"
         };
     }
 
@@ -804,9 +1080,9 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
-            AirAppMarketInstallState.UpdateAvailable => "更新",
-            AirAppMarketInstallState.Installed => "已安装",
-            _ => "安装"
+            AirAppMarketInstallState.UpdateAvailable => "Update",
+            AirAppMarketInstallState.Installed => "Installed",
+            _ => "Install"
         };
     }
 }
