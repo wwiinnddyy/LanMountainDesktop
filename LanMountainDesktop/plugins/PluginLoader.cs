@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using LanMountainDesktop.Services;
 using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Plugins;
@@ -346,6 +347,9 @@ public sealed class PluginLoader
     private string ExtractPackage(string packagePath, string pluginsRootDirectory)
     {
         var extractionDirectory = GetPackageExtractionDirectory(pluginsRootDirectory, packagePath);
+        AppLogger.Info(
+            "PluginLoader",
+            $"Extracting package '{packagePath}' to '{extractionDirectory}'.");
         RecreateDirectory(extractionDirectory);
         ZipFile.ExtractToDirectory(packagePath, extractionDirectory, overwriteFiles: true);
         return extractionDirectory;
@@ -381,7 +385,7 @@ public sealed class PluginLoader
     {
         if (Directory.Exists(directoryPath))
         {
-            Directory.Delete(directoryPath, recursive: true);
+            FileOperationRetryHelper.DeleteDirectoryWithRetry(directoryPath, recursive: true, "PluginLoader");
         }
 
         Directory.CreateDirectory(directoryPath);

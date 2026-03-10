@@ -18,10 +18,14 @@ public partial class MainWindow
         InstalledPluginsSettingsExpander.Header = L("settings.plugins.installed_header", "Installed Plugins");
         InstalledPluginsSettingsExpander.Description = L(
             "settings.plugins.installed_desc",
-            "Enable or disable plugins here. Detailed plugin settings appear as separate settings pages.");
+            "Review installed plugins and remove them here.");
+        ImportPluginPackageSettingsExpander.Header = L("settings.plugins.import_header", "Install From Package");
+        ImportPluginPackageSettingsExpander.Description = L(
+            "settings.plugins.import_desc",
+            "Open a .laapp package and stage it into the local plugin directory.");
         PluginRestartHintTextBlock.Text = L(
             "settings.plugins.restart_hint",
-            "Plugin enable state changes take effect after restarting the app.");
+            "Plugin installation and deletion changes take effect after restarting the app.");
         PluginCatalogEmptyTextBlock.Text = L("settings.plugins.empty", "No plugins found.");
         PluginSettingsPanel.RefreshFromRuntime();
     }

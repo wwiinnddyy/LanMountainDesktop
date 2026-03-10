@@ -85,8 +85,9 @@ public sealed class LauncherSettingsService
                 return normalizedSnapshot.Clone();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("LauncherSettings", $"Failed to load launcher settings from '{_settingsPath}'.", ex);
             return new LauncherSettingsSnapshot();
         }
     }
@@ -106,9 +107,9 @@ public sealed class LauncherSettingsService
 
             SettingsSaved?.Invoke(InstanceId);
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn("LauncherSettings", $"Failed to save launcher settings to '{_settingsPath}'.", ex);
         }
     }
 
@@ -148,8 +149,9 @@ public sealed class LauncherSettingsService
             var snapshot = JsonSerializer.Deserialize<LauncherSettingsSnapshot>(json, SerializerOptions);
             return NormalizeSnapshot(snapshot);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("LauncherSettings", $"Failed to deserialize launcher settings from '{_settingsPath}'.", ex);
             return new LauncherSettingsSnapshot();
         }
     }
@@ -180,8 +182,9 @@ public sealed class LauncherSettingsService
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("LauncherSettings", $"Failed to migrate legacy launcher settings from '{_legacyAppSettingsPath}'.", ex);
             return false;
         }
     }

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.WebView.Desktop;
 using LanMountainDesktop.Services;
 using System;
+using System.Threading.Tasks;
 
 namespace LanMountainDesktop;
 
@@ -11,8 +12,27 @@ sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp(LoadConfiguredRenderMode())
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        AppLogger.Initialize();
+        RegisterGlobalExceptionLogging();
+
+        var diagnostics = StartupDiagnosticsService.Run(args);
+        StartupDiagnosticsService.ShowLegacyExecutableWarningIfNeeded(diagnostics);
+
+        try
+        {
+            var renderMode = LoadConfiguredRenderMode();
+            AppLogger.Info("Startup", $"Resolved render mode '{renderMode}'.");
+            BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);
+            AppLogger.Info("Startup", "Application exited normally.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Critical("Startup", "Application terminated during startup.", ex);
+            throw;
+        }
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp(string renderMode = AppRenderingModeHelper.Default)
@@ -44,9 +64,26 @@ sealed class Program
         {
             return AppRenderingModeHelper.Normalize(new AppSettingsService().Load().AppRenderMode);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("Startup", "Failed to load configured render mode. Falling back to default.", ex);
             return AppRenderingModeHelper.Default;
         }
+    }
+
+    private static void RegisterGlobalExceptionLogging()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+        {
+            AppLogger.Critical(
+                "UnhandledException",
+                $"Unhandled exception. IsTerminating={eventArgs.IsTerminating}",
+                eventArgs.ExceptionObject as Exception);
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
+        {
+            AppLogger.Error("TaskScheduler", "Unobserved task exception.", eventArgs.Exception);
+        };
     }
 }

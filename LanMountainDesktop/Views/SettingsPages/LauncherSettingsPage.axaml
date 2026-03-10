@@ -31,12 +31,6 @@
                                    IsVisible="False"
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    Text="No hidden items." />
-                        <ScrollViewer MaxHeight="420"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel x:Name="LauncherHiddenItemsListPanel"
-                                        Spacing="8" />
-                        </ScrollViewer>
                     </StackPanel>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>

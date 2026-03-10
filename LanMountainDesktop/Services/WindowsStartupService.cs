@@ -30,8 +30,9 @@ public sealed class WindowsStartupService
             return runKey?.GetValue(ValueName) is string value &&
                    !string.IsNullOrWhiteSpace(value);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("WindowsStartup", "Failed to query startup registry state.", ex);
             return false;
         }
     }
@@ -67,8 +68,9 @@ public sealed class WindowsStartupService
 
             return IsEnabled() == enabled;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("WindowsStartup", $"Failed to set startup registry state. Enabled={enabled}", ex);
             return false;
         }
     }

@@ -80,8 +80,9 @@ public sealed class DesktopLayoutSettingsService
                 return normalizedSnapshot.Clone();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("DesktopLayout", $"Failed to load desktop layout settings from '{_settingsPath}'.", ex);
             return new DesktopLayoutSettingsSnapshot();
         }
     }
@@ -99,9 +100,9 @@ public sealed class DesktopLayoutSettingsService
                 UpdateCache(snapshotToPersist, writeTimeUtc, DateTime.UtcNow);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn("DesktopLayout", $"Failed to save desktop layout settings to '{_settingsPath}'.", ex);
         }
     }
 
@@ -141,8 +142,9 @@ public sealed class DesktopLayoutSettingsService
             var snapshot = JsonSerializer.Deserialize<DesktopLayoutSettingsSnapshot>(json, SerializerOptions);
             return NormalizeSnapshot(snapshot);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("DesktopLayout", $"Failed to deserialize desktop layout settings from '{_settingsPath}'.", ex);
             return new DesktopLayoutSettingsSnapshot();
         }
     }
@@ -174,8 +176,9 @@ public sealed class DesktopLayoutSettingsService
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("DesktopLayout", $"Failed to migrate legacy desktop layout settings from '{_legacyAppSettingsPath}'.", ex);
             return false;
         }
     }

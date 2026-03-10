@@ -61,7 +61,10 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     public PluginMarketEmbeddedView(PluginRuntimeService runtime)
     {
         _runtime = runtime;
-        var dataDirectory = Path.Combine(AppContext.BaseDirectory, "Data", "AirAppMarket");
+        var dataDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop",
+            "AirAppMarket");
         _indexService = new AirAppMarketIndexService(new AirAppMarketCacheService(dataDirectory));
         _installService = new AirAppMarketInstallService(runtime, dataDirectory);
         _readmeService = new AirAppMarketReadmeService();

@@ -8,6 +8,8 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using FluentIcons.Avalonia.Fluent;
+using FluentIcons.Common;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
@@ -18,6 +20,7 @@ public partial class PluginSettingsPage : UserControl
 {
     private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#FF0F766E"));
     private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#FFC42B1C"));
+    private static readonly IBrush DestructiveBrush = new SolidColorBrush(Color.Parse("#FFF87171"));
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
@@ -38,8 +41,9 @@ public partial class PluginSettingsPage : UserControl
         {
             PluginSystemStatusTextBlock.Text = L("settings.plugins.runtime_unavailable", "Plugin runtime is not available.");
             PluginRuntimeSummaryPanel.Children.Clear();
-            PluginCatalogItemsHost.Children.Clear();
+            InstalledPluginsSettingsExpander.Items.Clear();
             PluginRestartHintTextBlock.IsVisible = false;
+            PluginCatalogEmptyTextBlock.IsVisible = false;
             return;
         }
 
@@ -74,7 +78,7 @@ public partial class PluginSettingsPage : UserControl
             "Detected {0} plugin(s); enabled {1}; loaded {2}; settings pages {3}; widgets {4}; failures {5}.",
             runtime.Catalog.Count,
             enabledCount,
-            runtime.LoadedPlugins.Count,
+            runtime.Catalog.Count(entry => entry.IsLoaded),
             runtime.SettingsPages.Count,
             runtime.DesktopComponents.Count,
             failures.Length);
@@ -99,7 +103,7 @@ public partial class PluginSettingsPage : UserControl
 
     private void BuildPluginCatalog(PluginRuntimeService runtime)
     {
-        PluginCatalogItemsHost.Children.Clear();
+        InstalledPluginsSettingsExpander.Items.Clear();
 
         var plugins = runtime.Catalog
             .OrderBy(entry => entry.Manifest.Name, StringComparer.OrdinalIgnoreCase)
@@ -110,86 +114,20 @@ public partial class PluginSettingsPage : UserControl
 
         foreach (var plugin in plugins)
         {
-            PluginCatalogItemsHost.Children.Add(CreatePluginCatalogItem(runtime, plugin));
+            InstalledPluginsSettingsExpander.Items.Add(CreatePluginCatalogItem(runtime, plugin));
         }
     }
 
-    private Control CreatePluginCatalogItem(PluginRuntimeService runtime, PluginCatalogEntry entry)
+    private SettingsExpanderItem CreatePluginCatalogItem(PluginRuntimeService runtime, PluginCatalogEntry entry)
     {
-        var title = new TextBlock
+        return new SettingsExpanderItem
         {
-            Text = entry.Manifest.Name,
-            FontSize = 16,
-            FontWeight = FontWeight.SemiBold,
-            TextWrapping = TextWrapping.Wrap
+            Content = entry.Manifest.Name,
+            Description = BuildPluginSubtitle(entry),
+            IconSource = CreatePluginCatalogIconSource(),
+            IsClickEnabled = false,
+            Footer = CreatePluginCatalogActions(runtime, entry)
         };
-
-        var subtitle = new TextBlock
-        {
-            Text = BuildPluginSubtitle(entry),
-            Foreground = PluginSystemDescriptionTextBlock.Foreground,
-            TextWrapping = TextWrapping.Wrap
-        };
-
-        var enabledToggle = new ToggleSwitch
-        {
-            IsChecked = entry.IsEnabled,
-            OnContent = L("settings.plugins.toggle_on", "Enabled"),
-            OffContent = L("settings.plugins.toggle_off", "Disabled"),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        enabledToggle.IsCheckedChanged += (_, _) => OnPluginEnableChanged(runtime, entry, enabledToggle.IsChecked == true);
-
-        var header = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            ColumnSpacing = 12,
-            Children =
-            {
-                new StackPanel
-                {
-                    Spacing = 4,
-                    Children = { title, subtitle }
-                },
-                enabledToggle
-            }
-        };
-        Grid.SetColumn(enabledToggle, 1);
-
-        var details = new TextBlock
-        {
-            Text = BuildPluginDetails(entry),
-            Foreground = PluginSystemDescriptionTextBlock.Foreground,
-            TextWrapping = TextWrapping.Wrap
-        };
-
-        return new Border
-        {
-            Background = new SolidColorBrush(Color.Parse("#14000000")),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(14),
-            Child = new StackPanel
-            {
-                Spacing = 10,
-                Children = { header, details }
-            }
-        };
-    }
-
-    private void OnPluginEnableChanged(PluginRuntimeService runtime, PluginCatalogEntry entry, bool isEnabled)
-    {
-        runtime.SetPluginEnabled(entry.Manifest.Id, isEnabled);
-        BuildRuntimeSummary(runtime);
-        BuildPluginCatalog(runtime);
-        PluginSystemStatusTextBlock.Text = F(
-            "settings.plugins.toggle_result_format",
-            "Plugin '{0}' was {1} for the next launch. Restart the app to apply page and widget changes.",
-            entry.Manifest.Name,
-            isEnabled
-                ? L("settings.plugins.toggle_state_enabled", "enabled")
-                : L("settings.plugins.toggle_state_disabled", "disabled"));
     }
 
     private async void OnInstallPluginPackageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -247,6 +185,7 @@ public partial class PluginSettingsPage : UserControl
 
             var manifest = runtime.InstallPluginPackage(temporaryPackagePath);
             RefreshFromRuntime();
+            RefreshPluginNavigation(TopLevel.GetTopLevel(this));
             SetPackageImportStatus(
                 F(
                     "settings.plugins.install_success_format",
@@ -279,6 +218,79 @@ public partial class PluginSettingsPage : UserControl
         }
     }
 
+    private void OnDeletePluginClick(PluginRuntimeService runtime, PluginCatalogEntry entry)
+    {
+        try
+        {
+            if (!runtime.DeleteInstalledPlugin(entry.Manifest.Id))
+            {
+                SetPackageImportStatus(
+                    F(
+                        "settings.plugins.delete_failed_format",
+                        "Failed to delete plugin: {0}",
+                        entry.Manifest.Name),
+                    isError: true);
+                return;
+            }
+
+            RefreshFromRuntime();
+            RefreshPluginNavigation(TopLevel.GetTopLevel(this));
+            PluginSystemStatusTextBlock.Text = F(
+                "settings.plugins.delete_success_format",
+                "Plugin '{0}' was staged for deletion. Restart the app to finish removing it.",
+                entry.Manifest.Name);
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.delete_success_format",
+                    "Plugin '{0}' was staged for deletion. Restart the app to finish removing it.",
+                    entry.Manifest.Name),
+                isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.delete_failed_detail_format",
+                    "Failed to delete plugin '{0}': {1}",
+                    entry.Manifest.Name,
+                    ex.Message),
+                isError: true);
+        }
+    }
+
+    private void OnPluginEnabledChanged(PluginRuntimeService runtime, PluginCatalogEntry entry, bool isEnabled)
+    {
+        try
+        {
+            if (!runtime.SetPluginEnabled(entry.Manifest.Id, isEnabled))
+            {
+                return;
+            }
+
+            RefreshFromRuntime();
+            var toggleState = isEnabled
+                ? L("settings.plugins.toggle_state_enabled", "enabled")
+                : L("settings.plugins.toggle_state_disabled", "disabled");
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.toggle_result_format",
+                    "Plugin '{0}' was {1} for the next launch. Restart the app to apply page and widget changes.",
+                    entry.Manifest.Name,
+                    toggleState),
+                isError: false);
+        }
+        catch (Exception ex)
+        {
+            SetPackageImportStatus(
+                F(
+                    "settings.plugins.toggle_failed_detail_format",
+                    "Failed to update plugin '{0}': {1}",
+                    entry.Manifest.Name,
+                    ex.Message),
+                isError: true);
+        }
+    }
+
     private void RefreshPluginNavigation(TopLevel? topLevel)
     {
         switch (topLevel)
@@ -301,32 +313,13 @@ public partial class PluginSettingsPage : UserControl
 
     private string BuildPluginSubtitle(PluginCatalogEntry entry)
     {
-        var source = entry.IsPackage
-            ? L("settings.plugins.source_package", ".laapp package")
-            : L("settings.plugins.source_manifest", "Loose manifest");
-        var state = entry.IsEnabled
-            ? entry.IsLoaded
-                ? L("settings.plugins.state.loaded", "Loaded")
-                : L("settings.plugins.state.load_failed", "Load failed")
-            : L("settings.plugins.state.disabled", "Disabled");
+        var publisher = string.IsNullOrWhiteSpace(entry.Manifest.Author)
+            ? L("settings.plugins.publisher_unknown", "Unknown publisher")
+            : entry.Manifest.Author;
         return F(
-            "settings.plugins.subtitle_format",
-            "{0} | {1} | {2}",
-            state,
-            source,
-            entry.Manifest.Id);
-    }
-
-    private string BuildPluginDetails(PluginCatalogEntry entry)
-    {
-        var detail = F(
-            "settings.plugins.detail_format",
-            "Settings pages: {0} | Widgets: {1}",
-            entry.SettingsPageCount,
-            entry.WidgetCount);
-        return string.IsNullOrWhiteSpace(entry.ErrorMessage)
-            ? detail
-            : detail + Environment.NewLine + entry.ErrorMessage;
+            "settings.plugins.publisher_format",
+            "Publisher: {0}",
+            publisher);
     }
 
     private TextBlock CreateSummaryLine(string text)
@@ -348,6 +341,75 @@ public partial class PluginSettingsPage : UserControl
     private string F(string key, string fallback, params object[] args)
     {
         return string.Format(CultureInfo.CurrentCulture, L(key, fallback), args);
+    }
+
+    private FluentIcons.Avalonia.Fluent.SymbolIconSource CreatePluginCatalogIconSource()
+    {
+        return new FluentIcons.Avalonia.Fluent.SymbolIconSource
+        {
+            Symbol = FluentIcons.Common.Symbol.PuzzlePiece,
+            IconVariant = FluentIcons.Common.IconVariant.Regular
+        };
+    }
+
+    private Control CreatePluginCatalogActions(PluginRuntimeService runtime, PluginCatalogEntry entry)
+    {
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 10,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                CreateEnablePluginToggle(runtime, entry),
+                CreateDeletePluginButton(runtime, entry)
+            }
+        };
+    }
+
+    private ToggleSwitch CreateEnablePluginToggle(PluginRuntimeService runtime, PluginCatalogEntry entry)
+    {
+        var toggle = new ToggleSwitch
+        {
+            IsChecked = entry.IsEnabled,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        ToolTip.SetTip(
+            toggle,
+            entry.IsEnabled
+                ? L("settings.plugins.toggle_off", "Disable")
+                : L("settings.plugins.toggle_on", "Enable"));
+        toggle.IsCheckedChanged += (_, _) => OnPluginEnabledChanged(runtime, entry, toggle.IsChecked == true);
+        return toggle;
+    }
+
+    private Button CreateDeletePluginButton(PluginRuntimeService runtime, PluginCatalogEntry entry)
+    {
+        var button = new Button
+        {
+            Width = 36,
+            Height = 36,
+            Padding = new Thickness(0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Content = new FluentIcons.Avalonia.Fluent.SymbolIcon
+            {
+                Symbol = FluentIcons.Common.Symbol.Delete,
+                IconVariant = FluentIcons.Common.IconVariant.Regular,
+                FontSize = 18,
+                Foreground = DestructiveBrush,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        };
+
+        ToolTip.SetTip(button, L("settings.plugins.delete_button", "Delete plugin"));
+        button.Click += (_, _) => OnDeletePluginClick(runtime, entry);
+        return button;
     }
 
     private static async Task<string?> CopyPackageToTemporaryFileAsync(IStorageFile file)

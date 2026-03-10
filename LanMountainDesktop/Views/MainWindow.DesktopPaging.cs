@@ -13,6 +13,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -1069,12 +1070,12 @@ public partial class MainWindow
 
     private void RenderLauncherHiddenItemsList()
     {
-        if (LauncherHiddenItemsListPanel is null || LauncherHiddenItemsEmptyTextBlock is null)
+        if (LauncherHiddenItemsSettingsExpander is null || LauncherHiddenItemsEmptyTextBlock is null)
         {
             return;
         }
 
-        LauncherHiddenItemsListPanel.Children.Clear();
+        LauncherHiddenItemsSettingsExpander.Items.Clear();
         var hiddenItems = BuildLauncherHiddenItems();
         LauncherHiddenItemsEmptyTextBlock.IsVisible = hiddenItems.Count == 0;
         if (hiddenItems.Count == 0)
@@ -1084,7 +1085,7 @@ public partial class MainWindow
 
         foreach (var hiddenItem in hiddenItems)
         {
-            LauncherHiddenItemsListPanel.Children.Add(CreateLauncherHiddenItemRow(hiddenItem));
+            LauncherHiddenItemsSettingsExpander.Items.Add(CreateLauncherHiddenItemRow(hiddenItem));
         }
     }
 
@@ -1186,92 +1187,47 @@ public partial class MainWindow
             : fileName;
     }
 
-    private Control CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)
+    private SettingsExpanderItem CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)
     {
-        Control icon = hiddenItem.IconBitmap is not null
-            ? new Image
-            {
-                Source = hiddenItem.IconBitmap,
-                Width = 24,
-                Height = 24,
-                Stretch = Stretch.Uniform
-            }
-            : new Border
-            {
-                Width = 24,
-                Height = 24,
-                CornerRadius = new CornerRadius(999),
-                Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
-                Child = new TextBlock
-                {
-                    Text = hiddenItem.Monogram,
-                    FontSize = 10,
-                    FontWeight = FontWeight.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-
         var typeText = hiddenItem.Kind == LauncherEntryKind.Folder
             ? L("settings.launcher.hidden_type_folder", "Folder")
             : L("settings.launcher.hidden_type_shortcut", "Shortcut");
 
-        var infoPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-        infoPanel.Children.Add(icon);
-        infoPanel.Children.Add(new StackPanel
-        {
-            Spacing = 2,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = hiddenItem.DisplayName,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxLines = 1
-                },
-                new TextBlock
-                {
-                    Text = typeText,
-                    FontSize = 11,
-                    Opacity = 0.7
-                }
-            }
-        });
-
         var restoreButton = new Button
         {
-            Content = L("settings.launcher.restore_button", "Show Again"),
+            Content = L("settings.launcher.restore_button", "Unhide"),
             MinWidth = 110,
             Padding = new Thickness(12, 6),
             Tag = new LauncherHiddenItemToken(hiddenItem.Kind, hiddenItem.Key)
         };
         restoreButton.Click += OnRestoreLauncherHiddenItemClick;
 
-        var row = new Grid
+        return new SettingsExpanderItem
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            ColumnSpacing = 10
+            Content = hiddenItem.DisplayName,
+            Description = typeText,
+            IconSource = CreateLauncherHiddenItemIconSource(hiddenItem),
+            IsClickEnabled = false,
+            Footer = restoreButton
         };
-        row.Children.Add(infoPanel);
-        Grid.SetColumn(infoPanel, 0);
-        row.Children.Add(restoreButton);
-        Grid.SetColumn(restoreButton, 1);
+    }
 
-        return new Border
+    private IconSource CreateLauncherHiddenItemIconSource(LauncherHiddenItemView hiddenItem)
+    {
+        if (hiddenItem.IconBitmap is not null)
         {
-            Classes = { "glass-panel" },
-            BorderThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(14),
-            Padding = new Thickness(10, 8),
-            Child = row
+            return new ImageIconSource
+            {
+                Source = hiddenItem.IconBitmap
+            };
+        }
+
+        return new FluentIcons.Avalonia.Fluent.SymbolIconSource
+        {
+            Symbol = hiddenItem.Kind == LauncherEntryKind.Folder
+                ? FluentIcons.Common.Symbol.Folder
+                : FluentIcons.Common.Symbol.Apps,
+            IconVariant = FluentIcons.Common.IconVariant.Regular
         };
     }
 

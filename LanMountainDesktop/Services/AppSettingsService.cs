@@ -63,8 +63,9 @@ public sealed class AppSettingsService
                 return loadedSnapshot.Clone();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("AppSettings", $"Failed to load settings from '{_settingsPath}'.", ex);
             return new AppSettingsSnapshot();
         }
     }
@@ -95,9 +96,9 @@ public sealed class AppSettingsService
 
             SettingsSaved?.Invoke(InstanceId);
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn("AppSettings", $"Failed to save settings to '{_settingsPath}'.", ex);
         }
     }
 
@@ -136,8 +137,9 @@ public sealed class AppSettingsService
             var json = File.ReadAllText(_settingsPath);
             return JsonSerializer.Deserialize<AppSettingsSnapshot>(json, SerializerOptions) ?? new AppSettingsSnapshot();
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("AppSettings", $"Failed to deserialize settings from '{_settingsPath}'.", ex);
             return new AppSettingsSnapshot();
         }
     }

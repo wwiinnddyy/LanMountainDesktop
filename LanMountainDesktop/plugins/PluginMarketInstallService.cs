@@ -44,7 +44,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
         try
         {
+            AppLogger.Info(
+                "PluginMarket",
+                $"Starting install. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{downloadPath}'.");
             var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, cancellationToken);
+            AppLogger.Info(
+                "PluginMarket",
+                $"Resolved download url for '{plugin.Id}' to '{resolvedDownloadUrl}'.");
 
             if (AirAppMarketDefaults.TryResolveWorkspaceFile(resolvedDownloadUrl, out var localPackagePath))
             {
@@ -84,14 +90,24 @@ internal sealed class AirAppMarketInstallService : IDisposable
             }
 
             var manifest = _runtime.InstallPluginPackage(downloadPath);
+            AppLogger.Info(
+                "PluginMarket",
+                $"Install staged successfully. PluginId='{manifest.Id}'; InstalledName='{manifest.Name}'; PackagePath='{downloadPath}'.");
             return new AirAppMarketInstallResult(true, manifest, null);
         }
         catch (OperationCanceledException)
         {
+            AppLogger.Warn(
+                "PluginMarket",
+                $"Install canceled. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{downloadPath}'.");
             throw;
         }
         catch (Exception ex)
         {
+            AppLogger.Error(
+                "PluginMarket",
+                $"Install failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{downloadPath}'.",
+                ex);
             return new AirAppMarketInstallResult(false, null, ex.Message);
         }
     }

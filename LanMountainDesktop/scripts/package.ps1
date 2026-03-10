@@ -141,6 +141,37 @@ function Create-PackageArchive {
     return $archivePath
 }
 
+function Clear-DirectoryContents {
+    param([Parameter(Mandatory = $true)][string]$TargetDirectory)
+
+    [System.IO.Directory]::CreateDirectory($TargetDirectory) | Out-Null
+    Get-ChildItem -LiteralPath $TargetDirectory -Force -ErrorAction SilentlyContinue | ForEach-Object {
+        Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop
+    }
+}
+
+function Remove-LegacyOutputArtifacts {
+    param([Parameter(Mandatory = $true)][string]$TargetDirectory)
+
+    $legacyArtifacts = @(
+        "LanMontainDesktop.exe",
+        "LanMontainDesktop.dll",
+        "LanMontainDesktop.deps.json",
+        "LanMontainDesktop.runtimeconfig.json",
+        "LanMontainDesktop.pdb"
+    )
+
+    foreach ($artifactName in $legacyArtifacts) {
+        $artifactPath = Join-Path $TargetDirectory $artifactName
+        if (-not (Test-Path -LiteralPath $artifactPath)) {
+            continue
+        }
+
+        Remove-Item -LiteralPath $artifactPath -Force -ErrorAction Stop
+        Write-Host "Removed legacy artifact: $artifactPath"
+    }
+}
+
 function Add-LinuxDesktopAssets {
     param(
         [Parameter(Mandatory = $true)][string]$PublishedDirectory,
@@ -187,7 +218,7 @@ if (-not $PublishDir) {
 if (-not [System.IO.Path]::IsPathRooted($PublishDir)) {
     $PublishDir = Join-Path $repoRoot $PublishDir
 }
-[System.IO.Directory]::CreateDirectory($PublishDir) | Out-Null
+Clear-DirectoryContents -TargetDirectory $PublishDir
 
 Write-Host "Publishing project..."
 $publishArgs = @(
@@ -210,6 +241,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
+Remove-LegacyOutputArtifacts -TargetDirectory $PublishDir
 
 if ($RuntimeIdentifier -like "linux-*") {
     Add-LinuxDesktopAssets -PublishedDirectory $PublishDir -RepoRoot $repoRoot

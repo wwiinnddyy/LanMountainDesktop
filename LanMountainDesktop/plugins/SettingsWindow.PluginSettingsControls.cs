@@ -9,6 +9,7 @@ public partial class SettingsWindow
     internal TextBlock PluginSystemDescriptionTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginSystemDescriptionTextBlock")!;
     internal TextBlock PluginSystemStatusTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginSystemStatusTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander InstalledPluginsSettingsExpander => PluginSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("InstalledPluginsSettingsExpander")!;
+    internal FluentAvalonia.UI.Controls.SettingsExpander ImportPluginPackageSettingsExpander => PluginSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("ImportPluginPackageSettingsExpander")!;
     internal TextBlock PluginRestartHintTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginRestartHintTextBlock")!;
     internal TextBlock PluginCatalogEmptyTextBlock => PluginSettingsPanel.FindControl<TextBlock>("PluginCatalogEmptyTextBlock")!;
 }

@@ -211,7 +211,6 @@ public partial class SettingsWindow
     // --- LauncherSettingsPage ---
     internal TextBlock LauncherSettingsPanelTitleTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherSettingsPanelTitleTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander LauncherHiddenItemsSettingsExpander => LauncherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("LauncherHiddenItemsSettingsExpander")!;
-    internal StackPanel LauncherHiddenItemsListPanel => LauncherSettingsPanel.FindControl<StackPanel>("LauncherHiddenItemsListPanel")!;
     internal TextBlock LauncherHiddenItemsEmptyTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherHiddenItemsEmptyTextBlock")!;
     internal TextBlock LauncherHiddenItemsDescriptionTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherHiddenItemsDescriptionTextBlock")!;
 

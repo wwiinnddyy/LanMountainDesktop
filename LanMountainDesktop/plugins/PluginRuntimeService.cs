@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -16,6 +17,8 @@ namespace LanMountainDesktop.Services;
 
 public sealed class PluginRuntimeService : IDisposable
 {
+    private const string PendingDeletionFileName = ".pending-plugin-deletions.json";
+
     private readonly PluginLoader _loader;
     private readonly AppSettingsService _appSettingsService = new();
     private readonly IServiceProvider _hostServices;
@@ -25,6 +28,7 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly List<PluginCatalogEntry> _catalog = [];
     private readonly List<PluginSettingsPageContribution> _settingsPages = [];
     private readonly List<PluginDesktopComponentContribution> _desktopComponents = [];
+    private readonly object _packageMutationGate = new();
 
     public PluginRuntimeService()
     {
@@ -49,6 +53,7 @@ public sealed class PluginRuntimeService : IDisposable
     public void LoadInstalledPlugins()
     {
         Directory.CreateDirectory(PluginsDirectory);
+        ApplyPendingPluginDeletions();
         UnloadInstalledPlugins();
 
         var disabledPluginIds = GetDisabledPluginIds();
@@ -170,6 +175,7 @@ public sealed class PluginRuntimeService : IDisposable
             .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
             .ToList();
         _appSettingsService.Save(snapshot);
+        PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
 
         for (var i = 0; i < _catalog.Count; i++)
         {
@@ -184,7 +190,50 @@ public sealed class PluginRuntimeService : IDisposable
 
     public PluginManifest InstallPluginPackage(string packagePath)
     {
-        return InstallPluginPackageCore(packagePath).Manifest;
+        lock (_packageMutationGate)
+        {
+            return InstallPluginPackageCore(packagePath).Manifest;
+        }
+    }
+
+    public bool DeleteInstalledPlugin(string pluginId)
+    {
+        lock (_packageMutationGate)
+        {
+            return DeleteInstalledPluginCore(pluginId);
+        }
+    }
+
+    private bool DeleteInstalledPluginCore(string pluginId)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId))
+        {
+            return false;
+        }
+
+        var entry = _catalog.FirstOrDefault(candidate =>
+            string.Equals(candidate.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+        {
+            return false;
+        }
+
+        var targetPath = ResolvePluginRemovalTargetPath(entry);
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            return false;
+        }
+
+        var fullTargetPath = Path.GetFullPath(targetPath);
+        if (!TryDeletePluginTarget(fullTargetPath))
+        {
+            RegisterPendingPluginDeletion(fullTargetPath);
+        }
+
+        RemovePluginFromSnapshot(pluginId);
+        RemovePluginFromCatalog(pluginId);
+        PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+        return true;
     }
 
     internal IReadOnlyList<InstalledPluginInfo> GetInstalledPluginsSnapshot()
@@ -219,16 +268,22 @@ public sealed class PluginRuntimeService : IDisposable
         Directory.CreateDirectory(PluginsDirectory);
 
         var manifest = ReadManifestFromPackage(fullPackagePath);
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Installing package. PluginId='{manifest.Id}'; Source='{fullPackagePath}'; PluginsDirectory='{PluginsDirectory}'.");
         var replacedExisting = RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
 
         var destinationPath = Path.Combine(PluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
         if (!string.Equals(fullPackagePath, Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
         {
-            File.Copy(fullPackagePath, destinationPath, overwrite: true);
+            FileOperationRetryHelper.CopyWithRetry(fullPackagePath, destinationPath, overwrite: true, "PluginRuntime");
         }
 
         UpdateCatalogAfterPackageInstall(manifest, destinationPath);
         PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Package staged. PluginId='{manifest.Id}'; Destination='{destinationPath}'; ReplacedExisting={replacedExisting}.");
 
         return new PluginPackageInstallResult(manifest, replacedExisting, RestartRequired: true);
     }
@@ -349,7 +404,7 @@ public sealed class PluginRuntimeService : IDisposable
                     continue;
                 }
 
-                File.Delete(existingPackagePath);
+                FileOperationRetryHelper.DeleteFileWithRetry(existingPackagePath, "PluginRuntime");
                 replacedExisting = true;
             }
             catch
@@ -443,6 +498,150 @@ public sealed class PluginRuntimeService : IDisposable
         {
             _desktopComponents.Add(new PluginDesktopComponentContribution(loadedPlugin, desktopComponent));
         }
+    }
+
+    private void ApplyPendingPluginDeletions()
+    {
+        var pendingPaths = ReadPendingPluginDeletions();
+        if (pendingPaths.Count == 0)
+        {
+            return;
+        }
+
+        var remainingPaths = new List<string>();
+        foreach (var path in pendingPaths)
+        {
+            if (!TryDeletePluginTarget(path))
+            {
+                remainingPaths.Add(path);
+            }
+        }
+
+        SavePendingPluginDeletions(remainingPaths);
+    }
+
+    private string ResolvePluginRemovalTargetPath(PluginCatalogEntry entry)
+    {
+        if (entry.IsPackage)
+        {
+            return entry.SourcePath;
+        }
+
+        var fullSourcePath = Path.GetFullPath(entry.SourcePath);
+        if (File.Exists(fullSourcePath) &&
+            string.Equals(Path.GetFileName(fullSourcePath), "plugin.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.GetDirectoryName(fullSourcePath) ?? fullSourcePath;
+        }
+
+        return fullSourcePath;
+    }
+
+    private static bool TryDeletePluginTarget(string targetPath)
+    {
+        try
+        {
+            if (File.Exists(targetPath))
+            {
+                File.Delete(targetPath);
+            }
+            else if (Directory.Exists(targetPath))
+            {
+                Directory.Delete(targetPath, recursive: true);
+            }
+
+            return !File.Exists(targetPath) && !Directory.Exists(targetPath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void RegisterPendingPluginDeletion(string targetPath)
+    {
+        var pendingPaths = ReadPendingPluginDeletions();
+        if (pendingPaths.Contains(targetPath, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        pendingPaths.Add(targetPath);
+        SavePendingPluginDeletions(pendingPaths);
+    }
+
+    private List<string> ReadPendingPluginDeletions()
+    {
+        var pendingDeletionFilePath = GetPendingDeletionFilePath();
+        if (!File.Exists(pendingDeletionFilePath))
+        {
+            return [];
+        }
+
+        try
+        {
+            var json = File.ReadAllText(pendingDeletionFilePath);
+            var paths = JsonSerializer.Deserialize<List<string>>(json);
+            return paths?
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private void SavePendingPluginDeletions(IEnumerable<string> pendingPaths)
+    {
+        var pendingDeletionFilePath = GetPendingDeletionFilePath();
+        var normalizedPaths = pendingPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalizedPaths.Length == 0)
+        {
+            if (File.Exists(pendingDeletionFilePath))
+            {
+                File.Delete(pendingDeletionFilePath);
+            }
+
+            return;
+        }
+
+        Directory.CreateDirectory(PluginsDirectory);
+        var json = JsonSerializer.Serialize(normalizedPaths, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+        File.WriteAllText(pendingDeletionFilePath, json);
+    }
+
+    private string GetPendingDeletionFilePath()
+    {
+        return Path.Combine(PluginsDirectory, PendingDeletionFileName);
+    }
+
+    private void RemovePluginFromSnapshot(string pluginId)
+    {
+        var snapshot = _appSettingsService.Load();
+        if (snapshot.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase)) > 0)
+        {
+            _appSettingsService.Save(snapshot);
+        }
+    }
+
+    private void RemovePluginFromCatalog(string pluginId)
+    {
+        _catalog.RemoveAll(entry => string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        _settingsPages.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        _desktopComponents.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        _loadResults.RemoveAll(entry => string.Equals(entry.Manifest?.Id, pluginId, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed record PluginCandidate(

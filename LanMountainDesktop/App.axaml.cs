@@ -4,7 +4,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
@@ -29,6 +28,7 @@ public partial class App : Application
 
     public override void Initialize()
     {
+        AppLogger.Info("App", "Initializing application resources.");
         ConfigureWebViewUserDataFolder();
         AvaloniaWebViewBuilder.Initialize(default);
         AvaloniaXamlLoader.Load(this);
@@ -36,6 +36,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        AppLogger.Info("App", "Framework initialization completed.");
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePluginRuntime();
         AppSettingsService.SettingsSaved += OnAppSettingsSaved;
@@ -49,6 +50,7 @@ public partial class App : Application
             desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) =>
             {
+                AppLogger.Info("App", "Desktop lifetime exit triggered.");
                 AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
                 DisposeTrayIcon();
             };
@@ -56,6 +58,7 @@ public partial class App : Application
             {
                 DataContext = new MainWindowViewModel(),
             };
+            AppLogger.Info("App", $"Main window created. LogFile={AppLogger.LogFilePath}");
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -104,7 +107,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TraySettings] Failed to open settings window: {ex}");
+                AppLogger.Warn("TraySettings", "Failed to open settings window.", ex);
             }
         }, DispatcherPriority.Normal);
     }
@@ -159,9 +162,10 @@ public partial class App : Application
                 userDataFolder,
                 EnvironmentVariableTarget.Process);
         }
-        catch
+        catch (Exception ex)
         {
             // Keep startup resilient if user profile folders are unavailable.
+            AppLogger.Warn("WebView2", "Failed to configure WebView2 user data folder.", ex);
         }
     }
 
@@ -175,7 +179,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[PluginRuntime] Failed to initialize plugin runtime: {ex}");
+            AppLogger.Warn("PluginRuntime", "Failed to initialize plugin runtime.", ex);
         }
     }
 
@@ -199,7 +203,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[TrayIcon] Failed to initialize tray icon: {ex}");
+            AppLogger.Warn("TrayIcon", "Failed to initialize tray icon.", ex);
         }
     }
 
@@ -207,19 +211,19 @@ public partial class App : Application
     {
         var menu = new NativeMenu();
 
-        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "…Ë÷√"));
+        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "ËÆæÁΩÆ"));
         settingsItem.Click += OnTraySettingsClick;
         menu.Items.Add(settingsItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
-        var restartItem = new NativeMenuItem(L("tray.menu.restart", "÷ÿ∆Ù”¶”√"));
+        var restartItem = new NativeMenuItem(L("tray.menu.restart", "ÈáçÂêØÂ∫îÁî®"));
         restartItem.Click += OnTrayRestartClick;
         menu.Items.Add(restartItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
-        var exitItem = new NativeMenuItem(L("tray.menu.exit", "ÕÀ≥ˆ”¶”√"));
+        var exitItem = new NativeMenuItem(L("tray.menu.exit", "ÈÄÄÂá∫Â∫îÁî®"));
         exitItem.Click += OnTrayExitClick;
         menu.Items.Add(exitItem);
 

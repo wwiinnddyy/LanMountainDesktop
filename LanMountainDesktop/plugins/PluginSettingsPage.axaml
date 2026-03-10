@@ -44,31 +44,13 @@
         <Border Classes="settings-expander-shell">
             <ui:SettingsExpander x:Name="InstalledPluginsSettingsExpander"
                                  Header="Installed Plugins"
-                                 Description="Enable plugins here. Detailed settings appear as separate settings pages."
+                                 Description="Manage installed plugins here."
                                  IsExpanded="True">
                 <ui:SettingsExpander.IconSource>
                     <ui:FontIconSource Glyph="&#xe8fd;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
-                        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
-                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                Padding="14">
-                            <StackPanel Spacing="10">
-                                <Button x:Name="InstallPluginPackageButton"
-                                        HorizontalAlignment="Left"
-                                        Click="OnInstallPluginPackageClick"
-                                        Content="Open .laapp package" />
-                                <TextBlock x:Name="PluginPackageImportHintTextBlock"
-                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           Text="Open a .laapp package to install it into the local plugin directory." />
-                                <TextBlock x:Name="PluginPackageImportStatusTextBlock"
-                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                           TextWrapping="Wrap"
-                                           IsVisible="False" />
-                            </StackPanel>
-                        </Border>
                         <TextBlock x:Name="PluginRestartHintTextBlock"
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    TextWrapping="Wrap"
@@ -77,7 +59,33 @@
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    Text="No plugins found."
                                    IsVisible="False" />
-                        <StackPanel x:Name="PluginCatalogItemsHost" Spacing="12" />
+                    </StackPanel>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </Border>
+
+        <Border Classes="settings-expander-shell">
+            <ui:SettingsExpander x:Name="ImportPluginPackageSettingsExpander"
+                                 Header="Install From Package"
+                                 Description="Open a .laapp package and stage it into the local plugin directory."
+                                 IsExpanded="False">
+                <ui:SettingsExpander.IconSource>
+                    <ui:FontIconSource Glyph="&#xe8b7;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <StackPanel Spacing="10">
+                        <Button x:Name="InstallPluginPackageButton"
+                                HorizontalAlignment="Left"
+                                Click="OnInstallPluginPackageClick"
+                                Content="Open .laapp package" />
+                        <TextBlock x:Name="PluginPackageImportHintTextBlock"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Text="Open a .laapp package to install it into the local plugin directory." />
+                        <TextBlock x:Name="PluginPackageImportStatusTextBlock"
+                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="False" />
                     </StackPanel>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>

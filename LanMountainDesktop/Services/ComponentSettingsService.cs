@@ -51,8 +51,9 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 return document.DefaultSettings.Clone();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("ComponentSettings", $"Failed to load component settings from '{_settingsPath}'.", ex);
             return new ComponentSettingsSnapshot();
         }
     }
@@ -76,9 +77,9 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 PersistDocumentLocked(document);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn("ComponentSettings", $"Failed to save default component settings to '{_settingsPath}'.", ex);
         }
     }
 
@@ -99,8 +100,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 return document.DefaultSettings.Clone();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to load component settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
             return new ComponentSettingsSnapshot();
         }
     }
@@ -124,9 +129,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 PersistDocumentLocked(document);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to save component settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
         }
     }
 
@@ -151,9 +159,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to delete component settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
         }
     }
 
@@ -174,8 +185,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 return JsonSerializer.Deserialize<T>(settingsElement.GetRawText(), SerializerOptions) ?? new T();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to load plugin settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
             return new T();
         }
     }
@@ -197,9 +212,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 PersistDocumentLocked(document);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to save plugin settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
         }
     }
 
@@ -222,9 +240,12 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow persistence errors to keep UI interactions uninterrupted.
+            AppLogger.Warn(
+                "ComponentSettings",
+                $"Failed to delete plugin settings. ComponentId={componentId}; PlacementId={placementId}; Path={_settingsPath}",
+                ex);
         }
     }
 
@@ -373,8 +394,9 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
                 DefaultSettings = NormalizeSnapshot(legacySnapshot)
             };
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("ComponentSettings", $"Failed to deserialize component settings from '{_settingsPath}'.", ex);
             return new ComponentSettingsDocumentSnapshot();
         }
     }
@@ -428,8 +450,9 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
 
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn("ComponentSettings", $"Failed to migrate legacy component settings from '{_legacyAppSettingsPath}'.", ex);
             return false;
         }
     }
