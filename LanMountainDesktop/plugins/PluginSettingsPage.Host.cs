@@ -21,6 +21,7 @@ public partial class PluginSettingsPage : UserControl
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
+    private PluginMarketEmbeddedView? _pluginMarketView;
     private string? _packageImportStatusMessage;
     private bool _packageImportStatusIsError;
 
@@ -33,6 +34,13 @@ public partial class PluginSettingsPage : UserControl
     public void RefreshFromRuntime()
     {
         var runtime = (Application.Current as App)?.PluginRuntimeService;
+        PluginMarketSettingsExpander.Header = L("settings.plugins.market_header", "Official Market");
+        PluginMarketSettingsExpander.Description = L(
+            "settings.plugins.market_desc",
+            "Browse plugins from the official LanAirApp source and stage installs.");
+        PluginMarketDescriptionTextBlock.Text = L(
+            "settings.plugins.market_hint",
+            "Use the official market source hosted in LanAirApp to discover and stage plugin installs.");
         UpdateInstallerUi(runtime);
         if (runtime is null)
         {
@@ -40,11 +48,31 @@ public partial class PluginSettingsPage : UserControl
             PluginRuntimeSummaryPanel.Children.Clear();
             PluginCatalogItemsHost.Children.Clear();
             PluginRestartHintTextBlock.IsVisible = false;
+            PluginMarketContentHost.Content = CreateSummaryLine(
+                L("settings.plugins.market_unavailable", "Plugin runtime is not available, so the official market cannot be opened right now."));
             return;
         }
 
+        EnsurePluginMarketView(runtime);
+        _pluginMarketView?.RefreshLocalization();
+        _pluginMarketView?.RefreshInstalledSnapshot();
         BuildRuntimeSummary(runtime);
         BuildPluginCatalog(runtime);
+    }
+
+    private void EnsurePluginMarketView(PluginRuntimeService runtime)
+    {
+        if (_pluginMarketView is null)
+        {
+            _pluginMarketView = new PluginMarketEmbeddedView(runtime);
+            PluginMarketContentHost.Content = _pluginMarketView;
+            return;
+        }
+
+        if (!ReferenceEquals(PluginMarketContentHost.Content, _pluginMarketView))
+        {
+            PluginMarketContentHost.Content = _pluginMarketView;
+        }
     }
 
     private void UpdateInstallerUi(PluginRuntimeService? runtime)
@@ -140,8 +168,7 @@ public partial class PluginSettingsPage : UserControl
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        enabledToggle.Checked += (_, _) => OnPluginEnableChanged(runtime, entry, true);
-        enabledToggle.Unchecked += (_, _) => OnPluginEnableChanged(runtime, entry, false);
+        enabledToggle.IsCheckedChanged += (_, _) => OnPluginEnableChanged(runtime, entry, enabledToggle.IsChecked == true);
 
         var header = new Grid
         {
@@ -247,9 +274,6 @@ public partial class PluginSettingsPage : UserControl
             }
 
             var manifest = runtime.InstallPluginPackage(temporaryPackagePath);
-            runtime.LoadInstalledPlugins();
-            RefreshPluginNavigation(topLevel);
-            PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
             RefreshFromRuntime();
             SetPackageImportStatus(
                 F(

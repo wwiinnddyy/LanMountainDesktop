@@ -18,6 +18,8 @@ public sealed class PluginRuntimeService : IDisposable
 {
     private readonly PluginLoader _loader;
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly IServiceProvider _hostServices;
+    private readonly IPluginPackageManager _packageManager;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
     private readonly List<PluginLoadResult> _loadResults = [];
     private readonly List<PluginCatalogEntry> _catalog = [];
@@ -27,6 +29,8 @@ public sealed class PluginRuntimeService : IDisposable
     public PluginRuntimeService()
     {
         PluginsDirectory = Path.Combine(AppContext.BaseDirectory, "Extensions", "Plugins");
+        _packageManager = new PluginRuntimePackageManager(this);
+        _hostServices = new PluginHostServiceProvider(_packageManager);
         _loader = new PluginLoader(CreateOptions());
     }
 
@@ -96,11 +100,11 @@ public sealed class PluginRuntimeService : IDisposable
                 PluginCatalogSourceKind.Package => _loader.LoadFromPackage(
                     candidate.SourcePath,
                     PluginsDirectory,
-                    services: null,
+                    services: _hostServices,
                     hostProperties),
                 _ => _loader.LoadFromManifest(
                     candidate.SourcePath,
-                    services: null,
+                    services: _hostServices,
                     hostProperties)
             };
 
@@ -180,6 +184,24 @@ public sealed class PluginRuntimeService : IDisposable
 
     public PluginManifest InstallPluginPackage(string packagePath)
     {
+        return InstallPluginPackageCore(packagePath).Manifest;
+    }
+
+    internal IReadOnlyList<InstalledPluginInfo> GetInstalledPluginsSnapshot()
+    {
+        return _catalog
+            .OrderBy(entry => entry.Manifest.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(entry => new InstalledPluginInfo(
+                entry.Manifest,
+                entry.IsEnabled,
+                entry.IsLoaded,
+                entry.IsPackage,
+                entry.ErrorMessage))
+            .ToArray();
+    }
+
+    private PluginPackageInstallResult InstallPluginPackageCore(string packagePath)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(packagePath);
 
         var fullPackagePath = Path.GetFullPath(packagePath);
@@ -197,7 +219,7 @@ public sealed class PluginRuntimeService : IDisposable
         Directory.CreateDirectory(PluginsDirectory);
 
         var manifest = ReadManifestFromPackage(fullPackagePath);
-        RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
+        var replacedExisting = RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
 
         var destinationPath = Path.Combine(PluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
         if (!string.Equals(fullPackagePath, Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
@@ -205,7 +227,10 @@ public sealed class PluginRuntimeService : IDisposable
             File.Copy(fullPackagePath, destinationPath, overwrite: true);
         }
 
-        return manifest;
+        UpdateCatalogAfterPackageInstall(manifest, destinationPath);
+        PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+
+        return new PluginPackageInstallResult(manifest, replacedExisting, RestartRequired: true);
     }
 
     public void Dispose()
@@ -303,8 +328,9 @@ public sealed class PluginRuntimeService : IDisposable
         return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 
-    private void RemoveExistingPluginPackages(string pluginId, string packagePathToKeep)
+    private bool RemoveExistingPluginPackages(string pluginId, string packagePathToKeep)
     {
+        var replacedExisting = false;
         foreach (var existingPackagePath in EnumerateCandidatePaths($"*{PluginSdkInfo.PackageFileExtension}"))
         {
             if (string.Equals(
@@ -324,12 +350,40 @@ public sealed class PluginRuntimeService : IDisposable
                 }
 
                 File.Delete(existingPackagePath);
+                replacedExisting = true;
             }
             catch
             {
                 // Ignore unrelated or invalid packages during replacement.
             }
         }
+
+        return replacedExisting;
+    }
+
+    private void UpdateCatalogAfterPackageInstall(PluginManifest manifest, string destinationPath)
+    {
+        var isEnabled = !GetDisabledPluginIds().Contains(manifest.Id);
+        var entry = new PluginCatalogEntry(
+            manifest,
+            destinationPath,
+            IsPackage: true,
+            IsEnabled: isEnabled,
+            IsLoaded: false,
+            ErrorMessage: null,
+            SettingsPageCount: 0,
+            WidgetCount: 0);
+
+        for (var i = 0; i < _catalog.Count; i++)
+        {
+            if (string.Equals(_catalog[i].Manifest.Id, manifest.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                _catalog[i] = entry;
+                return;
+            }
+        }
+
+        _catalog.Add(entry);
     }
 
     private static string BuildInstalledPackageFileName(string pluginId)
@@ -395,4 +449,41 @@ public sealed class PluginRuntimeService : IDisposable
         string SourcePath,
         PluginManifest Manifest,
         PluginCatalogSourceKind SourceKind);
+
+    private sealed class PluginHostServiceProvider : IServiceProvider
+    {
+        private readonly IPluginPackageManager _packageManager;
+
+        public PluginHostServiceProvider(IPluginPackageManager packageManager)
+        {
+            _packageManager = packageManager;
+        }
+
+        public object? GetService(Type serviceType)
+        {
+            return serviceType == typeof(IPluginPackageManager)
+                ? _packageManager
+                : null;
+        }
+    }
+
+    private sealed class PluginRuntimePackageManager : IPluginPackageManager
+    {
+        private readonly PluginRuntimeService _runtimeService;
+
+        public PluginRuntimePackageManager(PluginRuntimeService runtimeService)
+        {
+            _runtimeService = runtimeService;
+        }
+
+        public IReadOnlyList<InstalledPluginInfo> GetInstalledPlugins()
+        {
+            return _runtimeService.GetInstalledPluginsSnapshot();
+        }
+
+        public PluginPackageInstallResult InstallPackage(string packagePath)
+        {
+            return _runtimeService.InstallPluginPackageCore(packagePath);
+        }
+    }
 }

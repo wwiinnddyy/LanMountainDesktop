@@ -10,6 +10,7 @@
 
 目录结构：
 - `docs/`：插件开发文档、打包文档
+- `plugins/`：第一方插件项目，例如插件市场插件
 - `releases/`：已经打包完成、可直接分享与安装的 `.laapp` 插件包
 - `samples/`：示例插件，其中 `LanMountainDesktop.SamplePlugin` 是示例开发插件
 - `standards/`：插件标准文件与模板

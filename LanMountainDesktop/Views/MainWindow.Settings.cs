@@ -1396,6 +1396,8 @@ public partial class MainWindow
         {
             WeatherCoordinateSettingsExpander.IsVisible = _weatherLocationMode == WeatherLocationMode.Coordinates;
         }
+
+        UpdateWeatherLocationSummaryCard();
     }
 
     private void OnWeatherLocationModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1879,7 +1881,7 @@ public partial class MainWindow
             var weather = snapshot.Current.WeatherText ??
                           L("settings.weather.preview_unknown", "Unknown");
             var temperature = snapshot.Current.TemperatureC.HasValue
-                ? string.Create(CultureInfo.InvariantCulture, $"{snapshot.Current.TemperatureC.Value:F1} C")
+                ? FormatWeatherPreviewTemperature(snapshot.Current.TemperatureC.Value)
                 : "--";
             var updatedAt = snapshot.ObservationTime ?? snapshot.FetchedAt;
 
@@ -1922,6 +1924,14 @@ public partial class MainWindow
 
     private void UpdateWeatherPreviewSummary(int? weatherCode, string temperatureText, DateTimeOffset? updatedAt)
     {
+        if (WeatherPreviewIconImage is not null)
+        {
+            var kind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, _isNightMode);
+            WeatherPreviewIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(
+                HyperOS3WeatherTheme.ResolveIconAsset(kind)) ??
+                HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(kind));
+        }
+
         if (WeatherPreviewIconSymbol is not null)
         {
             WeatherPreviewIconSymbol.Symbol = ResolveWeatherPreviewSymbol(weatherCode, _isNightMode);
@@ -1941,8 +1951,13 @@ public partial class MainWindow
         }
 
         WeatherPreviewUpdatedTextBlock.Text = updatedAt.HasValue
-            ? Lf("weather.widget.updated_format", "Updated {0:HH:mm}", updatedAt.Value.LocalDateTime)
+            ? updatedAt.Value.LocalDateTime.ToString("yyyy/M/d HH:mm:ss", CultureInfo.InvariantCulture)
             : "-";
+    }
+
+    private static string FormatWeatherPreviewTemperature(double temperatureC)
+    {
+        return string.Create(CultureInfo.InvariantCulture, $"{temperatureC:0.#}°C");
     }
 
     private static Symbol ResolveWeatherPreviewSymbol(int? weatherCode, bool isNight)
@@ -1958,6 +1973,38 @@ public partial class MainWindow
             18 or 32 => Symbol.WeatherFog,
             _ => isNight ? Symbol.WeatherPartlyCloudyNight : Symbol.WeatherPartlyCloudyDay
         };
+    }
+
+    private void UpdateWeatherLocationSummaryCard()
+    {
+        if (WeatherLocationSelectionTitleTextBlock is null ||
+            WeatherLocationSelectionDescriptionTextBlock is null ||
+            WeatherLocationValueTextBlock is null)
+        {
+            return;
+        }
+
+        if (_weatherLocationMode == WeatherLocationMode.Coordinates)
+        {
+            WeatherLocationSelectionTitleTextBlock.Text = L("settings.weather.coordinates_selection_label", "Coordinate Location");
+            WeatherLocationSelectionDescriptionTextBlock.Text = L(
+                "settings.weather.location_coordinates_summary_desc",
+                "Set latitude/longitude and optional location name used for weather queries.");
+            WeatherLocationValueTextBlock.Text = string.IsNullOrWhiteSpace(_weatherLocationName)
+                ? string.Create(CultureInfo.InvariantCulture, $"{_weatherLatitude:F4}, {_weatherLongitude:F4}")
+                : _weatherLocationName;
+            return;
+        }
+
+        WeatherLocationSelectionTitleTextBlock.Text = L("settings.weather.city_selection_label", "City Selection");
+        WeatherLocationSelectionDescriptionTextBlock.Text = L(
+            "settings.weather.location_city_summary_desc",
+            "Select the current city used for weather queries.");
+        WeatherLocationValueTextBlock.Text = !string.IsNullOrWhiteSpace(_weatherLocationName)
+            ? _weatherLocationName
+            : !string.IsNullOrWhiteSpace(_weatherLocationKey)
+                ? _weatherLocationKey
+                : L("settings.weather.location_not_selected", "No location selected");
     }
 
     private void SetWeatherSearchBusy(bool isBusy)
@@ -2661,6 +2708,8 @@ public partial class MainWindow
 
     // --- WeatherSettingsPage ---
     internal TextBlock WeatherPanelTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPanelTitleTextBlock")!;
+    internal TextBlock WeatherPreviewSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewSectionTextBlock")!;
+    internal TextBlock WeatherSettingsSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherSettingsSectionTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherPreviewSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherPreviewSettingsExpander")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherLocationSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherLocationSettingsExpander")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCitySearchSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCitySearchSettingsExpander")!;
@@ -2691,6 +2740,7 @@ public partial class MainWindow
     internal FluentAvalonia.UI.Controls.NumberBox WeatherLongitudeNumberBox => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLongitudeNumberBox")!;
     internal TextBlock WeatherCoordinateStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherCoordinateStatusTextBlock")!;
     internal TextBlock WeatherPreviewResultTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewResultTextBlock")!;
+    internal Image WeatherPreviewIconImage => WeatherSettingsPanel.FindControl<Image>("WeatherPreviewIconImage")!;
     internal FluentIcons.Avalonia.Fluent.SymbolIcon WeatherPreviewIconSymbol => WeatherSettingsPanel.FindControl<FluentIcons.Avalonia.Fluent.SymbolIcon>("WeatherPreviewIconSymbol")!;
     internal TextBlock WeatherPreviewTemperatureTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewTemperatureTextBlock")!;
     internal TextBlock WeatherPreviewUpdatedTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewUpdatedTextBlock")!;
@@ -2698,7 +2748,13 @@ public partial class MainWindow
     internal FluentAvalonia.UI.Controls.ProgressRing WeatherPreviewProgressRing => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherPreviewProgressRing")!;
     internal ComboBoxItem WeatherIconPackFluentRegularItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentRegularItem")!;
     internal ComboBoxItem WeatherIconPackFluentFilledItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentFilledItem")!;
+    internal TextBlock WeatherLocationSelectionTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionTitleTextBlock")!;
+    internal TextBlock WeatherLocationSelectionDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionDescriptionTextBlock")!;
+    internal TextBlock WeatherLocationValueTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationValueTextBlock")!;
     internal TextBlock WeatherLocationStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationStatusTextBlock")!;
+    internal TextBlock WeatherAlertListTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListTitleTextBlock")!;
+    internal TextBlock WeatherAlertListDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListDescriptionTextBlock")!;
+    internal TextBlock WeatherFooterHintTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherFooterHintTextBlock")!;
 
     // --- UpdateSettingsPage ---
     internal TextBlock UpdatePanelTitleTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdatePanelTitleTextBlock")!;

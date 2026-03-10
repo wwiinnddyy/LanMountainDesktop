@@ -83,11 +83,6 @@ public partial class SettingsWindow
 
     private void OnGridSpacingPresetSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_suppressGridSpacingEvents)
-        {
-            return;
-        }
-
         UpdateGridPreviewLayout();
     }
 

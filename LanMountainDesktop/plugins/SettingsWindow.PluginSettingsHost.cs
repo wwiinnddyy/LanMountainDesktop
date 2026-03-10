@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
-using FluentAvalonia.UI.Controls;
-using FluentIcons.Avalonia.Fluent;
 using FluentIcons.Common;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -18,7 +17,7 @@ public partial class SettingsWindow
 
     private void InitializePluginSettingsNavigation()
     {
-        if (_pluginSettingsPageHosts.Count > 0 || SettingsNavView?.MenuItems is null)
+        if (_pluginSettingsPageHosts.Count > 0)
         {
             return;
         }
@@ -32,6 +31,7 @@ public partial class SettingsWindow
 
         if (contributions is not { Length: > 0 })
         {
+            SettingsPluginNavSection.IsVisible = false;
             return;
         }
 
@@ -39,31 +39,23 @@ public partial class SettingsWindow
             .GroupBy(contribution => contribution.Plugin.Manifest.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
-        var insertIndex = SettingsNavView.MenuItems.IndexOf(SettingsNavPluginsItem) + 1;
         foreach (var contribution in contributions)
         {
             var tag = BuildPluginSettingsTag(contribution);
             var navigationTitle = BuildPluginSettingsNavigationTitle(contribution, pageCountsByPluginId);
-            var navItem = new NavigationViewItem
-            {
-                Content = navigationTitle,
-                Tag = tag,
-                IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
-                {
-                    Symbol = FluentIcons.Common.Symbol.PuzzlePiece,
-                    IconVariant = FluentIcons.Common.IconVariant.Regular
-                }
-            };
-
+            var navItem = CreateSettingsNavItem(tag, Symbol.PuzzlePiece, navigationTitle);
             ToolTip.SetTip(navItem, $"{contribution.Plugin.Manifest.Name} - {contribution.Registration.Title}");
 
-            SettingsNavView.MenuItems.Insert(insertIndex++, navItem);
+            SettingsPluginNavHost.Children.Add(navItem);
+            _pluginSettingsNavItems[tag] = navItem;
 
             var pageHost = CreatePluginSettingsPageHost(contribution);
             pageHost.IsVisible = false;
             SettingsContentPagesHost.Children.Add(pageHost);
             _pluginSettingsPageHosts[tag] = pageHost;
         }
+
+        SettingsPluginNavSection.IsVisible = SettingsPluginNavHost.Children.Count > 0;
     }
 
     private static string BuildPluginSettingsTag(PluginSettingsPageContribution contribution)
@@ -141,43 +133,48 @@ public partial class SettingsWindow
 
     internal void RefreshPluginSettingsNavigation()
     {
-        if (SettingsNavView?.MenuItems is null)
-        {
-            return;
-        }
-
         foreach (var pair in _pluginSettingsPageHosts.ToArray())
         {
-            var navItem = SettingsNavView.MenuItems
-                .OfType<NavigationViewItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), pair.Key, StringComparison.OrdinalIgnoreCase));
-            if (navItem is not null)
+            if (_pluginSettingsNavItems.TryGetValue(pair.Key, out var navItem))
             {
-                SettingsNavView.MenuItems.Remove(navItem);
+                SettingsPluginNavHost.Children.Remove(navItem);
             }
 
             SettingsContentPagesHost.Children.Remove(pair.Value);
         }
 
         _pluginSettingsPageHosts.Clear();
+        _pluginSettingsNavItems.Clear();
+        SettingsPluginNavSection.IsVisible = false;
         InitializePluginSettingsNavigation();
+
+        if (GetSettingsNavItem(_selectedSettingsTabTag) is null)
+        {
+            SelectSettingsTab("Plugins", persistSelection: false);
+        }
+        else
+        {
+            SelectSettingsTab(_selectedSettingsTabTag, persistSelection: false);
+        }
     }
 
     private string? GetSelectedSettingsTabTag()
     {
-        return (SettingsNavView?.SelectedItem as NavigationViewItem)?.Tag?.ToString();
+        return _selectedSettingsTabTag;
     }
 
     private int ResolveSelectedSettingsTabIndex()
     {
-        if (SettingsNavView?.SelectedItem is null || SettingsNavView.MenuItems is null)
+        var selectedTag = GetSelectedSettingsTabTag();
+        if (string.IsNullOrWhiteSpace(selectedTag))
         {
             return 0;
         }
 
-        for (var i = 0; i < SettingsNavView.MenuItems.Count; i++)
+        var buttons = EnumerateSettingsNavItems().ToList();
+        for (var i = 0; i < buttons.Count; i++)
         {
-            if (ReferenceEquals(SettingsNavView.MenuItems[i], SettingsNavView.SelectedItem))
+            if (string.Equals(buttons[i].Tag?.ToString(), selectedTag, StringComparison.OrdinalIgnoreCase))
             {
                 return i;
             }
@@ -188,30 +185,21 @@ public partial class SettingsWindow
 
     private void RestoreSettingsTabSelection(AppSettingsSnapshot snapshot)
     {
-        if (SettingsNavView?.MenuItems is null || SettingsNavView.MenuItems.Count == 0)
+        var buttons = EnumerateSettingsNavItems().ToList();
+        if (buttons.Count == 0)
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(snapshot.SettingsTabTag))
+        if (!string.IsNullOrWhiteSpace(snapshot.SettingsTabTag) &&
+            GetSettingsNavItem(snapshot.SettingsTabTag) is not null)
         {
-            var taggedItem = SettingsNavView.MenuItems
-                .OfType<NavigationViewItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), snapshot.SettingsTabTag, StringComparison.OrdinalIgnoreCase));
-            if (taggedItem is not null)
-            {
-                SettingsNavView.SelectedItem = taggedItem;
-                return;
-            }
+            SelectSettingsTab(snapshot.SettingsTabTag, persistSelection: false);
+            return;
         }
 
-        var safeIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, Math.Max(0, SettingsNavView.MenuItems.Count - 1));
-        if (SettingsNavView.MenuItems[safeIndex] is NavigationViewItem navItem)
-        {
-            SettingsNavView.SelectedItem = navItem;
-        }
+        var safeIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, Math.Max(0, buttons.Count - 1));
+        var button = buttons[safeIndex];
+        SelectSettingsTab(button.Tag?.ToString() ?? "Wallpaper", persistSelection: false);
     }
 }
-
-
-

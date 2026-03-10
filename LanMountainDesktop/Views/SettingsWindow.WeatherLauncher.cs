@@ -14,6 +14,7 @@ using Avalonia.Threading;
 using FluentIcons.Common;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
@@ -225,6 +226,7 @@ public partial class SettingsWindow
     {
         WeatherCitySearchSettingsExpander.IsVisible = _weatherLocationMode == WeatherLocationMode.CitySearch;
         WeatherCoordinateSettingsExpander.IsVisible = _weatherLocationMode == WeatherLocationMode.Coordinates;
+        UpdateWeatherLocationSummaryCard();
     }
 
     private void OnWeatherLocationModeSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -584,7 +586,7 @@ public partial class SettingsWindow
                 : snapshot.LocationName;
             var weather = snapshot.Current.WeatherText ?? L("settings.weather.preview_unknown", "Unknown");
             var temperature = snapshot.Current.TemperatureC.HasValue
-                ? string.Create(CultureInfo.InvariantCulture, $"{snapshot.Current.TemperatureC.Value:F1} C")
+                ? FormatWeatherPreviewTemperature(snapshot.Current.TemperatureC.Value)
                 : "--";
             var updatedAt = snapshot.ObservationTime ?? snapshot.FetchedAt;
 
@@ -605,14 +607,23 @@ public partial class SettingsWindow
 
     private void UpdateWeatherPreviewSummary(int? weatherCode, string temperatureText, DateTimeOffset? updatedAt)
     {
+        var kind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, _isNightMode);
+        WeatherPreviewIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(
+            HyperOS3WeatherTheme.ResolveIconAsset(kind)) ??
+            HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(kind));
         WeatherPreviewIconSymbol.Symbol = ResolveWeatherPreviewSymbol(weatherCode, _isNightMode);
         WeatherPreviewIconSymbol.IconVariant = string.Equals(_weatherIconPackId, "FluentFilled", StringComparison.OrdinalIgnoreCase)
             ? IconVariant.Filled
             : IconVariant.Regular;
         WeatherPreviewTemperatureTextBlock.Text = string.IsNullOrWhiteSpace(temperatureText) ? "--" : temperatureText;
         WeatherPreviewUpdatedTextBlock.Text = updatedAt.HasValue
-            ? Lf("weather.widget.updated_format", "Updated {0:HH:mm}", updatedAt.Value.LocalDateTime)
+            ? updatedAt.Value.LocalDateTime.ToString("yyyy/M/d HH:mm:ss", CultureInfo.InvariantCulture)
             : "-";
+    }
+
+    private static string FormatWeatherPreviewTemperature(double temperatureC)
+    {
+        return string.Create(CultureInfo.InvariantCulture, $"{temperatureC:0.#}°C");
     }
 
     private static Symbol ResolveWeatherPreviewSymbol(int? weatherCode, bool isNight)
@@ -658,11 +669,13 @@ public partial class SettingsWindow
             if (string.IsNullOrWhiteSpace(_weatherLocationKey))
             {
                 WeatherLocationStatusTextBlock.Text = L("settings.weather.status_city_empty", "No city location is configured.");
+                UpdateWeatherLocationSummaryCard();
                 return;
             }
 
             var locationName = string.IsNullOrWhiteSpace(_weatherLocationName) ? _weatherLocationKey : _weatherLocationName;
             WeatherLocationStatusTextBlock.Text = Lf("settings.weather.status_city_format", "Mode: {0} | {1} | Key: {2}", modeText, locationName, _weatherLocationKey);
+            UpdateWeatherLocationSummaryCard();
             return;
         }
 
@@ -673,6 +686,34 @@ public partial class SettingsWindow
             _weatherLatitude,
             _weatherLongitude,
             string.IsNullOrWhiteSpace(_weatherLocationKey) ? BuildCoordinateLocationKey(_weatherLatitude, _weatherLongitude) : _weatherLocationKey);
+        UpdateWeatherLocationSummaryCard();
+    }
+
+    private void UpdateWeatherLocationSummaryCard()
+    {
+        if (_weatherLocationMode == WeatherLocationMode.Coordinates)
+        {
+            WeatherLocationSelectionTitleTextBlock.Text = L("settings.weather.coordinates_selection_label", "Coordinate Location");
+            WeatherLocationSelectionDescriptionTextBlock.Text = L(
+                "settings.weather.location_coordinates_summary_desc",
+                "Set latitude/longitude and optional location name used for weather queries.");
+
+            var locationName = string.IsNullOrWhiteSpace(_weatherLocationName)
+                ? string.Create(CultureInfo.InvariantCulture, $"{_weatherLatitude:F4}, {_weatherLongitude:F4}")
+                : _weatherLocationName;
+            WeatherLocationValueTextBlock.Text = locationName;
+            return;
+        }
+
+        WeatherLocationSelectionTitleTextBlock.Text = L("settings.weather.city_selection_label", "City Selection");
+        WeatherLocationSelectionDescriptionTextBlock.Text = L(
+            "settings.weather.location_city_summary_desc",
+            "Select the current city used for weather queries.");
+        WeatherLocationValueTextBlock.Text = !string.IsNullOrWhiteSpace(_weatherLocationName)
+            ? _weatherLocationName
+            : !string.IsNullOrWhiteSpace(_weatherLocationKey)
+                ? _weatherLocationKey
+                : L("settings.weather.location_not_selected", "No location selected");
     }
 
     private void InitializeLauncherVisibilitySettings(LauncherSettingsSnapshot snapshot)

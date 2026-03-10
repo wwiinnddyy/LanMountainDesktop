@@ -102,13 +102,14 @@ public partial class SettingsWindow : Window
     private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _hiddenLauncherAppPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
+    private readonly Dictionary<string, Button> _settingsNavItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Button> _pluginSettingsNavItems = new(StringComparer.OrdinalIgnoreCase);
 
     private StartMenuFolderNode _startMenuRoot = new("All Apps", string.Empty);
     private byte[]? _launcherFolderIconPngBytes;
     private Bitmap? _launcherFolderIconBitmap;
 
     private int _targetShortSideCells;
-    private bool _isSettingsOpen = true;
     private bool _isNightMode;
     private bool _enableDynamicTaskbarActions;
     private bool _suppressThemeToggleEvents;
@@ -116,7 +117,6 @@ public partial class SettingsWindow : Window
     private bool _suppressTimeZoneSelectionEvents;
     private bool _suppressWeatherLocationEvents;
     private bool _suppressSettingsPersistence;
-    private bool _suppressGridSpacingEvents;
     private bool _suppressGridInsetEvents;
     private bool _suppressStatusBarSpacingEvents;
     private bool _suppressAutoStartToggleEvents;
@@ -135,8 +135,6 @@ public partial class SettingsWindow : Window
     private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");
     private double _currentDesktopCellSize;
-    private double _currentDesktopCellGap;
-    private double _currentDesktopEdgeInset;
     private string _gridSpacingPreset = "Relaxed";
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
@@ -156,6 +154,7 @@ public partial class SettingsWindow : Window
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private string _weatherSearchKeyword = string.Empty;
+    private string _selectedSettingsTabTag = "Wallpaper";
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
 
@@ -163,6 +162,7 @@ public partial class SettingsWindow : Window
     {
         _componentRegistry = DesktopComponentRegistryFactory.Create((Application.Current as App)?.PluginRuntimeService);
         InitializeComponent();
+        InitializeSettingsNavigation();
         InitializePluginSettingsNavigation();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         RequestedThemeVariant = Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default;
@@ -184,8 +184,7 @@ public partial class SettingsWindow : Window
         GridSpacingPresetComboBox.SelectionChanged += OnGridSpacingPresetSelectionChanged;
         GridEdgeInsetSlider.ValueChanged += OnGridEdgeInsetSliderChanged;
         ApplyGridButton.Click += OnApplyGridSizeClick;
-        NightModeToggleSwitch.Checked += OnNightModeChecked;
-        NightModeToggleSwitch.Unchecked += OnNightModeUnchecked;
+        NightModeToggleSwitch.IsCheckedChanged += OnNightModeIsCheckedChanged;
         RecommendedColorButton1.Click += OnRecommendedColorClick;
         RecommendedColorButton2.Click += OnRecommendedColorClick;
         RecommendedColorButton3.Click += OnRecommendedColorClick;
@@ -199,35 +198,62 @@ public partial class SettingsWindow : Window
         MonetColorButton4.Click += OnMonetColorClick;
         MonetColorButton5.Click += OnMonetColorClick;
         MonetColorButton6.Click += OnMonetColorClick;
-        StatusBarClockToggleSwitch.Checked += OnStatusBarClockChecked;
-        StatusBarClockToggleSwitch.Unchecked += OnStatusBarClockUnchecked;
-        ClockFormatHMSSRadio.Checked += OnClockFormatChanged;
-        ClockFormatHMRadio.Checked += OnClockFormatChanged;
+        StatusBarClockToggleSwitch.IsCheckedChanged += OnStatusBarClockIsCheckedChanged;
+        ClockFormatHMSSRadio.IsCheckedChanged += OnClockFormatChanged;
+        ClockFormatHMRadio.IsCheckedChanged += OnClockFormatChanged;
         StatusBarSpacingModeComboBox.SelectionChanged += OnStatusBarSpacingModeChanged;
         StatusBarSpacingSlider.ValueChanged += OnStatusBarSpacingSliderChanged;
         WeatherPreviewButton.Click += OnTestWeatherRequestClick;
         WeatherLocationModeComboBox.SelectionChanged += OnWeatherLocationModeSelectionChanged;
         WeatherLocationModeChipListBox.SelectionChanged += OnWeatherLocationModeChipSelectionChanged;
-        WeatherAutoRefreshToggleSwitch.Checked += OnWeatherAutoRefreshToggled;
-        WeatherAutoRefreshToggleSwitch.Unchecked += OnWeatherAutoRefreshToggled;
+        WeatherAutoRefreshToggleSwitch.IsCheckedChanged += OnWeatherAutoRefreshToggled;
         WeatherSearchButton.Click += OnSearchWeatherCityClick;
         WeatherApplyCityButton.Click += OnApplyWeatherCitySelectionClick;
         WeatherApplyCoordinatesButton.Click += OnApplyWeatherCoordinatesClick;
         WeatherExcludedAlertsTextBox.LostFocus += OnWeatherExcludedAlertsLostFocus;
         WeatherIconPackComboBox.SelectionChanged += OnWeatherIconPackSelectionChanged;
-        WeatherNoTlsToggleSwitch.Checked += OnWeatherNoTlsToggled;
-        WeatherNoTlsToggleSwitch.Unchecked += OnWeatherNoTlsToggled;
+        WeatherNoTlsToggleSwitch.IsCheckedChanged += OnWeatherNoTlsToggled;
         LanguageComboBox.SelectionChanged += OnLanguageSelectionChanged;
         TimeZoneComboBox.SelectionChanged += OnTimeZoneSelectionChanged;
-        AutoCheckUpdatesToggleSwitch.Checked += OnAutoCheckUpdatesToggled;
-        AutoCheckUpdatesToggleSwitch.Unchecked += OnAutoCheckUpdatesToggled;
+        AutoCheckUpdatesToggleSwitch.IsCheckedChanged += OnAutoCheckUpdatesToggled;
         UpdateChannelChipListBox.SelectionChanged += OnUpdateChannelSelectionChanged;
         CheckForUpdatesButton.Click += OnCheckForUpdatesClick;
         DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
-        AutoStartWithWindowsToggleSwitch.Checked += OnAutoStartWithWindowsToggled;
-        AutoStartWithWindowsToggleSwitch.Unchecked += OnAutoStartWithWindowsToggled;
+        AutoStartWithWindowsToggleSwitch.IsCheckedChanged += OnAutoStartWithWindowsToggled;
         AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
         Opened += OnWindowOpened;
+    }
+
+    private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton toggleButton)
+        {
+            return;
+        }
+
+        if (toggleButton.IsChecked == true)
+        {
+            OnNightModeChecked(sender, e);
+            return;
+        }
+
+        OnNightModeUnchecked(sender, e);
+    }
+
+    private void OnStatusBarClockIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton toggleButton)
+        {
+            return;
+        }
+
+        if (toggleButton.IsChecked == true)
+        {
+            OnStatusBarClockChecked(sender, e);
+            return;
+        }
+
+        OnStatusBarClockUnchecked(sender, e);
     }
 
     private void OnWindowOpened(object? sender, EventArgs e)
@@ -283,8 +309,6 @@ public partial class SettingsWindow : Window
         EnsureSelectedThemeColor();
         UpdateThemeColorSelectionState();
         ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);
-        WindowTitleTextBlock.Text = L("settings.title", "Settings");
-        WindowSubtitleTextBlock.Text = L("settings.footer", "LanMountainDesktop Settings");
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
         RestoreSettingsTabSelection(snapshot);
         UpdateSettingsTabContent();

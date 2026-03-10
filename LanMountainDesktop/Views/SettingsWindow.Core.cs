@@ -48,10 +48,166 @@ public partial class SettingsWindow
         base.OnClosed(e);
     }
 
-    private void OnSettingsNavSelectionChanged(object? sender, FluentAvalonia.UI.Controls.NavigationViewSelectionChangedEventArgs e)
+    private void InitializeSettingsNavigation()
     {
+        _settingsNavItems.Clear();
+        _pluginSettingsNavItems.Clear();
+
+        SettingsPrimaryNavHost.Children.Clear();
+        SettingsSecondaryNavHost.Children.Clear();
+        SettingsPluginNavHost.Children.Clear();
+        SettingsPluginNavSection.IsVisible = false;
+
+        AddSettingsNavItem(SettingsPrimaryNavHost, "Wallpaper", Symbol.Wallpaper, "Wallpaper");
+        AddSettingsNavItem(SettingsPrimaryNavHost, "Grid", Symbol.Grid, "Grid");
+        AddSettingsNavItem(SettingsPrimaryNavHost, "Color", Symbol.Color, "Color");
+        AddSettingsNavItem(SettingsPrimaryNavHost, "StatusBar", Symbol.Status, "Status Bar");
+        AddSettingsNavItem(SettingsPrimaryNavHost, "Weather", Symbol.WeatherSunny, "Weather");
+
+        AddSettingsNavItem(SettingsSecondaryNavHost, "Region", Symbol.Globe, "Region");
+        AddSettingsNavItem(SettingsSecondaryNavHost, "Launcher", Symbol.Apps, "App Launcher");
+        AddSettingsNavItem(SettingsSecondaryNavHost, "Update", Symbol.ArrowSync, "Update");
+        AddSettingsNavItem(SettingsSecondaryNavHost, "About", Symbol.Info, "About");
+        AddSettingsNavItem(SettingsSecondaryNavHost, "Plugins", Symbol.PuzzlePiece, "Plugins");
+    }
+
+    private void OnSettingsNavItemClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string tag)
+        {
+            return;
+        }
+
+        SelectSettingsTab(tag, persistSelection: true);
+    }
+
+    private Button AddSettingsNavItem(Panel host, string tag, Symbol symbol, string title)
+    {
+        var button = CreateSettingsNavItem(tag, symbol, title);
+        host.Children.Add(button);
+        _settingsNavItems[tag] = button;
+        return button;
+    }
+
+    private Button CreateSettingsNavItem(string tag, Symbol symbol, string title)
+    {
+        var icon = new SymbolIcon
+        {
+            Symbol = symbol,
+            IconVariant = IconVariant.Regular
+        };
+        icon.Classes.Add("settings-nav-icon");
+
+        var iconShell = new Border
+        {
+            Child = icon,
+            Classes = { "settings-sidebar-icon-shell" }
+        };
+
+        var label = new TextBlock
+        {
+            Text = title,
+            Classes = { "settings-nav-label" }
+        };
+
+        var contentGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 12
+        };
+        contentGrid.Children.Add(iconShell);
+        contentGrid.Children.Add(label);
+        Grid.SetColumn(label, 1);
+
+        var button = new Button
+        {
+            Tag = tag,
+            Content = contentGrid,
+            Classes = { "settings-sidebar-item" }
+        };
+        button.Click += OnSettingsNavItemClick;
+        return button;
+    }
+
+    private IEnumerable<Button> EnumerateSettingsNavItems()
+    {
+        foreach (var button in SettingsPrimaryNavHost.Children.OfType<Button>())
+        {
+            yield return button;
+        }
+
+        foreach (var button in SettingsSecondaryNavHost.Children.OfType<Button>())
+        {
+            yield return button;
+        }
+
+        foreach (var button in SettingsPluginNavHost.Children.OfType<Button>())
+        {
+            yield return button;
+        }
+    }
+
+    private Button? GetSettingsNavItem(string tag)
+    {
+        if (_settingsNavItems.TryGetValue(tag, out var builtIn))
+        {
+            return builtIn;
+        }
+
+        return _pluginSettingsNavItems.GetValueOrDefault(tag);
+    }
+
+    private static void SetSettingsNavItemLabel(Button? button, string text)
+    {
+        if (button?.Content is Grid grid)
+        {
+            var label = grid.Children
+                .OfType<TextBlock>()
+                .FirstOrDefault(textBlock => textBlock.Classes.Contains("settings-nav-label"));
+
+            if (label is not null)
+            {
+                label.Text = text;
+            }
+        }
+    }
+
+    private void SelectSettingsTab(string? tag, bool persistSelection)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return;
+        }
+
+        var selectedButton = GetSettingsNavItem(tag);
+        if (selectedButton is null)
+        {
+            return;
+        }
+
+        _selectedSettingsTabTag = tag;
+        foreach (var button in EnumerateSettingsNavItems())
+        {
+            var isSelected = ReferenceEquals(button, selectedButton);
+            if (isSelected)
+            {
+                if (!button.Classes.Contains("nav-selected"))
+                {
+                    button.Classes.Add("nav-selected");
+                }
+            }
+            else
+            {
+                button.Classes.Remove("nav-selected");
+            }
+        }
+
         UpdateSettingsTabContent();
-        PersistSettings();
+
+        if (persistSelection)
+        {
+            PersistSettings();
+        }
     }
 
     private int GetSettingsTabIndex()
@@ -61,13 +217,7 @@ public partial class SettingsWindow
 
     private void UpdateSettingsTabContent()
     {
-        if (SettingsNavView is null)
-        {
-            return;
-        }
-
-        var selectedItem = SettingsNavView.SelectedItem as FluentAvalonia.UI.Controls.NavigationViewItem;
-        var tag = selectedItem?.Tag?.ToString();
+        var tag = GetSelectedSettingsTabTag();
 
         WallpaperSettingsPanel.IsVisible = tag == "Wallpaper";
         GridSettingsPanel.IsVisible = tag == "Grid";
@@ -279,6 +429,11 @@ public partial class SettingsWindow
             return;
         }
 
+        if (radioButton.IsChecked != true)
+        {
+            return;
+        }
+
         _clockDisplayFormat = formatTag == "Hm"
             ? ClockDisplayFormat.HourMinute
             : ClockDisplayFormat.HourMinuteSecond;
@@ -375,8 +530,7 @@ public partial class SettingsWindow
 
     private TaskbarContext GetCurrentTaskbarContext()
     {
-        var selectedItem = SettingsNavView?.SelectedItem as FluentAvalonia.UI.Controls.NavigationViewItem;
-        return selectedItem?.Tag?.ToString() switch
+        return GetSelectedSettingsTabTag() switch
         {
             "Wallpaper" => TaskbarContext.SettingsWallpaper,
             "Grid" => TaskbarContext.SettingsGrid,

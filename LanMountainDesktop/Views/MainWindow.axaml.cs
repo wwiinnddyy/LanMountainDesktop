@@ -205,8 +205,7 @@ public partial class MainWindow : Window
         GridEdgeInsetSlider.ValueChanged += OnGridEdgeInsetSliderChanged;
         ApplyGridButton.Click += OnApplyGridSizeClick;
 
-        NightModeToggleSwitch.Checked += OnNightModeChecked;
-        NightModeToggleSwitch.Unchecked += OnNightModeUnchecked;
+        NightModeToggleSwitch.IsCheckedChanged += OnNightModeIsCheckedChanged;
         RecommendedColorButton1.Click += OnRecommendedColorClick;
         RecommendedColorButton2.Click += OnRecommendedColorClick;
         RecommendedColorButton3.Click += OnRecommendedColorClick;
@@ -221,38 +220,65 @@ public partial class MainWindow : Window
         MonetColorButton5.Click += OnMonetColorClick;
         MonetColorButton6.Click += OnMonetColorClick;
 
-        StatusBarClockToggleSwitch.Checked += OnStatusBarClockChecked;
-        StatusBarClockToggleSwitch.Unchecked += OnStatusBarClockUnchecked;
-        ClockFormatHMSSRadio.Checked += OnClockFormatChanged;
-        ClockFormatHMRadio.Checked += OnClockFormatChanged;
+        StatusBarClockToggleSwitch.IsCheckedChanged += OnStatusBarClockIsCheckedChanged;
+        ClockFormatHMSSRadio.IsCheckedChanged += OnClockFormatChanged;
+        ClockFormatHMRadio.IsCheckedChanged += OnClockFormatChanged;
         StatusBarSpacingModeComboBox.SelectionChanged += OnStatusBarSpacingModeChanged;
         StatusBarSpacingSlider.ValueChanged += OnStatusBarSpacingSliderChanged;
 
         WeatherPreviewButton.Click += OnTestWeatherRequestClick;
         WeatherLocationModeComboBox.SelectionChanged += OnWeatherLocationModeSelectionChanged;
         WeatherLocationModeChipListBox.SelectionChanged += OnWeatherLocationModeChipSelectionChanged;
-        WeatherAutoRefreshToggleSwitch.Checked += OnWeatherAutoRefreshToggled;
-        WeatherAutoRefreshToggleSwitch.Unchecked += OnWeatherAutoRefreshToggled;
+        WeatherAutoRefreshToggleSwitch.IsCheckedChanged += OnWeatherAutoRefreshToggled;
         WeatherSearchButton.Click += OnSearchWeatherCityClick;
         WeatherApplyCityButton.Click += OnApplyWeatherCitySelectionClick;
         WeatherApplyCoordinatesButton.Click += OnApplyWeatherCoordinatesClick;
         WeatherExcludedAlertsTextBox.LostFocus += OnWeatherExcludedAlertsLostFocus;
         WeatherIconPackComboBox.SelectionChanged += OnWeatherIconPackSelectionChanged;
-        WeatherNoTlsToggleSwitch.Checked += OnWeatherNoTlsToggled;
-        WeatherNoTlsToggleSwitch.Unchecked += OnWeatherNoTlsToggled;
+        WeatherNoTlsToggleSwitch.IsCheckedChanged += OnWeatherNoTlsToggled;
 
         LanguageComboBox.SelectionChanged += OnLanguageSelectionChanged;
         TimeZoneComboBox.SelectionChanged += OnTimeZoneSelectionChanged;
 
-        AutoCheckUpdatesToggleSwitch.Checked += OnAutoCheckUpdatesToggled;
-        AutoCheckUpdatesToggleSwitch.Unchecked += OnAutoCheckUpdatesToggled;
+        AutoCheckUpdatesToggleSwitch.IsCheckedChanged += OnAutoCheckUpdatesToggled;
         UpdateChannelChipListBox.SelectionChanged += OnUpdateChannelSelectionChanged;
         CheckForUpdatesButton.Click += OnCheckForUpdatesClick;
         DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
 
-        AutoStartWithWindowsToggleSwitch.Checked += OnAutoStartWithWindowsToggled;
-        AutoStartWithWindowsToggleSwitch.Unchecked += OnAutoStartWithWindowsToggled;
+        AutoStartWithWindowsToggleSwitch.IsCheckedChanged += OnAutoStartWithWindowsToggled;
         AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
+    }
+
+    private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton toggleButton)
+        {
+            return;
+        }
+
+        if (toggleButton.IsChecked == true)
+        {
+            OnNightModeChecked(sender, e);
+            return;
+        }
+
+        OnNightModeUnchecked(sender, e);
+    }
+
+    private void OnStatusBarClockIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton toggleButton)
+        {
+            return;
+        }
+
+        if (toggleButton.IsChecked == true)
+        {
+            OnStatusBarClockChecked(sender, e);
+            return;
+        }
+
+        OnStatusBarClockUnchecked(sender, e);
     }
 
     protected override void OnOpened(EventArgs e)
@@ -783,6 +809,11 @@ public partial class MainWindow : Window
     private void OnClockFormatChanged(object? sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton radioButton || radioButton.Tag is not string formatTag)
+        {
+            return;
+        }
+
+        if (radioButton.IsChecked != true)
         {
             return;
         }

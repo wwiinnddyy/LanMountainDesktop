@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/airappmarket/schema/airappmarket-index.schema.json",
+  "title": "AirAppMarket Index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceId",
+    "sourceName",
+    "generatedAt",
+    "plugins"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/plugin"
+      }
+    }
+  },
+  "$defs": {
+    "plugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "author",
+        "version",
+        "apiVersion",
+        "minHostVersion",
+        "downloadUrl",
+        "sha256",
+        "packageSizeBytes",
+        "iconUrl",
+        "homepageUrl",
+        "repositoryUrl",
+        "tags",
+        "publishedAt",
+        "updatedAt",
+        "releaseNotes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+ ][A-Za-z0-9.-]+)?$"
+        },
+        "apiVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+ ][A-Za-z0-9.-]+)?$"
+        },
+        "minHostVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+ ][A-Za-z0-9.-]+)?$"
+        },
+        "downloadUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "packageSizeBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "iconUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "homepageUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "repositoryUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "releaseNotes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

@@ -48,20 +48,32 @@ public partial class SettingsWindow
 
     private void ApplyLocalization()
     {
-        Title = L("settings.title", "Settings");
-        WindowTitleTextBlock.Text = L("settings.title", "Settings");
-        WindowSubtitleTextBlock.Text = L("settings.footer", "LanMountainDesktop Settings");
+        Title = L("settings.shell.title", "Application Settings");
+        WindowTitleTextBlock.Text = L("settings.shell.title", "Application Settings");
+        WindowSubtitleTextBlock.Text = L("settings.shell.subtitle", "LanMountainDesktop standalone preferences");
+        WindowVersionBadgeTextBlock.Text = GetAppVersionText();
+        WindowCodeNameBadgeTextBlock.Text = AppCodeName;
+        SettingsSidebarTitleTextBlock.Text = L("settings.nav_header", "Settings");
+        SettingsSidebarHintTextBlock.Text = L(
+            "settings.shell.sidebar_hint",
+            "Choose a category to adjust application behavior and desktop appearance.");
+        SettingsPrimaryGroupTextBlock.Text = L("settings.nav.group_desktop", "Desktop");
+        SettingsSecondaryGroupTextBlock.Text = L("settings.nav.group_system", "System");
+        SettingsPluginGroupTextBlock.Text = L("settings.nav.group_extensions", "Extensions");
+        SettingsSidebarFooterTextBlock.Text = L(
+            "settings.shell.footer_hint",
+            "Tray-opened settings are managed in this standalone window.");
 
-        SettingsNavWallpaperItem.Content = L("settings.nav.wallpaper", "Wallpaper");
-        SettingsNavGridItem.Content = L("settings.nav.grid", "Grid");
-        SettingsNavColorItem.Content = L("settings.nav.color", "Color");
-        SettingsNavStatusBarItem.Content = L("settings.nav.status_bar", "Status Bar");
-        SettingsNavWeatherItem.Content = L("settings.nav.weather", "Weather");
-        SettingsNavRegionItem.Content = L("settings.nav.region", "Region");
-        SettingsNavUpdateItem.Content = L("settings.nav.update", "Update");
-        SettingsNavAboutItem.Content = L("settings.nav.about", "About");
-        SettingsNavLauncherItem.Content = L("settings.nav.launcher", "App Launcher");
-        SettingsNavPluginsItem.Content = L("settings.nav.plugins", "Plugins");
+        SetSettingsNavItemLabel(GetSettingsNavItem("Wallpaper"), L("settings.nav.wallpaper", "Wallpaper"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Grid"), L("settings.nav.grid", "Grid"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Color"), L("settings.nav.color", "Color"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("StatusBar"), L("settings.nav.status_bar", "Status Bar"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Weather"), L("settings.nav.weather", "Weather"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Region"), L("settings.nav.region", "Region"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Update"), L("settings.nav.update", "Update"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("About"), L("settings.nav.about", "About"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Launcher"), L("settings.nav.launcher", "App Launcher"));
+        SetSettingsNavItemLabel(GetSettingsNavItem("Plugins"), L("settings.nav.plugins", "Plugins"));
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -95,6 +107,60 @@ public partial class SettingsWindow
         StatusBarSpacingModeRelaxedItem.Content = L("settings.status_bar.spacing_mode_relaxed", "Relaxed");
         StatusBarSpacingModeCustomItem.Content = L("settings.status_bar.spacing_mode_custom", "Custom");
         StatusBarSpacingCustomPanel.Content = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
+
+        WeatherPanelTitleTextBlock.Text = L("settings.weather.title", "Weather");
+        WeatherPreviewSectionTextBlock.Text = L("settings.weather.preview_section", "Weather Preview");
+        WeatherSettingsSectionTextBlock.Text = L("settings.weather.settings_section", "Settings");
+        WeatherPreviewButton.Content = L("settings.weather.refresh_button", "Refresh");
+        WeatherPreviewResultTextBlock.Text = L("settings.weather.preview_hint", "Use refresh to verify your weather configuration.");
+        WeatherLocationSettingsExpander.Header = L("settings.weather.location_source_header", "Location Source");
+        WeatherLocationSettingsExpander.Description = L(
+            "settings.weather.location_source_desc",
+            "Choose how weather widgets resolve location.");
+        WeatherLocationModeCityItem.Content = L("settings.weather.mode_city_search", "City Search");
+        WeatherLocationModeCoordinatesItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
+        WeatherLocationModeCityChipItem.Content = L("settings.weather.mode_city_search", "City Search");
+        WeatherLocationModeCoordinatesChipItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
+        WeatherAutoRefreshToggleSwitch.Content = L("settings.weather.auto_refresh", "Auto refresh location on startup");
+        WeatherCitySearchSettingsExpander.Header = L("settings.weather.city_search_header", "City Search");
+        WeatherCitySearchSettingsExpander.Description = L(
+            "settings.weather.city_search_desc",
+            "Search cities and apply one weather location.");
+        WeatherCitySearchTextBox.Watermark = L("settings.weather.search_placeholder", "e.g. Beijing");
+        WeatherSearchButton.Content = L("settings.weather.search_button", "Search");
+        WeatherApplyCityButton.Content = L("settings.weather.apply_city_button", "Apply City");
+        WeatherSearchStatusTextBlock.Text = L("settings.weather.search_hint", "Search by city name and apply one location.");
+        WeatherCoordinateSettingsExpander.Header = L("settings.weather.coordinates_header", "Coordinates");
+        WeatherCoordinateSettingsExpander.Description = L(
+            "settings.weather.coordinates_desc",
+            "Set latitude/longitude and optional key/name.");
+        WeatherLatitudeNumberBox.Header = L("settings.weather.latitude_label", "Latitude");
+        WeatherLongitudeNumberBox.Header = L("settings.weather.longitude_label", "Longitude");
+        WeatherLocationKeyTextBox.Watermark = L("settings.weather.location_key_placeholder", "Location key (optional)");
+        WeatherLocationNameTextBox.Watermark = L("settings.weather.location_name_placeholder", "Display name (optional)");
+        WeatherApplyCoordinatesButton.Content = L("settings.weather.apply_coordinates_button", "Apply Coordinates");
+        WeatherAlertFilterSettingsExpander.Header = L("settings.weather.alert_filter_header", "Excluded Alerts");
+        WeatherAlertFilterSettingsExpander.Description = L(
+            "settings.weather.alert_filter_desc",
+            "Alerts containing these words will not be shown. One rule per line.");
+        WeatherAlertListTitleTextBlock.Text = L("settings.weather.alert_list_label", "Exclude List");
+        WeatherAlertListDescriptionTextBlock.Text = L("settings.weather.alert_list_desc", "One exclusion rule per line.");
+        WeatherExcludedAlertsTextBox.Watermark = L("settings.weather.alert_filter_placeholder", "One keyword per line");
+        WeatherNoTlsSettingsExpander.Header = L("settings.weather.no_tls_header", "No TLS Weather Request");
+        WeatherNoTlsSettingsExpander.Description = L(
+            "settings.weather.no_tls_desc",
+            "Not recommended. Enable only for incompatible network environments.");
+        WeatherNoTlsToggleSwitch.Content = L("settings.weather.no_tls_toggle", "Allow non-TLS request fallback");
+        WeatherFooterHintTextBlock.Text = L(
+            "settings.weather.footer_hint",
+            "Desktop weather widgets will reuse the location and alert exclusion settings configured here.");
+        WeatherIconPackSettingsExpander.Header = L("settings.weather.icon_style_header", "Weather Icon Style");
+        WeatherIconPackSettingsExpander.Description = L(
+            "settings.weather.icon_style_desc",
+            "Choose Fluent Icon style for weather symbols.");
+        WeatherIconPackFluentRegularItem.Content = L("settings.weather.icon_style_fluent_regular", "Fluent Regular");
+        WeatherIconPackFluentFilledItem.Content = L("settings.weather.icon_style_fluent_filled", "Fluent Filled");
+        UpdateWeatherLocationStatusText();
 
         RegionPanelTitleTextBlock.Text = L("settings.region.title", "Region");
         LanguageSettingsExpander.Header = L("settings.region.language_header", "Language");

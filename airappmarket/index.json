@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "sourceId": "official.lanmountaindesktop",
+  "sourceName": "LanMountainDesktop Official Market",
+  "generatedAt": "2026-03-10T01:30:00Z",
+  "plugins": [
+    {
+      "id": "LanMountainDesktop.PluginMarketplace",
+      "name": "LanMountain Plugin Marketplace",
+      "description": "Official plugin marketplace for browsing and installing LanMountainDesktop plugins.",
+      "author": "LanMountainDesktop",
+      "version": "1.0.0",
+      "apiVersion": "1.0.0",
+      "minHostVersion": "1.0.0",
+      "downloadUrl": "https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/LanAirApp/releases/LanMountainDesktop.PluginMarketplace.1.0.0.laapp",
+      "sha256": "51e73bf834c4c3f8a32bc711e9db62b954e24a3577e580d6faa4c3986ce70e0b",
+      "packageSizeBytes": 1704353,
+      "iconUrl": "https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/airappmarket/assets/plugin-marketplace.svg",
+      "homepageUrl": "https://github.com/wwiinnddyy/LanMountainDesktop/tree/main/LanAirApp/plugins/LanMountainDesktop.PluginMarketplace",
+      "repositoryUrl": "https://github.com/wwiinnddyy/LanMountainDesktop/tree/main/LanAirApp/plugins/LanMountainDesktop.PluginMarketplace",
+      "tags": [
+        "official",
+        "market",
+        "settings"
+      ],
+      "publishedAt": "2026-03-10T01:30:00Z",
+      "updatedAt": "2026-03-10T01:30:00Z",
+      "releaseNotes": "Bootstrap plugin for the official LanMountainDesktop marketplace. Install it once from a local .laapp package, then use it to discover and stage future plugin installs and updates."
+    },
+    {
+      "id": "LanMountainDesktop.SamplePlugin",
+      "name": "LanMountain Sample Plugin",
+      "description": "Example plugin used to validate PluginSdk loading and isolation.",
+      "author": "LanMountainDesktop",
+      "version": "1.0.0",
+      "apiVersion": "1.0.0",
+      "minHostVersion": "1.0.0",
+      "downloadUrl": "https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/LanAirApp/releases/LanMountainDesktop.SamplePlugin.1.0.0.laapp",
+      "sha256": "c092f9d215ee0f1e436bc49b919dd9a75b3838e950c72c46dd7e41807557125c",
+      "packageSizeBytes": 1703398,
+      "iconUrl": "https://raw.githubusercontent.com/wwiinnddyy/LanMountainDesktop/main/airappmarket/assets/sample-plugin.svg",
+      "homepageUrl": "https://github.com/wwiinnddyy/LanMountainDesktop/tree/main/LanAirApp/samples/LanMountainDesktop.SamplePlugin",
+      "repositoryUrl": "https://github.com/wwiinnddyy/LanMountainDesktop/tree/main/LanAirApp/samples/LanMountainDesktop.SamplePlugin",
+      "tags": [
+        "example",
+        "official",
+        "sdk"
+      ],
+      "publishedAt": "2026-03-10T01:30:00Z",
+      "updatedAt": "2026-03-10T01:30:00Z",
+      "releaseNotes": "Reference plugin for SDK validation. Includes a settings page, a desktop widget, localization resources, service registration, and plugin message bus usage."
+    }
+  ]
+}

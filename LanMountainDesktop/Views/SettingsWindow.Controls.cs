@@ -126,6 +126,8 @@ public partial class SettingsWindow
 
     // --- WeatherSettingsPage ---
     internal TextBlock WeatherPanelTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPanelTitleTextBlock")!;
+    internal TextBlock WeatherPreviewSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewSectionTextBlock")!;
+    internal TextBlock WeatherSettingsSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherSettingsSectionTextBlock")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherPreviewSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherPreviewSettingsExpander")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherLocationSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherLocationSettingsExpander")!;
     internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCitySearchSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCitySearchSettingsExpander")!;
@@ -156,6 +158,7 @@ public partial class SettingsWindow
     internal FluentAvalonia.UI.Controls.NumberBox WeatherLongitudeNumberBox => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLongitudeNumberBox")!;
     internal TextBlock WeatherCoordinateStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherCoordinateStatusTextBlock")!;
     internal TextBlock WeatherPreviewResultTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewResultTextBlock")!;
+    internal Image WeatherPreviewIconImage => WeatherSettingsPanel.FindControl<Image>("WeatherPreviewIconImage")!;
     internal FluentIcons.Avalonia.Fluent.SymbolIcon WeatherPreviewIconSymbol => WeatherSettingsPanel.FindControl<FluentIcons.Avalonia.Fluent.SymbolIcon>("WeatherPreviewIconSymbol")!;
     internal TextBlock WeatherPreviewTemperatureTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewTemperatureTextBlock")!;
     internal TextBlock WeatherPreviewUpdatedTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewUpdatedTextBlock")!;
@@ -163,7 +166,13 @@ public partial class SettingsWindow
     internal FluentAvalonia.UI.Controls.ProgressRing WeatherPreviewProgressRing => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherPreviewProgressRing")!;
     internal ComboBoxItem WeatherIconPackFluentRegularItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentRegularItem")!;
     internal ComboBoxItem WeatherIconPackFluentFilledItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentFilledItem")!;
+    internal TextBlock WeatherLocationSelectionTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionTitleTextBlock")!;
+    internal TextBlock WeatherLocationSelectionDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionDescriptionTextBlock")!;
+    internal TextBlock WeatherLocationValueTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationValueTextBlock")!;
     internal TextBlock WeatherLocationStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationStatusTextBlock")!;
+    internal TextBlock WeatherAlertListTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListTitleTextBlock")!;
+    internal TextBlock WeatherAlertListDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListDescriptionTextBlock")!;
+    internal TextBlock WeatherFooterHintTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherFooterHintTextBlock")!;
 
     // --- UpdateSettingsPage ---
     internal TextBlock UpdatePanelTitleTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdatePanelTitleTextBlock")!;

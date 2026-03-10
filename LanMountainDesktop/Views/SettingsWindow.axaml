@@ -1,6 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:ic="using:FluentIcons.Avalonia.Fluent"
         xmlns:pages="using:LanMountainDesktop.Views.SettingsPages"
@@ -8,15 +7,93 @@
         x:Class="LanMountainDesktop.Views.SettingsWindow"
         Title="Settings"
         Icon="/Assets/avalonia-logo.ico"
-        Width="1360"
-        Height="900"
-        MinWidth="1120"
-        MinHeight="760"
+        Width="1520"
+        Height="960"
+        MinWidth="1240"
+        MinHeight="820"
         ShowInTaskbar="True"
         WindowStartupLocation="CenterScreen"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="SystemChrome"
         Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+
+    <Window.Styles>
+        <Style Selector="Border.settings-shell-card">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="BoxShadow" Value="0 10 28 #12000000" />
+        </Style>
+
+        <Style Selector="TextBlock.settings-shell-eyebrow">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.settings-shell-hint">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        </Style>
+
+        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
+                    <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+            <Setter Property="RenderTransform" Value="scale(1.01)" />
+        </Style>
+
+        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item.nav-selected">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
+        </Style>
+
+        <Style Selector="Border.settings-sidebar-icon-shell">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.settings-sidebar-item.nav-selected Border.settings-sidebar-icon-shell">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.settings-nav-label">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="ic|SymbolIcon.settings-nav-icon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.settings-sidebar-item.nav-selected ic|SymbolIcon.settings-nav-icon">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </Window.Styles>
 
     <Grid x:Name="DesktopHost">
         <Border x:Name="DesktopWallpaperLayer"
@@ -27,121 +104,142 @@
               IsVisible="True"
               Opacity="1"
               Margin="20">
-            <Border x:Name="SettingsContentPanel"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Margin="0"
-                    Padding="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch">
-                <Grid RowDefinitions="Auto,*">
-                    <Border Grid.Row="0"
-                            Classes="mica-strong"
-                            CornerRadius="24,24,0,0"
-                            Padding="20,16">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <Border Width="40"
-                                    Height="40"
-                                    CornerRadius="20"
-                                    Background="{DynamicResource AdaptiveAccentBrush}">
-                                <fi:FluentIcon Icon="Settings"
-                                               IconVariant="Regular"
-                                               Foreground="White"
-                                               FontSize="18"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
-                            </Border>
-                            <StackPanel Grid.Column="1"
-                                        Margin="14,0,0,0"
-                                        Spacing="2"
-                                        VerticalAlignment="Center">
-                                <TextBlock x:Name="WindowTitleTextBlock"
-                                           FontSize="24"
+            <Grid x:Name="SettingsContentPanel"
+                  RowDefinitions="Auto,*"
+                  RowSpacing="18">
+                <Border Grid.Row="0"
+                        Classes="settings-shell-card"
+                        Padding="20,18">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="18">
+                        <Border Width="52"
+                                Height="52"
+                                CornerRadius="18"
+                                Background="{DynamicResource AdaptiveAccentBrush}">
+                            <TextBlock Text="LMD"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="White"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="3"
+                                    VerticalAlignment="Center">
+                            <TextBlock x:Name="WindowTitleTextBlock"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Text="Application Settings" />
+                            <TextBlock x:Name="WindowSubtitleTextBlock"
+                                       Classes="settings-shell-hint"
+                                       Text="LanMountainDesktop" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="10"
+                                    VerticalAlignment="Center">
+                            <Border Classes="settings-shell-card"
+                                    Padding="12,8"
+                                    CornerRadius="18">
+                                <TextBlock x:Name="WindowVersionBadgeTextBlock"
+                                           FontSize="14"
                                            FontWeight="SemiBold"
+                                           Text="1.0.0" />
+                            </Border>
+                            <Border Classes="settings-shell-card"
+                                    Padding="12,8"
+                                    CornerRadius="18">
+                                <TextBlock x:Name="WindowCodeNameBadgeTextBlock"
+                                           Classes="settings-shell-hint"
+                                           Text="Administrate" />
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="300,20,*">
+                    <Border Grid.Column="0"
+                            Classes="settings-shell-card"
+                            Padding="18,18,18,16">
+                        <Grid RowDefinitions="Auto,*,Auto"
+                              RowSpacing="18">
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Name="SettingsSidebarTitleTextBlock"
+                                           Classes="settings-shell-eyebrow"
                                            Text="Settings" />
-                                <TextBlock x:Name="WindowSubtitleTextBlock"
-                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                           Text="LanMountainDesktop preferences" />
+                                <TextBlock x:Name="SettingsSidebarHintTextBlock"
+                                           Classes="settings-shell-hint"
+                                           TextWrapping="Wrap"
+                                           Text="Choose a category to adjust application behavior and desktop appearance." />
                             </StackPanel>
-                            <Button Grid.Column="2"
-                                    Padding="10,8"
-                                    HorizontalAlignment="Right"
-                                    Click="OnCloseWindowClick">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <fi:FluentIcon Icon="Dismiss" IconVariant="Regular" />
-                                    <TextBlock Text="Close" VerticalAlignment="Center" />
+
+                            <ScrollViewer Grid.Row="1"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="20">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock x:Name="SettingsPrimaryGroupTextBlock"
+                                                   Classes="settings-shell-eyebrow"
+                                                   Text="Desktop" />
+                                        <StackPanel x:Name="SettingsPrimaryNavHost"
+                                                    Classes="settings-sidebar-host"
+                                                    Spacing="0" />
+                                    </StackPanel>
+
+                                    <Border Background="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                            Height="1" />
+
+                                    <StackPanel Spacing="10">
+                                        <TextBlock x:Name="SettingsSecondaryGroupTextBlock"
+                                                   Classes="settings-shell-eyebrow"
+                                                   Text="System" />
+                                        <StackPanel x:Name="SettingsSecondaryNavHost"
+                                                    Classes="settings-sidebar-host"
+                                                    Spacing="0" />
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="SettingsPluginNavSection"
+                                                IsVisible="False"
+                                                Spacing="10">
+                                        <Border Background="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                                                Height="1" />
+                                        <TextBlock x:Name="SettingsPluginGroupTextBlock"
+                                                   Classes="settings-shell-eyebrow"
+                                                   Text="Extensions" />
+                                        <StackPanel x:Name="SettingsPluginNavHost"
+                                                    Classes="settings-sidebar-host"
+                                                    Spacing="0" />
+                                    </StackPanel>
                                 </StackPanel>
-                            </Button>
+                            </ScrollViewer>
+
+                            <Border Grid.Row="2"
+                                    Classes="settings-shell-card"
+                                    Padding="14,12"
+                                    CornerRadius="22">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="LanMountainDesktop"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock x:Name="SettingsSidebarFooterTextBlock"
+                                               Classes="settings-shell-hint"
+                                               TextWrapping="Wrap"
+                                               Text="Tray-opened settings are managed in this standalone window." />
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </Border>
 
-                    <Border Grid.Row="1"
-                            Classes="mica-strong"
-                            CornerRadius="0,0,24,24"
-                            Padding="18">
-                        <Grid RowDefinitions="*,Auto"
-                              RowSpacing="14">
-                        <ui:NavigationView x:Name="SettingsNavView"
-                                           Grid.Row="0"
-                                           PaneDisplayMode="Left"
-                                           IsSettingsVisible="False"
-                                           OpenPaneLength="240"
-                                           SelectionChanged="OnSettingsNavSelectionChanged">
-                            <ui:NavigationView.MenuItems>
-                                <ui:NavigationViewItem x:Name="SettingsNavWallpaperItem" Content="壁纸" Tag="Wallpaper">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Wallpaper" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavGridItem" Content="网格" Tag="Grid">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Grid" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavColorItem" Content="颜色" Tag="Color">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Color" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavStatusBarItem" Content="状态栏" Tag="StatusBar">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Status" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavWeatherItem" Content="天气" Tag="Weather">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="WeatherSunny" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavRegionItem" Content="地区" Tag="Region">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Globe" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavUpdateItem" Content="更新" Tag="Update">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="ArrowSync" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavAboutItem" Content="关于" Tag="About">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Info" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavLauncherItem" Content="应用启动台" Tag="Launcher">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="Apps" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                                <ui:NavigationViewItem x:Name="SettingsNavPluginsItem" Content="插件" Tag="Plugins">
-                                    <ui:NavigationViewItem.IconSource>
-                                        <ic:SymbolIconSource Symbol="PuzzlePiece" IconVariant="Regular" />
-                                    </ui:NavigationViewItem.IconSource>
-                                </ui:NavigationViewItem>
-                            </ui:NavigationView.MenuItems>
-
+                    <Grid Grid.Column="2"
+                          RowDefinitions="*,Auto"
+                          RowSpacing="14">
+                        <Border Grid.Row="0"
+                                Classes="settings-shell-card"
+                                Padding="0">
                             <ScrollViewer x:Name="SettingsContentScrollViewer"
-                                          Padding="0,0,16,0"
+                                          Padding="30,28,30,30"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">
                                 <Grid x:Name="SettingsContentPagesHost">
@@ -157,23 +255,23 @@
                                     <pages:PluginSettingsPage x:Name="PluginSettingsPanel" IsVisible="False" />
                                 </Grid>
                             </ScrollViewer>
-                        </ui:NavigationView>
+                        </Border>
 
                         <Border x:Name="PendingRestartDock"
                                 Grid.Row="1"
                                 IsVisible="False"
-                                Classes="glass-panel"
-                                CornerRadius="18"
-                                Padding="14,12">
+                                Classes="settings-shell-card"
+                                Padding="16,14"
+                                CornerRadius="24">
                             <Grid ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="12">
-                                <Border Width="34"
-                                        Height="34"
-                                        CornerRadius="17"
+                                  ColumnSpacing="14">
+                                <Border Width="38"
+                                        Height="38"
+                                        CornerRadius="14"
                                         Background="{DynamicResource AdaptiveAccentBrush}">
                                     <fi:FluentIcon Icon="ArrowSync"
                                                    IconVariant="Regular"
-                                                   FontSize="16"
+                                                   FontSize="18"
                                                    Foreground="White"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" />
@@ -182,7 +280,7 @@
                                             Spacing="2"
                                             VerticalAlignment="Center">
                                     <TextBlock x:Name="PendingRestartDockTitleTextBlock"
-                                               FontSize="13"
+                                               FontSize="14"
                                                FontWeight="SemiBold"
                                                Text="Restart required" />
                                     <TextBlock x:Name="PendingRestartDockDescriptionTextBlock"
@@ -192,7 +290,7 @@
                                 </StackPanel>
                                 <Button x:Name="PendingRestartDockButton"
                                         Grid.Column="2"
-                                        Padding="14,8"
+                                        Padding="16,8"
                                         Click="OnPendingRestartDockButtonClick">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <fi:FluentIcon Icon="ArrowSync"
@@ -204,10 +302,9 @@
                                 </Button>
                             </Grid>
                         </Border>
-                        </Grid>
-                    </Border>
+                    </Grid>
                 </Grid>
-            </Border>
+            </Grid>
         </Grid>
 
         <Grid IsVisible="False">

@@ -180,6 +180,14 @@ public partial class MainWindow
         StatusBarSpacingCustomPanel.Content = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
 
         WeatherPanelTitleTextBlock.Text = L("settings.weather.title", "Weather");
+        WeatherPreviewSectionTextBlock.Text = L("settings.weather.preview_section", "Weather Preview");
+        WeatherSettingsSectionTextBlock.Text = L("settings.weather.settings_section", "Settings");
+        WeatherPreviewSettingsExpander.Header = L("settings.weather.preview_panel_header", "Weather Preview");
+        WeatherPreviewSettingsExpander.Description = L(
+            "settings.weather.preview_panel_desc",
+            "Refresh and verify current weather service status.");
+        WeatherPreviewButton.Content = L("settings.weather.refresh_button", "Refresh");
+
         WeatherLocationSettingsExpander.Header = L("settings.weather.location_source_header", "Location Source");
         WeatherLocationSettingsExpander.Description = L(
             "settings.weather.location_source_desc",
@@ -189,6 +197,10 @@ public partial class MainWindow
         WeatherLocationModeCityChipItem.Content = L("settings.weather.mode_city_search", "City Search");
         WeatherLocationModeCoordinatesChipItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
         WeatherAutoRefreshToggleSwitch.Content = L("settings.weather.auto_refresh", "Auto refresh location on startup");
+        WeatherLocationSelectionTitleTextBlock.Text = L("settings.weather.city_selection_label", "City Selection");
+        WeatherLocationSelectionDescriptionTextBlock.Text = L(
+            "settings.weather.location_city_summary_desc",
+            "Select the current city used for weather queries.");
 
         WeatherCitySearchSettingsExpander.Header = L("settings.weather.city_search_header", "City Search");
         WeatherCitySearchSettingsExpander.Description = L(
@@ -208,24 +220,12 @@ public partial class MainWindow
         WeatherLocationNameTextBox.Watermark = L("settings.weather.location_name_placeholder", "Display name (optional)");
         WeatherApplyCoordinatesButton.Content = L("settings.weather.apply_coordinates_button", "Apply Coordinates");
 
-        WeatherPreviewSettingsExpander.Header = L("settings.weather.preview_panel_header", "Weather Preview");
-        WeatherPreviewSettingsExpander.Description = L(
-            "settings.weather.preview_panel_desc",
-            "Refresh and verify current weather service status.");
-        WeatherPreviewButton.Content = L("settings.weather.refresh_button", "Refresh");
-
-        WeatherLocationSettingsExpander.Header = L("settings.weather.location_msg_header", "Location Source");
-        WeatherLocationSettingsExpander.Description = L(
-            "settings.weather.location_msg_desc",
-            "Choose how weather widgets resolve location.");
-        WeatherLocationModeCityChipItem.Content = L("settings.weather.mode_city", "City Search");
-        WeatherLocationModeCoordinatesChipItem.Content = L("settings.weather.mode_coordinates", "Coordinates");
-        WeatherAutoRefreshToggleSwitch.Content = L("settings.weather.auto_location_toggle", "Auto refresh location on startup");
-
         WeatherAlertFilterSettingsExpander.Header = L("settings.weather.alert_filter_header", "Excluded Alerts");
         WeatherAlertFilterSettingsExpander.Description = L(
             "settings.weather.alert_filter_desc",
             "Alerts containing these words will not be shown. One rule per line.");
+        WeatherAlertListTitleTextBlock.Text = L("settings.weather.alert_list_label", "Exclude List");
+        WeatherAlertListDescriptionTextBlock.Text = L("settings.weather.alert_list_desc", "One exclusion rule per line.");
         WeatherExcludedAlertsTextBox.Watermark = L("settings.weather.alert_filter_placeholder", "One keyword per line");
 
         WeatherIconPackSettingsExpander.Header = L("settings.weather.icon_style_header", "Weather Icon Style");
@@ -239,6 +239,10 @@ public partial class MainWindow
         WeatherNoTlsSettingsExpander.Description = L(
             "settings.weather.no_tls_desc",
             "Not recommended. Enable only for incompatible network environments.");
+        WeatherNoTlsToggleSwitch.Content = L("settings.weather.no_tls_toggle", "Allow non-TLS request fallback");
+        WeatherFooterHintTextBlock.Text = L(
+            "settings.weather.footer_hint",
+            "Desktop weather widgets will reuse the location and alert exclusion settings configured here.");
 
         if (string.IsNullOrWhiteSpace(_weatherSearchKeyword))
         {
@@ -418,6 +422,7 @@ public partial class MainWindow
                 WeatherLocationStatusTextBlock.Text = L(
                     "settings.weather.status_city_empty",
                     "No city location is configured.");
+                UpdateWeatherLocationSummaryCard();
                 return;
             }
 
@@ -430,6 +435,7 @@ public partial class MainWindow
                 modeText,
                 locationName,
                 _weatherLocationKey);
+            UpdateWeatherLocationSummaryCard();
             return;
         }
 
@@ -442,6 +448,7 @@ public partial class MainWindow
             string.IsNullOrWhiteSpace(_weatherLocationKey)
                 ? BuildCoordinateLocationKey(_weatherLatitude, _weatherLongitude)
                 : _weatherLocationKey);
+        UpdateWeatherLocationSummaryCard();
     }
 }
 

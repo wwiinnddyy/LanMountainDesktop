@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <OutputPath>bin\$(Configuration)\$(TargetFramework)\content\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <PluginPackageOutputDirectory>..\..\..\LanMountainDesktop\bin\$(Configuration)\$(TargetFramework)\Extensions\Plugins\</PluginPackageOutputDirectory>
+    <PluginPackagePath>$(PluginPackageOutputDirectory)$(AssemblyName).laapp</PluginPackagePath>
+    <PluginReleaseOutputDirectory>..\..\releases\</PluginReleaseOutputDirectory>
+    <PluginReleasePackagePath>$(PluginReleaseOutputDirectory)$(AssemblyName).$(Version).laapp</PluginReleasePackagePath>
+    <LegacyLoosePluginOutputDirectory>..\..\..\LanMountainDesktop\bin\$(Configuration)\$(TargetFramework)\Extensions\Plugins\PluginMarketplace\</LegacyLoosePluginOutputDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" Private="false" />
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CreateLaappPackage" AfterTargets="Build">
+    <MakeDir Directories="$(PluginPackageOutputDirectory)" />
+    <MakeDir Directories="$(PluginReleaseOutputDirectory)" />
+    <RemoveDir Directories="$(LegacyLoosePluginOutputDirectory)" />
+    <Delete Files="$(PluginPackagePath)" TreatErrorsAsWarnings="true" />
+    <Delete Files="$(PluginReleasePackagePath)" TreatErrorsAsWarnings="true" />
+    <ZipDirectory SourceDirectory="$(OutputPath)" DestinationFile="$(PluginPackagePath)" />
+    <Copy SourceFiles="$(PluginPackagePath)" DestinationFiles="$(PluginReleasePackagePath)" />
+  </Target>
+
+</Project>
