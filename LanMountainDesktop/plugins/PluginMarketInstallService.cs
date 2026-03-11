@@ -78,6 +78,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
                 }
             }
 
+            var actualSize = new FileInfo(downloadPath).Length;
             string actualHash;
             await using (var hashStream = File.OpenRead(downloadPath))
             {
@@ -87,11 +88,14 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
             if (!string.Equals(actualHash, plugin.Sha256, StringComparison.OrdinalIgnoreCase))
             {
+                AppLogger.Error(
+                    "PluginMarket",
+                    $"SHA-256 verification failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadUrl='{resolvedDownloadUrl}'; DownloadPath='{downloadPath}'; ExpectedHash='{plugin.Sha256}'; ActualHash='{actualHash}'; ExpectedSize='{plugin.PackageSizeBytes}'; ActualSize='{actualSize}'.");
                 File.Delete(downloadPath);
                 return new AirAppMarketInstallResult(
                     false,
                     null,
-                    $"SHA-256 mismatch. Expected {plugin.Sha256}, actual {actualHash}.");
+                    $"SHA-256 mismatch. Expected {plugin.Sha256}, actual {actualHash}. Expected size {plugin.PackageSizeBytes}, actual size {actualSize}. Source {resolvedDownloadUrl}.");
             }
 
             PluginManifest manifest;
