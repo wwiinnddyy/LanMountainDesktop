@@ -8,14 +8,14 @@ MSBUILD : error MSB1003: Specify a project or solution file.
 The current working directory does not contain a project or solution file.
 ```
 
-**原因**: 项目中缺少 `LanMountainDesktop.sln` 解决方案文件，但工作流尝试执行 `dotnet restore` 而没有指定项目。
+**原因**: 项目中缺少 `LanMountainDesktop.slnx` 解决方案文件，但工作流尝试执行 `dotnet restore` 而没有指定项目。
 
 ---
 
 ## 🔧 已采取的修复
 
-### 1. 创建解决方案文件
-✅ 创建了标准的 `LanMountainDesktop.sln` 文件，包含：
+### 1. 创建 `.slnx` 解决方案文件
+✅ 创建了标准的 `LanMountainDesktop.slnx` 文件，包含：
 - `LanMountainDesktop/LanMountainDesktop.csproj`
 
 ### 2. 验证本地构建工作
@@ -35,10 +35,10 @@ The current working directory does not contain a project or solution file.
 
 ## 📋 解决方案文件内容
 
-包含主桌面项目的标准 Visual Studio 解决方案格式：
+包含主桌面项目的标准 XML 解决方案格式：
 
 ```
-LanMountainDesktop.sln
+LanMountainDesktop.slnx
 └── LanMountainDesktop (Desktop UI - Avalonia)
 ```
 
@@ -50,10 +50,11 @@ LanMountainDesktop.sln
 
 ```bash
 # 1. 添加新创建的解决方案文件
-git add LanMountainDesktop.sln
+git add LanMountainDesktop.slnx
+git add global.json
 
 # 2. 提交
-git commit -m "Add solution file for desktop project"
+git commit -m "Migrate desktop solution to .slnx"
 
 # 3. 推送
 git push origin main
@@ -92,7 +93,7 @@ git push origin v1.0.1
 | `.github/workflows/code-quality.yml` | 代码质量检查 | ✅ 可用 |
 | `.github/workflows/release.yml` | 多平台发布 | ✅ 可用 |
 | `.github/workflows/issue-management.yml` | Issue自动管理 | ✅ 可用 |
-| `LanMountainDesktop.sln` | 解决方案文件 | ✅ 已修复 |
+| `LanMountainDesktop.slnx` | 解决方案文件 | ✅ 已修复 |
 
 ---
 

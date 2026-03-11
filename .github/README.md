@@ -36,9 +36,10 @@
 - 扩展契约与字段说明见组件系统文档：`LanMountainDesktop/ComponentSystem/README.md`。
 
 ## 当前状态
-- 项目包含桌面端与推荐后端两个子项目，并在同一 solution 中维护。
+- 项目包含桌面端与推荐后端两个子项目，并在同一 `LanMountainDesktop.slnx` 工作区中维护。
 - 配置默认写入本地：`%LOCALAPPDATA%\LanMountainDesktop\settings.json`。
 - 当前体验以 Windows 为主要目标平台。
+- SDK 版本由仓库根目录 `global.json` 锁定。
 
 ## 运行说明
 运行与环境准备已拆分到独立文档：[`run.md`](./run.md)

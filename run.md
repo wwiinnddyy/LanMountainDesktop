@@ -8,12 +8,14 @@
 
 - 安装 .NET SDK 10。
 - 桌面端建议在 Windows 上运行。
+- 仓库主入口解决方案文件为 `LanMountainDesktop.slnx`。
+- SDK 版本由仓库根目录 `global.json` 锁定。
 
 ### 构建
 
 ```bash
 dotnet restore
-dotnet build LanMountainDesktop.sln -c Debug
+dotnet build LanMountainDesktop.slnx -c Debug
 ```
 
 ### 运行桌面端
@@ -41,11 +43,13 @@ dotnet run --project LanMountainDesktop/LanMountainDesktop.csproj
 
 This guide explains how to run LanMountainDesktop locally.
 
+The repository entry solution is `LanMountainDesktop.slnx`, and the SDK version is pinned by the root `global.json`.
+
 ### Build
 
 ```bash
 dotnet restore
-dotnet build LanMountainDesktop.sln -c Debug
+dotnet build LanMountainDesktop.slnx -c Debug
 ```
 
 ### Run

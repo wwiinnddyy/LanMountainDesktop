@@ -9,7 +9,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  Solution_Name: LanMountainDesktop.sln
+  Solution_Name: LanMountainDesktop.slnx
 
 jobs:
   build-windows:
