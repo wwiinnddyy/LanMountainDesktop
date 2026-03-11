@@ -492,3 +492,13 @@ nul
 /_build_verify_plugin_services
 /LanMountainDesktop.PluginSdk/_build_verify_*/
 /_build_obj
+
+# LanMountainDesktop local workspace files
+/.arts/
+/.knox/
+/.lingma/
+/.tmp/
+/publish-test/
+/validator-restore.log
+/temp_old_main.axaml
+/temp_old_main_utf8.axaml
