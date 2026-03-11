@@ -743,7 +743,10 @@
     "placement.fit":  "适应",
     "placement.stretch":  "拉伸",
     "placement.center":  "居中",
-    "placement.tile":  "平铺"
-}
+    "placement.tile":  "平铺",
+    "single_instance.notice.title":  "应用已打开",
+    "single_instance.notice.description":  "阑山桌面已经在运行，已为你切换到当前正在使用的桌面。",
+    "single_instance.notice.button":  "知道了"
+  }
 
 

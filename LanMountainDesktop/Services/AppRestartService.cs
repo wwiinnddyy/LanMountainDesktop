@@ -9,6 +9,8 @@ namespace LanMountainDesktop.Services;
 
 public static class AppRestartService
 {
+    private const string RestartParentPidArgumentPrefix = "--restart-parent-pid=";
+
     public static bool TryRestartApplication()
     {
         return App.CurrentHostApplicationLifecycle?.TryRestart(new HostApplicationLifecycleRequest(
@@ -75,6 +77,21 @@ public static class AppRestartService
         return null;
     }
 
+    public static int? TryGetRestartParentProcessId(IReadOnlyList<string> commandLineArgs)
+    {
+        ArgumentNullException.ThrowIfNull(commandLineArgs);
+
+        foreach (var argument in commandLineArgs)
+        {
+            if (TryParseRestartParentProcessId(argument, out var processId))
+            {
+                return processId;
+            }
+        }
+
+        return null;
+    }
+
     private static ProcessStartInfo CreateExecutableStartInfo(
         string executablePath,
         string? entryAssemblyPath,
@@ -88,6 +105,7 @@ public static class AppRestartService
         };
 
         AppendArguments(startInfo, commandLineArgs);
+        AppendRestartParentProcessArgument(startInfo);
         return startInfo;
     }
 
@@ -110,6 +128,7 @@ public static class AppRestartService
 
         startInfo.ArgumentList.Add(entryAssemblyPath);
         AppendArguments(startInfo, commandLineArgs);
+        AppendRestartParentProcessArgument(startInfo);
         return startInfo;
     }
 
@@ -117,8 +136,32 @@ public static class AppRestartService
     {
         for (var i = 1; i < commandLineArgs.Count; i++)
         {
+            if (TryParseRestartParentProcessId(commandLineArgs[i], out _))
+            {
+                continue;
+            }
+
             startInfo.ArgumentList.Add(commandLineArgs[i]);
         }
+    }
+
+    private static void AppendRestartParentProcessArgument(ProcessStartInfo startInfo)
+    {
+        startInfo.ArgumentList.Add($"{RestartParentPidArgumentPrefix}{Environment.ProcessId}");
+    }
+
+    private static bool TryParseRestartParentProcessId(string? argument, out int processId)
+    {
+        processId = 0;
+        if (string.IsNullOrWhiteSpace(argument) ||
+            !argument.StartsWith(RestartParentPidArgumentPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return int.TryParse(
+            argument[RestartParentPidArgumentPrefix.Length..],
+            out processId) && processId > 0;
     }
 
     private static string? NormalizeExistingPath(string? path)

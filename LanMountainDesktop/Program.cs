@@ -1,8 +1,10 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.WebView.Desktop;
 using LanMountainDesktop.Services;
-using System;
-using System.Threading.Tasks;
 
 namespace LanMountainDesktop;
 
@@ -17,12 +19,11 @@ sealed class Program
         AppLogger.Initialize();
         RegisterGlobalExceptionLogging();
 
-        using var singleInstance = SingleInstanceService.CreateDefault();
+        using var singleInstance = AcquireSingleInstance(args);
         if (!singleInstance.IsPrimaryInstance)
         {
             AppLogger.Warn("Startup", "A secondary launch was blocked because another instance is already running.");
-            var notified = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2));
-            ShowAlreadyRunningNotice(notified);
+            _ = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2));
             return;
         }
 
@@ -72,6 +73,42 @@ sealed class Program
         return builder;
     }
 
+    private static SingleInstanceService AcquireSingleInstance(string[] args)
+    {
+        var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
+        var singleInstance = SingleInstanceService.CreateDefault();
+        if (singleInstance.IsPrimaryInstance || restartParentProcessId is null)
+        {
+            return singleInstance;
+        }
+
+        AppLogger.Info(
+            "Startup",
+            $"Restart relaunch detected. Waiting for previous instance pid={restartParentProcessId.Value} to exit before re-acquiring the single-instance lock.");
+        singleInstance.Dispose();
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(12);
+        WaitForRestartParentExit(restartParentProcessId.Value, deadline);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var retryInstance = SingleInstanceService.CreateDefault();
+            if (retryInstance.IsPrimaryInstance)
+            {
+                AppLogger.Info("Startup", "Restart relaunch acquired the single-instance lock.");
+                return retryInstance;
+            }
+
+            retryInstance.Dispose();
+            Thread.Sleep(150);
+        }
+
+        AppLogger.Warn(
+            "Startup",
+            $"Restart relaunch timed out while waiting for the single-instance lock. pid={restartParentProcessId.Value}.");
+        return SingleInstanceService.CreateDefault();
+    }
+
     private static string LoadConfiguredRenderMode()
     {
         try
@@ -85,14 +122,25 @@ sealed class Program
         }
     }
 
-    private static void ShowAlreadyRunningNotice(bool notifiedPrimaryInstance)
+    private static void WaitForRestartParentExit(int processId, DateTime deadlineUtc)
     {
-        const string caption = "LanMountainDesktop";
-        var message = notifiedPrimaryInstance
-            ? "应用已打开，不需要多开了。\r\n\r\n已为你切换到正在运行的阑山桌面。"
-            : "应用已打开，不需要多开了。\r\n\r\n请切换到正在运行的阑山桌面。";
-
-        WindowsNativeDialogService.ShowInformation(caption, message);
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            var remaining = deadlineUtc - DateTime.UtcNow;
+            if (remaining > TimeSpan.Zero)
+            {
+                process.WaitForExit((int)Math.Ceiling(remaining.TotalMilliseconds));
+            }
+        }
+        catch (ArgumentException)
+        {
+            // The previous process already exited before we started waiting.
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Startup", $"Failed while waiting for restart parent pid={processId} to exit.", ex);
+        }
     }
 
     private static void RegisterGlobalExceptionLogging()

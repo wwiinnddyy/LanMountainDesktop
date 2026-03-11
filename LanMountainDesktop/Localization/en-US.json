@@ -743,7 +743,10 @@
     "placement.fit":  "Fit",
     "placement.stretch":  "Stretch",
     "placement.center":  "Center",
-    "placement.tile":  "Tile"
-}
+    "placement.tile":  "Tile",
+    "single_instance.notice.title":  "App already open",
+    "single_instance.notice.description":  "LanMountainDesktop is already running. Switched back to the active desktop.",
+    "single_instance.notice.button":  "Got it"
+  }
 
 

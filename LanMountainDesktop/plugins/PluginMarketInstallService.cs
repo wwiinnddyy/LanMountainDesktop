@@ -78,9 +78,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
                 }
             }
 
-            await using var hashStream = File.OpenRead(downloadPath);
-            var hashBytes = await SHA256.HashDataAsync(hashStream, cancellationToken);
-            var actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            string actualHash;
+            await using (var hashStream = File.OpenRead(downloadPath))
+            {
+                var hashBytes = await SHA256.HashDataAsync(hashStream, cancellationToken);
+                actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            }
+
             if (!string.Equals(actualHash, plugin.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 File.Delete(downloadPath);

@@ -6,6 +6,13 @@ using LanMountainDesktop.PluginSdk;
 
 internal static class Program
 {
+    private static readonly TimeSpan[] RetryDelays =
+    [
+        TimeSpan.FromMilliseconds(120),
+        TimeSpan.FromMilliseconds(250),
+        TimeSpan.FromMilliseconds(500)
+    ];
+
     private static async Task<int> Main(string[] args)
     {
         var result = new HelperResult();
@@ -35,10 +42,12 @@ internal static class Program
 
             var manifest = ReadManifestFromPackage(fullSourcePath);
             Directory.CreateDirectory(fullPluginsDirectory);
-            RemoveExistingPluginPackages(fullPluginsDirectory, manifest.Id);
-
             var destinationPath = Path.Combine(fullPluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
-            File.Copy(fullSourcePath, destinationPath, overwrite: true);
+            var stagingPath = destinationPath + ".incoming";
+            DeleteFileWithRetry(stagingPath);
+            CopyWithRetry(fullSourcePath, stagingPath, overwrite: true);
+            RemoveExistingPluginPackages(fullPluginsDirectory, manifest.Id, destinationPath, stagingPath);
+            MoveWithOverwriteRetry(stagingPath, destinationPath);
 
             result = new HelperResult
             {
@@ -123,7 +132,7 @@ internal static class Program
         return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 
-    private static void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId)
+    private static void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), PluginSdkInfo.RuntimeDirectoryName));
         foreach (var existingPackagePath in Directory
@@ -133,18 +142,74 @@ internal static class Program
         {
             try
             {
+                if (string.Equals(existingPackagePath, Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(existingPackagePath, Path.GetFullPath(stagingPath), StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 var existingManifest = ReadManifestFromPackage(existingPackagePath);
                 if (!string.Equals(existingManifest.Id, pluginId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
-                File.Delete(existingPackagePath);
+                DeleteFileWithRetry(existingPackagePath);
             }
             catch
             {
                 // Ignore unrelated or malformed packages while replacing an install target.
             }
+        }
+    }
+
+    private static void CopyWithRetry(string sourcePath, string destinationPath, bool overwrite)
+    {
+        Retry(() => File.Copy(sourcePath, destinationPath, overwrite));
+    }
+
+    private static void MoveWithOverwriteRetry(string sourcePath, string destinationPath)
+    {
+        Retry(() => File.Move(sourcePath, destinationPath, overwrite: true));
+    }
+
+    private static void DeleteFileWithRetry(string filePath)
+    {
+        Retry(() =>
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        });
+    }
+
+    private static void Retry(Action action)
+    {
+        Exception? lastException = null;
+
+        for (var attempt = 0; attempt <= RetryDelays.Length; attempt++)
+        {
+            try
+            {
+                action();
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                lastException = ex;
+                if (attempt >= RetryDelays.Length)
+                {
+                    break;
+                }
+
+                Thread.Sleep(RetryDelays[attempt]);
+            }
+        }
+
+        if (lastException is not null)
+        {
+            throw lastException;
         }
     }
 

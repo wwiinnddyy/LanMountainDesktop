@@ -271,6 +271,10 @@ public partial class App : Application
                 mainWindow.Activate();
                 mainWindow.Topmost = true;
                 mainWindow.Topmost = false;
+                if (mainWindow is MainWindow lanMountainMainWindow)
+                {
+                    lanMountainMainWindow.ShowSingleInstanceNotice();
+                }
             }
             catch (Exception ex)
             {
