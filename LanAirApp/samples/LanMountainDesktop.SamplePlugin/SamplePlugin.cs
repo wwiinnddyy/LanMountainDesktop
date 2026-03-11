@@ -16,6 +16,7 @@ public sealed class SamplePlugin : PluginBase, IDisposable
         var hostName = GetHostProperty(context, PluginHostPropertyKeys.HostApplicationName, "UnknownHost");
         var hostVersion = GetHostProperty(context, PluginHostPropertyKeys.HostVersion, "UnknownVersion");
         var sdkApiVersion = GetHostProperty(context, PluginHostPropertyKeys.PluginSdkApiVersion, "UnknownApiVersion");
+        var hostApplicationLifecycle = context.GetService<IHostApplicationLifecycle>();
         var messageBus = context.GetService<IPluginMessageBus>()
             ?? throw new InvalidOperationException("Plugin message bus is not available.");
 
@@ -74,6 +75,19 @@ public sealed class SamplePlugin : PluginBase, IDisposable
             allowStatusBarPlacement: false,
             resizeMode: PluginDesktopComponentResizeMode.Proportional,
             cornerRadiusResolver: cellSize => Math.Clamp(cellSize * 0.34, 18, 34)));
+
+        context.RegisterDesktopComponent(new PluginDesktopComponentRegistration(
+            "LanMountainDesktop.SamplePlugin.CloseDesktop",
+            localizer.GetString("widget.close_desktop.display_name", "关闭桌面"),
+            widgetContext => new SamplePluginCloseDesktopWidget(widgetContext),
+            iconKey: "DismissCircle",
+            category: localizer.GetString("widget.category", "鎻掍欢"),
+            minWidthCells: 2,
+            minHeightCells: 1,
+            allowDesktopPlacement: true,
+            allowStatusBarPlacement: false,
+            resizeMode: PluginDesktopComponentResizeMode.Free,
+            cornerRadiusResolver: cellSize => Math.Clamp(cellSize * 0.28, 14, 22)));
     }
 
     public void Dispose()

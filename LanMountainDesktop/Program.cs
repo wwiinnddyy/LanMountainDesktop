@@ -17,6 +17,15 @@ sealed class Program
         AppLogger.Initialize();
         RegisterGlobalExceptionLogging();
 
+        using var singleInstance = SingleInstanceService.CreateDefault();
+        if (!singleInstance.IsPrimaryInstance)
+        {
+            AppLogger.Warn("Startup", "A secondary launch was blocked because another instance is already running.");
+            var notified = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2));
+            ShowAlreadyRunningNotice(notified);
+            return;
+        }
+
         var diagnostics = StartupDiagnosticsService.Run(args);
         StartupDiagnosticsService.ShowLegacyExecutableWarningIfNeeded(diagnostics);
 
@@ -24,6 +33,7 @@ sealed class Program
         {
             var renderMode = LoadConfiguredRenderMode();
             AppLogger.Info("Startup", $"Resolved render mode '{renderMode}'.");
+            App.CurrentSingleInstanceService = singleInstance;
             BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);
             AppLogger.Info("Startup", "Application exited normally.");
         }
@@ -31,6 +41,10 @@ sealed class Program
         {
             AppLogger.Critical("Startup", "Application terminated during startup.", ex);
             throw;
+        }
+        finally
+        {
+            App.CurrentSingleInstanceService = null;
         }
     }
 
@@ -69,6 +83,16 @@ sealed class Program
             AppLogger.Warn("Startup", "Failed to load configured render mode. Falling back to default.", ex);
             return AppRenderingModeHelper.Default;
         }
+    }
+
+    private static void ShowAlreadyRunningNotice(bool notifiedPrimaryInstance)
+    {
+        const string caption = "LanMountainDesktop";
+        var message = notifiedPrimaryInstance
+            ? "应用已打开，不需要多开了。\r\n\r\n已为你切换到正在运行的阑山桌面。"
+            : "应用已打开，不需要多开了。\r\n\r\n请切换到正在运行的阑山桌面。";
+
+        WindowsNativeDialogService.ShowInformation(caption, message);
     }
 
     private static void RegisterGlobalExceptionLogging()

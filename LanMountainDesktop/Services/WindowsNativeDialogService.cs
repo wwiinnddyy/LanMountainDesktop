@@ -6,9 +6,20 @@ namespace LanMountainDesktop.Services;
 internal static class WindowsNativeDialogService
 {
     private const uint Ok = 0x00000000;
+    private const uint IconInformation = 0x00000040;
     private const uint IconWarning = 0x00000030;
 
+    public static void ShowInformation(string caption, string message)
+    {
+        Show(caption, message, Ok | IconInformation, "NativeDialog");
+    }
+
     public static void ShowWarning(string caption, string message)
+    {
+        Show(caption, message, Ok | IconWarning, "StartupDiagnostics");
+    }
+
+    private static void Show(string caption, string message, uint type, string logCategory)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -17,11 +28,11 @@ internal static class WindowsNativeDialogService
 
         try
         {
-            _ = MessageBoxW(IntPtr.Zero, message, caption, Ok | IconWarning);
+            _ = MessageBoxW(IntPtr.Zero, message, caption, type);
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("StartupDiagnostics", "Failed to show legacy executable warning dialog.", ex);
+            AppLogger.Warn(logCategory, "Failed to show native dialog.", ex);
         }
     }
 

@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
@@ -77,7 +78,9 @@ public partial class SettingsWindow
             var result = await dialog.ShowAsync(this);
             if (result == ContentDialogResult.Primary)
             {
-                if (!AppRestartService.TryRestartApplication())
+                if (App.CurrentHostApplicationLifecycle?.TryRestart(new HostApplicationLifecycleRequest(
+                        Source: nameof(SettingsWindow),
+                        Reason: "User confirmed a pending restart prompt from settings.")) != true)
                 {
                     UpdatePendingRestartDock();
                 }

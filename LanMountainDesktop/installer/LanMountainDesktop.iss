@@ -38,6 +38,8 @@ OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}-{#MyAppArch}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+; Leave PrivilegesRequiredOverridesAllowed unset so users cannot downgrade
+; installation mode via dialog or /ALLUSERS /CURRENTUSER command-line switches.
 PrivilegesRequired=admin
 CloseApplications=yes
 CloseApplicationsFilter={#MyAppExeName}

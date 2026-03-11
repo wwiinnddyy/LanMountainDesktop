@@ -12,6 +12,7 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
 using AvaloniaWebView;
+using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop;
 
@@ -19,12 +20,19 @@ public partial class App : Application
 {
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
+    private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
+    private bool _exitCleanupCompleted;
 
     private SettingsWindow? _traySettingsWindow;
     private TrayIcons? _trayIcons;
     private PluginRuntimeService? _pluginRuntimeService;
 
+    internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
+    internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
+        (Current as App)?._hostApplicationLifecycle;
+
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
+    public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
 
     public override void Initialize()
     {
@@ -51,14 +59,14 @@ public partial class App : Application
             desktop.Exit += (_, _) =>
             {
                 AppLogger.Info("App", "Desktop lifetime exit triggered.");
-                AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
-                DisposeTrayIcon();
+                PerformExitCleanup();
             };
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(),
             };
             AppLogger.Info("App", $"Main window created. LogFile={AppLogger.LogFilePath}");
+            CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -66,12 +74,9 @@ public partial class App : Application
 
     private void OnTrayExitClick(object? sender, EventArgs e)
     {
-        DisposeTrayIcon();
-
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.Shutdown();
-        }
+        _ = _hostApplicationLifecycle.TryExit(new HostApplicationLifecycleRequest(
+            Source: "TrayMenu",
+            Reason: "User selected Exit App from the tray menu."));
     }
 
     private void OnTraySettingsClick(object? sender, EventArgs e)
@@ -114,18 +119,9 @@ public partial class App : Application
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
     {
-        AppRestartService.TryRestartApplication();
-    }
-
-    private void OnAppSettingsSaved(string _)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_trayIcons is not null)
-            {
-                InitializeTrayIcon();
-            }
-        }, DispatcherPriority.Background);
+        _ = _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
+            Source: "TrayMenu",
+            Reason: "User selected Restart App from the tray menu."));
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -244,6 +240,95 @@ public partial class App : Application
         }
 
         _trayIcons = null;
+    }
+
+    private void ActivateMainWindow()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                return;
+            }
+
+            if (desktop.MainWindow is not Window mainWindow)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!mainWindow.IsVisible)
+                {
+                    mainWindow.Show();
+                }
+
+                if (mainWindow.WindowState == WindowState.Minimized)
+                {
+                    mainWindow.WindowState = WindowState.Normal;
+                }
+
+                mainWindow.Activate();
+                mainWindow.Topmost = true;
+                mainWindow.Topmost = false;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("SingleInstance", "Failed to activate the existing main window.", ex);
+            }
+        }, DispatcherPriority.Send);
+    }
+
+    private void OnAppSettingsSaved(string _)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_trayIcons is not null)
+            {
+                InitializeTrayIcon();
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void PerformExitCleanup()
+    {
+        if (_exitCleanupCompleted)
+        {
+            return;
+        }
+
+        _exitCleanupCompleted = true;
+        AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
+
+        try
+        {
+            _traySettingsWindow?.Close();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("App", "Failed to close tray-opened settings window during shutdown.", ex);
+        }
+        finally
+        {
+            _traySettingsWindow = null;
+        }
+
+        try
+        {
+            _pluginRuntimeService?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PluginRuntime", "Failed to dispose plugin runtime during shutdown.", ex);
+        }
+        finally
+        {
+            _pluginRuntimeService = null;
+        }
+
+        AudioRecorderServiceFactory.DisposeSharedServices();
+        StudyAnalyticsServiceFactory.DisposeSharedService();
+        DisposeTrayIcon();
     }
 
     private string L(string key, string fallback)

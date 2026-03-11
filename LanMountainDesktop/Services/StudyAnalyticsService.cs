@@ -16,6 +16,14 @@ public static class StudyAnalyticsServiceFactory
     {
         return SharedService.Value;
     }
+
+    public static void DisposeSharedService()
+    {
+        if (SharedService.IsValueCreated)
+        {
+            SharedService.Value.Dispose();
+        }
+    }
 }
 
 public sealed class StudyAnalyticsService : IStudyAnalyticsService
@@ -446,6 +454,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             _disposed = true;
             StopTimerLocked();
             _samplingTimer.Dispose();
+            _audioRecorderService.Dispose();
         }
     }
 
@@ -759,4 +768,3 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
         _lastSessionReport = null;
     }
 }
-

@@ -21,6 +21,7 @@ public sealed class PluginRuntimeService : IDisposable
 
     private readonly PluginLoader _loader;
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly IHostApplicationLifecycle _applicationLifecycle = new HostApplicationLifecycleService();
     private readonly IServiceProvider _hostServices;
     private readonly IPluginPackageManager _packageManager;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
@@ -34,7 +35,7 @@ public sealed class PluginRuntimeService : IDisposable
     {
         PluginsDirectory = Path.Combine(AppContext.BaseDirectory, "Extensions", "Plugins");
         _packageManager = new PluginRuntimePackageManager(this);
-        _hostServices = new PluginHostServiceProvider(_packageManager);
+        _hostServices = new PluginHostServiceProvider(_packageManager, _applicationLifecycle);
         _loader = new PluginLoader(CreateOptions());
     }
 
@@ -679,17 +680,29 @@ public sealed class PluginRuntimeService : IDisposable
     private sealed class PluginHostServiceProvider : IServiceProvider
     {
         private readonly IPluginPackageManager _packageManager;
+        private readonly IHostApplicationLifecycle _applicationLifecycle;
 
-        public PluginHostServiceProvider(IPluginPackageManager packageManager)
+        public PluginHostServiceProvider(
+            IPluginPackageManager packageManager,
+            IHostApplicationLifecycle applicationLifecycle)
         {
             _packageManager = packageManager;
+            _applicationLifecycle = applicationLifecycle;
         }
 
         public object? GetService(Type serviceType)
         {
-            return serviceType == typeof(IPluginPackageManager)
-                ? _packageManager
-                : null;
+            if (serviceType == typeof(IPluginPackageManager))
+            {
+                return _packageManager;
+            }
+
+            if (serviceType == typeof(IHostApplicationLifecycle))
+            {
+                return _applicationLifecycle;
+            }
+
+            return null;
         }
     }
 

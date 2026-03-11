@@ -251,6 +251,7 @@
     "settings.update.status_launching_installer":  "下载完成，正在启动安装程序...",
     "settings.update.status_installer_missing":  "下载后未找到安装包文件。",
     "settings.update.status_installer_started":  "安装程序已启动，应用将关闭进行更新。",
+    "settings.update.status_elevation_cancelled":  "未授予管理员权限，更新已取消。",
     "settings.update.status_launch_failed_format":  "启动安装程序失败：{0}",
     "settings.about.title":  "关于",
     "settings.about.version_format":  "版本号: {0}",

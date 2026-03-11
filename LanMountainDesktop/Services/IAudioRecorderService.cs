@@ -80,6 +80,19 @@ public static class AudioRecorderServiceFactory
     {
         return CreateRecorder();
     }
+
+    public static void DisposeSharedServices()
+    {
+        if (SharedRecorderService.IsValueCreated)
+        {
+            SharedRecorderService.Value.Dispose();
+        }
+
+        if (SharedStudyMonitoringService.IsValueCreated)
+        {
+            SharedStudyMonitoringService.Value.Dispose();
+        }
+    }
 }
 
 internal sealed class NoOpAudioRecorderService(string reason) : IAudioRecorderService

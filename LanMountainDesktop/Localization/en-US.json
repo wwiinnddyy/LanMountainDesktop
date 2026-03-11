@@ -251,6 +251,7 @@
     "settings.update.status_launching_installer":  "Download complete. Launching installer...",
     "settings.update.status_installer_missing":  "Installer file was not found after download.",
     "settings.update.status_installer_started":  "Installer started. The app will close for update.",
+    "settings.update.status_elevation_cancelled":  "Administrator permission was not granted. Update was cancelled.",
     "settings.update.status_launch_failed_format":  "Failed to start installer: {0}",
     "settings.about.title":  "About",
     "settings.about.version_format":  "Version: {0}",

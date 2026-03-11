@@ -1,13 +1,12 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
@@ -250,23 +249,23 @@ public partial class SettingsWindow
             {
                 FileName = installerPath,
                 WorkingDirectory = Path.GetDirectoryName(installerPath) ?? Environment.CurrentDirectory,
-                UseShellExecute = true
+                UseShellExecute = true,
+                Verb = "runas"
             });
 
             _updateStatusText = L("settings.update.status_installer_started", "Installer started. The app will close for update.");
             UpdateUpdatePanelState();
 
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                {
-                    desktop.Shutdown();
-                }
-                else
-                {
-                    Close();
-                }
-            }, DispatcherPriority.Background);
+            _ = App.CurrentHostApplicationLifecycle?.TryExit(new HostApplicationLifecycleRequest(
+                Source: nameof(SettingsWindow),
+                Reason: "Update installer started successfully from settings."));
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            _updateStatusText = L(
+                "settings.update.status_elevation_cancelled",
+                "Administrator permission was not granted. Update was cancelled.");
+            UpdateUpdatePanelState();
         }
         catch (Exception ex)
         {
