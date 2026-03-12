@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="LanAirApp/samples/LanMountainDesktop.SamplePlugin/LanMountainDesktop.SamplePlugin.csproj" />
   <Project Path="LanAirApp/tools/LanMountainDesktop.PluginPackager/LanMountainDesktop.PluginPackager.csproj" />
   <Project Path="LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
   <Project Path="LanMountainDesktop.PluginsInstallHelper/LanMountainDesktop.PluginsInstallHelper.csproj" />
