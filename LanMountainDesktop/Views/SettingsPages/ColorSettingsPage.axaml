@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,19 +8,27 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="LanMountainDesktop.Views.SettingsPages.ColorSettingsPage">
     <StackPanel x:Name="ColorSettingsPanel"
+                MaxWidth="920"
                 Spacing="16">
         <TextBlock x:Name="ColorPanelTitleTextBlock"
+                   IsVisible="False"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="Color" />
+
+        <TextBlock x:Name="ColorPanelSubtitleTextBlock"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Adjust theme mode and accent colors. The desktop shell will reuse these colors consistently." />
 
         <Border Classes="settings-expander-shell">
             <ui:SettingsExpander x:Name="ThemeModeSettingsExpander"
                                  Header="&#26085;&#22812;&#27169;&#24335;"
                                  Description="&#20999;&#25442;&#24212;&#29992;&#30340;&#27973;&#33394;&#25110;&#28145;&#33394;&#20027;&#39064;&#12290;">
                 <ui:SettingsExpander.IconSource>
-
+                    <ic:SymbolIconSource Symbol="DarkTheme"
+                                         IconVariant="Regular" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <ToggleSwitch x:Name="NightModeToggleSwitch"
@@ -35,14 +43,15 @@
                                  Header="&#20027;&#39064;&#33394;"
                                  Description="&#36873;&#25321;&#24212;&#29992;&#30340;&#20027;&#39064;&#28857;&#32512;&#33394;&#12290;">
                 <ui:SettingsExpander.IconSource>
-
+                    <ic:SymbolIconSource Symbol="Color"
+                                         IconVariant="Regular" />
                 </ui:SettingsExpander.IconSource>
                 
                 <ui:SettingsExpanderItem>
                     <ui:SettingsExpanderItem.Footer>
                         <StackPanel Spacing="12">
                             <TextBlock x:Name="RecommendedColorsLabelTextBlock"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        Text="Recommended Colors" />
                             <WrapPanel ItemWidth="72"
                                        ItemHeight="56"
@@ -119,7 +128,7 @@
                                   ColumnSpacing="10">
                                 <TextBlock x:Name="SystemMonetColorsLabelTextBlock"
                                            VerticalAlignment="Center"
-                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            Text="System Monet Colors" />
                                 <Button x:Name="RefreshMonetColorsButton"
                                         Grid.Column="1"
@@ -197,8 +206,13 @@
             </ui:SettingsExpander>
         </Border>
 
-        <TextBlock x:Name="ThemeColorStatusTextBlock"
-                   Foreground="{DynamicResource AdaptiveTextMutedBrush}"
-                   Text="Theme color is ready." />
+        <Border Classes="settings-expander-shell"
+                Padding="16,14">
+            <TextBlock x:Name="ThemeColorStatusTextBlock"
+                       Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                       TextWrapping="Wrap"
+                       Text="Theme color is ready." />
+        </Border>
     </StackPanel>
 </UserControl>
+

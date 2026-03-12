@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,31 +9,33 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage">
     <Grid x:Name="WallpaperSettingsPanel"
-          ColumnDefinitions="*, *"
+          ColumnDefinitions="280, *"
           RowDefinitions="Auto, *">
         <TextBlock x:Name="WallpaperPanelTitleTextBlock"
                    Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                   FontSize="28"
+                   FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                   Margin="0,0,0,24"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                   Margin="0,0,0,20"
                    Text="Personalize Wallpaper" />
 
         <!-- Left Column: Monitor Preview -->
         <Border x:Name="WallpaperPreviewHost"
                 Grid.Row="1" Grid.Column="0"
-                Margin="0,0,16,0"
-                VerticalAlignment="Stretch"
-                HorizontalAlignment="Stretch">
+                Margin="0,0,20,0"
+                Width="256"
+                MaxWidth="256"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Left">
             <!-- Monitor Frame (Bezel) -->
             <Border x:Name="WallpaperPreviewFrame"
                     HorizontalAlignment="Stretch"
-                    CornerRadius="28"
+                    CornerRadius="22"
                     Background="#FF1A1A1A"
-                    Padding="12">
+                    Padding="8">
                 <Border x:Name="WallpaperPreviewViewport"
                         ClipToBounds="True"
-                        CornerRadius="12"
+                        CornerRadius="14"
                         Background="#30111827">
                     <Grid>
                         <Image x:Name="WallpaperPreviewVideoImage"
@@ -96,14 +98,14 @@
 
         <!-- Right Column: Settings Content -->
         <StackPanel Grid.Row="1" Grid.Column="1"
-                    Margin="16,0,0,0"
+                    Margin="20,0,0,0"
                     Spacing="16">
             <StackPanel Spacing="8">
-                <TextBlock Text="Preview status" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                <TextBlock Text="Preview status" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <TextBlock x:Name="WallpaperPathTextBlock"
                            FontSize="14"
                            FontWeight="Medium"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            TextTrimming="CharacterEllipsis"
                            Text="No file selected" />
                 <TextBlock x:Name="WallpaperStatusTextBlock"
@@ -114,7 +116,7 @@
 
             <Separator Background="{DynamicResource SurfaceStrokeColorDefaultBrush}" Height="1" Margin="0,8" />
 
-            <TextBlock Text="Choose image or video" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <TextBlock Text="Choose image or video" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
             
             <Grid ColumnDefinitions="*, *" ColumnSpacing="12">
                 <Button x:Name="PickWallpaperButton"
@@ -149,3 +151,4 @@
         </StackPanel>
     </Grid>
 </UserControl>
+

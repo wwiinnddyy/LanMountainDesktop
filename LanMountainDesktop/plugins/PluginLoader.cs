@@ -145,22 +145,29 @@ public sealed class PluginLoader
         {
             Directory.CreateDirectory(dataDirectory);
             ValidatePluginRuntimeAssets(manifest, assemblyPath, pluginDirectory);
+            AppLogger.Info(
+                "PluginLoader",
+                $"LoadCore starting. PluginId='{manifest.Id}'; AssemblyPath='{assemblyPath}'; PluginDirectory='{pluginDirectory}'; DataDirectory='{dataDirectory}'.");
 
             loadContext = new PluginLoadContext(assemblyPath, _options.SharedAssemblyNames);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+            AppLogger.Info("PluginLoader", $"Assembly loaded. PluginId='{manifest.Id}'; Assembly='{assembly.FullName}'.");
             var pluginType = ResolvePluginType(assembly);
             plugin = CreatePluginInstance(pluginType);
+            AppLogger.Info("PluginLoader", $"Plugin instance created. PluginId='{manifest.Id}'; PluginType='{pluginType.FullName}'.");
             runtimeContext = CreateRuntimeContext(manifest, pluginDirectory, dataDirectory, properties);
             var serviceCollection = CreateServiceCollection(runtimeContext, services);
             var hostBuilderContext = CreateHostBuilderContext(runtimeContext);
 
             plugin.Initialize(hostBuilderContext, serviceCollection);
+            AppLogger.Info("PluginLoader", $"Plugin Initialize completed. PluginId='{manifest.Id}'.");
 
             pluginServices = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
             {
                 ValidateScopes = false,
                 ValidateOnBuild = true
             });
+            AppLogger.Info("PluginLoader", $"Service provider built. PluginId='{manifest.Id}'.");
             runtimeContext.SetServices(pluginServices);
 
             var settingsPages = pluginServices
@@ -174,8 +181,12 @@ public sealed class PluginLoader
                 .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var exportedServices = ResolveExports(manifest, pluginServices);
+            AppLogger.Info(
+                "PluginLoader",
+                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsPages={settingsPages.Length}; Widgets={desktopComponents.Length}; Exports={exportedServices.Count}."); 
             hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
             StartHostedServices(hostedServices);
+            AppLogger.Info("PluginLoader", $"Hosted services started. PluginId='{manifest.Id}'; HostedServices={hostedServices.Count}."); 
 
             var loadedPlugin = new LoadedPlugin(
                 manifest,
@@ -375,6 +386,7 @@ public sealed class PluginLoader
     {
         foreach (var hostedService in hostedServices)
         {
+            AppLogger.Info("PluginLoader", $"Starting hosted service '{hostedService.GetType().FullName}'.");
             hostedService.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
         }
     }

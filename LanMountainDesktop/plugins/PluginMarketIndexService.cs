@@ -32,7 +32,7 @@ internal sealed class AirAppMarketIndexService : IDisposable
         {
             try
             {
-                var json = await File.ReadAllTextAsync(localIndexPath, cancellationToken);
+                var json = await File.ReadAllTextAsync(localIndexPath, cancellationToken).ConfigureAwait(false);
                 var document = AirAppMarketIndexDocument.Load(json, localIndexPath);
                 _cacheService.SaveIndexJson(json);
                 return new AirAppMarketLoadResult(
@@ -61,8 +61,8 @@ internal sealed class AirAppMarketIndexService : IDisposable
         {
             using var response = await _httpClient.GetAsync(
                 AirAppMarketDefaults.DefaultIndexUrl,
-                cancellationToken);
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                cancellationToken).ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var document = AirAppMarketIndexDocument.Load(json, AirAppMarketDefaults.DefaultIndexUrl);

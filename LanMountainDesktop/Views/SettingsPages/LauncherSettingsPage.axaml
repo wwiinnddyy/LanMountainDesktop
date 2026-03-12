@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,7 +11,7 @@
         <TextBlock x:Name="LauncherSettingsPanelTitleTextBlock"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="App Launcher" />
 
         <Border Classes="settings-expander-shell">
@@ -25,11 +25,11 @@
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="LauncherHiddenItemsDescriptionTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="Right-click an icon in launcher to hide it. Hidden entries appear here." />
                         <TextBlock x:Name="LauncherHiddenItemsEmptyTextBlock"
                                    IsVisible="False"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="No hidden items." />
                     </StackPanel>
                 </ui:SettingsExpander.Footer>
@@ -37,3 +37,4 @@
         </Border>
     </StackPanel>
 </UserControl>
+

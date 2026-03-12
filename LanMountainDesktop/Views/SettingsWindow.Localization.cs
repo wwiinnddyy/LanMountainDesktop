@@ -48,33 +48,50 @@ public partial class SettingsWindow
 
     private void ApplyLocalization()
     {
-        Title = L("settings.shell.title", "Application Settings");
-        WindowTitleTextBlock.Text = L("settings.shell.title", "Application Settings");
-        WindowSubtitleTextBlock.Text = L("settings.shell.subtitle", "LanMountainDesktop standalone preferences");
+        Title = L("settings.shell.title", "Settings");
+        WindowTitleTextBlock.Text = L("settings.shell.title", "Settings");
+        WindowSubtitleTextBlock.Text = L("settings.shell.subtitle", "LanMountainDesktop independent settings module");
         WindowVersionBadgeTextBlock.Text = GetAppVersionText();
         WindowCodeNameBadgeTextBlock.Text = AppCodeName;
         SettingsSidebarTitleTextBlock.Text = L("settings.nav_header", "Settings");
         SettingsSidebarHintTextBlock.Text = L(
             "settings.shell.sidebar_hint",
-            "Choose a category to adjust application behavior and desktop appearance.");
-        SettingsPrimaryGroupTextBlock.Text = L("settings.nav.group_desktop", "Desktop");
-        SettingsSecondaryGroupTextBlock.Text = L("settings.nav.group_system", "System");
-        SettingsPluginGroupTextBlock.Text = L("settings.nav.group_extensions", "Extensions");
+            "Use stable left navigation and a single right-side page host, following the ClassIsland settings rhythm.");
         SettingsSidebarFooterTextBlock.Text = L(
             "settings.shell.footer_hint",
-            "Tray-opened settings are managed in this standalone window.");
+            "Tray-opened settings are managed in this independent settings module.");
+        InitializeSettingsNavigation();
 
-        SetSettingsNavItemLabel(GetSettingsNavItem("Wallpaper"), L("settings.nav.wallpaper", "Wallpaper"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Grid"), L("settings.nav.grid", "Grid"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Color"), L("settings.nav.color", "Color"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("StatusBar"), L("settings.nav.status_bar", "Status Bar"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Weather"), L("settings.nav.weather", "Weather"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Region"), L("settings.nav.region", "Region"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Update"), L("settings.nav.update", "Update"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("About"), L("settings.nav.about", "About"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Launcher"), L("settings.nav.launcher", "App Launcher"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("Plugins"), L("settings.nav.plugins", "Plugins"));
-        SetSettingsNavItemLabel(GetSettingsNavItem("PluginMarket"), L("settings.nav.plugin_market", "Plugin Market"));
+        if (GeneralSettingsHubPanel is not null)
+        {
+            GeneralSettingsHubPanel.GeneralPageSubtitleTextBlock.Text = L("settings.page_desc.general", "Manage language, launcher, and weather behavior from the independent settings module.");
+            GeneralSettingsHubPanel.GeneralRegionSectionTitleTextBlock.Text = L("settings.nav.region", "Region");
+            GeneralSettingsHubPanel.GeneralRegionSectionHintTextBlock.Text = L("settings.general.region_hint", "Language and time zone settings affect the entire desktop shell.");
+            GeneralSettingsHubPanel.GeneralLauncherSectionTitleTextBlock.Text = L("settings.nav.launcher", "App Launcher");
+            GeneralSettingsHubPanel.GeneralLauncherSectionHintTextBlock.Text = L("settings.general.launcher_hint", "Restore hidden entries and adjust how the app launcher behaves.");
+            GeneralSettingsHubPanel.GeneralWeatherSectionTitleTextBlock.Text = L("settings.nav.weather", "Weather");
+            GeneralSettingsHubPanel.GeneralWeatherSectionHintTextBlock.Text = L("settings.general.weather_hint", "Configure shared weather source, location, and icon style for weather widgets.");
+        }
+
+        if (AppearanceSettingsHubPanel is not null)
+        {
+            AppearanceSettingsHubPanel.AppearancePageSubtitleTextBlock.Text = L("settings.page_desc.appearance", "Personalize wallpaper, desktop grid, and accent colors in one place.");
+            AppearanceSettingsHubPanel.AppearanceWallpaperSectionTitleTextBlock.Text = L("settings.nav.wallpaper", "Wallpaper");
+            AppearanceSettingsHubPanel.AppearanceWallpaperSectionHintTextBlock.Text = L("settings.appearance.wallpaper_hint", "Use lightweight thumbnails and asset controls instead of heavy live preview.");
+            AppearanceSettingsHubPanel.AppearanceGridSectionTitleTextBlock.Text = L("settings.nav.grid", "Grid");
+            AppearanceSettingsHubPanel.AppearanceGridSectionHintTextBlock.Text = L("settings.appearance.grid_hint", "Tune grid density, spacing, and safe edge inset for the desktop canvas.");
+            AppearanceSettingsHubPanel.AppearanceColorSectionTitleTextBlock.Text = L("settings.nav.color", "Color");
+            AppearanceSettingsHubPanel.AppearanceColorSectionHintTextBlock.Text = L("settings.appearance.color_hint", "Choose theme mode and accent colors with Fluent-consistent swatches.");
+        }
+
+        if (ComponentsSettingsHubPanel is not null)
+        {
+            ComponentsSettingsHubPanel.ComponentsPageSubtitleTextBlock.Text = L("settings.page_desc.components", "Review available desktop components and configure the status bar area.");
+            ComponentsSettingsHubPanel.ComponentsSummarySectionTitleTextBlock.Text = L("settings.components.library_title", "Component Library");
+            ComponentsSettingsHubPanel.ComponentsSummarySectionHintTextBlock.Text = L("settings.components.library_hint", "Built-in and plugin-contributed components available to the desktop editor.");
+            ComponentsSettingsHubPanel.ComponentsStatusBarSectionTitleTextBlock.Text = L("settings.nav.status_bar", "Status Bar");
+            ComponentsSettingsHubPanel.ComponentsStatusBarSectionHintTextBlock.Text = L("settings.components.status_bar_hint", "Clock and status-bar component spacing are managed here.");
+        }
 
         WallpaperPanelTitleTextBlock.Text = L("settings.wallpaper.title", "Personalize your wallpaper");
         WallpaperPlacementSettingsExpander.Header = L("settings.wallpaper.placement_label", "Placement");
@@ -211,6 +228,31 @@ public partial class SettingsWindow
         ApplyUpdateLocalization();
         UpdateWallpaperDisplay();
         RenderLauncherHiddenItemsList();
+        UpdateCurrentSettingsPageHeader(_selectedSettingsTabTag);
+    }
+
+    private void UpdateCurrentSettingsPageHeader(string? tag)
+    {
+        if (CurrentSettingsPageTitleTextBlock is null || CurrentSettingsPageSubtitleTextBlock is null)
+        {
+            return;
+        }
+
+        var pageTag = string.IsNullOrWhiteSpace(tag) ? "General" : NormalizeSettingsPageTag(tag);
+        CurrentSettingsPageTitleTextBlock.Text = _settingsPageDefinitions.TryGetValue(pageTag, out var definition)
+            ? definition.Title
+            : L("settings.shell.title", "Settings");
+        CurrentSettingsPageSubtitleTextBlock.Text = GetSettingsPageDescription(pageTag);
+    }
+
+    private string GetSettingsPageDescription(string tag)
+    {
+        if (_settingsPageDefinitions.TryGetValue(tag, out var definition))
+        {
+            return definition.Description;
+        }
+
+        return L("settings.shell.sidebar_hint", "Use stable left navigation and a single right-side page host, following the ClassIsland settings rhythm.");
     }
 
     private void SetAppRenderModeComboItemContent(string tag, string content)

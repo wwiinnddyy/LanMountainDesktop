@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,16 +8,16 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage">
 
     <StackPanel x:Name="AboutSettingsPanel" Spacing="20">
-        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" Text="About" />
+        <TextBlock x:Name="AboutPanelTitleTextBlock" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="About" />
         
         <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="20">
             <StackPanel Spacing="12">
-                <TextBlock Text="LanMountainDesktop" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                <TextBlock Text="Modern desktop shell experience." FontSize="13" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                <TextBlock Text="LanMountainDesktop" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <TextBlock Text="Modern desktop shell experience." FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <Separator Background="{DynamicResource AdaptiveButtonBorderBrush}" Margin="0,8" />
-                <TextBlock x:Name="VersionTextBlock" Text="Version: 1.0.0" FontSize="13" Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                <TextBlock x:Name="VersionTextBlock" Text="Version: 1.0.0" FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 <TextBlock x:Name="CodeNameTextBlock" Text="Code Name: Administrate" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AdaptiveAccentBrush}" />
-                <TextBlock x:Name="FontInfoTextBlock" Text="Font: MiSans" FontSize="12" Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                <TextBlock x:Name="FontInfoTextBlock" Text="Font: MiSans" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
         </Border>
 
@@ -49,17 +49,17 @@
                                Text="Current actual backend"
                                FontSize="12"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     <TextBlock x:Name="CurrentRenderBackendValueTextBlock"
                                Text="Current backend: Software"
                                FontSize="13"
                                TextWrapping="Wrap"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     <TextBlock x:Name="CurrentRenderBackendImplementationTextBlock"
                                Text="Runtime implementation is unavailable."
                                FontSize="12"
                                TextWrapping="Wrap"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
                 <ui:SettingsExpander.Footer>
                     <ComboBox x:Name="AppRenderModeComboBox"
@@ -77,3 +77,4 @@
         </Border>
     </StackPanel>
 </UserControl>
+

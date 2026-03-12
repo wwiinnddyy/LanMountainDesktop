@@ -66,6 +66,7 @@ public sealed class PluginRuntimeService : IDisposable
         Directory.CreateDirectory(PluginsDirectory);
         ApplyPendingPluginDeletions();
         UnloadInstalledPlugins();
+        AppLogger.Info("PluginRuntime", $"Loading installed plugins from '{PluginsDirectory}'.");
 
         var disabledPluginIds = GetDisabledPluginIds();
         var settingsSnapshot = _appSettingsService.Load();
@@ -81,6 +82,9 @@ public sealed class PluginRuntimeService : IDisposable
         var discoveryFailures = new List<PluginLoadResult>();
         var candidates = DiscoverCandidates(discoveryFailures);
         _loadResults.AddRange(discoveryFailures);
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Plugin discovery completed. Candidates={candidates.Count}; DiscoveryFailures={discoveryFailures.Count}; PluginsDirectory='{PluginsDirectory}'.");
 
         var selectedPluginIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates)
@@ -93,6 +97,7 @@ public sealed class PluginRuntimeService : IDisposable
                     new InvalidOperationException(
                         $"Duplicate plugin id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected."));
                 _loadResults.Add(duplicateFailure);
+                LogPluginFailure("CatalogSelection", duplicateFailure, treatAsError: false);
                 continue;
             }
 
@@ -113,7 +118,13 @@ public sealed class PluginRuntimeService : IDisposable
 
             try
             {
+                AppLogger.Info(
+                    "PluginRuntime",
+                    $"Preparing shared contracts. PluginId='{candidate.Manifest.Id}'; SourcePath='{candidate.SourcePath}'; SourceKind='{candidate.SourceKind}'.");
                 RegisterSharedContractsForLoad(candidate.Manifest);
+                AppLogger.Info(
+                    "PluginRuntime",
+                    $"Shared contracts ready. PluginId='{candidate.Manifest.Id}'; SourcePath='{candidate.SourcePath}'.");
             }
             catch (Exception ex)
             {
@@ -128,10 +139,13 @@ public sealed class PluginRuntimeService : IDisposable
                     ex.Message,
                     0,
                     0));
-                Debug.WriteLine($"[PluginRuntime] Failed to prepare dependencies for '{candidate.Manifest.Id}': {ex}");
+                LogPluginFailure("DependencyPrepare", dependencyFailure, treatAsError: false);
                 continue;
             }
 
+            AppLogger.Info(
+                "PluginRuntime",
+                $"Starting plugin load. PluginId='{candidate.Manifest.Id}'; SourcePath='{candidate.SourcePath}'; SourceKind='{candidate.SourceKind}'.");
             var loadResult = candidate.SourceKind switch
             {
                 PluginCatalogSourceKind.Package => _loader.LoadFromPackage(
@@ -160,6 +174,9 @@ public sealed class PluginRuntimeService : IDisposable
                     null,
                     loadResult.LoadedPlugin.SettingsPages.Count,
                     loadResult.LoadedPlugin.DesktopComponents.Count));
+                AppLogger.Info(
+                    "PluginRuntime",
+                    $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsPages={loadResult.LoadedPlugin.SettingsPages.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}.");
                 Debug.WriteLine($"[PluginRuntime] Loaded '{loadResult.Manifest?.Id}' from '{loadResult.SourcePath}'.");
                 continue;
             }
@@ -173,11 +190,15 @@ public sealed class PluginRuntimeService : IDisposable
                 loadResult.Error?.Message,
                 0,
                 0));
+            LogPluginFailure("Load", loadResult, treatAsError: true);
             Debug.WriteLine($"[PluginRuntime] Failed to load plugin from '{loadResult.SourcePath}': {loadResult.Error}");
         }
 
         if (_catalog.Count == 0 && discoveryFailures.Count == 0)
         {
+            AppLogger.Info(
+                "PluginRuntime",
+                $"No plugin packages or loose manifests were discovered under '{PluginsDirectory}'.");
             Debug.WriteLine($"[PluginRuntime] No .laapp packages or loose plugin manifests found under '{PluginsDirectory}'.");
         }
     }
@@ -392,7 +413,9 @@ public sealed class PluginRuntimeService : IDisposable
             }
             catch (Exception ex)
             {
-                failures.Add(PluginLoadResult.Failure(packagePath, null, ex));
+                var failure = PluginLoadResult.Failure(packagePath, null, ex);
+                failures.Add(failure);
+                LogPluginFailure("ManifestValidation", failure, treatAsError: false);
             }
         }
 
@@ -405,7 +428,9 @@ public sealed class PluginRuntimeService : IDisposable
             }
             catch (Exception ex)
             {
-                failures.Add(PluginLoadResult.Failure(manifestPath, null, ex));
+                var failure = PluginLoadResult.Failure(manifestPath, null, ex);
+                failures.Add(failure);
+                LogPluginFailure("ManifestValidation", failure, treatAsError: false);
             }
         }
 
@@ -715,6 +740,21 @@ public sealed class PluginRuntimeService : IDisposable
     private string GetPendingDeletionFilePath()
     {
         return Path.Combine(PluginsDirectory, PendingDeletionFileName);
+    }
+
+    private static void LogPluginFailure(string stage, PluginLoadResult result, bool treatAsError)
+    {
+        var manifest = result.Manifest;
+        var message =
+            $"Plugin load issue. Stage='{stage}'; PluginId='{manifest?.Id ?? "<unknown>"}'; SourcePath='{result.SourcePath}'; ManifestVersion='{manifest?.Version ?? "<unknown>"}'; ApiVersion='{manifest?.ApiVersion ?? "<unknown>"}'; Error='{result.Error?.Message ?? "<none>"}'.";
+
+        if (treatAsError)
+        {
+            AppLogger.Error("PluginRuntime", message, result.Error);
+            return;
+        }
+
+        AppLogger.Warn("PluginRuntime", message, result.Error);
     }
 
     private void RemovePluginFromSnapshot(string pluginId)

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -12,7 +12,7 @@
         <TextBlock x:Name="RegionPanelTitleTextBlock"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="Region" />
 
         <Border Classes="settings-expander-shell">
@@ -25,7 +25,7 @@
                 <ui:SettingsExpander.Footer>
                     <ComboBox x:Name="LanguageComboBox"
                               Width="220">
-                        <ComboBoxItem x:Name="LanguageChineseItem" Tag="zh-CN" Content="中文" />
+                        <ComboBoxItem x:Name="LanguageChineseItem" Tag="zh-CN" Content="涓枃" />
                         <ComboBoxItem x:Name="LanguageEnglishItem" Tag="en-US" Content="English" />
                     </ComboBox>
                 </ui:SettingsExpander.Footer>
@@ -47,3 +47,4 @@
         </Border>
     </StackPanel>
 </UserControl>
+

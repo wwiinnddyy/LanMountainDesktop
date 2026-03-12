@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
@@ -22,12 +25,13 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
+using LanMountainDesktop.Views.SettingsPages;
 using LibVLCSharp.Shared;
 using Line = Avalonia.Controls.Shapes.Line;
 
 namespace LanMountainDesktop.Views;
 
-public partial class SettingsWindow : Window
+public partial class SettingsWindow : IndependentSettingsModuleWindowBase
 {
     private enum WallpaperPlacement
     {
@@ -102,8 +106,23 @@ public partial class SettingsWindow : Window
     private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _hiddenLauncherAppPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
-    private readonly Dictionary<string, Button> _settingsNavItems = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Button> _pluginSettingsNavItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, NavigationViewItem> _settingsNavItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, NavigationViewItem> _pluginSettingsNavItems = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IndependentSettingsPageDefinition> _settingsPageDefinitions = new(StringComparer.OrdinalIgnoreCase);
+    private GeneralSettingsPage? GeneralSettingsHubPanel;
+    private AppearanceSettingsPage? AppearanceSettingsHubPanel;
+    private ComponentsSettingsPage? ComponentsSettingsHubPanel;
+    private WallpaperSettingsPage? WallpaperSettingsPanel;
+    private GridSettingsPage? GridSettingsPanel;
+    private ColorSettingsPage? ColorSettingsPanel;
+    private StatusBarSettingsPage? StatusBarSettingsPanel;
+    private WeatherSettingsPage? WeatherSettingsPanel;
+    private RegionSettingsPage? RegionSettingsPanel;
+    private UpdateSettingsPage? UpdateSettingsPanel;
+    private LauncherSettingsPage? LauncherSettingsPanel;
+    private AboutSettingsPage? AboutSettingsPanel;
+    private PluginSettingsPage? PluginSettingsPanel;
+    private PluginMarketSettingsPage? PluginMarketSettingsPanel;
 
     private StartMenuFolderNode _startMenuRoot = new("All Apps", string.Empty);
     private byte[]? _launcherFolderIconPngBytes;
@@ -168,20 +187,28 @@ public partial class SettingsWindow : Window
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private string _weatherSearchKeyword = string.Empty;
-    private string _selectedSettingsTabTag = "Wallpaper";
+    private string _selectedSettingsTabTag = "General";
+    private WallpaperPlacement _selectedWallpaperPlacement = WallpaperPlacement.Fill;
     private bool _isWeatherSearchInProgress;
     private bool _isWeatherPreviewInProgress;
+    private bool _controlsBound;
+    private bool _independentModuleInitializationCompleted;
+    private bool _suppressWallpaperPlacementEvents;
+    private bool _isIndependentSettingsModuleClosing;
+    private bool _allowIndependentSettingsModuleRealClose;
 
     public SettingsWindow()
     {
         _componentRegistry = DesktopComponentRegistryFactory.Create((Application.Current as App)?.PluginRuntimeService);
         InitializeComponent();
+        InitializeSettingsPageHosts();
         InitializeSettingsNavigation();
         InitializePluginSettingsNavigation();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         RequestedThemeVariant = Application.Current?.RequestedThemeVariant ?? ThemeVariant.Default;
         PendingRestartStateService.StateChanged += OnPendingRestartStateChanged;
-        HookEvents();
+        Closing += OnIndependentSettingsModuleClosing;
+        Opened += OnWindowOpened;
     }
 
     private void InitializeComponent()
@@ -235,7 +262,27 @@ public partial class SettingsWindow : Window
         DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
         AutoStartWithWindowsToggleSwitch.IsCheckedChanged += OnAutoStartWithWindowsToggled;
         AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
-        Opened += OnWindowOpened;
+    }
+
+    private void EnsureIndependentModuleControlsBound()
+    {
+        if (_controlsBound)
+        {
+            return;
+        }
+
+        AppLogger.Info("IndependentSettingsModule", "ControlsBindingStarted.");
+        try
+        {
+            HookEvents();
+            _controlsBound = true;
+            AppLogger.Info("IndependentSettingsModule", "ControlsBindingCompleted.");
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn("IndependentSettingsModule", "ControlsBindingFailed.", ex);
+            throw new InvalidOperationException("Failed to bind independent settings module controls.", ex);
+        }
     }
 
     private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -273,69 +320,287 @@ public partial class SettingsWindow : Window
     private void OnWindowOpened(object? sender, EventArgs e)
     {
         Opened -= OnWindowOpened;
-        _suppressSettingsPersistence = true;
-        var snapshot = _appSettingsService.Load();
-        var launcherSnapshot = _launcherSettingsService.Load();
+        UpdateWindowChromeState();
+        UiExceptionGuard.FireAndForgetGuarded(
+            async () =>
+            {
+                EnsureIndependentModuleControlsBound();
+                await InitializeIndependentSettingsModuleAsync();
+            },
+            "IndependentSettingsModule.Initialize",
+            UiExceptionGuard.BuildContext(("Window", nameof(SettingsWindow))),
+            ex =>
+            {
+                ShowIndependentModuleStatus(
+                    L("settings.shell.init_failed_title", "设置模块初始化失败"),
+                    ex.Message,
+                    InfoBarSeverity.Warning);
+                return Task.CompletedTask;
+            });
+    }
 
-        _targetShortSideCells = Math.Clamp(
-            snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
-            MinShortSideCells,
-            MaxShortSideCells);
-        _gridSpacingPreset = NormalizeGridSpacingPreset(snapshot.GridSpacingPreset);
-        _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
-        _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
-        _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
-        GridSizeNumberBox.Value = _targetShortSideCells;
-        GridSizeSlider.Value = _targetShortSideCells;
-        GridSpacingPresetComboBox.SelectedIndex = string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        GridEdgeInsetSlider.Value = _desktopEdgeInsetPercent;
-        GridEdgeInsetNumberBox.Value = _desktopEdgeInsetPercent;
-        StatusBarSpacingModeComboBox.SelectedIndex = _statusBarSpacingMode switch
+    private void OnIndependentSettingsModuleClosing(object? sender, WindowClosingEventArgs e)
+    {
+        AppLogger.Info(
+            "IndependentSettingsModule",
+            $"CloseRequested; AllowRealClose={_allowIndependentSettingsModuleRealClose}; Reason='{e.CloseReason}'.");
+
+        if (!_allowIndependentSettingsModuleRealClose &&
+            e.CloseReason is not WindowCloseReason.ApplicationShutdown &&
+            e.CloseReason is not WindowCloseReason.OSShutdown)
         {
-            "Compact" => 0,
-            "Custom" => 2,
-            _ => 1
-        };
-        StatusBarSpacingSlider.Value = _statusBarCustomSpacingPercent;
-        StatusBarSpacingNumberBox.Value = _statusBarCustomSpacingPercent;
-        StatusBarSpacingCustomPanel.IsVisible = string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase);
-        GridEdgeInsetNumberBox.ValueChanged += OnGridEdgeInsetNumberBoxChanged;
-        StatusBarSpacingNumberBox.ValueChanged += OnStatusBarSpacingNumberBoxChanged;
-        ApplyTaskbarSettings(snapshot);
-        InitializeLocalization(snapshot.LanguageCode);
-        InitializeWeatherSettings(snapshot);
-        InitializeAutoStartWithWindowsSetting(snapshot);
-        InitializeAppRenderModeSetting(snapshot);
-        InitializeUpdateSettings(snapshot);
-        InitializeLauncherVisibilitySettings(launcherSnapshot);
-        InitializeSettingsIcons();
-        ApplyLocalization();
-        WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
-        TryRestoreWallpaper(snapshot.WallpaperPath);
-        RefreshColorPalettes();
-        if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
-        {
-            _selectedThemeColor = savedThemeColor;
+            e.Cancel = true;
+            PersistSettings();
+            Hide();
+            AppLogger.Info("IndependentSettingsModule", "WindowHiddenByClose.");
+            return;
         }
 
-        _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
-        ApplyNightModeState(_isNightMode, refreshPalettes: false);
-        EnsureSelectedThemeColor();
-        UpdateThemeColorSelectionState();
-        ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);
-        _defaultDesktopBackground = DesktopWallpaperLayer.Background;
-        RestoreSettingsTabSelection(snapshot);
-        UpdateSettingsTabContent();
-        UpdateWallpaperDisplay();
-        UpdateWallpaperPreviewLayout();
-        UpdateGridPreviewLayout();
-        InitializeTimeZoneSettings();
-        _ = LoadLauncherEntriesAsync();
-        _suppressSettingsPersistence = false;
+        _isIndependentSettingsModuleClosing = true;
+    }
+
+    private async Task InitializeIndependentSettingsModuleAsync()
+    {
+        if (_independentModuleInitializationCompleted)
+        {
+            return;
+        }
+
+        AppLogger.Info("IndependentSettingsModule", "ModuleInitStarted; Stage='Opened'.");
+        _suppressSettingsPersistence = true;
+        try
+        {
+            ShowIndependentModuleStatus(string.Empty, string.Empty, InfoBarSeverity.Informational, isOpen: false);
+
+            var snapshot = new AppSettingsSnapshot();
+            var launcherSnapshot = new LauncherSettingsSnapshot();
+
+            await RunInitializationStageAsync("SnapshotLoad", () =>
+            {
+                snapshot = _appSettingsService.Load();
+                launcherSnapshot = _launcherSettingsService.Load();
+                return Task.CompletedTask;
+            });
+
+            await RunInitializationStageAsync("BaseConfiguration", () =>
+            {
+                _targetShortSideCells = Math.Clamp(
+                    snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
+                    MinShortSideCells,
+                    MaxShortSideCells);
+                _gridSpacingPreset = NormalizeGridSpacingPreset(snapshot.GridSpacingPreset);
+                _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+                _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
+                _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
+                GridSizeNumberBox.Value = _targetShortSideCells;
+                GridSizeSlider.Value = _targetShortSideCells;
+                GridSpacingPresetComboBox.SelectedIndex = string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                GridEdgeInsetSlider.Value = _desktopEdgeInsetPercent;
+                GridEdgeInsetNumberBox.Value = _desktopEdgeInsetPercent;
+                StatusBarSpacingModeComboBox.SelectedIndex = _statusBarSpacingMode switch
+                {
+                    "Compact" => 0,
+                    "Custom" => 2,
+                    _ => 1
+                };
+                StatusBarSpacingSlider.Value = _statusBarCustomSpacingPercent;
+                StatusBarSpacingNumberBox.Value = _statusBarCustomSpacingPercent;
+                StatusBarSpacingCustomPanel.IsVisible = string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase);
+                GridEdgeInsetNumberBox.ValueChanged += OnGridEdgeInsetNumberBoxChanged;
+                StatusBarSpacingNumberBox.ValueChanged += OnStatusBarSpacingNumberBoxChanged;
+                ApplyTaskbarSettings(snapshot);
+                InitializeLocalization(snapshot.LanguageCode);
+                InitializeWeatherSettings(snapshot);
+                InitializeAutoStartWithWindowsSetting(snapshot);
+                InitializeAppRenderModeSetting(snapshot);
+                InitializeUpdateSettings(snapshot);
+                InitializeLauncherVisibilitySettings(launcherSnapshot);
+                InitializeSettingsIcons();
+                ApplyLocalization();
+                return Task.CompletedTask;
+            });
+
+            await RunInitializationStageAsync("VisualState", () =>
+            {
+                _selectedWallpaperPlacement = GetWallpaperPlacementFromIndex(GetPlacementIndexFromSetting(snapshot.WallpaperPlacement));
+                _suppressWallpaperPlacementEvents = true;
+                WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
+                _suppressWallpaperPlacementEvents = false;
+                TryRestoreWallpaper(snapshot.WallpaperPath);
+                RefreshColorPalettes();
+                if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
+                {
+                    _selectedThemeColor = savedThemeColor;
+                }
+
+                _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
+                ApplyNightModeState(_isNightMode, refreshPalettes: false);
+                EnsureSelectedThemeColor();
+                UpdateThemeColorSelectionState();
+                ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);
+                _defaultDesktopBackground = DesktopWallpaperLayer.Background;
+                RestoreSettingsTabSelection(snapshot);
+                UpdateSettingsTabContent();
+                UpdateWallpaperDisplay();
+                UpdateWallpaperPreviewLayout();
+                UpdateGridPreviewLayout();
+                InitializeTimeZoneSettings();
+                return Task.CompletedTask;
+            });
+
+            UiExceptionGuard.FireAndForgetGuarded(
+                LoadLauncherEntriesAsync,
+                "IndependentSettingsModule.LoadLauncherEntries",
+                UiExceptionGuard.BuildContext(("Window", nameof(SettingsWindow))),
+                ex =>
+                {
+                    ShowIndependentModuleStatus(
+                        L("settings.shell.partial_warning_title", "部分内容未能载入"),
+                        ex.Message,
+                        InfoBarSeverity.Warning);
+                    return Task.CompletedTask;
+                });
+
+            _independentModuleInitializationCompleted = true;
+            AppLogger.Info("IndependentSettingsModule", "ModuleInitCompleted.");
+        }
+        finally
+        {
+            _suppressSettingsPersistence = false;
+        }
+    }
+
+    private async Task RunInitializationStageAsync(string stage, Func<Task> action)
+    {
+        AppLogger.Info("IndependentSettingsModule", $"ModuleInitStarted; Stage='{stage}'.");
+        try
+        {
+            await action();
+            AppLogger.Info("IndependentSettingsModule", $"ModuleInitCompleted; Stage='{stage}'.");
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn("IndependentSettingsModule", $"ModuleInitFailed; Stage='{stage}'.", ex);
+            ShowIndependentModuleStatus(
+                L("settings.shell.partial_warning_title", "部分内容未能载入"),
+                ex.Message,
+                InfoBarSeverity.Warning);
+        }
+    }
+
+    private void ShowIndependentModuleStatus(string title, string message, InfoBarSeverity severity, bool isOpen = true)
+    {
+        if (IndependentSettingsStatusInfoBar is null)
+        {
+            return;
+        }
+
+        IndependentSettingsStatusInfoBar.Title = title;
+        IndependentSettingsStatusInfoBar.Message = message;
+        IndependentSettingsStatusInfoBar.Severity = severity;
+        IndependentSettingsStatusInfoBar.IsOpen = isOpen;
+    }
+
+    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            BeginMoveDrag(e);
+        }
+    }
+
+    private void OnTitleBarDoubleTapped(object? sender, RoutedEventArgs e)
+    {
+        if (!CanResize)
+        {
+            return;
+        }
+
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+        UpdateWindowChromeState();
+    }
+
+    private void OnMinimizeWindowClick(object? sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+        UpdateWindowChromeState();
+    }
+
+    private void OnToggleWindowStateClick(object? sender, RoutedEventArgs e)
+    {
+        if (!CanResize)
+        {
+            return;
+        }
+
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+        UpdateWindowChromeState();
+    }
+
+    private void UpdateWindowChromeState()
+    {
+        if (WindowStateToggleIcon is null)
+        {
+            return;
+        }
+
+        WindowStateToggleIcon.Symbol = WindowState == WindowState.Maximized
+            ? FluentIcons.Common.Symbol.SquareMultiple
+            : FluentIcons.Common.Symbol.Square;
     }
 
     private void OnCloseWindowClick(object? sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void OnSettingsPaneToggleButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (SettingsNavView is not null)
+        {
+            SettingsNavView.IsPaneOpen = !SettingsNavView.IsPaneOpen;
+        }
+    }
+
+    private void OnOpenLogsFolderClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = AppLogger.LogDirectory,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            ShowIndependentModuleStatus(
+                L("settings.shell.partial_warning_title", "部分内容未能加载"),
+                ex.Message,
+                InfoBarSeverity.Warning);
+        }
+    }
+
+    private void OnOpenAppFolderClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = Path.GetFullPath(".") ?? string.Empty,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            ShowIndependentModuleStatus(
+                L("settings.shell.partial_warning_title", "部分内容未能加载"),
+                ex.Message,
+                InfoBarSeverity.Warning);
+        }
     }
 }

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,7 +11,7 @@
         <TextBlock x:Name="StatusBarPanelTitleTextBlock"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="Status Bar" />
 
         <Border Classes="settings-expander-shell">
@@ -80,7 +80,7 @@
                     <ui:SettingsExpanderItem.Footer>
                         <TextBlock x:Name="StatusBarSpacingComputedPxTextBlock"
                                    HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text=">= 0 px" />
                     </ui:SettingsExpanderItem.Footer>
                 </ui:SettingsExpanderItem>
@@ -88,3 +88,4 @@
         </Border>
     </StackPanel>
 </UserControl>
+

@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="960"
+             d:DesignHeight="1400"
+             x:Class="LanMountainDesktop.Views.SettingsPages.GeneralSettingsPage">
+    <StackPanel MaxWidth="920"
+                Spacing="16">
+        <TextBlock x:Name="GeneralPageSubtitleTextBlock"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Manage language, launcher, and weather behavior from the independent settings module." />
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="GeneralRegionSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Region" />
+                <TextBlock x:Name="GeneralRegionSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Language and time zone settings affect the entire desktop shell." />
+                <ContentControl x:Name="RegionContentHost" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="GeneralLauncherSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Launcher" />
+                <TextBlock x:Name="GeneralLauncherSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Restore hidden entries and adjust how the app launcher behaves." />
+                <ContentControl x:Name="LauncherContentHost" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="GeneralWeatherSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Weather" />
+                <TextBlock x:Name="GeneralWeatherSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Configure shared weather source, location, and icon style for weather widgets." />
+                <ContentControl x:Name="WeatherContentHost" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

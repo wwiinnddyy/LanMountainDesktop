@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,7 +11,7 @@
         <Style Selector="StackPanel.weather-settings-root TextBlock.section-eyebrow">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
 
         <Style Selector="StackPanel.weather-settings-root Border.preview-icon-shell">
@@ -42,7 +42,7 @@
         <TextBlock x:Name="WeatherPanelTitleTextBlock"
                    FontSize="28"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="Weather" />
 
         <StackPanel Spacing="8">
@@ -70,7 +70,7 @@
                                        Text="--" />
                             <TextBlock x:Name="WeatherPreviewUpdatedTextBlock"
                                        FontSize="13"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        Text="-" />
                         </StackPanel>
 
@@ -92,7 +92,7 @@
                     <TextBlock x:Name="WeatherPreviewResultTextBlock"
                                Grid.Row="1"
                                TextWrapping="Wrap"
-                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Text="Use refresh to verify your weather configuration." />
                 </Grid>
             </Border>
@@ -138,7 +138,7 @@
                                        FontWeight="SemiBold"
                                        Text="City Selection" />
                             <TextBlock x:Name="WeatherLocationSelectionDescriptionTextBlock"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
                                        Text="Select the current city used for weather queries." />
                         </StackPanel>
@@ -157,7 +157,7 @@
                                        FontSize="12"
                                        TextAlignment="Right"
                                        TextWrapping="Wrap"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </Grid>
                 </ui:SettingsExpanderItem>
@@ -216,7 +216,7 @@
 
                         <TextBlock x:Name="WeatherSearchStatusTextBlock"
                                    FontSize="12"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    Text="Search by city name and apply one location." />
                     </StackPanel>
@@ -266,7 +266,7 @@
                                  Watermark="Display name (optional)" />
                         <TextBlock x:Name="WeatherCoordinateStatusTextBlock"
                                    FontSize="12"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </ui:SettingsExpanderItem>
@@ -288,7 +288,7 @@
                                        FontWeight="SemiBold"
                                        Text="Exclude List" />
                             <TextBlock x:Name="WeatherAlertListDescriptionTextBlock"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
                                        Text="One exclusion rule per line." />
                         </StackPanel>
@@ -321,7 +321,7 @@
         <Border Classes="settings-note-shell">
             <TextBlock x:Name="WeatherFooterHintTextBlock"
                        TextWrapping="Wrap"
-                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="Desktop weather widgets will reuse the location and alert exclusion settings configured here." />
         </Border>
 
@@ -352,3 +352,4 @@
         </Grid>
     </StackPanel>
 </UserControl>
+

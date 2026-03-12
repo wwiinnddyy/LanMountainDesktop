@@ -1,312 +1,345 @@
-<Window xmlns="https://github.com/avaloniaui"
+<local:IndependentSettingsModuleWindowBase xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:fi="using:FluentIcons.Avalonia"
-        xmlns:ic="using:FluentIcons.Avalonia.Fluent"
-        xmlns:pages="using:LanMountainDesktop.Views.SettingsPages"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:comp="using:LanMountainDesktop.Views.Components"
+        xmlns:local="using:LanMountainDesktop.Views"
+        xmlns:windowing="clr-namespace:FluentAvalonia.UI.Windowing;assembly=FluentAvalonia"
         x:Class="LanMountainDesktop.Views.SettingsWindow"
+        x:Name="IndependentSettingsModuleWindow"
         Title="Settings"
         Icon="/Assets/avalonia-logo.ico"
-        Width="1520"
-        Height="960"
-        MinWidth="1240"
-        MinHeight="820"
+        Width="1240"
+        Height="860"
+        MinWidth="980"
+        MinHeight="680"
         ShowInTaskbar="True"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+        SystemDecorations="None"
+        CanResize="True"
+        UseLayoutRounding="True"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+        windowing:AppWindow.AllowInteractionInTitleBar="True"
+        FontFamily="Segoe UI Variable Text, {DynamicResource AppFontFamily}">
 
     <Window.Styles>
-        <Style Selector="Border.settings-shell-card">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Style Selector="Border.independent-settings-shell">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="28" />
-            <Setter Property="BoxShadow" Value="0 10 28 #12000000" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="BoxShadow" Value="0 12 36 #22000000" />
         </Style>
 
-        <Style Selector="TextBlock.settings-shell-eyebrow">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        <Style Selector="TextBlock.independent-settings-hint">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="FontSize" Value="12.5" />
         </Style>
 
-        <Style Selector="TextBlock.settings-shell-hint">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+        <Style Selector="Border.independent-settings-titlebar">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
         </Style>
 
-        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item">
+        <Style Selector="Button.independent-settings-titlebar-button">
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="14,12" />
-            <Setter Property="Margin" Value="0,0,0,8" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
-                    <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
-                </Transitions>
-            </Setter>
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         </Style>
 
-        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-            <Setter Property="RenderTransform" Value="scale(1.01)" />
+        <Style Selector="Button.independent-settings-titlebar-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
         </Style>
 
-        <Style Selector="StackPanel.settings-sidebar-host Button.settings-sidebar-item.nav-selected">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
-        </Style>
-
-        <Style Selector="Border.settings-sidebar-icon-shell">
-            <Setter Property="Width" Value="34" />
-            <Setter Property="Height" Value="34" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-
-        <Style Selector="Button.settings-sidebar-item.nav-selected Border.settings-sidebar-icon-shell">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
-        </Style>
-
-        <Style Selector="TextBlock.settings-nav-label">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-
-        <Style Selector="ic|SymbolIcon.settings-nav-icon">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-
-        <Style Selector="Button.settings-sidebar-item.nav-selected ic|SymbolIcon.settings-nav-icon">
+        <Style Selector="Button.independent-settings-titlebar-close:pointerover">
+            <Setter Property="Background" Value="#CCB91C1C" />
             <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="Button.independent-settings-pane-button">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="Button.independent-settings-pane-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+
+        <Style Selector="ui|NavigationView#SettingsNavView">
+            <Setter Property="PaneDisplayMode" Value="Auto" />
+            <Setter Property="IsBackButtonVisible" Value="False" />
+            <Setter Property="IsPaneToggleButtonVisible" Value="False" />
+            <Setter Property="IsSettingsVisible" Value="False" />
+            <Setter Property="OpenPaneLength" Value="283" />
+            <Setter Property="CompactPaneLength" Value="0" />
+            <Setter Property="AlwaysShowHeader" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="ui|NavigationViewItem">
+            <Setter Property="Margin" Value="6,2" />
+        </Style>
+
+        <Style Selector="ui|NavigationViewItemHeader">
+            <Setter Property="Margin" Value="14,14,0,4" />
+        </Style>
+
+        <Style Selector="ui|InfoBar#IndependentSettingsStatusInfoBar">
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+
+        <Style Selector="Border.settings-page-shell">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseAltBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="24" />
         </Style>
     </Window.Styles>
 
-    <Grid x:Name="DesktopHost">
+    <Grid x:Name="DesktopHost"
+          Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
         <Border x:Name="DesktopWallpaperLayer"
-                Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
+                IsVisible="False"
+                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
 
-        <Grid x:Name="SettingsPage"
-              Classes="settings-scope"
-              IsVisible="True"
-              Opacity="1"
-              Margin="20">
-            <Grid x:Name="SettingsContentPanel"
-                  RowDefinitions="Auto,*"
-                  RowSpacing="18">
+        <Border Margin="12"
+                Classes="independent-settings-shell">
+            <Grid RowDefinitions="48,*">
                 <Border Grid.Row="0"
-                        Classes="settings-shell-card"
-                        Padding="20,18">
-                    <Grid ColumnDefinitions="Auto,*,Auto"
-                          ColumnSpacing="18">
-                        <Border Width="52"
-                                Height="52"
-                                CornerRadius="18"
-                                Background="{DynamicResource AdaptiveAccentBrush}">
-                            <TextBlock Text="LMD"
-                                       FontSize="16"
-                                       FontWeight="Bold"
-                                       Foreground="White"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" />
-                        </Border>
+                        Classes="independent-settings-titlebar"
+                        PointerPressed="OnTitleBarPointerPressed"
+                        DoubleTapped="OnTitleBarDoubleTapped">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                          ColumnSpacing="10"
+                          Margin="10,0,8,0">
+                        <Button x:Name="SettingsPaneToggleButton"
+                                Grid.Column="0"
+                                Classes="independent-settings-pane-button"
+                                Click="OnSettingsPaneToggleButtonClick"
+                                ToolTip.Tip="Toggle navigation">
+                            <fi:SymbolIcon Symbol="Navigation" />
+                        </Button>
 
                         <StackPanel Grid.Column="1"
-                                    Spacing="3"
-                                    VerticalAlignment="Center">
-                            <TextBlock x:Name="WindowTitleTextBlock"
-                                       FontSize="28"
-                                       FontWeight="SemiBold"
-                                       Text="Application Settings" />
-                            <TextBlock x:Name="WindowSubtitleTextBlock"
-                                       Classes="settings-shell-hint"
-                                       Text="LanMountainDesktop" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="2"
                                     Orientation="Horizontal"
                                     Spacing="10"
                                     VerticalAlignment="Center">
-                            <Border Classes="settings-shell-card"
-                                    Padding="12,8"
-                                    CornerRadius="18">
+                            <Border Width="28"
+                                    Height="28"
+                                    CornerRadius="9"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                <TextBlock Text="L"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Spacing="0"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="WindowTitleTextBlock"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Text="Settings" />
+                                <TextBlock x:Name="WindowSubtitleTextBlock"
+                                           Classes="independent-settings-hint"
+                                           Text="LanMountainDesktop independent settings module" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                            <Border Classes="settings-page-shell"
+                                    Padding="10,4"
+                                    CornerRadius="12">
                                 <TextBlock x:Name="WindowVersionBadgeTextBlock"
-                                           FontSize="14"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            FontWeight="SemiBold"
                                            Text="1.0.0" />
                             </Border>
-                            <Border Classes="settings-shell-card"
-                                    Padding="12,8"
-                                    CornerRadius="18">
+                            <Border Classes="settings-page-shell"
+                                    Padding="10,4"
+                                    CornerRadius="12">
                                 <TextBlock x:Name="WindowCodeNameBadgeTextBlock"
-                                           Classes="settings-shell-hint"
+                                           Classes="independent-settings-hint"
                                            Text="Administrate" />
                             </Border>
+                            <Button Classes="independent-settings-pane-button"
+                                    ToolTip.Tip="More options">
+                                <fi:SymbolIcon Symbol="MoreHorizontal" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="Open Logs Folder"
+                                                  Click="OnOpenLogsFolderClick">
+                                            <MenuItem.Icon>
+                                                <fi:SymbolIcon Symbol="FolderOpen" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Open App Folder"
+                                                  Click="OnOpenAppFolderClick">
+                                            <MenuItem.Icon>
+                                                <fi:SymbolIcon Symbol="FolderOpen" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                            <Button Classes="independent-settings-titlebar-button"
+                                    Click="OnMinimizeWindowClick">
+                                <fi:SymbolIcon Symbol="Subtract" />
+                            </Button>
+                            <Button Classes="independent-settings-titlebar-button"
+                                    Click="OnToggleWindowStateClick">
+                                <fi:SymbolIcon x:Name="WindowStateToggleIcon"
+                                               Symbol="Square" />
+                            </Button>
+                            <Button Classes="independent-settings-titlebar-button independent-settings-titlebar-close"
+                                    Click="OnCloseWindowClick">
+                                <fi:SymbolIcon Symbol="Dismiss" />
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <Grid Grid.Row="1"
-                      ColumnDefinitions="300,20,*">
-                    <Border Grid.Column="0"
-                            Classes="settings-shell-card"
-                            Padding="18,18,18,16">
-                        <Grid RowDefinitions="Auto,*,Auto"
-                              RowSpacing="18">
-                            <StackPanel Spacing="6">
+                <Grid Grid.Row="1">
+                    <ui:NavigationView x:Name="SettingsNavView"
+                                       SelectionChanged="OnSettingsNavSelectionChanged">
+                        <ui:NavigationView.PaneHeader>
+                            <StackPanel Margin="10,10,10,12"
+                                        Spacing="4">
                                 <TextBlock x:Name="SettingsSidebarTitleTextBlock"
-                                           Classes="settings-shell-eyebrow"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
                                            Text="Settings" />
                                 <TextBlock x:Name="SettingsSidebarHintTextBlock"
-                                           Classes="settings-shell-hint"
+                                           Classes="independent-settings-hint"
                                            TextWrapping="Wrap"
-                                           Text="Choose a category to adjust application behavior and desktop appearance." />
+                                           Text="Use stable left navigation and a single right-side page host, following the ClassIsland settings rhythm." />
                             </StackPanel>
+                        </ui:NavigationView.PaneHeader>
 
-                            <ScrollViewer Grid.Row="1"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Auto">
-                                <StackPanel Spacing="20">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock x:Name="SettingsPrimaryGroupTextBlock"
-                                                   Classes="settings-shell-eyebrow"
-                                                   Text="Desktop" />
-                                        <StackPanel x:Name="SettingsPrimaryNavHost"
-                                                    Classes="settings-sidebar-host"
-                                                    Spacing="0" />
-                                    </StackPanel>
-
-                                    <Border Background="{DynamicResource SurfaceStrokeColorDefaultBrush}"
-                                            Height="1" />
-
-                                    <StackPanel Spacing="10">
-                                        <TextBlock x:Name="SettingsSecondaryGroupTextBlock"
-                                                   Classes="settings-shell-eyebrow"
-                                                   Text="System" />
-                                        <StackPanel x:Name="SettingsSecondaryNavHost"
-                                                    Classes="settings-sidebar-host"
-                                                    Spacing="0" />
-                                    </StackPanel>
-
-                                    <StackPanel x:Name="SettingsPluginNavSection"
-                                                IsVisible="False"
-                                                Spacing="10">
-                                        <Border Background="{DynamicResource SurfaceStrokeColorDefaultBrush}"
-                                                Height="1" />
-                                        <TextBlock x:Name="SettingsPluginGroupTextBlock"
-                                                   Classes="settings-shell-eyebrow"
-                                                   Text="Extensions" />
-                                        <StackPanel x:Name="SettingsPluginNavHost"
-                                                    Classes="settings-sidebar-host"
-                                                    Spacing="0" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </ScrollViewer>
-
-                            <Border Grid.Row="2"
-                                    Classes="settings-shell-card"
-                                    Padding="14,12"
-                                    CornerRadius="22">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="LanMountainDesktop"
-                                               FontWeight="SemiBold" />
-                                    <TextBlock x:Name="SettingsSidebarFooterTextBlock"
-                                               Classes="settings-shell-hint"
-                                               TextWrapping="Wrap"
-                                               Text="Tray-opened settings are managed in this standalone window." />
-                                </StackPanel>
+                        <ui:NavigationView.PaneFooter>
+                            <Border Margin="10,10,10,12"
+                                    Classes="settings-page-shell"
+                                    Padding="12">
+                                <TextBlock x:Name="SettingsSidebarFooterTextBlock"
+                                           Classes="independent-settings-hint"
+                                           TextWrapping="Wrap"
+                                           Text="Both the tray entry and the in-app settings entry now open this same independent settings module." />
                             </Border>
-                        </Grid>
-                    </Border>
+                        </ui:NavigationView.PaneFooter>
 
-                    <Grid Grid.Column="2"
-                          RowDefinitions="*,Auto"
-                          RowSpacing="14">
-                        <Border Grid.Row="0"
-                                Classes="settings-shell-card"
-                                Padding="0">
-                            <ScrollViewer x:Name="SettingsContentScrollViewer"
-                                          Padding="30,28,30,30"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Auto">
-                                <Grid x:Name="SettingsContentPagesHost">
-                                    <pages:WallpaperSettingsPage x:Name="WallpaperSettingsPanel" IsVisible="True" />
-                                    <pages:GridSettingsPage x:Name="GridSettingsPanel" IsVisible="False" />
-                                    <pages:ColorSettingsPage x:Name="ColorSettingsPanel" IsVisible="False" />
-                                    <pages:StatusBarSettingsPage x:Name="StatusBarSettingsPanel" IsVisible="False" />
-                                    <pages:WeatherSettingsPage x:Name="WeatherSettingsPanel" IsVisible="False" />
-                                    <pages:RegionSettingsPage x:Name="RegionSettingsPanel" IsVisible="False" />
-                                    <pages:UpdateSettingsPage x:Name="UpdateSettingsPanel" IsVisible="False" />
-                                    <pages:LauncherSettingsPage x:Name="LauncherSettingsPanel" IsVisible="False" />
-                                    <pages:AboutSettingsPage x:Name="AboutSettingsPanel" IsVisible="False" />
-                                    <pages:PluginSettingsPage x:Name="PluginSettingsPanel" IsVisible="False" />
-                                    <pages:PluginMarketSettingsPage x:Name="PluginMarketSettingsPanel" IsVisible="False" />
-                                </Grid>
-                            </ScrollViewer>
-                        </Border>
+                        <Grid RowDefinitions="Auto,*">
+                            <ui:InfoBar x:Name="IndependentSettingsStatusInfoBar"
+                                        Title="Independent settings module status"
+                                        IsClosable="True"
+                                        IsOpen="False"
+                                        Severity="Warning" />
 
-                        <Border x:Name="PendingRestartDock"
-                                Grid.Row="1"
-                                IsVisible="False"
-                                Classes="settings-shell-card"
-                                Padding="16,14"
-                                CornerRadius="24">
-                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="14">
-                                <Border Width="38"
-                                        Height="38"
-                                        CornerRadius="14"
-                                        Background="{DynamicResource AdaptiveAccentBrush}">
-                                    <fi:FluentIcon Icon="ArrowSync"
-                                                   IconVariant="Regular"
-                                                   FontSize="18"
-                                                   Foreground="White"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                </Border>
-                                <StackPanel Grid.Column="1"
-                                            Spacing="2"
-                                            VerticalAlignment="Center">
-                                    <TextBlock x:Name="PendingRestartDockTitleTextBlock"
-                                               FontSize="14"
+                            <Grid Grid.Row="1"
+                                  Margin="18,4,18,18"
+                                  RowDefinitions="Auto,*,Auto">
+                                <StackPanel Spacing="4"
+                                            Margin="4,0,0,16"
+                                            MaxWidth="980"
+                                            HorizontalAlignment="Left">
+                                    <TextBlock x:Name="CurrentSettingsPageTitleTextBlock"
+                                               FontSize="28"
                                                FontWeight="SemiBold"
-                                               Text="Restart required" />
-                                    <TextBlock x:Name="PendingRestartDockDescriptionTextBlock"
+                                               Text="General" />
+                                    <TextBlock x:Name="CurrentSettingsPageSubtitleTextBlock"
+                                               Classes="independent-settings-hint"
+                                               MaxWidth="720"
                                                TextWrapping="Wrap"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="Your changes will apply after restarting the app." />
+                                               Text="Configure this part of LanMountainDesktop in the independent settings module." />
                                 </StackPanel>
-                                <Button x:Name="PendingRestartDockButton"
-                                        Grid.Column="2"
-                                        Padding="16,8"
-                                        Click="OnPendingRestartDockButtonClick">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <fi:FluentIcon Icon="ArrowSync"
-                                                       IconVariant="Regular" />
-                                        <TextBlock x:Name="PendingRestartDockButtonTextBlock"
-                                                   VerticalAlignment="Center"
-                                                   Text="Restart app" />
-                                    </StackPanel>
-                                </Button>
+
+                                <Border Grid.Row="1"
+                                        Classes="settings-page-shell"
+                                        MaxWidth="980"
+                                        HorizontalAlignment="Left">
+                                    <ScrollViewer x:Name="SettingsContentScrollViewer"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ui:Frame x:Name="SettingsPageFrame"
+                                                  Margin="0" />
+                                    </ScrollViewer>
+                                </Border>
+
+                                <Border x:Name="PendingRestartDock"
+                                        Grid.Row="2"
+                                        IsVisible="False"
+                                        Margin="0,14,0,0"
+                                        Classes="settings-page-shell"
+                                        Padding="14,12"
+                                        MaxWidth="980"
+                                        HorizontalAlignment="Left">
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          ColumnSpacing="12">
+                                        <Border Width="36"
+                                                Height="36"
+                                                CornerRadius="18"
+                                                Background="{DynamicResource AccentFillColorDefaultBrush}">
+                                            <fi:FluentIcon Icon="ArrowSync"
+                                                           IconVariant="Regular"
+                                                           FontSize="16"
+                                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1"
+                                                    Spacing="2"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock x:Name="PendingRestartDockTitleTextBlock"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Text="Restart required" />
+                                            <TextBlock x:Name="PendingRestartDockDescriptionTextBlock"
+                                                       Classes="independent-settings-hint"
+                                                       TextWrapping="Wrap"
+                                                       Text="Your changes will apply after restarting the app." />
+                                        </StackPanel>
+
+                                        <Button x:Name="PendingRestartDockButton"
+                                                Grid.Column="2"
+                                                Padding="14,8"
+                                                Click="OnPendingRestartDockButtonClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <fi:FluentIcon Icon="ArrowSync"
+                                                               IconVariant="Regular" />
+                                                <TextBlock x:Name="PendingRestartDockButtonTextBlock"
+                                                           VerticalAlignment="Center"
+                                                           Text="Restart app" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
                             </Grid>
-                        </Border>
-                    </Grid>
+                        </Grid>
+                    </ui:NavigationView>
                 </Grid>
             </Grid>
-        </Grid>
+        </Border>
 
         <Grid IsVisible="False">
             <Button x:Name="BackToWindowsButton" />
@@ -324,4 +357,4 @@
             <Border x:Name="BottomTaskbarContainer" />
         </Grid>
     </Grid>
-</Window>
+</local:IndependentSettingsModuleWindowBase>

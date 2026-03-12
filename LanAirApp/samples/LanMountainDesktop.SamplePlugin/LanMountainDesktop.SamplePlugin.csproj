@@ -9,9 +9,9 @@
     <OutputPath>bin\$(Configuration)\$(TargetFramework)\content\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <PluginPackageOutputDirectory>..\..\..\LanMountainDesktop\bin\$(Configuration)\$(TargetFramework)\Extensions\Plugins\</PluginPackageOutputDirectory>
-    <PluginPackagePath>$(PluginPackageOutputDirectory)$(AssemblyName).laapp</PluginPackagePath>
-    <LegacyLoosePluginOutputDirectory>..\..\..\LanMountainDesktop\bin\$(Configuration)\$(TargetFramework)\Extensions\Plugins\SamplePlugin\</LegacyLoosePluginOutputDirectory>
+    <PluginPackageOutputDirectory>$(MSBuildThisFileDirectory)artifacts\Packages\</PluginPackageOutputDirectory>
+    <PluginPackagePath>$(PluginPackageOutputDirectory)$(AssemblyName).$(Version).laapp</PluginPackagePath>
+    <LegacyLoosePluginOutputDirectory>$(MSBuildThisFileDirectory)artifacts\Loose\</LegacyLoosePluginOutputDirectory>
   </PropertyGroup>
 
   <ItemGroup>

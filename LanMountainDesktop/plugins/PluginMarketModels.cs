@@ -31,14 +31,8 @@ internal static class AirAppMarketDefaults
 
     public static string? TryGetWorkspaceIndexPath()
     {
-        var repositoryRoot = TryGetWorkspaceRepositoryRoot("LanAirApp");
-        if (repositoryRoot is null)
-        {
-            return null;
-        }
-
-        var candidatePath = Path.Combine(repositoryRoot, "airappmarket", "index.json");
-        return File.Exists(candidatePath) ? candidatePath : null;
+        var relativePath = Path.Combine("airappmarket", "index.json");
+        return TryResolveWorkspacePath("LanAirApp", relativePath);
     }
 
     public static bool TryResolveWorkspaceFile(string url, out string localPath)
@@ -57,14 +51,8 @@ internal static class AirAppMarketDefaults
             return false;
         }
 
-        var repositoryRoot = TryGetWorkspaceRepositoryRoot(repositoryName);
-        if (repositoryRoot is null)
-        {
-            return false;
-        }
-
-        var candidatePath = Path.GetFullPath(Path.Combine(repositoryRoot, relativePath));
-        if (!File.Exists(candidatePath))
+        var candidatePath = TryResolveWorkspacePath(repositoryName, relativePath);
+        if (candidatePath is null)
         {
             return false;
         }
@@ -99,7 +87,7 @@ internal static class AirAppMarketDefaults
         return !string.IsNullOrWhiteSpace(owner) && !string.IsNullOrWhiteSpace(repositoryName);
     }
 
-    private static string? TryGetWorkspaceRepositoryRoot(string repositoryName)
+    private static string? TryResolveWorkspacePath(string repositoryName, string relativePath)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
@@ -107,7 +95,11 @@ internal static class AirAppMarketDefaults
             var candidate = Path.Combine(current.FullName, repositoryName);
             if (Directory.Exists(candidate))
             {
-                return candidate;
+                var candidatePath = Path.GetFullPath(Path.Combine(candidate, relativePath));
+                if (File.Exists(candidatePath))
+                {
+                    return candidatePath;
+                }
             }
 
             current = current.Parent;

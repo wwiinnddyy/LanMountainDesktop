@@ -7,12 +7,20 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="1000"
              x:Class="LanMountainDesktop.Views.SettingsPages.PluginSettingsPage">
 
-    <StackPanel x:Name="PluginSettingsPanel" Spacing="16">
+    <StackPanel x:Name="PluginSettingsPanel"
+                MaxWidth="920"
+                Spacing="16">
         <TextBlock x:Name="PluginSettingsPanelTitleTextBlock"
+                   IsVisible="False"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    Text="Plugins" />
+
+        <TextBlock x:Name="PluginSettingsPanelSubtitleTextBlock"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Manage installed plugins, local package import, and runtime availability from one place." />
 
         <Border Classes="settings-expander-shell">
             <ui:SettingsExpander x:Name="PluginSystemSettingsExpander"
@@ -20,18 +28,19 @@
                                  Description="Manage plugin loading and backend isolation."
                                  IsExpanded="True">
                 <ui:SettingsExpander.IconSource>
-                    <ui:FontIconSource Glyph="&#xe734;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
+                    <fi:SymbolIconSource Symbol="PuzzlePiece"
+                                         IconVariant="Regular" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="PluginSystemDescriptionTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="This page will host installed plugin management, permission review, and sandboxed backend runtime controls." />
-                        <Border Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                        <Border Background="{DynamicResource LayerFillColorDefaultBrush}"
                                 CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                 Padding="14">
                             <TextBlock x:Name="PluginSystemStatusTextBlock"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap"
                                        Text="Plugin management UI is not connected yet. Next step is wiring the loader, permissions, and worker isolation state into this panel." />
                         </Border>
@@ -47,16 +56,17 @@
                                  Description="Manage installed plugins here."
                                  IsExpanded="True">
                 <ui:SettingsExpander.IconSource>
-                    <ui:FontIconSource Glyph="&#xe8fd;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
+                    <fi:SymbolIconSource Symbol="Apps"
+                                         IconVariant="Regular" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="PluginRestartHintTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    Text="Plugin enable state changes take effect after restarting the app." />
                         <TextBlock x:Name="PluginCatalogEmptyTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="No plugins found."
                                    IsVisible="False" />
                     </StackPanel>
@@ -70,7 +80,8 @@
                                  Description="Open a .laapp package and stage it into the local plugin directory."
                                  IsExpanded="False">
                 <ui:SettingsExpander.IconSource>
-                    <ui:FontIconSource Glyph="&#xe8b7;" FontFamily="{StaticResource SymbolThemeFontFamily}" />
+                    <fi:SymbolIconSource Symbol="ArrowUpload"
+                                         IconVariant="Regular" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <StackPanel Spacing="10">
@@ -79,11 +90,11 @@
                                 Click="OnInstallPluginPackageClick"
                                 Content="Open .laapp package" />
                         <TextBlock x:Name="PluginPackageImportHintTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    Text="Open a .laapp package to install it into the local plugin directory." />
                         <TextBlock x:Name="PluginPackageImportStatusTextBlock"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    IsVisible="False" />
                     </StackPanel>

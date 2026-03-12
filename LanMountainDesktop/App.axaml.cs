@@ -1,32 +1,50 @@
+using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
-using System;
-using System.Linq;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
-using AvaloniaWebView;
-using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop;
 
 public partial class App : Application
 {
+    private enum DesktopShellState
+    {
+        ForegroundDesktop = 0,
+        MinimizedToTaskbar = 1,
+        TrayOnly = 2
+    }
+
+    private enum ShutdownIntent
+    {
+        None = 0,
+        ExitRequested = 1,
+        RestartRequested = 2
+    }
+
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private bool _exitCleanupCompleted;
+    private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
+    private ShutdownIntent _shutdownIntent;
 
-    private SettingsWindow? _traySettingsWindow;
+    private readonly IndependentSettingsModuleService _independentSettingsModuleService = new();
     private TrayIcons? _trayIcons;
     private PluginRuntimeService? _pluginRuntimeService;
+    private MainWindow? _mainWindow;
+    private bool _mainWindowClosed;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -34,6 +52,11 @@ public partial class App : Application
 
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
+
+    internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
+    {
+        _independentSettingsModuleService.ShowOrActivate(source, pageTag);
+    }
 
     public override void Initialize()
     {
@@ -62,12 +85,8 @@ public partial class App : Application
                 AppLogger.Info("App", "Desktop lifetime exit triggered.");
                 PerformExitCleanup();
             };
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainWindowViewModel(),
-            };
-            AppLogger.Info("App", $"Main window created. LogFile={AppLogger.LogFilePath}");
-            LogBrowserStartupDiagnostics();
+
+            CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         }
 
@@ -81,42 +100,14 @@ public partial class App : Application
             Reason: "User selected Exit App from the tray menu."));
     }
 
+    private void OnTrayShowDesktopClick(object? sender, EventArgs e)
+    {
+        RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayMenu");
+    }
+
     private void OnTraySettingsClick(object? sender, EventArgs e)
     {
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
-        {
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
-            {
-                if (_traySettingsWindow is { } existingWindow && existingWindow.IsVisible)
-                {
-                    existingWindow.WindowState = Avalonia.Controls.WindowState.Normal;
-                    existingWindow.Activate();
-                    return;
-                }
-
-                var settingsWindow = new SettingsWindow();
-                settingsWindow.Closed += (_, _) =>
-                {
-                    if (ReferenceEquals(_traySettingsWindow, settingsWindow))
-                    {
-                        _traySettingsWindow = null;
-                    }
-                };
-
-                _traySettingsWindow = settingsWindow;
-                settingsWindow.Show();
-                settingsWindow.Activate();
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("TraySettings", "Failed to open settings window.", ex);
-            }
-        }, DispatcherPriority.Normal);
+        OpenIndependentSettingsModule("TrayMenu");
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
@@ -209,19 +200,25 @@ public partial class App : Application
     {
         var menu = new NativeMenu();
 
-        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "设置"));
+        var showDesktopItem = new NativeMenuItem(L("tray.menu.show_desktop", "Open Desktop"));
+        showDesktopItem.Click += OnTrayShowDesktopClick;
+        menu.Items.Add(showDesktopItem);
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+
+        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "Settings"));
         settingsItem.Click += OnTraySettingsClick;
         menu.Items.Add(settingsItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
-        var restartItem = new NativeMenuItem(L("tray.menu.restart", "重启应用"));
+        var restartItem = new NativeMenuItem(L("tray.menu.restart", "Restart App"));
         restartItem.Click += OnTrayRestartClick;
         menu.Items.Add(restartItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
-        var exitItem = new NativeMenuItem(L("tray.menu.exit", "退出应用"));
+        var exitItem = new NativeMenuItem(L("tray.menu.exit", "Exit App"));
         exitItem.Click += OnTrayExitClick;
         menu.Items.Add(exitItem);
 
@@ -246,6 +243,11 @@ public partial class App : Application
 
     private void ActivateMainWindow()
     {
+        RestoreOrCreateMainWindow(showSingleInstanceNotice: true, source: "SingleInstance");
+    }
+
+    private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
+    {
         Dispatcher.UIThread.Post(() =>
         {
             if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
@@ -253,13 +255,11 @@ public partial class App : Application
                 return;
             }
 
-            if (desktop.MainWindow is not Window mainWindow)
-            {
-                return;
-            }
-
             try
             {
+                var mainWindow = GetOrCreateMainWindow(desktop, source);
+                mainWindow.ShowInTaskbar = true;
+
                 if (!mainWindow.IsVisible)
                 {
                     mainWindow.Show();
@@ -278,16 +278,66 @@ public partial class App : Application
                 mainWindow.Activate();
                 mainWindow.Topmost = true;
                 mainWindow.Topmost = false;
-                if (mainWindow is MainWindow lanMountainMainWindow)
+                SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
+                AppLogger.Info(
+                    "DesktopShell",
+                    $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
+
+                if (showSingleInstanceNotice)
                 {
-                    lanMountainMainWindow.ShowSingleInstanceNotice();
+                    mainWindow.ShowSingleInstanceNotice();
                 }
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("SingleInstance", "Failed to activate the existing main window.", ex);
+                AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
             }
         }, DispatcherPriority.Send);
+    }
+
+    internal void PrepareForShutdown(bool isRestart, string source)
+    {
+        void Mark()
+        {
+            _shutdownIntent = isRestart
+                ? ShutdownIntent.RestartRequested
+                : ShutdownIntent.ExitRequested;
+            AppLogger.Info(
+                "DesktopShell",
+                $"Shutdown intent marked. Intent='{_shutdownIntent}'; Source='{source}'; CurrentShellState='{_desktopShellState}'.");
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            Mark();
+            return;
+        }
+
+        Dispatcher.UIThread.InvokeAsync(Mark, DispatcherPriority.Send).GetAwaiter().GetResult();
+    }
+
+    internal void ResetShutdownIntent(string source)
+    {
+        void Reset()
+        {
+            if (_shutdownIntent == ShutdownIntent.None)
+            {
+                return;
+            }
+
+            AppLogger.Warn(
+                "DesktopShell",
+                $"Shutdown intent cleared without process exit. PreviousIntent='{_shutdownIntent}'; Source='{source}'.");
+            _shutdownIntent = ShutdownIntent.None;
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            Reset();
+            return;
+        }
+
+        Dispatcher.UIThread.InvokeAsync(Reset, DispatcherPriority.Send).GetAwaiter().GetResult();
     }
 
     private void OnAppSettingsSaved(string _)
@@ -311,18 +361,7 @@ public partial class App : Application
         _exitCleanupCompleted = true;
         AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
 
-        try
-        {
-            _traySettingsWindow?.Close();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("App", "Failed to close tray-opened settings window during shutdown.", ex);
-        }
-        finally
-        {
-            _traySettingsWindow = null;
-        }
+        _independentSettingsModuleService.CloseIfOpen();
 
         try
         {
@@ -340,6 +379,171 @@ public partial class App : Application
         AudioRecorderServiceFactory.DisposeSharedServices();
         StudyAnalyticsServiceFactory.DisposeSharedService();
         DisposeTrayIcon();
+    }
+
+    private MainWindow CreateAndAssignMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string reason)
+    {
+        var mainWindow = new MainWindow
+        {
+            DataContext = new MainWindowViewModel(),
+            ShowInTaskbar = true
+        };
+
+        AttachMainWindow(mainWindow);
+        desktop.MainWindow = mainWindow;
+        AppLogger.Info("App", $"Main window created. Reason='{reason}'. LogFile={AppLogger.LogFilePath}");
+        LogBrowserStartupDiagnostics();
+        SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"MainWindowCreated:{reason}");
+        return mainWindow;
+    }
+
+    private MainWindow GetOrCreateMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        string reason)
+    {
+        if (_mainWindow is not null && !_mainWindowClosed)
+        {
+            return _mainWindow;
+        }
+
+        if (desktop.MainWindow is MainWindow desktopMainWindow && !_mainWindowClosed)
+        {
+            AttachMainWindow(desktopMainWindow);
+            return desktopMainWindow;
+        }
+
+        return CreateAndAssignMainWindow(desktop, reason);
+    }
+
+    private void AttachMainWindow(MainWindow mainWindow)
+    {
+        if (ReferenceEquals(_mainWindow, mainWindow))
+        {
+            _mainWindowClosed = false;
+            return;
+        }
+
+        if (_mainWindow is not null)
+        {
+            _mainWindow.Closing -= OnMainWindowClosing;
+            _mainWindow.Closed -= OnMainWindowClosed;
+            _mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
+        }
+
+        _mainWindow = mainWindow;
+        _mainWindowClosed = false;
+        mainWindow.Closing += OnMainWindowClosing;
+        mainWindow.Closed += OnMainWindowClosed;
+        mainWindow.PropertyChanged += OnMainWindowPropertyChanged;
+    }
+
+    private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (sender is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        AppLogger.Info(
+            "DesktopShell",
+            $"Main window closing requested. Intent='{_shutdownIntent}'; ShellState='{_desktopShellState}'; WindowState='{mainWindow.WindowState}'; IsVisible={mainWindow.IsVisible}.");
+
+        if (_shutdownIntent is ShutdownIntent.ExitRequested or ShutdownIntent.RestartRequested)
+        {
+            AppLogger.Info(
+                "DesktopShell",
+                $"Main window close allowed. Intent='{_shutdownIntent}'; ShellState='{_desktopShellState}'.");
+            return;
+        }
+
+        e.Cancel = true;
+        HideMainWindowToTray(mainWindow, "MainWindowClosing");
+    }
+
+    private void OnMainWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        mainWindow.Closing -= OnMainWindowClosing;
+        mainWindow.Closed -= OnMainWindowClosed;
+        mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
+
+        if (ReferenceEquals(_mainWindow, mainWindow))
+        {
+            _mainWindow = null;
+        }
+
+        _mainWindowClosed = true;
+        AppLogger.Info(
+            "DesktopShell",
+            $"Main window closed. Intent='{_shutdownIntent}'; ShellState='{_desktopShellState}'.");
+
+        if (_shutdownIntent == ShutdownIntent.None)
+        {
+            SetDesktopShellState(DesktopShellState.TrayOnly, "MainWindowClosedUnexpected");
+        }
+    }
+
+    private void OnMainWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (sender is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        if (e.Property != Window.WindowStateProperty)
+        {
+            return;
+        }
+
+        if (_shutdownIntent != ShutdownIntent.None || !mainWindow.IsVisible)
+        {
+            return;
+        }
+
+        if (mainWindow.WindowState == WindowState.Minimized)
+        {
+            SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, "MainWindowMinimized");
+            return;
+        }
+
+        SetDesktopShellState(DesktopShellState.ForegroundDesktop, "MainWindowRestored");
+    }
+
+    private void HideMainWindowToTray(MainWindow mainWindow, string source)
+    {
+        try
+        {
+            mainWindow.ShowInTaskbar = false;
+            mainWindow.Hide();
+            SetDesktopShellState(DesktopShellState.TrayOnly, source);
+            AppLogger.Info(
+                "DesktopShell",
+                $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DesktopShell", $"Failed to hide main window to tray. Source='{source}'.", ex);
+        }
+    }
+
+    private void SetDesktopShellState(DesktopShellState state, string source)
+    {
+        if (_desktopShellState == state)
+        {
+            return;
+        }
+
+        var previous = _desktopShellState;
+        _desktopShellState = state;
+        AppLogger.Info(
+            "DesktopShell",
+            $"Shell state changed. Previous='{previous}'; Current='{state}'; Source='{source}'.");
     }
 
     private void LogBrowserStartupDiagnostics()

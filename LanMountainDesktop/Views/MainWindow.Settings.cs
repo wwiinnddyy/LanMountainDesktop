@@ -80,11 +80,13 @@ public partial class MainWindow
 
         if (_isSettingsOpen)
         {
-            CloseSettingsPage();
-            return;
+            CloseSettingsPage(immediate: true);
         }
 
-        OpenSettingsPage();
+        if (Application.Current is App app)
+        {
+            app.OpenIndependentSettingsModule("MainWindow");
+        }
     }
 
     private void OnCloseSettingsClick(object? sender, RoutedEventArgs e)

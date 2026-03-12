@@ -1,217 +1,261 @@
-﻿using Avalonia.Controls;
+using System;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using LanMountainDesktop.Views.Components;
+using LanMountainDesktop.Views.SettingsPages;
+
 namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow
 {
-    // --- WallpaperSettingsPage ---
-    internal TextBlock WallpaperPanelTitleTextBlock => WallpaperSettingsPanel.FindControl<TextBlock>("WallpaperPanelTitleTextBlock")!;
-    internal TextBlock WallpaperPathTextBlock => WallpaperSettingsPanel.FindControl<TextBlock>("WallpaperPathTextBlock")!;
-    internal TextBlock WallpaperStatusTextBlock => WallpaperSettingsPanel.FindControl<TextBlock>("WallpaperStatusTextBlock")!;
-    internal ComboBox WallpaperPlacementComboBox => WallpaperSettingsPanel.FindControl<ComboBox>("WallpaperPlacementComboBox")!;
-    internal Border WallpaperPreviewHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewHost")!;
-    internal Border WallpaperPreviewFrame => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewFrame")!;
-    internal Border WallpaperPreviewViewport => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewViewport")!;
-    internal Image WallpaperPreviewVideoImage => WallpaperSettingsPanel.FindControl<Image>("WallpaperPreviewVideoImage")!;
-    internal Grid WallpaperPreviewGrid => WallpaperSettingsPanel.FindControl<Grid>("WallpaperPreviewGrid")!;
-    internal Border WallpaperPreviewTopStatusBarHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewTopStatusBarHost")!;
-    internal StackPanel WallpaperPreviewTopStatusComponentsPanel => WallpaperSettingsPanel.FindControl<StackPanel>("WallpaperPreviewTopStatusComponentsPanel")!;
-    internal LanMountainDesktop.Views.Components.ClockWidget WallpaperPreviewClockWidget => WallpaperSettingsPanel.FindControl<LanMountainDesktop.Views.Components.ClockWidget>("WallpaperPreviewClockWidget")!;
-    internal Border WallpaperPreviewBottomTaskbarContainer => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewBottomTaskbarContainer")!;
-    internal Border WallpaperPreviewTaskbarFixedActionsHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewTaskbarFixedActionsHost")!;
-    internal StackPanel WallpaperPreviewBackButtonVisual => WallpaperSettingsPanel.FindControl<StackPanel>("WallpaperPreviewBackButtonVisual")!;
-    internal TextBlock WallpaperPreviewBackButtonTextBlock => WallpaperSettingsPanel.FindControl<TextBlock>("WallpaperPreviewBackButtonTextBlock")!;
-    internal StackPanel WallpaperPreviewTaskbarDynamicActionsHost => WallpaperSettingsPanel.FindControl<StackPanel>("WallpaperPreviewTaskbarDynamicActionsHost")!;
-    internal Border WallpaperPreviewTaskbarSettingsActionHost => WallpaperSettingsPanel.FindControl<Border>("WallpaperPreviewTaskbarSettingsActionHost")!;
-    internal StackPanel WallpaperPreviewComponentLibraryVisual => WallpaperSettingsPanel.FindControl<StackPanel>("WallpaperPreviewComponentLibraryVisual")!;
-    internal TextBlock WallpaperPreviewComponentLibraryTextBlock => WallpaperSettingsPanel.FindControl<TextBlock>("WallpaperPreviewComponentLibraryTextBlock")!;
-    internal FluentIcons.Avalonia.SymbolIcon WallpaperPreviewSettingsButtonIcon => WallpaperSettingsPanel.FindControl<FluentIcons.Avalonia.SymbolIcon>("WallpaperPreviewSettingsButtonIcon")!;
-    internal Button PickWallpaperButton => WallpaperSettingsPanel.FindControl<Button>("PickWallpaperButton")!;
-    internal Button ClearWallpaperButton => WallpaperSettingsPanel.FindControl<Button>("ClearWallpaperButton")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WallpaperPlacementSettingsExpander => WallpaperSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WallpaperPlacementSettingsExpander")!;
+    private string CurrentControlAccessStage => _controlsBound ? "module init" : "control binding";
 
-    // --- GridSettingsPage ---
-    internal TextBlock GridPanelTitleTextBlock => GridSettingsPanel.FindControl<TextBlock>("GridPanelTitleTextBlock")!;
-    internal Border GridPreviewHost => GridSettingsPanel.FindControl<Border>("GridPreviewHost")!;
-    internal Border GridPreviewFrame => GridSettingsPanel.FindControl<Border>("GridPreviewFrame")!;
-    internal Border GridPreviewViewport => GridSettingsPanel.FindControl<Border>("GridPreviewViewport")!;
-    internal Canvas GridPreviewLinesCanvas => GridSettingsPanel.FindControl<Canvas>("GridPreviewLinesCanvas")!;
-    internal Grid GridPreviewGrid => GridSettingsPanel.FindControl<Grid>("GridPreviewGrid")!;
-    internal Border GridPreviewTopStatusBarHost => GridSettingsPanel.FindControl<Border>("GridPreviewTopStatusBarHost")!;
-    internal StackPanel GridPreviewTopStatusComponentsPanel => GridSettingsPanel.FindControl<StackPanel>("GridPreviewTopStatusComponentsPanel")!;
-    internal Border GridPreviewBottomTaskbarContainer => GridSettingsPanel.FindControl<Border>("GridPreviewBottomTaskbarContainer")!;
-    internal Border GridPreviewTaskbarFixedActionsHost => GridSettingsPanel.FindControl<Border>("GridPreviewTaskbarFixedActionsHost")!;
-    internal StackPanel GridPreviewBackButtonVisual => GridSettingsPanel.FindControl<StackPanel>("GridPreviewBackButtonVisual")!;
-    internal TextBlock GridPreviewBackButtonTextBlock => GridSettingsPanel.FindControl<TextBlock>("GridPreviewBackButtonTextBlock")!;
-    internal StackPanel GridPreviewTaskbarDynamicActionsHost => GridSettingsPanel.FindControl<StackPanel>("GridPreviewTaskbarDynamicActionsHost")!;
-    internal Border GridPreviewTaskbarSettingsActionHost => GridSettingsPanel.FindControl<Border>("GridPreviewTaskbarSettingsActionHost")!;
-    internal StackPanel GridPreviewComponentLibraryVisual => GridSettingsPanel.FindControl<StackPanel>("GridPreviewComponentLibraryVisual")!;
-    internal FluentIcons.Avalonia.FluentIcon GridPreviewComponentLibraryIcon => GridSettingsPanel.FindControl<FluentIcons.Avalonia.FluentIcon>("GridPreviewComponentLibraryIcon")!;
-    internal TextBlock GridPreviewComponentLibraryTextBlock => GridSettingsPanel.FindControl<TextBlock>("GridPreviewComponentLibraryTextBlock")!;
-    internal FluentIcons.Avalonia.SymbolIcon GridPreviewSettingsButtonIcon => GridSettingsPanel.FindControl<FluentIcons.Avalonia.SymbolIcon>("GridPreviewSettingsButtonIcon")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander GridRowsSettingsExpander => GridSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridRowsSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander GridSpacingSettingsExpander => GridSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridSpacingSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander GridEdgeInsetSettingsExpander => GridSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridEdgeInsetSettingsExpander")!;
-    internal Slider GridSizeSlider => GridSettingsPanel.FindControl<Slider>("GridSizeSlider")!;
-    internal FluentAvalonia.UI.Controls.NumberBox GridSizeNumberBox => GridSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("GridSizeNumberBox")!;
-    internal ComboBox GridSpacingPresetComboBox => GridSettingsPanel.FindControl<ComboBox>("GridSpacingPresetComboBox")!;
-    internal ComboBoxItem GridSpacingRelaxedComboBoxItem => GridSettingsPanel.FindControl<ComboBoxItem>("GridSpacingRelaxedComboBoxItem")!;
-    internal ComboBoxItem GridSpacingCompactComboBoxItem => GridSettingsPanel.FindControl<ComboBoxItem>("GridSpacingCompactComboBoxItem")!;
-    internal Slider GridEdgeInsetSlider => GridSettingsPanel.FindControl<Slider>("GridEdgeInsetSlider")!;
-    internal FluentAvalonia.UI.Controls.NumberBox GridEdgeInsetNumberBox => GridSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("GridEdgeInsetNumberBox")!;
-    internal TextBlock GridEdgeInsetComputedPxTextBlock => GridSettingsPanel.FindControl<TextBlock>("GridEdgeInsetComputedPxTextBlock")!;
-    internal Button ApplyGridButton => GridSettingsPanel.FindControl<Button>("ApplyGridButton")!;
-    internal TextBlock GridInfoTextBlock => GridSettingsPanel.FindControl<TextBlock>("GridInfoTextBlock")!;
+    private T? TryGetOptionalPageControl<T>(Control? pageRoot, string controlName)
+        where T : Control
+    {
+        return pageRoot?.FindControl<T>(controlName);
+    }
 
-    // --- ColorSettingsPage ---
-    internal TextBlock ColorPanelTitleTextBlock => ColorSettingsPanel.FindControl<TextBlock>("ColorPanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander ThemeModeSettingsExpander => ColorSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("ThemeModeSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander ThemeColorSettingsExpander => ColorSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("ThemeColorSettingsExpander")!;
-    internal ToggleSwitch NightModeToggleSwitch => ColorSettingsPanel.FindControl<ToggleSwitch>("NightModeToggleSwitch")!;
-    internal TextBlock ThemeColorStatusTextBlock => ColorSettingsPanel.FindControl<TextBlock>("ThemeColorStatusTextBlock")!;
-    internal TextBlock RecommendedColorsLabelTextBlock => ColorSettingsPanel.FindControl<TextBlock>("RecommendedColorsLabelTextBlock")!;
-    internal TextBlock SystemMonetColorsLabelTextBlock => ColorSettingsPanel.FindControl<TextBlock>("SystemMonetColorsLabelTextBlock")!;
-    internal Button RecommendedColorButton1 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton1")!;
-    internal Button RecommendedColorButton2 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton2")!;
-    internal Button RecommendedColorButton3 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton3")!;
-    internal Button RecommendedColorButton4 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton4")!;
-    internal Button RecommendedColorButton5 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton5")!;
-    internal Button RecommendedColorButton6 => ColorSettingsPanel.FindControl<Button>("RecommendedColorButton6")!;
-    internal Border RecommendedColorSwatch1 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch1")!;
-    internal Border RecommendedColorSwatch2 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch2")!;
-    internal Border RecommendedColorSwatch3 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch3")!;
-    internal Border RecommendedColorSwatch4 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch4")!;
-    internal Border RecommendedColorSwatch5 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch5")!;
-    internal Border RecommendedColorSwatch6 => ColorSettingsPanel.FindControl<Border>("RecommendedColorSwatch6")!;
-    internal Button RefreshMonetColorsButton => ColorSettingsPanel.FindControl<Button>("RefreshMonetColorsButton")!;
-    internal Button MonetColorButton1 => ColorSettingsPanel.FindControl<Button>("MonetColorButton1")!;
-    internal Button MonetColorButton2 => ColorSettingsPanel.FindControl<Button>("MonetColorButton2")!;
-    internal Button MonetColorButton3 => ColorSettingsPanel.FindControl<Button>("MonetColorButton3")!;
-    internal Button MonetColorButton4 => ColorSettingsPanel.FindControl<Button>("MonetColorButton4")!;
-    internal Button MonetColorButton5 => ColorSettingsPanel.FindControl<Button>("MonetColorButton5")!;
-    internal Button MonetColorButton6 => ColorSettingsPanel.FindControl<Button>("MonetColorButton6")!;
-    internal Border MonetColorSwatch1 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch1")!;
-    internal Border MonetColorSwatch2 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch2")!;
-    internal Border MonetColorSwatch3 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch3")!;
-    internal Border MonetColorSwatch4 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch4")!;
-    internal Border MonetColorSwatch5 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch5")!;
-    internal Border MonetColorSwatch6 => ColorSettingsPanel.FindControl<Border>("MonetColorSwatch6")!;
+    private T RequirePageControl<T>(Control pageRoot, string controlName)
+        where T : Control
+    {
+        var control = pageRoot.FindControl<T>(controlName);
+        if (control is null)
+        {
+            throw new InvalidOperationException(
+                $"Independent settings module control resolution failed. Page='{pageRoot.Name ?? pageRoot.GetType().Name}'; Control='{controlName}'; Stage='{CurrentControlAccessStage}'.");
+        }
 
-    // --- StatusBarSettingsPage ---
-    internal TextBlock StatusBarPanelTitleTextBlock => StatusBarSettingsPanel.FindControl<TextBlock>("StatusBarPanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander StatusBarClockSettingsExpander => StatusBarSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("StatusBarClockSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander StatusBarSpacingSettingsExpander => StatusBarSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("StatusBarSpacingSettingsExpander")!;
-    internal ToggleSwitch StatusBarClockToggleSwitch => StatusBarSettingsPanel.FindControl<ToggleSwitch>("StatusBarClockToggleSwitch")!;
-    internal RadioButton ClockFormatHMSSRadio => StatusBarSettingsPanel.FindControl<RadioButton>("ClockFormatHMSSRadio")!;
-    internal RadioButton ClockFormatHMRadio => StatusBarSettingsPanel.FindControl<RadioButton>("ClockFormatHMRadio")!;
-    internal ComboBox StatusBarSpacingModeComboBox => StatusBarSettingsPanel.FindControl<ComboBox>("StatusBarSpacingModeComboBox")!;
-    internal ComboBoxItem StatusBarSpacingModeCompactItem => StatusBarSettingsPanel.FindControl<ComboBoxItem>("StatusBarSpacingModeCompactItem")!;
-    internal ComboBoxItem StatusBarSpacingModeRelaxedItem => StatusBarSettingsPanel.FindControl<ComboBoxItem>("StatusBarSpacingModeRelaxedItem")!;
-    internal ComboBoxItem StatusBarSpacingModeCustomItem => StatusBarSettingsPanel.FindControl<ComboBoxItem>("StatusBarSpacingModeCustomItem")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpanderItem StatusBarSpacingCustomPanel => StatusBarSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpanderItem>("StatusBarSpacingCustomPanel")!;
-    internal Slider StatusBarSpacingSlider => StatusBarSettingsPanel.FindControl<Slider>("StatusBarSpacingSlider")!;
-    internal FluentAvalonia.UI.Controls.NumberBox StatusBarSpacingNumberBox => StatusBarSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("StatusBarSpacingNumberBox")!;
-    internal TextBlock StatusBarSpacingComputedPxTextBlock => StatusBarSettingsPanel.FindControl<TextBlock>("StatusBarSpacingComputedPxTextBlock")!;
+        return control;
+    }
 
-    // --- RegionSettingsPage ---
-    internal TextBlock RegionPanelTitleTextBlock => RegionSettingsPanel.FindControl<TextBlock>("RegionPanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander LanguageSettingsExpander => RegionSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("LanguageSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander TimeZoneSettingsExpander => RegionSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("TimeZoneSettingsExpander")!;
-    internal ComboBox LanguageComboBox => RegionSettingsPanel.FindControl<ComboBox>("LanguageComboBox")!;
-    internal ComboBoxItem LanguageChineseItem => RegionSettingsPanel.FindControl<ComboBoxItem>("LanguageChineseItem")!;
-    internal ComboBoxItem LanguageEnglishItem => RegionSettingsPanel.FindControl<ComboBoxItem>("LanguageEnglishItem")!;
-    internal ComboBox TimeZoneComboBox => RegionSettingsPanel.FindControl<ComboBox>("TimeZoneComboBox")!;
+    private T RequireSettingsPage<T>(T? page, string pageName)
+        where T : Control
+    {
+        return page ?? throw new InvalidOperationException(
+            $"Independent settings module page resolution failed. Page='{pageName}'; Stage='{CurrentControlAccessStage}'.");
+    }
 
-    // --- WeatherSettingsPage ---
-    internal TextBlock WeatherPanelTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPanelTitleTextBlock")!;
-    internal TextBlock WeatherPreviewSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewSectionTextBlock")!;
-    internal TextBlock WeatherSettingsSectionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherSettingsSectionTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherPreviewSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherPreviewSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherLocationSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherLocationSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCitySearchSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCitySearchSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCoordinateSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCoordinateSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherAlertFilterSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherAlertFilterSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherIconPackSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherIconPackSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherNoTlsSettingsExpander => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherNoTlsSettingsExpander")!;
-    internal Button WeatherPreviewButton => WeatherSettingsPanel.FindControl<Button>("WeatherPreviewButton")!;
-    internal ComboBox WeatherLocationModeComboBox => WeatherSettingsPanel.FindControl<ComboBox>("WeatherLocationModeComboBox")!;
-    internal ComboBoxItem WeatherLocationModeCityItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherLocationModeCityItem")!;
-    internal ComboBoxItem WeatherLocationModeCoordinatesItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherLocationModeCoordinatesItem")!;
-    internal ListBoxItem WeatherLocationModeCityChipItem => WeatherSettingsPanel.FindControl<ListBoxItem>("WeatherLocationModeCityChipItem")!;
-    internal ListBoxItem WeatherLocationModeCoordinatesChipItem => WeatherSettingsPanel.FindControl<ListBoxItem>("WeatherLocationModeCoordinatesChipItem")!;
-    internal ListBox WeatherLocationModeChipListBox => WeatherSettingsPanel.FindControl<ListBox>("WeatherLocationModeChipListBox")!;
-    internal ToggleSwitch WeatherAutoRefreshToggleSwitch => WeatherSettingsPanel.FindControl<ToggleSwitch>("WeatherAutoRefreshToggleSwitch")!;
-    internal Button WeatherSearchButton => WeatherSettingsPanel.FindControl<Button>("WeatherSearchButton")!;
-    internal Button WeatherApplyCityButton => WeatherSettingsPanel.FindControl<Button>("WeatherApplyCityButton")!;
-    internal Button WeatherApplyCoordinatesButton => WeatherSettingsPanel.FindControl<Button>("WeatherApplyCoordinatesButton")!;
-    internal TextBox WeatherExcludedAlertsTextBox => WeatherSettingsPanel.FindControl<TextBox>("WeatherExcludedAlertsTextBox")!;
-    internal ComboBox WeatherIconPackComboBox => WeatherSettingsPanel.FindControl<ComboBox>("WeatherIconPackComboBox")!;
-    internal ToggleSwitch WeatherNoTlsToggleSwitch => WeatherSettingsPanel.FindControl<ToggleSwitch>("WeatherNoTlsToggleSwitch")!;
-    internal TextBox WeatherCitySearchTextBox => WeatherSettingsPanel.FindControl<TextBox>("WeatherCitySearchTextBox")!;
-    internal ComboBox WeatherCityResultsComboBox => WeatherSettingsPanel.FindControl<ComboBox>("WeatherCityResultsComboBox")!;
-    internal TextBlock WeatherSearchStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherSearchStatusTextBlock")!;
-    internal TextBox WeatherLocationKeyTextBox => WeatherSettingsPanel.FindControl<TextBox>("WeatherLocationKeyTextBox")!;
-    internal TextBox WeatherLocationNameTextBox => WeatherSettingsPanel.FindControl<TextBox>("WeatherLocationNameTextBox")!;
-    internal FluentAvalonia.UI.Controls.NumberBox WeatherLatitudeNumberBox => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLatitudeNumberBox")!;
-    internal FluentAvalonia.UI.Controls.NumberBox WeatherLongitudeNumberBox => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLongitudeNumberBox")!;
-    internal TextBlock WeatherCoordinateStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherCoordinateStatusTextBlock")!;
-    internal TextBlock WeatherPreviewResultTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewResultTextBlock")!;
-    internal Image WeatherPreviewIconImage => WeatherSettingsPanel.FindControl<Image>("WeatherPreviewIconImage")!;
-    internal FluentIcons.Avalonia.Fluent.SymbolIcon WeatherPreviewIconSymbol => WeatherSettingsPanel.FindControl<FluentIcons.Avalonia.Fluent.SymbolIcon>("WeatherPreviewIconSymbol")!;
-    internal TextBlock WeatherPreviewTemperatureTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewTemperatureTextBlock")!;
-    internal TextBlock WeatherPreviewUpdatedTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherPreviewUpdatedTextBlock")!;
-    internal FluentAvalonia.UI.Controls.ProgressRing WeatherSearchProgressRing => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherSearchProgressRing")!;
-    internal FluentAvalonia.UI.Controls.ProgressRing WeatherPreviewProgressRing => WeatherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherPreviewProgressRing")!;
-    internal ComboBoxItem WeatherIconPackFluentRegularItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentRegularItem")!;
-    internal ComboBoxItem WeatherIconPackFluentFilledItem => WeatherSettingsPanel.FindControl<ComboBoxItem>("WeatherIconPackFluentFilledItem")!;
-    internal TextBlock WeatherLocationSelectionTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionTitleTextBlock")!;
-    internal TextBlock WeatherLocationSelectionDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationSelectionDescriptionTextBlock")!;
-    internal TextBlock WeatherLocationValueTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationValueTextBlock")!;
-    internal TextBlock WeatherLocationStatusTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherLocationStatusTextBlock")!;
-    internal TextBlock WeatherAlertListTitleTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListTitleTextBlock")!;
-    internal TextBlock WeatherAlertListDescriptionTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherAlertListDescriptionTextBlock")!;
-    internal TextBlock WeatherFooterHintTextBlock => WeatherSettingsPanel.FindControl<TextBlock>("WeatherFooterHintTextBlock")!;
+    private WallpaperSettingsPage WallpaperSettingsPageRoot => RequireSettingsPage(WallpaperSettingsPanel, nameof(WallpaperSettingsPanel));
+    private GridSettingsPage GridSettingsPageRoot => RequireSettingsPage(GridSettingsPanel, nameof(GridSettingsPanel));
+    private ColorSettingsPage ColorSettingsPageRoot => RequireSettingsPage(ColorSettingsPanel, nameof(ColorSettingsPanel));
+    private StatusBarSettingsPage StatusBarSettingsPageRoot => RequireSettingsPage(StatusBarSettingsPanel, nameof(StatusBarSettingsPanel));
+    private RegionSettingsPage RegionSettingsPageRoot => RequireSettingsPage(RegionSettingsPanel, nameof(RegionSettingsPanel));
+    private WeatherSettingsPage WeatherSettingsPageRoot => RequireSettingsPage(WeatherSettingsPanel, nameof(WeatherSettingsPanel));
+    private UpdateSettingsPage UpdateSettingsPageRoot => RequireSettingsPage(UpdateSettingsPanel, nameof(UpdateSettingsPanel));
+    private AboutSettingsPage AboutSettingsPageRoot => RequireSettingsPage(AboutSettingsPanel, nameof(AboutSettingsPanel));
+    private LauncherSettingsPage LauncherSettingsPageRoot => RequireSettingsPage(LauncherSettingsPanel, nameof(LauncherSettingsPanel));
 
-    // --- UpdateSettingsPage ---
-    internal TextBlock UpdatePanelTitleTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdatePanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander UpdateOptionsSettingsExpander => UpdateSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("UpdateOptionsSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander UpdateActionsSettingsExpander => UpdateSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("UpdateActionsSettingsExpander")!;
-    internal TextBlock UpdateCurrentVersionLabelTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateCurrentVersionLabelTextBlock")!;
-    internal TextBlock UpdateCurrentVersionValueTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateCurrentVersionValueTextBlock")!;
-    internal TextBlock UpdateLatestVersionLabelTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateLatestVersionLabelTextBlock")!;
-    internal TextBlock UpdateLatestVersionValueTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateLatestVersionValueTextBlock")!;
-    internal TextBlock UpdatePublishedAtLabelTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdatePublishedAtLabelTextBlock")!;
-    internal TextBlock UpdatePublishedAtValueTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdatePublishedAtValueTextBlock")!;
-    internal TextBlock UpdateChannelLabelTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateChannelLabelTextBlock")!;
-    internal ListBoxItem UpdateChannelStableChipItem => UpdateSettingsPanel.FindControl<ListBoxItem>("UpdateChannelStableChipItem")!;
-    internal ListBoxItem UpdateChannelPreviewChipItem => UpdateSettingsPanel.FindControl<ListBoxItem>("UpdateChannelPreviewChipItem")!;
-    internal ToggleSwitch AutoCheckUpdatesToggleSwitch => UpdateSettingsPanel.FindControl<ToggleSwitch>("AutoCheckUpdatesToggleSwitch")! ;
-    internal ListBox UpdateChannelChipListBox => UpdateSettingsPanel.FindControl<ListBox>("UpdateChannelChipListBox")!;
-    internal Button CheckForUpdatesButton => UpdateSettingsPanel.FindControl<Button>("CheckForUpdatesButton")!;
-    internal Button DownloadAndInstallUpdateButton => UpdateSettingsPanel.FindControl<Button>("DownloadAndInstallUpdateButton")!;
-    internal ProgressBar UpdateDownloadProgressBar => UpdateSettingsPanel.FindControl<ProgressBar>("UpdateDownloadProgressBar")!;
-    internal TextBlock UpdateDownloadProgressTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateDownloadProgressTextBlock")!;
-    internal TextBlock UpdateStatusTextBlock => UpdateSettingsPanel.FindControl<TextBlock>("UpdateStatusTextBlock")!;
+    private T WallpaperControl<T>(string name) where T : Control => RequirePageControl<T>(WallpaperSettingsPageRoot, name);
+    private T GridControl<T>(string name) where T : Control => RequirePageControl<T>(GridSettingsPageRoot, name);
+    private T ColorControl<T>(string name) where T : Control => RequirePageControl<T>(ColorSettingsPageRoot, name);
+    private T StatusBarControl<T>(string name) where T : Control => RequirePageControl<T>(StatusBarSettingsPageRoot, name);
+    private T RegionControl<T>(string name) where T : Control => RequirePageControl<T>(RegionSettingsPageRoot, name);
+    private T WeatherControl<T>(string name) where T : Control => RequirePageControl<T>(WeatherSettingsPageRoot, name);
+    private T UpdateControl<T>(string name) where T : Control => RequirePageControl<T>(UpdateSettingsPageRoot, name);
+    private T AboutControl<T>(string name) where T : Control => RequirePageControl<T>(AboutSettingsPageRoot, name);
+    private T LauncherControl<T>(string name) where T : Control => RequirePageControl<T>(LauncherSettingsPageRoot, name);
 
-    // --- AboutSettingsPage ---
-    internal TextBlock AboutPanelTitleTextBlock => AboutSettingsPanel.FindControl<TextBlock>("AboutPanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander AboutStartupSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutStartupSettingsExpander")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander AboutRenderModeSettingsExpander => AboutSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutRenderModeSettingsExpander")!;
-    internal ToggleSwitch AutoStartWithWindowsToggleSwitch => AboutSettingsPanel.FindControl<ToggleSwitch>("AutoStartWithWindowsToggleSwitch")!;
-    internal ComboBox AppRenderModeComboBox => AboutSettingsPanel.FindControl<ComboBox>("AppRenderModeComboBox")!;
-    internal TextBlock CurrentRenderBackendLabelTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendLabelTextBlock")!;
-    internal TextBlock CurrentRenderBackendValueTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendValueTextBlock")!;
-    internal TextBlock CurrentRenderBackendImplementationTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CurrentRenderBackendImplementationTextBlock")!;
-    internal TextBlock VersionTextBlock => AboutSettingsPanel.FindControl<TextBlock>("VersionTextBlock")!;
-    internal TextBlock CodeNameTextBlock => AboutSettingsPanel.FindControl<TextBlock>("CodeNameTextBlock")!;
-    internal TextBlock FontInfoTextBlock => AboutSettingsPanel.FindControl<TextBlock>("FontInfoTextBlock")!;
+    internal TextBlock WallpaperPanelTitleTextBlock => WallpaperControl<TextBlock>("WallpaperPanelTitleTextBlock");
+    internal TextBlock WallpaperPathTextBlock => WallpaperControl<TextBlock>("WallpaperPathTextBlock");
+    internal TextBlock WallpaperStatusTextBlock => WallpaperControl<TextBlock>("WallpaperStatusTextBlock");
+    internal ComboBox WallpaperPlacementComboBox => WallpaperControl<ComboBox>("WallpaperPlacementComboBox");
+    internal Border WallpaperPreviewHost => WallpaperControl<Border>("WallpaperPreviewHost");
+    internal Border WallpaperPreviewFrame => WallpaperControl<Border>("WallpaperPreviewFrame");
+    internal Border WallpaperPreviewViewport => WallpaperControl<Border>("WallpaperPreviewViewport");
+    internal Image WallpaperPreviewVideoImage => WallpaperControl<Image>("WallpaperPreviewVideoImage");
+    internal Grid WallpaperPreviewGrid => WallpaperControl<Grid>("WallpaperPreviewGrid");
+    internal Border WallpaperPreviewTopStatusBarHost => WallpaperControl<Border>("WallpaperPreviewTopStatusBarHost");
+    internal StackPanel WallpaperPreviewTopStatusComponentsPanel => WallpaperControl<StackPanel>("WallpaperPreviewTopStatusComponentsPanel");
+    internal ClockWidget WallpaperPreviewClockWidget => WallpaperControl<ClockWidget>("WallpaperPreviewClockWidget");
+    internal Border WallpaperPreviewBottomTaskbarContainer => WallpaperControl<Border>("WallpaperPreviewBottomTaskbarContainer");
+    internal Border WallpaperPreviewTaskbarFixedActionsHost => WallpaperControl<Border>("WallpaperPreviewTaskbarFixedActionsHost");
+    internal StackPanel WallpaperPreviewBackButtonVisual => WallpaperControl<StackPanel>("WallpaperPreviewBackButtonVisual");
+    internal TextBlock WallpaperPreviewBackButtonTextBlock => WallpaperControl<TextBlock>("WallpaperPreviewBackButtonTextBlock");
+    internal StackPanel WallpaperPreviewTaskbarDynamicActionsHost => WallpaperControl<StackPanel>("WallpaperPreviewTaskbarDynamicActionsHost");
+    internal Border WallpaperPreviewTaskbarSettingsActionHost => WallpaperControl<Border>("WallpaperPreviewTaskbarSettingsActionHost");
+    internal StackPanel WallpaperPreviewComponentLibraryVisual => WallpaperControl<StackPanel>("WallpaperPreviewComponentLibraryVisual");
+    internal TextBlock WallpaperPreviewComponentLibraryTextBlock => WallpaperControl<TextBlock>("WallpaperPreviewComponentLibraryTextBlock");
+    internal FluentIcons.Avalonia.SymbolIcon WallpaperPreviewSettingsButtonIcon => WallpaperControl<FluentIcons.Avalonia.SymbolIcon>("WallpaperPreviewSettingsButtonIcon");
+    internal Button PickWallpaperButton => WallpaperControl<Button>("PickWallpaperButton");
+    internal Button ClearWallpaperButton => WallpaperControl<Button>("ClearWallpaperButton");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WallpaperPlacementSettingsExpander => WallpaperControl<FluentAvalonia.UI.Controls.SettingsExpander>("WallpaperPlacementSettingsExpander");
+    private Image? OptionalWallpaperPreviewVideoImage => TryGetOptionalPageControl<Image>(WallpaperSettingsPanel, "WallpaperPreviewVideoImage");
+    private Border? OptionalWallpaperPreviewViewport => TryGetOptionalPageControl<Border>(WallpaperSettingsPanel, "WallpaperPreviewViewport");
+    private bool IsWallpaperSettingsPageVisible => string.Equals(NormalizeSettingsPageTag(_selectedSettingsTabTag), "Appearance", StringComparison.OrdinalIgnoreCase);
 
-    // --- LauncherSettingsPage ---
-    internal TextBlock LauncherSettingsPanelTitleTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherSettingsPanelTitleTextBlock")!;
-    internal FluentAvalonia.UI.Controls.SettingsExpander LauncherHiddenItemsSettingsExpander => LauncherSettingsPanel.FindControl<FluentAvalonia.UI.Controls.SettingsExpander>("LauncherHiddenItemsSettingsExpander")!;
-    internal TextBlock LauncherHiddenItemsEmptyTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherHiddenItemsEmptyTextBlock")!;
-    internal TextBlock LauncherHiddenItemsDescriptionTextBlock => LauncherSettingsPanel.FindControl<TextBlock>("LauncherHiddenItemsDescriptionTextBlock")!;
+    internal TextBlock GridPanelTitleTextBlock => GridControl<TextBlock>("GridPanelTitleTextBlock");
+    internal Border GridPreviewHost => GridControl<Border>("GridPreviewHost");
+    internal Border GridPreviewFrame => GridControl<Border>("GridPreviewFrame");
+    internal Border GridPreviewViewport => GridControl<Border>("GridPreviewViewport");
+    internal Canvas GridPreviewLinesCanvas => GridControl<Canvas>("GridPreviewLinesCanvas");
+    internal Grid GridPreviewGrid => GridControl<Grid>("GridPreviewGrid");
+    internal Border GridPreviewTopStatusBarHost => GridControl<Border>("GridPreviewTopStatusBarHost");
+    internal StackPanel GridPreviewTopStatusComponentsPanel => GridControl<StackPanel>("GridPreviewTopStatusComponentsPanel");
+    internal Border GridPreviewBottomTaskbarContainer => GridControl<Border>("GridPreviewBottomTaskbarContainer");
+    internal Border GridPreviewTaskbarFixedActionsHost => GridControl<Border>("GridPreviewTaskbarFixedActionsHost");
+    internal StackPanel GridPreviewBackButtonVisual => GridControl<StackPanel>("GridPreviewBackButtonVisual");
+    internal TextBlock GridPreviewBackButtonTextBlock => GridControl<TextBlock>("GridPreviewBackButtonTextBlock");
+    internal StackPanel GridPreviewTaskbarDynamicActionsHost => GridControl<StackPanel>("GridPreviewTaskbarDynamicActionsHost");
+    internal Border GridPreviewTaskbarSettingsActionHost => GridControl<Border>("GridPreviewTaskbarSettingsActionHost");
+    internal StackPanel GridPreviewComponentLibraryVisual => GridControl<StackPanel>("GridPreviewComponentLibraryVisual");
+    internal FluentIcons.Avalonia.FluentIcon GridPreviewComponentLibraryIcon => GridControl<FluentIcons.Avalonia.FluentIcon>("GridPreviewComponentLibraryIcon");
+    internal TextBlock GridPreviewComponentLibraryTextBlock => GridControl<TextBlock>("GridPreviewComponentLibraryTextBlock");
+    internal FluentIcons.Avalonia.SymbolIcon GridPreviewSettingsButtonIcon => GridControl<FluentIcons.Avalonia.SymbolIcon>("GridPreviewSettingsButtonIcon");
+    internal FluentAvalonia.UI.Controls.SettingsExpander GridRowsSettingsExpander => GridControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridRowsSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander GridSpacingSettingsExpander => GridControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridSpacingSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander GridEdgeInsetSettingsExpander => GridControl<FluentAvalonia.UI.Controls.SettingsExpander>("GridEdgeInsetSettingsExpander");
+    internal Slider GridSizeSlider => GridControl<Slider>("GridSizeSlider");
+    internal FluentAvalonia.UI.Controls.NumberBox GridSizeNumberBox => GridControl<FluentAvalonia.UI.Controls.NumberBox>("GridSizeNumberBox");
+    internal ComboBox GridSpacingPresetComboBox => GridControl<ComboBox>("GridSpacingPresetComboBox");
+    internal ComboBoxItem GridSpacingRelaxedComboBoxItem => GridControl<ComboBoxItem>("GridSpacingRelaxedComboBoxItem");
+    internal ComboBoxItem GridSpacingCompactComboBoxItem => GridControl<ComboBoxItem>("GridSpacingCompactComboBoxItem");
+    internal Slider GridEdgeInsetSlider => GridControl<Slider>("GridEdgeInsetSlider");
+    internal FluentAvalonia.UI.Controls.NumberBox GridEdgeInsetNumberBox => GridControl<FluentAvalonia.UI.Controls.NumberBox>("GridEdgeInsetNumberBox");
+    internal TextBlock GridEdgeInsetComputedPxTextBlock => GridControl<TextBlock>("GridEdgeInsetComputedPxTextBlock");
+    internal Button ApplyGridButton => GridControl<Button>("ApplyGridButton");
+    internal TextBlock GridInfoTextBlock => GridControl<TextBlock>("GridInfoTextBlock");
 
+    internal TextBlock ColorPanelTitleTextBlock => ColorControl<TextBlock>("ColorPanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander ThemeModeSettingsExpander => ColorControl<FluentAvalonia.UI.Controls.SettingsExpander>("ThemeModeSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander ThemeColorSettingsExpander => ColorControl<FluentAvalonia.UI.Controls.SettingsExpander>("ThemeColorSettingsExpander");
+    internal ToggleSwitch NightModeToggleSwitch => ColorControl<ToggleSwitch>("NightModeToggleSwitch");
+    internal TextBlock ThemeColorStatusTextBlock => ColorControl<TextBlock>("ThemeColorStatusTextBlock");
+    internal TextBlock RecommendedColorsLabelTextBlock => ColorControl<TextBlock>("RecommendedColorsLabelTextBlock");
+    internal TextBlock SystemMonetColorsLabelTextBlock => ColorControl<TextBlock>("SystemMonetColorsLabelTextBlock");
+    internal Button RecommendedColorButton1 => ColorControl<Button>("RecommendedColorButton1");
+    internal Button RecommendedColorButton2 => ColorControl<Button>("RecommendedColorButton2");
+    internal Button RecommendedColorButton3 => ColorControl<Button>("RecommendedColorButton3");
+    internal Button RecommendedColorButton4 => ColorControl<Button>("RecommendedColorButton4");
+    internal Button RecommendedColorButton5 => ColorControl<Button>("RecommendedColorButton5");
+    internal Button RecommendedColorButton6 => ColorControl<Button>("RecommendedColorButton6");
+    internal Border RecommendedColorSwatch1 => ColorControl<Border>("RecommendedColorSwatch1");
+    internal Border RecommendedColorSwatch2 => ColorControl<Border>("RecommendedColorSwatch2");
+    internal Border RecommendedColorSwatch3 => ColorControl<Border>("RecommendedColorSwatch3");
+    internal Border RecommendedColorSwatch4 => ColorControl<Border>("RecommendedColorSwatch4");
+    internal Border RecommendedColorSwatch5 => ColorControl<Border>("RecommendedColorSwatch5");
+    internal Border RecommendedColorSwatch6 => ColorControl<Border>("RecommendedColorSwatch6");
+    internal Button RefreshMonetColorsButton => ColorControl<Button>("RefreshMonetColorsButton");
+    internal Button MonetColorButton1 => ColorControl<Button>("MonetColorButton1");
+    internal Button MonetColorButton2 => ColorControl<Button>("MonetColorButton2");
+    internal Button MonetColorButton3 => ColorControl<Button>("MonetColorButton3");
+    internal Button MonetColorButton4 => ColorControl<Button>("MonetColorButton4");
+    internal Button MonetColorButton5 => ColorControl<Button>("MonetColorButton5");
+    internal Button MonetColorButton6 => ColorControl<Button>("MonetColorButton6");
+    internal Border MonetColorSwatch1 => ColorControl<Border>("MonetColorSwatch1");
+    internal Border MonetColorSwatch2 => ColorControl<Border>("MonetColorSwatch2");
+    internal Border MonetColorSwatch3 => ColorControl<Border>("MonetColorSwatch3");
+    internal Border MonetColorSwatch4 => ColorControl<Border>("MonetColorSwatch4");
+    internal Border MonetColorSwatch5 => ColorControl<Border>("MonetColorSwatch5");
+    internal Border MonetColorSwatch6 => ColorControl<Border>("MonetColorSwatch6");
+
+    internal TextBlock StatusBarPanelTitleTextBlock => StatusBarControl<TextBlock>("StatusBarPanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander StatusBarClockSettingsExpander => StatusBarControl<FluentAvalonia.UI.Controls.SettingsExpander>("StatusBarClockSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander StatusBarSpacingSettingsExpander => StatusBarControl<FluentAvalonia.UI.Controls.SettingsExpander>("StatusBarSpacingSettingsExpander");
+    internal ToggleSwitch StatusBarClockToggleSwitch => StatusBarControl<ToggleSwitch>("StatusBarClockToggleSwitch");
+    internal RadioButton ClockFormatHMSSRadio => StatusBarControl<RadioButton>("ClockFormatHMSSRadio");
+    internal RadioButton ClockFormatHMRadio => StatusBarControl<RadioButton>("ClockFormatHMRadio");
+    internal ComboBox StatusBarSpacingModeComboBox => StatusBarControl<ComboBox>("StatusBarSpacingModeComboBox");
+    internal ComboBoxItem StatusBarSpacingModeCompactItem => StatusBarControl<ComboBoxItem>("StatusBarSpacingModeCompactItem");
+    internal ComboBoxItem StatusBarSpacingModeRelaxedItem => StatusBarControl<ComboBoxItem>("StatusBarSpacingModeRelaxedItem");
+    internal ComboBoxItem StatusBarSpacingModeCustomItem => StatusBarControl<ComboBoxItem>("StatusBarSpacingModeCustomItem");
+    internal FluentAvalonia.UI.Controls.SettingsExpanderItem StatusBarSpacingCustomPanel => StatusBarControl<FluentAvalonia.UI.Controls.SettingsExpanderItem>("StatusBarSpacingCustomPanel");
+    internal Slider StatusBarSpacingSlider => StatusBarControl<Slider>("StatusBarSpacingSlider");
+    internal FluentAvalonia.UI.Controls.NumberBox StatusBarSpacingNumberBox => StatusBarControl<FluentAvalonia.UI.Controls.NumberBox>("StatusBarSpacingNumberBox");
+    internal TextBlock StatusBarSpacingComputedPxTextBlock => StatusBarControl<TextBlock>("StatusBarSpacingComputedPxTextBlock");
+
+    internal TextBlock RegionPanelTitleTextBlock => RegionControl<TextBlock>("RegionPanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander LanguageSettingsExpander => RegionControl<FluentAvalonia.UI.Controls.SettingsExpander>("LanguageSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander TimeZoneSettingsExpander => RegionControl<FluentAvalonia.UI.Controls.SettingsExpander>("TimeZoneSettingsExpander");
+    internal ComboBox LanguageComboBox => RegionControl<ComboBox>("LanguageComboBox");
+    internal ComboBoxItem LanguageChineseItem => RegionControl<ComboBoxItem>("LanguageChineseItem");
+    internal ComboBoxItem LanguageEnglishItem => RegionControl<ComboBoxItem>("LanguageEnglishItem");
+    internal ComboBox TimeZoneComboBox => RegionControl<ComboBox>("TimeZoneComboBox");
+
+    internal TextBlock WeatherPanelTitleTextBlock => WeatherControl<TextBlock>("WeatherPanelTitleTextBlock");
+    internal TextBlock WeatherPreviewSectionTextBlock => WeatherControl<TextBlock>("WeatherPreviewSectionTextBlock");
+    internal TextBlock WeatherSettingsSectionTextBlock => WeatherControl<TextBlock>("WeatherSettingsSectionTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherPreviewSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherPreviewSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherLocationSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherLocationSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCitySearchSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCitySearchSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherCoordinateSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherCoordinateSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherAlertFilterSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherAlertFilterSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherIconPackSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherIconPackSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander WeatherNoTlsSettingsExpander => WeatherControl<FluentAvalonia.UI.Controls.SettingsExpander>("WeatherNoTlsSettingsExpander");
+    internal Button WeatherPreviewButton => WeatherControl<Button>("WeatherPreviewButton");
+    internal ComboBox WeatherLocationModeComboBox => WeatherControl<ComboBox>("WeatherLocationModeComboBox");
+    internal ComboBoxItem WeatherLocationModeCityItem => WeatherControl<ComboBoxItem>("WeatherLocationModeCityItem");
+    internal ComboBoxItem WeatherLocationModeCoordinatesItem => WeatherControl<ComboBoxItem>("WeatherLocationModeCoordinatesItem");
+    internal ListBoxItem WeatherLocationModeCityChipItem => WeatherControl<ListBoxItem>("WeatherLocationModeCityChipItem");
+    internal ListBoxItem WeatherLocationModeCoordinatesChipItem => WeatherControl<ListBoxItem>("WeatherLocationModeCoordinatesChipItem");
+    internal ListBox WeatherLocationModeChipListBox => WeatherControl<ListBox>("WeatherLocationModeChipListBox");
+    internal ToggleSwitch WeatherAutoRefreshToggleSwitch => WeatherControl<ToggleSwitch>("WeatherAutoRefreshToggleSwitch");
+    internal Button WeatherSearchButton => WeatherControl<Button>("WeatherSearchButton");
+    internal Button WeatherApplyCityButton => WeatherControl<Button>("WeatherApplyCityButton");
+    internal Button WeatherApplyCoordinatesButton => WeatherControl<Button>("WeatherApplyCoordinatesButton");
+    internal TextBox WeatherExcludedAlertsTextBox => WeatherControl<TextBox>("WeatherExcludedAlertsTextBox");
+    internal ComboBox WeatherIconPackComboBox => WeatherControl<ComboBox>("WeatherIconPackComboBox");
+    internal ToggleSwitch WeatherNoTlsToggleSwitch => WeatherControl<ToggleSwitch>("WeatherNoTlsToggleSwitch");
+    internal TextBox WeatherCitySearchTextBox => WeatherControl<TextBox>("WeatherCitySearchTextBox");
+    internal ComboBox WeatherCityResultsComboBox => WeatherControl<ComboBox>("WeatherCityResultsComboBox");
+    internal TextBlock WeatherSearchStatusTextBlock => WeatherControl<TextBlock>("WeatherSearchStatusTextBlock");
+    internal TextBox WeatherLocationKeyTextBox => WeatherControl<TextBox>("WeatherLocationKeyTextBox");
+    internal TextBox WeatherLocationNameTextBox => WeatherControl<TextBox>("WeatherLocationNameTextBox");
+    internal FluentAvalonia.UI.Controls.NumberBox WeatherLatitudeNumberBox => WeatherControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLatitudeNumberBox");
+    internal FluentAvalonia.UI.Controls.NumberBox WeatherLongitudeNumberBox => WeatherControl<FluentAvalonia.UI.Controls.NumberBox>("WeatherLongitudeNumberBox");
+    internal TextBlock WeatherCoordinateStatusTextBlock => WeatherControl<TextBlock>("WeatherCoordinateStatusTextBlock");
+    internal TextBlock WeatherPreviewResultTextBlock => WeatherControl<TextBlock>("WeatherPreviewResultTextBlock");
+    internal Image WeatherPreviewIconImage => WeatherControl<Image>("WeatherPreviewIconImage");
+    internal FluentIcons.Avalonia.Fluent.SymbolIcon WeatherPreviewIconSymbol => WeatherControl<FluentIcons.Avalonia.Fluent.SymbolIcon>("WeatherPreviewIconSymbol");
+    internal TextBlock WeatherPreviewTemperatureTextBlock => WeatherControl<TextBlock>("WeatherPreviewTemperatureTextBlock");
+    internal TextBlock WeatherPreviewUpdatedTextBlock => WeatherControl<TextBlock>("WeatherPreviewUpdatedTextBlock");
+    internal FluentAvalonia.UI.Controls.ProgressRing WeatherSearchProgressRing => WeatherControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherSearchProgressRing");
+    internal FluentAvalonia.UI.Controls.ProgressRing WeatherPreviewProgressRing => WeatherControl<FluentAvalonia.UI.Controls.ProgressRing>("WeatherPreviewProgressRing");
+    internal ComboBoxItem WeatherIconPackFluentRegularItem => WeatherControl<ComboBoxItem>("WeatherIconPackFluentRegularItem");
+    internal ComboBoxItem WeatherIconPackFluentFilledItem => WeatherControl<ComboBoxItem>("WeatherIconPackFluentFilledItem");
+    internal TextBlock WeatherLocationSelectionTitleTextBlock => WeatherControl<TextBlock>("WeatherLocationSelectionTitleTextBlock");
+    internal TextBlock WeatherLocationSelectionDescriptionTextBlock => WeatherControl<TextBlock>("WeatherLocationSelectionDescriptionTextBlock");
+    internal TextBlock WeatherLocationValueTextBlock => WeatherControl<TextBlock>("WeatherLocationValueTextBlock");
+    internal TextBlock WeatherLocationStatusTextBlock => WeatherControl<TextBlock>("WeatherLocationStatusTextBlock");
+    internal TextBlock WeatherAlertListTitleTextBlock => WeatherControl<TextBlock>("WeatherAlertListTitleTextBlock");
+    internal TextBlock WeatherAlertListDescriptionTextBlock => WeatherControl<TextBlock>("WeatherAlertListDescriptionTextBlock");
+    internal TextBlock WeatherFooterHintTextBlock => WeatherControl<TextBlock>("WeatherFooterHintTextBlock");
+
+    internal TextBlock UpdatePanelTitleTextBlock => UpdateControl<TextBlock>("UpdatePanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander UpdateOptionsSettingsExpander => UpdateControl<FluentAvalonia.UI.Controls.SettingsExpander>("UpdateOptionsSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander UpdateActionsSettingsExpander => UpdateControl<FluentAvalonia.UI.Controls.SettingsExpander>("UpdateActionsSettingsExpander");
+    internal TextBlock UpdateCurrentVersionLabelTextBlock => UpdateControl<TextBlock>("UpdateCurrentVersionLabelTextBlock");
+    internal TextBlock UpdateCurrentVersionValueTextBlock => UpdateControl<TextBlock>("UpdateCurrentVersionValueTextBlock");
+    internal TextBlock UpdateLatestVersionLabelTextBlock => UpdateControl<TextBlock>("UpdateLatestVersionLabelTextBlock");
+    internal TextBlock UpdateLatestVersionValueTextBlock => UpdateControl<TextBlock>("UpdateLatestVersionValueTextBlock");
+    internal TextBlock UpdatePublishedAtLabelTextBlock => UpdateControl<TextBlock>("UpdatePublishedAtLabelTextBlock");
+    internal TextBlock UpdatePublishedAtValueTextBlock => UpdateControl<TextBlock>("UpdatePublishedAtValueTextBlock");
+    internal TextBlock UpdateChannelLabelTextBlock => UpdateControl<TextBlock>("UpdateChannelLabelTextBlock");
+    internal ListBoxItem UpdateChannelStableChipItem => UpdateControl<ListBoxItem>("UpdateChannelStableChipItem");
+    internal ListBoxItem UpdateChannelPreviewChipItem => UpdateControl<ListBoxItem>("UpdateChannelPreviewChipItem");
+    internal ToggleSwitch AutoCheckUpdatesToggleSwitch => UpdateControl<ToggleSwitch>("AutoCheckUpdatesToggleSwitch");
+    internal ListBox UpdateChannelChipListBox => UpdateControl<ListBox>("UpdateChannelChipListBox");
+    internal Button CheckForUpdatesButton => UpdateControl<Button>("CheckForUpdatesButton");
+    internal Button DownloadAndInstallUpdateButton => UpdateControl<Button>("DownloadAndInstallUpdateButton");
+    internal ProgressBar UpdateDownloadProgressBar => UpdateControl<ProgressBar>("UpdateDownloadProgressBar");
+    internal TextBlock UpdateDownloadProgressTextBlock => UpdateControl<TextBlock>("UpdateDownloadProgressTextBlock");
+    internal TextBlock UpdateStatusTextBlock => UpdateControl<TextBlock>("UpdateStatusTextBlock");
+
+    internal TextBlock AboutPanelTitleTextBlock => AboutControl<TextBlock>("AboutPanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander AboutStartupSettingsExpander => AboutControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutStartupSettingsExpander");
+    internal FluentAvalonia.UI.Controls.SettingsExpander AboutRenderModeSettingsExpander => AboutControl<FluentAvalonia.UI.Controls.SettingsExpander>("AboutRenderModeSettingsExpander");
+    internal ToggleSwitch AutoStartWithWindowsToggleSwitch => AboutControl<ToggleSwitch>("AutoStartWithWindowsToggleSwitch");
+    internal ComboBox AppRenderModeComboBox => AboutControl<ComboBox>("AppRenderModeComboBox");
+    internal TextBlock CurrentRenderBackendLabelTextBlock => AboutControl<TextBlock>("CurrentRenderBackendLabelTextBlock");
+    internal TextBlock CurrentRenderBackendValueTextBlock => AboutControl<TextBlock>("CurrentRenderBackendValueTextBlock");
+    internal TextBlock CurrentRenderBackendImplementationTextBlock => AboutControl<TextBlock>("CurrentRenderBackendImplementationTextBlock");
+    internal TextBlock VersionTextBlock => AboutControl<TextBlock>("VersionTextBlock");
+    internal TextBlock CodeNameTextBlock => AboutControl<TextBlock>("CodeNameTextBlock");
+    internal TextBlock FontInfoTextBlock => AboutControl<TextBlock>("FontInfoTextBlock");
+
+    internal TextBlock LauncherSettingsPanelTitleTextBlock => LauncherControl<TextBlock>("LauncherSettingsPanelTitleTextBlock");
+    internal FluentAvalonia.UI.Controls.SettingsExpander LauncherHiddenItemsSettingsExpander => LauncherControl<FluentAvalonia.UI.Controls.SettingsExpander>("LauncherHiddenItemsSettingsExpander");
+    internal TextBlock LauncherHiddenItemsEmptyTextBlock => LauncherControl<TextBlock>("LauncherHiddenItemsEmptyTextBlock");
+    internal TextBlock LauncherHiddenItemsDescriptionTextBlock => LauncherControl<TextBlock>("LauncherHiddenItemsDescriptionTextBlock");
 }
-

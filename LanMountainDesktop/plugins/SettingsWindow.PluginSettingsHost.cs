@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
 using Avalonia.Media;
 using FluentIcons.Common;
+using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -17,11 +17,12 @@ public partial class SettingsWindow
 
     private void InitializePluginSettingsNavigation()
     {
-        if (_pluginSettingsPageHosts.Count > 0)
-        {
-            return;
-        }
+        _pluginSettingsPageHosts.Clear();
+        _pluginSettingsNavItems.Clear();
+    }
 
+    private void RegisterPluginSettingsDefinitions()
+    {
         var runtime = (Application.Current as App)?.PluginRuntimeService;
         var contributions = runtime?.SettingsPages
             .OrderBy(contribution => contribution.Registration.SortOrder)
@@ -31,7 +32,6 @@ public partial class SettingsWindow
 
         if (contributions is not { Length: > 0 })
         {
-            SettingsPluginNavSection.IsVisible = false;
             return;
         }
 
@@ -39,23 +39,21 @@ public partial class SettingsWindow
             .GroupBy(contribution => contribution.Plugin.Manifest.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var contribution in contributions)
+        for (var i = 0; i < contributions.Length; i++)
         {
+            var contribution = contributions[i];
             var tag = BuildPluginSettingsTag(contribution);
-            var navigationTitle = BuildPluginSettingsNavigationTitle(contribution, pageCountsByPluginId);
-            var navItem = CreateSettingsNavItem(tag, Symbol.PuzzlePiece, navigationTitle);
-            ToolTip.SetTip(navItem, $"{contribution.Plugin.Manifest.Name} - {contribution.Registration.Title}");
+            _pluginSettingsPageHosts[tag] = CreatePluginSettingsPageHost(contribution);
 
-            SettingsPluginNavHost.Children.Add(navItem);
-            _pluginSettingsNavItems[tag] = navItem;
-
-            var pageHost = CreatePluginSettingsPageHost(contribution);
-            pageHost.IsVisible = false;
-            SettingsContentPagesHost.Children.Add(pageHost);
-            _pluginSettingsPageHosts[tag] = pageHost;
+            RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+                tag,
+                BuildPluginSettingsNavigationTitle(contribution, pageCountsByPluginId),
+                BuildPluginSettingsPageDescription(contribution),
+                FluentIcons.Common.Symbol.PuzzlePiece,
+                IndependentSettingsPageCategory.External,
+                200 + i,
+                $"{contribution.Plugin.Manifest.Name} - {contribution.Registration.Title}"));
         }
-
-        SettingsPluginNavSection.IsVisible = SettingsPluginNavHost.Children.Count > 0;
     }
 
     private static string BuildPluginSettingsTag(PluginSettingsPageContribution contribution)
@@ -70,6 +68,15 @@ public partial class SettingsWindow
         return pageCountsByPluginId.TryGetValue(contribution.Plugin.Manifest.Id, out var pageCount) && pageCount > 1
             ? $"{contribution.Plugin.Manifest.Name} - {contribution.Registration.Title}"
             : contribution.Plugin.Manifest.Name;
+    }
+
+    private string BuildPluginSettingsPageDescription(PluginSettingsPageContribution contribution)
+    {
+        return Lf(
+            "settings.page_desc.plugin_contributed_format",
+            "Settings page '{0}' is provided by plugin '{1}'.",
+            contribution.Registration.Title,
+            contribution.Plugin.Manifest.Name);
     }
 
     private Control CreatePluginSettingsPageHost(PluginSettingsPageContribution contribution)
@@ -87,6 +94,7 @@ public partial class SettingsWindow
         return new StackPanel
         {
             Spacing = 16,
+            MaxWidth = 920,
             Children =
             {
                 new TextBlock
@@ -94,12 +102,12 @@ public partial class SettingsWindow
                     Text = contribution.Registration.Title,
                     FontSize = 24,
                     FontWeight = FontWeight.SemiBold,
-                    Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush")
+                    Foreground = GetThemeBrush("TextFillColorPrimaryBrush")
                 },
                 new TextBlock
                 {
                     Text = contribution.Plugin.Manifest.Name,
-                    Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush")
+                    Foreground = GetThemeBrush("TextFillColorSecondaryBrush")
                 },
                 content
             }
@@ -123,58 +131,32 @@ public partial class SettingsWindow
         };
     }
 
-    private void UpdatePluginSettingsPageVisibility(string? selectedTag)
-    {
-        foreach (var pair in _pluginSettingsPageHosts)
-        {
-            pair.Value.IsVisible = string.Equals(pair.Key, selectedTag, StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
     internal void RefreshPluginSettingsNavigation()
     {
-        foreach (var pair in _pluginSettingsPageHosts.ToArray())
-        {
-            if (_pluginSettingsNavItems.TryGetValue(pair.Key, out var navItem))
-            {
-                SettingsPluginNavHost.Children.Remove(navItem);
-            }
-
-            SettingsContentPagesHost.Children.Remove(pair.Value);
-        }
-
-        _pluginSettingsPageHosts.Clear();
-        _pluginSettingsNavItems.Clear();
-        SettingsPluginNavSection.IsVisible = false;
-        InitializePluginSettingsNavigation();
-
-        if (GetSettingsNavItem(_selectedSettingsTabTag) is null)
-        {
-            SelectSettingsTab("Plugins", persistSelection: false);
-        }
-        else
-        {
-            SelectSettingsTab(_selectedSettingsTabTag, persistSelection: false);
-        }
+        var preferredTag = NormalizeSettingsPageTag(_selectedSettingsTabTag);
+        InitializeSettingsNavigation();
+        SelectSettingsTab(
+            _settingsPageDefinitions.ContainsKey(preferredTag) ? preferredTag : "Plugins",
+            persistSelection: false);
+        PluginSettingsPanel?.RefreshFromRuntime();
     }
 
     private string? GetSelectedSettingsTabTag()
     {
-        return _selectedSettingsTabTag;
+        return NormalizeSettingsPageTag(_selectedSettingsTabTag);
     }
 
     private int ResolveSelectedSettingsTabIndex()
     {
-        var selectedTag = GetSelectedSettingsTabTag();
-        if (string.IsNullOrWhiteSpace(selectedTag))
+        if (SettingsNavView?.MenuItems is null)
         {
             return 0;
         }
 
-        var buttons = EnumerateSettingsNavItems().ToList();
-        for (var i = 0; i < buttons.Count; i++)
+        var items = SettingsNavView.MenuItems.OfType<NavigationViewItem>().ToList();
+        for (var i = 0; i < items.Count; i++)
         {
-            if (string.Equals(buttons[i].Tag?.ToString(), selectedTag, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(items[i].Tag?.ToString(), NormalizeSettingsPageTag(_selectedSettingsTabTag), StringComparison.OrdinalIgnoreCase))
             {
                 return i;
             }
@@ -185,21 +167,32 @@ public partial class SettingsWindow
 
     private void RestoreSettingsTabSelection(AppSettingsSnapshot snapshot)
     {
-        var buttons = EnumerateSettingsNavItems().ToList();
-        if (buttons.Count == 0)
+        if (SettingsNavView?.MenuItems is null || SettingsNavView.MenuItems.Count == 0)
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(snapshot.SettingsTabTag) &&
-            GetSettingsNavItem(snapshot.SettingsTabTag) is not null)
+        var items = SettingsNavView.MenuItems.OfType<NavigationViewItem>().ToList();
+        if (items.Count == 0)
         {
-            SelectSettingsTab(snapshot.SettingsTabTag, persistSelection: false);
             return;
         }
 
-        var safeIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, Math.Max(0, buttons.Count - 1));
-        var button = buttons[safeIndex];
-        SelectSettingsTab(button.Tag?.ToString() ?? "Wallpaper", persistSelection: false);
+        if (!string.IsNullOrWhiteSpace(snapshot.SettingsTabTag))
+        {
+            var normalizedTag = NormalizeSettingsPageTag(snapshot.SettingsTabTag);
+            var taggedItem = items
+                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), normalizedTag, StringComparison.OrdinalIgnoreCase));
+            if (taggedItem is not null)
+            {
+                _selectedSettingsTabTag = normalizedTag;
+                SettingsNavView.SelectedItem = taggedItem;
+                return;
+            }
+        }
+
+        var safeIndex = Math.Clamp(snapshot.SettingsTabIndex, 0, Math.Max(0, items.Count - 1));
+        _selectedSettingsTabTag = items[safeIndex].Tag?.ToString() ?? _selectedSettingsTabTag;
+        SettingsNavView.SelectedItem = items[safeIndex];
     }
 }

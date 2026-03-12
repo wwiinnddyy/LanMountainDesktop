@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="960"
+             d:DesignHeight="1200"
+             x:Class="LanMountainDesktop.Views.SettingsPages.ComponentsSettingsPage">
+    <StackPanel MaxWidth="920"
+                Spacing="16">
+        <TextBlock x:Name="ComponentsPageSubtitleTextBlock"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Review available desktop components and configure the status bar area." />
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="ComponentsSummarySectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Component Library" />
+                <TextBlock x:Name="ComponentsSummarySectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Built-in and plugin-contributed components available to the desktop editor." />
+                <TextBlock x:Name="ComponentsSummaryTextBlock"
+                           TextWrapping="Wrap"
+                           Text="Loading component catalog..." />
+                <StackPanel x:Name="ComponentCategoryItemsPanel"
+                            Spacing="4" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="ComponentsStatusBarSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Status Bar" />
+                <TextBlock x:Name="ComponentsStatusBarSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Clock and status-bar component spacing are managed here." />
+                <ContentControl x:Name="StatusBarContentHost" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

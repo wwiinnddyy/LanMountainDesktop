@@ -410,7 +410,10 @@ public partial class MainWindow
             _reopenSettingsAfterComponentLibraryClose = false;
             if (shouldReopenSettings)
             {
-                OpenSettingsPage();
+                if (Application.Current is App app)
+                {
+                    app.OpenIndependentSettingsModule("ComponentLibrary");
+                }
             }
         }, FluttermotionToken.Slow);
     }

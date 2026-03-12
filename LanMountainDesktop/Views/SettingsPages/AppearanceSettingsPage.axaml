@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="960"
+             d:DesignHeight="1400"
+             x:Class="LanMountainDesktop.Views.SettingsPages.AppearanceSettingsPage">
+    <StackPanel MaxWidth="920"
+                Spacing="16">
+        <TextBlock x:Name="AppearancePageSubtitleTextBlock"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   Text="Personalize wallpaper, desktop grid, and accent colors in one place." />
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="AppearanceWallpaperSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Wallpaper" />
+                <TextBlock x:Name="AppearanceWallpaperSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Use lightweight thumbnails and asset controls instead of heavy live preview." />
+                <ContentControl x:Name="WallpaperContentHost" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="AppearanceGridSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Grid" />
+                <TextBlock x:Name="AppearanceGridSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Tune grid density, spacing, and safe edge inset for the desktop canvas." />
+                <ContentControl x:Name="GridContentHost" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="settings-page-shell">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="AppearanceColorSectionTitleTextBlock"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Text="Color" />
+                <TextBlock x:Name="AppearanceColorSectionHintTextBlock"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Text="Choose theme mode and accent colors with Fluent-consistent swatches." />
+                <ContentControl x:Name="ColorContentHost" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

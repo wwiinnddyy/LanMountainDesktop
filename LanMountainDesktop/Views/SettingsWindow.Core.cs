@@ -8,149 +8,332 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using FluentAvalonia.UI.Controls;
 using FluentIcons.Avalonia.Fluent;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.Components;
+using LanMountainDesktop.Views.SettingsPages;
 
 namespace LanMountainDesktop.Views;
 
+using FluentIconVariant = FluentIcons.Common.IconVariant;
+using FluentSymbol = FluentIcons.Common.Symbol;
+using FluentSymbolIconSource = FluentIcons.Avalonia.Fluent.SymbolIconSource;
+
 public partial class SettingsWindow
 {
-    protected override void OnClosed(EventArgs e)
+    private readonly Dictionary<string, Control> _builtInSettingsPageHosts = new(StringComparer.OrdinalIgnoreCase);
+
+    internal void Open(string? pageTag = null)
     {
-        _persistSettingsDebounceTimer?.Dispose();
-        _persistSettingsDebounceTimer = null;
-
-        StopVideoWallpaper();
-        _previewVideoWallpaperPlayer?.Dispose();
-        _previewVideoWallpaperPlayer = null;
-        _previewVideoWallpaperMedia?.Dispose();
-        _previewVideoWallpaperMedia = null;
-        _previewVideoFrameRefreshTimer?.Stop();
-        _previewVideoFrameRefreshTimer = null;
-        _libVlc?.Dispose();
-        _libVlc = null;
-
-        _releaseUpdateService.Dispose();
-        _wallpaperBitmap?.Dispose();
-        _wallpaperBitmap = null;
-        _launcherFolderIconBitmap?.Dispose();
-        _launcherFolderIconBitmap = null;
-
-        foreach (var icon in _launcherIconCache.Values)
+        if (!string.IsNullOrWhiteSpace(pageTag))
         {
-            icon.Dispose();
+            _selectedSettingsTabTag = NormalizeSettingsPageTag(pageTag);
+            if (_independentModuleInitializationCompleted)
+            {
+                SelectSettingsTab(_selectedSettingsTabTag, persistSelection: false);
+            }
         }
 
-        _launcherIconCache.Clear();
-        PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
-        base.OnClosed(e);
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    internal void PrepareForForceClose()
+    {
+        _allowIndependentSettingsModuleRealClose = true;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        AppLogger.Info(
+            "IndependentSettingsModule",
+            $"PreviewCleanupStarted; Stage='WindowCloseCleanup'; Module='WallpaperPreview'; CloseRequested={_isIndependentSettingsModuleClosing}.");
+
+        try
+        {
+            _persistSettingsDebounceTimer?.Dispose();
+            _persistSettingsDebounceTimer = null;
+
+            StopVideoWallpaper();
+            _previewVideoWallpaperPlayer?.Dispose();
+            _previewVideoWallpaperPlayer = null;
+            _previewVideoWallpaperMedia?.Dispose();
+            _previewVideoWallpaperMedia = null;
+            _previewVideoFrameRefreshTimer?.Stop();
+            _previewVideoFrameRefreshTimer = null;
+            _libVlc?.Dispose();
+            _libVlc = null;
+
+            _releaseUpdateService.Dispose();
+            _wallpaperBitmap?.Dispose();
+            _wallpaperBitmap = null;
+            _launcherFolderIconBitmap?.Dispose();
+            _launcherFolderIconBitmap = null;
+
+            foreach (var icon in _launcherIconCache.Values)
+            {
+                icon.Dispose();
+            }
+
+            _launcherIconCache.Clear();
+            AppLogger.Info(
+                "IndependentSettingsModule",
+                $"PreviewCleanupCompleted; Stage='WindowCloseCleanup'; Module='WallpaperPreview'; CloseRequested={_isIndependentSettingsModuleClosing}.");
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn(
+                "IndependentSettingsModule",
+                $"PreviewCleanupFailed; Stage='WindowCloseCleanup'; Module='WallpaperPreview'; Downgraded=True; CloseRequested={_isIndependentSettingsModuleClosing}.",
+                ex);
+        }
+        finally
+        {
+            PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
+            Closing -= OnIndependentSettingsModuleClosing;
+            base.OnClosed(e);
+            AppLogger.Info("IndependentSettingsModule", $"WindowClosed; CloseRequested={_isIndependentSettingsModuleClosing}.");
+            _isIndependentSettingsModuleClosing = false;
+            _allowIndependentSettingsModuleRealClose = false;
+        }
     }
 
     private void InitializeSettingsNavigation()
     {
+        _settingsPageDefinitions.Clear();
         _settingsNavItems.Clear();
-        _pluginSettingsNavItems.Clear();
-
-        SettingsPrimaryNavHost.Children.Clear();
-        SettingsSecondaryNavHost.Children.Clear();
-        SettingsPluginNavHost.Children.Clear();
-        SettingsPluginNavSection.IsVisible = false;
-
-        AddSettingsNavItem(SettingsPrimaryNavHost, "Wallpaper", Symbol.Wallpaper, "Wallpaper");
-        AddSettingsNavItem(SettingsPrimaryNavHost, "Grid", Symbol.Grid, "Grid");
-        AddSettingsNavItem(SettingsPrimaryNavHost, "Color", Symbol.Color, "Color");
-        AddSettingsNavItem(SettingsPrimaryNavHost, "StatusBar", Symbol.Status, "Status Bar");
-        AddSettingsNavItem(SettingsPrimaryNavHost, "Weather", Symbol.WeatherSunny, "Weather");
-
-        AddSettingsNavItem(SettingsSecondaryNavHost, "Region", Symbol.Globe, "Region");
-        AddSettingsNavItem(SettingsSecondaryNavHost, "Launcher", Symbol.Apps, "App Launcher");
-        AddSettingsNavItem(SettingsSecondaryNavHost, "Update", Symbol.ArrowSync, "Update");
-        AddSettingsNavItem(SettingsSecondaryNavHost, "About", Symbol.Info, "About");
-        AddSettingsNavItem(SettingsSecondaryNavHost, "Plugins", Symbol.PuzzlePiece, "Plugins");
-        AddSettingsNavItem(SettingsSecondaryNavHost, "PluginMarket", Symbol.PuzzlePiece, "Plugin Market");
+        InitializePluginSettingsNavigation();
+        RegisterBuiltInSettingsPageDefinitions();
+        RegisterPluginSettingsDefinitions();
+        RebuildSettingsNavigationMenu();
     }
 
-    private void OnSettingsNavItemClick(object? sender, RoutedEventArgs e)
+    private void RegisterBuiltInSettingsPageDefinitions()
     {
-        if (sender is not Button button || button.Tag is not string tag)
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "General",
+            L("settings.nav.general", "General"),
+            L("settings.page_desc.general", "Manage language, launcher, and weather behavior from the independent settings module."),
+            FluentSymbol.Settings,
+            IndependentSettingsPageCategory.Internal,
+            0));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "Appearance",
+            L("settings.nav.appearance", "Appearance"),
+            L("settings.page_desc.appearance", "Personalize wallpaper, desktop grid, and accent colors in one place."),
+            FluentSymbol.PaintBrush,
+            IndependentSettingsPageCategory.Internal,
+            10));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "Components",
+            L("settings.nav.components", "Components"),
+            L("settings.page_desc.components", "Review available desktop components and configure the status bar area."),
+            FluentSymbol.Apps,
+            IndependentSettingsPageCategory.Internal,
+            20));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "Update",
+            L("settings.nav.update", "Update"),
+            L("settings.page_desc.update", "Check for updates and control the update channel."),
+            FluentSymbol.ArrowSync,
+            IndependentSettingsPageCategory.Internal,
+            30));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "Plugins",
+            L("settings.nav.plugins", "Plugins"),
+            L("settings.page_desc.plugins", "Review installed plugins, runtime state, and local package installation."),
+            FluentSymbol.PuzzlePiece,
+            IndependentSettingsPageCategory.External,
+            100));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "PluginMarket",
+            L("settings.nav.plugin_market", "Plugin Market"),
+            L("settings.page_desc.pluginmarket", "Browse the official plugin market and stage installs safely."),
+            FluentSymbol.ShoppingBag,
+            IndependentSettingsPageCategory.External,
+            110));
+        RegisterSettingsPageDefinition(new IndependentSettingsPageDefinition(
+            "About",
+            L("settings.nav.about", "About"),
+            L("settings.page_desc.about", "See version information, rendering backend, and startup behavior."),
+            FluentSymbol.Info,
+            IndependentSettingsPageCategory.About,
+            200));
+    }
+
+    private void RegisterSettingsPageDefinition(IndependentSettingsPageDefinition definition)
+    {
+        _settingsPageDefinitions[definition.Tag] = definition;
+    }
+
+    private void RebuildSettingsNavigationMenu()
+    {
+        if (SettingsNavView is null)
         {
             return;
         }
 
-        SelectSettingsTab(tag, persistSelection: true);
-    }
+        var selectedTag = NormalizeSettingsPageTag(_selectedSettingsTabTag);
+        SettingsNavView.MenuItems.Clear();
+        _settingsNavItems.Clear();
+        _pluginSettingsNavItems.Clear();
 
-    private Button AddSettingsNavItem(Panel host, string tag, Symbol symbol, string title)
-    {
-        var button = CreateSettingsNavItem(tag, symbol, title);
-        host.Children.Add(button);
-        _settingsNavItems[tag] = button;
-        return button;
-    }
-
-    private Button CreateSettingsNavItem(string tag, Symbol symbol, string title)
-    {
-        var icon = new SymbolIcon
+        IndependentSettingsPageCategory? lastCategory = null;
+        foreach (var definition in _settingsPageDefinitions.Values
+                     .OrderBy(definition => GetSettingsPageCategoryOrder(definition.Category))
+                     .ThenBy(definition => definition.SortOrder)
+                     .ThenBy(definition => definition.Title, StringComparer.CurrentCulture))
         {
-            Symbol = symbol,
-            IconVariant = IconVariant.Regular
-        };
-        icon.Classes.Add("settings-nav-icon");
+            if (lastCategory is not null && lastCategory != definition.Category)
+            {
+                SettingsNavView.MenuItems.Add(new NavigationViewItemSeparator());
+            }
 
-        var iconShell = new Border
-        {
-            Child = icon,
-            Classes = { "settings-sidebar-icon-shell" }
-        };
+            var navItem = CreateSettingsNavItem(definition);
+            SettingsNavView.MenuItems.Add(navItem);
+            _settingsNavItems[definition.Tag] = navItem;
+            if (definition.Category == IndependentSettingsPageCategory.External)
+            {
+                _pluginSettingsNavItems[definition.Tag] = navItem;
+            }
 
-        var label = new TextBlock
-        {
-            Text = title,
-            Classes = { "settings-nav-label" }
-        };
-
-        var contentGrid = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-            ColumnSpacing = 12
-        };
-        contentGrid.Children.Add(iconShell);
-        contentGrid.Children.Add(label);
-        Grid.SetColumn(label, 1);
-
-        var button = new Button
-        {
-            Tag = tag,
-            Content = contentGrid,
-            Classes = { "settings-sidebar-item" }
-        };
-        button.Click += OnSettingsNavItemClick;
-        return button;
-    }
-
-    private IEnumerable<Button> EnumerateSettingsNavItems()
-    {
-        foreach (var button in SettingsPrimaryNavHost.Children.OfType<Button>())
-        {
-            yield return button;
+            lastCategory = definition.Category;
         }
 
-        foreach (var button in SettingsSecondaryNavHost.Children.OfType<Button>())
+        if (_settingsNavItems.TryGetValue(selectedTag, out var selectedItem))
         {
-            yield return button;
+            SettingsNavView.SelectedItem = selectedItem;
+            return;
         }
 
-        foreach (var button in SettingsPluginNavHost.Children.OfType<Button>())
+        if (SettingsNavView.MenuItems.OfType<NavigationViewItem>().FirstOrDefault() is { } firstItem)
         {
-            yield return button;
+            _selectedSettingsTabTag = firstItem.Tag?.ToString() ?? "General";
+            SettingsNavView.SelectedItem = firstItem;
         }
     }
 
-    private Button? GetSettingsNavItem(string tag)
+    private NavigationViewItem CreateSettingsNavItem(IndependentSettingsPageDefinition definition)
+    {
+        var item = new NavigationViewItem
+        {
+            Content = definition.Title,
+            Tag = definition.Tag,
+            IconSource = new FluentSymbolIconSource
+            {
+                Symbol = definition.Icon,
+                IconVariant = FluentIconVariant.Regular
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(definition.ToolTip))
+        {
+            ToolTip.SetTip(item, definition.ToolTip);
+        }
+
+        return item;
+    }
+
+    private static int GetSettingsPageCategoryOrder(IndependentSettingsPageCategory category)
+    {
+        return category switch
+        {
+            IndependentSettingsPageCategory.Internal => 0,
+            IndependentSettingsPageCategory.External => 1,
+            IndependentSettingsPageCategory.About => 2,
+            IndependentSettingsPageCategory.Debug => 3,
+            _ => int.MaxValue
+        };
+    }
+
+    private void InitializeSettingsPageHosts()
+    {
+        _builtInSettingsPageHosts.Clear();
+
+        GeneralSettingsHubPanel = new GeneralSettingsPage();
+        AppearanceSettingsHubPanel = new AppearanceSettingsPage();
+        ComponentsSettingsHubPanel = new ComponentsSettingsPage();
+        WallpaperSettingsPanel = new WallpaperSettingsPage();
+        GridSettingsPanel = new GridSettingsPage();
+        ColorSettingsPanel = new ColorSettingsPage();
+        StatusBarSettingsPanel = new StatusBarSettingsPage();
+        WeatherSettingsPanel = new WeatherSettingsPage();
+        RegionSettingsPanel = new RegionSettingsPage();
+        UpdateSettingsPanel = new UpdateSettingsPage();
+        LauncherSettingsPanel = new LauncherSettingsPage();
+        AboutSettingsPanel = new AboutSettingsPage();
+        PluginSettingsPanel = new PluginSettingsPage();
+        PluginMarketSettingsPanel = new PluginMarketSettingsPage();
+
+        GeneralSettingsHubPanel.RegionContentHost.Content = RegionSettingsPanel;
+        GeneralSettingsHubPanel.LauncherContentHost.Content = LauncherSettingsPanel;
+        GeneralSettingsHubPanel.WeatherContentHost.Content = WeatherSettingsPanel;
+
+        AppearanceSettingsHubPanel.WallpaperContentHost.Content = WallpaperSettingsPanel;
+        AppearanceSettingsHubPanel.GridContentHost.Content = GridSettingsPanel;
+        AppearanceSettingsHubPanel.ColorContentHost.Content = ColorSettingsPanel;
+
+        ComponentsSettingsHubPanel.StatusBarContentHost.Content = StatusBarSettingsPanel;
+
+        RegisterBuiltInSettingsPage("General", GeneralSettingsHubPanel);
+        RegisterBuiltInSettingsPage("Appearance", AppearanceSettingsHubPanel);
+        RegisterBuiltInSettingsPage("Components", ComponentsSettingsHubPanel);
+        RegisterBuiltInSettingsPage("Update", UpdateSettingsPanel);
+        RegisterBuiltInSettingsPage("About", AboutSettingsPanel);
+        RegisterBuiltInSettingsPage("Plugins", PluginSettingsPanel);
+        RegisterBuiltInSettingsPage("PluginMarket", PluginMarketSettingsPanel);
+    }
+
+    private void RegisterBuiltInSettingsPage(string tag, Control? page)
+    {
+        if (page is not null)
+        {
+            _builtInSettingsPageHosts[tag] = page;
+        }
+    }
+
+    private Control? ResolveSettingsPageHost(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return null;
+        }
+
+        if (_builtInSettingsPageHosts.TryGetValue(tag, out var builtIn))
+        {
+            return builtIn;
+        }
+
+        return _pluginSettingsPageHosts.GetValueOrDefault(tag);
+    }
+
+    private void OnSettingsNavSelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e)
+    {
+        if (e.SelectedItem is NavigationViewItem selectedItem &&
+            selectedItem.Tag is not null)
+        {
+            _selectedSettingsTabTag = NormalizeSettingsPageTag(selectedItem.Tag.ToString());
+        }
+
+        AppLogger.Info("IndependentSettingsModule", $"NavigationChanged; Tag='{_selectedSettingsTabTag}'.");
+        UpdateSettingsTabContent();
+        SchedulePersistSettings(0);
+    }
+
+    private NavigationViewItem? GetSettingsNavItem(string tag)
     {
         if (_settingsNavItems.TryGetValue(tag, out var builtIn))
         {
@@ -160,51 +343,20 @@ public partial class SettingsWindow
         return _pluginSettingsNavItems.GetValueOrDefault(tag);
     }
 
-    private static void SetSettingsNavItemLabel(Button? button, string text)
-    {
-        if (button?.Content is Grid grid)
-        {
-            var label = grid.Children
-                .OfType<TextBlock>()
-                .FirstOrDefault(textBlock => textBlock.Classes.Contains("settings-nav-label"));
-
-            if (label is not null)
-            {
-                label.Text = text;
-            }
-        }
-    }
-
     private void SelectSettingsTab(string? tag, bool persistSelection)
     {
-        if (string.IsNullOrWhiteSpace(tag))
+        if (string.IsNullOrWhiteSpace(tag) || SettingsNavView is null)
         {
             return;
         }
 
-        var selectedButton = GetSettingsNavItem(tag);
-        if (selectedButton is null)
+        if (GetSettingsNavItem(tag) is not { } selectedItem)
         {
             return;
         }
 
         _selectedSettingsTabTag = tag;
-        foreach (var button in EnumerateSettingsNavItems())
-        {
-            var isSelected = ReferenceEquals(button, selectedButton);
-            if (isSelected)
-            {
-                if (!button.Classes.Contains("nav-selected"))
-                {
-                    button.Classes.Add("nav-selected");
-                }
-            }
-            else
-            {
-                button.Classes.Remove("nav-selected");
-            }
-        }
-
+        SettingsNavView.SelectedItem = selectedItem;
         UpdateSettingsTabContent();
 
         if (persistSelection)
@@ -220,22 +372,31 @@ public partial class SettingsWindow
 
     private void UpdateSettingsTabContent()
     {
+        if (SettingsNavView is null || SettingsPageFrame is null)
+        {
+            return;
+        }
+
         var tag = GetSelectedSettingsTabTag();
+        UpdateCurrentSettingsPageHeader(tag);
+        if (ResolveSettingsPageHost(tag) is { } pageHost)
+        {
+            if (!ReferenceEquals(SettingsPageFrame.Content, pageHost))
+            {
+                SettingsPageFrame.Content = pageHost;
+            }
+        }
+        else
+        {
+            AppLogger.Warn("IndependentSettingsModule", $"PageHostMissing; Tag='{tag}'.");
+            ShowIndependentModuleStatus(
+                L("settings.shell.partial_warning_title", "部分内容未能加载"),
+                $"No settings page host is registered for '{tag}'.",
+                InfoBarSeverity.Warning);
+            return;
+        }
 
-        WallpaperSettingsPanel.IsVisible = tag == "Wallpaper";
-        GridSettingsPanel.IsVisible = tag == "Grid";
-        ColorSettingsPanel.IsVisible = tag == "Color";
-        StatusBarSettingsPanel.IsVisible = tag == "StatusBar";
-        WeatherSettingsPanel.IsVisible = tag == "Weather";
-        RegionSettingsPanel.IsVisible = tag == "Region";
-        UpdateSettingsPanel.IsVisible = tag == "Update";
-        AboutSettingsPanel.IsVisible = tag == "About";
-        LauncherSettingsPanel.IsVisible = tag == "Launcher";
-        PluginSettingsPanel.IsVisible = tag == "Plugins";
-        PluginMarketSettingsPanel.IsVisible = tag == "PluginMarket";
-        UpdatePluginSettingsPageVisibility(tag);
-
-        if (tag == "Launcher")
+        if (tag == "General")
         {
             RenderLauncherHiddenItemsList();
         }
@@ -250,9 +411,15 @@ public partial class SettingsWindow
             PluginMarketSettingsPanel.RefreshFromRuntime();
         }
 
-        if (tag == "Grid")
+        if (tag == "Appearance")
         {
+            UpdateWallpaperPreviewLayout();
             UpdateGridPreviewLayout();
+        }
+
+        if (tag == "Components")
+        {
+            UpdateComponentsSettingsSummary();
         }
 
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -266,6 +433,7 @@ public partial class SettingsWindow
             return;
         }
 
+        AppLogger.Info("IndependentSettingsModule", $"PersistCompleted; Tag='{_selectedSettingsTabTag}'.");
         _appSettingsService.Save(BuildAppSettingsSnapshot());
         _launcherSettingsService.Save(BuildLauncherSettingsSnapshot());
     }
@@ -281,7 +449,7 @@ public partial class SettingsWindow
         snapshot.WallpaperPath = _wallpaperPath;
         snapshot.WallpaperPlacement = GetPlacementDisplayName(GetSelectedWallpaperPlacement());
         snapshot.SettingsTabIndex = Math.Max(0, GetSettingsTabIndex());
-        snapshot.SettingsTabTag = GetSelectedSettingsTabTag();
+        snapshot.SettingsTabTag = NormalizeSettingsPageTag(_selectedSettingsTabTag);
         snapshot.LanguageCode = _languageCode;
         snapshot.TimeZoneId = _timeZoneService.CurrentTimeZone.Id;
         snapshot.WeatherLocationMode = ToWeatherLocationModeTag(_weatherLocationMode);
@@ -326,6 +494,7 @@ public partial class SettingsWindow
         }
 
         _persistSettingsDebounceTimer?.Dispose();
+        AppLogger.Info("IndependentSettingsModule", $"PersistScheduled; DelayMs={Math.Max(0, delayMs)}; Tag='{_selectedSettingsTabTag}'.");
         _persistSettingsDebounceTimer = DispatcherTimer.RunOnce(() =>
         {
             _persistSettingsDebounceTimer = null;
@@ -345,6 +514,22 @@ public partial class SettingsWindow
         return string.Equals(value, "Compact", StringComparison.OrdinalIgnoreCase)
             ? "Compact"
             : "Relaxed";
+    }
+
+    private static string NormalizeSettingsPageTag(string? tag)
+    {
+        return tag switch
+        {
+            null or "" => "General",
+            _ when string.Equals(tag, "Wallpaper", StringComparison.OrdinalIgnoreCase) => "Appearance",
+            _ when string.Equals(tag, "Grid", StringComparison.OrdinalIgnoreCase) => "Appearance",
+            _ when string.Equals(tag, "Color", StringComparison.OrdinalIgnoreCase) => "Appearance",
+            _ when string.Equals(tag, "StatusBar", StringComparison.OrdinalIgnoreCase) => "Components",
+            _ when string.Equals(tag, "Region", StringComparison.OrdinalIgnoreCase) => "General",
+            _ when string.Equals(tag, "Weather", StringComparison.OrdinalIgnoreCase) => "General",
+            _ when string.Equals(tag, "Launcher", StringComparison.OrdinalIgnoreCase) => "General",
+            _ => tag
+        };
     }
 
     private static string NormalizeStatusBarSpacingMode(string? value)
@@ -590,32 +775,32 @@ public partial class SettingsWindow
 
     private void InitializeSettingsIcons()
     {
-        const IconVariant variant = IconVariant.Regular;
+        const FluentIconVariant variant = FluentIconVariant.Regular;
 
-        WallpaperPlacementSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Wallpaper, IconVariant = variant };
-        ThemeColorSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Color, IconVariant = variant };
-        StatusBarClockSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Clock, IconVariant = variant };
-        StatusBarSpacingSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.TextLineSpacing, IconVariant = variant };
-        WeatherLocationSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.WeatherSunny, IconVariant = variant };
-        WeatherPreviewSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.WeatherSunny, IconVariant = variant };
-        WeatherAlertFilterSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Info, IconVariant = variant };
-        WeatherIconPackSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Color, IconVariant = variant };
-        WeatherNoTlsSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Globe, IconVariant = variant };
-        LanguageSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Translate, IconVariant = variant };
-        TimeZoneSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.GlobeClock, IconVariant = variant };
-        UpdateOptionsSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.ArrowClockwiseDashesSettings, IconVariant = variant };
-        UpdateActionsSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.ArrowDownload, IconVariant = variant };
-        AboutStartupSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.Play, IconVariant = variant };
-        PluginSystemSettingsExpander.IconSource = new SymbolIconSource { Symbol = Symbol.PuzzlePiece, IconVariant = variant };
+        WallpaperPlacementSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Wallpaper, IconVariant = variant };
+        ThemeColorSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Color, IconVariant = variant };
+        StatusBarClockSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Clock, IconVariant = variant };
+        StatusBarSpacingSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.TextLineSpacing, IconVariant = variant };
+        WeatherLocationSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.WeatherSunny, IconVariant = variant };
+        WeatherPreviewSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.WeatherSunny, IconVariant = variant };
+        WeatherAlertFilterSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Info, IconVariant = variant };
+        WeatherIconPackSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Color, IconVariant = variant };
+        WeatherNoTlsSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Globe, IconVariant = variant };
+        LanguageSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Translate, IconVariant = variant };
+        TimeZoneSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.GlobeClock, IconVariant = variant };
+        UpdateOptionsSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.ArrowClockwiseDashesSettings, IconVariant = variant };
+        UpdateActionsSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.ArrowDownload, IconVariant = variant };
+        AboutStartupSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.Play, IconVariant = variant };
+        PluginSystemSettingsExpander.IconSource = new FluentSymbolIconSource { Symbol = FluentSymbol.PuzzlePiece, IconVariant = variant };
         UpdateThemeModeIcon();
     }
 
     private void UpdateThemeModeIcon()
     {
-        ThemeModeSettingsExpander.IconSource = new SymbolIconSource
+        ThemeModeSettingsExpander.IconSource = new FluentSymbolIconSource
         {
-            Symbol = _isNightMode ? Symbol.WeatherMoon : Symbol.WeatherSunny,
-            IconVariant = IconVariant.Regular
+            Symbol = _isNightMode ? FluentSymbol.WeatherMoon : FluentSymbol.WeatherSunny,
+            IconVariant = FluentIconVariant.Regular
         };
     }
 

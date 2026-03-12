@@ -22,6 +22,42 @@ namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow
 {
+    private bool TrySetWallpaperPreviewVideoVisibility(bool isVisible)
+    {
+        var previewImage = OptionalWallpaperPreviewVideoImage;
+        if (previewImage is null)
+        {
+            return false;
+        }
+
+        previewImage.IsVisible = isVisible;
+        return true;
+    }
+
+    private bool TrySetWallpaperPreviewVideoSource(IImage? source)
+    {
+        var previewImage = OptionalWallpaperPreviewVideoImage;
+        if (previewImage is null)
+        {
+            return false;
+        }
+
+        previewImage.Source = source;
+        return true;
+    }
+
+    private bool TrySetWallpaperPreviewViewportBackground(IBrush background)
+    {
+        var viewport = OptionalWallpaperPreviewViewport;
+        if (viewport is null)
+        {
+            return false;
+        }
+
+        viewport.Background = background;
+        return true;
+    }
+
     private void OnNightModeChecked(object? sender, RoutedEventArgs e)
     {
         if (_suppressThemeToggleEvents)
@@ -139,6 +175,12 @@ public partial class SettingsWindow
 
     private void OnWallpaperPlacementSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_suppressWallpaperPlacementEvents)
+        {
+            return;
+        }
+
+        _selectedWallpaperPlacement = GetWallpaperPlacementFromIndex(WallpaperPlacementComboBox.SelectedIndex);
         ApplyWallpaperBrush();
         if (_wallpaperMediaType == WallpaperMediaType.Image && _wallpaperBitmap is not null)
         {
@@ -157,9 +199,10 @@ public partial class SettingsWindow
     {
         if (_wallpaperMediaType == WallpaperMediaType.Video && !string.IsNullOrWhiteSpace(_wallpaperVideoPath))
         {
-            DesktopWallpaperLayer.Background = Brushes.Transparent;
-            WallpaperPreviewViewport.Background = GetThemeDefaultDesktopBackground();
-            SyncVideoWallpaperPreviewPlayback();
+            DesktopWallpaperLayer.Background = GetThemeDefaultDesktopBackground();
+            TrySetWallpaperPreviewViewportBackground(GetThemeDefaultDesktopBackground());
+            TrySetWallpaperPreviewVideoSource(null);
+            TrySetWallpaperPreviewVideoVisibility(false);
             return;
         }
 
@@ -168,43 +211,24 @@ public partial class SettingsWindow
         {
             var fallbackBackground = GetThemeDefaultDesktopBackground();
             DesktopWallpaperLayer.Background = fallbackBackground;
-            WallpaperPreviewViewport.Background = fallbackBackground;
+            TrySetWallpaperPreviewViewportBackground(fallbackBackground);
             return;
         }
 
         var placement = GetSelectedWallpaperPlacement();
         DesktopWallpaperLayer.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, false);
-        WallpaperPreviewViewport.Background = CreateWallpaperBrush(_wallpaperBitmap, placement, true);
+        TrySetWallpaperPreviewViewportBackground(CreateWallpaperBrush(_wallpaperBitmap, placement, true));
     }
 
     private void SyncVideoWallpaperPreviewPlayback()
     {
-        var shouldPlay =
-            _wallpaperMediaType == WallpaperMediaType.Video &&
-            !string.IsNullOrWhiteSpace(_wallpaperVideoPath) &&
-            WallpaperSettingsPanel.IsVisible;
-
-        if (!shouldPlay)
+        if (_previewVideoWallpaperPlayer?.IsPlaying == true)
         {
-            if (_previewVideoWallpaperPlayer?.IsPlaying == true)
-            {
-                StopPreviewVideoCapture(clearSnapshot: false);
-            }
-
-            WallpaperPreviewVideoImage.IsVisible = WallpaperPreviewVideoImage.Source is not null && WallpaperSettingsPanel.IsVisible;
-            return;
+            StopPreviewVideoCapture(clearSnapshot: false);
         }
 
-        if (WallpaperPreviewVideoImage.Source is not null)
-        {
-            WallpaperPreviewVideoImage.IsVisible = true;
-            return;
-        }
-
-        if (_previewVideoWallpaperMedia is null || _previewVideoSnapshotPending)
-        {
-            PlayVideoWallpaper(_wallpaperVideoPath!);
-        }
+        TrySetWallpaperPreviewVideoSource(null);
+        TrySetWallpaperPreviewVideoVisibility(false);
     }
 
     private void UpdateWallpaperDisplay()
@@ -217,17 +241,17 @@ public partial class SettingsWindow
 
         if (_wallpaperMediaType == WallpaperMediaType.Video)
         {
-            WallpaperPreviewViewport.Background = GetThemeDefaultDesktopBackground();
+            TrySetWallpaperPreviewViewportBackground(GetThemeDefaultDesktopBackground());
             return;
         }
 
         if (_wallpaperBitmap is null)
         {
-            WallpaperPreviewViewport.Background = GetThemeDefaultDesktopBackground();
+            TrySetWallpaperPreviewViewportBackground(GetThemeDefaultDesktopBackground());
             return;
         }
 
-        WallpaperPreviewViewport.Background = CreateWallpaperBrush(_wallpaperBitmap, GetSelectedWallpaperPlacement(), true);
+        TrySetWallpaperPreviewViewportBackground(CreateWallpaperBrush(_wallpaperBitmap, GetSelectedWallpaperPlacement(), true));
     }
 
     private ImageBrush CreateWallpaperBrush(Bitmap bitmap, WallpaperPlacement placement, bool forPreview)
@@ -272,7 +296,12 @@ public partial class SettingsWindow
 
     private WallpaperPlacement GetSelectedWallpaperPlacement()
     {
-        return WallpaperPlacementComboBox.SelectedIndex switch
+        return _selectedWallpaperPlacement;
+    }
+
+    private static WallpaperPlacement GetWallpaperPlacementFromIndex(int selectedIndex)
+    {
+        return selectedIndex switch
         {
             1 => WallpaperPlacement.Fit,
             2 => WallpaperPlacement.Stretch,
@@ -497,7 +526,7 @@ public partial class SettingsWindow
 
     private void StopPreviewVideoCapture(bool clearSnapshot)
     {
-        WallpaperPreviewVideoImage.IsVisible = false;
+        TrySetWallpaperPreviewVideoVisibility(false);
         _previewVideoWallpaperPlayer?.Stop();
         StopPreviewVideoFrameRefreshTimer();
         _previewVideoWallpaperMedia?.Dispose();
@@ -517,8 +546,14 @@ public partial class SettingsWindow
             return false;
         }
 
-        var hostWidth = Math.Max(1, WallpaperPreviewViewport.Bounds.Width);
-        var hostHeight = Math.Max(1, WallpaperPreviewViewport.Bounds.Height);
+        var previewViewport = OptionalWallpaperPreviewViewport;
+        if (previewViewport is null)
+        {
+            return false;
+        }
+
+        var hostWidth = Math.Max(1, previewViewport.Bounds.Width);
+        var hostHeight = Math.Max(1, previewViewport.Bounds.Height);
         var pixelWidth = Math.Max(1, (int)Math.Round(hostWidth * RenderScaling));
         var pixelHeight = Math.Max(1, (int)Math.Round(hostHeight * RenderScaling));
         const int maxPixelCount = 1280 * 720;
@@ -570,7 +605,7 @@ public partial class SettingsWindow
                 (uint)_previewVideoFrameWidth,
                 (uint)_previewVideoFrameHeight,
                 (uint)_previewVideoFramePitch);
-            WallpaperPreviewVideoImage.Source = _previewVideoBitmap;
+            TrySetWallpaperPreviewVideoSource(_previewVideoBitmap);
             return true;
         }
         catch
@@ -649,24 +684,25 @@ public partial class SettingsWindow
             Marshal.Copy(_previewVideoStagingBuffer, sourceOffset, destinationPtr, bytesPerRow);
         }
 
-        if (!ReferenceEquals(WallpaperPreviewVideoImage.Source, _previewVideoBitmap))
+        var previewImage = OptionalWallpaperPreviewVideoImage;
+        if (previewImage is not null && !ReferenceEquals(previewImage.Source, _previewVideoBitmap))
         {
-            WallpaperPreviewVideoImage.Source = _previewVideoBitmap;
+            previewImage.Source = _previewVideoBitmap;
         }
 
         if (_previewVideoSnapshotPending)
         {
             _previewVideoSnapshotPending = false;
-            WallpaperPreviewVideoImage.IsVisible = WallpaperSettingsPanel.IsVisible;
+            TrySetWallpaperPreviewVideoVisibility(IsWallpaperSettingsPageVisible);
             StopPreviewVideoCapture(clearSnapshot: false);
-            WallpaperPreviewVideoImage.IsVisible = WallpaperSettingsPanel.IsVisible;
+            TrySetWallpaperPreviewVideoVisibility(IsWallpaperSettingsPageVisible);
         }
     }
 
     private void ReleasePreviewVideoRendererResources()
     {
         Interlocked.Exchange(ref _previewVideoFrameDirtyFlag, 0);
-        WallpaperPreviewVideoImage.Source = null;
+        TrySetWallpaperPreviewVideoSource(null);
         _previewVideoBitmap?.Dispose();
         _previewVideoBitmap = null;
         _previewVideoStagingBuffer = null;
@@ -715,7 +751,7 @@ public partial class SettingsWindow
             _previewVideoWallpaperMedia = new Media(_libVlc, new Uri(videoPath));
             _previewVideoWallpaperMedia.AddOption(":input-repeat=65535");
             _previewVideoSnapshotPending = true;
-            WallpaperPreviewVideoImage.IsVisible = false;
+            TrySetWallpaperPreviewVideoVisibility(false);
             _previewVideoWallpaperPlayer.Play(_previewVideoWallpaperMedia);
             StartPreviewVideoFrameRefreshTimer();
         }

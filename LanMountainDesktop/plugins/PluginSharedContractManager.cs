@@ -8,6 +8,7 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Threading;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Views.SettingsPages;
 
 namespace LanMountainDesktop.Plugins;
@@ -48,6 +49,9 @@ internal sealed class PluginSharedContractManager : IDisposable
         }
 
         var document = LoadIndex(cancellationToken);
+        AppLogger.Info(
+            "PluginSharedContracts",
+            $"Shared contract index loaded for plugin '{manifest.Id}'. SourceContracts={document.Contracts.Count}.");
         foreach (var reference in manifest.SharedContracts)
         {
             EnsureInstalled(document, reference, cancellationToken);
@@ -64,9 +68,19 @@ internal sealed class PluginSharedContractManager : IDisposable
         }
 
         var assemblyNames = new List<string>(manifest.SharedContracts.Count);
+        AirAppMarketIndexDocument? document = null;
         foreach (var reference in manifest.SharedContracts)
         {
             var assemblyPath = GetInstalledAssemblyPath(reference);
+            if (!File.Exists(assemblyPath))
+            {
+                document ??= LoadIndex(cancellationToken);
+                AppLogger.Info(
+                    "PluginSharedContracts",
+                    $"Installing missing shared contract during plugin load. PluginId='{manifest.Id}'; ContractId='{reference.Id}'; Version='{reference.Version}'; Destination='{assemblyPath}'.");
+                EnsureInstalled(document, reference, cancellationToken);
+            }
+
             if (!File.Exists(assemblyPath))
             {
                 throw new InvalidOperationException(
@@ -115,10 +129,12 @@ internal sealed class PluginSharedContractManager : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
         var temporaryPath = destinationPath + ".download";
+        var resolvedSource = entry.DownloadUrl;
         try
         {
             if (AirAppMarketDefaults.TryResolveWorkspaceFile(entry.DownloadUrl, out var localSourcePath))
             {
+                resolvedSource = localSourcePath;
                 File.Copy(localSourcePath, temporaryPath, overwrite: true);
             }
             else
@@ -136,6 +152,9 @@ internal sealed class PluginSharedContractManager : IDisposable
 
             ValidateInstalledFile(temporaryPath, entry);
             File.Move(temporaryPath, destinationPath, overwrite: true);
+            AppLogger.Info(
+                "PluginSharedContracts",
+                $"Installed shared contract. ContractId='{reference.Id}'; Version='{reference.Version}'; Source='{resolvedSource}'; Destination='{destinationPath}'.");
         }
         finally
         {
@@ -145,12 +164,17 @@ internal sealed class PluginSharedContractManager : IDisposable
 
     private AirAppMarketIndexDocument LoadIndex(CancellationToken cancellationToken)
     {
+        AppLogger.Info("PluginSharedContracts", "Loading market index for shared contract resolution.");
         var result = _indexService.LoadAsync(cancellationToken).GetAwaiter().GetResult();
         if (!result.Success || result.Document is null)
         {
             throw new InvalidOperationException(
                 $"Failed to load market index for shared contract resolution: {result.ErrorMessage ?? "Unknown error"}");
         }
+
+        AppLogger.Info(
+            "PluginSharedContracts",
+            $"Market index ready. Source='{result.Source}'; Location='{result.SourceLocation}'; Warning='{result.WarningMessage ?? string.Empty}'.");
 
         return result.Document;
     }

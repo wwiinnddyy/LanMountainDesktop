@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,30 +9,32 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="LanMountainDesktop.Views.SettingsPages.GridSettingsPage">
     <Grid x:Name="GridSettingsPanel"
-          ColumnDefinitions="*, *"
+          ColumnDefinitions="280, *"
           RowDefinitions="Auto, *">
         <TextBlock x:Name="GridPanelTitleTextBlock"
                    Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                   FontSize="28"
+                   FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                   Margin="0,0,0,24"
-                   Text="调整网格布局" />
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                   Margin="0,0,0,20"
+                   Text="璋冩暣缃戞牸甯冨眬" />
 
         <!-- Left Column: Grid Preview -->
         <Border x:Name="GridPreviewHost"
                 Grid.Row="1" Grid.Column="0"
-                Margin="0,0,16,0"
+                Margin="0,0,20,0"
+                Width="256"
+                MaxWidth="256"
                 VerticalAlignment="Top"
-                HorizontalAlignment="Stretch">
+                HorizontalAlignment="Left">
             <Border x:Name="GridPreviewFrame"
                     HorizontalAlignment="Stretch"
-                    CornerRadius="28"
+                    CornerRadius="22"
                     Background="#FF1A1A1A"
-                    Padding="12">
+                    Padding="8">
                 <Border x:Name="GridPreviewViewport"
                         ClipToBounds="True"
-                        CornerRadius="16"
+                        CornerRadius="14"
                         Background="#30111827">
                     <Panel>
                         <Canvas x:Name="GridPreviewLinesCanvas"
@@ -63,7 +65,7 @@
                                 <Border x:Name="GridPreviewTaskbarFixedActionsHost" Grid.Column="0">
                                     <StackPanel x:Name="GridPreviewBackButtonVisual" Orientation="Horizontal" Spacing="3">
                                         <fi:SymbolIcon Classes="icon-s" Symbol="Window" />
-                                        <TextBlock x:Name="GridPreviewBackButtonTextBlock" Text="回到Windows" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="GridPreviewBackButtonTextBlock" Text="鍥炲埌Windows" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
                                 <StackPanel x:Name="GridPreviewTaskbarDynamicActionsHost"
@@ -90,7 +92,7 @@
 
         <!-- Right Column: Settings Content -->
         <StackPanel Grid.Row="1" Grid.Column="1"
-                    Margin="16,0,0,0"
+                    Margin="20,0,0,0"
                     Spacing="16">
             
             <Border Classes="settings-expander-shell">
@@ -109,7 +111,7 @@
                                           Width="80"
                                           Minimum="6"
                                           Maximum="96"
-                                          Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                           Value="12" />
                         </Grid>
                     </ui:SettingsExpander.Footer>
@@ -144,14 +146,14 @@
                                           Width="80"
                                           Minimum="0"
                                           Maximum="30"
-                                          Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                           Value="18" />
                         </Grid>
                     </ui:SettingsExpander.Footer>
                     <ui:SettingsExpanderItem>
                         <ui:SettingsExpanderItem.Footer>
                             <TextBlock x:Name="GridEdgeInsetComputedPxTextBlock"
-                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        Text=">= 0 px" />
                         </ui:SettingsExpanderItem.Footer>
                     </ui:SettingsExpanderItem>
@@ -161,12 +163,13 @@
             <Button x:Name="ApplyGridButton"
                     HorizontalAlignment="Stretch"
                     Padding="0,10"
-                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                    Content="应用" />
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                    Content="搴旂敤" />
 
             <TextBlock x:Name="GridInfoTextBlock"
-                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="Grid: - cols x - rows (1:1)" />
         </StackPanel>
     </Grid>
 </UserControl>
+
