@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -37,6 +39,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private readonly AirAppMarketReadmeService _readmeService;
     private readonly AirAppMarketIconService _iconService;
     private readonly Version? _hostVersion;
+    private readonly CancellationTokenSource _lifetimeCts = new();
 
     private readonly TextBox _searchTextBox;
     private readonly Button _refreshButton;
@@ -57,6 +60,8 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private bool _isRefreshing;
     private bool _isInstalling;
     private bool _hasLoadedOnce;
+    private bool _isDisposed;
+    private bool _isAttachedToVisualTree;
 
     public PluginMarketEmbeddedView(PluginRuntimeService runtime)
     {
@@ -106,16 +111,8 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         _detailBorder = CreatePanelShell(18);
 
         Content = BuildLayout();
-        AttachedToVisualTree += async (_, _) =>
-        {
-            if (_hasLoadedOnce)
-            {
-                return;
-            }
-
-            _hasLoadedOnce = true;
-            await RefreshAsync();
-        };
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     public void RefreshInstalledSnapshot()
@@ -134,16 +131,45 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
     public void Dispose()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        _lifetimeCts.Cancel();
+
         foreach (var bitmap in _iconBitmaps.Values)
         {
             bitmap?.Dispose();
         }
 
         _iconBitmaps.Clear();
+        _lifetimeCts.Dispose();
         _iconService.Dispose();
         _readmeService.Dispose();
         _installService.Dispose();
         _indexService.Dispose();
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttachedToVisualTree = true;
+        if (_hasLoadedOnce)
+        {
+            return;
+        }
+
+        _hasLoadedOnce = true;
+        UiExceptionGuard.FireAndForgetGuarded(
+            RefreshAsync,
+            "PluginMarket.InitialLoad",
+            BuildMarketContext());
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttachedToVisualTree = false;
     }
 
     private Control BuildLayout()
@@ -197,14 +223,23 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         return root;
     }
 
-    private async void OnRefreshClick(object? sender, RoutedEventArgs e)
+    private void OnRefreshClick(object? sender, RoutedEventArgs e)
     {
-        await RefreshAsync();
+        UiExceptionGuard.FireAndForgetGuarded(
+            RefreshAsync,
+            "PluginMarket.Refresh",
+            BuildMarketContext(),
+            ex => HandleTopLevelUiActionExceptionAsync(
+                ex,
+                F(
+                    "market.status.load_failed_format",
+                    "Failed to load the plugin market: {0}",
+                    DescribeException(ex))));
     }
 
     private async Task RefreshAsync()
     {
-        if (_isRefreshing)
+        if (_isRefreshing || _isDisposed || _lifetimeCts.IsCancellationRequested)
         {
             return;
         }
@@ -217,11 +252,19 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         {
             RefreshInstalledSnapshot();
 
-            var result = await _indexService.LoadAsync();
+            var result = await _indexService.LoadAsync(_lifetimeCts.Token);
+            if (!CanUpdateUi())
+            {
+                return;
+            }
+
             if (!result.Success || result.Document is null)
             {
                 _document = null;
                 _selectedPlugin = null;
+                AppLogger.Warn(
+                    "PluginMarket",
+                    $"Refresh failed. Source=None; Warning={result.WarningMessage ?? string.Empty}; Error={result.ErrorMessage ?? string.Empty}; Context={BuildMarketContext()}");
                 SetStatus(
                     F(
                         "market.status.load_failed_format",
@@ -235,6 +278,9 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             _document = result.Document;
             _marketSourceDisplay = result.SourceLocation ?? AirAppMarketDefaults.DefaultIndexUrl;
             _selectedPlugin = ResolveSelectedPlugin(_selectedPlugin?.Id, result.Document.Plugins);
+            AppLogger.Info(
+                "PluginMarket",
+                $"Refresh completed. Source={result.Source}; PluginCount={result.Document.Plugins.Count}; SourceLocation={result.SourceLocation ?? string.Empty}; Warning={result.WarningMessage ?? string.Empty}; Context={BuildMarketContext()}");
 
             var statusMessage = result.Source == AirAppMarketLoadSource.Cache
                 ? F(
@@ -251,15 +297,43 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             RebuildSurface();
             await EnsureReadmeLoadedAsync(_selectedPlugin);
         }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            AppLogger.Info("PluginMarket", $"Refresh canceled because the view is being disposed. Context={BuildMarketContext()}");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn(
+                "PluginMarket",
+                $"Refresh threw unexpectedly. ExceptionType={ex.GetType().FullName}; Classification={ClassifyException(ex)}; Context={BuildMarketContext()}",
+                ex);
+            if (CanUpdateUi())
+            {
+                SetStatus(
+                    F(
+                        "market.status.load_failed_format",
+                        "Failed to load the plugin market: {0}",
+                        DescribeException(ex)),
+                    ErrorBrush);
+                _document = null;
+                _selectedPlugin = null;
+                RebuildSurface();
+            }
+        }
         finally
         {
             _isRefreshing = false;
-            _refreshButton.IsEnabled = true;
+            _refreshButton.IsEnabled = !_isDisposed;
         }
     }
 
     private void RebuildSurface()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         var filteredPlugins = GetFilteredPlugins();
         _selectedPlugin = filteredPlugins.Count > 0
             ? ResolveSelectedPlugin(_selectedPlugin?.Id, filteredPlugins)
@@ -396,7 +470,10 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             Content = selectGrid
         };
-        selectButton.Click += async (_, _) => await SelectPluginAsync(plugin);
+        selectButton.Click += (_, _) => UiExceptionGuard.FireAndForgetGuarded(
+            () => SelectPluginAsync(plugin),
+            "PluginMarket.SelectPlugin",
+            BuildMarketContext(plugin));
 
         var rightPanel = new StackPanel
         {
@@ -623,13 +700,22 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             HorizontalAlignment = HorizontalAlignment.Right
         };
 
-        button.Click += async (_, _) =>
-        {
-            _selectedPlugin = plugin;
-            RebuildSurface();
-            await EnsureReadmeLoadedAsync(plugin);
-            await InstallSelectedPluginAsync(plugin);
-        };
+        button.Click += (_, _) => UiExceptionGuard.FireAndForgetGuarded(
+            async () =>
+            {
+                _selectedPlugin = plugin;
+                RebuildSurface();
+                await EnsureReadmeLoadedAsync(plugin);
+                await InstallSelectedPluginAsync(plugin);
+            },
+            "PluginMarket.InstallPlugin",
+            BuildMarketContext(plugin),
+            ex => HandleTopLevelUiActionExceptionAsync(
+                ex,
+                F(
+                    "market.status.install_failed_format",
+                    "Failed to install plugin: {0}",
+                    DescribeException(ex))));
 
         return button;
     }
@@ -643,7 +729,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
     private async Task InstallSelectedPluginAsync(AirAppMarketPluginEntry plugin)
     {
-        if (_isInstalling)
+        if (_isInstalling || _isDisposed || _lifetimeCts.IsCancellationRequested)
         {
             return;
         }
@@ -658,7 +744,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         try
         {
-            var result = await _installService.InstallAsync(plugin);
+            var result = await _installService.InstallAsync(plugin, _lifetimeCts.Token);
+            if (!CanUpdateUi())
+            {
+                return;
+            }
+
             if (!result.Success || result.Manifest is null)
             {
                 SetStatus(
@@ -679,6 +770,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
                 SuccessBrush);
             RebuildSurface();
         }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            AppLogger.Info(
+                "PluginMarket",
+                $"Install canceled because the view is being disposed. PluginId={plugin.Id}; Context={BuildMarketContext(plugin)}");
+        }
         finally
         {
             _isInstalling = false;
@@ -690,6 +787,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private async Task EnsureReadmeLoadedAsync(AirAppMarketPluginEntry? plugin)
     {
         if (plugin is null ||
+            _isDisposed ||
             _readmeContents.ContainsKey(plugin.Id) ||
             string.Equals(_loadingReadmePluginId, plugin.Id, StringComparison.OrdinalIgnoreCase))
         {
@@ -702,19 +800,30 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         try
         {
-            var readme = await _readmeService.LoadAsync(plugin);
+            var readme = await _readmeService.LoadAsync(plugin, _lifetimeCts.Token);
             _readmeContents[plugin.Id] = string.IsNullOrWhiteSpace(readme)
                 ? T("market.detail.readme_empty", "README is empty.")
                 : readme.Trim();
         }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            AppLogger.Info(
+                "PluginMarket",
+                $"README load canceled because the view is being disposed. PluginId={plugin.Id}; Context={BuildMarketContext(plugin)}");
+        }
         catch (Exception ex)
         {
+            AppLogger.Warn(
+                "PluginMarket",
+                $"README load failed. PluginId={plugin.Id}; ExceptionType={ex.GetType().FullName}; Classification={ClassifyException(ex)}; Context={BuildMarketContext(plugin)}",
+                ex);
             _readmeErrors[plugin.Id] = ex.Message;
         }
         finally
         {
             _loadingReadmePluginId = null;
-            if (string.Equals(_selectedPlugin?.Id, plugin.Id, StringComparison.OrdinalIgnoreCase))
+            if (CanUpdateUi() &&
+                string.Equals(_selectedPlugin?.Id, plugin.Id, StringComparison.OrdinalIgnoreCase))
             {
                 BuildDetailPanel();
             }
@@ -724,6 +833,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private async Task EnsureIconLoadedAsync(AirAppMarketPluginEntry? plugin)
     {
         if (plugin is null ||
+            _isDisposed ||
             _iconBitmaps.ContainsKey(plugin.Id) ||
             !_loadingIconPluginIds.Add(plugin.Id))
         {
@@ -732,7 +842,13 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
         try
         {
-            _iconBitmaps[plugin.Id] = await _iconService.LoadAsync(plugin);
+            _iconBitmaps[plugin.Id] = await _iconService.LoadAsync(plugin, _lifetimeCts.Token);
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            AppLogger.Info(
+                "PluginMarket",
+                $"Icon load canceled because the view is being disposed. PluginId={plugin.Id}; Context={BuildMarketContext(plugin)}");
         }
         catch
         {
@@ -741,8 +857,61 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         finally
         {
             _loadingIconPluginIds.Remove(plugin.Id);
+            if (CanUpdateUi())
+            {
+                RebuildSurface();
+            }
+        }
+    }
+
+    private Task HandleTopLevelUiActionExceptionAsync(Exception ex, string fallbackStatus)
+    {
+        if (CanUpdateUi())
+        {
+            SetStatus(fallbackStatus, ErrorBrush);
             RebuildSurface();
         }
+
+        return Task.CompletedTask;
+    }
+
+    private bool CanUpdateUi()
+    {
+        return !_isDisposed && _isAttachedToVisualTree && !_lifetimeCts.IsCancellationRequested;
+    }
+
+    private string BuildMarketContext(AirAppMarketPluginEntry? plugin = null)
+    {
+        return UiExceptionGuard.BuildContext(
+            ("SelectedPluginId", _selectedPlugin?.Id),
+            ("PluginId", plugin?.Id),
+            ("Source", _marketSourceDisplay),
+            ("IsRefreshing", _isRefreshing),
+            ("IsInstalling", _isInstalling),
+            ("IsDisposed", _isDisposed));
+    }
+
+    private static string ClassifyException(Exception ex)
+    {
+        return ex switch
+        {
+            OperationCanceledException => "Canceled",
+            TimeoutException => "Timeout",
+            HttpRequestException => "Network",
+            IOException => "IO",
+            _ => "Unexpected"
+        };
+    }
+
+    private static string DescribeException(Exception ex)
+    {
+        return ex switch
+        {
+            OperationCanceledException => "The request timed out or was canceled.",
+            TimeoutException => "The request timed out.",
+            HttpRequestException => ex.Message,
+            _ => ex.Message
+        };
     }
 
     private string GetReadmeContent(AirAppMarketPluginEntry plugin)

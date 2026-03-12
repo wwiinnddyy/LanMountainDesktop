@@ -43,9 +43,13 @@ internal sealed class AirAppMarketIndexService : IDisposable
                     null,
                     null);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                networkError = ex;
             }
             catch (Exception ex)
             {
@@ -71,9 +75,13 @@ internal sealed class AirAppMarketIndexService : IDisposable
                 null,
                 null);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            networkError = ex;
         }
         catch (Exception ex)
         {

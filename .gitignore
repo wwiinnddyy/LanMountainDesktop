@@ -502,3 +502,13 @@ nul
 /validator-restore.log
 /temp_old_main.axaml
 /temp_old_main_utf8.axaml
+
+# LanMountainDesktop local packaging outputs
+/build-installer/
+/build-deb/
+/dmg-temp/
+/release-files/
+/LanMountainDesktop.app/
+/*.deb
+/*.dmg
+/*.AppImage

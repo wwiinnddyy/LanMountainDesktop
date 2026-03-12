@@ -18,10 +18,19 @@ sealed class Program
     {
         AppLogger.Initialize();
         RegisterGlobalExceptionLogging();
+        var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
 
-        using var singleInstance = AcquireSingleInstance(args);
+        using var singleInstance = AcquireSingleInstance(restartParentProcessId);
         if (!singleInstance.IsPrimaryInstance)
         {
+            if (restartParentProcessId is not null)
+            {
+                AppLogger.Warn(
+                    "Startup",
+                    $"Restart relaunch could not acquire the single-instance lock. pid={restartParentProcessId.Value}. Suppressing multi-open activation prompt.");
+                return;
+            }
+
             AppLogger.Warn("Startup", "A secondary launch was blocked because another instance is already running.");
             _ = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2));
             return;
@@ -73,9 +82,8 @@ sealed class Program
         return builder;
     }
 
-    private static SingleInstanceService AcquireSingleInstance(string[] args)
+    private static SingleInstanceService AcquireSingleInstance(int? restartParentProcessId)
     {
-        var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
         var singleInstance = SingleInstanceService.CreateDefault();
         if (singleInstance.IsPrimaryInstance || restartParentProcessId is null)
         {
@@ -156,6 +164,7 @@ sealed class Program
         TaskScheduler.UnobservedTaskException += (_, eventArgs) =>
         {
             AppLogger.Error("TaskScheduler", "Unobserved task exception.", eventArgs.Exception);
+            eventArgs.SetObserved();
         };
     }
 }

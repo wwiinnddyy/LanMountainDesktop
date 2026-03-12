@@ -1,59 +1,58 @@
-using System;
-using Avalonia.Interactivity;
+using System.Threading.Tasks;
 using Avalonia.Threading;
+using FluentAvalonia.UI.Controls;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
 
 public partial class MainWindow
 {
-    private readonly DispatcherTimer _singleInstanceNoticeTimer = new()
-    {
-        Interval = TimeSpan.FromSeconds(6)
-    };
+    private bool _isSingleInstancePromptVisible;
 
     internal void ShowSingleInstanceNotice()
     {
+        void ShowPrompt()
+        {
+            UiExceptionGuard.FireAndForgetGuarded(
+                ShowSingleInstanceNoticeCoreAsync,
+                "MainWindow.ShowSingleInstanceNotice");
+        }
+
         if (Dispatcher.UIThread.CheckAccess())
         {
-            ShowSingleInstanceNoticeCore();
+            ShowPrompt();
             return;
         }
 
-        Dispatcher.UIThread.Post(ShowSingleInstanceNoticeCore, DispatcherPriority.Send);
+        Dispatcher.UIThread.Post(ShowPrompt, DispatcherPriority.Send);
     }
 
-    private void ShowSingleInstanceNoticeCore()
+    private async Task ShowSingleInstanceNoticeCoreAsync()
     {
-        SingleInstanceNoticeTitleTextBlock.Text = L(
-            "single_instance.notice.title",
-            "App already open");
-        SingleInstanceNoticeDescriptionTextBlock.Text = L(
-            "single_instance.notice.description",
-            "LanMountainDesktop is already running. Switched back to the active desktop.");
-        SingleInstanceNoticeButtonTextBlock.Text = L(
-            "single_instance.notice.button",
-            "Got it");
-        SingleInstanceNoticeDock.IsVisible = true;
+        if (_isSingleInstancePromptVisible)
+        {
+            return;
+        }
 
-        _singleInstanceNoticeTimer.Stop();
-        _singleInstanceNoticeTimer.Tick -= OnSingleInstanceNoticeTimerTick;
-        _singleInstanceNoticeTimer.Tick += OnSingleInstanceNoticeTimerTick;
-        _singleInstanceNoticeTimer.Start();
-    }
+        _isSingleInstancePromptVisible = true;
 
-    private void OnSingleInstanceNoticeButtonClick(object? sender, RoutedEventArgs e)
-    {
-        HideSingleInstanceNotice();
-    }
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = L("single_instance.notice.title", "应用已经运行"),
+                Content = L(
+                    "single_instance.notice.description",
+                    "应用已经运行，无需多次点击打开。"),
+                PrimaryButtonText = L("single_instance.notice.button", "确定"),
+                DefaultButton = ContentDialogButton.Primary
+            };
 
-    private void OnSingleInstanceNoticeTimerTick(object? sender, EventArgs e)
-    {
-        HideSingleInstanceNotice();
-    }
-
-    private void HideSingleInstanceNotice()
-    {
-        _singleInstanceNoticeTimer.Stop();
-        SingleInstanceNoticeDock.IsVisible = false;
+            await dialog.ShowAsync(this);
+        }
+        finally
+        {
+            _isSingleInstancePromptVisible = false;
+        }
     }
 }

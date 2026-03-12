@@ -6,21 +6,27 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using AvaloniaWebView;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using WebViewCore.Events;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class BrowserWidget : UserControl, IDesktopComponentWidget
-    , IDesktopPageVisibilityAwareComponentWidget, IDisposable
+public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
+    IDesktopPageVisibilityAwareComponentWidget, IComponentPlacementContextAware, IDisposable
 {
     private static readonly Uri DefaultHomeUri = new("https://www.bing.com");
+
     private double _currentCellSize = 48;
+    private string _componentId = BuiltInComponentIds.DesktopBrowser;
+    private string _placementId = string.Empty;
     private bool? _isNightModeApplied;
     private Uri _lastKnownUri = DefaultHomeUri;
     private bool _isOnActiveDesktopPage;
+    private bool _isAttachedToVisualTree;
     private bool _isEditMode;
     private bool _isWebViewActive = true;
+    private bool _isWebViewFaulted;
     private readonly WebView2RuntimeAvailability _runtimeAvailability;
     private bool _isDisposed;
 
@@ -45,8 +51,8 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
             ApplyRuntimeUnavailableState();
         }
 
+        AddressTextBox.Text = DefaultHomeUri.ToString();
         UpdateWebViewActiveState();
-        NavigateTo(DefaultHomeUri);
     }
 
     public void Dispose()
@@ -74,17 +80,15 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         _currentCellSize = Math.Max(1, cellSize);
 
         RootBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.34, 12, 28));
-        RootBorder.Padding = new Thickness(
-            Math.Clamp(_currentCellSize * 0.20, 8, 18));
+        RootBorder.Padding = new Thickness(Math.Clamp(_currentCellSize * 0.20, 8, 18));
 
         WebViewHostBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.24, 10, 22));
         AddressBarBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.22, 10, 20));
         AddressBarBorder.Padding = new Thickness(8, 6);
 
-        var rowSpacing = 8d;
         if (RootBorder.Child is Grid rootGrid)
         {
-            rootGrid.RowSpacing = rowSpacing;
+            rootGrid.RowSpacing = 8d;
         }
 
         var buttonSize = Math.Clamp(_currentCellSize * 0.72, 30, 36);
@@ -111,16 +115,33 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         AddressTextBox.Height = buttonSize;
     }
 
+    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
+    {
+        _isOnActiveDesktopPage = isOnActivePage;
+        _isEditMode = isEditMode;
+        UpdateWebViewActiveState();
+    }
+
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopBrowser
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttachedToVisualTree = true;
         ApplyTheme(force: true);
         UpdateWebViewActiveState();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttachedToVisualTree = false;
         _isOnActiveDesktopPage = false;
-        UpdateWebViewActiveState();
+        DeactivateWebView(clearUrl: false);
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -202,28 +223,20 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (!_runtimeAvailability.IsAvailable)
+        if (!CanUseWebView())
         {
             return;
         }
 
-        if (!_isWebViewActive)
+        if (!TryReloadWebView("Refresh"))
         {
-            return;
+            TryNavigate(DefaultHomeUri, "RefreshFallback");
         }
-
-        if (BrowserWebView.Url is not null)
-        {
-            BrowserWebView.Reload();
-            return;
-        }
-
-        NavigateTo(DefaultHomeUri);
     }
 
     private void OnGoButtonClick(object? sender, RoutedEventArgs e)
     {
-        if (!_runtimeAvailability.IsAvailable)
+        if (!CanUseWebView())
         {
             return;
         }
@@ -233,7 +246,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void OnAddressTextBoxKeyDown(object? sender, KeyEventArgs e)
     {
-        if (!_runtimeAvailability.IsAvailable)
+        if (!CanUseWebView())
         {
             return;
         }
@@ -249,7 +262,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
 
     private void NavigateFromAddressBar()
     {
-        if (!_runtimeAvailability.IsAvailable)
+        if (!CanUseWebView())
         {
             return;
         }
@@ -269,7 +282,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         AddressTextBox.Text = uri.ToString();
         if (_isWebViewActive)
         {
-            BrowserWebView.Url = uri;
+            TryNavigate(uri, "NavigateTo");
         }
     }
 
@@ -284,25 +297,16 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         AddressTextBox.Text = e.Url.ToString();
     }
 
-    public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
-    {
-        _isOnActiveDesktopPage = isOnActivePage;
-        _isEditMode = isEditMode;
-        UpdateWebViewActiveState();
-    }
-
     private void UpdateWebViewActiveState()
     {
-        if (!_runtimeAvailability.IsAvailable)
+        if (!_runtimeAvailability.IsAvailable || _isWebViewFaulted)
         {
             _isWebViewActive = false;
-            BrowserWebView.Url = null;
-            BrowserWebView.IsVisible = false;
-            BrowserWebView.IsHitTestVisible = false;
+            ApplyRuntimeUnavailableState();
             return;
         }
 
-        var shouldBeActive = _isOnActiveDesktopPage && !_isEditMode && IsVisible;
+        var shouldBeActive = _isAttachedToVisualTree && _isOnActiveDesktopPage && !_isEditMode && IsVisible;
         if (_isWebViewActive == shouldBeActive)
         {
             return;
@@ -311,38 +315,116 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget
         _isWebViewActive = shouldBeActive;
         if (!_isWebViewActive)
         {
-            if (BrowserWebView.Url is Uri currentUri)
-            {
-                _lastKnownUri = currentUri;
-            }
+            DeactivateWebView(clearUrl: false);
+            return;
+        }
 
-            BrowserWebView.IsHitTestVisible = false;
-            BrowserWebView.IsVisible = false;
-            BrowserWebView.Url = null;
+        ActivateWebView();
+    }
+
+    private void ActivateWebView()
+    {
+        if (_isWebViewFaulted || !_runtimeAvailability.IsAvailable)
+        {
+            ApplyRuntimeUnavailableState();
             return;
         }
 
         BrowserWebView.IsVisible = true;
         BrowserWebView.IsHitTestVisible = true;
-        BrowserWebView.Url = _lastKnownUri;
+        RefreshButton.IsEnabled = true;
+        GoButton.IsEnabled = true;
+        AddressTextBox.IsEnabled = true;
+        UnavailableOverlay.IsVisible = false;
+
+        TryNavigate(_lastKnownUri, "Activate");
+    }
+
+    private void DeactivateWebView(bool clearUrl)
+    {
+        BrowserWebView.IsHitTestVisible = false;
+        BrowserWebView.IsVisible = false;
+
+        if (clearUrl)
+        {
+            TryClearWebViewUrl();
+        }
+    }
+
+    private bool TryReloadWebView(string action)
+    {
+        try
+        {
+            BrowserWebView.Reload();
+            return true;
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            EnterFaultedState(action, ex);
+            return false;
+        }
+    }
+
+    private bool TryNavigate(Uri uri, string action)
+    {
+        try
+        {
+            BrowserWebView.Url = uri;
+            return true;
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            EnterFaultedState(action, ex);
+            return false;
+        }
+    }
+
+    private void TryClearWebViewUrl()
+    {
+        try
+        {
+            BrowserWebView.Url = null;
+        }
+        catch
+        {
+            // Best-effort cleanup only.
+        }
+    }
+
+    private bool CanUseWebView()
+    {
+        return _runtimeAvailability.IsAvailable && !_isWebViewFaulted && _isWebViewActive;
     }
 
     private void ApplyRuntimeUnavailableState()
     {
         _isWebViewActive = false;
-        BrowserWebView.Url = null;
         BrowserWebView.IsVisible = false;
         BrowserWebView.IsHitTestVisible = false;
 
         RefreshButton.IsEnabled = false;
         GoButton.IsEnabled = false;
         AddressTextBox.IsEnabled = false;
-        AddressTextBox.Text = string.Empty;
+        AddressTextBox.Text = _lastKnownUri.ToString();
 
-        UnavailableMessageTextBlock.Text = string.IsNullOrWhiteSpace(_runtimeAvailability.Message)
-            ? "WebView runtime unavailable."
-            : _runtimeAvailability.Message;
+        UnavailableMessageTextBlock.Text = _isWebViewFaulted
+            ? "The browser component is temporarily unavailable. Restart the app to retry."
+            : string.IsNullOrWhiteSpace(_runtimeAvailability.Message)
+                ? "WebView runtime unavailable."
+                : _runtimeAvailability.Message;
         UnavailableOverlay.IsVisible = true;
+    }
+
+    private void EnterFaultedState(string action, Exception ex)
+    {
+        _isWebViewFaulted = true;
+        _isWebViewActive = false;
+        AppLogger.Warn(
+            "BrowserWidget",
+            $"Browser component faulted. Action={action}; ComponentId={_componentId}; PlacementId={_placementId}; RuntimeAvailability={_runtimeAvailability.IsAvailable}; RuntimeVersion={_runtimeAvailability.Version ?? string.Empty}; CurrentUrl={_lastKnownUri}",
+            ex);
+        TryClearWebViewUrl();
+        ApplyRuntimeUnavailableState();
     }
 
     private static Uri? TryNormalizeUri(string? rawText)

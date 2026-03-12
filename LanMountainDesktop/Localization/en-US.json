@@ -744,9 +744,9 @@
     "placement.stretch":  "Stretch",
     "placement.center":  "Center",
     "placement.tile":  "Tile",
-    "single_instance.notice.title":  "App already open",
-    "single_instance.notice.description":  "LanMountainDesktop is already running. Switched back to the active desktop.",
-    "single_instance.notice.button":  "Got it"
+    "single_instance.notice.title":  "App already running",
+    "single_instance.notice.description":  "The app is already running. There is no need to click multiple times to open it.",
+    "single_instance.notice.button":  "OK"
   }
 
 

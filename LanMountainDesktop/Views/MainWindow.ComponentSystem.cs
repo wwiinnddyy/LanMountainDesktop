@@ -1522,7 +1522,7 @@ public partial class MainWindow
             placement.PlacementId = Guid.NewGuid().ToString("N");
         }
 
-        var component = CreateDesktopComponentControl(placement.ComponentId, placement.PlacementId);
+        var component = CreateDesktopComponentControl(placement.ComponentId, placement.PlacementId, placement.PageIndex);
         if (component is null)
         {
             return null;
@@ -1956,23 +1956,54 @@ public partial class MainWindow
         return onLeft || onRight || onTop || onBottom;
     }
 
-    private Control? CreateDesktopComponentControl(string componentId, string? placementId = null)
+    private Control? CreateDesktopComponentControl(string componentId, string? placementId = null, int? pageIndex = null)
     {
         if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
             return null;
         }
 
-        var component = runtimeDescriptor.CreateControl(
-            _currentDesktopCellSize,
-            _timeZoneService,
-            _weatherDataService,
-            _recommendationInfoService,
-            _calculatorDataService,
-            _componentSettingsService,
-            placementId);
-        component.Classes.Add(DesktopComponentClass);
-        return component;
+        return CreateDesktopComponentControl(runtimeDescriptor, _currentDesktopCellSize, placementId, pageIndex, "DesktopSurface");
+    }
+
+    private Control? CreateDesktopComponentControl(
+        DesktopComponentRuntimeDescriptor runtimeDescriptor,
+        double cellSize,
+        string? placementId,
+        int? pageIndex,
+        string action)
+    {
+        try
+        {
+            var component = runtimeDescriptor.CreateControl(
+                cellSize,
+                _timeZoneService,
+                _weatherDataService,
+                _recommendationInfoService,
+                _calculatorDataService,
+                _componentSettingsService,
+                placementId);
+            component.Classes.Add(DesktopComponentClass);
+            return component;
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn(
+                "ComponentRuntime",
+                $"Action={action}; ComponentId={runtimeDescriptor.Definition.Id}; PlacementId={placementId ?? string.Empty}; PageIndex={pageIndex?.ToString() ?? string.Empty}; ExceptionType={ex.GetType().FullName}; IsFatal=false",
+                ex);
+
+            var failureView = new DesktopComponentFailureView(
+                runtimeDescriptor.Definition.DisplayName,
+                runtimeDescriptor.Definition.Id,
+                placementId,
+                pageIndex,
+                action,
+                ex);
+            failureView.ApplyCellSize(cellSize);
+            failureView.Classes.Add(DesktopComponentClass);
+            return failureView;
+        }
     }
 
     private void CollapseComponentLibraryPanel()
@@ -3113,13 +3144,16 @@ public partial class MainWindow
             var previewHeight = previewSpan.HeightCells * previewCellSize;
             var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
 
-            var previewControl = descriptor.CreateControl(
+            var previewControl = CreateDesktopComponentControl(
+                descriptor,
                 renderCellSize,
-                _timeZoneService,
-                _weatherDataService,
-                _recommendationInfoService,
-                _calculatorDataService,
-                _componentSettingsService);
+                placementId: null,
+                pageIndex: null,
+                action: "ComponentLibraryPreview");
+            if (previewControl is null)
+            {
+                continue;
+            }
             // Component library previews must stay non-interactive so drag gesture is reliable.
             previewControl.IsHitTestVisible = false;
             previewControl.Focusable = false;

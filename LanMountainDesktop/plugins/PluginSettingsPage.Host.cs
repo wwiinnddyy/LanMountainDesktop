@@ -130,7 +130,25 @@ public partial class PluginSettingsPage : UserControl
         };
     }
 
-    private async void OnInstallPluginPackageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnInstallPluginPackageClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        UiExceptionGuard.FireAndForgetGuarded(
+            OnInstallPluginPackageAsync,
+            "PluginSettings.InstallPackage",
+            context: "Page=PluginSettings",
+            onHandledException: ex =>
+            {
+                SetPackageImportStatus(
+                    F(
+                        "settings.plugins.install_failed_format",
+                        "Failed to install plugin package: {0}",
+                        ex.Message),
+                    isError: true);
+                return Task.CompletedTask;
+            });
+    }
+
+    private async Task OnInstallPluginPackageAsync()
     {
         var runtime = (Application.Current as App)?.PluginRuntimeService;
         if (runtime is null)

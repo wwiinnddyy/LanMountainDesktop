@@ -8,6 +8,7 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -66,6 +67,7 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
             AppLogger.Info("App", $"Main window created. LogFile={AppLogger.LogFilePath}");
+            LogBrowserStartupDiagnostics();
             CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         }
 
@@ -268,6 +270,11 @@ public partial class App : Application
                     mainWindow.WindowState = WindowState.Normal;
                 }
 
+                if (mainWindow.WindowState != WindowState.FullScreen)
+                {
+                    mainWindow.WindowState = WindowState.FullScreen;
+                }
+
                 mainWindow.Activate();
                 mainWindow.Topmost = true;
                 mainWindow.Topmost = false;
@@ -333,6 +340,34 @@ public partial class App : Application
         AudioRecorderServiceFactory.DisposeSharedServices();
         StudyAnalyticsServiceFactory.DisposeSharedService();
         DisposeTrayIcon();
+    }
+
+    private void LogBrowserStartupDiagnostics()
+    {
+        try
+        {
+            var snapshot = new DesktopLayoutSettingsService().Load();
+            var browserPlacements = snapshot.DesktopComponentPlacements
+                .Where(placement => string.Equals(
+                    placement.ComponentId,
+                    BuiltInComponentIds.DesktopBrowser,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var runtimeAvailability = WebView2RuntimeProbe.GetAvailability();
+
+            AppLogger.Info(
+                "StartupDiagnostics",
+                $"Browser component diagnostics. HasBrowserPlacement={browserPlacements.Count > 0}; " +
+                $"ActivePageHasBrowser={browserPlacements.Any(item => item.PageIndex == snapshot.CurrentDesktopSurfaceIndex)}; " +
+                $"CurrentDesktopSurfaceIndex={snapshot.CurrentDesktopSurfaceIndex}; " +
+                $"WebViewRuntimeAvailable={runtimeAvailability.IsAvailable}; " +
+                $"WebViewRuntimeVersion={runtimeAvailability.Version ?? string.Empty}; " +
+                $"WebViewRuntimeMessage={runtimeAvailability.Message}");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("StartupDiagnostics", "Failed to log browser component diagnostics.", ex);
+        }
     }
 
     private string L(string key, string fallback)

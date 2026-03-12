@@ -3,4 +3,5 @@
   <Project Path="LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
   <Project Path="LanMountainDesktop.PluginsInstallHelper/LanMountainDesktop.PluginsInstallHelper.csproj" />
   <Project Path="LanMountainDesktop/LanMountainDesktop.csproj" />
+  <Project Path="LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj" />
 </Solution>

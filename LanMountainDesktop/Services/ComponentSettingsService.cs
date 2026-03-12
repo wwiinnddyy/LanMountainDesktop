@@ -12,6 +12,8 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true
     };
 
@@ -29,9 +31,19 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
     private string _scopedPlacementId = string.Empty;
 
     public ComponentSettingsService()
+        : this(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop"))
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var settingsDirectory = Path.Combine(appData, "LanMountainDesktop");
+    }
+
+    internal ComponentSettingsService(string settingsDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(settingsDirectory))
+        {
+            throw new ArgumentException("Settings directory cannot be null or whitespace.", nameof(settingsDirectory));
+        }
+
         _settingsPath = Path.Combine(settingsDirectory, "component-settings.json");
         _legacyAppSettingsPath = Path.Combine(settingsDirectory, "settings.json");
     }
@@ -345,10 +357,11 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         }
 
         ComponentSettingsDocumentSnapshot loadedSnapshot;
-        var loadedFromLegacy = false;
+        var loadDetails = ComponentSettingsLoadDetails.Empty;
         if (hasFile)
         {
-            loadedSnapshot = LoadSnapshotFromDisk();
+            loadDetails = LoadSnapshotFromDisk();
+            loadedSnapshot = loadDetails.Snapshot;
         }
         else if (TryLoadLegacySnapshot(out var migratedSnapshot))
         {
@@ -356,7 +369,10 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
             {
                 DefaultSettings = NormalizeSnapshot(migratedSnapshot)
             };
-            loadedFromLegacy = true;
+            loadDetails = new ComponentSettingsLoadDetails(
+                loadedSnapshot,
+                ComponentSettingsDocumentFormat.LegacySnapshot,
+                true);
         }
         else
         {
@@ -364,40 +380,44 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         }
 
         var normalizedSnapshot = NormalizeDocument(loadedSnapshot);
-        if (loadedFromLegacy)
+        if (loadDetails.ShouldRewriteToCanonical)
         {
             writeTimeUtc = PersistSnapshotToDisk(normalizedSnapshot);
         }
 
+        LogLoadDetails(loadDetails.Format, loadDetails.ShouldRewriteToCanonical, normalizedSnapshot);
         UpdateCache(normalizedSnapshot, writeTimeUtc, nowUtc);
         return normalizedSnapshot.Clone();
     }
 
-    private ComponentSettingsDocumentSnapshot LoadSnapshotFromDisk()
+    private ComponentSettingsLoadDetails LoadSnapshotFromDisk()
     {
         try
         {
             var json = File.ReadAllText(_settingsPath);
             using var document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind == JsonValueKind.Object &&
-                (document.RootElement.TryGetProperty("defaultSettings", out _) ||
-                 document.RootElement.TryGetProperty("instanceSettings", out _) ||
-                 document.RootElement.TryGetProperty("pluginSettings", out _)))
+            if (TryGetDocumentFormat(document.RootElement, out var format))
             {
                 var snapshot = JsonSerializer.Deserialize<ComponentSettingsDocumentSnapshot>(json, SerializerOptions);
-                return NormalizeDocument(snapshot);
+                return new ComponentSettingsLoadDetails(
+                    snapshot ?? new ComponentSettingsDocumentSnapshot(),
+                    format,
+                    format == ComponentSettingsDocumentFormat.PascalCaseDocument);
             }
 
             var legacySnapshot = JsonSerializer.Deserialize<ComponentSettingsSnapshot>(json, SerializerOptions);
-            return new ComponentSettingsDocumentSnapshot
-            {
-                DefaultSettings = NormalizeSnapshot(legacySnapshot)
-            };
+            return new ComponentSettingsLoadDetails(
+                new ComponentSettingsDocumentSnapshot
+                {
+                    DefaultSettings = NormalizeSnapshot(legacySnapshot)
+                },
+                ComponentSettingsDocumentFormat.LegacySnapshot,
+                true);
         }
         catch (Exception ex)
         {
             AppLogger.Warn("ComponentSettings", $"Failed to deserialize component settings from '{_settingsPath}'.", ex);
-            return new ComponentSettingsDocumentSnapshot();
+            return ComponentSettingsLoadDetails.Empty;
         }
     }
 
@@ -684,6 +704,79 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         _lastProbeUtc = probeTimeUtc;
     }
 
+    internal static void ResetCacheForTests()
+    {
+        lock (CacheGate)
+        {
+            _cachedPath = null;
+            _cachedSnapshot = null;
+            _cachedWriteTimeUtc = DateTime.MinValue;
+            _lastProbeUtc = DateTime.MinValue;
+        }
+    }
+
+    private void LogLoadDetails(
+        ComponentSettingsDocumentFormat format,
+        bool rewroteToCanonical,
+        ComponentSettingsDocumentSnapshot snapshot)
+    {
+        AppLogger.Info(
+            "ComponentSettings",
+            $"Loaded component settings document. Format={format}; RewroteToCanonical={rewroteToCanonical}; " +
+            $"InstanceSettings={snapshot.InstanceSettings.Count}; PluginSettings={snapshot.PluginSettings.Count}; Path={_settingsPath}");
+    }
+
+    private static bool TryGetDocumentFormat(
+        JsonElement rootElement,
+        out ComponentSettingsDocumentFormat format)
+    {
+        format = ComponentSettingsDocumentFormat.EmptyDocument;
+        if (rootElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var hasDocumentProperties = false;
+        var requiresCanonicalRewrite = false;
+        foreach (var property in rootElement.EnumerateObject())
+        {
+            if (!IsDocumentPropertyName(property.Name))
+            {
+                continue;
+            }
+
+            hasDocumentProperties = true;
+            if (!IsCanonicalDocumentPropertyName(property.Name))
+            {
+                requiresCanonicalRewrite = true;
+            }
+        }
+
+        if (!hasDocumentProperties)
+        {
+            return false;
+        }
+
+        format = requiresCanonicalRewrite
+            ? ComponentSettingsDocumentFormat.PascalCaseDocument
+            : ComponentSettingsDocumentFormat.CanonicalDocument;
+        return true;
+    }
+
+    private static bool IsDocumentPropertyName(string propertyName)
+    {
+        return string.Equals(propertyName, "defaultSettings", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(propertyName, "instanceSettings", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(propertyName, "pluginSettings", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsCanonicalDocumentPropertyName(string propertyName)
+    {
+        return string.Equals(propertyName, "defaultSettings", StringComparison.Ordinal) ||
+               string.Equals(propertyName, "instanceSettings", StringComparison.Ordinal) ||
+               string.Equals(propertyName, "pluginSettings", StringComparison.Ordinal);
+    }
+
     private sealed class ComponentSettingsDocumentSnapshot
     {
         public ComponentSettingsSnapshot DefaultSettings { get; set; } = new();
@@ -770,5 +863,24 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
         public int Stcn24ForumAutoRefreshIntervalMinutes { get; set; } = 20;
 
         public string Stcn24ForumSourceType { get; set; } = Stcn24ForumSourceTypes.LatestCreated;
+    }
+
+    private readonly record struct ComponentSettingsLoadDetails(
+        ComponentSettingsDocumentSnapshot Snapshot,
+        ComponentSettingsDocumentFormat Format,
+        bool ShouldRewriteToCanonical)
+    {
+        public static ComponentSettingsLoadDetails Empty { get; } = new(
+            new ComponentSettingsDocumentSnapshot(),
+            ComponentSettingsDocumentFormat.EmptyDocument,
+            false);
+    }
+
+    private enum ComponentSettingsDocumentFormat
+    {
+        EmptyDocument,
+        CanonicalDocument,
+        PascalCaseDocument,
+        LegacySnapshot
     }
 }
