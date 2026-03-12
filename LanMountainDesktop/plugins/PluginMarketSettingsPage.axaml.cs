@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.PluginMarket;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 

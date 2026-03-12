@@ -21,7 +21,7 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         IPlugin plugin,
         IPluginRuntimeContext runtimeContext,
         IServiceProvider services,
-        IReadOnlyList<PluginSettingsPageRegistration> settingsPages,
+        IReadOnlyList<PluginSettingsSectionRegistration> settingsSections,
         IReadOnlyList<PluginDesktopComponentRegistration> desktopComponents,
         IReadOnlyList<PluginServiceExportDescriptor> exportedServices,
         IReadOnlyList<IHostedService> hostedServices,
@@ -34,7 +34,7 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         Plugin = plugin;
         RuntimeContext = runtimeContext;
         Services = services;
-        SettingsPages = settingsPages;
+        SettingsSections = settingsSections;
         DesktopComponents = desktopComponents;
         ExportedServices = exportedServices;
         HostedServices = hostedServices;
@@ -57,7 +57,7 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
 
     public IServiceProvider Services { get; }
 
-    public IReadOnlyList<PluginSettingsPageRegistration> SettingsPages { get; }
+    public IReadOnlyList<PluginSettingsSectionRegistration> SettingsSections { get; }
 
     public IReadOnlyList<PluginDesktopComponentRegistration> DesktopComponents { get; }
 

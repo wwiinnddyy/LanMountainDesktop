@@ -16,7 +16,7 @@ using Avalonia.Media.Imaging;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 {

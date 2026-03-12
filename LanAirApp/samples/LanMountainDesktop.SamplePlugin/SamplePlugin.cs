@@ -16,7 +16,6 @@ public sealed class SamplePlugin : PluginBase, IDisposable
         var hostName = GetHostProperty(context, PluginHostPropertyKeys.HostApplicationName, "UnknownHost");
         var hostVersion = GetHostProperty(context, PluginHostPropertyKeys.HostVersion, "UnknownVersion");
         var sdkApiVersion = GetHostProperty(context, PluginHostPropertyKeys.PluginSdkApiVersion, "UnknownApiVersion");
-        var hostApplicationLifecycle = context.GetService<IHostApplicationLifecycle>();
         var messageBus = context.GetService<IPluginMessageBus>()
             ?? throw new InvalidOperationException("Plugin message bus is not available.");
 
@@ -44,31 +43,26 @@ public sealed class SamplePlugin : PluginBase, IDisposable
             File.AppendAllText(logPath, initMessage + Environment.NewLine);
             _stateService.MarkBackendReady(localizer.Format(
                 "status.backend.detail.log_written",
-                "初始化日志已写入：{0}",
+                "Initialization log written: {0}",
                 logPath));
         }
         catch (Exception ex)
         {
             _stateService.MarkBackendFaulted(localizer.Format(
                 "status.backend.detail.log_write_failed",
-                "初始化日志写入失败：{0}",
+                "Initialization log failed: {0}",
                 ex.Message));
             throw;
         }
 
         _clockService.Start();
 
-        context.RegisterSettingsPage(new PluginSettingsPageRegistration(
-            "status",
-            localizer.GetString("settings.page_title", "插件状态"),
-            () => new SamplePluginSettingsView(context)));
-
         context.RegisterDesktopComponent(new PluginDesktopComponentRegistration(
             "LanMountainDesktop.SamplePlugin.StatusClock",
-            localizer.GetString("widget.display_name", "示例插件状态时钟"),
+            localizer.GetString("widget.display_name", "Sample Plugin Status Clock"),
             widgetContext => new SamplePluginStatusClockWidget(widgetContext),
             iconKey: "PuzzlePiece",
-            category: localizer.GetString("widget.category", "插件"),
+            category: localizer.GetString("widget.category", "Plugins"),
             minWidthCells: 4,
             minHeightCells: 4,
             allowDesktopPlacement: true,
@@ -78,10 +72,10 @@ public sealed class SamplePlugin : PluginBase, IDisposable
 
         context.RegisterDesktopComponent(new PluginDesktopComponentRegistration(
             "LanMountainDesktop.SamplePlugin.CloseDesktop",
-            localizer.GetString("widget.close_desktop.display_name", "关闭桌面"),
+            localizer.GetString("widget.close_desktop.display_name", "Close Desktop"),
             widgetContext => new SamplePluginCloseDesktopWidget(widgetContext),
             iconKey: "DismissCircle",
-            category: localizer.GetString("widget.category", "鎻掍欢"),
+            category: localizer.GetString("widget.category", "Plugins"),
             minWidthCells: 2,
             minHeightCells: 1,
             allowDesktopPlacement: true,

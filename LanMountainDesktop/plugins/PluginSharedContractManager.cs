@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Views.SettingsPages;
+using LanMountainDesktop.Services.PluginMarket;
 
 namespace LanMountainDesktop.Plugins;
 

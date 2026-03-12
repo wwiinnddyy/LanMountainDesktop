@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using LanMountainDesktop.PluginSdk;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal static class AirAppMarketDefaults
 {

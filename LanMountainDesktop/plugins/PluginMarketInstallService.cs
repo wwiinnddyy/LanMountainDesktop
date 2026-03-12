@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketInstallService : IDisposable
 {

@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketIconService : IDisposable
 {

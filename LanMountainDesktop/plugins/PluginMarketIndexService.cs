@@ -5,7 +5,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketIndexService : IDisposable
 {

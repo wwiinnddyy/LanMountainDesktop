@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace LanMountainDesktop.Views.SettingsPages;
+namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketCacheService
 {

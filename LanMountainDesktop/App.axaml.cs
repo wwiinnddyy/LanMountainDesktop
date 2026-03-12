@@ -40,7 +40,6 @@ public partial class App : Application
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
 
-    private readonly IndependentSettingsModuleService _independentSettingsModuleService = new();
     private TrayIcons? _trayIcons;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
@@ -55,7 +54,9 @@ public partial class App : Application
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
     {
-        _independentSettingsModuleService.ShowOrActivate(source, pageTag);
+        AppLogger.Info(
+            "SettingsFacade",
+            $"Settings UI entry is disabled by hard-cut migration. Source='{source}'; PageTag='{pageTag ?? "<default>"}'.");
     }
 
     public override void Initialize()
@@ -103,11 +104,6 @@ public partial class App : Application
     private void OnTrayShowDesktopClick(object? sender, EventArgs e)
     {
         RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayMenu");
-    }
-
-    private void OnTraySettingsClick(object? sender, EventArgs e)
-    {
-        OpenIndependentSettingsModule("TrayMenu");
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
@@ -203,12 +199,6 @@ public partial class App : Application
         var showDesktopItem = new NativeMenuItem(L("tray.menu.show_desktop", "Open Desktop"));
         showDesktopItem.Click += OnTrayShowDesktopClick;
         menu.Items.Add(showDesktopItem);
-
-        menu.Items.Add(new NativeMenuItemSeparator());
-
-        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "Settings"));
-        settingsItem.Click += OnTraySettingsClick;
-        menu.Items.Add(settingsItem);
 
         menu.Items.Add(new NativeMenuItemSeparator());
 
@@ -360,8 +350,6 @@ public partial class App : Application
 
         _exitCleanupCompleted = true;
         AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
-
-        _independentSettingsModuleService.CloseIfOpen();
 
         try
         {

@@ -108,23 +108,18 @@ public partial class MainWindow
             return;
         }
 
-        _reopenSettingsAfterComponentLibraryClose = _isSettingsOpen;
-        if (_isSettingsOpen)
-        {
-            CloseSettingsPage(immediate: true);
-        }
-
         OpenComponentLibraryWindow();
     }
 
     private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
-        CloseComponentLibraryWindow(reopenSettings: true);
+        CloseComponentLibraryWindow(reopenSettings: false);
     }
 
     private void OnCloseComponentSettingsClick(object? sender, RoutedEventArgs e)
     {
-        CloseComponentSettingsWindow();
+        _ = sender;
+        _ = e;
     }
 
     private void OnStatusBarClockChecked(object? sender, RoutedEventArgs e)
@@ -251,29 +246,13 @@ public partial class MainWindow
 
     private TaskbarContext GetCurrentTaskbarContext()
     {
-        if (!_isSettingsOpen)
-        {
-            return TaskbarContext.Desktop;
-        }
-
-        var selectedItem = SettingsNavView?.SelectedItem as FluentAvalonia.UI.Controls.NavigationViewItem;
-        return selectedItem?.Tag?.ToString() switch
-        {
-            "Wallpaper" => TaskbarContext.SettingsWallpaper,
-            "Grid" => TaskbarContext.SettingsGrid,
-            "Color" => TaskbarContext.SettingsColor,
-            "StatusBar" => TaskbarContext.SettingsStatusBar,
-            "Weather" => TaskbarContext.SettingsWeather,
-            "Region" => TaskbarContext.SettingsRegion,
-            _ => TaskbarContext.Desktop
-        };
+        return TaskbarContext.Desktop;
     }
 
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
         if (BackToWindowsButton is null ||
             OpenComponentLibraryButton is null ||
-            OpenSettingsButton is null ||
             WallpaperPreviewBackButtonVisual is null ||
             WallpaperPreviewComponentLibraryVisual is null ||
             WallpaperPreviewSettingsButtonIcon is null)
@@ -282,12 +261,11 @@ public partial class MainWindow
         }
 
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
-        var showSettings = _pinnedTaskbarActions.Contains(TaskbarActionId.OpenSettings);
-        var showDesktopEdit = _isSettingsOpen;
+        var showSettings = false;
+        var showDesktopEdit = true;
 
         BackToWindowsButton.IsVisible = showMinimize;
         OpenComponentLibraryButton.IsVisible = showDesktopEdit;
-        OpenSettingsButton.IsVisible = showSettings;
         WallpaperPreviewBackButtonVisual.IsVisible = showMinimize;
         WallpaperPreviewComponentLibraryVisual.IsVisible = showDesktopEdit;
         WallpaperPreviewSettingsButtonIcon.IsVisible = showSettings;
@@ -327,30 +305,11 @@ public partial class MainWindow
         {
             WallpaperPreviewTaskbarDynamicActionsHost.IsVisible = hasDynamicActions;
         }
-
-        UpdateOpenSettingsActionVisualState();
     }
 
     private void UpdateOpenSettingsActionVisualState()
     {
-        if (OpenSettingsButtonTextBlock is null || OpenSettingsButton is null)
-        {
-            return;
-        }
-
-        var showBackToDesktop = _isSettingsOpen;
-        OpenSettingsButtonTextBlock.IsVisible = showBackToDesktop;
-        OpenSettingsButtonTextBlock.Text = L("settings.back_to_desktop", "Back to Desktop");
-        ToolTip.SetTip(
-            OpenSettingsButton,
-            showBackToDesktop
-                ? L("settings.back_to_desktop", "Back to Desktop")
-                : L("tooltip.open_settings", "Settings"));
-
-        var effectiveCellSize = _currentDesktopCellSize > 0
-            ? _currentDesktopCellSize
-            : Math.Max(32, Math.Min(Bounds.Width, Bounds.Height) / Math.Max(1, _targetShortSideCells));
-        ApplyWidgetSizing(effectiveCellSize);
+        // Open-settings action is removed in API-only settings mode.
     }
 
     private void OpenComponentLibraryWindow()
@@ -410,10 +369,9 @@ public partial class MainWindow
             _reopenSettingsAfterComponentLibraryClose = false;
             if (shouldReopenSettings)
             {
-                if (Application.Current is App app)
-                {
-                    app.OpenIndependentSettingsModule("ComponentLibrary");
-                }
+                AppLogger.Info(
+                    "SettingsFacade",
+                    "Reopen settings request ignored because settings UI entry is disabled during hard-cut migration.");
             }
         }, FluttermotionToken.Slow);
     }
@@ -451,13 +409,6 @@ public partial class MainWindow
                     "Delete",
                     IsVisible: true,
                     CommandKey: "component.delete"));
-
-                actions.Add(new TaskbarActionItem(
-                    TaskbarActionId.EditComponent,
-                    L("component.edit", "Edit"),
-                    "Edit",
-                    IsVisible: true,
-                    CommandKey: "component.edit"));
 
                 return actions;
             }
@@ -556,16 +507,11 @@ public partial class MainWindow
             var isDeleteAction = action.Id == TaskbarActionId.DeleteDesktopPage ||
                                  action.Id == TaskbarActionId.DeleteComponent;
             var isHideAction = action.Id == TaskbarActionId.HideLauncherEntry;
-            var isEditAction = action.Id == TaskbarActionId.EditComponent;
 
             Symbol iconSymbol;
             if (isDeleteAction || isHideAction)
             {
                 iconSymbol = Symbol.Delete;
-            }
-            else if (isEditAction)
-            {
-                iconSymbol = Symbol.Edit;
             }
             else
             {
@@ -662,9 +608,6 @@ public partial class MainWindow
             case "component.delete":
                 DeleteSelectedComponent();
                 break;
-            case "component.edit":
-                OpenComponentSettings();
-                break;
             case "launcher.hide":
                 HideSelectedLauncherEntry();
                 break;
@@ -714,583 +657,7 @@ public partial class MainWindow
         }
     }
 
-    private void OpenComponentSettings()
-    {
-        if (_selectedDesktopComponentHost is null || _selectedDesktopComponentHost.Tag is not string placementId)
-        {
-            return;
-        }
-
-        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
-            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
-        if (placement is null)
-        {
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.Date)
-        {
-            OpenDateComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopClock)
-        {
-            OpenDesktopClockComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopClassSchedule)
-        {
-            OpenClassScheduleComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopWorldClock)
-        {
-            OpenWorldClockComponentSettings(placement);
-            return;
-        }
-
-        if (IsWeatherComponentId(placement.ComponentId))
-        {
-            OpenWeatherComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyArtwork)
-        {
-            OpenDailyArtworkComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopCnrDailyNews)
-        {
-            OpenCnrDailyNewsComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopIfengNews)
-        {
-            OpenIfengNewsComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopDailyWord ||
-            placement.ComponentId == BuiltInComponentIds.DesktopDailyWord2x2)
-        {
-            OpenDailyWordComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopBilibiliHotSearch)
-        {
-            OpenBilibiliHotSearchComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopBaiduHotSearch)
-        {
-            OpenBaiduHotSearchComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopStcn24Forum)
-        {
-            OpenStcn24ForumComponentSettings(placement);
-            return;
-        }
-
-        if (placement.ComponentId == BuiltInComponentIds.DesktopStudyEnvironment)
-        {
-            OpenStudyEnvironmentComponentSettings(placement);
-            return;
-        }
-    }
-
-    private static bool IsWeatherComponentId(string componentId)
-    {
-        return string.Equals(componentId, BuiltInComponentIds.DesktopWeather, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(componentId, BuiltInComponentIds.DesktopWeatherClock, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(componentId, BuiltInComponentIds.DesktopHourlyWeather, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(componentId, BuiltInComponentIds.DesktopMultiDayWeather, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(componentId, BuiltInComponentIds.DesktopExtendedWeather, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void ShowComponentSettings(Control settingsContent, DesktopComponentPlacementSnapshot placement)
-    {
-        if (ComponentSettingsWindow is null || ComponentSettingsContentHost is null)
-        {
-            return;
-        }
-
-        var runtimeContext = new DesktopComponentRuntimeContext(
-            placement.ComponentId,
-            placement.PlacementId,
-            _componentSettingsService);
-
-        if (settingsContent is IComponentRuntimeContextAware runtimeContextAwareComponent)
-        {
-            runtimeContextAwareComponent.SetComponentRuntimeContext(runtimeContext);
-        }
-
-        if (settingsContent is IComponentPlacementContextAware placementAwareComponent)
-        {
-            placementAwareComponent.SetComponentPlacementContext(placement.ComponentId, placement.PlacementId);
-        }
-
-        if (settingsContent is IComponentSettingsStoreAware settingsStoreAwareComponent)
-        {
-            settingsStoreAwareComponent.SetComponentSettingsStore(_componentSettingsService);
-        }
-
-        ComponentSettingsService.ApplyScopedContextToTarget(settingsContent, placement.ComponentId, placement.PlacementId);
-
-        ComponentSettingsContentHost.Content = settingsContent;
-        ComponentSettingsWindow.IsVisible = true;
-        ComponentSettingsWindow.Opacity = 0;
-        ComponentSettingsWindow.Opacity = 1;
-    }
-
-    private void OpenDateComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new DateWidgetSettingsWindow();
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenClassScheduleComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new ClassScheduleSettingsWindow();
-        settingsContent.SettingsChanged += OnClassScheduleSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenDesktopClockComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new AnalogClockWidgetSettingsWindow();
-        settingsContent.SettingsChanged += OnDesktopClockSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenWorldClockComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new WorldClockWidgetSettingsWindow();
-        settingsContent.SettingsChanged += OnWorldClockSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenWeatherComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new WeatherWidgetSettingsWindow();
-        settingsContent.SettingsChanged += OnWeatherSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenStudyEnvironmentComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new StudyEnvironmentWidgetSettingsWindow();
-        settingsContent.SettingsChanged += OnStudyEnvironmentSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenDailyArtworkComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new DailyArtworkSettingsWindow();
-        settingsContent.SettingsChanged += OnDailyArtworkSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenCnrDailyNewsComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new CnrDailyNewsSettingsWindow();
-        settingsContent.SettingsChanged += OnCnrDailyNewsSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenIfengNewsComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new IfengNewsSettingsWindow();
-        settingsContent.SettingsChanged += OnIfengNewsSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenDailyWordComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new DailyWordSettingsWindow();
-        settingsContent.SettingsChanged += OnDailyWordSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenBilibiliHotSearchComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new BilibiliHotSearchSettingsWindow();
-        settingsContent.SettingsChanged += OnBilibiliHotSearchSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenBaiduHotSearchComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new BaiduHotSearchSettingsWindow();
-        settingsContent.SettingsChanged += OnBaiduHotSearchSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OpenStcn24ForumComponentSettings(DesktopComponentPlacementSnapshot placement)
-    {
-        var settingsContent = new Stcn24ForumSettingsWindow();
-        settingsContent.SettingsChanged += OnStcn24ForumSettingsChanged;
-        ShowComponentSettings(settingsContent, placement);
-    }
-
-    private void OnClassScheduleSettingsChanged(object? sender, EventArgs e)
-    {
-        if (_selectedDesktopComponentHost is null)
-        {
-            return;
-        }
-
-        if (TryGetContentHost(_selectedDesktopComponentHost)?.Child is ClassScheduleWidget widget)
-        {
-            widget.RefreshFromSettings();
-        }
-    }
-
-    private void OnDesktopClockSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is AnalogClockWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnStudyEnvironmentSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        if (_selectedDesktopComponentHost is null)
-        {
-            return;
-        }
-
-        if (TryGetContentHost(_selectedDesktopComponentHost)?.Child is StudyEnvironmentWidget widget)
-        {
-            widget.RefreshFromSettings();
-        }
-    }
-
-    private void OnDailyArtworkSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is DailyArtworkWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnWorldClockSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is WorldClockWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnWeatherSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                var child = TryGetContentHost(host)?.Child;
-                switch (child)
-                {
-                    case WeatherWidget weatherWidget:
-                        weatherWidget.RefreshFromSettings();
-                        break;
-                    case WeatherClockWidget weatherClockWidget:
-                        weatherClockWidget.RefreshFromSettings();
-                        break;
-                    case HourlyWeatherWidget hourlyWeatherWidget:
-                        hourlyWeatherWidget.RefreshFromSettings();
-                        break;
-                    case MultiDayWeatherWidget multiDayWeatherWidget:
-                        multiDayWeatherWidget.RefreshFromSettings();
-                        break;
-                    case ExtendedWeatherWidget extendedWeatherWidget:
-                        extendedWeatherWidget.RefreshFromSettings();
-                        break;
-                }
-            }
-        }
-    }
-
-    private void OnCnrDailyNewsSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is CnrDailyNewsWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnIfengNewsSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is IfengNewsWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnDailyWordSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                var widget = TryGetContentHost(host)?.Child;
-                if (widget is DailyWordWidget dailyWordWidget)
-                {
-                    dailyWordWidget.RefreshFromSettings();
-                }
-                else if (widget is DailyWord2x2Widget dailyWord2x2Widget)
-                {
-                    dailyWord2x2Widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnBilibiliHotSearchSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is BilibiliHotSearchWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnBaiduHotSearchSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is BaiduHotSearchWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void OnStcn24ForumSettingsChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        foreach (var pageGrid in _desktopPageComponentGrids.Values)
-        {
-            foreach (var host in pageGrid.Children.OfType<Border>())
-            {
-                if (!host.Classes.Contains(DesktopComponentHostClass))
-                {
-                    continue;
-                }
-
-                if (TryGetContentHost(host)?.Child is Stcn24ForumWidget widget)
-                {
-                    widget.RefreshFromSettings();
-                }
-            }
-        }
-    }
-
-    private void CloseComponentSettingsWindow()
-    {
-        if (ComponentSettingsWindow is null)
-        {
-            return;
-        }
-
-        if (ComponentSettingsContentHost?.Content is ClassScheduleSettingsWindow classScheduleSettingsWindow)
-        {
-            classScheduleSettingsWindow.SettingsChanged -= OnClassScheduleSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is AnalogClockWidgetSettingsWindow analogClockSettingsWindow)
-        {
-            analogClockSettingsWindow.SettingsChanged -= OnDesktopClockSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is StudyEnvironmentWidgetSettingsWindow studyEnvironmentSettingsWindow)
-        {
-            studyEnvironmentSettingsWindow.SettingsChanged -= OnStudyEnvironmentSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is DailyArtworkSettingsWindow dailyArtworkSettingsWindow)
-        {
-            dailyArtworkSettingsWindow.SettingsChanged -= OnDailyArtworkSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is WorldClockWidgetSettingsWindow worldClockSettingsWindow)
-        {
-            worldClockSettingsWindow.SettingsChanged -= OnWorldClockSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is WeatherWidgetSettingsWindow weatherSettingsWindow)
-        {
-            weatherSettingsWindow.SettingsChanged -= OnWeatherSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is CnrDailyNewsSettingsWindow cnrDailyNewsSettingsWindow)
-        {
-            cnrDailyNewsSettingsWindow.SettingsChanged -= OnCnrDailyNewsSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is IfengNewsSettingsWindow ifengNewsSettingsWindow)
-        {
-            ifengNewsSettingsWindow.SettingsChanged -= OnIfengNewsSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is DailyWordSettingsWindow dailyWordSettingsWindow)
-        {
-            dailyWordSettingsWindow.SettingsChanged -= OnDailyWordSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is BilibiliHotSearchSettingsWindow bilibiliHotSearchSettingsWindow)
-        {
-            bilibiliHotSearchSettingsWindow.SettingsChanged -= OnBilibiliHotSearchSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is BaiduHotSearchSettingsWindow baiduHotSearchSettingsWindow)
-        {
-            baiduHotSearchSettingsWindow.SettingsChanged -= OnBaiduHotSearchSettingsChanged;
-        }
-
-        if (ComponentSettingsContentHost?.Content is Stcn24ForumSettingsWindow stcn24ForumSettingsWindow)
-        {
-            stcn24ForumSettingsWindow.SettingsChanged -= OnStcn24ForumSettingsChanged;
-        }
-
-        ComponentSettingsWindow.Opacity = 0;
-        
-        DispatcherTimer.RunOnce(() =>
-        {
-            if (ComponentSettingsWindow is not null)
-            {
-                ComponentSettingsWindow.IsVisible = false;
-            }
-            if (ComponentSettingsContentHost is not null)
-            {
-                ComponentSettingsContentHost.Content = null;
-            }
-        }, FluttermotionToken.Slow);
-    }
+    // Component settings popup UI is removed in API-only settings hard-cut mode.
 
     private void AddDesktopPage()
     {

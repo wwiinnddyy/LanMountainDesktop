@@ -75,11 +75,11 @@ public partial class PluginSettingsPage : UserControl
         var enabledCount = runtime.Catalog.Count(entry => entry.IsEnabled);
         PluginSystemStatusTextBlock.Text = F(
             "settings.plugins.summary_format",
-            "Detected {0} plugin(s); enabled {1}; loaded {2}; settings pages {3}; widgets {4}; failures {5}.",
+            "Detected {0} plugin(s); enabled {1}; loaded {2}; settings sections {3}; widgets {4}; failures {5}.",
             runtime.Catalog.Count,
             enabledCount,
             runtime.Catalog.Count(entry => entry.IsLoaded),
-            runtime.SettingsPages.Count,
+            runtime.SettingsSections.Count,
             runtime.DesktopComponents.Count,
             failures.Length);
 
@@ -315,9 +315,6 @@ public partial class PluginSettingsPage : UserControl
         {
             case MainWindow mainWindow:
                 mainWindow.RefreshPluginSettingsNavigation();
-                break;
-            case SettingsWindow settingsWindow:
-                settingsWindow.RefreshPluginSettingsNavigation();
                 break;
         }
     }

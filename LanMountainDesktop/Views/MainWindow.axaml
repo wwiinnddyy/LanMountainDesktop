@@ -312,29 +312,6 @@
                                             </StackPanel>
                                         </Button>
 
-                                        <Button x:Name="OpenSettingsButton"
-                                                Grid.Column="1"
-                                                Padding="6"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnOpenSettingsClick"
-                                                ToolTip.Tip="&#35774;&#32622;">
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="6">
-                                                <fi:FluentIcon x:Name="OpenSettingsIcon"
-                                                               Icon="Settings"
-                                                               IconVariant="Regular" />
-                                                <TextBlock x:Name="OpenSettingsButtonTextBlock"
-                                                           IsVisible="False"
-                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                           Text="&#36820;&#22238;&#26700;&#38754;" />
-                                            </StackPanel>
-                                        </Button>
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -520,47 +497,6 @@
                 </Border>
             </Border>
         </Grid>
-
-        <Border x:Name="ComponentSettingsWindow"
-                IsVisible="False"
-                Opacity="0"
-                Classes="glass-strong"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                Width="400"
-                MinWidth="300"
-                MaxWidth="500"
-                Height="300"
-                MinHeight="200"
-                Margin="24,24,24,100"
-                CornerRadius="36"
-                Padding="0">
-            <Grid RowDefinitions="Auto,*">
-                <Border Grid.Row="0"
-                        Background="{DynamicResource AdaptiveAccentBrush}"
-                        CornerRadius="36,36,0,0"
-                        Padding="16,12">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Component Settings"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"
-                                   Foreground="White"
-                                   VerticalAlignment="Center" />
-                        <Button Grid.Column="1"
-                                Padding="8"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Click="OnCloseComponentSettingsClick">
-                            <fi:FluentIcon Icon="Dismiss"
-                                           FontSize="14"
-                                           Foreground="White" />
-                        </Button>
-                    </Grid>
-                </Border>
-                <ContentControl x:Name="ComponentSettingsContentHost"
-                                Grid.Row="1" />
-            </Grid>
-        </Border>
 
         <Border x:Name="ComponentLibraryWindow"
                 IsVisible="False"

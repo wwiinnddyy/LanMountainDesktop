@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -29,10 +30,12 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly PluginSharedContractManager _sharedContractManager;
     private readonly IServiceProvider _hostServices;
     private readonly IPluginPackageManager _packageManager;
+    private readonly SettingsFacadeService _settingsFacade;
+    private readonly SettingsCatalogService _settingsCatalogService;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
     private readonly List<PluginLoadResult> _loadResults = [];
     private readonly List<PluginCatalogEntry> _catalog = [];
-    private readonly List<PluginSettingsPageContribution> _settingsPages = [];
+    private readonly List<PluginSettingsSectionContribution> _settingsSections = [];
     private readonly List<PluginDesktopComponentContribution> _desktopComponents = [];
     private readonly object _packageMutationGate = new();
 
@@ -42,7 +45,14 @@ public sealed class PluginRuntimeService : IDisposable
         _sharedContractManager = new PluginSharedContractManager(
             Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
         _packageManager = new PluginRuntimePackageManager(this);
-        _hostServices = new PluginHostServiceProvider(_packageManager, _applicationLifecycle, _exportRegistry);
+        _settingsFacade = new SettingsFacadeService(this);
+        _settingsCatalogService = (SettingsCatalogService)_settingsFacade.Catalog;
+        _hostServices = new PluginHostServiceProvider(
+            _packageManager,
+            _applicationLifecycle,
+            _exportRegistry,
+            _settingsFacade.Settings,
+            _settingsFacade.Catalog);
         _loaderOptions = CreateOptions();
         _loader = new PluginLoader(_loaderOptions);
     }
@@ -55,11 +65,13 @@ public sealed class PluginRuntimeService : IDisposable
 
     public IReadOnlyList<PluginCatalogEntry> Catalog => _catalog;
 
-    public IReadOnlyList<PluginSettingsPageContribution> SettingsPages => _settingsPages;
+    public IReadOnlyList<PluginSettingsSectionContribution> SettingsSections => _settingsSections;
 
     public IReadOnlyList<PluginDesktopComponentContribution> DesktopComponents => _desktopComponents;
 
     public IPluginExportRegistry ExportRegistry => _exportRegistry;
+
+    public ISettingsFacadeService SettingsFacade => _settingsFacade;
 
     public void LoadInstalledPlugins()
     {
@@ -172,11 +184,11 @@ public sealed class PluginRuntimeService : IDisposable
                     true,
                     true,
                     null,
-                    loadResult.LoadedPlugin.SettingsPages.Count,
+                    loadResult.LoadedPlugin.SettingsSections.Count,
                     loadResult.LoadedPlugin.DesktopComponents.Count));
                 AppLogger.Info(
                     "PluginRuntime",
-                    $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsPages={loadResult.LoadedPlugin.SettingsPages.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}.");
+                    $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsSections={loadResult.LoadedPlugin.SettingsSections.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}.");
                 Debug.WriteLine($"[PluginRuntime] Loaded '{loadResult.Manifest?.Id}' from '{loadResult.SourcePath}'.");
                 continue;
             }
@@ -374,13 +386,16 @@ public sealed class PluginRuntimeService : IDisposable
     {
         UnloadInstalledPlugins();
         _sharedContractManager.Dispose();
+        _settingsFacade.Dispose();
     }
 
     private void UnloadInstalledPlugins()
     {
         for (var i = _loadedPlugins.Count - 1; i >= 0; i--)
         {
-            _exportRegistry.RemoveExports(_loadedPlugins[i].Manifest.Id);
+            var pluginId = _loadedPlugins[i].Manifest.Id;
+            _exportRegistry.RemoveExports(pluginId);
+            _settingsCatalogService.RemovePluginSections(pluginId);
             _loadedPlugins[i].Dispose();
         }
 
@@ -388,7 +403,7 @@ public sealed class PluginRuntimeService : IDisposable
         _exportRegistry.Clear();
         _loadResults.Clear();
         _catalog.Clear();
-        _settingsPages.Clear();
+        _settingsSections.Clear();
         _desktopComponents.Clear();
     }
 
@@ -593,9 +608,16 @@ public sealed class PluginRuntimeService : IDisposable
     {
         _exportRegistry.ReplaceExports(loadedPlugin.Manifest.Id, loadedPlugin.ExportedServices);
 
-        foreach (var settingsPage in loadedPlugin.SettingsPages)
+        _settingsCatalogService.RegisterPluginSections(loadedPlugin.Manifest.Id, loadedPlugin.SettingsSections);
+
+        _settingsSections.RemoveAll(entry => string.Equals(
+            entry.Plugin.Manifest.Id,
+            loadedPlugin.Manifest.Id,
+            StringComparison.OrdinalIgnoreCase));
+
+        foreach (var settingsSection in loadedPlugin.SettingsSections)
         {
-            _settingsPages.Add(new PluginSettingsPageContribution(loadedPlugin, settingsPage));
+            _settingsSections.Add(new PluginSettingsSectionContribution(loadedPlugin, settingsSection));
         }
 
         foreach (var desktopComponent in loadedPlugin.DesktopComponents)
@@ -769,9 +791,10 @@ public sealed class PluginRuntimeService : IDisposable
     private void RemovePluginFromCatalog(string pluginId)
     {
         _catalog.RemoveAll(entry => string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
-        _settingsPages.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        _settingsSections.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
         _desktopComponents.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
         _loadResults.RemoveAll(entry => string.Equals(entry.Manifest?.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        _settingsCatalogService.RemovePluginSections(pluginId);
     }
 
     private sealed record PluginCandidate(
@@ -784,15 +807,21 @@ public sealed class PluginRuntimeService : IDisposable
         private readonly IPluginPackageManager _packageManager;
         private readonly IHostApplicationLifecycle _applicationLifecycle;
         private readonly IPluginExportRegistry _exportRegistry;
+        private readonly ISettingsService _settingsService;
+        private readonly ISettingsCatalog _settingsCatalog;
 
         public PluginHostServiceProvider(
             IPluginPackageManager packageManager,
             IHostApplicationLifecycle applicationLifecycle,
-            IPluginExportRegistry exportRegistry)
+            IPluginExportRegistry exportRegistry,
+            ISettingsService settingsService,
+            ISettingsCatalog settingsCatalog)
         {
             _packageManager = packageManager;
             _applicationLifecycle = applicationLifecycle;
             _exportRegistry = exportRegistry;
+            _settingsService = settingsService;
+            _settingsCatalog = settingsCatalog;
         }
 
         public object? GetService(Type serviceType)
@@ -810,6 +839,16 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(IPluginExportRegistry))
             {
                 return _exportRegistry;
+            }
+
+            if (serviceType == typeof(ISettingsService))
+            {
+                return _settingsService;
+            }
+
+            if (serviceType == typeof(ISettingsCatalog))
+            {
+                return _settingsCatalog;
             }
 
             return null;

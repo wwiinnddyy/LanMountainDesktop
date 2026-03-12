@@ -170,10 +170,10 @@ public sealed class PluginLoader
             AppLogger.Info("PluginLoader", $"Service provider built. PluginId='{manifest.Id}'.");
             runtimeContext.SetServices(pluginServices);
 
-            var settingsPages = pluginServices
-                .GetServices<PluginSettingsPageRegistration>()
-                .OrderBy(page => page.SortOrder)
-                .ThenBy(page => page.Title, StringComparer.OrdinalIgnoreCase)
+            var settingsSections = pluginServices
+                .GetServices<PluginSettingsSectionRegistration>()
+                .OrderBy(section => section.SortOrder)
+                .ThenBy(section => section.TitleLocalizationKey, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var desktopComponents = pluginServices
                 .GetServices<PluginDesktopComponentRegistration>()
@@ -183,7 +183,7 @@ public sealed class PluginLoader
             var exportedServices = ResolveExports(manifest, pluginServices);
             AppLogger.Info(
                 "PluginLoader",
-                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsPages={settingsPages.Length}; Widgets={desktopComponents.Length}; Exports={exportedServices.Count}."); 
+                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Exports={exportedServices.Count}."); 
             hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
             StartHostedServices(hostedServices);
             AppLogger.Info("PluginLoader", $"Hosted services started. PluginId='{manifest.Id}'; HostedServices={hostedServices.Count}."); 
@@ -196,7 +196,7 @@ public sealed class PluginLoader
                 plugin,
                 runtimeContext,
                 pluginServices,
-                settingsPages,
+                settingsSections,
                 desktopComponents,
                 exportedServices,
                 hostedServices,
@@ -314,6 +314,8 @@ public sealed class PluginLoader
         RegisterHostService<IPluginPackageManager>(services, hostServices);
         RegisterHostService<IHostApplicationLifecycle>(services, hostServices);
         RegisterHostService<IPluginExportRegistry>(services, hostServices);
+        RegisterHostService<ISettingsService>(services, hostServices);
+        RegisterHostService<ISettingsCatalog>(services, hostServices);
 
         return services;
     }

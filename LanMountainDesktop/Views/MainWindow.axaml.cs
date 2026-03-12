@@ -71,20 +71,9 @@ public partial class MainWindow : Window
     };
     private static readonly TaskbarActionId[] DefaultPinnedTaskbarActions =
     [
-        TaskbarActionId.MinimizeToWindows,
-        TaskbarActionId.OpenSettings
+        TaskbarActionId.MinimizeToWindows
     ];
-    private readonly record struct GridMetrics(
-        int ColumnCount,
-        int RowCount,
-        double CellSize,
-        double GapPx,
-        double EdgeInsetPx,
-        double GridWidthPx,
-        double GridHeightPx)
-    {
-        public double Pitch => CellSize + GapPx;
-    }
+    private readonly DesktopGridLayoutService _gridLayoutService = new();
     private readonly MonetColorService _monetColorService = new();
     private readonly AppSettingsService _appSettingsService = new();
     private readonly DesktopLayoutSettingsService _desktopLayoutSettingsService = new();
@@ -300,7 +289,7 @@ public partial class MainWindow : Window
             MinShortSideCells,
             MaxShortSideCells);
 
-        _gridSpacingPreset = NormalizeGridSpacingPreset(snapshot.GridSpacingPreset);
+        _gridSpacingPreset = _gridLayoutService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
         _suppressGridSpacingEvents = true;
         GridSpacingPresetComboBox.SelectedIndex = string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _suppressGridSpacingEvents = false;
@@ -637,11 +626,11 @@ public partial class MainWindow : Window
 
         var innerWidth = Math.Max(1, gridPreviewWidth - horizontalPadding);
         var innerHeight = Math.Max(1, gridPreviewHeight - verticalPadding);
-        var preset = NormalizeGridSpacingPreset(TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
-        var gapRatio = ResolveGridGapRatio(preset);
+        var preset = _gridLayoutService.NormalizeSpacingPreset(TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
+        var gapRatio = _gridLayoutService.ResolveGapRatio(preset);
         var pendingEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
-        var edgeInset = CalculateEdgeInset(innerWidth, innerHeight, previewShortSideCells, pendingEdgeInsetPercent);
-        var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells, gapRatio, edgeInset);
+        var edgeInset = _gridLayoutService.CalculateEdgeInset(innerWidth, innerHeight, previewShortSideCells, pendingEdgeInsetPercent);
+        var gridMetrics = _gridLayoutService.CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
@@ -697,7 +686,7 @@ public partial class MainWindow : Window
         DrawGridPreviewLines(gridMetrics);
     }
 
-    private void DrawGridPreviewLines(GridMetrics gridMetrics)
+    private void DrawGridPreviewLines(DesktopGridMetrics gridMetrics)
     {
         if (GridPreviewLinesCanvas is null || GridPreviewViewport is null || GridPreviewGrid is null)
         {
@@ -778,7 +767,7 @@ public partial class MainWindow : Window
 
     private void OnApplyGridSizeClick(object? sender, RoutedEventArgs e)
     {
-        _gridSpacingPreset = NormalizeGridSpacingPreset(
+        _gridSpacingPreset = _gridLayoutService.NormalizeSpacingPreset(
             TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
         _desktopEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
 
@@ -836,9 +825,9 @@ public partial class MainWindow : Window
     {
         var hostWidth = DesktopHost.Bounds.Width;
         var hostHeight = DesktopHost.Bounds.Height;
-        var gapRatio = ResolveGridGapRatio(_gridSpacingPreset);
-        var edgeInset = CalculateEdgeInset(hostWidth, hostHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
-        var gridMetrics = CalculateGridMetrics(hostWidth, hostHeight, _targetShortSideCells, gapRatio, edgeInset);
+        var gapRatio = _gridLayoutService.ResolveGapRatio(_gridSpacingPreset);
+        var edgeInset = _gridLayoutService.CalculateEdgeInset(hostWidth, hostHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+        var gridMetrics = _gridLayoutService.CalculateGridMetrics(hostWidth, hostHeight, _targetShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
@@ -960,13 +949,6 @@ public partial class MainWindow : Window
             insetPx);
     }
 
-    private static string NormalizeGridSpacingPreset(string? value)
-    {
-        return string.Equals(value, "Compact", StringComparison.OrdinalIgnoreCase)
-            ? "Compact"
-            : "Relaxed";
-    }
-
     private static string NormalizeStatusBarSpacingMode(string? value)
     {
         return value switch
@@ -985,99 +967,6 @@ public partial class MainWindow : Window
         }
 
         return comboBox?.SelectedItem?.ToString();
-    }
-
-    private static double ResolveGridGapRatio(string preset)
-    {
-        return string.Equals(preset, "Compact", StringComparison.OrdinalIgnoreCase) ? 0.06 : 0.12;
-    }
-
-    private static double CalculateEdgeInset(double hostWidth, double hostHeight, int shortSideCells, int insetPercent)
-    {
-        if (hostWidth <= 1 || hostHeight <= 1)
-        {
-            return 0;
-        }
-
-        var cells = Math.Max(1, shortSideCells);
-        var shortSidePx = Math.Max(1, Math.Min(hostWidth, hostHeight));
-        var baseCell = shortSidePx / cells;
-        
-        // Proportional inset based on user percentage selection.
-        var clampedPercent = Math.Clamp(insetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
-        var insetRatio = clampedPercent / 100d;
-        
-        // Keep inset within a practical visual range.
-        return Math.Clamp(baseCell * insetRatio, 0, 80);
-    }
-
-    private static GridMetrics CalculateGridMetrics(
-        double hostWidth,
-        double hostHeight,
-        int shortSideCells,
-        double gapRatio,
-        double edgeInsetPx)
-    {
-        if (hostWidth <= 1 || hostHeight <= 1)
-        {
-            return default;
-        }
-
-        var shortSide = Math.Max(1, shortSideCells);
-        var clampedGapRatio = Math.Max(0, gapRatio);
-        var inset = Math.Max(0, edgeInsetPx);
-
-        // Edge inset should come only from user setting.
-        // Remaining free space is handled by container centering, not baked into inset.
-        var availableWidth = Math.Max(1, hostWidth - inset * 2);
-        var availableHeight = Math.Max(1, hostHeight - inset * 2);
-
-        if (hostWidth >= hostHeight)
-        {
-            var rowCount = shortSide;
-            var denominator = rowCount + Math.Max(0, rowCount - 1) * clampedGapRatio;
-            if (denominator <= 0)
-            {
-                return default;
-            }
-
-            var cellSize = availableHeight / denominator;
-            var gapPx = cellSize * clampedGapRatio;
-            var pitch = cellSize + gapPx;
-            if (pitch <= 0)
-            {
-                return default;
-            }
-
-            var columnCount = Math.Max(1, (int)Math.Floor((availableWidth + gapPx) / pitch));
-            var gridWidth = columnCount * cellSize + Math.Max(0, columnCount - 1) * gapPx;
-            var gridHeight = rowCount * cellSize + Math.Max(0, rowCount - 1) * gapPx;
-
-            return new GridMetrics(columnCount, rowCount, cellSize, gapPx, inset, gridWidth, gridHeight);
-        }
-        else
-        {
-            var columnCount = shortSide;
-            var denominator = columnCount + Math.Max(0, columnCount - 1) * clampedGapRatio;
-            if (denominator <= 0)
-            {
-                return default;
-            }
-
-            var cellSize = availableWidth / denominator;
-            var gapPx = cellSize * clampedGapRatio;
-            var pitch = cellSize + gapPx;
-            if (pitch <= 0)
-            {
-                return default;
-            }
-
-            var rowCount = Math.Max(1, (int)Math.Floor((availableHeight + gapPx) / pitch));
-            var gridWidth = columnCount * cellSize + Math.Max(0, columnCount - 1) * gapPx;
-            var gridHeight = rowCount * cellSize + Math.Max(0, rowCount - 1) * gapPx;
-
-            return new GridMetrics(columnCount, rowCount, cellSize, gapPx, inset, gridWidth, gridHeight);
-        }
     }
 
     private static int ClampComponentSpan(int requestedSpan, int axisCellCount)
@@ -1110,7 +999,6 @@ public partial class MainWindow : Window
         var taskbarTextSize = Math.Clamp(taskbarCellHeight * 0.36, 12, 22);
         var taskbarIconSize = Math.Clamp(taskbarCellHeight * 0.46, 16, 34);
         var taskbarButtonInset = Math.Clamp(taskbarCellHeight * 0.22, 6, 16);
-        var compactButtonInset = Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
         var buttonContentSpacing = Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
         var taskbarButtonPadding = new Thickness(taskbarButtonInset);
 
@@ -1144,27 +1032,6 @@ public partial class MainWindow : Window
         OpenComponentLibraryIcon.FontSize = taskbarIconSize;
         OpenComponentLibraryTextBlock.FontSize = taskbarTextSize;
         SetButtonContentSpacing(OpenComponentLibraryButton, buttonContentSpacing);
-
-        OpenSettingsButton.Margin = new Thickness(0);
-        OpenSettingsButton.Height = taskbarCellHeight;
-        OpenSettingsButton.MinHeight = taskbarCellHeight;
-        OpenSettingsButton.FontSize = taskbarTextSize;
-        OpenSettingsButtonTextBlock.FontSize = taskbarTextSize;
-        OpenSettingsIcon.FontSize = taskbarIconSize;
-        SetButtonContentSpacing(OpenSettingsButton, Math.Clamp(taskbarCellHeight * 0.18, 4, 10));
-
-        if (_isSettingsOpen)
-        {
-            OpenSettingsButton.Width = double.NaN;
-            OpenSettingsButton.MinWidth = Math.Clamp(taskbarCellHeight * 2.45, 120, 360);
-            OpenSettingsButton.Padding = taskbarButtonPadding;
-        }
-        else
-        {
-            OpenSettingsButton.Width = taskbarCellHeight;
-            OpenSettingsButton.MinWidth = taskbarCellHeight;
-            OpenSettingsButton.Padding = new Thickness(compactButtonInset);
-        }
 
         UpdateComponentLibraryLayout(cellSize);
     }
@@ -1293,9 +1160,9 @@ public partial class MainWindow : Window
 
             var innerWidth = Math.Max(1, previewWidth - horizontalPadding);
             var innerHeight = Math.Max(1, previewHeight - verticalPadding);
-            var gapRatio = ResolveGridGapRatio(_gridSpacingPreset);
-            var edgeInset = CalculateEdgeInset(innerWidth, innerHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
-            var gridMetrics = CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells, gapRatio, edgeInset);
+            var gapRatio = _gridLayoutService.ResolveGapRatio(_gridSpacingPreset);
+            var edgeInset = _gridLayoutService.CalculateEdgeInset(innerWidth, innerHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+            var gridMetrics = _gridLayoutService.CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells, gapRatio, edgeInset);
             if (gridMetrics.CellSize <= 0)
             {
                 return;

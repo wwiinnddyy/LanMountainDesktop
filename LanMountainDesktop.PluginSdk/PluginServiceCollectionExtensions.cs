@@ -5,20 +5,26 @@ namespace LanMountainDesktop.PluginSdk;
 
 public static class PluginServiceCollectionExtensions
 {
-    public static IServiceCollection AddPluginSettingsPage<TControl>(
+    public static IServiceCollection AddPluginSettingsSection(
         this IServiceCollection services,
         string id,
-        string title,
+        string titleLocalizationKey,
+        Action<PluginSettingsSectionBuilder> configure,
+        string? descriptionLocalizationKey = null,
+        string iconKey = "PuzzlePiece",
         int sortOrder = 0)
-        where TControl : Control
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configure);
 
-        services.AddSingleton(new PluginSettingsPageRegistration(
+        var builder = new PluginSettingsSectionBuilder(
             id,
-            title,
-            provider => ActivatorUtilities.CreateInstance<TControl>(provider),
-            sortOrder));
+            titleLocalizationKey,
+            descriptionLocalizationKey,
+            iconKey,
+            sortOrder);
+        configure(builder);
+        services.AddSingleton(builder.Build());
         return services;
     }
 

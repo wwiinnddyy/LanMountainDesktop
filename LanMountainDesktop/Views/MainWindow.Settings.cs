@@ -83,10 +83,7 @@ public partial class MainWindow
             CloseSettingsPage(immediate: true);
         }
 
-        if (Application.Current is App app)
-        {
-            app.OpenIndependentSettingsModule("MainWindow");
-        }
+        AppLogger.Info("SettingsFacade", "Open settings entry is disabled during hard-cut settings API migration.");
     }
 
     private void OnCloseSettingsClick(object? sender, RoutedEventArgs e)
@@ -1009,7 +1006,7 @@ public partial class MainWindow
                 MinShortSideCells,
                 MaxShortSideCells);
 
-            _gridSpacingPreset = NormalizeGridSpacingPreset(snapshot.GridSpacingPreset);
+            _gridSpacingPreset = _gridLayoutService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
             _suppressGridSpacingEvents = true;
             GridSpacingPresetComboBox.SelectedIndex =
                 string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;

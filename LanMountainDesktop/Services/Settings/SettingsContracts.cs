@@ -1,0 +1,189 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
+
+namespace LanMountainDesktop.Services.Settings;
+
+public enum WallpaperMediaType
+{
+    None,
+    Image,
+    Video
+}
+
+public sealed record GridSettingsState(int ShortSideCells, string SpacingPreset, int EdgeInsetPercent);
+public sealed record WallpaperSettingsState(string? WallpaperPath, string Placement);
+public sealed record ThemeAppearanceSettingsState(bool IsNightMode, string? ThemeColor);
+public sealed record StatusBarSettingsState(
+    IReadOnlyList<string> TopStatusComponentIds,
+    IReadOnlyList<string> PinnedTaskbarActions,
+    bool EnableDynamicTaskbarActions,
+    string TaskbarLayoutMode,
+    string ClockDisplayFormat,
+    string SpacingMode,
+    int CustomSpacingPercent);
+public sealed record WeatherSettingsState(
+    string LocationMode,
+    string LocationKey,
+    string LocationName,
+    double Latitude,
+    double Longitude,
+    bool AutoRefreshLocation,
+    string ExcludedAlerts,
+    string IconPackId,
+    bool NoTlsRequests,
+    string LocationQuery);
+public sealed record RegionSettingsState(string LanguageCode, string? TimeZoneId);
+public sealed record UpdateSettingsState(bool AutoCheckUpdates, bool IncludePrereleaseUpdates, string UpdateChannel);
+public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
+public sealed record PluginMarketPluginInfo(
+    string Id,
+    string Name,
+    string Description,
+    string Author,
+    string Version,
+    string ApiVersion,
+    string MinHostVersion,
+    string DownloadUrl,
+    string ReleaseTag,
+    string ReleaseAssetName,
+    string IconUrl,
+    string ReadmeUrl,
+    string HomepageUrl,
+    string RepositoryUrl,
+    IReadOnlyList<string> Tags,
+    DateTimeOffset PublishedAt,
+    DateTimeOffset UpdatedAt);
+public sealed record PluginMarketIndexResult(
+    bool Success,
+    IReadOnlyList<PluginMarketPluginInfo> Plugins,
+    string? Source,
+    string? SourceLocation,
+    string? WarningMessage,
+    string? ErrorMessage);
+public sealed record PluginMarketInstallResult(
+    bool Success,
+    string? PluginId,
+    string? PluginName,
+    string? ErrorMessage);
+
+public interface IGridSettingsService
+{
+    GridSettingsState Get();
+    void Save(GridSettingsState state);
+}
+
+public interface IWallpaperSettingsService
+{
+    WallpaperSettingsState Get();
+    void Save(WallpaperSettingsState state);
+}
+
+public interface IWallpaperMediaService
+{
+    WallpaperMediaType DetectMediaType(string? path);
+    Task<string?> ImportAssetAsync(string sourcePath, CancellationToken cancellationToken = default);
+}
+
+public interface IThemeAppearanceService
+{
+    ThemeAppearanceSettingsState Get();
+    void Save(ThemeAppearanceSettingsState state);
+    MonetPalette BuildPalette(bool nightMode, string? wallpaperPath);
+}
+
+public interface IStatusBarSettingsService
+{
+    StatusBarSettingsState Get();
+    void Save(StatusBarSettingsState state);
+}
+
+public interface IWeatherProvider
+{
+    Task<WeatherQueryResult<IReadOnlyList<WeatherLocation>>> SearchLocationsAsync(
+        string keyword,
+        string? locale = null,
+        CancellationToken cancellationToken = default);
+
+    Task<WeatherQueryResult<WeatherSnapshot>> GetWeatherAsync(
+        WeatherQuery query,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IWeatherSettingsService
+{
+    WeatherSettingsState Get();
+    void Save(WeatherSettingsState state);
+}
+
+public interface IRegionSettingsService
+{
+    RegionSettingsState Get();
+    void Save(RegionSettingsState state);
+}
+
+public interface IUpdateSettingsService
+{
+    UpdateSettingsState Get();
+    void Save(UpdateSettingsState state);
+    Task<UpdateCheckResult> CheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
+    Task<UpdateDownloadResult> DownloadAssetAsync(
+        GitHubReleaseAsset asset,
+        string destinationFilePath,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ILauncherCatalogService
+{
+    StartMenuFolderNode LoadCatalog();
+}
+
+public interface ILauncherPolicyService
+{
+    LauncherSettingsSnapshot Get();
+    void Save(LauncherSettingsSnapshot snapshot);
+}
+
+public interface IPluginManagementSettingsService
+{
+    PluginManagementSettingsState Get();
+    void Save(PluginManagementSettingsState state);
+    IReadOnlyList<InstalledPluginInfo> GetInstalledPlugins();
+    bool SetPluginEnabled(string pluginId, bool isEnabled);
+    bool DeleteInstalledPlugin(string pluginId);
+}
+
+public interface IPluginMarketSettingsService
+{
+    Task<PluginMarketIndexResult> LoadIndexAsync(CancellationToken cancellationToken = default);
+    Task<PluginMarketInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+}
+
+public interface IApplicationInfoService
+{
+    string GetAppVersionText();
+    AppRenderBackendInfo GetRenderBackendInfo();
+}
+
+public interface ISettingsFacadeService
+{
+    ISettingsService Settings { get; }
+    ISettingsCatalog Catalog { get; }
+    IGridSettingsService Grid { get; }
+    IWallpaperSettingsService Wallpaper { get; }
+    IWallpaperMediaService WallpaperMedia { get; }
+    IThemeAppearanceService Theme { get; }
+    IStatusBarSettingsService StatusBar { get; }
+    IWeatherSettingsService Weather { get; }
+    IRegionSettingsService Region { get; }
+    IUpdateSettingsService Update { get; }
+    ILauncherCatalogService LauncherCatalog { get; }
+    ILauncherPolicyService LauncherPolicy { get; }
+    IPluginManagementSettingsService PluginManagement { get; }
+    IPluginMarketSettingsService PluginMarket { get; }
+    IApplicationInfoService ApplicationInfo { get; }
+}

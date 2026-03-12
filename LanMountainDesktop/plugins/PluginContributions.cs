@@ -3,9 +3,9 @@ using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Services;
 
-public sealed record PluginSettingsPageContribution(
+public sealed record PluginSettingsSectionContribution(
     LoadedPlugin Plugin,
-    PluginSettingsPageRegistration Registration);
+    PluginSettingsSectionRegistration Registration);
 
 public sealed record PluginDesktopComponentContribution(
     LoadedPlugin Plugin,

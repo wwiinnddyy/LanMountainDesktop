@@ -147,7 +147,7 @@ public partial class MainWindow
         }
     }
 
-    private void UpdateDesktopSurfaceLayout(GridMetrics gridMetrics)
+    private void UpdateDesktopSurfaceLayout(DesktopGridMetrics gridMetrics)
     {
         if (DesktopPagesViewport is null ||
             DesktopPagesHost is null ||

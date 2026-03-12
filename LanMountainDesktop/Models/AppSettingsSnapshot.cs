@@ -60,8 +60,7 @@ public sealed class AppSettingsSnapshot
 
     public List<string> PinnedTaskbarActions { get; set; } =
     [
-        TaskbarActionId.MinimizeToWindows.ToString(),
-        TaskbarActionId.OpenSettings.ToString()
+        TaskbarActionId.MinimizeToWindows.ToString()
     ];
 
     public bool EnableDynamicTaskbarActions { get; set; } = true;
