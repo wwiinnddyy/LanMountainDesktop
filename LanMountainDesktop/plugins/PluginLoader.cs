@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 
 using LanMountainDesktop.Services;
 using LanMountainDesktop.PluginSdk;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace LanMountainDesktop.Plugins;
 
@@ -135,19 +137,45 @@ public sealed class PluginLoader
     {
         PluginLoadContext? loadContext = null;
         IPlugin? plugin = null;
-        PluginContext? context = null;
+        PluginRuntimeContext? runtimeContext = null;
+        ServiceProvider? pluginServices = null;
+        IReadOnlyList<IHostedService> hostedServices = Array.Empty<IHostedService>();
 
         try
         {
+            Directory.CreateDirectory(dataDirectory);
+            ValidatePluginRuntimeAssets(manifest, assemblyPath, pluginDirectory);
+
             loadContext = new PluginLoadContext(assemblyPath, _options.SharedAssemblyNames);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
             var pluginType = ResolvePluginType(assembly);
             plugin = CreatePluginInstance(pluginType);
-            context = CreateContext(manifest, pluginDirectory, dataDirectory, services, properties);
+            runtimeContext = CreateRuntimeContext(manifest, pluginDirectory, dataDirectory, properties);
+            var serviceCollection = CreateServiceCollection(runtimeContext, services);
+            var hostBuilderContext = CreateHostBuilderContext(runtimeContext);
 
-            plugin.Initialize(context);
-            var settingsPages = context.GetSettingsPagesSnapshot();
-            var desktopComponents = context.GetDesktopComponentsSnapshot();
+            plugin.Initialize(hostBuilderContext, serviceCollection);
+
+            pluginServices = serviceCollection.BuildServiceProvider(new ServiceProviderOptions
+            {
+                ValidateScopes = false,
+                ValidateOnBuild = true
+            });
+            runtimeContext.SetServices(pluginServices);
+
+            var settingsPages = pluginServices
+                .GetServices<PluginSettingsPageRegistration>()
+                .OrderBy(page => page.SortOrder)
+                .ThenBy(page => page.Title, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var desktopComponents = pluginServices
+                .GetServices<PluginDesktopComponentRegistration>()
+                .OrderBy(component => component.Category, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            var exportedServices = ResolveExports(manifest, pluginServices);
+            hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
+            StartHostedServices(hostedServices);
 
             var loadedPlugin = new LoadedPlugin(
                 manifest,
@@ -155,17 +183,22 @@ public sealed class PluginLoader
                 assemblyPath,
                 assembly,
                 plugin,
-                context,
+                runtimeContext,
+                pluginServices,
                 settingsPages,
                 desktopComponents,
+                exportedServices,
+                hostedServices,
                 loadContext);
 
             return PluginLoadResult.Success(sourcePath, manifest, loadedPlugin);
         }
         catch (Exception ex)
         {
+            StopHostedServices(hostedServices);
+            DisposeInstance(pluginServices);
             DisposeInstance(plugin);
-            DisposeInstance(context);
+            DisposeInstance(runtimeContext);
             loadContext?.Unload();
             return PluginLoadResult.Failure(sourcePath, manifest, ex);
         }
@@ -243,21 +276,122 @@ public sealed class PluginLoader
         }
     }
 
-    private PluginContext CreateContext(
+    private PluginRuntimeContext CreateRuntimeContext(
         PluginManifest manifest,
         string pluginDirectory,
         string dataDirectory,
-        IServiceProvider? services,
         IReadOnlyDictionary<string, object?>? properties)
     {
-        Directory.CreateDirectory(dataDirectory);
-
-        return new PluginContext(
+        return new PluginRuntimeContext(
             manifest,
             pluginDirectory,
             dataDirectory,
-            services ?? NullServiceProvider.Instance,
             CreateReadOnlyProperties(properties));
+    }
+
+    private ServiceCollection CreateServiceCollection(
+        PluginRuntimeContext runtimeContext,
+        IServiceProvider? hostServices)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(runtimeContext);
+        services.AddSingleton<IPluginRuntimeContext>(runtimeContext);
+        services.AddSingleton(runtimeContext.Manifest);
+        services.AddSingleton<IReadOnlyDictionary<string, object?>>(runtimeContext.Properties);
+        services.AddSingleton<IPluginMessageBus, PluginMessageBus>();
+
+        RegisterHostService<IPluginPackageManager>(services, hostServices);
+        RegisterHostService<IHostApplicationLifecycle>(services, hostServices);
+        RegisterHostService<IPluginExportRegistry>(services, hostServices);
+
+        return services;
+    }
+
+    private static void RegisterHostService<TService>(IServiceCollection services, IServiceProvider? hostServices)
+        where TService : class
+    {
+        if (hostServices?.GetService(typeof(TService)) is TService service)
+        {
+            services.AddSingleton(service);
+        }
+    }
+
+    private static HostBuilderContext CreateHostBuilderContext(PluginRuntimeContext runtimeContext)
+    {
+        var hostBuilderContext = new HostBuilderContext(new Dictionary<object, object>());
+        hostBuilderContext.Properties["LanMountainDesktop.PluginManifest"] = runtimeContext.Manifest;
+        hostBuilderContext.Properties["LanMountainDesktop.PluginDirectory"] = runtimeContext.PluginDirectory;
+        hostBuilderContext.Properties["LanMountainDesktop.PluginDataDirectory"] = runtimeContext.DataDirectory;
+        hostBuilderContext.Properties["LanMountainDesktop.PluginRuntimeContext"] = runtimeContext;
+
+        foreach (var pair in runtimeContext.Properties)
+        {
+            if (pair.Value is not null)
+            {
+                hostBuilderContext.Properties[pair.Key] = pair.Value;
+            }
+        }
+
+        return hostBuilderContext;
+    }
+
+    private static IReadOnlyList<PluginServiceExportDescriptor> ResolveExports(
+        PluginManifest manifest,
+        IServiceProvider services)
+    {
+        return services
+            .GetServices<PluginServiceExportRegistration>()
+            .Select(registration =>
+            {
+                if (!IsSupportedExportContract(manifest, registration.ContractType))
+                {
+                    throw new InvalidOperationException(
+                        $"Plugin '{manifest.Id}' exported contract '{registration.ContractType.FullName}', but export contracts must come from LanMountainDesktop.PluginSdk or a manifest-declared shared contract assembly.");
+                }
+
+                return new PluginServiceExportDescriptor(
+                    manifest.Id,
+                    registration.ContractType,
+                    services.GetService(registration.ContractType)
+                        ?? throw new InvalidOperationException(
+                            $"Plugin '{manifest.Id}' exported contract '{registration.ContractType.FullName}', but no singleton service instance was registered."));
+            })
+            .ToArray();
+    }
+
+    private static bool IsSupportedExportContract(PluginManifest manifest, Type contractType)
+    {
+        if (contractType.Assembly == typeof(IPlugin).Assembly)
+        {
+            return true;
+        }
+
+        var assemblyFileName = contractType.Assembly.GetName().Name + ".dll";
+        return manifest.SharedContracts?.Any(contract =>
+            string.Equals(contract.AssemblyName, assemblyFileName, StringComparison.OrdinalIgnoreCase)) == true;
+    }
+
+    private static void StartHostedServices(IEnumerable<IHostedService> hostedServices)
+    {
+        foreach (var hostedService in hostedServices)
+        {
+            hostedService.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+    }
+
+    private static void StopHostedServices(IEnumerable<IHostedService> hostedServices)
+    {
+        foreach (var hostedService in hostedServices.Reverse())
+        {
+            try
+            {
+                hostedService.StopAsync(CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Ignore best-effort shutdown during failed startup.
+            }
+        }
     }
 
     private IReadOnlyList<PluginCandidate> DiscoverCandidates(
@@ -436,6 +570,27 @@ public sealed class PluginLoader
         return new ReadOnlyDictionary<string, object?>(map);
     }
 
+    private static void ValidatePluginRuntimeAssets(
+        PluginManifest manifest,
+        string assemblyPath,
+        string pluginDirectory)
+    {
+        var depsFilePath = Path.ChangeExtension(assemblyPath, ".deps.json");
+        if (!File.Exists(depsFilePath))
+        {
+            throw new InvalidOperationException(
+                $"Plugin '{manifest.Id}' targets API {PluginSdkInfo.ApiVersion} and must include '{Path.GetFileName(depsFilePath)}' next to its main assembly.");
+        }
+
+        var runtimesDirectory = Path.Combine(pluginDirectory, "runtimes");
+        if (Directory.Exists(runtimesDirectory) &&
+            !Directory.EnumerateFiles(runtimesDirectory, "*", SearchOption.AllDirectories).Any())
+        {
+            throw new InvalidOperationException(
+                $"Plugin '{manifest.Id}' contains an empty 'runtimes' directory. Native/runtime assets must be packaged together with the plugin.");
+        }
+    }
+
     private static Type ResolvePluginType(Assembly assembly)
     {
         var candidateTypes = GetLoadableTypes(assembly)
@@ -543,34 +698,19 @@ public sealed class PluginLoader
         }
     }
 
-    private sealed class PluginContext : IPluginContext, IDisposable, IAsyncDisposable
+    private sealed class PluginRuntimeContext : IPluginRuntimeContext
     {
-        private readonly Dictionary<string, PluginSettingsPageRegistration> _settingsPages =
-            new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, PluginDesktopComponentRegistration> _desktopComponents =
-            new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<Type, object> _registeredServices = [];
-        private readonly List<object> _serviceRegistrationOrder = [];
-        private readonly object _serviceGate = new();
-        private readonly IServiceProvider _hostServices;
-        private int _disposed;
-
-        public PluginContext(
+        public PluginRuntimeContext(
             PluginManifest manifest,
             string pluginDirectory,
             string dataDirectory,
-            IServiceProvider services,
             IReadOnlyDictionary<string, object?> properties)
         {
             Manifest = manifest;
             PluginDirectory = pluginDirectory;
             DataDirectory = dataDirectory;
-            _hostServices = services;
-            Services = new PluginCompositeServiceProvider(this);
             Properties = properties;
-
-            RegisterBuiltInService<IPluginContext>(this);
-            RegisterBuiltInService<IPluginMessageBus>(new PluginMessageBus());
+            Services = NullServiceProvider.Instance;
         }
 
         public PluginManifest Manifest { get; }
@@ -579,7 +719,7 @@ public sealed class PluginLoader
 
         public string DataDirectory { get; }
 
-        public IServiceProvider Services { get; }
+        public IServiceProvider Services { get; private set; }
 
         public IReadOnlyDictionary<string, object?> Properties { get; }
 
@@ -602,181 +742,9 @@ public sealed class PluginLoader
             return false;
         }
 
-        public void RegisterService<TService>(TService service)
-            where TService : class
+        public void SetServices(IServiceProvider services)
         {
-            RegisterServiceCore(typeof(TService), service, allowOverride: false);
-        }
-
-        public void RegisterSettingsPage(PluginSettingsPageRegistration registration)
-        {
-            ArgumentNullException.ThrowIfNull(registration);
-            ThrowIfDisposed();
-
-            if (!_settingsPages.TryAdd(registration.Id, registration))
-            {
-                throw new InvalidOperationException(
-                    $"Plugin '{Manifest.Id}' already registered a settings page with id '{registration.Id}'.");
-            }
-        }
-
-        public void RegisterDesktopComponent(PluginDesktopComponentRegistration registration)
-        {
-            ArgumentNullException.ThrowIfNull(registration);
-            ThrowIfDisposed();
-
-            if (!_desktopComponents.TryAdd(registration.ComponentId, registration))
-            {
-                throw new InvalidOperationException(
-                    $"Plugin '{Manifest.Id}' already registered a desktop component with id '{registration.ComponentId}'.");
-            }
-        }
-
-        public IReadOnlyList<PluginSettingsPageRegistration> GetSettingsPagesSnapshot()
-        {
-            ThrowIfDisposed();
-            return _settingsPages.Values
-                .OrderBy(page => page.SortOrder)
-                .ThenBy(page => page.Title, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
-        public IReadOnlyList<PluginDesktopComponentRegistration> GetDesktopComponentsSnapshot()
-        {
-            ThrowIfDisposed();
-            return _desktopComponents.Values
-                .OrderBy(component => component.Category, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-        }
-
-        internal object? ResolveService(Type serviceType)
-        {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                return null;
-            }
-
-            if (serviceType == typeof(IServiceProvider))
-            {
-                return Services;
-            }
-
-            lock (_serviceGate)
-            {
-                if (_registeredServices.TryGetValue(serviceType, out var service))
-                {
-                    return service;
-                }
-
-                foreach (var registeredService in _registeredServices.Values)
-                {
-                    if (serviceType.IsInstanceOfType(registeredService))
-                    {
-                        return registeredService;
-                    }
-                }
-            }
-
-            return _hostServices.GetService(serviceType);
-        }
-
-        private void RegisterBuiltInService<TService>(TService service)
-            where TService : class
-        {
-            RegisterServiceCore(typeof(TService), service, allowOverride: true);
-        }
-
-        public void Dispose()
-        {
-            DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            {
-                return;
-            }
-
-            object[] services;
-            lock (_serviceGate)
-            {
-                services = _serviceRegistrationOrder.ToArray();
-                _registeredServices.Clear();
-                _serviceRegistrationOrder.Clear();
-            }
-
-            _settingsPages.Clear();
-            _desktopComponents.Clear();
-
-            var disposedServices = new HashSet<object>(ReferenceEqualityComparer.Instance);
-            for (var i = services.Length - 1; i >= 0; i--)
-            {
-                var service = services[i];
-                if (ReferenceEquals(service, this) || !disposedServices.Add(service))
-                {
-                    continue;
-                }
-
-                if (service is IAsyncDisposable asyncDisposable)
-                {
-                    await asyncDisposable.DisposeAsync();
-                }
-                else if (service is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
-        }
-
-        private void RegisterServiceCore(Type serviceType, object service, bool allowOverride)
-        {
-            ArgumentNullException.ThrowIfNull(serviceType);
-            ArgumentNullException.ThrowIfNull(service);
-            ThrowIfDisposed();
-
-            if (!serviceType.IsInstanceOfType(service))
-            {
-                throw new InvalidOperationException(
-                    $"Service instance '{service.GetType().FullName}' is not assignable to '{serviceType.FullName}'.");
-            }
-
-            lock (_serviceGate)
-            {
-                if (!allowOverride && _registeredServices.ContainsKey(serviceType))
-                {
-                    throw new InvalidOperationException(
-                        $"Plugin '{Manifest.Id}' already registered a service for '{serviceType.FullName}'.");
-                }
-
-                _registeredServices[serviceType] = service;
-                _serviceRegistrationOrder.Add(service);
-            }
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                throw new ObjectDisposedException(nameof(PluginContext));
-            }
-        }
-    }
-
-    private sealed class PluginCompositeServiceProvider : IServiceProvider
-    {
-        private readonly PluginContext _context;
-
-        public PluginCompositeServiceProvider(PluginContext context)
-        {
-            _context = context;
-        }
-
-        public object? GetService(Type serviceType)
-        {
-            ArgumentNullException.ThrowIfNull(serviceType);
-            return _context.ResolveService(serviceType);
+            Services = services ?? throw new ArgumentNullException(nameof(services));
         }
     }
 

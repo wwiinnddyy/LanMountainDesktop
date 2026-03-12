@@ -26,7 +26,7 @@ public sealed class PluginLocalizer
 
     public string LanguageCode { get; }
 
-    public static PluginLocalizer Create(IPluginContext context)
+    public static PluginLocalizer Create(IPluginRuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         return new PluginLocalizer(context.PluginDirectory, ResolveLanguageCode(context.Properties));

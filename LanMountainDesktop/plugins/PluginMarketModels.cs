@@ -215,6 +215,8 @@ internal sealed class AirAppMarketIndexDocument
 
     public DateTimeOffset GeneratedAt { get; init; }
 
+    public List<AirAppMarketSharedContractEntry> Contracts { get; init; } = [];
+
     public List<AirAppMarketPluginEntry> Plugins { get; init; } = [];
 
     public static AirAppMarketIndexDocument Load(string json, string sourceName)
@@ -236,6 +238,23 @@ internal sealed class AirAppMarketIndexDocument
 
     private AirAppMarketIndexDocument ValidateAndNormalize(string sourceName)
     {
+        var contracts = Contracts ?? [];
+        var normalizedContracts = new List<AirAppMarketSharedContractEntry>(contracts.Count);
+        var seenContracts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var contract in contracts)
+        {
+            var normalizedContract = contract.ValidateAndNormalize(sourceName);
+            var contractKey = $"{normalizedContract.Id}@{normalizedContract.Version}";
+            if (!seenContracts.Add(contractKey))
+            {
+                throw new InvalidOperationException(
+                    $"Market index '{sourceName}' contains duplicate shared contract '{contractKey}'.");
+            }
+
+            normalizedContracts.Add(normalizedContract);
+        }
+
         var plugins = Plugins ?? [];
         var normalizedPlugins = new List<AirAppMarketPluginEntry>(plugins.Count);
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -260,6 +279,10 @@ internal sealed class AirAppMarketIndexDocument
             GeneratedAt = GeneratedAt == default
                 ? throw new InvalidOperationException($"Market index '{sourceName}' is missing a valid generatedAt timestamp.")
                 : GeneratedAt,
+            Contracts = normalizedContracts
+                .OrderBy(contract => contract.Id, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(contract => contract.Version, StringComparer.OrdinalIgnoreCase)
+                .ToList(),
             Plugins = normalizedPlugins
                 .OrderBy(plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList()
@@ -370,6 +393,56 @@ internal sealed class AirAppMarketIndexDocument
             Math.Max(0, parsed.Minor),
             Math.Max(0, parsed.Build));
         return true;
+    }
+}
+
+internal sealed class AirAppMarketSharedContractEntry
+{
+    public string Id { get; init; } = string.Empty;
+
+    public string Version { get; init; } = string.Empty;
+
+    public string AssemblyName { get; init; } = string.Empty;
+
+    public string DownloadUrl { get; init; } = string.Empty;
+
+    public string Sha256 { get; init; } = string.Empty;
+
+    public long PackageSizeBytes { get; init; }
+
+    public AirAppMarketSharedContractEntry ValidateAndNormalize(string sourceName)
+    {
+        var normalizedSha = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant()
+            ?? throw new InvalidOperationException(
+                $"Market index '{sourceName}' is missing required property '{nameof(Sha256)}' for a shared contract.");
+        if (normalizedSha.Length != 64 || normalizedSha.Any(ch => !Uri.IsHexDigit(ch)))
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' declares invalid SHA-256 '{normalizedSha}' for shared contract '{Id}'.");
+        }
+
+        var normalizedDownloadUrl = AirAppMarketIndexDocument.NormalizeValue(DownloadUrl)
+            ?? throw new InvalidOperationException(
+                $"Market index '{sourceName}' is missing required property '{nameof(DownloadUrl)}' for shared contract '{Id}'.");
+        AirAppMarketIndexDocument.EnsureUrl(normalizedDownloadUrl, nameof(DownloadUrl), sourceName);
+
+        if (PackageSizeBytes <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Market index '{sourceName}' declares invalid packageSizeBytes '{PackageSizeBytes}' for shared contract '{Id}'.");
+        }
+
+        return new AirAppMarketSharedContractEntry
+        {
+            Id = AirAppMarketIndexDocument.NormalizeValue(Id)
+                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing a shared contract id."),
+            Version = AirAppMarketIndexDocument.NormalizeVersion(Version, nameof(Version), sourceName),
+            AssemblyName = AirAppMarketIndexDocument.NormalizeValue(AssemblyName)
+                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing assemblyName for shared contract '{Id}'."),
+            DownloadUrl = normalizedDownloadUrl,
+            Sha256 = normalizedSha,
+            PackageSizeBytes = PackageSizeBytes
+        };
     }
 }
 

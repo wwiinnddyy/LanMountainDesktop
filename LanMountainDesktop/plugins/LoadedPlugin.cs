@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using LanMountainDesktop.PluginSdk;
+using Microsoft.Extensions.Hosting;
 
 namespace LanMountainDesktop.Plugins;
 
@@ -18,9 +19,12 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         string assemblyPath,
         Assembly assembly,
         IPlugin plugin,
-        IPluginContext context,
+        IPluginRuntimeContext runtimeContext,
+        IServiceProvider services,
         IReadOnlyList<PluginSettingsPageRegistration> settingsPages,
         IReadOnlyList<PluginDesktopComponentRegistration> desktopComponents,
+        IReadOnlyList<PluginServiceExportDescriptor> exportedServices,
+        IReadOnlyList<IHostedService> hostedServices,
         PluginLoadContext loadContext)
     {
         Manifest = manifest;
@@ -28,9 +32,12 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         AssemblyPath = assemblyPath;
         Assembly = assembly;
         Plugin = plugin;
-        Context = context;
+        RuntimeContext = runtimeContext;
+        Services = services;
         SettingsPages = settingsPages;
         DesktopComponents = desktopComponents;
+        ExportedServices = exportedServices;
+        HostedServices = hostedServices;
         LoadContext = loadContext;
     }
 
@@ -44,13 +51,21 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
 
     public IPlugin Plugin { get; }
 
-    public IPluginContext Context { get; }
+    public IPluginRuntimeContext RuntimeContext { get; }
+
+    public IPluginRuntimeContext Context => RuntimeContext;
+
+    public IServiceProvider Services { get; }
 
     public IReadOnlyList<PluginSettingsPageRegistration> SettingsPages { get; }
 
     public IReadOnlyList<PluginDesktopComponentRegistration> DesktopComponents { get; }
 
+    public IReadOnlyList<PluginServiceExportDescriptor> ExportedServices { get; }
+
     public PluginLoadContext LoadContext { get; }
+
+    private IReadOnlyList<IHostedService> HostedServices { get; }
 
     public void Dispose()
     {
@@ -64,6 +79,18 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
             return;
         }
 
+        for (var i = HostedServices.Count - 1; i >= 0; i--)
+        {
+            try
+            {
+                await HostedServices[i].StopAsync(CancellationToken.None);
+            }
+            catch
+            {
+                // Ignore plugin hosted service shutdown failures to allow unload cleanup.
+            }
+        }
+
         if (Plugin is IAsyncDisposable asyncDisposable)
         {
             await asyncDisposable.DisposeAsync();
@@ -73,11 +100,20 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
             disposable.Dispose();
         }
 
-        if (Context is IAsyncDisposable asyncContext)
+        if (Services is IAsyncDisposable asyncServices)
+        {
+            await asyncServices.DisposeAsync();
+        }
+        else if (Services is IDisposable disposableServices)
+        {
+            disposableServices.Dispose();
+        }
+
+        if (RuntimeContext is IAsyncDisposable asyncContext)
         {
             await asyncContext.DisposeAsync();
         }
-        else if (Context is IDisposable disposableContext)
+        else if (RuntimeContext is IDisposable disposableContext)
         {
             disposableContext.Dispose();
         }

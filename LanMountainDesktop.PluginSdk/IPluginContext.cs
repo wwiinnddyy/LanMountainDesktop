@@ -1,27 +1,6 @@
-using System.Collections.Generic;
-
 namespace LanMountainDesktop.PluginSdk;
 
-public interface IPluginContext
+[Obsolete("Plugin API 2.0.0 uses IPluginRuntimeContext and IServiceCollection-based initialization.")]
+public interface IPluginContext : IPluginRuntimeContext
 {
-    PluginManifest Manifest { get; }
-
-    string PluginDirectory { get; }
-
-    string DataDirectory { get; }
-
-    IServiceProvider Services { get; }
-
-    IReadOnlyDictionary<string, object?> Properties { get; }
-
-    T? GetService<T>();
-
-    bool TryGetProperty<T>(string key, out T? value);
-
-    void RegisterService<TService>(TService service)
-        where TService : class;
-
-    void RegisterSettingsPage(PluginSettingsPageRegistration registration);
-
-    void RegisterDesktopComponent(PluginDesktopComponentRegistration registration);
 }

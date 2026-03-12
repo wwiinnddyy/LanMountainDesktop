@@ -47,6 +47,9 @@ This directory contains the host-side plugin runtime for LanMountainDesktop.
 - load plugin assemblies
 - integrate plugin settings pages and desktop components
 - expose market and plugin management in the host UI
+- build a plugin-scoped `IServiceCollection`/`ServiceProvider` for API `2.0.0` plugins
+- resolve shared contract assemblies into a version-isolated cache before plugin activation
+- expose explicit cross-plugin exports through `IPluginExportRegistry`
 
 ### Market install order
 
@@ -55,3 +58,9 @@ This directory contains the host-side plugin runtime for LanMountainDesktop.
 3. If Release resolution fails, the host falls back to the repository root `.laapp` from `downloadUrl`.
 4. Plugin details always come from the repository root `README.md`.
 5. Market installs are staged and take effect after restart.
+
+### Dependency model
+
+- Plugin-private managed and native NuGet dependencies remain plugin-local and are resolved through `AssemblyDependencyResolver`.
+- Shared contract assemblies are downloaded from the official market index, cached under `LocalAppData/LanMountainDesktop/SharedContracts/<id>/<version>/`, and loaded into the default context so host and plugins share the same contract types.
+- Different contract versions are isolated on disk. If two active plugins request incompatible versions of the same shared assembly name in one process, the host fails the later activation with a clear error instead of loading an ambiguous contract.

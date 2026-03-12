@@ -7,7 +7,7 @@ public sealed class PluginSettingsPageRegistration
     public PluginSettingsPageRegistration(
         string id,
         string title,
-        Func<Control> contentFactory,
+        Func<IServiceProvider, Control> contentFactory,
         int sortOrder = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -20,11 +20,20 @@ public sealed class PluginSettingsPageRegistration
         SortOrder = sortOrder;
     }
 
+    public PluginSettingsPageRegistration(
+        string id,
+        string title,
+        Func<Control> contentFactory,
+        int sortOrder = 0)
+        : this(id, title, _ => contentFactory(), sortOrder)
+    {
+    }
+
     public string Id { get; }
 
     public string Title { get; }
 
     public int SortOrder { get; }
 
-    public Func<Control> ContentFactory { get; }
+    public Func<IServiceProvider, Control> ContentFactory { get; }
 }

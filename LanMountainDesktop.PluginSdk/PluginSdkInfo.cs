@@ -2,7 +2,7 @@ namespace LanMountainDesktop.PluginSdk;
 
 public static class PluginSdkInfo
 {
-    public const string ApiVersion = "1.0.0";
+    public const string ApiVersion = "2.0.0";
     public const string ManifestFileName = "plugin.json";
     public const string PackageFileExtension = ".laapp";
     public const string DataDirectoryName = "Data";

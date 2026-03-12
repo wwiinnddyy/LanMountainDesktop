@@ -77,7 +77,7 @@ public partial class SettingsWindow
         Control content;
         try
         {
-            content = contribution.Registration.ContentFactory();
+            content = contribution.Registration.ContentFactory(contribution.Plugin.Services);
         }
         catch (Exception ex)
         {

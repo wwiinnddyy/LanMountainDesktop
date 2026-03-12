@@ -7,7 +7,7 @@ public sealed class PluginDesktopComponentRegistration
     public PluginDesktopComponentRegistration(
         string componentId,
         string displayName,
-        Func<PluginDesktopComponentContext, Control> controlFactory,
+        Func<IServiceProvider, PluginDesktopComponentContext, Control> controlFactory,
         string iconKey = "PuzzlePiece",
         string category = "Plugins",
         int minWidthCells = 2,
@@ -40,13 +40,42 @@ public sealed class PluginDesktopComponentRegistration
         CornerRadiusResolver = cornerRadiusResolver;
     }
 
+    public PluginDesktopComponentRegistration(
+        string componentId,
+        string displayName,
+        Func<PluginDesktopComponentContext, Control> controlFactory,
+        string iconKey = "PuzzlePiece",
+        string category = "Plugins",
+        int minWidthCells = 2,
+        int minHeightCells = 2,
+        bool allowDesktopPlacement = true,
+        bool allowStatusBarPlacement = false,
+        PluginDesktopComponentResizeMode resizeMode = PluginDesktopComponentResizeMode.Proportional,
+        string? displayNameLocalizationKey = null,
+        Func<double, double>? cornerRadiusResolver = null)
+        : this(
+            componentId,
+            displayName,
+            (_, context) => controlFactory(context),
+            iconKey,
+            category,
+            minWidthCells,
+            minHeightCells,
+            allowDesktopPlacement,
+            allowStatusBarPlacement,
+            resizeMode,
+            displayNameLocalizationKey,
+            cornerRadiusResolver)
+    {
+    }
+
     public string ComponentId { get; }
 
     public string DisplayName { get; }
 
     public string? DisplayNameLocalizationKey { get; }
 
-    public Func<PluginDesktopComponentContext, Control> ControlFactory { get; }
+    public Func<IServiceProvider, PluginDesktopComponentContext, Control> ControlFactory { get; }
 
     public string IconKey { get; }
 

@@ -85,7 +85,7 @@ public partial class MainWindow
         Control content;
         try
         {
-            content = contribution.Registration.ContentFactory();
+            content = contribution.Registration.ContentFactory(contribution.Plugin.Services);
         }
         catch (Exception ex)
         {

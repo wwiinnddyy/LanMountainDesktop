@@ -118,13 +118,13 @@ public static class DesktopComponentRegistryFactory
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,
                 contribution.Plugin.Context.DataDirectory,
-                contribution.Plugin.Context.Services,
+                contribution.Plugin.Services,
                 contribution.Plugin.Context.Properties,
                 contribution.Registration.ComponentId,
                 context.PlacementId,
                 context.CellSize);
 
-            return contribution.Registration.ControlFactory(pluginContext);
+            return contribution.Registration.ControlFactory(contribution.Plugin.Services, pluginContext);
         }
         catch (Exception ex)
         {

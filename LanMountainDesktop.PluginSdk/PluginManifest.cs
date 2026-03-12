@@ -9,7 +9,8 @@ public sealed record PluginManifest(
     string? Description = null,
     string? Author = null,
     string? Version = null,
-    string? ApiVersion = null)
+    string? ApiVersion = null,
+    IReadOnlyList<PluginSharedContractReference>? SharedContracts = null)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -57,6 +58,7 @@ public sealed record PluginManifest(
 
     private PluginManifest NormalizeAndValidate(string manifestPath)
     {
+        var normalizedSharedContracts = NormalizeSharedContracts(manifestPath, SharedContracts);
         var normalized = this with
         {
             Id = RequireValue(Id, nameof(Id), manifestPath),
@@ -65,7 +67,8 @@ public sealed record PluginManifest(
             Description = NormalizeOptionalValue(Description),
             Author = NormalizeOptionalValue(Author),
             Version = NormalizeOptionalValue(Version),
-            ApiVersion = NormalizeOptionalValue(ApiVersion) ?? PluginSdkInfo.ApiVersion
+            ApiVersion = NormalizeOptionalValue(ApiVersion) ?? PluginSdkInfo.ApiVersion,
+            SharedContracts = normalizedSharedContracts
         };
 
         if (!System.Version.TryParse(normalized.ApiVersion, out var requestedVersion))
@@ -82,7 +85,41 @@ public sealed record PluginManifest(
         if (requestedVersion.Major != currentVersion.Major)
         {
             throw new InvalidOperationException(
-                $"Plugin '{normalized.Id}' targets API version '{normalized.ApiVersion}', but the host provides '{PluginSdkInfo.ApiVersion}'.");
+                $"Plugin '{normalized.Id}' targets API version '{normalized.ApiVersion}', but the host provides '{PluginSdkInfo.ApiVersion}'. Upgrade the plugin to API {PluginSdkInfo.ApiVersion}.");
+        }
+
+        return normalized;
+    }
+
+    private static IReadOnlyList<PluginSharedContractReference> NormalizeSharedContracts(
+        string manifestPath,
+        IReadOnlyList<PluginSharedContractReference>? sharedContracts)
+    {
+        if (sharedContracts is null || sharedContracts.Count == 0)
+        {
+            return Array.Empty<PluginSharedContractReference>();
+        }
+
+        var normalized = new List<PluginSharedContractReference>(sharedContracts.Count);
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var contract in sharedContracts)
+        {
+            if (contract is null)
+            {
+                throw new InvalidOperationException(
+                    $"Plugin manifest '{manifestPath}' contains a null shared contract declaration.");
+            }
+
+            var normalizedContract = contract.NormalizeAndValidate(manifestPath);
+            var contractKey = $"{normalizedContract.Id}@{normalizedContract.Version}";
+            if (!seenIds.Add(contractKey))
+            {
+                throw new InvalidOperationException(
+                    $"Plugin manifest '{manifestPath}' declares duplicate shared contract '{contractKey}'.");
+            }
+
+            normalized.Add(normalizedContract);
         }
 
         return normalized;

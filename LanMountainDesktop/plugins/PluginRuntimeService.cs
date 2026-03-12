@@ -12,6 +12,8 @@ using Avalonia.Markup.Xaml;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.PluginSdk;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace LanMountainDesktop.Services;
 
@@ -19,9 +21,12 @@ public sealed class PluginRuntimeService : IDisposable
 {
     private const string PendingDeletionFileName = ".pending-plugin-deletions.json";
 
+    private readonly PluginLoaderOptions _loaderOptions;
     private readonly PluginLoader _loader;
     private readonly AppSettingsService _appSettingsService = new();
     private readonly IHostApplicationLifecycle _applicationLifecycle = new HostApplicationLifecycleService();
+    private readonly PluginExportRegistry _exportRegistry = new();
+    private readonly PluginSharedContractManager _sharedContractManager;
     private readonly IServiceProvider _hostServices;
     private readonly IPluginPackageManager _packageManager;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
@@ -34,9 +39,12 @@ public sealed class PluginRuntimeService : IDisposable
     public PluginRuntimeService()
     {
         PluginsDirectory = Path.Combine(AppContext.BaseDirectory, "Extensions", "Plugins");
+        _sharedContractManager = new PluginSharedContractManager(
+            Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
         _packageManager = new PluginRuntimePackageManager(this);
-        _hostServices = new PluginHostServiceProvider(_packageManager, _applicationLifecycle);
-        _loader = new PluginLoader(CreateOptions());
+        _hostServices = new PluginHostServiceProvider(_packageManager, _applicationLifecycle, _exportRegistry);
+        _loaderOptions = CreateOptions();
+        _loader = new PluginLoader(_loaderOptions);
     }
 
     public string PluginsDirectory { get; }
@@ -50,6 +58,8 @@ public sealed class PluginRuntimeService : IDisposable
     public IReadOnlyList<PluginSettingsPageContribution> SettingsPages => _settingsPages;
 
     public IReadOnlyList<PluginDesktopComponentContribution> DesktopComponents => _desktopComponents;
+
+    public IPluginExportRegistry ExportRegistry => _exportRegistry;
 
     public void LoadInstalledPlugins()
     {
@@ -98,6 +108,27 @@ public sealed class PluginRuntimeService : IDisposable
                     null,
                     0,
                     0));
+                continue;
+            }
+
+            try
+            {
+                RegisterSharedContractsForLoad(candidate.Manifest);
+            }
+            catch (Exception ex)
+            {
+                var dependencyFailure = PluginLoadResult.Failure(candidate.SourcePath, candidate.Manifest, ex);
+                _loadResults.Add(dependencyFailure);
+                _catalog.Add(new PluginCatalogEntry(
+                    candidate.Manifest,
+                    candidate.SourcePath,
+                    candidate.SourceKind == PluginCatalogSourceKind.Package,
+                    true,
+                    false,
+                    ex.Message,
+                    0,
+                    0));
+                Debug.WriteLine($"[PluginRuntime] Failed to prepare dependencies for '{candidate.Manifest.Id}': {ex}");
                 continue;
             }
 
@@ -277,6 +308,7 @@ public sealed class PluginRuntimeService : IDisposable
         Directory.CreateDirectory(PluginsDirectory);
 
         var manifest = ReadManifestFromPackage(fullPackagePath);
+        _sharedContractManager.EnsureInstalled(manifest);
         AppLogger.Info(
             "PluginRuntime",
             $"Installing package. PluginId='{manifest.Id}'; Source='{fullPackagePath}'; PluginsDirectory='{PluginsDirectory}'.");
@@ -308,6 +340,7 @@ public sealed class PluginRuntimeService : IDisposable
         }
 
         var manifest = ReadManifestFromPackage(fullPackagePath);
+        _sharedContractManager.EnsureInstalled(manifest);
         AppLogger.Info(
             "PluginRuntime",
             $"Registering externally installed package. PluginId='{manifest.Id}'; Source='{fullPackagePath}'.");
@@ -319,16 +352,19 @@ public sealed class PluginRuntimeService : IDisposable
     public void Dispose()
     {
         UnloadInstalledPlugins();
+        _sharedContractManager.Dispose();
     }
 
     private void UnloadInstalledPlugins()
     {
         for (var i = _loadedPlugins.Count - 1; i >= 0; i--)
         {
+            _exportRegistry.RemoveExports(_loadedPlugins[i].Manifest.Id);
             _loadedPlugins[i].Dispose();
         }
 
         _loadedPlugins.Clear();
+        _exportRegistry.Clear();
         _loadResults.Clear();
         _catalog.Clear();
         _settingsPages.Clear();
@@ -483,10 +519,23 @@ public sealed class PluginRuntimeService : IDisposable
             : path + Path.DirectorySeparatorChar;
     }
 
+    private static string GetUserDataRootDirectory()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+        {
+            return Path.Combine(AppContext.BaseDirectory, "Data");
+        }
+
+        return Path.Combine(localAppData, "LanMountainDesktop");
+    }
+
     private static PluginLoaderOptions CreateOptions()
     {
         var options = new PluginLoaderOptions();
         AddSharedAssembly(options, typeof(App).Assembly);
+        AddSharedAssembly(options, typeof(IServiceCollection).Assembly);
+        AddSharedAssembly(options, typeof(HostBuilderContext).Assembly);
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
@@ -517,6 +566,8 @@ public sealed class PluginRuntimeService : IDisposable
 
     private void CollectContributions(LoadedPlugin loadedPlugin)
     {
+        _exportRegistry.ReplaceExports(loadedPlugin.Manifest.Id, loadedPlugin.ExportedServices);
+
         foreach (var settingsPage in loadedPlugin.SettingsPages)
         {
             _settingsPages.Add(new PluginSettingsPageContribution(loadedPlugin, settingsPage));
@@ -525,6 +576,17 @@ public sealed class PluginRuntimeService : IDisposable
         foreach (var desktopComponent in loadedPlugin.DesktopComponents)
         {
             _desktopComponents.Add(new PluginDesktopComponentContribution(loadedPlugin, desktopComponent));
+        }
+    }
+
+    private void RegisterSharedContractsForLoad(PluginManifest manifest)
+    {
+        foreach (var assemblyName in _sharedContractManager.PrepareForLoad(manifest))
+        {
+            if (!string.IsNullOrWhiteSpace(assemblyName))
+            {
+                _loaderOptions.SharedAssemblyNames.Add(assemblyName);
+            }
         }
     }
 
@@ -681,13 +743,16 @@ public sealed class PluginRuntimeService : IDisposable
     {
         private readonly IPluginPackageManager _packageManager;
         private readonly IHostApplicationLifecycle _applicationLifecycle;
+        private readonly IPluginExportRegistry _exportRegistry;
 
         public PluginHostServiceProvider(
             IPluginPackageManager packageManager,
-            IHostApplicationLifecycle applicationLifecycle)
+            IHostApplicationLifecycle applicationLifecycle,
+            IPluginExportRegistry exportRegistry)
         {
             _packageManager = packageManager;
             _applicationLifecycle = applicationLifecycle;
+            _exportRegistry = exportRegistry;
         }
 
         public object? GetService(Type serviceType)
@@ -700,6 +765,11 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(IHostApplicationLifecycle))
             {
                 return _applicationLifecycle;
+            }
+
+            if (serviceType == typeof(IPluginExportRegistry))
+            {
+                return _exportRegistry;
             }
 
             return null;
