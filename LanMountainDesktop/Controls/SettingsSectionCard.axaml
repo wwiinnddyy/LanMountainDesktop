@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:LanMountainDesktop.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanMountainDesktop.Controls.SettingsSectionCard"
+             x:Name="Root">
+    <Border Classes="settings-section-card">
+        <Grid RowDefinitions="Auto,Auto"
+              RowSpacing="16">
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="14">
+                <Border x:Name="IconHost"
+                        Classes="settings-section-card-icon-host">
+                    <fi:SymbolIcon x:Name="CardIcon"
+                                   Classes="icon-l" />
+                </Border>
+
+                <StackPanel Grid.Column="1"
+                            Spacing="4">
+                    <TextBlock x:Name="TitleTextBlock"
+                               Classes="settings-card-header"
+                               Margin="0" />
+                    <TextBlock x:Name="DescriptionTextBlock"
+                               Classes="settings-card-description"
+                               Margin="0" />
+                </StackPanel>
+            </Grid>
+
+            <ContentPresenter x:Name="CardContentHost"
+                              Grid.Row="1" />
+        </Grid>
+    </Border>
+</UserControl>

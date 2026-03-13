@@ -1,0 +1,165 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LanMountainDesktop.ViewModels"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        x:Class="LanMountainDesktop.Views.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Width="1120"
+        Height="760"
+        MinWidth="920"
+        MinHeight="620"
+        CanResize="True"
+        WindowStartupLocation="Manual"
+        SystemDecorations="BorderOnly"
+        FontFamily="{DynamicResource AppFontFamily}"
+        Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{Binding Title}">
+
+    <Grid Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+          RowDefinitions="Auto,Auto,*">
+        <Border x:Name="WindowTitleBarHost"
+                Height="48"
+                Padding="12,0,12,0"
+                Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                BorderThickness="0,0,0,1"
+                PointerPressed="OnWindowTitleBarPointerPressed">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                  ColumnSpacing="8"
+                  VerticalAlignment="Center">
+                <Button x:Name="TogglePaneButton"
+                        Width="40"
+                        Height="32"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnTogglePaneButtonClick">
+                    <fi:FluentIcon x:Name="TogglePaneButtonIcon"
+                                   Icon="PanelLeftExpand"
+                                   IconVariant="Regular" />
+                </Button>
+
+                <fi:FluentIcon x:Name="WindowBrandIcon"
+                               Grid.Column="1"
+                               Margin="6,0,2,0"
+                               Icon="Settings"
+                               IconVariant="Filled"
+                               IsHitTestVisible="False"
+                               VerticalAlignment="Center" />
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Spacing="10">
+                    <TextBlock x:Name="WindowTitleTextBlock"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               IsHitTestVisible="False"
+                               Text="{Binding Title}" />
+                </StackPanel>
+
+                <Button x:Name="RestartNowButton"
+                        Grid.Column="3"
+                        Padding="10,6"
+                        Margin="0,0,4,0"
+                        Background="Transparent"
+                        IsVisible="{Binding IsRestartRequested}"
+                        Click="OnRestartNowClick">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                        <fi:FluentIcon x:Name="RestartButtonIcon"
+                                       Icon="ArrowSync"
+                                       IconVariant="Regular" />
+                        <TextBlock x:Name="RestartButtonTextBlock"
+                                   Text="{Binding RestartButtonText}" />
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="CloseWindowButton"
+                        Grid.Column="4"
+                        Width="40"
+                        Height="32"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnCloseWindowClick">
+                    <fi:FluentIcon x:Name="CloseWindowButtonIcon"
+                                   Icon="Dismiss"
+                                   IconVariant="Regular" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <ui:InfoBar x:Name="RestartInfoBar"
+                    Grid.Row="1"
+                    IsOpen="{Binding IsRestartRequested}"
+                    Margin="16,8,16,0"
+                    Severity="Informational"
+                    IsClosable="False"
+                    Title="{Binding RestartTitle}"
+                    Message="{Binding RestartMessage}">
+            <ui:InfoBar.ActionButton>
+                <Button Click="OnRestartNowClick"
+                        Content="{Binding RestartButtonText}" />
+            </ui:InfoBar.ActionButton>
+        </ui:InfoBar>
+
+        <ui:NavigationView x:Name="RootNavigationView"
+                           Grid.Row="2"
+                           Margin="0,8,0,0"
+                           Background="Transparent"
+                           PaneDisplayMode="Auto"
+                           OpenPaneLength="283"
+                           IsSettingsVisible="False"
+                           IsPaneToggleButtonVisible="False"
+                           IsBackButtonVisible="False"
+                           SelectionChanged="OnNavigationSelectionChanged">
+            <ui:NavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+            </ui:NavigationView.Resources>
+
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="20"
+                  Margin="12,0,16,16">
+                <ui:Frame x:Name="ContentFrame" />
+
+                <Border x:Name="DrawerBorder"
+                        Grid.Column="1"
+                        Width="296"
+                        Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="20"
+                        BoxShadow="0 8 24 #14000000"
+                        IsVisible="{Binding IsDrawerOpen}">
+                    <Grid RowDefinitions="Auto,*"
+                          RowSpacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock x:Name="DrawerTitleTextBlock"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding DrawerTitle}" />
+                            <Button Grid.Column="1"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="OnCloseDrawerClick">
+                                <fi:FluentIcon Icon="Dismiss"
+                                               IconVariant="Regular" />
+                            </Button>
+                        </Grid>
+
+                        <ContentControl x:Name="DrawerContentHost"
+                                        Grid.Row="1" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </ui:NavigationView>
+    </Grid>
+</Window>

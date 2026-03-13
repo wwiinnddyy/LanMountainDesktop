@@ -7,18 +7,24 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.PluginMarket;
 
 namespace LanMountainDesktop.Services.Settings;
 
 internal sealed class GridSettingsService : IGridSettingsService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private readonly DesktopGridLayoutService _gridLayoutService = new();
+
+    public GridSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
 
     public GridSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new GridSettingsState(
             snapshot.GridShortSideCells,
             snapshot.GridSpacingPreset,
@@ -27,11 +33,19 @@ internal sealed class GridSettingsService : IGridSettingsService
 
     public void Save(GridSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.GridShortSideCells = state.ShortSideCells;
         snapshot.GridSpacingPreset = state.SpacingPreset;
         snapshot.DesktopEdgeInsetPercent = state.EdgeInsetPercent;
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.GridShortSideCells),
+                nameof(AppSettingsSnapshot.GridSpacingPreset),
+                nameof(AppSettingsSnapshot.DesktopEdgeInsetPercent)
+            ]);
     }
 
     public string NormalizeSpacingPreset(string? value)
@@ -67,22 +81,34 @@ internal sealed class GridSettingsService : IGridSettingsService
 
 internal sealed class WallpaperSettingsService : IWallpaperSettingsService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
+
+    public WallpaperSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
 
     public WallpaperSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new WallpaperSettingsState(snapshot.WallpaperPath, snapshot.WallpaperPlacement);
     }
 
     public void Save(WallpaperSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.WallpaperPath = state.WallpaperPath;
         snapshot.WallpaperPlacement = string.IsNullOrWhiteSpace(state.Placement)
             ? "Fill"
             : state.Placement.Trim();
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.WallpaperPath),
+                nameof(AppSettingsSnapshot.WallpaperPlacement)
+            ]);
     }
 }
 
@@ -182,24 +208,39 @@ internal sealed class WallpaperMediaService : IWallpaperMediaService
 
 internal sealed class ThemeAppearanceService : IThemeAppearanceService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private readonly MonetColorService _monetColorService = new();
     private readonly WallpaperMediaService _wallpaperMediaService = new();
 
+    public ThemeAppearanceService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
+
     public ThemeAppearanceSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new ThemeAppearanceSettingsState(
             snapshot.IsNightMode ?? false,
-            snapshot.ThemeColor);
+            snapshot.ThemeColor,
+            snapshot.UseSystemChrome);
     }
 
     public void Save(ThemeAppearanceSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.IsNightMode = state.IsNightMode;
         snapshot.ThemeColor = state.ThemeColor;
-        _appSettingsService.Save(snapshot);
+        snapshot.UseSystemChrome = state.UseSystemChrome;
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.IsNightMode),
+                nameof(AppSettingsSnapshot.ThemeColor),
+                nameof(AppSettingsSnapshot.UseSystemChrome)
+            ]);
     }
 
     public MonetPalette BuildPalette(bool nightMode, string? wallpaperPath)
@@ -236,11 +277,16 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
 
 internal sealed class StatusBarSettingsService : IStatusBarSettingsService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
+
+    public StatusBarSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
 
     public StatusBarSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new StatusBarSettingsState(
             snapshot.TopStatusComponentIds?.ToArray() ?? [],
             snapshot.PinnedTaskbarActions?.ToArray() ?? [],
@@ -253,7 +299,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
 
     public void Save(StatusBarSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.TopStatusComponentIds = state.TopStatusComponentIds?.ToList() ?? [];
         snapshot.PinnedTaskbarActions = state.PinnedTaskbarActions?.ToList() ?? [];
         snapshot.EnableDynamicTaskbarActions = state.EnableDynamicTaskbarActions;
@@ -261,7 +307,19 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
         snapshot.ClockDisplayFormat = state.ClockDisplayFormat;
         snapshot.StatusBarSpacingMode = state.SpacingMode;
         snapshot.StatusBarCustomSpacingPercent = state.CustomSpacingPercent;
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.TopStatusComponentIds),
+                nameof(AppSettingsSnapshot.PinnedTaskbarActions),
+                nameof(AppSettingsSnapshot.EnableDynamicTaskbarActions),
+                nameof(AppSettingsSnapshot.TaskbarLayoutMode),
+                nameof(AppSettingsSnapshot.ClockDisplayFormat),
+                nameof(AppSettingsSnapshot.StatusBarSpacingMode),
+                nameof(AppSettingsSnapshot.StatusBarCustomSpacingPercent)
+            ]);
     }
 }
 
@@ -295,12 +353,17 @@ internal sealed class WeatherProviderAdapter : IWeatherProvider, IWeatherInfoSer
 
 internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposable
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private readonly WeatherProviderAdapter _weatherProvider = new();
+
+    public WeatherSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
 
     public WeatherSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new WeatherSettingsState(
             snapshot.WeatherLocationMode,
             snapshot.WeatherLocationKey,
@@ -316,7 +379,7 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
 
     public void Save(WeatherSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.WeatherLocationMode = state.LocationMode;
         snapshot.WeatherLocationKey = state.LocationKey;
         snapshot.WeatherLocationName = state.LocationName;
@@ -327,7 +390,22 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
         snapshot.WeatherIconPackId = state.IconPackId;
         snapshot.WeatherNoTlsRequests = state.NoTlsRequests;
         snapshot.WeatherLocationQuery = state.LocationQuery;
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.WeatherLocationMode),
+                nameof(AppSettingsSnapshot.WeatherLocationKey),
+                nameof(AppSettingsSnapshot.WeatherLocationName),
+                nameof(AppSettingsSnapshot.WeatherLatitude),
+                nameof(AppSettingsSnapshot.WeatherLongitude),
+                nameof(AppSettingsSnapshot.WeatherAutoRefreshLocation),
+                nameof(AppSettingsSnapshot.WeatherExcludedAlerts),
+                nameof(AppSettingsSnapshot.WeatherIconPackId),
+                nameof(AppSettingsSnapshot.WeatherNoTlsRequests),
+                nameof(AppSettingsSnapshot.WeatherLocationQuery)
+            ]);
     }
 
     public IWeatherInfoService GetWeatherInfoService()
@@ -343,41 +421,74 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
 
 internal sealed class RegionSettingsService : IRegionSettingsService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private readonly TimeZoneService _timeZoneService = new();
+
+    public RegionSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        ApplyTimeZone(_settingsService.Load().TimeZoneId);
+    }
 
     public RegionSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new RegionSettingsState(snapshot.LanguageCode, snapshot.TimeZoneId);
     }
 
     public void Save(RegionSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.LanguageCode = string.IsNullOrWhiteSpace(state.LanguageCode)
             ? "zh-CN"
             : state.LanguageCode.Trim();
         snapshot.TimeZoneId = string.IsNullOrWhiteSpace(state.TimeZoneId)
             ? null
             : state.TimeZoneId.Trim();
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.LanguageCode),
+                nameof(AppSettingsSnapshot.TimeZoneId)
+            ]);
+        ApplyTimeZone(snapshot.TimeZoneId);
     }
 
     public TimeZoneService GetTimeZoneService()
     {
         return _timeZoneService;
     }
+
+    private void ApplyTimeZone(string? timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+        {
+            _timeZoneService.CurrentTimeZone = TimeZoneInfo.Local;
+            return;
+        }
+
+        if (!_timeZoneService.SetTimeZoneById(timeZoneId))
+        {
+            _timeZoneService.CurrentTimeZone = TimeZoneInfo.Local;
+        }
+    }
 }
 
 internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposable
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
+
+    public UpdateSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
 
     public UpdateSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new UpdateSettingsState(
             snapshot.AutoCheckUpdates,
             snapshot.IncludePrereleaseUpdates,
@@ -386,11 +497,19 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     public void Save(UpdateSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.AutoCheckUpdates = state.AutoCheckUpdates;
         snapshot.IncludePrereleaseUpdates = state.IncludePrereleaseUpdates;
         snapshot.UpdateChannel = state.UpdateChannel;
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.AutoCheckUpdates),
+                nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
+                nameof(AppSettingsSnapshot.UpdateChannel)
+            ]);
     }
 
     public Task<UpdateCheckResult> CheckForUpdatesAsync(
@@ -443,11 +562,12 @@ internal sealed class LauncherPolicyService : ILauncherPolicyService
 
 internal sealed class PluginManagementSettingsService : IPluginManagementSettingsService
 {
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsService _settingsService;
     private PluginRuntimeService? _pluginRuntimeService;
 
-    public PluginManagementSettingsService(PluginRuntimeService? pluginRuntimeService)
+    public PluginManagementSettingsService(ISettingsService settingsService, PluginRuntimeService? pluginRuntimeService)
     {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _pluginRuntimeService = pluginRuntimeService;
     }
 
@@ -458,15 +578,18 @@ internal sealed class PluginManagementSettingsService : IPluginManagementSetting
 
     public PluginManagementSettingsState Get()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         return new PluginManagementSettingsState(snapshot.DisabledPluginIds?.ToArray() ?? []);
     }
 
     public void Save(PluginManagementSettingsState state)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsService.Load();
         snapshot.DisabledPluginIds = state.DisabledPluginIds?.ToList() ?? [];
-        _appSettingsService.Save(snapshot);
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.DisabledPluginIds)]);
     }
 
     public IReadOnlyList<InstalledPluginInfo> GetInstalledPlugins()
@@ -653,19 +776,19 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
     {
         Settings = new SettingsService();
         Catalog = new SettingsCatalogService();
-        Grid = new GridSettingsService();
-        Wallpaper = new WallpaperSettingsService();
+        Grid = new GridSettingsService(Settings);
+        Wallpaper = new WallpaperSettingsService(Settings);
         WallpaperMedia = new WallpaperMediaService();
-        Theme = new ThemeAppearanceService();
-        StatusBar = new StatusBarSettingsService();
-        _weatherSettingsService = new WeatherSettingsService();
+        Theme = new ThemeAppearanceService(Settings);
+        StatusBar = new StatusBarSettingsService(Settings);
+        _weatherSettingsService = new WeatherSettingsService(Settings);
         Weather = _weatherSettingsService;
-        Region = new RegionSettingsService();
-        _updateSettingsService = new UpdateSettingsService();
+        Region = new RegionSettingsService(Settings);
+        _updateSettingsService = new UpdateSettingsService(Settings);
         Update = _updateSettingsService;
         LauncherCatalog = new LauncherCatalogService();
         LauncherPolicy = new LauncherPolicyService();
-        _pluginManagementSettingsService = new PluginManagementSettingsService(pluginRuntimeService);
+        _pluginManagementSettingsService = new PluginManagementSettingsService(Settings, pluginRuntimeService);
         PluginManagement = _pluginManagementSettingsService;
         _pluginMarketSettingsService = new PluginMarketSettingsService(pluginRuntimeService);
         PluginMarket = _pluginMarketSettingsService;

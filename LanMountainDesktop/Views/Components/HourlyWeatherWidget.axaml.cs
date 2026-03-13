@@ -95,8 +95,8 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         Interval = FluttermotionToken.WeatherAnimationFrameInterval
     };
 
-    private readonly AppSettingsService _settingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly Dictionary<WeatherVisualKind, IBrush> _backgroundBrushCache = new();
     private readonly Dictionary<HyperOS3WeatherVisualKind, IBrush> _particleBrushCache = new();

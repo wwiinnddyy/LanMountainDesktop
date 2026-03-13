@@ -12,6 +12,8 @@ namespace LanMountainDesktop;
 
 sealed class Program
 {
+    internal static string StartupRenderMode { get; private set; } = AppRenderingModeHelper.Default;
+
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
@@ -44,6 +46,7 @@ sealed class Program
         try
         {
             var renderMode = LoadConfiguredRenderMode();
+            StartupRenderMode = renderMode;
             AppLogger.Info("Startup", $"Resolved render mode '{renderMode}'.");
             App.CurrentSingleInstanceService = singleInstance;
             BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);

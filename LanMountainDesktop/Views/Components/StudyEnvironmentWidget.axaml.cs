@@ -13,8 +13,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 {
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
-    private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
     {
@@ -38,6 +38,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ReloadDisplaySettings();
         ApplyCellSize(_currentCellSize);
@@ -104,6 +105,11 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         ApplyCellSize(_currentCellSize);
         UpdateAdaptiveLayout();
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        RefreshVisual();
     }
 
     private void OnUiTimerTick(object? sender, EventArgs e)
@@ -330,7 +336,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private IBrush TryResolveThemeBrush(string resourceKey, string fallbackHex)
     {
-        if (Resources.TryGetResource(resourceKey, ActualThemeVariant, out var resource) && resource is IBrush brush)
+        if (this.TryFindResource(resourceKey, out var resource) && resource is IBrush brush)
         {
             return brush;
         }
@@ -352,6 +358,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
+        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
 
         _monitoringLease?.Dispose();
         _monitoringLease = null;

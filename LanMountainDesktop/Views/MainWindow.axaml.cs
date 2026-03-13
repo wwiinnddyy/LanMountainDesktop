@@ -17,6 +17,7 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -29,7 +30,7 @@ using LibVLCSharp.Shared;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 {
     private enum WallpaperPlacement
     {
@@ -84,7 +85,7 @@ public partial class MainWindow : Window
     private readonly ISettingsService _settingsService;
     private readonly IComponentLayoutStore _componentLayoutStore = ComponentDomainStorageProvider.Instance;
     private readonly IComponentStateStore _componentStateStore = ComponentDomainStorageProvider.Instance;
-    private readonly IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly TimeZoneService _timeZoneService;
     private readonly WindowsStartupService _windowsStartupService = new();
@@ -94,7 +95,8 @@ public partial class MainWindow : Window
     private readonly ComponentRegistry _componentRegistry;
     private readonly DesktopComponentRuntimeRegistry _componentRuntimeRegistry;
     private readonly IComponentLibraryService _componentLibraryService;
-    private readonly IComponentLibraryWindowService _componentLibraryWindowService = new ComponentLibraryWindowService();
+    private readonly IEmbeddedComponentLibraryService _componentLibraryWindowService = new EmbeddedComponentLibraryService();
+    private ComponentLibraryWindow? _detachedComponentLibraryWindow;
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
@@ -190,13 +192,19 @@ public partial class MainWindow : Window
         InitializeComponent();
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,
-            pluginRuntimeService);
+            pluginRuntimeService,
+            _settingsFacade);
         _componentLibraryService = new ComponentLibraryService(_componentRegistry, _componentRuntimeRegistry);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         _settingsService.Changed += OnSettingsChanged;
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
+        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        {
+            settingsWindowService.StateChanged += OnSettingsWindowStateChanged;
+            _isSettingsOpen = settingsWindowService.IsOpen;
+        }
     }
 
     private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -234,6 +242,7 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        SyncSettingsWindowState();
 
         _suppressSettingsPersistence = true;
         var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -295,6 +304,13 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         PersistSettings();
+        if (_detachedComponentLibraryWindow is not null)
+        {
+            _detachedComponentLibraryWindow.AddComponentRequested -= OnDetachedComponentLibraryAddComponentRequested;
+            _detachedComponentLibraryWindow.Closed -= OnDetachedComponentLibraryClosed;
+            _detachedComponentLibraryWindow.Close();
+        }
+        _detachedComponentLibraryWindow = null;
         StopVideoWallpaper();
         DisposeLauncherResources();
         _videoWallpaperMedia?.Dispose();
@@ -316,6 +332,10 @@ public partial class MainWindow : Window
         _settingsService.Changed -= OnSettingsChanged;
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
+        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        {
+            settingsWindowService.StateChanged -= OnSettingsWindowStateChanged;
+        }
         base.OnClosed(e);
     }
 
@@ -985,6 +1005,17 @@ public partial class MainWindow : Window
         BackToWindowsIcon.FontSize = taskbarIconSize;
         BackToWindowsTextBlock.FontSize = taskbarTextSize;
         SetButtonContentSpacing(BackToWindowsButton, buttonContentSpacing);
+
+        OpenSettingsButton.Margin = new Thickness(0);
+        OpenSettingsButton.Padding = taskbarButtonPadding;
+        OpenSettingsButton.FontSize = taskbarTextSize;
+        OpenSettingsButton.MinHeight = taskbarCellHeight;
+        OpenSettingsButton.MinWidth = OpenSettingsButtonTextBlock.IsVisible
+            ? Math.Clamp(taskbarCellHeight * 2.35, 100, 340)
+            : Math.Clamp(taskbarCellHeight * 1.10, 48, 88);
+        OpenSettingsIcon.FontSize = taskbarIconSize;
+        OpenSettingsButtonTextBlock.FontSize = taskbarTextSize;
+        SetButtonContentSpacing(OpenSettingsButton, buttonContentSpacing);
         
         OpenComponentLibraryButton.Margin = new Thickness(0);
         OpenComponentLibraryButton.Padding = taskbarButtonPadding;

@@ -41,8 +41,8 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromMinutes(12)
     };
 
-    private readonly AppSettingsService _settingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly Line _hourHandLine = CreateHandLine("#232938", 4.0);
     private readonly Line _minuteHandLine = CreateHandLine("#2F3749", 2.8);

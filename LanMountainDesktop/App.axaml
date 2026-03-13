@@ -1,4 +1,4 @@
-﻿<Application xmlns="https://github.com/avaloniaui"
+<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sty="using:FluentAvalonia.Styling"
              xmlns:fi="using:FluentIcons.Avalonia"
@@ -22,6 +22,7 @@
         <StyleInclude Source="avares://LanMountainDesktop/Styles/FluttermotionToken.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/GlassModule.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsAnimations.axaml" />
+        <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsCardStyles.axaml" />
 
         <Style Selector="Window">
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />

@@ -55,6 +55,7 @@ public sealed class PluginRuntimeService : IDisposable
             _packageManager,
             _applicationLifecycle,
             _exportRegistry,
+            _settingsFacade,
             _settingsFacade.Settings,
             _settingsFacade.Catalog);
         _loaderOptions = CreateOptions();
@@ -824,6 +825,7 @@ public sealed class PluginRuntimeService : IDisposable
         private readonly IPluginPackageManager _packageManager;
         private readonly IHostApplicationLifecycle _applicationLifecycle;
         private readonly IPluginExportRegistry _exportRegistry;
+        private readonly ISettingsFacadeService _settingsFacade;
         private readonly ISettingsService _settingsService;
         private readonly ISettingsCatalog _settingsCatalog;
 
@@ -831,12 +833,14 @@ public sealed class PluginRuntimeService : IDisposable
             IPluginPackageManager packageManager,
             IHostApplicationLifecycle applicationLifecycle,
             IPluginExportRegistry exportRegistry,
+            ISettingsFacadeService settingsFacade,
             ISettingsService settingsService,
             ISettingsCatalog settingsCatalog)
         {
             _packageManager = packageManager;
             _applicationLifecycle = applicationLifecycle;
             _exportRegistry = exportRegistry;
+            _settingsFacade = settingsFacade;
             _settingsService = settingsService;
             _settingsCatalog = settingsCatalog;
         }
@@ -856,6 +860,11 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(IPluginExportRegistry))
             {
                 return _exportRegistry;
+            }
+
+            if (serviceType == typeof(ISettingsFacadeService))
+            {
+                return _settingsFacade;
             }
 
             if (serviceType == typeof(ISettingsService))

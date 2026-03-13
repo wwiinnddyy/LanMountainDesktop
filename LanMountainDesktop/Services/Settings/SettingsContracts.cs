@@ -16,7 +16,7 @@ public enum WallpaperMediaType
 
 public sealed record GridSettingsState(int ShortSideCells, string SpacingPreset, int EdgeInsetPercent);
 public sealed record WallpaperSettingsState(string? WallpaperPath, string Placement);
-public sealed record ThemeAppearanceSettingsState(bool IsNightMode, string? ThemeColor);
+public sealed record ThemeAppearanceSettingsState(bool IsNightMode, string? ThemeColor, bool UseSystemChrome);
 public sealed record StatusBarSettingsState(
     IReadOnlyList<string> TopStatusComponentIds,
     IReadOnlyList<string> PinnedTaskbarActions,

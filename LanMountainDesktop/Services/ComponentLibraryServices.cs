@@ -6,29 +6,20 @@ using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Views;
 using LanMountainDesktop.Views.Components;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Services;
 
-public sealed record ComponentLibraryCreateContext(
-    double CellSize,
-    TimeZoneService TimeZoneService,
-    IWeatherInfoService WeatherInfoService,
-    IRecommendationInfoService RecommendationInfoService,
-    ICalculatorDataService CalculatorDataService,
-    string? PlacementId = null);
-
-public interface IComponentLibraryService
+public interface IEmbeddedComponentLibraryService
 {
-    IReadOnlyList<DesktopComponentDefinition> GetDefinitions();
+    void Open(MainWindow window);
 
-    bool TryCreateControl(
-        string componentId,
-        ComponentLibraryCreateContext context,
-        out Control? control,
-        out Exception? exception);
+    void Close(MainWindow window);
+
+    void Toggle(MainWindow window);
 }
 
-public interface IComponentLibraryWindowService
+public interface IDetachedComponentLibraryWindowService
 {
     void Open(MainWindow window);
 
@@ -53,6 +44,31 @@ internal sealed class ComponentLibraryService : IComponentLibraryService
         return _registry.GetAll().ToArray();
     }
 
+    public IReadOnlyList<ComponentLibraryCategoryEntry> GetDesktopCategories()
+    {
+        return _runtimeRegistry
+            .GetDesktopComponents()
+            .GroupBy(
+                descriptor => string.IsNullOrWhiteSpace(descriptor.Definition.Category)
+                    ? "Other"
+                    : descriptor.Definition.Category.Trim(),
+                StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ComponentLibraryCategoryEntry(
+                group.Key,
+                group
+                    .OrderBy(descriptor => descriptor.Definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+                    .Select(descriptor => new ComponentLibraryComponentEntry(
+                        descriptor.Definition.Id,
+                        descriptor.Definition.DisplayName,
+                        descriptor.DisplayNameLocalizationKey,
+                        group.Key,
+                        descriptor.Definition.MinWidthCells,
+                        descriptor.Definition.MinHeightCells))
+                    .ToArray()))
+            .ToArray();
+    }
+
     public bool TryCreateControl(
         string componentId,
         ComponentLibraryCreateContext context,
@@ -75,6 +91,7 @@ internal sealed class ComponentLibraryService : IComponentLibraryService
                 context.WeatherInfoService,
                 context.RecommendationInfoService,
                 context.CalculatorDataService,
+                context.SettingsFacade,
                 context.PlacementId);
             return true;
         }
@@ -86,7 +103,7 @@ internal sealed class ComponentLibraryService : IComponentLibraryService
     }
 }
 
-internal sealed class ComponentLibraryWindowService : IComponentLibraryWindowService
+internal sealed class EmbeddedComponentLibraryService : IEmbeddedComponentLibraryService
 {
     public void Open(MainWindow window)
     {
@@ -110,5 +127,32 @@ internal sealed class ComponentLibraryWindowService : IComponentLibraryWindowSer
         }
 
         window.OpenComponentLibraryWindowFromService();
+    }
+}
+
+internal sealed class DetachedComponentLibraryWindowService : IDetachedComponentLibraryWindowService
+{
+    public void Open(MainWindow window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        window.OpenDetachedComponentLibraryWindowFromService();
+    }
+
+    public void Close(MainWindow window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        window.CloseDetachedComponentLibraryWindowFromService();
+    }
+
+    public void Toggle(MainWindow window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        if (window.IsDetachedComponentLibraryWindowOpenFromService)
+        {
+            window.CloseDetachedComponentLibraryWindowFromService();
+            return;
+        }
+
+        window.OpenDetachedComponentLibraryWindowFromService();
     }
 }

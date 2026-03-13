@@ -285,10 +285,35 @@
                                         Grid.Column="2"
                                         Background="Transparent"
                                         BorderThickness="0">
-                                    <Grid ColumnDefinitions="Auto,Auto"
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto"
                                           ColumnSpacing="8">
-                                        <Button x:Name="OpenComponentLibraryButton"
+                                        <Button x:Name="OpenSettingsButton"
                                                 Grid.Column="0"
+                                                IsVisible="False"
+                                                Padding="8"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                Click="OnOpenSettingsClick"
+                                                ToolTip.Tip="Settings">
+                                            <StackPanel Orientation="Horizontal"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="8">
+                                                <fi:FluentIcon x:Name="OpenSettingsIcon"
+                                                               Icon="Settings"
+                                                               IconVariant="Regular" />
+                                                <TextBlock x:Name="OpenSettingsButtonTextBlock"
+                                                           IsVisible="False"
+                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                           Text="Settings" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <Button x:Name="OpenComponentLibraryButton"
+                                                Grid.Column="1"
                                                 IsVisible="False"
                                                 Padding="8"
                                                 HorizontalAlignment="Stretch"

@@ -55,7 +55,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private readonly object _snapshotSync = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _renderTimer = new()
     {
@@ -89,6 +89,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
@@ -190,6 +191,24 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         ApplyCellSize(_currentCellSize);
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        var panelColor = ResolvePanelBackgroundColor();
+        ApplyTypographyByBackground(panelColor);
+        ApplyStatusBadgeStyle(StatusVisualKind.Default, panelColor);
+
+        lock (_snapshotSync)
+        {
+            _pendingSnapshot = _studyAnalyticsService.GetSnapshot();
+            _hasPendingSnapshot = true;
+        }
+
+        if (!_renderTimer.IsEnabled)
+        {
+            OnRenderTimerTick(this, EventArgs.Empty);
+        }
     }
 
     private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
@@ -375,7 +394,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             return solidBackground.Color;
         }
 
-        if (Resources.TryGetResource("AdaptiveGlassStrongBackgroundBrush", ActualThemeVariant, out var resource) &&
+        if (this.TryFindResource("AdaptiveGlassStrongBackgroundBrush", out var resource) &&
             resource is ISolidColorBrush solidBrush)
         {
             return solidBrush.Color;
@@ -580,6 +599,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
+        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
 
         if (_isSubscribed)
         {

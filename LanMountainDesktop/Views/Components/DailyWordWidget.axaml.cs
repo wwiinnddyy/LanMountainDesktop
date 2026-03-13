@@ -31,8 +31,8 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         Interval = TimeSpan.FromHours(6)
     };
 
-    private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;

@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Services;
@@ -17,6 +18,11 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
     public ComponentSettingsService()
     {
         _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+    }
+
+    public ComponentSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
     }
 
     internal ComponentSettingsService(string settingsDirectory)

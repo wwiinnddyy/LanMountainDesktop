@@ -8,6 +8,8 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -59,7 +61,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private string _componentId = BuiltInComponentIds.DesktopClock;
     private string _placementId = string.Empty;
 
-    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;

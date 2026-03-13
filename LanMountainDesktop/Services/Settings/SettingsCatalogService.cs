@@ -19,10 +19,7 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
             new SettingsSectionDefinition("appearance", SettingsCategories.Appearance, SettingsScope.App, "settings.appearance.title", iconKey: "DesignIdeas", sortOrder: 10),
             new SettingsSectionDefinition("components", SettingsCategories.Components, SettingsScope.ComponentInstance, "settings.components.title", iconKey: "GridDots", sortOrder: 20),
             new SettingsSectionDefinition("plugins", SettingsCategories.Plugins, SettingsScope.Plugin, "settings.plugins.title", iconKey: "PuzzlePiece", sortOrder: 30),
-            new SettingsSectionDefinition("plugin-market", SettingsCategories.PluginMarket, SettingsScope.Plugin, "settings.plugin_market.title", iconKey: "Shop", sortOrder: 40),
-            new SettingsSectionDefinition("update", SettingsCategories.Update, SettingsScope.App, "settings.update.title", iconKey: "ArrowSync", sortOrder: 50),
-            new SettingsSectionDefinition("about", SettingsCategories.About, SettingsScope.App, "settings.about.title", iconKey: "Info", sortOrder: 60),
-            new SettingsSectionDefinition("advanced", SettingsCategories.Advanced, SettingsScope.App, "settings.advanced.title", iconKey: "DeveloperBoard", sortOrder: 70)
+            new SettingsSectionDefinition("about", SettingsCategories.About, SettingsScope.App, "settings.about.title", iconKey: "Info", sortOrder: 40)
         ]);
     }
 

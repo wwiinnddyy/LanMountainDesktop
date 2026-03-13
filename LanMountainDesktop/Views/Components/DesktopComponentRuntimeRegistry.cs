@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.PluginSdk;
@@ -16,7 +17,9 @@ public sealed record DesktopComponentControlFactoryContext(
     IWeatherInfoService WeatherInfoService,
     IRecommendationInfoService RecommendationInfoService,
     ICalculatorDataService CalculatorDataService,
+    ISettingsFacadeService SettingsFacade,
     ISettingsService SettingsService,
+    IComponentInstanceSettingsStore ComponentSettingsStore,
     IComponentSettingsAccessor ComponentSettingsAccessor,
     string? PlacementId = null);
 
@@ -87,10 +90,15 @@ public sealed class DesktopComponentRuntimeDescriptor
         IWeatherInfoService weatherInfoService,
         IRecommendationInfoService recommendationInfoService,
         ICalculatorDataService calculatorDataService,
+        ISettingsFacadeService settingsFacade,
         string? placementId = null)
     {
-        var settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+        ArgumentNullException.ThrowIfNull(settingsFacade);
+
+        var settingsService = settingsFacade.Settings;
         var componentAccessor = settingsService.GetComponentAccessor(Definition.Id, placementId);
+        var componentSettingsStore = new ComponentSettingsService(settingsService);
+        componentSettingsStore.SetScopedComponentContext(Definition.Id, placementId);
         var control = _controlFactory(new DesktopComponentControlFactoryContext(
             Definition,
             cellSize,
@@ -98,18 +106,35 @@ public sealed class DesktopComponentRuntimeDescriptor
             weatherInfoService,
             recommendationInfoService,
             calculatorDataService,
+            settingsFacade,
             settingsService,
+            componentSettingsStore,
             componentAccessor,
             placementId));
         var runtimeContext = new DesktopComponentRuntimeContext(
             Definition.Id,
             placementId,
+            settingsFacade,
             settingsService,
-            componentAccessor);
+            componentAccessor,
+            componentSettingsStore);
+
+        ApplySettingsDependencies(control, settingsService, componentSettingsStore);
 
         if (control is IComponentRuntimeContextAware runtimeContextAwareComponent)
         {
             runtimeContextAwareComponent.SetComponentRuntimeContext(runtimeContext);
+        }
+
+        if (control is IComponentSettingsContextAware settingsContextAwareComponent)
+        {
+            settingsContextAwareComponent.SetComponentSettingsContext(new DesktopComponentSettingsContext(
+                Definition.Id,
+                placementId,
+                settingsFacade,
+                settingsService,
+                componentAccessor,
+                componentSettingsStore));
         }
 
         if (control is IComponentPlacementContextAware placementAwareComponent)
@@ -148,6 +173,57 @@ public sealed class DesktopComponentRuntimeDescriptor
     public double ResolveCornerRadius(double cellSize)
     {
         return _cornerRadiusResolver(Math.Max(1, cellSize));
+    }
+
+    private static void ApplySettingsDependencies(
+        object? target,
+        ISettingsService settingsService,
+        IComponentInstanceSettingsStore componentSettingsStore)
+    {
+        if (target is null)
+        {
+            return;
+        }
+
+        var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        foreach (var field in target.GetType().GetFields(flags))
+        {
+            if (field.IsInitOnly)
+            {
+                continue;
+            }
+
+            if (typeof(ISettingsService).IsAssignableFrom(field.FieldType))
+            {
+                field.SetValue(target, settingsService);
+                continue;
+            }
+
+            if (typeof(IComponentInstanceSettingsStore).IsAssignableFrom(field.FieldType))
+            {
+                field.SetValue(target, componentSettingsStore);
+            }
+        }
+
+        foreach (var property in target.GetType().GetProperties(flags))
+        {
+            if (!property.CanWrite)
+            {
+                continue;
+            }
+
+            if (typeof(ISettingsService).IsAssignableFrom(property.PropertyType))
+            {
+                property.SetValue(target, settingsService);
+                continue;
+            }
+
+            if (typeof(IComponentInstanceSettingsStore).IsAssignableFrom(property.PropertyType))
+            {
+                property.SetValue(target, componentSettingsStore);
+            }
+        }
     }
 }
 
@@ -368,8 +444,11 @@ public sealed class DesktopComponentRuntimeRegistry
         ];
     }
 
-    public static DesktopComponentRuntimeRegistry CreateDefault(ComponentRegistry componentRegistry)
+    public static DesktopComponentRuntimeRegistry CreateDefault(
+        ComponentRegistry componentRegistry,
+        ISettingsFacadeService settingsFacade)
     {
+        _ = settingsFacade;
         return new DesktopComponentRuntimeRegistry(componentRegistry, GetDefaultRegistrations());
     }
 

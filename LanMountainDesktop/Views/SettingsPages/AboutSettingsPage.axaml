@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
+             x:DataType="vm:AboutSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <TextBlock Classes="settings-section-title"
+                       Text="{Binding PageTitle}" />
+            <TextBlock Classes="settings-section-description"
+                       Text="{Binding PageDescription}" />
+
+            <controls:SettingsSectionCard IconKey="Info"
+                                          Title="{Binding AppInfoHeader}">
+                <controls:SettingsSectionCard.CardContent>
+                    <StackPanel Spacing="14">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding VersionLabel}" />
+                            <TextBlock Opacity="0.82"
+                                       Text="{Binding VersionText}" />
+                        </StackPanel>
+
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding RenderBackendLabel}" />
+                            <TextBlock Opacity="0.82"
+                                       Text="{Binding RenderBackendText}" />
+                        </StackPanel>
+                    </StackPanel>
+                </controls:SettingsSectionCard.CardContent>
+            </controls:SettingsSectionCard>
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding UpdateHeader}"
+                                 IsExpanded="True">
+                <StackPanel Spacing="12">
+                    <controls:SettingsOptionCard IconKey="ArrowSync"
+                                                 Title="{Binding AutoCheckUpdatesLabel}">
+                        <controls:SettingsOptionCard.ActionContent>
+                            <ToggleSwitch IsChecked="{Binding AutoCheckUpdates}" />
+                        </controls:SettingsOptionCard.ActionContent>
+                    </controls:SettingsOptionCard>
+
+                    <controls:SettingsOptionCard IconKey="ArrowSync"
+                                                 Title="{Binding IncludePrereleaseUpdatesLabel}">
+                        <controls:SettingsOptionCard.ActionContent>
+                            <ToggleSwitch IsChecked="{Binding IncludePrereleaseUpdates}" />
+                        </controls:SettingsOptionCard.ActionContent>
+                    </controls:SettingsOptionCard>
+
+                    <controls:SettingsOptionCard IconKey="ArrowSync"
+                                                 Title="{Binding UpdateChannelLabel}">
+                        <controls:SettingsOptionCard.DetailsContent>
+                            <ComboBox ItemsSource="{Binding UpdateChannels}"
+                                      SelectedItem="{Binding SelectedUpdateChannel}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SelectionOption">
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </controls:SettingsOptionCard.DetailsContent>
+                    </controls:SettingsOptionCard>
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="12">
+                        <Button Command="{Binding CheckForUpdatesCommand}"
+                                Content="{Binding CheckForUpdatesButtonText}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Opacity="0.76"
+                                   Text="{Binding UpdateStatus}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

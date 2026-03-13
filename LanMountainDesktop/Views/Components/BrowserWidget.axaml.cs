@@ -336,8 +336,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         GoButton.IsEnabled = true;
         AddressTextBox.IsEnabled = true;
         UnavailableOverlay.IsVisible = false;
-
-        TryNavigate(_lastKnownUri, "Activate");
     }
 
     private void DeactivateWebView(bool clearUrl)

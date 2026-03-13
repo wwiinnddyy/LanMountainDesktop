@@ -14,6 +14,8 @@ public sealed class AppSettingsSnapshot
 
     public string? ThemeColor { get; set; }
 
+    public bool UseSystemChrome { get; set; }
+
     public string? WallpaperPath { get; set; }
 
     public string WallpaperPlacement { get; set; } = "Fill";

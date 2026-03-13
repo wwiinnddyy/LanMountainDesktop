@@ -44,8 +44,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromMinutes(30)
     };
 
-    private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly Bitmap?[] _newsBitmaps = new Bitmap?[2];
     private readonly List<string?> _newsUrls = [];
@@ -875,4 +875,3 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 }
-

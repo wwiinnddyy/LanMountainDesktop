@@ -26,7 +26,7 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
     private readonly IAudioRecorderService _audioRecorderService = AudioRecorderServiceFactory.CreateRecorder();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private readonly List<Border> _waveBars = [];
     private readonly double[] _waveLevels = new double[WaveBarCount];

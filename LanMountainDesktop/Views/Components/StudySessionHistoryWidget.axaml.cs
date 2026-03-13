@@ -47,7 +47,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private double _currentCellSize = 48;
@@ -72,6 +72,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
         DialogCancelButton.Click += (_, _) => CloseDialog();
         DialogConfirmButton.Click += (_, _) => ConfirmDialog();
         DialogRenameTextBox.KeyDown += OnDialogRenameTextBoxKeyDown;
@@ -127,6 +128,14 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         UpdateAdaptiveLayout();
+        if (_currentSnapshot is not null)
+        {
+            RenderSnapshot(_currentSnapshot);
+        }
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
         if (_currentSnapshot is not null)
         {
             RenderSnapshot(_currentSnapshot);
@@ -657,7 +666,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             return solidBackground.Color;
         }
 
-        if (Resources.TryGetResource("AdaptiveGlassStrongBackgroundBrush", ActualThemeVariant, out var resource) &&
+        if (this.TryFindResource("AdaptiveGlassStrongBackgroundBrush", out var resource) &&
             resource is ISolidColorBrush solidBrush)
         {
             return solidBrush.Color;
@@ -747,6 +756,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
+        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
         DialogCancelButton.Click -= (_, _) => CloseDialog();
         DialogConfirmButton.Click -= (_, _) => ConfirmDialog();
         DialogRenameTextBox.KeyDown -= OnDialogRenameTextBoxKeyDown;
@@ -758,5 +768,3 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         }
     }
 }
-
-

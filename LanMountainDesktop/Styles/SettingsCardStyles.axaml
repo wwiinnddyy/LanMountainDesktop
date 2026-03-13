@@ -1,0 +1,198 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="using:FluentAvalonia.UI.Controls">
+
+    <Style Selector="StackPanel.settings-page-container">
+        <Setter Property="Spacing" Value="0" />
+        <Setter Property="Margin" Value="12,14,28,32" />
+        <Setter Property="MaxWidth" Value="900" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-section-title">
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-section-description">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Opacity" Value="0.76" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="MaxWidth" Value="760" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,22" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-subsection-title">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,18,0,10" />
+    </Style>
+
+    <Style Selector="Border.settings-section-card, Border.settings-option-card, Border.settings-list-item">
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background"
+                                 Duration="{StaticResource FluttermotionToken.Duration.Standard}"
+                                 Easing="0.22,1,0.36,1" />
+                <BoxShadowsTransition Property="BoxShadow"
+                                      Duration="{StaticResource FluttermotionToken.Duration.Fast}"
+                                      Easing="0.22,1,0.36,1" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.settings-section-card">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="Margin" Value="0,0,0,14" />
+        <Setter Property="BoxShadow" Value="0 2 8 #12000000" />
+    </Style>
+
+    <Style Selector="Border.settings-option-card">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="BoxShadow" Value="0 1 4 #0F000000" />
+    </Style>
+
+    <Style Selector="Border.settings-list-item">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="BoxShadow" Value="0 1 4 #0F000000" />
+    </Style>
+
+    <Style Selector="Border.settings-list-item:pointerover, Border.settings-option-card:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BoxShadow" Value="0 4 10 #13000000" />
+    </Style>
+
+    <Style Selector="Border.settings-option-card-icon-host, Border.settings-section-card-icon-host">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+
+    <Style Selector="Border.settings-option-card-icon-host">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+    </Style>
+
+    <Style Selector="Border.settings-section-card-icon-host">
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-card-header">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-card-description">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Opacity" Value="0.72" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,-8,0,0" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-item-label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-item-description">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Opacity" Value="0.68" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="MaxWidth" Value="620" />
+    </Style>
+
+    <Style Selector="StackPanel.settings-item">
+        <Setter Property="Spacing" Value="8" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <Style Selector="Grid.settings-inline-pair">
+        <Setter Property="ColumnSpacing" Value="14" />
+    </Style>
+
+    <Style Selector="Grid.settings-list-actions">
+        <Setter Property="ColumnSpacing" Value="12" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card">
+        <Setter Property="Margin" Value="0,0,0,14" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card /template/ ContentPresenter#FooterContentPresenter">
+        <Setter Property="Margin" Value="0,6,0,2" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card /template/ ContentPresenter#ContentPresenter">
+        <Setter Property="Margin" Value="0,14,0,0" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card ComboBox, .settings-section-card ComboBox, .settings-option-card ComboBox">
+        <Setter Property="MinWidth" Value="220" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card TextBox, .settings-section-card TextBox, .settings-option-card TextBox">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="MinHeight" Value="38" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card NumericUpDown, .settings-section-card NumericUpDown, .settings-option-card NumericUpDown">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="MinHeight" Value="38" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander.settings-expander-card ToggleSwitch, .settings-option-card ToggleSwitch, .settings-list-item ToggleSwitch">
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="OnContent" Value="{x:Null}" />
+        <Setter Property="OffContent" Value="{x:Null}" />
+    </Style>
+
+    <Style Selector=".settings-section-card Button, .settings-option-card Button, .settings-list-item Button, ui|SettingsExpander.settings-expander-card Button">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="14,8" />
+    </Style>
+
+    <Style Selector="Button.settings-accent-button">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="MinHeight" Value="36" />
+    </Style>
+
+    <Style Selector="Button.settings-accent-button:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveAccentLightBrush}" />
+    </Style>
+
+    <Style Selector="Separator.settings-separator">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="Margin" Value="0,18" />
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+</Styles>

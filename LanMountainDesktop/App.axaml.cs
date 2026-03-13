@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -7,6 +9,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
@@ -38,6 +41,9 @@ public partial class App : Application
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
+    private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
+    private ISettingsPageRegistry? _settingsPageRegistry;
+    private ISettingsWindowService? _settingsWindowService;
     private bool _exitCleanupCompleted;
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
@@ -46,6 +52,7 @@ public partial class App : Application
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private bool _mainWindowClosed;
+    private bool _uiUnhandledExceptionHooked;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -54,12 +61,18 @@ public partial class App : Application
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
+    internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
     {
+        EnsureSettingsWindowService();
         AppLogger.Info(
             "SettingsFacade",
-            $"Settings UI entry is disabled by hard-cut migration. Source='{source}'; PageTag='{pageTag ?? "<default>"}'.");
+            $"Opening settings window. Source='{source}'; PageTag='{pageTag ?? "<default>"}'.");
+        _settingsWindowService?.Open(new SettingsWindowOpenRequest(
+            Source: source,
+            Owner: _mainWindow is { IsVisible: true } ? _mainWindow : null,
+            PageId: pageTag));
     }
 
     public override void Initialize()
@@ -68,11 +81,15 @@ public partial class App : Application
         ConfigureWebViewUserDataFolder();
         AvaloniaWebViewBuilder.Initialize(default);
         AvaloniaXamlLoader.Load(this);
+        ApplyInitialThemeVariantFromSettings();
+        ApplyCurrentCultureFromSettings();
+        EnsureSettingsWindowService();
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
         AppLogger.Info("App", "Framework initialization completed.");
+        RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePluginRuntime();
         AppSettingsService.SettingsSaved += OnAppSettingsSaved;
@@ -114,6 +131,25 @@ public partial class App : Application
         _ = _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
             Source: "TrayMenu",
             Reason: "User selected Restart App from the tray menu."));
+    }
+
+    private void OnTraySettingsClick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        OpenIndependentSettingsModule("TrayMenu");
+    }
+
+    private void OnTrayComponentLibraryClick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        _detachedComponentLibraryWindowService.Open(_mainWindow);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -204,6 +240,14 @@ public partial class App : Application
         showDesktopItem.Click += OnTrayShowDesktopClick;
         menu.Items.Add(showDesktopItem);
 
+        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "Settings"));
+        settingsItem.Click += OnTraySettingsClick;
+        menu.Items.Add(settingsItem);
+
+        var componentLibraryItem = new NativeMenuItem(L("tray.menu.component_library", "Component Library"));
+        componentLibraryItem.Click += OnTrayComponentLibraryClick;
+        menu.Items.Add(componentLibraryItem);
+
         menu.Items.Add(new NativeMenuItemSeparator());
 
         var restartItem = new NativeMenuItem(L("tray.menu.restart", "Restart App"));
@@ -233,6 +277,48 @@ public partial class App : Application
         }
 
         _trayIcons = null;
+    }
+
+    private void EnsureSettingsWindowService()
+    {
+        _settingsPageRegistry ??= new SettingsPageRegistry(
+            _settingsFacade,
+            _hostApplicationLifecycle,
+            _localizationService,
+            () => _pluginRuntimeService);
+        _settingsWindowService ??= new SettingsWindowService(
+            _settingsPageRegistry,
+            _hostApplicationLifecycle,
+            _settingsFacade);
+    }
+
+    private void ApplyInitialThemeVariantFromSettings()
+    {
+        var themeState = _settingsFacade.Theme.Get();
+        RequestedThemeVariant = themeState.IsNightMode
+            ? ThemeVariant.Dark
+            : ThemeVariant.Light;
+    }
+
+    private void ApplyCurrentCultureFromSettings()
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+
+        CultureInfo culture;
+        try
+        {
+            culture = CultureInfo.GetCultureInfo(languageCode);
+        }
+        catch (CultureNotFoundException)
+        {
+            culture = CultureInfo.GetCultureInfo("zh-CN");
+        }
+
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
     }
 
     private void ActivateMainWindow()
@@ -338,11 +424,50 @@ public partial class App : Application
     {
         Dispatcher.UIThread.Post(() =>
         {
+            ApplyInitialThemeVariantFromSettings();
+            ApplyCurrentCultureFromSettings();
             if (_trayIcons is not null)
             {
                 InitializeTrayIcon();
             }
         }, DispatcherPriority.Background);
+    }
+
+    private void RegisterUiUnhandledExceptionGuard()
+    {
+        if (_uiUnhandledExceptionHooked)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.UnhandledException += OnUiThreadUnhandledException;
+        _uiUnhandledExceptionHooked = true;
+    }
+
+    private void OnUiThreadUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        if (!IsKnownWebViewStartupException(e.Exception))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        AppLogger.Warn(
+            "WebView2",
+            "Suppressed a known WebView startup exception from AvaloniaWebView.Navigate to keep the host process alive.",
+            e.Exception);
+    }
+
+    private static bool IsKnownWebViewStartupException(Exception exception)
+    {
+        if (exception is not NullReferenceException)
+        {
+            return false;
+        }
+
+        var stackTrace = exception.StackTrace ?? string.Empty;
+        return stackTrace.Contains("AvaloniaWebView.WebView.Navigate", StringComparison.Ordinal) &&
+               stackTrace.Contains("AvaloniaWebView.WebView.OnAttachedToVisualTree", StringComparison.Ordinal);
     }
 
     private void PerformExitCleanup()
@@ -366,6 +491,12 @@ public partial class App : Application
         finally
         {
             _pluginRuntimeService = null;
+        }
+
+        _settingsWindowService?.Close();
+        if (_settingsPageRegistry is IDisposable disposableRegistry)
+        {
+            disposableRegistry.Dispose();
         }
 
         AudioRecorderServiceFactory.DisposeSharedServices();

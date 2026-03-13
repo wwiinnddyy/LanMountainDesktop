@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.PluginSdk;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -310,10 +311,15 @@ public sealed class PluginLoader
         services.AddSingleton(runtimeContext.Manifest);
         services.AddSingleton<IReadOnlyDictionary<string, object?>>(runtimeContext.Properties);
         services.AddSingleton<IPluginMessageBus, PluginMessageBus>();
+        services.AddSingleton<IPluginSettingsService>(provider =>
+            new PluginScopedSettingsService(
+                runtimeContext.Manifest.Id,
+                provider.GetRequiredService<ISettingsService>()));
 
         RegisterHostService<IPluginPackageManager>(services, hostServices);
         RegisterHostService<IHostApplicationLifecycle>(services, hostServices);
         RegisterHostService<IPluginExportRegistry>(services, hostServices);
+        RegisterHostService<ISettingsFacadeService>(services, hostServices);
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
 

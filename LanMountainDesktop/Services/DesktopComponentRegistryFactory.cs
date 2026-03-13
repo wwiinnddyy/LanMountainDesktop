@@ -33,7 +33,8 @@ public static class DesktopComponentRegistryFactory
 
     public static DesktopComponentRuntimeRegistry CreateRuntimeRegistry(
         ComponentRegistry componentRegistry,
-        PluginRuntimeService? pluginRuntimeService)
+        PluginRuntimeService? pluginRuntimeService,
+        ISettingsFacadeService settingsFacade)
     {
         var registrations = DesktopComponentRuntimeRegistry.GetDefaultRegistrations().ToList();
         var registeredIds = new HashSet<string>(
@@ -65,6 +66,7 @@ public static class DesktopComponentRegistryFactory
             }
         }
 
+        _ = settingsFacade;
         return new DesktopComponentRuntimeRegistry(componentRegistry, registrations);
     }
 
@@ -116,7 +118,7 @@ public static class DesktopComponentRegistryFactory
         try
         {
             var settingsService = contribution.Plugin.Services.GetService(typeof(ISettingsService)) as ISettingsService
-                ?? HostSettingsFacadeProvider.GetOrCreate().Settings;
+                ?? context.SettingsService;
             var pluginSettings = new PluginScopedSettingsService(
                 contribution.Plugin.Manifest.Id,
                 settingsService);

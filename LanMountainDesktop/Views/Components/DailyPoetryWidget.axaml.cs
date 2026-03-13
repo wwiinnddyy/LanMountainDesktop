@@ -55,7 +55,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         Interval = TimeSpan.FromHours(6)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;

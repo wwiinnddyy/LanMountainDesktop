@@ -29,7 +29,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
     private readonly IMusicControlService _musicControlService = MusicControlServiceFactory.CreateDefault();
     private readonly MonetColorService _monetColorService = new();
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private CancellationTokenSource? _refreshCts;

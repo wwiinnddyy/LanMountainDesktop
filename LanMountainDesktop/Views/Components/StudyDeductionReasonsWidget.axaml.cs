@@ -41,7 +41,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private readonly DispatcherTimer _uiTimer = new()
     {
@@ -73,6 +73,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyVariableFontFamily();
         ReloadLanguageCode();
@@ -112,6 +113,11 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     {
         UpdateAdaptiveLayout();
         ApplyTypographyByBackground(ResolvePanelBackgroundColor());
+    }
+
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        RefreshVisual();
     }
 
     private void OnUiTimerTick(object? sender, EventArgs e)
@@ -572,7 +578,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
             return solidBackground.Color;
         }
 
-        if (Resources.TryGetResource("AdaptiveGlassStrongBackgroundBrush", ActualThemeVariant, out var resource) &&
+        if (this.TryFindResource("AdaptiveGlassStrongBackgroundBrush", out var resource) &&
             resource is ISolidColorBrush solidBrush)
         {
             return solidBrush.Color;

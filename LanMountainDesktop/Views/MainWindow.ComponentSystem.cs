@@ -15,6 +15,7 @@ using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
@@ -44,7 +45,7 @@ public partial class MainWindow
     private TranslateTransform? _componentLibraryCategoryHostTransform;
     private TranslateTransform? _componentLibraryComponentHostTransform;
     private IReadOnlyList<ComponentLibraryCategory> _componentLibraryCategories = Array.Empty<ComponentLibraryCategory>();
-    private IReadOnlyList<DesktopComponentRuntimeDescriptor> _componentLibraryActiveComponents = Array.Empty<DesktopComponentRuntimeDescriptor>();
+    private IReadOnlyList<ComponentLibraryComponentEntry> _componentLibraryActiveComponents = Array.Empty<ComponentLibraryComponentEntry>();
     private bool _isComponentLibraryCategoryGestureActive;
     private bool _isComponentLibraryComponentGestureActive;
     private Point _componentLibraryCategoryGestureStartPoint;
@@ -95,13 +96,51 @@ public partial class MainWindow
         string Id,
         Symbol Icon,
         string Title,
-        IReadOnlyList<DesktopComponentRuntimeDescriptor> Components);
+        IReadOnlyList<ComponentLibraryComponentEntry> Components);
 
     private readonly record struct ComponentScaleRule(int WidthUnit, int HeightUnit, int MinScale);
 
     private void OnOpenComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
-        _componentLibraryWindowService.Toggle(this);
+        _ = sender;
+        _ = e;
+
+        if (_isComponentLibraryOpen)
+        {
+            CloseComponentLibraryWindow(reopenSettings: false);
+            return;
+        }
+
+        var settingsWindowService = (Application.Current as App)?.SettingsWindowService;
+        _reopenSettingsAfterComponentLibraryClose = settingsWindowService?.IsOpen == true;
+        if (_reopenSettingsAfterComponentLibraryClose)
+        {
+            settingsWindowService?.Close();
+        }
+
+        OpenComponentLibraryWindow();
+    }
+
+    private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_isComponentLibraryOpen)
+        {
+            CloseComponentLibraryWindow(reopenSettings: false);
+        }
+
+        var app = Application.Current as App;
+        if (app?.SettingsWindowService is { } settingsWindowService)
+        {
+            settingsWindowService.Toggle(new SettingsWindowOpenRequest(
+                Source: "MainWindowTaskbar",
+                Owner: this));
+            return;
+        }
+
+        app?.OpenIndependentSettingsModule("MainWindowTaskbar");
     }
 
     private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)
@@ -220,16 +259,19 @@ public partial class MainWindow
 
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
-        if (BackToWindowsButton is null || OpenComponentLibraryButton is null)
+        if (BackToWindowsButton is null ||
+            OpenComponentLibraryButton is null ||
+            OpenSettingsButton is null)
         {
             return;
         }
 
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
-        var showSettings = false;
-        var showDesktopEdit = true;
+        var showSettings = true;
+        var showDesktopEdit = _isSettingsOpen;
 
         BackToWindowsButton.IsVisible = showMinimize;
+        OpenSettingsButton.IsVisible = showSettings;
         OpenComponentLibraryButton.IsVisible = showDesktopEdit;
 
         if (TaskbarFixedActionsHost is not null)
@@ -241,6 +283,8 @@ public partial class MainWindow
         {
             TaskbarSettingsActionHost.IsVisible = showSettings || showDesktopEdit;
         }
+
+        UpdateOpenSettingsActionVisualState();
 
         var dynamicActions = ResolveDynamicTaskbarActions(context)
             .Where(action => action.IsVisible)
@@ -256,7 +300,25 @@ public partial class MainWindow
 
     private void UpdateOpenSettingsActionVisualState()
     {
-        // Open-settings action is removed in API-only settings mode.
+        if (OpenSettingsButtonTextBlock is null || OpenSettingsButton is null)
+        {
+            return;
+        }
+
+        var showBackToDesktop = _isSettingsOpen;
+        var buttonText = L("settings.back_to_desktop", "Back to Desktop");
+        OpenSettingsButtonTextBlock.IsVisible = showBackToDesktop;
+        OpenSettingsButtonTextBlock.Text = buttonText;
+        ToolTip.SetTip(
+            OpenSettingsButton,
+            showBackToDesktop
+                ? buttonText
+                : L("tooltip.open_settings", "Settings"));
+
+        var effectiveCellSize = _currentDesktopCellSize > 0
+            ? _currentDesktopCellSize
+            : Math.Max(32, Math.Min(Bounds.Width, Bounds.Height) / Math.Max(1, _targetShortSideCells));
+        ApplyWidgetSizing(effectiveCellSize);
     }
 
     private void OpenComponentLibraryWindow()
@@ -316,11 +378,107 @@ public partial class MainWindow
             _reopenSettingsAfterComponentLibraryClose = false;
             if (shouldReopenSettings)
             {
-                AppLogger.Info(
-                    "SettingsFacade",
-                    "Reopen settings request ignored because settings UI entry is disabled during hard-cut migration.");
+                (Application.Current as App)?.OpenIndependentSettingsModule("ComponentLibraryClose");
             }
         }, FluttermotionToken.Slow);
+    }
+
+    private void OpenDetachedComponentLibraryWindow()
+    {
+        _detachedComponentLibraryWindow ??= CreateDetachedComponentLibraryWindow();
+        _detachedComponentLibraryWindow.Reload();
+        if (!_detachedComponentLibraryWindow.IsVisible)
+        {
+            if (IsVisible)
+            {
+                _detachedComponentLibraryWindow.Show(this);
+            }
+            else
+            {
+                _detachedComponentLibraryWindow.Show();
+            }
+
+            return;
+        }
+
+        _detachedComponentLibraryWindow.Activate();
+    }
+
+    private void CloseDetachedComponentLibraryWindow()
+    {
+        if (_detachedComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        _detachedComponentLibraryWindow.Hide();
+    }
+
+    private ComponentLibraryWindow CreateDetachedComponentLibraryWindow()
+    {
+        var window = new ComponentLibraryWindow(
+            _componentLibraryService,
+            cellSize => new ComponentLibraryCreateContext(
+                cellSize,
+                _timeZoneService,
+                _weatherDataService,
+                _recommendationInfoService,
+                _calculatorDataService,
+                _settingsFacade),
+            L);
+        window.AddComponentRequested += OnDetachedComponentLibraryAddComponentRequested;
+        window.Closed += OnDetachedComponentLibraryClosed;
+        return window;
+    }
+
+    private void OnDetachedComponentLibraryAddComponentRequested(object? sender, string componentId)
+    {
+        _ = sender;
+        if (string.IsNullOrWhiteSpace(componentId) ||
+            _currentDesktopSurfaceIndex < 0 ||
+            _currentDesktopSurfaceIndex >= _desktopPageCount ||
+            !_desktopPageComponentGrids.TryGetValue(_currentDesktopSurfaceIndex, out var pageGrid) ||
+            !_componentRuntimeRegistry.TryGetDescriptor(componentId, out var descriptor))
+        {
+            return;
+        }
+
+        var span = NormalizeComponentCellSpan(
+            componentId,
+            ComponentPlacementRules.EnsureMinimumSize(
+                descriptor.Definition,
+                descriptor.Definition.MinWidthCells,
+                descriptor.Definition.MinHeightCells));
+        var row = Math.Max(0, (pageGrid.RowDefinitions.Count - span.HeightCells) / 2);
+        var column = Math.Max(0, (pageGrid.ColumnDefinitions.Count - span.WidthCells) / 2);
+        PlaceDesktopComponentOnPage(componentId, _currentDesktopSurfaceIndex, row, column);
+    }
+
+    private void OnDetachedComponentLibraryClosed(object? sender, EventArgs e)
+    {
+        _ = e;
+        if (ReferenceEquals(sender, _detachedComponentLibraryWindow))
+        {
+            _detachedComponentLibraryWindow.AddComponentRequested -= OnDetachedComponentLibraryAddComponentRequested;
+            _detachedComponentLibraryWindow.Closed -= OnDetachedComponentLibraryClosed;
+            _detachedComponentLibraryWindow = null;
+        }
+    }
+
+    private void OnSettingsWindowStateChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        SyncSettingsWindowState();
+    }
+
+    private void SyncSettingsWindowState()
+    {
+        var isOpen = (Application.Current as App)?.SettingsWindowService?.IsOpen == true;
+        _isSettingsOpen = isOpen;
+        UpdateDesktopPageAwareComponentContext();
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+        UpdateOpenSettingsActionVisualState();
     }
 
     private void InitializeDesktopComponentDragHandlers()
@@ -1246,6 +1404,21 @@ public partial class MainWindow
     }
 
     private Control? CreateDesktopComponentControl(
+        string componentId,
+        double cellSize,
+        string? placementId,
+        int? pageIndex,
+        string action)
+    {
+        if (!_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
+        {
+            return null;
+        }
+
+        return CreateDesktopComponentControl(runtimeDescriptor, cellSize, placementId, pageIndex, action);
+    }
+
+    private Control? CreateDesktopComponentControl(
         DesktopComponentRuntimeDescriptor runtimeDescriptor,
         double cellSize,
         string? placementId,
@@ -1260,6 +1433,7 @@ public partial class MainWindow
                 _weatherDataService,
                 _recommendationInfoService,
                 _calculatorDataService,
+                _settingsFacade,
                 placementId);
             if (!_componentLibraryService.TryCreateControl(runtimeDescriptor.Definition.Id, createContext, out var component, out var exception) ||
                 component is null)
@@ -1291,6 +1465,7 @@ public partial class MainWindow
     }
 
     internal bool IsComponentLibraryOpenFromService => _isComponentLibraryOpen;
+    internal bool IsDetachedComponentLibraryWindowOpenFromService => _detachedComponentLibraryWindow is { IsVisible: true };
 
     internal void OpenComponentLibraryWindowFromService()
     {
@@ -1300,6 +1475,44 @@ public partial class MainWindow
     internal void CloseComponentLibraryWindowFromService()
     {
         CloseComponentLibraryWindow(reopenSettings: false);
+    }
+
+    internal void OpenDetachedComponentLibraryWindowFromService()
+    {
+        OpenDetachedComponentLibraryWindow();
+    }
+
+    internal void CloseDetachedComponentLibraryWindowFromService()
+    {
+        CloseDetachedComponentLibraryWindow();
+    }
+
+    public bool TryGetSettingsWindowAnchorBounds(out PixelRect anchorBounds)
+    {
+        anchorBounds = default;
+        if (!IsVisible || BottomTaskbarContainer is null)
+        {
+            return false;
+        }
+
+        var origin = BottomTaskbarContainer.TranslatePoint(new Point(0, 0), this);
+        if (origin is null)
+        {
+            return false;
+        }
+
+        var scale = RenderScaling > 0 ? RenderScaling : 1d;
+        var width = (int)Math.Round(BottomTaskbarContainer.Bounds.Width * scale);
+        var height = (int)Math.Round(BottomTaskbarContainer.Bounds.Height * scale);
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        var x = Position.X + (int)Math.Round(origin.Value.X * scale);
+        var y = Position.Y + (int)Math.Round(origin.Value.Y * scale);
+        anchorBounds = new PixelRect(x, y, width, height);
+        return true;
     }
 
     private void CollapseComponentLibraryPanel()
@@ -1314,6 +1527,7 @@ public partial class MainWindow
         _isComponentLibraryOpen = false;
         CancelDesktopComponentDrag();
         CancelDesktopComponentResize(restoreOriginalSpan: true);
+        CloseDetachedComponentLibraryWindow();
         ClearDesktopComponentSelection();
         ClearSelectedLauncherTile(refreshTaskbar: false);
         UpdateDesktopComponentHostEditState();
@@ -2170,27 +2384,18 @@ public partial class MainWindow
 
     private IReadOnlyList<ComponentLibraryCategory> GetComponentLibraryCategories()
     {
-        var descriptors = _componentRuntimeRegistry.GetDesktopComponents();
-        if (descriptors.Count == 0)
+        var categories = _componentLibraryService.GetDesktopCategories();
+        if (categories.Count == 0)
         {
             return Array.Empty<ComponentLibraryCategory>();
         }
 
-        return descriptors
-            .GroupBy(descriptor => descriptor.Definition.Category, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(group =>
-            {
-                var categoryId = string.IsNullOrWhiteSpace(group.Key) ? "Other" : group.Key.Trim();
-                var components = group
-                    .OrderBy(descriptor => descriptor.Definition.DisplayName, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                return new ComponentLibraryCategory(
-                    categoryId,
-                    ResolveComponentLibraryCategoryIcon(categoryId),
-                    GetLocalizedComponentLibraryCategoryTitle(categoryId),
-                    components);
-            })
+        return categories
+            .Select(category => new ComponentLibraryCategory(
+                category.Id,
+                ResolveComponentLibraryCategoryIcon(category.Id),
+                GetLocalizedComponentLibraryCategoryTitle(category.Id),
+                category.Components))
             .ToList();
     }
 
@@ -2411,12 +2616,7 @@ public partial class MainWindow
 
         for (var i = 0; i < componentCount; i++)
         {
-            var descriptor = _componentLibraryActiveComponents[i];
-            var definition = descriptor.Definition;
-            if (!definition.AllowDesktopPlacement)
-            {
-                continue;
-            }
+            var component = _componentLibraryActiveComponents[i];
 
             var page = new Grid
             {
@@ -2429,8 +2629,8 @@ public partial class MainWindow
             var previewMaxWidth = _componentLibraryComponentPageWidth * 0.94;
             var previewMaxHeight = viewportHeight * 0.86;
             var previewSpan = NormalizeComponentCellSpan(
-                definition.Id,
-                (definition.MinWidthCells, definition.MinHeightCells));
+                component.ComponentId,
+                (component.MinWidthCells, component.MinHeightCells));
             var previewCellSize = Math.Min(
                 previewMaxWidth / Math.Max(1, previewSpan.WidthCells),
                 previewMaxHeight / Math.Max(1, previewSpan.HeightCells));
@@ -2441,7 +2641,7 @@ public partial class MainWindow
             var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
 
             var previewControl = CreateDesktopComponentControl(
-                descriptor,
+                component.ComponentId,
                 renderCellSize,
                 placementId: null,
                 pageIndex: null,
@@ -2479,13 +2679,13 @@ public partial class MainWindow
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Child = previewViewbox,
-                Tag = definition.Id
+                Tag = component.ComponentId
             };
             previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
 
             var label = new TextBlock
             {
-                Text = GetLocalizedComponentDisplayName(descriptor),
+                Text = GetLocalizedComponentDisplayName(component),
                 FontSize = 14,
                 FontWeight = FontWeight.SemiBold,
                 Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
@@ -2544,11 +2744,11 @@ public partial class MainWindow
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
     }
 
-    private string GetLocalizedComponentDisplayName(DesktopComponentRuntimeDescriptor descriptor)
+    private string GetLocalizedComponentDisplayName(ComponentLibraryComponentEntry component)
     {
-        return string.IsNullOrWhiteSpace(descriptor.DisplayNameLocalizationKey)
-            ? descriptor.Definition.DisplayName
-            : L(descriptor.DisplayNameLocalizationKey, descriptor.Definition.DisplayName);
+        return string.IsNullOrWhiteSpace(component.DisplayNameLocalizationKey)
+            ? component.DisplayName
+            : L(component.DisplayNameLocalizationKey, component.DisplayName);
     }
 
     private void OnComponentLibraryComponentPreviewPointerPressed(object? sender, PointerPressedEventArgs e)

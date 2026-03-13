@@ -2,10 +2,12 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
@@ -276,6 +278,13 @@ public partial class MainWindow
     private void ApplyNightModeState(bool enabled, bool refreshPalettes)
     {
         _isNightMode = enabled;
+        var requestedThemeVariant = enabled ? ThemeVariant.Dark : ThemeVariant.Light;
+        RequestedThemeVariant = requestedThemeVariant;
+        if (Application.Current is not null)
+        {
+            Application.Current.RequestedThemeVariant = requestedThemeVariant;
+        }
+
         if (!refreshPalettes)
         {
             return;
@@ -335,13 +344,44 @@ public partial class MainWindow
         _suppressSettingsPersistence = true;
         try
         {
+            InitializeLocalization(snapshot.LanguageCode);
+            if (string.IsNullOrWhiteSpace(snapshot.TimeZoneId))
+            {
+                _timeZoneService.CurrentTimeZone = TimeZoneInfo.Local;
+            }
+            else
+            {
+                _timeZoneService.SetTimeZoneById(snapshot.TimeZoneId);
+            }
+
+            _targetShortSideCells = Math.Clamp(
+                snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
+                MinShortSideCells,
+                MaxShortSideCells);
+            _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
+            _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
+            _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
+            _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
             ApplyTaskbarSettings(snapshot);
             InitializeWeatherSettings(snapshot);
+            InitializeAutoStartWithWindowsSetting(snapshot);
+            InitializeAppRenderModeSetting(snapshot);
+            InitializeUpdateSettings(snapshot);
             InitializeDesktopSurfaceState(layoutSnapshot);
             InitializeLauncherVisibilitySettings(launcherSnapshot);
             InitializeDesktopComponentPlacements(layoutSnapshot);
             TryRestoreWallpaper(snapshot.WallpaperPath);
+            if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
+            {
+                _selectedThemeColor = savedThemeColor;
+            }
+
+            _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
+            ApplyNightModeState(_isNightMode, refreshPalettes: true);
             ApplyWallpaperBrush();
+            UpdateWallpaperDisplay();
+            InitializeTimeZoneSettings();
+            ApplyLocalization();
             RebuildDesktopGrid();
         }
         finally

@@ -15,6 +15,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -59,7 +60,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromHours(6)
     };
 
-    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;

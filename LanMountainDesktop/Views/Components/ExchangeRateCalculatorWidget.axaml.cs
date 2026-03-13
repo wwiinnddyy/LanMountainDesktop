@@ -36,7 +36,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         Interval = TimeSpan.FromMinutes(30)
     };
 
-    private readonly AppSettingsService _settingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private ICalculatorDataService _calculatorDataService = DefaultCalculatorService;

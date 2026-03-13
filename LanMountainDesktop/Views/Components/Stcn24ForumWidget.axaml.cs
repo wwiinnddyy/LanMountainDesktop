@@ -45,8 +45,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         Interval = TimeSpan.FromMinutes(20)
     };
 
-    private readonly AppSettingsService _appSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly List<Stcn24ForumPostItemSnapshot> _activeItems = [];
     private readonly List<ForumItemVisual> _itemVisuals = [];

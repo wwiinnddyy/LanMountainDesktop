@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             x:Class="LanMountainDesktop.Views.SettingsPages.ComponentsSettingsPage"
+             x:DataType="vm:ComponentsSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <TextBlock Classes="settings-section-title"
+                       Text="{Binding PageTitle}" />
+            <TextBlock Classes="settings-section-description"
+                       Text="{Binding PageDescription}" />
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding GridHeader}"
+                                 IsExpanded="True">
+                <StackPanel Spacing="14">
+                    <StackPanel Classes="settings-item">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding ShortSideCellsLabel}" />
+                        <NumericUpDown Minimum="6"
+                                       Maximum="96"
+                                       Value="{Binding ShortSideCells}" />
+                    </StackPanel>
+
+                    <StackPanel Classes="settings-item">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding EdgeInsetPercentLabel}" />
+                        <NumericUpDown Minimum="0"
+                                       Maximum="30"
+                                       Value="{Binding EdgeInsetPercent}" />
+                    </StackPanel>
+
+                    <StackPanel Classes="settings-item">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding SpacingPresetLabel}" />
+                        <ComboBox ItemsSource="{Binding SpacingPresets}"
+                                  SelectedItem="{Binding SelectedSpacingPreset}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

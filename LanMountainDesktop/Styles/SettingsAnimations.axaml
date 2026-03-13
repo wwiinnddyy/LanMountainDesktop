@@ -71,7 +71,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
     </Style>
 
-    <Style Selector="Grid.settings-scope ComboBox">
+    <Style Selector=".settings-scope ComboBox">
         <Setter Property="Transitions">
             <Transitions>
                 <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
@@ -80,11 +80,11 @@
         </Setter>
     </Style>
 
-    <Style Selector="Grid.settings-scope ComboBox:pointerover">
+    <Style Selector=".settings-scope ComboBox:pointerover">
         <Setter Property="RenderTransform" Value="scale(1.01)" />
     </Style>
 
-    <Style Selector="Grid.settings-scope ToggleSwitch">
+    <Style Selector=".settings-scope ToggleSwitch">
         <Setter Property="Transitions">
             <Transitions>
                 <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
@@ -93,7 +93,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="Grid.settings-scope ToggleSwitch:pointerover">
+    <Style Selector=".settings-scope ToggleSwitch:pointerover">
         <Setter Property="RenderTransform" Value="scale(1.01)" />
     </Style>
 </Styles>

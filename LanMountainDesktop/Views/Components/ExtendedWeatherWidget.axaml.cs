@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
@@ -26,7 +27,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private readonly DispatcherTimer _animationTimer = new() { Interval = FluttermotionToken.WeatherAnimationFrameInterval };
     private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
     private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
-    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+    private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private IWeatherInfoService _weatherInfoService = DefaultWeatherInfoService;

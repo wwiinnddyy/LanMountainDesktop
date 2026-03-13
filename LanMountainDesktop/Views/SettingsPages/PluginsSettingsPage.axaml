@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PluginsSettingsPage"
+             x:Name="Root"
+             x:DataType="vm:PluginsSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <TextBlock Classes="settings-section-title"
+                       Text="{Binding PageTitle}" />
+            <TextBlock Classes="settings-section-description"
+                       Text="{Binding PageDescription}" />
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="12"
+                        Margin="0,0,0,18">
+                <Button Command="{Binding RefreshCommand}"
+                        Content="{Binding RefreshButtonText}" />
+                <TextBlock VerticalAlignment="Center"
+                           Opacity="0.76"
+                           Text="{Binding StatusMessage}" />
+            </StackPanel>
+
+            <TextBlock Classes="settings-subsection-title"
+                       Text="{Binding InstalledHeader}" />
+
+            <ItemsControl ItemsSource="{Binding InstalledPlugins}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:InstalledPluginItemViewModel">
+                        <Border Classes="settings-list-item">
+                            <Grid Classes="settings-list-actions"
+                                  ColumnDefinitions="*,Auto,Auto">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold"
+                                               Text="{Binding Name}" />
+                                    <TextBlock Opacity="0.76"
+                                               FontSize="12"
+                                               Text="{Binding Description}" />
+                                    <TextBlock Opacity="0.58"
+                                               FontSize="11"
+                                               Text="{Binding Version}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding IsEnabled}"
+                                              Command="{Binding #Root.DataContext.TogglePluginCommand}"
+                                              CommandParameter="{Binding}" />
+                                <Button Grid.Column="2"
+                                        Command="{Binding #Root.DataContext.DeletePluginCommand}"
+                                        CommandParameter="{Binding}"
+                                        Content="{Binding #Root.DataContext.DeleteButtonText}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Classes="settings-subsection-title"
+                       Text="{Binding MarketplaceHeader}" />
+
+            <ItemsControl ItemsSource="{Binding MarketPlugins}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PluginMarketItemViewModel">
+                        <Border Classes="settings-list-item">
+                            <Grid Classes="settings-list-actions"
+                                  ColumnDefinitions="*,Auto">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold"
+                                               Text="{Binding Name}" />
+                                    <TextBlock Opacity="0.76"
+                                               FontSize="12"
+                                               Text="{Binding Description}" />
+                                    <TextBlock Opacity="0.58"
+                                               FontSize="11"
+                                               Text="{Binding Version}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Command="{Binding #Root.DataContext.InstallPluginCommand}"
+                                        CommandParameter="{Binding}"
+                                        Content="{Binding #Root.DataContext.InstallButtonText}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
