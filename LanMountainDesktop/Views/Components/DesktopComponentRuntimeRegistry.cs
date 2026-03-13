@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -14,7 +16,8 @@ public sealed record DesktopComponentControlFactoryContext(
     IWeatherInfoService WeatherInfoService,
     IRecommendationInfoService RecommendationInfoService,
     ICalculatorDataService CalculatorDataService,
-    IComponentInstanceSettingsStore ComponentSettingsStore,
+    ISettingsService SettingsService,
+    IComponentSettingsAccessor ComponentSettingsAccessor,
     string? PlacementId = null);
 
 public sealed class DesktopComponentRuntimeRegistration
@@ -84,9 +87,10 @@ public sealed class DesktopComponentRuntimeDescriptor
         IWeatherInfoService weatherInfoService,
         IRecommendationInfoService recommendationInfoService,
         ICalculatorDataService calculatorDataService,
-        IComponentInstanceSettingsStore componentSettingsStore,
         string? placementId = null)
     {
+        var settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
+        var componentAccessor = settingsService.GetComponentAccessor(Definition.Id, placementId);
         var control = _controlFactory(new DesktopComponentControlFactoryContext(
             Definition,
             cellSize,
@@ -94,12 +98,14 @@ public sealed class DesktopComponentRuntimeDescriptor
             weatherInfoService,
             recommendationInfoService,
             calculatorDataService,
-            componentSettingsStore,
+            settingsService,
+            componentAccessor,
             placementId));
         var runtimeContext = new DesktopComponentRuntimeContext(
             Definition.Id,
             placementId,
-            componentSettingsStore);
+            settingsService,
+            componentAccessor);
 
         if (control is IComponentRuntimeContextAware runtimeContextAwareComponent)
         {
@@ -110,13 +116,6 @@ public sealed class DesktopComponentRuntimeDescriptor
         {
             placementAwareComponent.SetComponentPlacementContext(Definition.Id, placementId);
         }
-
-        if (control is IComponentSettingsStoreAware settingsStoreAwareComponent)
-        {
-            settingsStoreAwareComponent.SetComponentSettingsStore(componentSettingsStore);
-        }
-
-        ComponentSettingsService.ApplyScopedContextToTarget(control, Definition.Id, placementId);
 
         if (control is IDesktopComponentWidget sizedComponent)
         {

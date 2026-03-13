@@ -4,7 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.WebView.Desktop;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop;
 
@@ -121,7 +123,10 @@ sealed class Program
     {
         try
         {
-            return AppRenderingModeHelper.Normalize(new AppSettingsService().Load().AppRenderMode);
+            var snapshot = HostSettingsFacadeProvider.GetOrCreate()
+                .Settings
+                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.PluginSdk.SettingsScope.App);
+            return AppRenderingModeHelper.Normalize(snapshot.AppRenderMode);
         }
         catch (Exception ex)
         {

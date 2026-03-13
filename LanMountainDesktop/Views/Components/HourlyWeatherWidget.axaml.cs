@@ -18,7 +18,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
 {
     private enum WeatherVisualKind
     {
@@ -233,12 +233,6 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
             ? BuiltInComponentIds.DesktopHourlyWeather
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
-        RefreshFromSettings();
-    }
-
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
         RefreshFromSettings();
     }
 

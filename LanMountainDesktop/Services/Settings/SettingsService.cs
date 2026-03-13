@@ -19,7 +19,8 @@ internal sealed class SettingsService : ISettingsService
 
     private readonly AppSettingsService _appSettingsService = new();
     private readonly LauncherSettingsService _launcherSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private readonly IComponentStateStore _componentStateStore = ComponentDomainStorageProvider.Instance;
+    private readonly IComponentMessageStore _componentMessageStore = ComponentDomainStorageProvider.Instance;
     private readonly string _pluginSettingsPath;
     private readonly object _pluginSettingsGate = new();
 
@@ -80,7 +81,7 @@ internal sealed class SettingsService : ISettingsService
     {
         if (scope == SettingsScope.ComponentInstance)
         {
-            return _componentSettingsService.LoadPluginSettings<T>(EnsureKey(subjectId), placementId);
+            return _componentMessageStore.LoadSection<T>(EnsureKey(subjectId), placementId, EnsureKey(sectionId));
         }
 
         if (scope != SettingsScope.Plugin)
@@ -111,7 +112,7 @@ internal sealed class SettingsService : ISettingsService
     {
         if (scope == SettingsScope.ComponentInstance)
         {
-            _componentSettingsService.SavePluginSettings(EnsureKey(subjectId), placementId, section);
+            _componentMessageStore.SaveSection(EnsureKey(subjectId), placementId, EnsureKey(sectionId), section);
             OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys));
             return;
         }
@@ -142,7 +143,7 @@ internal sealed class SettingsService : ISettingsService
     {
         if (scope == SettingsScope.ComponentInstance)
         {
-            _componentSettingsService.DeletePluginSettings(EnsureKey(subjectId), placementId);
+            _componentMessageStore.DeleteSection(EnsureKey(subjectId), placementId, EnsureKey(sectionId));
             OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId));
             return;
         }
@@ -183,7 +184,11 @@ internal sealed class SettingsService : ISettingsService
             SettingsScope.App => JsonSerializer.SerializeToElement(_appSettingsService.Load(), SerializerOptions),
             SettingsScope.Launcher => JsonSerializer.SerializeToElement(_launcherSettingsService.Load(), SerializerOptions),
             SettingsScope.ComponentInstance => JsonSerializer.SerializeToElement(
-                _componentSettingsService.LoadForComponent(EnsureKey(subjectId), placementId),
+                LoadSection<Dictionary<string, JsonElement>>(
+                    SettingsScope.ComponentInstance,
+                    EnsureKey(subjectId),
+                    sectionId ?? "__root__",
+                    placementId),
                 SerializerOptions),
             SettingsScope.Plugin => JsonSerializer.SerializeToElement(
                 LoadSection<Dictionary<string, JsonElement>>(SettingsScope.Plugin, EnsureKey(subjectId), sectionId ?? "__root__", placementId),
@@ -239,9 +244,10 @@ internal sealed class SettingsService : ISettingsService
 
         if (scope == SettingsScope.ComponentInstance)
         {
-            var dict = _componentSettingsService.LoadPluginSettings<Dictionary<string, JsonElement>>(EnsureKey(subjectId), placementId);
+            var effectiveSection = sectionId ?? "__root__";
+            var dict = _componentMessageStore.LoadSection<Dictionary<string, JsonElement>>(EnsureKey(subjectId), placementId, effectiveSection);
             dict[key] = JsonSerializer.SerializeToElement(value, SerializerOptions).Clone();
-            _componentSettingsService.SavePluginSettings(EnsureKey(subjectId), placementId, dict);
+            _componentMessageStore.SaveSection(EnsureKey(subjectId), placementId, effectiveSection, dict);
             OnChanged(new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys ?? [key]));
             return;
         }
@@ -271,14 +277,14 @@ internal sealed class SettingsService : ISettingsService
 
     private T LoadComponentSnapshot<T>(string? componentId, string? placementId) where T : new()
     {
-        var snapshot = _componentSettingsService.LoadForComponent(EnsureKey(componentId), placementId);
+        var snapshot = _componentStateStore.LoadState(EnsureKey(componentId), placementId);
         return ConvertSnapshot<ComponentSettingsSnapshot, T>(snapshot);
     }
 
     private void SaveComponentSnapshot<T>(string? componentId, string? placementId, T snapshot)
     {
         var converted = ConvertSnapshot<T, ComponentSettingsSnapshot>(snapshot);
-        _componentSettingsService.SaveForComponent(EnsureKey(componentId), placementId, converted);
+        _componentStateStore.SaveState(EnsureKey(componentId), placementId, converted);
     }
 
     private static TOut ConvertSnapshot<TIn, TOut>(TIn source) where TOut : new()

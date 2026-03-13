@@ -7,6 +7,13 @@ public partial class MainWindow
 {
     private void UpdateCurrentRenderBackendStatus()
     {
+        if (CurrentRenderBackendLabelTextBlock is null ||
+            CurrentRenderBackendValueTextBlock is null ||
+            CurrentRenderBackendImplementationTextBlock is null)
+        {
+            return;
+        }
+
         var backendInfo = AppRenderBackendDiagnostics.Detect();
         var localizedBackend = GetLocalizedRenderBackendName(backendInfo.ActualBackend);
 

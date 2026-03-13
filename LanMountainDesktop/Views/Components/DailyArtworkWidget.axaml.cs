@@ -16,10 +16,11 @@ using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, IComponentPlacementContextAware
 {
     private static readonly IReadOnlyDictionary<DayOfWeek, string> ZhWeekdays =
         new Dictionary<DayOfWeek, string>
@@ -58,8 +59,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromHours(6)
     };
 
-    private readonly AppSettingsService _settingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
@@ -146,12 +146,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             ? BuiltInComponentIds.DesktopDailyArtwork
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
-        RefreshFromSettings();
-    }
-
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
         RefreshFromSettings();
     }
 
@@ -651,7 +645,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     {
         try
         {
-            var snapshot = _settingsService.Load();
+            var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
             _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         }
         catch
@@ -664,7 +658,10 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     {
         try
         {
-            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+            var snapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
+                SettingsScope.ComponentInstance,
+                _componentId,
+                _placementId);
             return DailyArtworkMirrorSources.Normalize(snapshot.DailyArtworkMirrorSource);
         }
         catch

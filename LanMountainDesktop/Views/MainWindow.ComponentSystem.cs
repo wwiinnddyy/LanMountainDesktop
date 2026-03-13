@@ -101,19 +101,12 @@ public partial class MainWindow
 
     private void OnOpenComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
-        // "Desktop edit" toggle. While editing, show the component library window.
-        if (_isComponentLibraryOpen)
-        {
-            CloseComponentLibraryWindow(reopenSettings: false);
-            return;
-        }
-
-        OpenComponentLibraryWindow();
+        _componentLibraryWindowService.Toggle(this);
     }
 
     private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
-        CloseComponentLibraryWindow(reopenSettings: false);
+        _componentLibraryWindowService.Close(this);
     }
 
     private void OnCloseComponentSettingsClick(object? sender, RoutedEventArgs e)
@@ -202,21 +195,6 @@ public partial class MainWindow
         {
             ClockWidget.SetDisplayFormat(_clockDisplayFormat);
         }
-
-        if (_clockDisplayFormat == ClockDisplayFormat.HourMinute)
-        {
-            if (ClockFormatHMRadio is not null)
-            {
-                ClockFormatHMRadio.IsChecked = true;
-            }
-        }
-        else
-        {
-            if (ClockFormatHMSSRadio is not null)
-            {
-                ClockFormatHMSSRadio.IsChecked = true;
-            }
-        }
     }
 
     private void ApplyTopStatusComponentVisibility()
@@ -233,15 +211,6 @@ public partial class MainWindow
                 Grid.SetColumnSpan(ClockWidget, columnSpan);
             }
         }
-
-        if (WallpaperPreviewClockWidget is not null)
-        {
-            WallpaperPreviewClockWidget.IsVisible = showClock;
-            if (showClock)
-            {
-                WallpaperPreviewClockWidget.SetDisplayFormat(_clockDisplayFormat);
-            }
-        }
     }
 
     private TaskbarContext GetCurrentTaskbarContext()
@@ -251,11 +220,7 @@ public partial class MainWindow
 
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
-        if (BackToWindowsButton is null ||
-            OpenComponentLibraryButton is null ||
-            WallpaperPreviewBackButtonVisual is null ||
-            WallpaperPreviewComponentLibraryVisual is null ||
-            WallpaperPreviewSettingsButtonIcon is null)
+        if (BackToWindowsButton is null || OpenComponentLibraryButton is null)
         {
             return;
         }
@@ -266,9 +231,6 @@ public partial class MainWindow
 
         BackToWindowsButton.IsVisible = showMinimize;
         OpenComponentLibraryButton.IsVisible = showDesktopEdit;
-        WallpaperPreviewBackButtonVisual.IsVisible = showMinimize;
-        WallpaperPreviewComponentLibraryVisual.IsVisible = showDesktopEdit;
-        WallpaperPreviewSettingsButtonIcon.IsVisible = showSettings;
 
         if (TaskbarFixedActionsHost is not null)
         {
@@ -280,16 +242,6 @@ public partial class MainWindow
             TaskbarSettingsActionHost.IsVisible = showSettings || showDesktopEdit;
         }
 
-        if (WallpaperPreviewTaskbarFixedActionsHost is not null)
-        {
-            WallpaperPreviewTaskbarFixedActionsHost.IsVisible = showMinimize;
-        }
-
-        if (WallpaperPreviewTaskbarSettingsActionHost is not null)
-        {
-            WallpaperPreviewTaskbarSettingsActionHost.IsVisible = showSettings || showDesktopEdit;
-        }
-
         var dynamicActions = ResolveDynamicTaskbarActions(context)
             .Where(action => action.IsVisible)
             .ToList();
@@ -299,11 +251,6 @@ public partial class MainWindow
         if (TaskbarDynamicActionsHost is not null)
         {
             TaskbarDynamicActionsHost.IsVisible = hasDynamicActions;
-        }
-
-        if (WallpaperPreviewTaskbarDynamicActionsHost is not null)
-        {
-            WallpaperPreviewTaskbarDynamicActionsHost.IsVisible = hasDynamicActions;
         }
     }
 
@@ -455,14 +402,7 @@ public partial class MainWindow
             TaskbarDynamicActionsPanel.Children.Clear();
         }
 
-        if (WallpaperPreviewTaskbarDynamicActionsHost is not null)
-        {
-            WallpaperPreviewTaskbarDynamicActionsHost.Children.Clear();
-        }
-
-        if (actions.Count == 0 ||
-            TaskbarDynamicActionsPanel is null ||
-            WallpaperPreviewTaskbarDynamicActionsHost is null)
+        if (actions.Count == 0 || TaskbarDynamicActionsPanel is null)
         {
             return;
         }
@@ -556,37 +496,6 @@ public partial class MainWindow
 
             TaskbarDynamicActionsPanel.Children.Add(button);
 
-            Control previewIcon = new SymbolIcon
-            {
-                Symbol = iconSymbol,
-                IconVariant = IconVariant.Regular,
-                FontSize = iconSize * 0.85
-            };
-
-            var previewText = new TextBlock
-            {
-                Text = action.Title,
-                FontSize = fontSize * 0.85,
-                Foreground = (isDeleteAction || isHideAction)
-                    ? new SolidColorBrush(Color.Parse("#FFFF6B6B"))
-                    : Foreground,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-            };
-
-            var previewContent = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Spacing = spacing * 0.5,
-                Children = { previewIcon, previewText }
-            };
-
-            var previewBorder = new Border
-            {
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
-                Child = previewContent
-            };
-            WallpaperPreviewTaskbarDynamicActionsHost.Children.Add(previewBorder);
         }
     }
 
@@ -637,7 +546,7 @@ public partial class MainWindow
         }
 
         _desktopComponentPlacements.Remove(placement);
-        _componentSettingsService.DeleteForComponent(placement.ComponentId, placement.PlacementId);
+        _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
 
         ClearDesktopComponentSelection();
 
@@ -698,7 +607,7 @@ public partial class MainWindow
         foreach (var placement in placementsToRemove)
         {
             _desktopComponentPlacements.Remove(placement);
-            _componentSettingsService.DeleteForComponent(placement.ComponentId, placement.PlacementId);
+            _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
         }
 
         _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
@@ -1345,14 +1254,19 @@ public partial class MainWindow
     {
         try
         {
-            var component = runtimeDescriptor.CreateControl(
+            var createContext = new ComponentLibraryCreateContext(
                 cellSize,
                 _timeZoneService,
                 _weatherDataService,
                 _recommendationInfoService,
                 _calculatorDataService,
-                _componentSettingsService,
                 placementId);
+            if (!_componentLibraryService.TryCreateControl(runtimeDescriptor.Definition.Id, createContext, out var component, out var exception) ||
+                component is null)
+            {
+                throw exception ?? new InvalidOperationException("Component library service returned no control.");
+            }
+
             component.Classes.Add(DesktopComponentClass);
             return component;
         }
@@ -1374,6 +1288,18 @@ public partial class MainWindow
             failureView.Classes.Add(DesktopComponentClass);
             return failureView;
         }
+    }
+
+    internal bool IsComponentLibraryOpenFromService => _isComponentLibraryOpen;
+
+    internal void OpenComponentLibraryWindowFromService()
+    {
+        OpenComponentLibraryWindow();
+    }
+
+    internal void CloseComponentLibraryWindowFromService()
+    {
+        CloseComponentLibraryWindow(reopenSettings: false);
     }
 
     private void CollapseComponentLibraryPanel()

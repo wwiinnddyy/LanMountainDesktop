@@ -14,6 +14,7 @@ namespace LanMountainDesktop.Services.Settings;
 internal sealed class GridSettingsService : IGridSettingsService
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly DesktopGridLayoutService _gridLayoutService = new();
 
     public GridSettingsState Get()
     {
@@ -31,6 +32,36 @@ internal sealed class GridSettingsService : IGridSettingsService
         snapshot.GridSpacingPreset = state.SpacingPreset;
         snapshot.DesktopEdgeInsetPercent = state.EdgeInsetPercent;
         _appSettingsService.Save(snapshot);
+    }
+
+    public string NormalizeSpacingPreset(string? value)
+    {
+        return _gridLayoutService.NormalizeSpacingPreset(value);
+    }
+
+    public double ResolveGapRatio(string? preset)
+    {
+        return _gridLayoutService.ResolveGapRatio(preset);
+    }
+
+    public double CalculateEdgeInset(double hostWidth, double hostHeight, int shortSideCells, int insetPercent)
+    {
+        return _gridLayoutService.CalculateEdgeInset(hostWidth, hostHeight, shortSideCells, insetPercent);
+    }
+
+    public DesktopGridMetrics CalculateGridMetrics(
+        double hostWidth,
+        double hostHeight,
+        int shortSideCells,
+        double gapRatio,
+        double edgeInsetPx)
+    {
+        return _gridLayoutService.CalculateGridMetrics(
+            hostWidth,
+            hostHeight,
+            shortSideCells,
+            gapRatio,
+            edgeInsetPx);
     }
 }
 
@@ -234,7 +265,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
     }
 }
 
-internal sealed class WeatherProviderAdapter : IWeatherProvider
+internal sealed class WeatherProviderAdapter : IWeatherProvider, IWeatherInfoService, IDisposable
 {
     private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
 
@@ -252,11 +283,20 @@ internal sealed class WeatherProviderAdapter : IWeatherProvider
     {
         return _weatherDataService.GetWeatherAsync(query, cancellationToken);
     }
+
+    public void Dispose()
+    {
+        if (_weatherDataService is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+    }
 }
 
-internal sealed class WeatherSettingsService : IWeatherSettingsService
+internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposable
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly WeatherProviderAdapter _weatherProvider = new();
 
     public WeatherSettingsState Get()
     {
@@ -289,11 +329,22 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService
         snapshot.WeatherLocationQuery = state.LocationQuery;
         _appSettingsService.Save(snapshot);
     }
+
+    public IWeatherInfoService GetWeatherInfoService()
+    {
+        return _weatherProvider;
+    }
+
+    public void Dispose()
+    {
+        _weatherProvider.Dispose();
+    }
 }
 
 internal sealed class RegionSettingsService : IRegionSettingsService
 {
     private readonly AppSettingsService _appSettingsService = new();
+    private readonly TimeZoneService _timeZoneService = new();
 
     public RegionSettingsState Get()
     {
@@ -311,6 +362,11 @@ internal sealed class RegionSettingsService : IRegionSettingsService
             ? null
             : state.TimeZoneId.Trim();
         _appSettingsService.Save(snapshot);
+    }
+
+    public TimeZoneService GetTimeZoneService()
+    {
+        return _timeZoneService;
     }
 }
 
@@ -388,9 +444,14 @@ internal sealed class LauncherPolicyService : ILauncherPolicyService
 internal sealed class PluginManagementSettingsService : IPluginManagementSettingsService
 {
     private readonly AppSettingsService _appSettingsService = new();
-    private readonly PluginRuntimeService? _pluginRuntimeService;
+    private PluginRuntimeService? _pluginRuntimeService;
 
     public PluginManagementSettingsService(PluginRuntimeService? pluginRuntimeService)
+    {
+        _pluginRuntimeService = pluginRuntimeService;
+    }
+
+    public void SetPluginRuntime(PluginRuntimeService? pluginRuntimeService)
     {
         _pluginRuntimeService = pluginRuntimeService;
     }
@@ -426,9 +487,9 @@ internal sealed class PluginManagementSettingsService : IPluginManagementSetting
 
 internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService, IDisposable
 {
-    private readonly PluginRuntimeService? _pluginRuntimeService;
-    private readonly AirAppMarketIndexService _indexService;
-    private readonly AirAppMarketInstallService? _installService;
+    private PluginRuntimeService? _pluginRuntimeService;
+    private AirAppMarketIndexService _indexService;
+    private AirAppMarketInstallService? _installService;
     private readonly Dictionary<string, AirAppMarketPluginEntry> _cachedPlugins = new(StringComparer.OrdinalIgnoreCase);
 
     public PluginMarketSettingsService(PluginRuntimeService? pluginRuntimeService)
@@ -445,6 +506,24 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
         {
             _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
         }
+    }
+
+    public void SetPluginRuntime(PluginRuntimeService? pluginRuntimeService)
+    {
+        _pluginRuntimeService = pluginRuntimeService;
+        _installService?.Dispose();
+        _installService = null;
+
+        if (_pluginRuntimeService is null)
+        {
+            return;
+        }
+
+        var dataRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop",
+            "PluginMarket");
+        _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
     }
 
     public async Task<PluginMarketIndexResult> LoadIndexAsync(CancellationToken cancellationToken = default)
@@ -567,6 +646,8 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
 {
     private readonly UpdateSettingsService _updateSettingsService;
     private readonly PluginMarketSettingsService _pluginMarketSettingsService;
+    private readonly PluginManagementSettingsService _pluginManagementSettingsService;
+    private readonly WeatherSettingsService _weatherSettingsService;
 
     public SettingsFacadeService(PluginRuntimeService? pluginRuntimeService = null)
     {
@@ -577,13 +658,15 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         WallpaperMedia = new WallpaperMediaService();
         Theme = new ThemeAppearanceService();
         StatusBar = new StatusBarSettingsService();
-        Weather = new WeatherSettingsService();
+        _weatherSettingsService = new WeatherSettingsService();
+        Weather = _weatherSettingsService;
         Region = new RegionSettingsService();
         _updateSettingsService = new UpdateSettingsService();
         Update = _updateSettingsService;
         LauncherCatalog = new LauncherCatalogService();
         LauncherPolicy = new LauncherPolicyService();
-        PluginManagement = new PluginManagementSettingsService(pluginRuntimeService);
+        _pluginManagementSettingsService = new PluginManagementSettingsService(pluginRuntimeService);
+        PluginManagement = _pluginManagementSettingsService;
         _pluginMarketSettingsService = new PluginMarketSettingsService(pluginRuntimeService);
         PluginMarket = _pluginMarketSettingsService;
         ApplicationInfo = new ApplicationInfoService();
@@ -619,8 +702,15 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
 
     public IApplicationInfoService ApplicationInfo { get; }
 
+    public void BindPluginRuntime(PluginRuntimeService? pluginRuntimeService)
+    {
+        _pluginManagementSettingsService.SetPluginRuntime(pluginRuntimeService);
+        _pluginMarketSettingsService.SetPluginRuntime(pluginRuntimeService);
+    }
+
     public void Dispose()
     {
+        _weatherSettingsService.Dispose();
         _updateSettingsService.Dispose();
         _pluginMarketSettingsService.Dispose();
     }

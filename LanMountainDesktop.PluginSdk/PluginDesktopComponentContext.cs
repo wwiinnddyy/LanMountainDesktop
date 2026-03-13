@@ -10,7 +10,8 @@ public sealed class PluginDesktopComponentContext
         IReadOnlyDictionary<string, object?> properties,
         string componentId,
         string? placementId,
-        double cellSize)
+        double cellSize,
+        IPluginSettingsService? pluginSettings = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginDirectory);
@@ -27,6 +28,7 @@ public sealed class PluginDesktopComponentContext
         ComponentId = componentId.Trim();
         PlacementId = string.IsNullOrWhiteSpace(placementId) ? null : placementId.Trim();
         CellSize = Math.Max(1, cellSize);
+        PluginSettings = pluginSettings;
     }
 
     public PluginManifest Manifest { get; }
@@ -44,6 +46,8 @@ public sealed class PluginDesktopComponentContext
     public string? PlacementId { get; }
 
     public double CellSize { get; }
+
+    public IPluginSettingsService? PluginSettings { get; }
 
     public T? GetService<T>()
     {

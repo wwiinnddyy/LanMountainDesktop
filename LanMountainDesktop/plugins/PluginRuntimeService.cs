@@ -24,13 +24,12 @@ public sealed class PluginRuntimeService : IDisposable
 
     private readonly PluginLoaderOptions _loaderOptions;
     private readonly PluginLoader _loader;
-    private readonly AppSettingsService _appSettingsService = new();
     private readonly IHostApplicationLifecycle _applicationLifecycle = new HostApplicationLifecycleService();
     private readonly PluginExportRegistry _exportRegistry = new();
     private readonly PluginSharedContractManager _sharedContractManager;
     private readonly IServiceProvider _hostServices;
     private readonly IPluginPackageManager _packageManager;
-    private readonly SettingsFacadeService _settingsFacade;
+    private readonly ISettingsFacadeService _settingsFacade;
     private readonly SettingsCatalogService _settingsCatalogService;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
     private readonly List<PluginLoadResult> _loadResults = [];
@@ -39,14 +38,19 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly List<PluginDesktopComponentContribution> _desktopComponents = [];
     private readonly object _packageMutationGate = new();
 
-    public PluginRuntimeService()
+    public PluginRuntimeService(ISettingsFacadeService? settingsFacade = null)
     {
         PluginsDirectory = Path.Combine(AppContext.BaseDirectory, "Extensions", "Plugins");
         _sharedContractManager = new PluginSharedContractManager(
             Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
         _packageManager = new PluginRuntimePackageManager(this);
-        _settingsFacade = new SettingsFacadeService(this);
-        _settingsCatalogService = (SettingsCatalogService)_settingsFacade.Catalog;
+        _settingsFacade = settingsFacade ?? new SettingsFacadeService();
+        _settingsCatalogService = _settingsFacade.Catalog as SettingsCatalogService
+            ?? new SettingsCatalogService();
+        if (_settingsFacade is SettingsFacadeService concreteFacade)
+        {
+            concreteFacade.BindPluginRuntime(this);
+        }
         _hostServices = new PluginHostServiceProvider(
             _packageManager,
             _applicationLifecycle,
@@ -81,7 +85,7 @@ public sealed class PluginRuntimeService : IDisposable
         AppLogger.Info("PluginRuntime", $"Loading installed plugins from '{PluginsDirectory}'.");
 
         var disabledPluginIds = GetDisabledPluginIds();
-        var settingsSnapshot = _appSettingsService.Load();
+        var settingsSnapshot = LoadAppSettingsSnapshot();
         var hostLanguageCode = PluginLocalizer.NormalizeLanguageCode(settingsSnapshot.LanguageCode);
         var hostProperties = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -222,7 +226,7 @@ public sealed class PluginRuntimeService : IDisposable
             return false;
         }
 
-        var snapshot = _appSettingsService.Load();
+        var snapshot = LoadAppSettingsSnapshot();
         var disabledPluginIds = snapshot.DisabledPluginIds is { Count: > 0 }
             ? new HashSet<string>(snapshot.DisabledPluginIds, StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -239,7 +243,7 @@ public sealed class PluginRuntimeService : IDisposable
         snapshot.DisabledPluginIds = disabledPluginIds
             .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        _appSettingsService.Save(snapshot);
+        SaveAppSettingsSnapshot(snapshot);
         PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
 
         for (var i = 0; i < _catalog.Count; i++)
@@ -386,7 +390,10 @@ public sealed class PluginRuntimeService : IDisposable
     {
         UnloadInstalledPlugins();
         _sharedContractManager.Dispose();
-        _settingsFacade.Dispose();
+        if (_settingsFacade is IDisposable disposable && !ReferenceEquals(_settingsFacade, HostSettingsFacadeProvider.GetOrCreate()))
+        {
+            disposable.Dispose();
+        }
     }
 
     private void UnloadInstalledPlugins()
@@ -409,7 +416,7 @@ public sealed class PluginRuntimeService : IDisposable
 
     private HashSet<string> GetDisabledPluginIds()
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = LoadAppSettingsSnapshot();
         return snapshot.DisabledPluginIds is { Count: > 0 }
             ? new HashSet<string>(snapshot.DisabledPluginIds, StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -781,11 +788,21 @@ public sealed class PluginRuntimeService : IDisposable
 
     private void RemovePluginFromSnapshot(string pluginId)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = LoadAppSettingsSnapshot();
         if (snapshot.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase)) > 0)
         {
-            _appSettingsService.Save(snapshot);
+            SaveAppSettingsSnapshot(snapshot);
         }
+    }
+
+    private AppSettingsSnapshot LoadAppSettingsSnapshot()
+    {
+        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+    }
+
+    private void SaveAppSettingsSnapshot(AppSettingsSnapshot snapshot)
+    {
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot);
     }
 
     private void RemovePluginFromCatalog(string pluginId)

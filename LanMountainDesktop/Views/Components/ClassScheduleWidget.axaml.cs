@@ -10,10 +10,11 @@ using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
 {
     private sealed record CourseItemViewModel(
         string Name,
@@ -26,8 +27,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         Interval = TimeSpan.FromMinutes(4)
     };
 
-    private readonly AppSettingsService _appSettingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private readonly IClassIslandScheduleDataService _scheduleService = new ClassIslandScheduleDataService();
 
@@ -125,16 +125,13 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         RefreshSchedule();
     }
 
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
-        RefreshSchedule();
-    }
-
     private void RefreshSchedule()
     {
-        var appSettings = _appSettingsService.Load();
-        var componentSettings = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+        var appSettings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var componentSettings = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
+            SettingsScope.ComponentInstance,
+            _componentId,
+            _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         UpdateHeader(now);

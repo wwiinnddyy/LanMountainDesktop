@@ -10,8 +10,10 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
 
@@ -33,7 +35,7 @@ public partial class App : Application
         RestartRequested = 2
     }
 
-    private readonly AppSettingsService _appSettingsService = new();
+    private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private bool _exitCleanupCompleted;
@@ -50,6 +52,7 @@ public partial class App : Application
         (Current as App)?._hostApplicationLifecycle;
 
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
+    public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
@@ -159,7 +162,8 @@ public partial class App : Application
         try
         {
             _pluginRuntimeService?.Dispose();
-            _pluginRuntimeService = new PluginRuntimeService();
+            _pluginRuntimeService = new PluginRuntimeService(_settingsFacade);
+            HostSettingsFacadeProvider.BindPluginRuntime(_pluginRuntimeService);
             _pluginRuntimeService.LoadInstalledPlugins();
         }
         catch (Exception ex)
@@ -564,7 +568,7 @@ public partial class App : Application
 
     private string L(string key, string fallback)
     {
-        var snapshot = _appSettingsService.Load();
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         return _localizationService.GetString(languageCode, key, fallback);
     }

@@ -1,8 +1,9 @@
-using LanMountainDesktop.Services;
+using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.ComponentSystem;
 
 public sealed record DesktopComponentRuntimeContext(
     string ComponentId,
     string? PlacementId,
-    IComponentInstanceSettingsStore ComponentSettingsStore);
+    ISettingsService SettingsService,
+    IComponentSettingsAccessor ComponentSettingsAccessor);

@@ -13,7 +13,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -156,12 +156,6 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
             ? BuiltInComponentIds.DesktopWorldClock
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
-        RefreshFromSettings();
-    }
-
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
         RefreshFromSettings();
     }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,7 +20,9 @@ using Avalonia.Threading;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 using LibVLCSharp.Shared;
@@ -73,21 +75,26 @@ public partial class MainWindow : Window
     [
         TaskbarActionId.MinimizeToWindows
     ];
-    private readonly DesktopGridLayoutService _gridLayoutService = new();
-    private readonly MonetColorService _monetColorService = new();
-    private readonly AppSettingsService _appSettingsService = new();
-    private readonly DesktopLayoutSettingsService _desktopLayoutSettingsService = new();
-    private readonly LauncherSettingsService _launcherSettingsService = new();
-    private readonly ComponentSettingsService _componentSettingsService = new();
+    private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+    private readonly IGridSettingsService _gridSettingsService;
+    private readonly IThemeAppearanceService _themeSettingsService;
+    private readonly IWeatherSettingsService _weatherSettingsService;
+    private readonly IRegionSettingsService _regionSettingsService;
+    private readonly IUpdateSettingsService _updateSettingsService;
+    private readonly ISettingsService _settingsService;
+    private readonly IComponentLayoutStore _componentLayoutStore = ComponentDomainStorageProvider.Instance;
+    private readonly IComponentStateStore _componentStateStore = ComponentDomainStorageProvider.Instance;
+    private readonly IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
     private readonly LocalizationService _localizationService = new();
-    private readonly TimeZoneService _timeZoneService = new();
+    private readonly TimeZoneService _timeZoneService;
     private readonly WindowsStartupService _windowsStartupService = new();
-    private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
-    private readonly IWeatherDataService _weatherDataService = new XiaomiWeatherService();
+    private readonly IWeatherInfoService _weatherDataService;
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
     private readonly ComponentRegistry _componentRegistry;
     private readonly DesktopComponentRuntimeRegistry _componentRuntimeRegistry;
+    private readonly IComponentLibraryService _componentLibraryService;
+    private readonly IComponentLibraryWindowService _componentLibraryWindowService = new ComponentLibraryWindowService();
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<TaskbarActionId> _pinnedTaskbarActions = [];
@@ -171,71 +178,25 @@ public partial class MainWindow : Window
     {
         var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
+        _settingsService = _settingsFacade.Settings;
+        _gridSettingsService = _settingsFacade.Grid;
+        _themeSettingsService = _settingsFacade.Theme;
+        _weatherSettingsService = _settingsFacade.Weather;
+        _regionSettingsService = _settingsFacade.Region;
+        _updateSettingsService = _settingsFacade.Update;
+        _timeZoneService = _regionSettingsService.GetTimeZoneService();
+        _weatherDataService = _weatherSettingsService.GetWeatherInfoService();
 
         InitializeComponent();
-        InitializePluginSettingsNavigation();
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,
             pluginRuntimeService);
+        _componentLibraryService = new ComponentLibraryService(_componentRegistry, _componentRuntimeRegistry);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
-        AppSettingsService.SettingsSaved += OnExternalAppSettingsSaved;
-        LauncherSettingsService.SettingsSaved += OnExternalLauncherSettingsSaved;
-        PendingRestartStateService.StateChanged += OnPendingRestartStateChanged;
+        _settingsService.Changed += OnSettingsChanged;
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
-
-        PickWallpaperButton.Click += OnPickWallpaperClick;
-        ClearWallpaperButton.Click += OnClearWallpaperClick;
-        WallpaperPlacementComboBox.SelectionChanged += OnWallpaperPlacementSelectionChanged;
-
-        GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
-        GridSpacingPresetComboBox.SelectionChanged += OnGridSpacingPresetSelectionChanged;
-        GridEdgeInsetSlider.ValueChanged += OnGridEdgeInsetSliderChanged;
-        ApplyGridButton.Click += OnApplyGridSizeClick;
-
-        NightModeToggleSwitch.IsCheckedChanged += OnNightModeIsCheckedChanged;
-        RecommendedColorButton1.Click += OnRecommendedColorClick;
-        RecommendedColorButton2.Click += OnRecommendedColorClick;
-        RecommendedColorButton3.Click += OnRecommendedColorClick;
-        RecommendedColorButton4.Click += OnRecommendedColorClick;
-        RecommendedColorButton5.Click += OnRecommendedColorClick;
-        RecommendedColorButton6.Click += OnRecommendedColorClick;
-        RefreshMonetColorsButton.Click += OnRefreshMonetColorsClick;
-        MonetColorButton1.Click += OnMonetColorClick;
-        MonetColorButton2.Click += OnMonetColorClick;
-        MonetColorButton3.Click += OnMonetColorClick;
-        MonetColorButton4.Click += OnMonetColorClick;
-        MonetColorButton5.Click += OnMonetColorClick;
-        MonetColorButton6.Click += OnMonetColorClick;
-
-        StatusBarClockToggleSwitch.IsCheckedChanged += OnStatusBarClockIsCheckedChanged;
-        ClockFormatHMSSRadio.IsCheckedChanged += OnClockFormatChanged;
-        ClockFormatHMRadio.IsCheckedChanged += OnClockFormatChanged;
-        StatusBarSpacingModeComboBox.SelectionChanged += OnStatusBarSpacingModeChanged;
-        StatusBarSpacingSlider.ValueChanged += OnStatusBarSpacingSliderChanged;
-
-        WeatherPreviewButton.Click += OnTestWeatherRequestClick;
-        WeatherLocationModeComboBox.SelectionChanged += OnWeatherLocationModeSelectionChanged;
-        WeatherLocationModeChipListBox.SelectionChanged += OnWeatherLocationModeChipSelectionChanged;
-        WeatherAutoRefreshToggleSwitch.IsCheckedChanged += OnWeatherAutoRefreshToggled;
-        WeatherSearchButton.Click += OnSearchWeatherCityClick;
-        WeatherApplyCityButton.Click += OnApplyWeatherCitySelectionClick;
-        WeatherApplyCoordinatesButton.Click += OnApplyWeatherCoordinatesClick;
-        WeatherExcludedAlertsTextBox.LostFocus += OnWeatherExcludedAlertsLostFocus;
-        WeatherIconPackComboBox.SelectionChanged += OnWeatherIconPackSelectionChanged;
-        WeatherNoTlsToggleSwitch.IsCheckedChanged += OnWeatherNoTlsToggled;
-
-        LanguageComboBox.SelectionChanged += OnLanguageSelectionChanged;
-        TimeZoneComboBox.SelectionChanged += OnTimeZoneSelectionChanged;
-
-        AutoCheckUpdatesToggleSwitch.IsCheckedChanged += OnAutoCheckUpdatesToggled;
-        UpdateChannelChipListBox.SelectionChanged += OnUpdateChannelSelectionChanged;
-        CheckForUpdatesButton.Click += OnCheckForUpdatesClick;
-        DownloadAndInstallUpdateButton.Click += OnDownloadAndInstallUpdateClick;
-
-        AutoStartWithWindowsToggleSwitch.IsCheckedChanged += OnAutoStartWithWindowsToggled;
-        AppRenderModeComboBox.SelectionChanged += OnAppRenderModeSelectionChanged;
     }
 
     private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -275,9 +236,9 @@ public partial class MainWindow : Window
         base.OnOpened(e);
 
         _suppressSettingsPersistence = true;
-        var snapshot = _appSettingsService.Load();
-        var desktopLayoutSnapshot = _desktopLayoutSettingsService.Load();
-        var launcherSnapshot = _launcherSettingsService.Load();
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var desktopLayoutSnapshot = _componentLayoutStore.LoadLayout();
+        var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(SettingsScope.Launcher);
 
         if (!string.IsNullOrWhiteSpace(snapshot.TimeZoneId))
         {
@@ -289,47 +250,16 @@ public partial class MainWindow : Window
             MinShortSideCells,
             MaxShortSideCells);
 
-        _gridSpacingPreset = _gridLayoutService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
-        _suppressGridSpacingEvents = true;
-        GridSpacingPresetComboBox.SelectedIndex = string.Equals(_gridSpacingPreset, "Compact", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        _suppressGridSpacingEvents = false;
+        _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
 
         _desktopEdgeInsetPercent = Math.Clamp(snapshot.DesktopEdgeInsetPercent, MinEdgeInsetPercent, MaxEdgeInsetPercent);
-        _suppressGridInsetEvents = true;
-        GridEdgeInsetSlider.Value = _desktopEdgeInsetPercent;
-        GridEdgeInsetNumberBox.Value = _desktopEdgeInsetPercent;
-        _suppressGridInsetEvents = false;
-        GridEdgeInsetNumberBox.ValueChanged += OnGridEdgeInsetNumberBoxChanged;
 
         _statusBarSpacingMode = NormalizeStatusBarSpacingMode(snapshot.StatusBarSpacingMode);
         _statusBarCustomSpacingPercent = Math.Clamp(snapshot.StatusBarCustomSpacingPercent, 0, 30);
-        _suppressStatusBarSpacingEvents = true;
-        StatusBarSpacingModeComboBox.SelectedIndex = _statusBarSpacingMode switch
-        {
-            "Compact" => 0,
-            "Custom" => 2,
-            _ => 1
-        };
-        StatusBarSpacingSlider.Value = _statusBarCustomSpacingPercent;
-        StatusBarSpacingNumberBox.Value = _statusBarCustomSpacingPercent;
-        StatusBarSpacingCustomPanel.IsVisible = string.Equals(_statusBarSpacingMode, "Custom", StringComparison.OrdinalIgnoreCase);
-        _suppressStatusBarSpacingEvents = false;
-        StatusBarSpacingNumberBox.ValueChanged += OnStatusBarSpacingNumberBoxChanged;
-
-        GridSizeNumberBox.Value = _targetShortSideCells;
-        GridSizeSlider.Value = _targetShortSideCells;
-        GridSizeSlider.ValueChanged += OnGridSizeSliderChanged;
-        GridSizeNumberBox.ValueChanged += OnGridSizeNumberBoxChanged;
-
-        RestoreSettingsTabSelection(snapshot);
-        UpdateSettingsTabContent();
-
-        WallpaperPlacementComboBox.SelectedIndex = GetPlacementIndexFromSetting(snapshot.WallpaperPlacement);
         _defaultDesktopBackground = DesktopWallpaperLayer.Background;
         ApplyTaskbarSettings(snapshot);
         InitializeLocalization(snapshot.LanguageCode);
         InitializeWeatherSettings(snapshot);
-        _ = _componentSettingsService.Load();
         InitializeAutoStartWithWindowsSetting(snapshot);
         InitializeAppRenderModeSetting(snapshot);
         InitializeUpdateSettings(snapshot);
@@ -349,15 +279,8 @@ public partial class MainWindow : Window
 
         _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
         ApplyNightModeState(_isNightMode, refreshPalettes: true);
-        _suppressStatusBarToggleEvents = true;
-        StatusBarClockToggleSwitch.IsChecked = _topStatusComponentIds.Contains(BuiltInComponentIds.Clock);
-        _suppressStatusBarToggleEvents = false;
         ApplyLocalization();
-        ThemeColorStatusTextBlock.Text = Lf("settings.color.theme_ready_format", "Theme color ready: {0}.", _selectedThemeColor);
-        _settingsContentPanelTransform = SettingsContentPanel.RenderTransform as TranslateTransform;
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
-        WallpaperPreviewHost.SizeChanged += OnWallpaperPreviewHostSizeChanged;
-        GridPreviewHost.SizeChanged += OnGridPreviewHostSizeChanged;
         RebuildDesktopGrid();
         LoadLauncherEntriesAsync();
         InitializeTimeZoneSettings();
@@ -384,28 +307,15 @@ public partial class MainWindow : Window
         _wallpaperPreviewSnapshotBitmap = null;
         _libVlc?.Dispose();
         _libVlc = null;
-        if (_weatherDataService is IDisposable weatherServiceDisposable)
-        {
-            weatherServiceDisposable.Dispose();
-        }
         if (_recommendationInfoService is IDisposable recommendationServiceDisposable)
         {
             recommendationServiceDisposable.Dispose();
         }
-        _releaseUpdateService.Dispose();
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
-        AppSettingsService.SettingsSaved -= OnExternalAppSettingsSaved;
-        LauncherSettingsService.SettingsSaved -= OnExternalLauncherSettingsSaved;
-        PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
+        _settingsService.Changed -= OnSettingsChanged;
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
-        WallpaperPreviewHost.SizeChanged -= OnWallpaperPreviewHostSizeChanged;
-        GridPreviewHost.SizeChanged -= OnGridPreviewHostSizeChanged;
-        GridSizeSlider.ValueChanged -= OnGridSizeSliderChanged;
-        GridSizeNumberBox.ValueChanged -= OnGridSizeNumberBoxChanged;
-        GridEdgeInsetNumberBox.ValueChanged -= OnGridEdgeInsetNumberBoxChanged;
-        StatusBarSpacingNumberBox.ValueChanged -= OnStatusBarSpacingNumberBoxChanged;
         base.OnClosed(e);
     }
 
@@ -434,6 +344,11 @@ public partial class MainWindow : Window
 
     private void OnGridSizeSliderChanged(object? sender, RoutedEventArgs e)
     {
+        if (GridSizeSlider is null || GridSizeNumberBox is null)
+        {
+            return;
+        }
+
         var sliderValue = (int)Math.Round(GridSizeSlider.Value);
         if (Math.Abs(GridSizeNumberBox.Value - sliderValue) > double.Epsilon)
         {
@@ -444,6 +359,11 @@ public partial class MainWindow : Window
 
     private void OnGridSizeNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
     {
+        if (GridSizeSlider is null || GridSizeNumberBox is null)
+        {
+            return;
+        }
+
         var numberBoxValue = (int)Math.Round(GridSizeNumberBox.Value);
         if (Math.Abs(GridSizeSlider.Value - numberBoxValue) > double.Epsilon)
         {
@@ -454,6 +374,11 @@ public partial class MainWindow : Window
 
     private void OnGridEdgeInsetSliderChanged(object? sender, RoutedEventArgs e)
     {
+        if (GridEdgeInsetSlider is null)
+        {
+            return;
+        }
+
         if (_suppressGridInsetEvents)
         {
             return;
@@ -466,6 +391,11 @@ public partial class MainWindow : Window
 
     private void OnGridEdgeInsetNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
     {
+        if (GridEdgeInsetNumberBox is null)
+        {
+            return;
+        }
+
         if (_suppressGridInsetEvents)
         {
             return;
@@ -511,6 +441,11 @@ public partial class MainWindow : Window
 
     private void OnStatusBarSpacingModeChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (StatusBarSpacingModeComboBox is null)
+        {
+            return;
+        }
+
         if (_suppressStatusBarSpacingEvents)
         {
             return;
@@ -529,6 +464,11 @@ public partial class MainWindow : Window
 
     private void OnStatusBarSpacingSliderChanged(object? sender, RangeBaseValueChangedEventArgs e)
     {
+        if (StatusBarSpacingSlider is null)
+        {
+            return;
+        }
+
         if (_suppressStatusBarSpacingEvents)
         {
             return;
@@ -549,6 +489,11 @@ public partial class MainWindow : Window
 
     private void OnStatusBarSpacingNumberBoxChanged(object? sender, NumberBoxValueChangedEventArgs e)
     {
+        if (StatusBarSpacingNumberBox is null)
+        {
+            return;
+        }
+
         if (_suppressStatusBarSpacingEvents)
         {
             return;
@@ -597,7 +542,8 @@ public partial class MainWindow : Window
             GridPreviewHost is null ||
             GridPreviewViewport is null ||
             GridPreviewGrid is null ||
-            GridPreviewLinesCanvas is null)
+            GridPreviewLinesCanvas is null ||
+            GridSizeSlider is null)
         {
             return;
         }
@@ -626,11 +572,11 @@ public partial class MainWindow : Window
 
         var innerWidth = Math.Max(1, gridPreviewWidth - horizontalPadding);
         var innerHeight = Math.Max(1, gridPreviewHeight - verticalPadding);
-        var preset = _gridLayoutService.NormalizeSpacingPreset(TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
-        var gapRatio = _gridLayoutService.ResolveGapRatio(preset);
+        var preset = _gridSettingsService.NormalizeSpacingPreset(TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
+        var gapRatio = _gridSettingsService.ResolveGapRatio(preset);
         var pendingEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
-        var edgeInset = _gridLayoutService.CalculateEdgeInset(innerWidth, innerHeight, previewShortSideCells, pendingEdgeInsetPercent);
-        var gridMetrics = _gridLayoutService.CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells, gapRatio, edgeInset);
+        var edgeInset = _gridSettingsService.CalculateEdgeInset(innerWidth, innerHeight, previewShortSideCells, pendingEdgeInsetPercent);
+        var gridMetrics = _gridSettingsService.CalculateGridMetrics(innerWidth, innerHeight, previewShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
@@ -676,12 +622,15 @@ public partial class MainWindow : Window
         ApplyStatusBarComponentSpacingForPanel(GridPreviewTopStatusComponentsPanel, gridMetrics.CellSize);
         UpdateGridEdgeInsetComputedPxText(gridMetrics.CellSize);
 
-        GridInfoTextBlock.Text = Lf(
-            "settings.grid.info_format",
-            "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
-            gridMetrics.ColumnCount,
-            gridMetrics.RowCount,
-            gridMetrics.CellSize);
+        if (GridInfoTextBlock is not null)
+        {
+            GridInfoTextBlock.Text = Lf(
+                "settings.grid.info_format",
+                "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
+                gridMetrics.ColumnCount,
+                gridMetrics.RowCount,
+                gridMetrics.CellSize);
+        }
 
         DrawGridPreviewLines(gridMetrics);
     }
@@ -767,7 +716,12 @@ public partial class MainWindow : Window
 
     private void OnApplyGridSizeClick(object? sender, RoutedEventArgs e)
     {
-        _gridSpacingPreset = _gridLayoutService.NormalizeSpacingPreset(
+        if (GridSizeNumberBox is null || GridSizeSlider is null)
+        {
+            return;
+        }
+
+        _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(
             TryGetSelectedComboBoxTag(GridSpacingPresetComboBox) ?? _gridSpacingPreset);
         _desktopEdgeInsetPercent = ResolvePendingGridEdgeInsetPercent();
 
@@ -825,9 +779,9 @@ public partial class MainWindow : Window
     {
         var hostWidth = DesktopHost.Bounds.Width;
         var hostHeight = DesktopHost.Bounds.Height;
-        var gapRatio = _gridLayoutService.ResolveGapRatio(_gridSpacingPreset);
-        var edgeInset = _gridLayoutService.CalculateEdgeInset(hostWidth, hostHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
-        var gridMetrics = _gridLayoutService.CalculateGridMetrics(hostWidth, hostHeight, _targetShortSideCells, gapRatio, edgeInset);
+        var gapRatio = _gridSettingsService.ResolveGapRatio(_gridSpacingPreset);
+        var edgeInset = _gridSettingsService.CalculateEdgeInset(hostWidth, hostHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+        var gridMetrics = _gridSettingsService.CalculateGridMetrics(hostWidth, hostHeight, _targetShortSideCells, gapRatio, edgeInset);
         if (gridMetrics.CellSize <= 0)
         {
             return;
@@ -875,12 +829,15 @@ public partial class MainWindow : Window
         UpdateDesktopSurfaceLayout(gridMetrics);
         UpdateSettingsViewportInsets(gridMetrics.CellSize);
 
-        GridInfoTextBlock.Text = Lf(
-            "settings.grid.info_format",
-            "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
-            gridMetrics.ColumnCount,
-            gridMetrics.RowCount,
-            gridMetrics.CellSize);
+        if (GridInfoTextBlock is not null)
+        {
+            GridInfoTextBlock.Text = Lf(
+                "settings.grid.info_format",
+                "Grid: {0} cols x {1} rows | cell {2:F1}px (1:1)",
+                gridMetrics.ColumnCount,
+                gridMetrics.RowCount,
+                gridMetrics.CellSize);
+        }
 
         UpdateWallpaperPreviewLayout();
     }
@@ -930,6 +887,11 @@ public partial class MainWindow : Window
 
     private int ResolvePendingGridEdgeInsetPercent()
     {
+        if (GridEdgeInsetNumberBox is null)
+        {
+            return _desktopEdgeInsetPercent;
+        }
+
         var pending = (int)Math.Round(GridEdgeInsetNumberBox.Value);
         return Math.Clamp(pending, MinEdgeInsetPercent, MaxEdgeInsetPercent);
     }
@@ -1067,47 +1029,7 @@ public partial class MainWindow : Window
 
     private void UpdateSettingsViewportInsets(double cellSize)
     {
-        if (SettingsContentPanel is null)
-        {
-            return;
-        }
-
-        var clampedCell = Math.Max(1, cellSize);
-        var horizontalInset = Math.Clamp(clampedCell * 0.45, 12, 64);
-        var verticalGap = Math.Clamp(clampedCell * 0.16, 6, 18);
-        var edgeInset = Math.Max(0, _currentDesktopEdgeInset);
-
-        var taskbarCellHeight = Math.Clamp(clampedCell * 0.76, 36, 76);
-        var taskbarPadding = Math.Clamp(taskbarCellHeight * 0.16, 6, 14);
-        var taskbarVisualHeight = Math.Max(clampedCell, taskbarCellHeight + taskbarPadding * 2);
-        if (BottomTaskbarContainer is not null && BottomTaskbarContainer.Bounds.Height > 1)
-        {
-            taskbarVisualHeight = Math.Max(taskbarVisualHeight, BottomTaskbarContainer.Bounds.Height);
-        }
-
-        var statusBarVisualHeight = clampedCell;
-        if (TopStatusBarHost is not null && TopStatusBarHost.Bounds.Height > 1)
-        {
-            statusBarVisualHeight = Math.Max(statusBarVisualHeight, TopStatusBarHost.Bounds.Height);
-        }
-
-        var topInset = Math.Max(clampedCell + verticalGap, edgeInset + statusBarVisualHeight + verticalGap);
-        var bottomInset = Math.Max(clampedCell + verticalGap, edgeInset + taskbarVisualHeight + verticalGap);
-
-        // Add extra safety margin so rounded panel corners never clip against viewport edges.
-        var cornerSafetyMargin = Math.Clamp(clampedCell * 0.12, 4, 12);
-        var inset = new Thickness(
-            horizontalInset + cornerSafetyMargin,
-            topInset + cornerSafetyMargin,
-            horizontalInset + cornerSafetyMargin,
-            bottomInset + cornerSafetyMargin);
-
-        // Keep panel stretched with explicit viewport insets so it never overlaps fixed chrome.
-        SettingsContentPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
-        SettingsContentPanel.VerticalAlignment = VerticalAlignment.Stretch;
-        SettingsContentPanel.Margin = inset;
-        SettingsContentPanel.Width = double.NaN;
-        SettingsContentPanel.Height = double.NaN;
+        _ = cellSize;
     }
 
     private void UpdateWallpaperPreviewLayout()
@@ -1160,9 +1082,9 @@ public partial class MainWindow : Window
 
             var innerWidth = Math.Max(1, previewWidth - horizontalPadding);
             var innerHeight = Math.Max(1, previewHeight - verticalPadding);
-            var gapRatio = _gridLayoutService.ResolveGapRatio(_gridSpacingPreset);
-            var edgeInset = _gridLayoutService.CalculateEdgeInset(innerWidth, innerHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
-            var gridMetrics = _gridLayoutService.CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells, gapRatio, edgeInset);
+            var gapRatio = _gridSettingsService.ResolveGapRatio(_gridSpacingPreset);
+            var edgeInset = _gridSettingsService.CalculateEdgeInset(innerWidth, innerHeight, _targetShortSideCells, _desktopEdgeInsetPercent);
+            var gridMetrics = _gridSettingsService.CalculateGridMetrics(innerWidth, innerHeight, _targetShortSideCells, gapRatio, edgeInset);
             if (gridMetrics.CellSize <= 0)
             {
                 return;
@@ -1273,6 +1195,11 @@ public partial class MainWindow : Window
 
     private void InitializeTimeZoneSettings()
     {
+        if (TimeZoneComboBox is null)
+        {
+            return;
+        }
+
         // Populate timezone dropdown items before selecting current timezone.
         _suppressTimeZoneSelectionEvents = true;
         TimeZoneComboBox.Items.Clear();
@@ -1299,7 +1226,9 @@ public partial class MainWindow : Window
 
     private void OnTimeZoneSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_suppressTimeZoneSelectionEvents || TimeZoneComboBox.SelectedItem is not ComboBoxItem item)
+        if (TimeZoneComboBox is null ||
+            _suppressTimeZoneSelectionEvents ||
+            TimeZoneComboBox.SelectedItem is not ComboBoxItem item)
         {
             return;
         }

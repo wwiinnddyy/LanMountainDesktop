@@ -74,6 +74,15 @@ public interface IGridSettingsService
 {
     GridSettingsState Get();
     void Save(GridSettingsState state);
+    string NormalizeSpacingPreset(string? value);
+    double ResolveGapRatio(string? preset);
+    double CalculateEdgeInset(double hostWidth, double hostHeight, int shortSideCells, int insetPercent);
+    DesktopGridMetrics CalculateGridMetrics(
+        double hostWidth,
+        double hostHeight,
+        int shortSideCells,
+        double gapRatio,
+        double edgeInsetPx);
 }
 
 public interface IWallpaperSettingsService
@@ -117,12 +126,14 @@ public interface IWeatherSettingsService
 {
     WeatherSettingsState Get();
     void Save(WeatherSettingsState state);
+    IWeatherInfoService GetWeatherInfoService();
 }
 
 public interface IRegionSettingsService
 {
     RegionSettingsState Get();
     void Save(RegionSettingsState state);
+    TimeZoneService GetTimeZoneService();
 }
 
 public interface IUpdateSettingsService

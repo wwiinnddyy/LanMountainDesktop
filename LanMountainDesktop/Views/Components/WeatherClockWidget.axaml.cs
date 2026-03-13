@@ -16,7 +16,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
 {
     private sealed record WeatherClockConfig(
         string LanguageCode,
@@ -125,12 +125,6 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
             ? BuiltInComponentIds.DesktopWeatherClock
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
-        RefreshFromSettings();
-    }
-
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
         RefreshFromSettings();
     }
 

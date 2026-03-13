@@ -9,10 +9,11 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
 {
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -58,8 +59,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private string _componentId = BuiltInComponentIds.DesktopClock;
     private string _placementId = string.Empty;
 
-    private readonly AppSettingsService _appSettingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
@@ -121,12 +121,6 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
             ? BuiltInComponentIds.DesktopClock
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
-        RefreshFromSettings();
-    }
-
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
         RefreshFromSettings();
     }
 
@@ -376,8 +370,11 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
 
     private void LoadClockSettings()
     {
-        var appSnapshot = _appSettingsService.Load();
-        var componentSnapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+        var appSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var componentSnapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
+            SettingsScope.ComponentInstance,
+            _componentId,
+            _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
 
         var configuredTimeZoneId = string.IsNullOrWhiteSpace(componentSnapshot.DesktopClockTimeZoneId)

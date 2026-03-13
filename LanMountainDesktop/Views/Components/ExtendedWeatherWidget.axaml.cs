@@ -12,11 +12,12 @@ using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentSettingsStoreAware
+public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
 {
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
@@ -25,8 +26,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private readonly DispatcherTimer _animationTimer = new() { Interval = FluttermotionToken.WeatherAnimationFrameInterval };
     private readonly ScaleTransform _backgroundMotionScaleTransform = new(1, 1);
     private readonly TranslateTransform _backgroundMotionTranslateTransform = new();
-    private readonly AppSettingsService _settingsService = new();
-    private IComponentInstanceSettingsStore _componentSettingsStore = new ComponentSettingsService();
+    private readonly ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
     private IWeatherInfoService _weatherInfoService = DefaultWeatherInfoService;
@@ -185,12 +185,6 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         RefreshFromSettings();
     }
 
-    public void SetComponentSettingsStore(IComponentInstanceSettingsStore settingsStore)
-    {
-        _componentSettingsStore = settingsStore ?? new ComponentSettingsService();
-        RefreshFromSettings();
-    }
-
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
@@ -265,7 +259,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         }
 
         _isRefreshing = true;
-        var app = _settingsService.Load();
+        var app = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         _languageCode = _localizationService.NormalizeLanguageCode(app.LanguageCode);
         var locale = string.Equals(_languageCode, "zh-CN", StringComparison.OrdinalIgnoreCase) ? "zh_cn" : "en_us";
         var latitude = double.IsFinite(app.WeatherLatitude) ? Math.Clamp(app.WeatherLatitude, -90, 90) : 39.9042;
@@ -953,7 +947,10 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
         try
         {
-            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+            var snapshot = _settingsService.LoadSnapshot<ComponentSettingsSnapshot>(
+                SettingsScope.ComponentInstance,
+                _componentId,
+                _placementId);
             enabled = snapshot.WeatherAutoRefreshEnabled;
             intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.WeatherAutoRefreshIntervalMinutes);
         }

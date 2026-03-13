@@ -10,6 +10,7 @@ using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.ComponentSystem.Extensions;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Services;
@@ -114,6 +115,11 @@ public static class DesktopComponentRegistryFactory
     {
         try
         {
+            var settingsService = contribution.Plugin.Services.GetService(typeof(ISettingsService)) as ISettingsService
+                ?? HostSettingsFacadeProvider.GetOrCreate().Settings;
+            var pluginSettings = new PluginScopedSettingsService(
+                contribution.Plugin.Manifest.Id,
+                settingsService);
             var pluginContext = new PluginDesktopComponentContext(
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,
@@ -122,7 +128,8 @@ public static class DesktopComponentRegistryFactory
                 contribution.Plugin.Context.Properties,
                 contribution.Registration.ComponentId,
                 context.PlacementId,
-                context.CellSize);
+                context.CellSize,
+                pluginSettings);
 
             return contribution.Registration.ControlFactory(contribution.Plugin.Services, pluginContext);
         }

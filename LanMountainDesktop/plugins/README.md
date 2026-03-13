@@ -26,8 +26,6 @@
 - `PluginLoadContext.cs`
 - `PluginRuntimeService.cs`
 - `PluginCatalogEntry.cs`
-- `PluginSettingsPage.axaml`
-- `PluginSettingsPage.Host.cs`
 - `PluginMarketIndexService.cs`
 - `PluginMarketInstallService.cs`
 
