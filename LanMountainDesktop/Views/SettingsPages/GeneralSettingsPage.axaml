@@ -3,18 +3,22 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.GeneralSettingsPage"
              x:DataType="vm:GeneralSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-            <TextBlock Classes="settings-section-title"
-                       Text="{Binding PageTitle}" />
-            <TextBlock Classes="settings-section-description"
-                       Text="{Binding PageDescription}" />
 
-            <controls:SettingsOptionCard IconKey="Settings"
-                                         Title="{Binding LanguageHeader}">
-                <controls:SettingsOptionCard.DetailsContent>
+            <!-- 区域设置分组 -->
+            <controls:IconText Icon="Globe"
+                               Text="{Binding BasicHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding LanguageHeader}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Settings" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
                     <ComboBox MinWidth="240"
                               ItemsSource="{Binding Languages}"
                               SelectedItem="{Binding SelectedLanguage}">
@@ -24,13 +28,15 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </controls:SettingsOptionCard.DetailsContent>
-            </controls:SettingsOptionCard>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
 
-            <controls:SettingsOptionCard IconKey="Settings"
-                                         Title="{Binding TimeZoneHeader}"
-                                         Description="{Binding TimeZoneDescription}">
-                <controls:SettingsOptionCard.DetailsContent>
+            <ui:SettingsExpander Header="{Binding TimeZoneHeader}"
+                                 Description="{Binding TimeZoneDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Clock" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
                     <ComboBox MinWidth="280"
                               ItemsSource="{Binding TimeZones}"
                               SelectedItem="{Binding SelectedTimeZone}">
@@ -40,12 +46,14 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </controls:SettingsOptionCard.DetailsContent>
-            </controls:SettingsOptionCard>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
 
-            <controls:SettingsSectionCard IconKey="Info"
-                                          Title="{Binding PreviewHeader}">
-                <controls:SettingsSectionCard.CardContent>
+            <ui:SettingsExpander Header="{Binding PreviewHeader}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Calendar" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16"
                           RowDefinitions="Auto,Auto"
@@ -63,13 +71,22 @@
                                    Opacity="0.82"
                                    Text="{Binding PreviewDateText}" />
                     </Grid>
-                </controls:SettingsSectionCard.CardContent>
-            </controls:SettingsSectionCard>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding RuntimeHeader}"
+            <Separator Classes="settings-separator" />
+
+            <!-- 运行时设置分组 -->
+            <controls:IconText Icon="DeveloperBoard"
+                               Text="{Binding RuntimeHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding RenderModeHeader}"
                                  Description="{Binding RuntimeDescription}"
                                  IsExpanded="True">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="DeveloperBoard" />
+                </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <ComboBox MinWidth="240"
                               ItemsSource="{Binding RenderModes}"
@@ -81,7 +98,14 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                 </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <TextBlock Text="{Binding RenderModeRestartMessage}"
+                               Opacity="0.7"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

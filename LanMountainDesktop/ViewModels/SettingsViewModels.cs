@@ -42,6 +42,9 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     private string _currentPageTitle = string.Empty;
 
     [ObservableProperty]
+    private bool _isPageTitleVisible = true;
+
+    [ObservableProperty]
     private string? _currentPageDescription;
 
     [ObservableProperty]
@@ -636,7 +639,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.appearance.title", "Appearance");
-        PageDescription = L("settings.appearance.description", "Theme, wallpaper, and status bar presentation.");
+        PageDescription = L("settings.appearance.description", "Theme and status bar presentation.");
         ThemeHeader = L("settings.appearance.theme_header", "Theme");
         NightModeLabel = L("settings.color.enable_night_mode_toggle", "Enable night mode");
         UseSystemChromeLabel = L("settings.color.use_system_chrome_toggle", "Use system window chrome");

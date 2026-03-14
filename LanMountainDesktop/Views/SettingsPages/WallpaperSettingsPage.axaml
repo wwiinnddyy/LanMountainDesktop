@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage"
+             x:DataType="vm:WallpaperSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+
+            <controls:IconText Icon="Image"
+                               Text="{Binding WallpaperHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding WallpaperPathLabel}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Image" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox IsReadOnly="True"
+                                 MinWidth="200"
+                                 Text="{Binding WallpaperPath}" />
+                        <Button Click="OnBrowseWallpaperClick"
+                                Content="{Binding ImportWallpaperButtonText}" />
+                    </StackPanel>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
+                                 Description="{Binding WallpaperPlacementDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Maximize" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox MinWidth="160"
+                              ItemsSource="{Binding WallpaperPlacements}"
+                              SelectedItem="{Binding SelectedWallpaperPlacement}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

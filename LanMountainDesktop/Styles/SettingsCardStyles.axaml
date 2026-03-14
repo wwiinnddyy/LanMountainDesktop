@@ -4,9 +4,9 @@
 
     <Style Selector="StackPanel.settings-page-container">
         <Setter Property="Spacing" Value="0" />
-        <Setter Property="Margin" Value="12,14,28,32" />
-        <Setter Property="MaxWidth" Value="900" />
-        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Margin" Value="0,12,0,24" />
+        <Setter Property="Width" Value="{DynamicResource SettingsPageContentWidth}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="TextBlock.settings-section-title">
@@ -20,7 +20,6 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Opacity" Value="0.76" />
         <Setter Property="TextWrapping" Value="Wrap" />
-        <Setter Property="MaxWidth" Value="760" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
         <Setter Property="Margin" Value="0,0,0,22" />
     </Style>
@@ -33,6 +32,7 @@
     </Style>
 
     <Style Selector="Border.settings-section-card, Border.settings-option-card, Border.settings-list-item">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Transitions">
@@ -48,7 +48,6 @@
     </Style>
 
     <Style Selector="Border.settings-section-card">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
         <Setter Property="CornerRadius" Value="18" />
         <Setter Property="Padding" Value="20" />
         <Setter Property="Margin" Value="0,0,0,14" />
@@ -56,7 +55,6 @@
     </Style>
 
     <Style Selector="Border.settings-option-card">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
         <Setter Property="CornerRadius" Value="14" />
         <Setter Property="Padding" Value="16" />
         <Setter Property="Margin" Value="0,0,0,12" />
@@ -64,7 +62,6 @@
     </Style>
 
     <Style Selector="Border.settings-list-item">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
         <Setter Property="CornerRadius" Value="14" />
         <Setter Property="Padding" Value="16" />
         <Setter Property="Margin" Value="0,0,0,10" />
@@ -121,7 +118,6 @@
         <Setter Property="Opacity" Value="0.68" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
-        <Setter Property="MaxWidth" Value="620" />
     </Style>
 
     <Style Selector="StackPanel.settings-item">
@@ -135,6 +131,11 @@
 
     <Style Selector="Grid.settings-list-actions">
         <Setter Property="ColumnSpacing" Value="12" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="MinWidth" Value="0" />
     </Style>
 
     <Style Selector="ui|SettingsExpander.settings-expander-card">

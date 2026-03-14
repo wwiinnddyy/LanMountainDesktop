@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
@@ -17,10 +18,17 @@ namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow : Window, ISettingsPageHostContext
 {
+    private const double BaseSettingsContentWidth = 960d;
+    private const double MinSettingsContentWidth = 320d;
+    private const double MaxSettingsContentWidth = 1280d;
+    private const double BaseDrawerWidth = 296d;
+    private const double BaseNarrowThreshold = 800d;
+
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
     private readonly bool _useSystemChrome;
+    private bool _isResponsiveLayoutRefreshPending;
 
     public SettingsWindow()
         : this(
@@ -44,6 +52,11 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         InitializeComponent();
         ApplyChromeMode(useSystemChrome);
 
+        if (RootNavigationView is not null)
+        {
+            RootNavigationView.PropertyChanged += OnRootNavigationViewPropertyChanged;
+        }
+
         Opened += OnOpened;
         SizeChanged += OnWindowSizeChanged;
         Closed += OnClosed;
@@ -59,6 +72,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         SyncTitleText();
         UpdateChromeMetrics();
         UpdatePaneToggleIcon();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     public void ReloadPages(string? pageId)
@@ -86,6 +101,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         ViewModel.DrawerTitle = title ?? ViewModel.DrawerFallbackTitle;
         ViewModel.IsDrawerOpen = true;
         SyncTitleText();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     public void CloseDrawer()
@@ -98,6 +115,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         ViewModel.IsDrawerOpen = false;
         ViewModel.DrawerTitle = null;
         SyncTitleText();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     public void RequestRestart(string? reason = null)
@@ -285,6 +304,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         _ = sender;
         _ = e;
         UpdateChromeMetrics();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -292,12 +313,139 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         _ = sender;
         _ = e;
         UpdateChromeMetrics();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
+    }
+
+    private bool TryApplyResponsiveLayout()
+    {
+        if (SettingsContentGrid is null || DrawerBorder is null)
+        {
+            return false;
+        }
+
+        var width = Bounds.Width > 1 ? Bounds.Width : Math.Max(Width, MinWidth);
+        var renderScale = RenderScaling > 0 ? RenderScaling : 1d;
+        var titleScale = WindowTitleTextBlock?.FontSize > 0
+            ? WindowTitleTextBlock.FontSize / 12d
+            : 1d;
+        var pageTitleScale = PageTitleTextBlock?.FontSize > 0
+            ? PageTitleTextBlock.FontSize / 28d
+            : 1d;
+        var typographyScale = Math.Max(titleScale, pageTitleScale);
+        var contentScale = Math.Clamp(
+            1d + ((renderScale - 1d) * 0.7d) + ((typographyScale - 1d) * 0.45d),
+            1d,
+            1.45d);
+
+        var horizontalMargin = Math.Clamp(16d * renderScale, 12d, 32d);
+        var topMargin = Math.Clamp(2d * renderScale, 0d, 8d);
+        var bottomMargin = Math.Clamp(16d * renderScale, 12d, 28d);
+        var columnSpacing = Math.Clamp(20d * renderScale, 12d, 28d);
+        var drawerWidth = Math.Clamp(BaseDrawerWidth * contentScale, 276d, 380d);
+        var compactPaneWidth = Math.Clamp(48d * renderScale, 40d, 60d);
+        var narrowThreshold = Math.Clamp(BaseNarrowThreshold * renderScale, 760d, 980d);
+        var isNarrow = width < narrowThreshold;
+        var paneReservedWidth = GetReservedPaneWidth(compactPaneWidth, isNarrow);
+
+        SettingsContentGrid.Margin = new Thickness(horizontalMargin, topMargin, horizontalMargin, bottomMargin);
+        DrawerBorder.Width = drawerWidth;
+
+        if (isNarrow)
+        {
+            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*");
+            SettingsContentGrid.ColumnSpacing = 0;
+            if (DrawerBorder.IsVisible)
+            {
+                ViewModel.IsDrawerOpen = false;
+            }
+
+            DrawerBorder.IsVisible = false;
+        }
+        else
+        {
+            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto");
+            SettingsContentGrid.ColumnSpacing = columnSpacing;
+        }
+
+        var contentHostWidth = ContentFrame?.Bounds.Width > 1
+            ? ContentFrame.Bounds.Width
+            : 0d;
+        if (contentHostWidth <= 1)
+        {
+            var rootContentWidth = RootNavigationView?.Bounds.Width > 1
+                ? RootNavigationView.Bounds.Width - paneReservedWidth
+                : SettingsContentGrid.Bounds.Width;
+            contentHostWidth = rootContentWidth - (isNarrow ? 0d : drawerWidth + SettingsContentGrid.ColumnSpacing);
+        }
+
+        contentHostWidth = Math.Max(MinSettingsContentWidth, contentHostWidth);
+
+        var edgePadding = Math.Clamp(24d * renderScale, 14d, 40d);
+        var preferredContentWidth = Math.Clamp(BaseSettingsContentWidth * contentScale, 820d, MaxSettingsContentWidth);
+        var availableContentWidth = Math.Max(MinSettingsContentWidth, contentHostWidth - edgePadding * 2d);
+        var resolvedContentWidth = availableContentWidth > preferredContentWidth
+            ? preferredContentWidth
+            : availableContentWidth;
+
+        Resources["SettingsPageContentWidth"] = resolvedContentWidth;
+
+        if (PageTitleContainer is not null)
+        {
+            PageTitleContainer.Width = resolvedContentWidth;
+            PageTitleContainer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+        }
+
+        if (PageTitleTextBlock is not null)
+        {
+            var narrowTitleThreshold = Math.Clamp(760d * renderScale, 700d, 860d);
+            PageTitleTextBlock.Classes.Set("narrow", resolvedContentWidth < narrowTitleThreshold);
+        }
+
+        return true;
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        _ = TryApplyResponsiveLayout();
+        return;
+
+        if (SettingsContentGrid is null || DrawerBorder is null)
+        {
+            return;
+        }
+
+        var width = Bounds.Width;
+        const double narrowThreshold = 800;
+
+        var isNarrow = width < narrowThreshold;
+
+        // 小窗口时隐藏抽屉面板
+        if (isNarrow)
+        {
+            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*");
+            SettingsContentGrid.ColumnSpacing = 0;
+            if (DrawerBorder.IsVisible)
+            {
+                ViewModel.IsDrawerOpen = false;
+            }
+            DrawerBorder.IsVisible = false;
+        }
+        else
+        {
+            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto");
+            SettingsContentGrid.ColumnSpacing = 20;
+        }
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
         _cachedPages.Clear();
         PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
+        if (RootNavigationView is not null)
+        {
+            RootNavigationView.PropertyChanged -= OnRootNavigationViewPropertyChanged;
+        }
         Opened -= OnOpened;
         SizeChanged -= OnWindowSizeChanged;
     }
@@ -322,6 +470,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
         RootNavigationView.IsPaneOpen = !RootNavigationView.IsPaneOpen;
         UpdatePaneToggleIcon();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     private void OnCloseWindowClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -329,6 +479,46 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         _ = sender;
         _ = e;
         Close();
+    }
+
+    private void OnRootNavigationViewPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Property == NavigationView.IsPaneOpenProperty ||
+            e.Property == NavigationView.OpenPaneLengthProperty ||
+            e.Property == NavigationView.PaneDisplayModeProperty)
+        {
+            UpdatePaneToggleIcon();
+            RequestResponsiveLayoutRefresh();
+        }
+    }
+
+    private void RequestResponsiveLayoutRefresh()
+    {
+        if (_isResponsiveLayoutRefreshPending)
+        {
+            return;
+        }
+
+        _isResponsiveLayoutRefreshPending = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _isResponsiveLayoutRefreshPending = false;
+            UpdateResponsiveLayout();
+        }, DispatcherPriority.Background);
+    }
+
+    private double GetReservedPaneWidth(double compactPaneWidth, bool isNarrow)
+    {
+        if (RootNavigationView is null || isNarrow)
+        {
+            return 0d;
+        }
+
+        return RootNavigationView.IsPaneOpen
+            ? RootNavigationView.OpenPaneLength
+            : compactPaneWidth;
     }
 
     private void UpdatePaneToggleIcon()
@@ -457,6 +647,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         return iconKey?.Trim() switch
         {
             "DesignIdeas" => Symbol.Color,
+            "Image" => Symbol.Image,
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "Info" => Symbol.Info,

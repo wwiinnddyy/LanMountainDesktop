@@ -13,6 +13,7 @@ using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
@@ -193,6 +194,30 @@ public partial class MainWindow
         return false;
     }
 
+    private ThemeColorContext BuildAdaptiveThemeContext()
+    {
+        return new ThemeColorContext(
+            _selectedThemeColor,
+            IsLightBackground: !_isNightMode,
+            IsLightNavBackground: !_isNightMode,
+            IsNightMode: _isNightMode);
+    }
+
+    private void ApplyAdaptiveThemeResources()
+    {
+        var context = BuildAdaptiveThemeContext();
+        ThemeColorSystemService.ApplyThemeResources(Resources, context);
+        GlassEffectService.ApplyGlassResources(Resources, context);
+
+        if (Application.Current?.Resources is { } applicationResources)
+        {
+            ThemeColorSystemService.ApplyThemeResources(applicationResources, context);
+            GlassEffectService.ApplyGlassResources(applicationResources, context);
+        }
+
+        _defaultDesktopBackground = GetThemeBrush("AdaptiveSurfaceBaseBrush");
+    }
+
     private void TryRestoreWallpaper(string? savedWallpaperPath)
     {
         _wallpaperPath = string.IsNullOrWhiteSpace(savedWallpaperPath) ? null : savedWallpaperPath;
@@ -284,6 +309,9 @@ public partial class MainWindow
         {
             Application.Current.RequestedThemeVariant = requestedThemeVariant;
         }
+
+        ApplyAdaptiveThemeResources();
+        ApplyWallpaperBrush();
 
         if (!refreshPalettes)
         {

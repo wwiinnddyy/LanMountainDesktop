@@ -232,7 +232,7 @@
     "settings.general.preview_date_label":  "Date",
     "settings.general.render_mode_restart_message":  "Rendering mode changes require restarting the app.",
     "settings.appearance.title":  "Appearance",
-    "settings.appearance.description":  "Adjust theme, wallpaper, and status bar presentation.",
+    "settings.appearance.description":  "Adjust theme and status bar presentation.",
     "settings.appearance.theme_header":  "Theme",
     "settings.color.enable_night_mode_toggle":  "Enable night mode",
     "settings.color.use_system_chrome_toggle":  "Use system window chrome",
@@ -801,5 +801,4 @@
     "single_instance.notice.description":  "The app is already running. There is no need to click multiple times to open it.",
     "single_instance.notice.button":  "OK"
   }
-
 

@@ -107,9 +107,19 @@
     </Style>
 
     <Style Selector=".settings-scope ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="Padding" Value="10,6" />
         <Setter Property="Margin" Value="4,2" />
+    </Style>
+
+    <Style Selector=".settings-scope ComboBoxItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+    </Style>
+
+    <Style Selector=".settings-scope ComboBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
     </Style>
 
     <Style Selector=".settings-scope ui|NumberBox">
@@ -137,6 +147,10 @@
 
     <Style Selector=".settings-scope RadioButton:checked">
         <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
+    </Style>
+
+    <Style Selector=".settings-scope ui|NavigationView, .settings-scope ui|NavigationViewItem, .settings-scope ui|SettingsExpander, .settings-scope ui|InfoBar, .settings-scope ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
     <Style Selector="Button.swatch-button">

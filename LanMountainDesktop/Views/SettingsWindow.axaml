@@ -7,8 +7,8 @@
         x:DataType="vm:SettingsWindowViewModel"
         Width="1120"
         Height="760"
-        MinWidth="920"
-        MinHeight="620"
+        MinWidth="560"
+        MinHeight="480"
         CanResize="True"
         WindowStartupLocation="Manual"
         SystemDecorations="BorderOnly"
@@ -17,7 +17,29 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding Title}">
 
-    <Grid Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+    <Window.Resources>
+        <x:Double x:Key="SettingsPageContentWidth">920</x:Double>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Grid.page-title-container">
+            <Setter Property="Margin" Value="0,16,0,0" />
+            <Setter Property="Width" Value="{DynamicResource SettingsPageContentWidth}" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="TextBlock.page-title-text">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+
+        <Style Selector="TextBlock.page-title-text:narrow">
+            <Setter Property="FontSize" Value="24" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Classes="settings-scope"
+          Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
           RowDefinitions="Auto,Auto,*">
         <Border x:Name="WindowTitleBarHost"
                 Height="48"
@@ -121,10 +143,24 @@
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
             </ui:NavigationView.Resources>
 
-            <Grid ColumnDefinitions="*,Auto"
+            <Grid x:Name="SettingsContentGrid"
+                  ColumnDefinitions="*,Auto"
                   ColumnSpacing="20"
                   Margin="12,0,16,16">
-                <ui:Frame x:Name="ContentFrame" />
+                <Grid Grid.Column="0"
+                      RowDefinitions="Auto,*">
+                    <Grid x:Name="PageTitleContainer"
+                          Grid.Row="0"
+                          Classes="page-title-container"
+                          IsVisible="{Binding IsPageTitleVisible}">
+                        <TextBlock x:Name="PageTitleTextBlock"
+                                   Classes="page-title-text"
+                                   Text="{Binding CurrentPageTitle}" />
+                    </Grid>
+
+                    <ui:Frame x:Name="ContentFrame"
+                              Grid.Row="1" />
+                </Grid>
 
                 <Border x:Name="DrawerBorder"
                         Grid.Column="1"

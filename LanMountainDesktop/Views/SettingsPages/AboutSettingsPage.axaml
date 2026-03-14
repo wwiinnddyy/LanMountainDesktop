@@ -3,78 +3,102 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-            <TextBlock Classes="settings-section-title"
-                       Text="{Binding PageTitle}" />
-            <TextBlock Classes="settings-section-description"
-                       Text="{Binding PageDescription}" />
 
-            <controls:SettingsSectionCard IconKey="Info"
-                                          Title="{Binding AppInfoHeader}">
-                <controls:SettingsSectionCard.CardContent>
-                    <StackPanel Spacing="14">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding VersionLabel}" />
-                            <TextBlock Opacity="0.82"
-                                       Text="{Binding VersionText}" />
-                        </StackPanel>
+            <!-- 应用信息分组 -->
+            <controls:IconText Icon="Info"
+                               Text="{Binding AppInfoHeader}"
+                               Margin="0,0,0,4" />
 
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding RenderBackendLabel}" />
-                            <TextBlock Opacity="0.82"
-                                       Text="{Binding RenderBackendText}" />
-                        </StackPanel>
-                    </StackPanel>
-                </controls:SettingsSectionCard.CardContent>
-            </controls:SettingsSectionCard>
+            <ui:SettingsExpander Header="{Binding AppInfoHeader}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Info" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding VersionLabel}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   Opacity="0.82"
+                                   Text="{Binding VersionText}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding RenderBackendLabel}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   Opacity="0.82"
+                                   Text="{Binding RenderBackendText}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding UpdateHeader}"
+            <Separator Classes="settings-separator" />
+
+            <!-- 更新设置分组 -->
+            <controls:IconText Icon="ArrowSync"
+                               Text="{Binding UpdateHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding UpdateHeader}"
                                  IsExpanded="True">
-                <StackPanel Spacing="12">
-                    <controls:SettingsOptionCard IconKey="ArrowSync"
-                                                 Title="{Binding AutoCheckUpdatesLabel}">
-                        <controls:SettingsOptionCard.ActionContent>
-                            <ToggleSwitch IsChecked="{Binding AutoCheckUpdates}" />
-                        </controls:SettingsOptionCard.ActionContent>
-                    </controls:SettingsOptionCard>
-
-                    <controls:SettingsOptionCard IconKey="ArrowSync"
-                                                 Title="{Binding IncludePrereleaseUpdatesLabel}">
-                        <controls:SettingsOptionCard.ActionContent>
-                            <ToggleSwitch IsChecked="{Binding IncludePrereleaseUpdates}" />
-                        </controls:SettingsOptionCard.ActionContent>
-                    </controls:SettingsOptionCard>
-
-                    <controls:SettingsOptionCard IconKey="ArrowSync"
-                                                 Title="{Binding UpdateChannelLabel}">
-                        <controls:SettingsOptionCard.DetailsContent>
-                            <ComboBox ItemsSource="{Binding UpdateChannels}"
-                                      SelectedItem="{Binding SelectedUpdateChannel}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:SelectionOption">
-                                        <TextBlock Text="{Binding Label}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </controls:SettingsOptionCard.DetailsContent>
-                    </controls:SettingsOptionCard>
-
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="12">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ArrowSync" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding AutoCheckUpdatesLabel}"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      HorizontalAlignment="Right"
+                                      IsChecked="{Binding AutoCheckUpdates}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding IncludePrereleaseUpdatesLabel}"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      HorizontalAlignment="Right"
+                                      IsChecked="{Binding IncludePrereleaseUpdates}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding UpdateChannelLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="160"
+                                  HorizontalAlignment="Right"
+                                  ItemsSource="{Binding UpdateChannels}"
+                                  SelectedItem="{Binding SelectedUpdateChannel}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
                         <Button Command="{Binding CheckForUpdatesCommand}"
                                 Content="{Binding CheckForUpdatesButtonText}" />
-                        <TextBlock VerticalAlignment="Center"
-                                   Opacity="0.76"
+                        <TextBlock Opacity="0.76"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
                                    Text="{Binding UpdateStatus}" />
                     </StackPanel>
-                </StackPanel>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

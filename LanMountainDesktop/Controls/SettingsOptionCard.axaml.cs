@@ -102,6 +102,7 @@ public partial class SettingsOptionCard : UserControl
         return iconKey?.Trim() switch
         {
             "DesignIdeas" => Symbol.Color,
+            "Image" => Symbol.Image,
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "Info" => Symbol.Info,

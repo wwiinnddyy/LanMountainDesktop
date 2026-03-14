@@ -8,6 +8,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -17,6 +18,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
 
@@ -24,6 +26,7 @@ namespace LanMountainDesktop;
 
 public partial class App : Application
 {
+    private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
     private enum DesktopShellState
     {
         ForegroundDesktop = 0,
@@ -75,13 +78,18 @@ public partial class App : Application
             PageId: pageTag));
     }
 
+    public App()
+    {
+        _settingsFacade.Settings.Changed += OnSettingsChanged;
+    }
+
     public override void Initialize()
     {
         AppLogger.Info("App", "Initializing application resources.");
         ConfigureWebViewUserDataFolder();
         AvaloniaWebViewBuilder.Initialize(default);
         AvaloniaXamlLoader.Load(this);
-        ApplyInitialThemeVariantFromSettings();
+        ApplyThemeFromSettings();
         ApplyCurrentCultureFromSettings();
         EnsureSettingsWindowService();
     }
@@ -292,12 +300,13 @@ public partial class App : Application
             _settingsFacade);
     }
 
-    private void ApplyInitialThemeVariantFromSettings()
+    private void ApplyThemeFromSettings()
     {
         var themeState = _settingsFacade.Theme.Get();
         RequestedThemeVariant = themeState.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
+        ApplyAdaptiveThemeResources(themeState);
     }
 
     private void ApplyCurrentCultureFromSettings()
@@ -424,13 +433,78 @@ public partial class App : Application
     {
         Dispatcher.UIThread.Post(() =>
         {
-            ApplyInitialThemeVariantFromSettings();
+            ApplyThemeFromSettings();
             ApplyCurrentCultureFromSettings();
             if (_trayIcons is not null)
             {
                 InitializeTrayIcon();
             }
         }, DispatcherPriority.Background);
+    }
+
+    private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
+    {
+        _ = sender;
+
+        if (e.Scope != SettingsScope.App)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            var changedKeys = e.ChangedKeys?.ToArray();
+            var refreshAll = changedKeys is null || changedKeys.Length == 0;
+            var themeChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase);
+            var languageChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
+
+            if (themeChanged)
+            {
+                ApplyThemeFromSettings();
+            }
+
+            if (languageChanged)
+            {
+                ApplyCurrentCultureFromSettings();
+                if (_trayIcons is not null)
+                {
+                    InitializeTrayIcon();
+                }
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void ApplyAdaptiveThemeResources(ThemeAppearanceSettingsState themeState)
+    {
+        var accentColor = TryParseThemeColor(themeState.ThemeColor);
+        var context = new ThemeColorContext(
+            accentColor,
+            IsLightBackground: !themeState.IsNightMode,
+            IsLightNavBackground: !themeState.IsNightMode,
+            IsNightMode: themeState.IsNightMode);
+        ThemeColorSystemService.ApplyThemeResources(Resources, context);
+        GlassEffectService.ApplyGlassResources(Resources, context);
+    }
+
+    private static Color TryParseThemeColor(string? colorText)
+    {
+        if (!string.IsNullOrWhiteSpace(colorText))
+        {
+            try
+            {
+                return Color.Parse(colorText);
+            }
+            catch
+            {
+            }
+        }
+
+        return DefaultAccentColor;
     }
 
     private void RegisterUiUnhandledExceptionGuard()
@@ -479,6 +553,7 @@ public partial class App : Application
 
         _exitCleanupCompleted = true;
         AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
+        _settingsFacade.Settings.Changed -= OnSettingsChanged;
 
         try
         {

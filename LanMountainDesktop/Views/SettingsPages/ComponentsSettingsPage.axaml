@@ -1,40 +1,56 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.ComponentsSettingsPage"
              x:DataType="vm:ComponentsSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-            <TextBlock Classes="settings-section-title"
-                       Text="{Binding PageTitle}" />
-            <TextBlock Classes="settings-section-description"
-                       Text="{Binding PageDescription}" />
 
-            <ui:SettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding GridHeader}"
+            <!-- 网格布局设置分组 -->
+            <controls:IconText Icon="GridDots"
+                               Text="{Binding GridHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding GridHeader}"
                                  IsExpanded="True">
-                <StackPanel Spacing="14">
-                    <StackPanel Classes="settings-item">
-                        <TextBlock Classes="settings-item-label"
-                                   Text="{Binding ShortSideCellsLabel}" />
-                        <NumericUpDown Minimum="6"
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="GridDots" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding ShortSideCellsLabel}"
+                                   VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1"
+                                       MinWidth="120"
+                                       HorizontalAlignment="Right"
+                                       Minimum="6"
                                        Maximum="96"
                                        Value="{Binding ShortSideCells}" />
-                    </StackPanel>
-
-                    <StackPanel Classes="settings-item">
-                        <TextBlock Classes="settings-item-label"
-                                   Text="{Binding EdgeInsetPercentLabel}" />
-                        <NumericUpDown Minimum="0"
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding EdgeInsetPercentLabel}"
+                                   VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1"
+                                       MinWidth="120"
+                                       HorizontalAlignment="Right"
+                                       Minimum="0"
                                        Maximum="30"
                                        Value="{Binding EdgeInsetPercent}" />
-                    </StackPanel>
-
-                    <StackPanel Classes="settings-item">
-                        <TextBlock Classes="settings-item-label"
-                                   Text="{Binding SpacingPresetLabel}" />
-                        <ComboBox ItemsSource="{Binding SpacingPresets}"
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding SpacingPresetLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="160"
+                                  HorizontalAlignment="Right"
+                                  ItemsSource="{Binding SpacingPresets}"
                                   SelectedItem="{Binding SelectedSpacingPreset}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:SelectionOption">
@@ -42,9 +58,10 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                    </StackPanel>
-                </StackPanel>
+                    </Grid>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

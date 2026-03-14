@@ -2,11 +2,13 @@ using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
 
@@ -50,6 +52,7 @@ public interface ISettingsWindowService
 
 internal sealed class SettingsWindowService : ISettingsWindowService
 {
+    private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly ISettingsFacadeService _settingsFacade;
@@ -85,7 +88,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _window ??= CreateWindow();
         var themeState = _settingsFacade.Theme.Get();
         _window.ApplyChromeMode(themeState.UseSystemChrome);
-        ApplyTheme(_window, themeState.IsNightMode);
+        ApplyTheme(_window, themeState);
         _window.ReloadPages(request.PageId);
         PositionWindow(_window, request);
 
@@ -140,7 +143,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             _pageRegistry,
             _hostApplicationLifecycle,
             useSystemChrome);
-        ApplyTheme(window, themeState.IsNightMode);
+        ApplyTheme(window, themeState);
         window.ShowInTaskbar = false;
         window.Closed += (_, _) =>
         {
@@ -277,6 +280,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase);
 
             if (languageChanged)
@@ -292,15 +296,40 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             {
                 var themeState = _settingsFacade.Theme.Get();
                 _window.ApplyChromeMode(themeState.UseSystemChrome);
-                ApplyTheme(_window, themeState.IsNightMode);
+                ApplyTheme(_window, themeState);
             }
         }, DispatcherPriority.Background);
     }
 
-    private static void ApplyTheme(SettingsWindow window, bool isNightMode)
+    private static void ApplyTheme(SettingsWindow window, ThemeAppearanceSettingsState themeState)
     {
-        window.RequestedThemeVariant = isNightMode
+        window.RequestedThemeVariant = themeState.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
+
+        var accentColor = TryParseThemeColor(themeState.ThemeColor);
+        var context = new ThemeColorContext(
+            accentColor,
+            IsLightBackground: !themeState.IsNightMode,
+            IsLightNavBackground: !themeState.IsNightMode,
+            IsNightMode: themeState.IsNightMode);
+        ThemeColorSystemService.ApplyThemeResources(window.Resources, context);
+        GlassEffectService.ApplyGlassResources(window.Resources, context);
+    }
+
+    private static Color TryParseThemeColor(string? colorText)
+    {
+        if (!string.IsNullOrWhiteSpace(colorText))
+        {
+            try
+            {
+                return Color.Parse(colorText);
+            }
+            catch
+            {
+            }
+        }
+
+        return DefaultAccentColor;
     }
 }

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanMountainDesktop.Controls.IconText">
+
+    <StackPanel Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Center">
+        <fi:FluentIcon x:Name="IconElement"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                       FontSize="14"
+                       VerticalAlignment="Center" />
+        <TextBlock x:Name="TextElement"
+                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                   FontSize="14"
+                   FontWeight="Medium"
+                   VerticalAlignment="Center" />
+    </StackPanel>
+</UserControl>

@@ -25,43 +25,6 @@
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
-
-    <Window.Resources>
-        <SolidColorBrush x:Key="AdaptivePrimaryBrush" Color="#FF1D4ED8" />
-        <SolidColorBrush x:Key="AdaptiveSecondaryBrush" Color="#FF1E40AF" />
-        <SolidColorBrush x:Key="AdaptiveTextPrimaryBrush" Color="#FFF8FAFC" />
-        <SolidColorBrush x:Key="AdaptiveTextSecondaryBrush" Color="#FFE2E8F0" />
-        <SolidColorBrush x:Key="AdaptiveTextMutedBrush" Color="#FF94A3B8" />
-        <SolidColorBrush x:Key="AdaptiveTextAccentBrush" Color="#FF93C5FD" />
-        <SolidColorBrush x:Key="AdaptiveAccentBrush" Color="#FF3B82F6" />
-        <SolidColorBrush x:Key="AdaptiveOnAccentBrush" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="AdaptiveSurfaceBaseBrush" Color="#FF020617" />
-        <SolidColorBrush x:Key="AdaptiveSurfaceRaisedBrush" Color="#FF1E293B" />
-        <SolidColorBrush x:Key="AdaptiveSurfaceOverlayBrush" Color="#CC0F172A" />
-        <SolidColorBrush x:Key="AdaptiveButtonBackgroundBrush" Color="#66334155" />
-        <SolidColorBrush x:Key="AdaptiveButtonBorderBrush" Color="#80E2E8F0" />
-        <SolidColorBrush x:Key="AdaptiveButtonHoverBackgroundBrush" Color="#88475A74" />
-        <SolidColorBrush x:Key="AdaptiveButtonPressedBackgroundBrush" Color="#AA2A3B55" />
-        <SolidColorBrush x:Key="AdaptiveGlassPanelBackgroundBrush" Color="#70233448" />
-        <SolidColorBrush x:Key="AdaptiveGlassPanelBorderBrush" Color="#70475569" />
-        <SolidColorBrush x:Key="AdaptiveGlassStrongBackgroundBrush" Color="#A01E293B" />
-        <SolidColorBrush x:Key="AdaptiveGlassStrongBorderBrush" Color="#80475569" />
-        <SolidColorBrush x:Key="AdaptiveGlassOverlayBackgroundBrush" Color="#9A0F172A" />
-        <SolidColorBrush x:Key="AdaptiveNavTextBrush" Color="#FFF8FAFC" />
-        <SolidColorBrush x:Key="AdaptiveNavSelectedTextBrush" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="AdaptiveNavSelectionIndicatorBrush" Color="#FF93C5FD" />
-        <SolidColorBrush x:Key="AdaptiveNavItemBackgroundBrush" Color="#220F172A" />
-        <SolidColorBrush x:Key="AdaptiveNavItemHoverBackgroundBrush" Color="#40334155" />
-        <SolidColorBrush x:Key="AdaptiveNavItemSelectedBackgroundBrush" Color="#CC1D4ED8" />
-        <SolidColorBrush x:Key="AdaptiveToggleOnBrush" Color="#FF3B82F6" />
-        <SolidColorBrush x:Key="AdaptiveToggleOffBrush" Color="#66475569" />
-        <SolidColorBrush x:Key="AdaptiveToggleBorderBrush" Color="#80E2E8F0" />
-        <x:Double x:Key="AdaptiveGlassPanelBlurRadius">22</x:Double>
-        <x:Double x:Key="AdaptiveGlassStrongBlurRadius">28</x:Double>
-        <x:Double x:Key="AdaptiveGlassPanelOpacity">0.92</x:Double>
-        <x:Double x:Key="AdaptiveGlassStrongOpacity">0.95</x:Double>
-    </Window.Resources>
-
     <Grid>
         <Grid x:Name="DesktopPage"
               HorizontalAlignment="Stretch"

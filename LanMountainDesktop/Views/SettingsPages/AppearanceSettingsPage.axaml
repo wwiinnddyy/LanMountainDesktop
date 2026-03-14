@@ -2,96 +2,79 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.AppearanceSettingsPage"
              x:DataType="vm:AppearanceSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-            <TextBlock Classes="settings-section-title"
-                       Text="{Binding PageTitle}" />
-            <TextBlock Classes="settings-section-description"
-                       Text="{Binding PageDescription}" />
 
-            <controls:SettingsOptionCard IconKey="DesignIdeas"
-                                         Title="{Binding NightModeLabel}">
-                <controls:SettingsOptionCard.ActionContent>
+            <controls:IconText Icon="Color"
+                               Text="{Binding ThemeHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding NightModeLabel}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="WeatherMoon" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsNightMode}" />
-                </controls:SettingsOptionCard.ActionContent>
-            </controls:SettingsOptionCard>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
 
-            <controls:SettingsOptionCard IconKey="DesignIdeas"
-                                         Title="{Binding UseSystemChromeLabel}">
-                <controls:SettingsOptionCard.ActionContent>
+            <ui:SettingsExpander Header="{Binding UseSystemChromeLabel}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Window" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UseSystemChrome}" />
-                </controls:SettingsOptionCard.ActionContent>
-            </controls:SettingsOptionCard>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
 
-            <controls:SettingsOptionCard IconKey="DesignIdeas"
-                                         Title="{Binding ThemeColorLabel}">
-                <controls:SettingsOptionCard.DetailsContent>
+            <ui:SettingsExpander Header="{Binding ThemeColorLabel}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Color" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
                     <TextBox Watermark="#AABBCC"
+                             MinWidth="160"
                              Text="{Binding ThemeColor}" />
-                </controls:SettingsOptionCard.DetailsContent>
-            </controls:SettingsOptionCard>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
 
-            <controls:SettingsSectionCard IconKey="DesignIdeas"
-                                          Title="{Binding WallpaperHeader}">
-                <controls:SettingsSectionCard.CardContent>
-                    <StackPanel Spacing="14">
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding WallpaperPathLabel}" />
-                            <TextBox IsReadOnly="True"
-                                     Text="{Binding WallpaperPath}" />
-                        </StackPanel>
+            <Separator Classes="settings-separator" />
 
-                        <StackPanel Classes="settings-item">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="{Binding WallpaperPlacementLabel}" />
-                            <ComboBox ItemsSource="{Binding WallpaperPlacements}"
-                                      SelectedItem="{Binding SelectedWallpaperPlacement}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:SelectionOption">
-                                        <TextBlock Text="{Binding Label}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
+            <controls:IconText Icon="Clock"
+                               Text="{Binding ClockHeader}"
+                               Margin="0,0,0,4" />
 
-                        <Button HorizontalAlignment="Left"
-                                Click="OnBrowseWallpaperClick"
-                                Content="{Binding ImportWallpaperButtonText}" />
-                    </StackPanel>
-                </controls:SettingsSectionCard.CardContent>
-            </controls:SettingsSectionCard>
+            <ui:SettingsExpander Header="{Binding ClockHeader}"
+                                 Description="{Binding ClockDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Clock" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ShowClock}" />
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Text="{Binding ClockFormatLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="160"
+                                  HorizontalAlignment="Right"
+                                  ItemsSource="{Binding ClockFormats}"
+                                  SelectedItem="{Binding SelectedClockFormat}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
 
-            <controls:SettingsSectionCard IconKey="DesignIdeas"
-                                          Title="{Binding ClockHeader}"
-                                          Description="{Binding ClockDescription}">
-                <controls:SettingsSectionCard.CardContent>
-                    <StackPanel Spacing="14">
-                        <controls:SettingsOptionCard IconKey="DesignIdeas"
-                                                     Title="{Binding ClockHeader}">
-                            <controls:SettingsOptionCard.ActionContent>
-                                <ToggleSwitch IsChecked="{Binding ShowClock}" />
-                            </controls:SettingsOptionCard.ActionContent>
-                        </controls:SettingsOptionCard>
-
-                        <controls:SettingsOptionCard IconKey="DesignIdeas"
-                                                     Title="{Binding ClockFormatLabel}">
-                            <controls:SettingsOptionCard.DetailsContent>
-                                <ComboBox ItemsSource="{Binding ClockFormats}"
-                                          SelectedItem="{Binding SelectedClockFormat}">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:SelectionOption">
-                                            <TextBlock Text="{Binding Label}" />
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </controls:SettingsOptionCard.DetailsContent>
-                        </controls:SettingsOptionCard>
-                    </StackPanel>
-                </controls:SettingsSectionCard.CardContent>
-            </controls:SettingsSectionCard>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -232,7 +232,7 @@
     "settings.general.preview_date_label":  "日期",
     "settings.general.render_mode_restart_message":  "渲染模式变更需要重启应用。",
     "settings.appearance.title":  "外观",
-    "settings.appearance.description":  "切换主题、壁纸和状态栏展示。",
+    "settings.appearance.description":  "切换主题与状态栏展示。",
     "settings.appearance.theme_header":  "主题",
     "settings.color.enable_night_mode_toggle":  "启用夜间模式",
     "settings.color.use_system_chrome_toggle":  "使用系统窗口标题栏",
@@ -801,5 +801,4 @@
     "single_instance.notice.description":  "应用已经运行，无需多次点击打开。",
     "single_instance.notice.button":  "确定"
   }
-
 
