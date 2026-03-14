@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      assembly_version: ${{ steps.version.outputs.assembly_version }}
+      informational_version: ${{ steps.version.outputs.informational_version }}
       tag: ${{ steps.version.outputs.tag }}
       checkout_ref: ${{ steps.version.outputs.checkout_ref }}
     
@@ -47,8 +49,15 @@ jobs:
             CHECKOUT_REF="${GITHUB_SHA}"
           fi
           VERSION="${TAG#v}"
+          IFS='.' read -r -a VERSION_PARTS <<< "${VERSION}"
+          while [ "${#VERSION_PARTS[@]}" -lt 4 ]; do
+            VERSION_PARTS+=("0")
+          done
+          ASSEMBLY_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.${VERSION_PARTS[2]}.${VERSION_PARTS[3]}"
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "assembly_version=${ASSEMBLY_VERSION}" >> $GITHUB_OUTPUT
+          echo "informational_version=${VERSION}" >> $GITHUB_OUTPUT
           echo "checkout_ref=${CHECKOUT_REF}" >> $GITHUB_OUTPUT
 
   build-windows:
@@ -73,26 +82,16 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Update version in .csproj
-        run: |
-          $VERSION = "${{ needs.prepare.outputs.version }}"
-          $csprojFiles = @(
-            "LanMountainDesktop/LanMountainDesktop.csproj"
-          )
-          
-          foreach ($csprojPath in $csprojFiles) {
-            Write-Host "Updating version in $csprojPath to $VERSION"
-            $content = Get-Content $csprojPath -Raw
-            $content = $content -replace '<Version>.*?</Version>', "<Version>$VERSION</Version>"
-            Set-Content $csprojPath $content
-          }
-        shell: pwsh
-
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+        run: >
+          dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+          -p:Version=${{ needs.prepare.outputs.version }}
+          -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
       - name: Publish
         run: |
@@ -106,7 +105,11 @@ jobs:
             -p:DebugType=none `
             -p:DebugSymbols=false `
             -p:PublishTrimmed=false `
-            -p:PublishReadyToRun=false
+            -p:PublishReadyToRun=false `
+            -p:Version=${{ needs.prepare.outputs.version }} `
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
         shell: pwsh
 
       - name: Install Inno Setup
@@ -242,17 +245,16 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Update version in .csproj
-        run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Updating version in LanMountainDesktop.csproj to $VERSION"
-          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
-
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+        run: >
+          dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+          -p:Version=${{ needs.prepare.outputs.version }}
+          -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
       - name: Publish
         run: |
@@ -266,7 +268,11 @@ jobs:
             -p:DebugType=none \
             -p:DebugSymbols=false \
             -p:PublishTrimmed=false \
-            -p:PublishReadyToRun=false
+            -p:PublishReadyToRun=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
       - name: Package as DEB
         run: |
@@ -384,17 +390,16 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Update version in .csproj
-        run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Updating version in LanMountainDesktop.csproj to $VERSION"
-          sed -i '' "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" LanMountainDesktop/LanMountainDesktop.csproj
-
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
       - name: Build
-        run: dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+        run: >
+          dotnet build ${{ env.Solution_Name }} -c Release --no-restore -v minimal
+          -p:Version=${{ needs.prepare.outputs.version }}
+          -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
+          -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
       - name: Publish
         run: |
@@ -408,7 +413,11 @@ jobs:
             -p:DebugType=none \
             -p:DebugSymbols=false \
             -p:PublishTrimmed=false \
-            -p:PublishReadyToRun=false
+            -p:PublishReadyToRun=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
       - name: Package as DMG
         run: |

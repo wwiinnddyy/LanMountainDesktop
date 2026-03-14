@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.StatusBarSettingsPage"
+             x:DataType="vm:StatusBarSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <controls:IconText Icon="Apps"
+                               Text="{Binding ComponentsHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding ClockHeader}"
+                                 Description="{Binding ClockDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Clock" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ShowClock}" />
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding ClockFormatLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowClock}"
+                                  ItemsSource="{Binding ClockFormats}"
+                                  SelectedItem="{Binding SelectedClockFormat}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <Separator Classes="settings-separator" />
+
+            <controls:IconText Icon="Apps"
+                               Text="{Binding SpacingHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding SpacingHeader}"
+                                 Description="{Binding SpacingDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Apps" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="180"
+                              ItemsSource="{Binding SpacingModes}"
+                              SelectedItem="{Binding SelectedSpacingMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem IsVisible="{Binding IsCustomSpacingVisible}">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding CustomSpacingLabel}"
+                                   VerticalAlignment="Center" />
+                        <ui:NumberBox Grid.Column="1"
+                                      Width="160"
+                                      Minimum="0"
+                                      Maximum="30"
+                                      SmallChange="1"
+                                      LargeChange="4"
+                                      SpinButtonPlacementMode="Inline"
+                                      Value="{Binding CustomSpacingPercent}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

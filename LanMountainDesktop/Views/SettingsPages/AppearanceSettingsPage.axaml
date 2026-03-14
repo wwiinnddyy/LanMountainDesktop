@@ -39,39 +39,6 @@
                     <ColorPicker Color="{Binding ThemeColorPickerValue}" />
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
-
-            <Separator Classes="settings-separator" />
-
-            <controls:IconText Icon="Clock"
-                               Text="{Binding ClockHeader}"
-                               Margin="0,0,0,4" />
-
-            <ui:SettingsExpander Header="{Binding ClockHeader}"
-                                 Description="{Binding ClockDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Clock" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding ShowClock}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding ClockFormatLabel}"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Column="1"
-                                  Width="180"
-                                  ItemsSource="{Binding ClockFormats}"
-                                  SelectedItem="{Binding SelectedClockFormat}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:SelectionOption">
-                                    <TextBlock Text="{Binding Label}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
-
         </StackPanel>
     </ScrollViewer>
 </UserControl>

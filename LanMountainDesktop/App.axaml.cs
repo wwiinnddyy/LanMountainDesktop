@@ -493,7 +493,10 @@ public partial class App : Application
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase);
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase);
             var languageChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
@@ -516,14 +519,30 @@ public partial class App : Application
 
     private void ApplyAdaptiveThemeResources(ThemeAppearanceSettingsState themeState)
     {
-        var accentColor = TryParseThemeColor(themeState.ThemeColor);
+        var wallpaperState = _settingsFacade.Wallpaper.Get();
+        var monetPalette = _settingsFacade.Theme.BuildPalette(
+            themeState.IsNightMode,
+            wallpaperState.WallpaperPath,
+            themeState.ThemeColor);
+        var accentColor = ResolveAccentColor(themeState.ThemeColor, monetPalette);
         var context = new ThemeColorContext(
             accentColor,
             IsLightBackground: !themeState.IsNightMode,
             IsLightNavBackground: !themeState.IsNightMode,
-            IsNightMode: themeState.IsNightMode);
+            IsNightMode: themeState.IsNightMode,
+            MonetColors: monetPalette.MonetColors);
         ThemeColorSystemService.ApplyThemeResources(Resources, context);
         GlassEffectService.ApplyGlassResources(Resources, context);
+    }
+
+    private static Color ResolveAccentColor(string? colorText, MonetPalette monetPalette)
+    {
+        if (monetPalette.MonetColors is { Count: > 0 })
+        {
+            return monetPalette.MonetColors[0];
+        }
+
+        return TryParseThemeColor(colorText);
     }
 
     private static Color TryParseThemeColor(string? colorText)
@@ -589,6 +608,14 @@ public partial class App : Application
         _exitCleanupCompleted = true;
         AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
         _settingsFacade.Settings.Changed -= OnSettingsChanged;
+        try
+        {
+            HostUpdateWorkflowServiceProvider.GetOrCreate().TryApplyPendingUpdateOnExit();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("UpdateWorkflow", "Failed to apply pending update during exit cleanup.", ex);
+        }
 
         try
         {

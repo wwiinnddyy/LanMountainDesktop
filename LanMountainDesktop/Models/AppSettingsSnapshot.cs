@@ -60,7 +60,21 @@ public sealed class AppSettingsSnapshot
 
     public bool IncludePrereleaseUpdates { get; set; }
 
-    public string UpdateChannel { get; set; } = string.Empty;
+    public string UpdateChannel { get; set; } = "stable";
+
+    public string UpdateMode { get; set; } = "download_then_confirm";
+
+    public string UpdateDownloadSource { get; set; } = "github";
+
+    public int UpdateDownloadThreads { get; set; } = 4;
+
+    public string? PendingUpdateInstallerPath { get; set; }
+
+    public string? PendingUpdateVersion { get; set; }
+
+    public long? PendingUpdatePublishedAtUtcMs { get; set; }
+
+    public long? LastUpdateCheckUtcMs { get; set; }
 
     public List<string> TopStatusComponentIds { get; set; } = [];
 

@@ -6,96 +6,71 @@
              xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+    <UserControl.Styles>
+        <Style Selector="StackPanel.about-page-container">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Spacing" Value="0" />
+            <Setter Property="Margin" Value="0,12,0,24" />
+        </Style>
 
-            <!-- 应用信息分组 -->
-            <controls:IconText Icon="Info"
-                               Text="{Binding AppInfoHeader}"
-                               Margin="0,0,0,4" />
+        <Style Selector="Border.about-hero-card">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="Margin" Value="0,0,0,18" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
 
-            <ui:SettingsExpander Header="{Binding AppInfoHeader}">
-                <ui:SettingsExpander.IconSource>
+        <Style Selector="ui|InfoBar.about-static-info">
+            <Setter Property="IsOpen" Value="True" />
+            <Setter Property="IsClosable" Value="False" />
+            <Setter Property="Severity" Value="Informational" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="about-page-container">
+            <Border x:Name="AboutHeroCard"
+                    Classes="about-hero-card"
+                    Height="240">
+                <Image Source="/Assets/about_banner.png"
+                       Stretch="Uniform"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+            </Border>
+
+            <TextBlock Classes="settings-subsection-title"
+                       Text="{Binding AppInfoHeader}" />
+
+            <ui:InfoBar Classes="about-static-info"
+                        Title="{Binding VersionLabel}"
+                        Message="{Binding VersionText}">
+                <ui:InfoBar.IconSource>
                     <fi:SymbolIconSource Symbol="Info" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding VersionLabel}"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   HorizontalAlignment="Right"
-                                   Opacity="0.82"
-                                   Text="{Binding VersionText}" />
-                    </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding RenderBackendLabel}"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   HorizontalAlignment="Right"
-                                   Opacity="0.82"
-                                   Text="{Binding RenderBackendText}" />
-                    </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:InfoBar.IconSource>
+            </ui:InfoBar>
 
-            <Separator Classes="settings-separator" />
+            <ui:InfoBar Classes="about-static-info"
+                        Title="{Binding CodenameLabel}"
+                        Message="{Binding CodenameText}">
+                <ui:InfoBar.IconSource>
+                    <fi:SymbolIconSource Symbol="Bookmark" />
+                </ui:InfoBar.IconSource>
+            </ui:InfoBar>
 
-            <!-- 更新设置分组 -->
-            <controls:IconText Icon="ArrowSync"
-                               Text="{Binding UpdateHeader}"
-                               Margin="0,0,0,4" />
-
-            <ui:SettingsExpander Header="{Binding UpdateHeader}"
-                                 IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowSync" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding AutoCheckUpdatesLabel}"
-                                   VerticalAlignment="Center" />
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding AutoCheckUpdates}" />
-                    </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding IncludePrereleaseUpdatesLabel}"
-                                   VerticalAlignment="Center" />
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding IncludePrereleaseUpdates}" />
-                    </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
-                        <TextBlock Text="{Binding UpdateChannelLabel}"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Grid.Column="1"
-                                  Width="180"
-                                  ItemsSource="{Binding UpdateChannels}"
-                                  SelectedItem="{Binding SelectedUpdateChannel}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:SelectionOption">
-                                    <TextBlock Text="{Binding Label}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
-                    <StackPanel Spacing="8">
-                        <Button Command="{Binding CheckForUpdatesCommand}"
-                                Content="{Binding CheckForUpdatesButtonText}" />
-                        <TextBlock Opacity="0.76"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding UpdateStatus}" />
-                    </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
-
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <controls:IconText Icon="WindowConsole"
+                                       Text="{Binding RenderBackendLabel}" />
+                    <TextBlock Classes="settings-item-description"
+                               Text="{Binding RenderBackendText}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

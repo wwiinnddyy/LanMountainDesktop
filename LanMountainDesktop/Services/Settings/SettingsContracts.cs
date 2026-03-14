@@ -37,7 +37,17 @@ public sealed record WeatherSettingsState(
     bool NoTlsRequests,
     string LocationQuery);
 public sealed record RegionSettingsState(string LanguageCode, string? TimeZoneId);
-public sealed record UpdateSettingsState(bool AutoCheckUpdates, bool IncludePrereleaseUpdates, string UpdateChannel);
+public sealed record UpdateSettingsState(
+    bool AutoCheckUpdates,
+    bool IncludePrereleaseUpdates,
+    string UpdateChannel,
+    string UpdateMode,
+    string UpdateDownloadSource,
+    int UpdateDownloadThreads,
+    string? PendingUpdateInstallerPath,
+    string? PendingUpdateVersion,
+    long? PendingUpdatePublishedAtUtcMs,
+    long? LastUpdateCheckUtcMs);
 public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
 public sealed record PluginMarketDependencyInfo(
     string Id,
@@ -106,7 +116,7 @@ public interface IThemeAppearanceService
 {
     ThemeAppearanceSettingsState Get();
     void Save(ThemeAppearanceSettingsState state);
-    MonetPalette BuildPalette(bool nightMode, string? wallpaperPath);
+    MonetPalette BuildPalette(bool nightMode, string? wallpaperPath, string? preferredSeedColor = null);
 }
 
 public interface IStatusBarSettingsService
@@ -164,6 +174,8 @@ public interface IUpdateSettingsService
     Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default);
 }
@@ -197,6 +209,7 @@ public interface IPluginMarketSettingsService
 public interface IApplicationInfoService
 {
     string GetAppVersionText();
+    string GetAppCodenameText();
     AppRenderBackendInfo GetRenderBackendInfo();
 }
 

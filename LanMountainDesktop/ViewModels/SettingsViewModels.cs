@@ -1001,65 +1001,29 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
-    private bool _isInitializing;
 
     public AboutSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
-        UpdateChannels = CreateUpdateChannels();
         RefreshLocalizedText();
 
-        var update = _settingsFacade.Update.Get();
-        _isInitializing = true;
-        AutoCheckUpdates = update.AutoCheckUpdates;
-        IncludePrereleaseUpdates = update.IncludePrereleaseUpdates;
-        SelectedUpdateChannel = UpdateChannels.FirstOrDefault(option =>
-            string.Equals(
-                option.Value,
-                string.IsNullOrWhiteSpace(update.UpdateChannel) ? "stable" : update.UpdateChannel,
-                StringComparison.OrdinalIgnoreCase))
-            ?? UpdateChannels[0];
-
-        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
+        VersionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
+        CodenameText = _settingsFacade.ApplicationInfo.GetAppCodenameText();
         var backendInfo = _settingsFacade.ApplicationInfo.GetRenderBackendInfo();
-        var renderBackendText = string.IsNullOrWhiteSpace(backendInfo.ImplementationTypeName)
+        RenderBackendText = string.IsNullOrWhiteSpace(backendInfo.ImplementationTypeName)
             ? backendInfo.ActualBackend
             : $"{backendInfo.ActualBackend} ({backendInfo.ImplementationTypeName})";
-        VersionText = string.Format(
-            CultureInfo.CurrentCulture,
-            L("settings.about.version_format", "Version: {0}"),
-            versionText);
-        RenderBackendText = string.Format(
-            CultureInfo.CurrentCulture,
-            L("settings.about.render_backend_format", "Render Backend: {0}"),
-            renderBackendText);
-        UpdateStatus = L("settings.update.status_idle", "No update check has been performed yet.");
-        _isInitializing = false;
     }
-
-    public IReadOnlyList<SelectionOption> UpdateChannels { get; }
 
     [ObservableProperty]
     private string _versionText = "-";
 
     [ObservableProperty]
+    private string _codenameText = "-";
+
+    [ObservableProperty]
     private string _renderBackendText = "-";
-
-    [ObservableProperty]
-    private bool _autoCheckUpdates;
-
-    [ObservableProperty]
-    private bool _includePrereleaseUpdates;
-
-    [ObservableProperty]
-    private SelectionOption _selectedUpdateChannel = new("stable", "Stable");
-
-    [ObservableProperty]
-    private string _updateStatus = string.Empty;
-
-    [ObservableProperty]
-    private bool _isCheckingForUpdates;
 
     [ObservableProperty]
     private string _pageTitle = string.Empty;
@@ -1068,28 +1032,261 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
     private string _pageDescription = string.Empty;
 
     [ObservableProperty]
-    private string _autoCheckUpdatesLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _includePrereleaseUpdatesLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _updateChannelLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _checkForUpdatesButtonText = string.Empty;
-
-    [ObservableProperty]
     private string _appInfoHeader = string.Empty;
-
-    [ObservableProperty]
-    private string _updateHeader = string.Empty;
 
     [ObservableProperty]
     private string _versionLabel = string.Empty;
 
     [ObservableProperty]
+    private string _codenameLabel = string.Empty;
+
+    [ObservableProperty]
     private string _renderBackendLabel = string.Empty;
+
+    private void RefreshLocalizedText()
+    {
+        PageTitle = L("settings.about.title", "About");
+        PageDescription = L("settings.about.description", "Application details.");
+        AppInfoHeader = L("settings.about.app_info_header", "Application Information");
+        VersionLabel = L("settings.about.version_label", "Version");
+        CodenameLabel = L("settings.about.codename_label", "Codename");
+        RenderBackendLabel = L("settings.about.render_backend_label", "Render Backend");
+    }
+
+    private string L(string key, string fallback)
+        => _localizationService.GetString(_languageCode, key, fallback);
+}
+
+public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
+{
+    private readonly ISettingsFacadeService _settingsFacade;
+    private readonly UpdateWorkflowService _updateWorkflowService;
+    private readonly LocalizationService _localizationService = new();
+    private readonly string _languageCode;
+    private readonly Version _currentVersion;
+    private bool _isInitializing;
+    private UpdateCheckResult? _lastCheckResult;
+
+    public IReadOnlyList<SelectionOption> UpdateChannelOptions { get; }
+
+    public IReadOnlyList<SelectionOption> UpdateSourceOptions { get; }
+
+    public IReadOnlyList<SelectionOption> UpdateModeOptions { get; }
+
+    public IReadOnlyList<SelectionOption> DownloadThreadOptions { get; }
+
+    public UpdateSettingsPageViewModel(
+        ISettingsFacadeService settingsFacade,
+        UpdateWorkflowService? updateWorkflowService = null)
+    {
+        _settingsFacade = settingsFacade;
+        _updateWorkflowService = updateWorkflowService ?? HostUpdateWorkflowServiceProvider.GetOrCreate();
+        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
+        RefreshLocalizedText();
+        UpdateChannelOptions = CreateUpdateChannelOptions();
+        UpdateSourceOptions = CreateUpdateSourceOptions();
+        UpdateModeOptions = CreateUpdateModeOptions();
+        DownloadThreadOptions = CreateDownloadThreadOptions();
+
+        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
+        _currentVersion = Version.TryParse(versionText, out var parsedVersion)
+            ? parsedVersion
+            : new Version(0, 0, 0);
+
+        CurrentVersionText = versionText;
+        LoadStateFromSettings();
+    }
+
+    [ObservableProperty]
+    private bool _autoCheckUpdates;
+
+    [ObservableProperty]
+    private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
+
+    [ObservableProperty]
+    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
+
+    [ObservableProperty]
+    private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
+
+    [ObservableProperty]
+    private string _currentVersionText = "-";
+
+    [ObservableProperty]
+    private string _updateStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCheckingForUpdates;
+
+    [ObservableProperty]
+    private bool _isDownloading;
+
+    [ObservableProperty]
+    private double _downloadProgressValue;
+
+    [ObservableProperty]
+    private bool _isDownloadProgressVisible;
+
+    [ObservableProperty]
+    private string _downloadProgressText = string.Empty;
+
+    [ObservableProperty]
+    private string _pageTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _pageDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _statusCardTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _statusCardDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _preferencesHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _preferencesDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _autoCheckUpdatesLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _updateChannelLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _updateSourceLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _updateModeLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _currentVersionLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _latestVersionLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _publishedAtLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _lastCheckedLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _checkForUpdatesButtonText = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadButtonText = string.Empty;
+
+    [ObservableProperty]
+    private string _installNowButtonText = string.Empty;
+
+    [ObservableProperty]
+    private string _latestVersionText = string.Empty;
+
+    [ObservableProperty]
+    private string _publishedAtText = string.Empty;
+
+    [ObservableProperty]
+    private string _lastCheckedText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isLatestVersionVisible;
+
+    [ObservableProperty]
+    private bool _isPublishedAtVisible;
+
+    [ObservableProperty]
+    private bool _isLastCheckedVisible;
+
+    [ObservableProperty]
+    private bool _hasPendingInstaller;
+
+    [ObservableProperty]
+    private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
+
+    [ObservableProperty]
+    private string _selectedUpdateChannelDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _selectedUpdateModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _selectedUpdateSourceDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadThreadsLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadThreadsDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _stableChannelText = string.Empty;
+
+    [ObservableProperty]
+    private string _previewChannelText = string.Empty;
+
+    [ObservableProperty]
+    private string _gitHubSourceText = string.Empty;
+
+    [ObservableProperty]
+    private string _ghProxySourceText = string.Empty;
+
+    [ObservableProperty]
+    private string _manualModeText = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadThenConfirmModeText = string.Empty;
+
+    [ObservableProperty]
+    private string _silentOnExitModeText = string.Empty;
+
+    [ObservableProperty]
+    private SelectionOption? _selectedUpdateChannelOption;
+
+    [ObservableProperty]
+    private SelectionOption? _selectedUpdateSourceOption;
+
+    [ObservableProperty]
+    private SelectionOption? _selectedUpdateModeOption;
+
+    [ObservableProperty]
+    private SelectionOption? _selectedDownloadThreadsOption;
+
+    [ObservableProperty]
+    private string _downloadThreadsText = UpdateSettingsValues.DefaultDownloadThreads.ToString(CultureInfo.CurrentCulture);
+
+    public bool IsStableChannelSelected =>
+        string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelStable, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPreviewChannelSelected =>
+        string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsGitHubSourceSelected =>
+        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsGhProxySourceSelected =>
+        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsManualModeSelected =>
+        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsDownloadThenConfirmModeSelected =>
+        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeDownloadThenConfirm, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsSilentOnExitModeSelected =>
+        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsDownloadButtonVisible =>
+        !HasPendingInstaller &&
+        _lastCheckResult is { Success: true, IsUpdateAvailable: true, PreferredAsset: not null };
+
+    public bool IsInstallButtonVisible => HasPendingInstaller;
+
+    public string DownloadThreadsValueText =>
+        UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
+
+    private bool IsBusy => IsCheckingForUpdates || IsDownloading;
 
     partial void OnAutoCheckUpdatesChanged(bool value)
     {
@@ -1101,7 +1298,72 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
         SaveUpdateSettings();
     }
 
-    partial void OnIncludePrereleaseUpdatesChanged(bool value)
+    partial void OnSelectedUpdateChannelOptionChanged(SelectionOption? value)
+    {
+        if (value is not null &&
+            !string.Equals(SelectedUpdateChannelValue, value.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedUpdateChannelValue = value.Value;
+        }
+    }
+
+    partial void OnSelectedUpdateSourceOptionChanged(SelectionOption? value)
+    {
+        if (value is not null &&
+            !string.Equals(SelectedUpdateSourceValue, value.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedUpdateSourceValue = value.Value;
+        }
+    }
+
+    partial void OnSelectedUpdateModeOptionChanged(SelectionOption? value)
+    {
+        if (value is not null &&
+            !string.Equals(SelectedUpdateModeValue, value.Value, StringComparison.OrdinalIgnoreCase))
+        {
+            SelectedUpdateModeValue = value.Value;
+        }
+    }
+
+    partial void OnSelectedDownloadThreadsOptionChanged(SelectionOption? value)
+    {
+        if (value is null || !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return;
+        }
+
+        ApplyDownloadThreadsValue(parsed, !_isInitializing);
+    }
+
+    partial void OnSelectedUpdateChannelValueChanged(string value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        _lastCheckResult = null;
+        if (!HasPendingInstaller)
+        {
+            LatestVersionText = string.Empty;
+            PublishedAtText = string.Empty;
+            IsLatestVersionVisible = false;
+            IsPublishedAtVisible = false;
+        }
+
+        SaveUpdateSettings();
+        UpdateStatus = string.Format(
+            CultureInfo.CurrentCulture,
+            L("settings.update.status_channel_changed_format", "Update channel switched to {0}. Please check again."),
+            string.Equals(value, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase)
+                ? L("settings.update.channel_preview", "Preview")
+                : L("settings.update.channel_stable", "Stable"));
+        SelectedUpdateChannelDescription = BuildUpdateChannelDescription(value);
+        SyncSelectedOptions();
+        RefreshActionState();
+    }
+
+    partial void OnSelectedUpdateSourceValueChanged(string value)
     {
         if (_isInitializing)
         {
@@ -1109,63 +1371,196 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
         }
 
         SaveUpdateSettings();
+        SelectedUpdateSourceDescription = BuildUpdateSourceDescription(value);
+        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
+        SyncSelectedOptions();
     }
 
-    partial void OnSelectedUpdateChannelChanged(SelectionOption value)
+    partial void OnSelectedUpdateModeValueChanged(string value)
     {
-        if (_isInitializing || value is null)
+        if (_isInitializing)
         {
             return;
         }
 
         SaveUpdateSettings();
+        SelectedUpdateModeDescription = BuildUpdateModeDescription(value);
+        UpdateStatus = HasPendingInstaller
+            ? BuildPendingReadyStatus()
+            : L("settings.update.status_preferences_saved", "Update preferences saved.");
+        SyncSelectedOptions();
+        RefreshActionState();
     }
 
-    private void SaveUpdateSettings()
+    partial void OnDownloadThreadsSliderValueChanged(double value)
     {
-        _settingsFacade.Update.Save(new UpdateSettingsState(
-            AutoCheckUpdates,
-            IncludePrereleaseUpdates,
-            SelectedUpdateChannel.Value));
-        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
-    }
+        var normalized = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(value));
+        if (Math.Abs(value - normalized) > double.Epsilon)
+        {
+            DownloadThreadsSliderValue = normalized;
+            return;
+        }
 
-    [RelayCommand]
-    private async Task CheckForUpdatesAsync()
-    {
-        if (IsCheckingForUpdates)
+        OnPropertyChanged(nameof(DownloadThreadsValueText));
+        if (_isInitializing)
         {
             return;
         }
 
+        SaveUpdateSettings();
+        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
+        SyncSelectedOptions();
+    }
+
+    partial void OnDownloadThreadsTextChanged(string value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        if (!TryParseDownloadThreads(value, out var parsed))
+        {
+            return;
+        }
+
+        ApplyDownloadThreadsValue(parsed, true);
+    }
+
+    partial void OnHasPendingInstallerChanged(bool value)
+    {
+        RefreshActionState();
+        if (!value)
+        {
+            UpdateStatus = L("settings.update.status_ready", "Ready to check for updates.");
+        }
+    }
+
+    partial void OnIsCheckingForUpdatesChanged(bool value)
+    {
+        CheckForUpdatesCommand.NotifyCanExecuteChanged();
+        DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
+        InstallPendingUpdateCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsDownloadingChanged(bool value)
+    {
+        CheckForUpdatesCommand.NotifyCanExecuteChanged();
+        DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
+        InstallPendingUpdateCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand]
+    private void SelectStableChannel()
+    {
+        SelectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
+    }
+
+    [RelayCommand]
+    private void SelectPreviewChannel()
+    {
+        SelectedUpdateChannelValue = UpdateSettingsValues.ChannelPreview;
+    }
+
+    [RelayCommand]
+    private void SelectGitHubSource()
+    {
+        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
+    }
+
+    [RelayCommand]
+    private void SelectGhProxySource()
+    {
+        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGhProxy;
+    }
+
+    [RelayCommand]
+    private void SelectManualMode()
+    {
+        SelectedUpdateModeValue = UpdateSettingsValues.ModeManual;
+    }
+
+    [RelayCommand]
+    private void SelectDownloadThenConfirmMode()
+    {
+        SelectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
+    }
+
+    [RelayCommand]
+    private void SelectSilentOnExitMode()
+    {
+        SelectedUpdateModeValue = UpdateSettingsValues.ModeSilentOnExit;
+    }
+
+    private void SaveUpdateSettings()
+    {
+        var current = _settingsFacade.Update.Get();
+        _settingsFacade.Update.Save(current with
+        {
+            AutoCheckUpdates = AutoCheckUpdates,
+            IncludePrereleaseUpdates = string.Equals(
+                SelectedUpdateChannelValue,
+                UpdateSettingsValues.ChannelPreview,
+                StringComparison.OrdinalIgnoreCase),
+            UpdateChannel = SelectedUpdateChannelValue,
+            UpdateMode = SelectedUpdateModeValue,
+            UpdateDownloadSource = SelectedUpdateSourceValue,
+            UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue))
+        });
+    }
+
+    private bool CanCheckForUpdates() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
+    private async Task CheckForUpdatesAsync()
+    {
         try
         {
             IsCheckingForUpdates = true;
-            var version = Version.TryParse(VersionText, out var currentVersion)
-                ? currentVersion
-                : new Version(0, 0, 0);
+            IsDownloadProgressVisible = false;
+            DownloadProgressValue = 0;
+            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdateStatus = L("settings.update.status_checking", "Checking GitHub releases...");
 
-            var result = await _settingsFacade.Update.CheckForUpdatesAsync(version, IncludePrereleaseUpdates);
+            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion);
+            _lastCheckResult = result.Success ? result : null;
+            RefreshLastCheckedFromSettings();
+
             if (!result.Success)
             {
                 UpdateStatus = string.IsNullOrWhiteSpace(result.ErrorMessage)
                     ? L("settings.update.status_check_failed", "Failed to check for updates.")
-                    : result.ErrorMessage;
+                    : string.Format(
+                        CultureInfo.CurrentCulture,
+                        L("settings.update.status_check_failed_format", "Update check failed: {0}"),
+                        result.ErrorMessage);
                 return;
             }
 
-            UpdateStatus = result.IsUpdateAvailable
-                ? string.Format(
-                    CultureInfo.CurrentCulture,
-                    L(
-                        "settings.update.status_available_summary_format",
-                        "Update available: {0} (current: {1})"),
-                    result.LatestVersionText,
-                    result.CurrentVersionText)
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_up_to_date_format", "You are up to date ({0})."),
-                    result.CurrentVersionText);
+            ApplyCheckResultDisplay(result);
+            if (!result.IsUpdateAvailable)
+            {
+                return;
+            }
+
+            if (result.PreferredAsset is null)
+            {
+                UpdateStatus = L(
+                    "settings.update.status_asset_missing",
+                    "A new release is available, but no compatible installer was found.");
+                return;
+            }
+
+            if (!string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+            {
+                await DownloadLatestReleaseCoreAsync(result, invokedFromCheck: true);
+                return;
+            }
+
+            UpdateStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                L("settings.update.status_available_format", "New version {0} is available. Click Download & Install."),
+                result.LatestVersionText);
         }
         finally
         {
@@ -1173,27 +1568,345 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
         }
     }
 
-    private IReadOnlyList<SelectionOption> CreateUpdateChannels()
+    private bool CanDownloadLatestRelease() => !IsBusy && IsDownloadButtonVisible;
+
+    [RelayCommand(CanExecute = nameof(CanDownloadLatestRelease))]
+    private async Task DownloadLatestReleaseAsync()
     {
-        return
-        [
-            new SelectionOption("stable", L("settings.update.channel_stable", "Stable")),
-            new SelectionOption("preview", L("settings.update.channel_preview", "Preview"))
-        ];
+        await DownloadLatestReleaseCoreAsync(_lastCheckResult, invokedFromCheck: false);
+    }
+
+    private bool CanInstallPendingUpdate() => !IsBusy && HasPendingInstaller;
+
+    [RelayCommand(CanExecute = nameof(CanInstallPendingUpdate))]
+    private void InstallPendingUpdate()
+    {
+        var result = _updateWorkflowService.LaunchPendingInstallerNow();
+        if (result.Success)
+        {
+            UpdateStatus = L(
+                "settings.update.status_installer_started",
+                "Installer started. The app will close for update.");
+            HasPendingInstaller = false;
+            return;
+        }
+
+        UpdateStatus = result.UserCancelledElevation
+            ? L(
+                "settings.update.status_elevation_cancelled",
+                "Administrator permission was not granted. Update was cancelled.")
+            : string.Format(
+                CultureInfo.CurrentCulture,
+                L("settings.update.status_launch_failed_format", "Failed to start installer: {0}"),
+                result.ErrorMessage ?? L("settings.update.status_installer_missing", "Installer file was not found after download."));
     }
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.about.title", "About");
-        PageDescription = L("settings.about.description", "Application details and update preferences.");
-        AppInfoHeader = L("settings.about.app_info_header", "Application Information");
-        UpdateHeader = L("settings.about.update_header", "Updates");
-        VersionLabel = L("settings.about.version_label", "Version");
-        RenderBackendLabel = L("settings.about.render_backend_label", "Render Backend");
+        PageTitle = L("settings.update.title", "Update");
+        PageDescription = L("settings.update.description", "Update checks and release channel preferences.");
+        StatusCardTitle = L("settings.update.status_card_title", "Update Status");
+        StatusCardDescription = L("settings.update.status_card_description", "Check for updates and review the latest release information.");
+        PreferencesHeader = L("settings.update.preferences_header", "Update Preferences");
+        PreferencesDescription = L("settings.update.preferences_description", "Choose your release channel, download source, behavior, and download speed.");
         AutoCheckUpdatesLabel = L("settings.update.auto_check_toggle", "Automatically check for updates on startup");
-        IncludePrereleaseUpdatesLabel = L("settings.update.include_prerelease_toggle", "Include prerelease versions");
         UpdateChannelLabel = L("settings.update.channel_label", "Update Channel");
+        UpdateSourceLabel = L("settings.update.source_label", "Download Source");
+        UpdateModeLabel = L("settings.update.mode_label", "Update Mode");
+        DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
+        DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
         CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
+        DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
+        InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
+        CurrentVersionLabel = L("settings.update.current_version_label", "Current Version");
+        LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
+        PublishedAtLabel = L("settings.update.published_at_label", "Published At");
+        LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
+        StableChannelText = L("settings.update.channel_stable", "Stable");
+        PreviewChannelText = L("settings.update.channel_preview", "Preview");
+        GitHubSourceText = L("settings.update.source_github", "GitHub");
+        GhProxySourceText = L("settings.update.source_ghproxy", "gh-proxy");
+        ManualModeText = L("settings.update.mode_manual", "Manual Update");
+        DownloadThenConfirmModeText = L("settings.update.mode_download_then_confirm", "Silent Download");
+        SilentOnExitModeText = L("settings.update.mode_silent_on_exit", "Silent Install");
+        SelectedUpdateChannelDescription = BuildUpdateChannelDescription(SelectedUpdateChannelValue);
+        SelectedUpdateModeDescription = BuildUpdateModeDescription(SelectedUpdateModeValue);
+        SelectedUpdateSourceDescription = BuildUpdateSourceDescription(SelectedUpdateSourceValue);
+    }
+
+    private void LoadStateFromSettings()
+    {
+        var update = _settingsFacade.Update.Get();
+        _isInitializing = true;
+        AutoCheckUpdates = update.AutoCheckUpdates;
+        SelectedUpdateChannelValue = UpdateSettingsValues.NormalizeChannel(update.UpdateChannel, update.IncludePrereleaseUpdates);
+        SelectedUpdateSourceValue = UpdateSettingsValues.NormalizeDownloadSource(update.UpdateDownloadSource);
+        SelectedUpdateModeValue = UpdateSettingsValues.NormalizeMode(update.UpdateMode);
+        DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(update.UpdateDownloadThreads);
+        DownloadThreadsText = ((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
+        _isInitializing = false;
+
+        SyncSelectedOptions();
+        RefreshLastCheckedFromSettings();
+        ApplyPendingState(update);
+        if (!HasPendingInstaller)
+        {
+            UpdateStatus = L("settings.update.status_idle", "No update check has been performed yet.");
+        }
+
+        RefreshActionState();
+    }
+
+    private void RefreshLastCheckedFromSettings()
+    {
+        var update = _settingsFacade.Update.Get();
+        LastCheckedText = FormatTimestamp(update.LastUpdateCheckUtcMs);
+        IsLastCheckedVisible = !string.IsNullOrWhiteSpace(LastCheckedText);
+    }
+
+    private void ApplyPendingState(UpdateSettingsState update)
+    {
+        var pending = _updateWorkflowService.GetPendingUpdate();
+        HasPendingInstaller = pending is not null;
+        if (pending is null)
+        {
+            return;
+        }
+
+        LatestVersionText = pending.VersionText;
+        IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
+        PublishedAtText = pending.PublishedAt is null ? string.Empty : FormatTimestamp(pending.PublishedAt.Value.ToUnixTimeMilliseconds());
+        IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
+        UpdateStatus = BuildPendingReadyStatus();
+    }
+
+    private void ApplyCheckResultDisplay(UpdateCheckResult result)
+    {
+        if (result.IsUpdateAvailable)
+        {
+            LatestVersionText = result.LatestVersionText;
+            IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
+            PublishedAtText = result.Release is null || result.Release.PublishedAt == DateTimeOffset.MinValue
+                ? string.Empty
+                : FormatTimestamp(result.Release.PublishedAt.ToUnixTimeMilliseconds());
+            IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
+            return;
+        }
+
+        LatestVersionText = string.Empty;
+        PublishedAtText = string.Empty;
+        IsLatestVersionVisible = false;
+        IsPublishedAtVisible = false;
+        UpdateStatus = string.Format(
+            CultureInfo.CurrentCulture,
+            L("settings.update.status_up_to_date_format", "You are up to date ({0})."),
+            result.CurrentVersionText);
+    }
+
+    private async Task DownloadLatestReleaseCoreAsync(UpdateCheckResult? result, bool invokedFromCheck)
+    {
+        if (result is null || !result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsDownloading = true;
+            IsDownloadProgressVisible = true;
+            DownloadProgressValue = 0;
+            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
+
+            var progress = new Progress<double>(value =>
+            {
+                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
+                DownloadProgressText = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
+                    DownloadProgressValue);
+            });
+
+            var downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+            if (!downloadResult.Success)
+            {
+                UpdateStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.status_download_failed_format", "Download failed: {0}"),
+                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
+                return;
+            }
+
+            ApplyPendingState(_settingsFacade.Update.Get());
+            UpdateStatus = BuildPendingReadyStatus();
+            if (!invokedFromCheck)
+            {
+                _lastCheckResult = result;
+            }
+        }
+        finally
+        {
+            IsDownloading = false;
+            IsDownloadProgressVisible = false;
+        }
+    }
+
+    private string BuildPendingReadyStatus()
+    {
+        return string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase)
+            ? L("settings.update.status_downloaded_exit", "Update downloaded. It will be installed when you exit the app.")
+            : L("settings.update.status_downloaded_confirm", "Update downloaded. Review it and choose when to install.");
+    }
+
+    private string BuildUpdateModeDescription(string? value)
+    {
+        return UpdateSettingsValues.NormalizeMode(value) switch
+        {
+            UpdateSettingsValues.ModeManual => L(
+                "settings.update.mode_manual_desc",
+                "Only check for updates. You decide when downloads and installation happen."),
+            UpdateSettingsValues.ModeSilentOnExit => L(
+                "settings.update.mode_silent_on_exit_desc",
+                "Download updates in the background and install them the next time you exit the app."),
+            _ => L(
+                "settings.update.mode_download_then_confirm_desc",
+                "Download updates in the background and ask for confirmation before installing them.")
+        };
+    }
+
+    private string BuildUpdateChannelDescription(string? value)
+    {
+        return UpdateSettingsValues.NormalizeChannel(value) switch
+        {
+            UpdateSettingsValues.ChannelPreview => L(
+                "settings.update.channel_preview_desc",
+                "Preview builds may contain newer features but can be less stable."),
+            _ => L(
+                "settings.update.channel_stable_desc",
+                "Stable builds prioritize reliability and are recommended for most users.")
+        };
+    }
+
+    private string BuildUpdateSourceDescription(string? value)
+    {
+        return UpdateSettingsValues.NormalizeDownloadSource(value) switch
+        {
+            UpdateSettingsValues.DownloadSourceGhProxy => L(
+                "settings.update.source_ghproxy_desc",
+                "Use the gh-proxy mirror when downloading GitHub release assets."),
+            _ => L(
+                "settings.update.source_github_desc",
+                "Download release assets directly from GitHub.")
+        };
+    }
+
+    private string FormatTimestamp(long? utcMs)
+    {
+        if (utcMs is not > 0)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return DateTimeOffset
+                .FromUnixTimeMilliseconds(utcMs.Value)
+                .ToLocalTime()
+                .ToString("g", CultureInfo.CurrentCulture);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private void RefreshActionState()
+    {
+        OnPropertyChanged(nameof(IsDownloadButtonVisible));
+        OnPropertyChanged(nameof(IsInstallButtonVisible));
+        OnPropertyChanged(nameof(DownloadThreadsValueText));
+    }
+
+    private IReadOnlyList<SelectionOption> CreateUpdateChannelOptions()
+    {
+        return
+        [
+            new SelectionOption(UpdateSettingsValues.ChannelStable, StableChannelText),
+            new SelectionOption(UpdateSettingsValues.ChannelPreview, PreviewChannelText)
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateUpdateSourceOptions()
+    {
+        return
+        [
+            new SelectionOption(UpdateSettingsValues.DownloadSourceGitHub, GitHubSourceText),
+            new SelectionOption(UpdateSettingsValues.DownloadSourceGhProxy, GhProxySourceText)
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateUpdateModeOptions()
+    {
+        return
+        [
+            new SelectionOption(UpdateSettingsValues.ModeManual, ManualModeText),
+            new SelectionOption(UpdateSettingsValues.ModeDownloadThenConfirm, DownloadThenConfirmModeText),
+            new SelectionOption(UpdateSettingsValues.ModeSilentOnExit, SilentOnExitModeText)
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateDownloadThreadOptions()
+    {
+        return Enumerable
+            .Range(UpdateSettingsValues.MinDownloadThreads, UpdateSettingsValues.MaxDownloadThreads)
+            .Select(value => new SelectionOption(
+                value.ToString(CultureInfo.InvariantCulture),
+                value.ToString(CultureInfo.CurrentCulture)))
+            .ToList();
+    }
+
+    private void SyncSelectedOptions()
+    {
+        SelectedUpdateChannelOption = UpdateChannelOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, SelectedUpdateChannelValue, StringComparison.OrdinalIgnoreCase));
+        SelectedUpdateSourceOption = UpdateSourceOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, SelectedUpdateSourceValue, StringComparison.OrdinalIgnoreCase));
+        SelectedUpdateModeOption = UpdateModeOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, SelectedUpdateModeValue, StringComparison.OrdinalIgnoreCase));
+        SelectedDownloadThreadsOption = DownloadThreadOptions.FirstOrDefault(option =>
+            string.Equals(
+                option.Value,
+                UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.InvariantCulture),
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ApplyDownloadThreadsValue(int value, bool saveChanges)
+    {
+        var normalized = UpdateSettingsValues.NormalizeDownloadThreads(value);
+        var normalizedText = normalized.ToString(CultureInfo.CurrentCulture);
+
+        var previousInitializing = _isInitializing;
+        _isInitializing = true;
+        DownloadThreadsSliderValue = normalized;
+        DownloadThreadsText = normalizedText;
+        _isInitializing = previousInitializing;
+        SyncSelectedOptions();
+
+        if (saveChanges)
+        {
+            SaveUpdateSettings();
+            UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
+        }
+    }
+
+    private static bool TryParseDownloadThreads(string? value, out int parsed)
+    {
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out parsed))
+        {
+            return true;
+        }
+
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed);
     }
 
     private string L(string key, string fallback)

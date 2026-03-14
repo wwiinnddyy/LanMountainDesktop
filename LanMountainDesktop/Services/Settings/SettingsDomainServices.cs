@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -251,9 +253,15 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             ]);
     }
 
-    public MonetPalette BuildPalette(bool nightMode, string? wallpaperPath)
+    public MonetPalette BuildPalette(bool nightMode, string? wallpaperPath, string? preferredSeedColor = null)
     {
         Bitmap? bitmap = null;
+        Color? preferredSeed = null;
+
+        if (!string.IsNullOrWhiteSpace(preferredSeedColor) && Color.TryParse(preferredSeedColor, out var parsedSeed))
+        {
+            preferredSeed = parsedSeed;
+        }
 
         try
         {
@@ -274,7 +282,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
 
         try
         {
-            return _monetColorService.BuildPalette(bitmap, nightMode);
+            return _monetColorService.BuildPalette(bitmap, nightMode, preferredSeed);
         }
         finally
         {
@@ -530,18 +538,49 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public UpdateSettingsState Get()
     {
         var snapshot = _settingsService.Load();
+        var normalizedChannel = UpdateSettingsValues.NormalizeChannel(
+            snapshot.UpdateChannel,
+            snapshot.IncludePrereleaseUpdates);
         return new UpdateSettingsState(
             snapshot.AutoCheckUpdates,
-            snapshot.IncludePrereleaseUpdates,
-            snapshot.UpdateChannel);
+            string.Equals(normalizedChannel, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase),
+            normalizedChannel,
+            UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
+            UpdateSettingsValues.NormalizeDownloadSource(snapshot.UpdateDownloadSource),
+            UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
+            snapshot.PendingUpdateInstallerPath,
+            snapshot.PendingUpdateVersion,
+            snapshot.PendingUpdatePublishedAtUtcMs,
+            snapshot.LastUpdateCheckUtcMs);
     }
 
     public void Save(UpdateSettingsState state)
     {
         var snapshot = _settingsService.Load();
+        var normalizedChannel = UpdateSettingsValues.NormalizeChannel(
+            state.UpdateChannel,
+            state.IncludePrereleaseUpdates);
         snapshot.AutoCheckUpdates = state.AutoCheckUpdates;
-        snapshot.IncludePrereleaseUpdates = state.IncludePrereleaseUpdates;
-        snapshot.UpdateChannel = state.UpdateChannel;
+        snapshot.IncludePrereleaseUpdates = string.Equals(
+            normalizedChannel,
+            UpdateSettingsValues.ChannelPreview,
+            StringComparison.OrdinalIgnoreCase);
+        snapshot.UpdateChannel = normalizedChannel;
+        snapshot.UpdateMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
+        snapshot.UpdateDownloadSource = UpdateSettingsValues.NormalizeDownloadSource(state.UpdateDownloadSource);
+        snapshot.UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
+        snapshot.PendingUpdateInstallerPath = string.IsNullOrWhiteSpace(state.PendingUpdateInstallerPath)
+            ? null
+            : state.PendingUpdateInstallerPath.Trim();
+        snapshot.PendingUpdateVersion = string.IsNullOrWhiteSpace(state.PendingUpdateVersion)
+            ? null
+            : state.PendingUpdateVersion.Trim();
+        snapshot.PendingUpdatePublishedAtUtcMs = state.PendingUpdatePublishedAtUtcMs is > 0
+            ? state.PendingUpdatePublishedAtUtcMs
+            : null;
+        snapshot.LastUpdateCheckUtcMs = state.LastUpdateCheckUtcMs is > 0
+            ? state.LastUpdateCheckUtcMs
+            : null;
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
@@ -549,7 +588,14 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             [
                 nameof(AppSettingsSnapshot.AutoCheckUpdates),
                 nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
-                nameof(AppSettingsSnapshot.UpdateChannel)
+                nameof(AppSettingsSnapshot.UpdateChannel),
+                nameof(AppSettingsSnapshot.UpdateMode),
+                nameof(AppSettingsSnapshot.UpdateDownloadSource),
+                nameof(AppSettingsSnapshot.UpdateDownloadThreads),
+                nameof(AppSettingsSnapshot.PendingUpdateInstallerPath),
+                nameof(AppSettingsSnapshot.PendingUpdateVersion),
+                nameof(AppSettingsSnapshot.PendingUpdatePublishedAtUtcMs),
+                nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs)
             ]);
     }
 
@@ -564,10 +610,18 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        return _releaseUpdateService.DownloadAssetAsync(asset, destinationFilePath, progress, cancellationToken);
+        return _releaseUpdateService.DownloadAssetAsync(
+            asset,
+            destinationFilePath,
+            downloadSource,
+            maxParallelSegments,
+            progress,
+            cancellationToken);
     }
 
     public void Dispose()
@@ -795,15 +849,50 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
 
 internal sealed class ApplicationInfoService : IApplicationInfoService
 {
+    private const string Codename = "Administrate";
+
     public string GetAppVersionText()
     {
-        var version = typeof(App).Assembly.GetName().Version;
-        return version is null
-            ? "0.0.0"
-            : new Version(
-                Math.Max(0, version.Major),
-                Math.Max(0, version.Minor),
-                Math.Max(0, version.Build)).ToString(3);
+        var assembly = typeof(App).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            var normalizedInformationalVersion = informationalVersion.Split('+', 2)[0].Trim();
+            if (!string.IsNullOrWhiteSpace(normalizedInformationalVersion))
+            {
+                return normalizedInformationalVersion;
+            }
+        }
+
+        var version = assembly.GetName().Version;
+        if (version is null)
+        {
+            return "0.0.0";
+        }
+
+        if (version.Revision >= 0)
+        {
+            return version.ToString(4);
+        }
+
+        if (version.Build >= 0)
+        {
+            return version.ToString(3);
+        }
+
+        if (version.Minor >= 0)
+        {
+            return version.ToString(2);
+        }
+
+        return version.ToString();
+    }
+
+    public string GetAppCodenameText()
+    {
+        return Codename;
     }
 
     public AppRenderBackendInfo GetRenderBackendInfo()

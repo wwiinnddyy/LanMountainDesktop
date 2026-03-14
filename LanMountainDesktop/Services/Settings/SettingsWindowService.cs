@@ -281,6 +281,9 @@ internal sealed class SettingsWindowService : ISettingsWindowService
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase);
 
             if (languageChanged)
@@ -307,14 +310,31 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
 
-        var accentColor = TryParseThemeColor(themeState.ThemeColor);
+        var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+        var wallpaperState = settingsFacade.Wallpaper.Get();
+        var monetPalette = settingsFacade.Theme.BuildPalette(
+            themeState.IsNightMode,
+            wallpaperState.WallpaperPath,
+            themeState.ThemeColor);
+        var accentColor = ResolveAccentColor(themeState.ThemeColor, monetPalette);
         var context = new ThemeColorContext(
             accentColor,
             IsLightBackground: !themeState.IsNightMode,
             IsLightNavBackground: !themeState.IsNightMode,
-            IsNightMode: themeState.IsNightMode);
+            IsNightMode: themeState.IsNightMode,
+            MonetColors: monetPalette.MonetColors);
         ThemeColorSystemService.ApplyThemeResources(window.Resources, context);
         GlassEffectService.ApplyGlassResources(window.Resources, context);
+    }
+
+    private static Color ResolveAccentColor(string? colorText, MonetPalette monetPalette)
+    {
+        if (monetPalette.MonetColors is { Count: > 0 })
+        {
+            return monetPalette.MonetColors[0];
+        }
+
+        return TryParseThemeColor(colorText);
     }
 
     private static Color TryParseThemeColor(string? colorText)

@@ -1,0 +1,224 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.UpdateSettingsPage"
+             x:DataType="vm:UpdateSettingsPageViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.update-status-card">
+            <Setter Property="Padding" Value="24" />
+            <Setter Property="Margin" Value="0,0,0,18" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BoxShadow" Value="0 6 18 #15000000" />
+        </Style>
+
+        <Style Selector="TextBlock.update-kv-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.68" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.update-kv-value">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <TextBlock Classes="settings-section-title"
+                       Text="{Binding PageTitle}" />
+            <TextBlock Classes="settings-section-description"
+                       Text="{Binding PageDescription}" />
+
+            <Border Classes="update-status-card">
+                <StackPanel Spacing="18">
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="16">
+                        <Border Classes="settings-section-card-icon-host"
+                                Width="48"
+                                Height="48">
+                            <Viewbox Stretch="Uniform">
+                                <fi:SymbolIcon Symbol="ArrowSync" />
+                            </Viewbox>
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4">
+                            <TextBlock Classes="settings-card-header"
+                                       Margin="0"
+                                       Text="{Binding StatusCardTitle}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding StatusCardDescription}" />
+                        </StackPanel>
+
+                        <Button Grid.Column="2"
+                                Classes="settings-accent-button"
+                                Command="{Binding CheckForUpdatesCommand}"
+                                Content="{Binding CheckForUpdatesButtonText}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="14"
+                          RowSpacing="12">
+                        <StackPanel Grid.Column="0"
+                                    Spacing="4">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding CurrentVersionLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding CurrentVersionText}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4"
+                                    IsVisible="{Binding IsLatestVersionVisible}">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding LatestVersionLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding LatestVersionText}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1"
+                                    Grid.Column="0"
+                                    Spacing="4"
+                                    IsVisible="{Binding IsPublishedAtVisible}">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding PublishedAtLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding PublishedAtText}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1"
+                                    Grid.Column="1"
+                                    Spacing="4"
+                                    IsVisible="{Binding IsLastCheckedVisible}">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding LastCheckedLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding LastCheckedText}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="settings-item-description"
+                                   Text="{Binding UpdateStatus}" />
+
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding DownloadProgressValue}"
+                                     IsVisible="{Binding IsDownloadProgressVisible}" />
+
+                        <TextBlock Classes="settings-item-description"
+                                   IsVisible="{Binding IsDownloadProgressVisible}"
+                                   Text="{Binding DownloadProgressText}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <Button Command="{Binding DownloadLatestReleaseCommand}"
+                                Content="{Binding DownloadButtonText}"
+                                IsVisible="{Binding IsDownloadButtonVisible}" />
+                        <Button Classes="settings-accent-button"
+                                Command="{Binding InstallPendingUpdateCommand}"
+                                Content="{Binding InstallNowButtonText}"
+                                IsVisible="{Binding IsInstallButtonVisible}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="settings-subsection-title"
+                       Text="{Binding PreferencesHeader}" />
+            <TextBlock Classes="settings-section-description"
+                       Margin="0,0,0,18"
+                       Text="{Binding PreferencesDescription}" />
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding UpdateChannelLabel}"
+                                 Description="{Binding SelectedUpdateChannelDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="BranchFork" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding UpdateChannelOptions}"
+                              SelectedItem="{Binding SelectedUpdateChannelOption}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding UpdateSourceLabel}"
+                                 Description="{Binding SelectedUpdateSourceDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="GlobeArrowForward" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding UpdateSourceOptions}"
+                              SelectedItem="{Binding SelectedUpdateSourceOption}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding UpdateModeLabel}"
+                                 Description="{Binding SelectedUpdateModeDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Options" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="260"
+                              ItemsSource="{Binding UpdateModeOptions}"
+                              SelectedItem="{Binding SelectedUpdateModeOption}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding DownloadThreadsLabel}"
+                                 Description="{Binding DownloadThreadsDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ArrowDownload" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ui:NumberBox Width="160"
+                                  Minimum="1"
+                                  Maximum="128"
+                                  SpinButtonPlacementMode="Inline"
+                                  Value="{Binding DownloadThreadsSliderValue}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding AutoCheckUpdatesLabel}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ClockAlarm" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding AutoCheckUpdates}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

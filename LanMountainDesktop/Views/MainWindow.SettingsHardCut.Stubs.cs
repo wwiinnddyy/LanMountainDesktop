@@ -198,11 +198,16 @@ public partial class MainWindow
 
     private ThemeColorContext BuildAdaptiveThemeContext()
     {
+        var palette = _themeSettingsService.BuildPalette(_isNightMode, _wallpaperPath, _selectedThemeColor.ToString());
+        var accentColor = palette.MonetColors is { Count: > 0 }
+            ? palette.MonetColors[0]
+            : _selectedThemeColor;
         return new ThemeColorContext(
-            _selectedThemeColor,
+            accentColor,
             IsLightBackground: !_isNightMode,
             IsLightNavBackground: !_isNightMode,
-            IsNightMode: _isNightMode);
+            IsNightMode: _isNightMode,
+            MonetColors: palette.MonetColors);
     }
 
     private void ApplyAdaptiveThemeResources()
@@ -386,7 +391,7 @@ public partial class MainWindow
             return;
         }
 
-        var palette = _themeSettingsService.BuildPalette(enabled, _wallpaperPath);
+        var palette = _themeSettingsService.BuildPalette(enabled, _wallpaperPath, _selectedThemeColor.ToString());
         _recommendedColors = palette.RecommendedColors;
         _monetColors = palette.MonetColors;
     }
@@ -406,6 +411,32 @@ public partial class MainWindow
 
     private void TriggerAutoUpdateCheckIfEnabled()
     {
+        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
+        if (!Version.TryParse(versionText, out var currentVersion))
+        {
+            currentVersion = new Version(0, 0, 0);
+        }
+
+        var normalizedVersion = new Version(
+            Math.Max(0, currentVersion.Major),
+            Math.Max(0, currentVersion.Minor),
+            Math.Max(0, currentVersion.Build));
+
+        DispatcherTimer.RunOnce(
+            async () =>
+            {
+                try
+                {
+                    await HostUpdateWorkflowServiceProvider
+                        .GetOrCreate()
+                        .AutoCheckIfEnabledAsync(normalizedVersion);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("UpdateWorkflow", "Automatic update check failed after startup.", ex);
+                }
+            },
+            TimeSpan.FromSeconds(3));
     }
 
     private void PersistSettings()
@@ -489,6 +520,7 @@ public partial class MainWindow
     private AppSettingsSnapshot BuildAppSettingsSnapshot()
     {
         var latestWeatherState = _weatherSettingsService.Get();
+        var latestUpdateState = _updateSettingsService.Get();
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
@@ -513,6 +545,16 @@ public partial class MainWindow
             WeatherNoTlsRequests = latestWeatherState.NoTlsRequests,
             AutoStartWithWindows = _autoStartWithWindows,
             AppRenderMode = _selectedAppRenderMode,
+            AutoCheckUpdates = latestUpdateState.AutoCheckUpdates,
+            IncludePrereleaseUpdates = latestUpdateState.IncludePrereleaseUpdates,
+            UpdateChannel = latestUpdateState.UpdateChannel,
+            UpdateMode = latestUpdateState.UpdateMode,
+            UpdateDownloadSource = latestUpdateState.UpdateDownloadSource,
+            UpdateDownloadThreads = latestUpdateState.UpdateDownloadThreads,
+            PendingUpdateInstallerPath = latestUpdateState.PendingUpdateInstallerPath,
+            PendingUpdateVersion = latestUpdateState.PendingUpdateVersion,
+            PendingUpdatePublishedAtUtcMs = latestUpdateState.PendingUpdatePublishedAtUtcMs,
+            LastUpdateCheckUtcMs = latestUpdateState.LastUpdateCheckUtcMs,
             TopStatusComponentIds = [.. _topStatusComponentIds],
             PinnedTaskbarActions = [.. _pinnedTaskbarActions.Select(v => v.ToString())],
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,

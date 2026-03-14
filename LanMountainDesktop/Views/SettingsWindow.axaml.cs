@@ -216,8 +216,11 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         ViewModel.CurrentPageTitle = descriptor.Title;
         ViewModel.CurrentPageDescription = descriptor.Description;
         ViewModel.CurrentPageId = descriptor.PageId;
+        ViewModel.IsPageTitleVisible = !descriptor.HidePageTitle;
         TrySelectNavigationItem(descriptor.PageId);
         SyncTitleText();
+        UpdateResponsiveLayout();
+        RequestResponsiveLayoutRefresh();
     }
 
     private SettingsPageDescriptor? ResolveDescriptor(string? pageId)

@@ -124,7 +124,10 @@ internal sealed class ComponentEditorWindowService : IComponentEditorWindowServi
         var themeState = _settingsFacade.Theme.Get();
         var wallpaperState = _settingsFacade.Wallpaper.Get();
         var wallpaperMediaType = _settingsFacade.WallpaperMedia.DetectMediaType(wallpaperState.WallpaperPath);
-        var monetPalette = _settingsFacade.Theme.BuildPalette(themeState.IsNightMode, wallpaperState.WallpaperPath);
+        var monetPalette = _settingsFacade.Theme.BuildPalette(
+            themeState.IsNightMode,
+            wallpaperState.WallpaperPath,
+            themeState.ThemeColor);
         var palette = ComponentEditorMaterialThemeAdapter.Build(
             themeState,
             wallpaperState,

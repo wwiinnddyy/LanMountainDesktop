@@ -1,0 +1,291 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services.Settings;
+
+namespace LanMountainDesktop.Services;
+
+public sealed record UpdatePendingInfo(
+    string InstallerPath,
+    string VersionText,
+    DateTimeOffset? PublishedAt);
+
+public sealed record UpdateInstallerLaunchResult(
+    bool Success,
+    bool UserCancelledElevation,
+    string? ErrorMessage);
+
+internal static class HostUpdateWorkflowServiceProvider
+{
+    private static readonly object Gate = new();
+    private static UpdateWorkflowService? _instance;
+
+    public static UpdateWorkflowService GetOrCreate()
+    {
+        lock (Gate)
+        {
+            return _instance ??= new UpdateWorkflowService(HostSettingsFacadeProvider.GetOrCreate());
+        }
+    }
+}
+
+public sealed class UpdateWorkflowService
+{
+    private readonly ISettingsFacadeService _settingsFacade;
+    private readonly string _updatesDirectory;
+
+    public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
+    {
+        _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
+        _updatesDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop",
+            "Updates");
+    }
+
+    public UpdatePendingInfo? GetPendingUpdate()
+    {
+        var state = _settingsFacade.Update.Get();
+        return GetPendingUpdate(state);
+    }
+
+    public async Task<UpdateCheckResult> CheckForUpdatesAsync(
+        Version currentVersion,
+        CancellationToken cancellationToken = default)
+    {
+        var state = _settingsFacade.Update.Get();
+        var includePrerelease = string.Equals(
+            UpdateSettingsValues.NormalizeChannel(state.UpdateChannel, state.IncludePrereleaseUpdates),
+            UpdateSettingsValues.ChannelPreview,
+            StringComparison.OrdinalIgnoreCase);
+
+        var result = await _settingsFacade.Update.CheckForUpdatesAsync(
+            currentVersion,
+            includePrerelease,
+            cancellationToken);
+
+        SaveState(state with
+        {
+            LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+
+        return result;
+    }
+
+    public async Task<UpdateDownloadResult> DownloadReleaseAsync(
+        UpdateCheckResult checkResult,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkResult);
+
+        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
+        {
+            return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
+        }
+
+        var state = _settingsFacade.Update.Get();
+        var existingPending = GetPendingUpdate(state);
+        if (existingPending is not null &&
+            string.Equals(existingPending.VersionText, checkResult.LatestVersionText, StringComparison.OrdinalIgnoreCase) &&
+            File.Exists(existingPending.InstallerPath))
+        {
+            return new UpdateDownloadResult(true, existingPending.InstallerPath, null);
+        }
+
+        Directory.CreateDirectory(_updatesDirectory);
+        var fileName = SanitizeFileName(checkResult.PreferredAsset.Name);
+        var destinationPath = Path.Combine(_updatesDirectory, fileName);
+
+        var result = await _settingsFacade.Update.DownloadAssetAsync(
+            checkResult.PreferredAsset,
+            destinationPath,
+            state.UpdateDownloadSource,
+            state.UpdateDownloadThreads,
+            progress,
+            cancellationToken);
+
+        if (result.Success)
+        {
+            SaveState(state with
+            {
+                PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
+                PendingUpdateVersion = checkResult.LatestVersionText,
+                PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
+                    ? null
+                    : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+        }
+
+        return result;
+    }
+
+    public async Task AutoCheckIfEnabledAsync(
+        Version currentVersion,
+        CancellationToken cancellationToken = default)
+    {
+        var state = _settingsFacade.Update.Get();
+        if (!state.AutoCheckUpdates)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await CheckForUpdatesAsync(currentVersion, cancellationToken);
+            if (!result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
+            {
+                return;
+            }
+
+            var normalizedMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
+            if (string.Equals(normalizedMode, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            await DownloadReleaseAsync(result, cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("UpdateWorkflow", "Automatic update check failed.", ex);
+        }
+    }
+
+    public UpdateInstallerLaunchResult LaunchPendingInstallerNow()
+    {
+        return LaunchPendingInstaller(silent: false, exitApplicationAfterLaunch: true);
+    }
+
+    public bool TryApplyPendingUpdateOnExit()
+    {
+        var state = _settingsFacade.Update.Get();
+        if (!string.Equals(
+                UpdateSettingsValues.NormalizeMode(state.UpdateMode),
+                UpdateSettingsValues.ModeSilentOnExit,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var result = LaunchPendingInstaller(silent: true, exitApplicationAfterLaunch: false);
+        if (!result.Success && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            AppLogger.Warn("UpdateWorkflow", $"Silent update on exit failed: {result.ErrorMessage}");
+        }
+
+        return result.Success;
+    }
+
+    public void ClearPendingUpdate()
+    {
+        var state = _settingsFacade.Update.Get();
+        SaveState(state with
+        {
+            PendingUpdateInstallerPath = null,
+            PendingUpdateVersion = null,
+            PendingUpdatePublishedAtUtcMs = null
+        });
+    }
+
+    private UpdateInstallerLaunchResult LaunchPendingInstaller(bool silent, bool exitApplicationAfterLaunch)
+    {
+        var state = _settingsFacade.Update.Get();
+        var pending = GetPendingUpdate(state);
+        if (pending is null)
+        {
+            return new UpdateInstallerLaunchResult(false, false, "No pending installer is available.");
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = pending.InstallerPath,
+                WorkingDirectory = Path.GetDirectoryName(pending.InstallerPath) ?? _updatesDirectory,
+                UseShellExecute = true,
+                Verb = OperatingSystem.IsWindows() ? "runas" : string.Empty,
+                Arguments = silent ? "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" : string.Empty
+            };
+
+            Process.Start(startInfo);
+            ClearPendingUpdate();
+
+            if (exitApplicationAfterLaunch)
+            {
+                App.CurrentHostApplicationLifecycle?.TryExit(new HostApplicationLifecycleRequest(
+                    Source: "Update",
+                    Reason: silent
+                        ? "Silent installer launched."
+                        : "Installer launched from update page."));
+            }
+
+            return new UpdateInstallerLaunchResult(true, false, null);
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            return new UpdateInstallerLaunchResult(false, true, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return new UpdateInstallerLaunchResult(false, false, ex.Message);
+        }
+    }
+
+    private UpdatePendingInfo? GetPendingUpdate(UpdateSettingsState state)
+    {
+        var installerPath = state.PendingUpdateInstallerPath?.Trim();
+        if (string.IsNullOrWhiteSpace(installerPath))
+        {
+            return null;
+        }
+
+        if (!File.Exists(installerPath))
+        {
+            ClearPendingUpdate();
+            return null;
+        }
+
+        DateTimeOffset? publishedAt = state.PendingUpdatePublishedAtUtcMs is > 0
+            ? DateTimeOffset.FromUnixTimeMilliseconds(state.PendingUpdatePublishedAtUtcMs.Value)
+            : null;
+
+        return new UpdatePendingInfo(
+            installerPath,
+            string.IsNullOrWhiteSpace(state.PendingUpdateVersion) ? Path.GetFileNameWithoutExtension(installerPath) : state.PendingUpdateVersion,
+            publishedAt);
+    }
+
+    private void SaveState(UpdateSettingsState state)
+    {
+        _settingsFacade.Update.Save(state);
+    }
+
+    private static string SanitizeFileName(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return FormattableString.Invariant($"LanMountainDesktop-update-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}.exe");
+        }
+
+        var invalid = Path.GetInvalidFileNameChars();
+        Span<char> buffer = stackalloc char[fileName.Length];
+        var index = 0;
+        foreach (var ch in fileName)
+        {
+            buffer[index++] = Array.IndexOf(invalid, ch) >= 0 ? '_' : ch;
+        }
+
+        return new string(buffer[..index]);
+    }
+}

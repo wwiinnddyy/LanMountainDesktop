@@ -12,10 +12,10 @@ namespace LanMountainDesktop.Services;
 
 public sealed class MonetColorService
 {
-    public MonetPalette BuildPalette(Bitmap? wallpaper, bool nightMode)
+    public MonetPalette BuildPalette(Bitmap? wallpaper, bool nightMode, Color? preferredSeed = null)
     {
         var recommended = BuildRecommendedPalette(nightMode);
-        var seed = TryExtractSeedColor(wallpaper) ?? TryGetSystemMonetSeedColor() ?? Color.Parse("#FF3B82F6");
+        var seed = preferredSeed ?? TryExtractSeedColor(wallpaper) ?? TryGetSystemMonetSeedColor() ?? Color.Parse("#FF3B82F6");
         var monet = BuildMonetPalette(seed, nightMode);
         return new MonetPalette(recommended, monet);
     }

@@ -172,6 +172,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
     public async Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -193,11 +195,14 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         var progressAdapter = progress is null
             ? null
             : new Progress<DownloadProgressInfo>(info => progress.Report(info.Progress));
+        var effectiveSource = ApplyDownloadSource(asset.BrowserDownloadUrl, downloadSource);
 
         var result = await _downloadService.DownloadAsync(
-            asset.BrowserDownloadUrl,
+            effectiveSource,
             destinationFilePath,
-            new DownloadOptions(ExpectedSizeBytes: asset.SizeBytes > 0 ? asset.SizeBytes : null),
+            new DownloadOptions(
+                ExpectedSizeBytes: asset.SizeBytes > 0 ? asset.SizeBytes : null,
+                MaxParallelSegments: UpdateSettingsValues.NormalizeDownloadThreads(maxParallelSegments)),
             progressAdapter,
             cancellationToken);
 
@@ -459,5 +464,24 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         }
 
         return value[..maxLength];
+    }
+
+    private static string ApplyDownloadSource(string browserDownloadUrl, string? downloadSource)
+    {
+        if (!string.Equals(
+                UpdateSettingsValues.NormalizeDownloadSource(downloadSource),
+                UpdateSettingsValues.DownloadSourceGhProxy,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return browserDownloadUrl;
+        }
+
+        var normalizedBase = UpdateSettingsValues.DefaultGhProxyBaseUrl.TrimEnd('/') + "/";
+        if (browserDownloadUrl.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+        {
+            return browserDownloadUrl;
+        }
+
+        return normalizedBase + browserDownloadUrl;
     }
 }
