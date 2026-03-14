@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.InformationalComponentEditor">
+    <StackPanel Spacing="16">
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <Grid ColumnDefinitions="Auto,*"
+                  RowDefinitions="Auto,Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="8">
+                <TextBlock x:Name="ComponentLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <TextBlock x:Name="ComponentValueTextBlock"
+                           Grid.Column="1" />
+
+                <TextBlock Grid.Row="1"
+                           x:Name="PlacementLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <TextBlock x:Name="PlacementValueTextBlock"
+                           Grid.Row="1"
+                           Grid.Column="1" />
+
+                <TextBlock Grid.Row="2"
+                           x:Name="ScopeLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <TextBlock x:Name="ScopeValueTextBlock"
+                           Grid.Row="2"
+                           Grid.Column="1"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

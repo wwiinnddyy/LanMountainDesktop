@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.ClockComponentEditor">
+    <StackPanel Spacing="16">
+        <Border Classes="component-editor-hero-card"
+                Padding="24">
+            <StackPanel Spacing="8">
+                <TextBlock x:Name="HeadlineTextBlock"
+                           Classes="component-editor-headline"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="DescriptionTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="TimeZoneLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="TimeZoneComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnTimeZoneSelectionChanged" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="SecondHandLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                
+                <Border Classes="component-editor-segmented-host"
+                        HorizontalAlignment="Left">
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="4">
+                        <ToggleButton x:Name="TickRadioButton"
+                                      Classes="component-editor-segmented-choice"
+                                      Checked="OnSecondHandChanged"
+                                      Unchecked="OnSecondHandChanged" />
+                        <ToggleButton x:Name="SweepRadioButton"
+                                      Grid.Column="1"
+                                      Classes="component-editor-segmented-choice"
+                                      Checked="OnSecondHandChanged"
+                                      Unchecked="OnSecondHandChanged" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

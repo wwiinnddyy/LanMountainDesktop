@@ -158,7 +158,7 @@ public partial class MainWindow
         _weatherLongitude = snapshot.WeatherLongitude;
         _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
         _weatherExcludedAlertsRaw = snapshot.WeatherExcludedAlerts ?? string.Empty;
-        _weatherIconPackId = string.IsNullOrWhiteSpace(snapshot.WeatherIconPackId) ? "FluentRegular" : snapshot.WeatherIconPackId;
+        _weatherIconPackId = string.IsNullOrWhiteSpace(snapshot.WeatherIconPackId) ? "HyperOS3" : snapshot.WeatherIconPackId;
         _weatherNoTlsRequests = snapshot.WeatherNoTlsRequests;
     }
 
@@ -488,6 +488,7 @@ public partial class MainWindow
 
     private AppSettingsSnapshot BuildAppSettingsSnapshot()
     {
+        var latestWeatherState = _weatherSettingsService.Get();
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
@@ -500,15 +501,16 @@ public partial class MainWindow
             WallpaperColor = _wallpaperSolidColor?.ToString(),
             LanguageCode = _languageCode,
             TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
-            WeatherLocationMode = _weatherLocationMode.ToString(),
-            WeatherLocationKey = _weatherLocationKey,
-            WeatherLocationName = _weatherLocationName,
-            WeatherLatitude = _weatherLatitude,
-            WeatherLongitude = _weatherLongitude,
-            WeatherAutoRefreshLocation = _weatherAutoRefreshLocation,
-            WeatherExcludedAlerts = _weatherExcludedAlertsRaw,
-            WeatherIconPackId = _weatherIconPackId,
-            WeatherNoTlsRequests = _weatherNoTlsRequests,
+            WeatherLocationMode = latestWeatherState.LocationMode,
+            WeatherLocationKey = latestWeatherState.LocationKey,
+            WeatherLocationName = latestWeatherState.LocationName,
+            WeatherLatitude = latestWeatherState.Latitude,
+            WeatherLongitude = latestWeatherState.Longitude,
+            WeatherAutoRefreshLocation = latestWeatherState.AutoRefreshLocation,
+            WeatherLocationQuery = latestWeatherState.LocationQuery,
+            WeatherExcludedAlerts = latestWeatherState.ExcludedAlerts,
+            WeatherIconPackId = latestWeatherState.IconPackId,
+            WeatherNoTlsRequests = latestWeatherState.NoTlsRequests,
             AutoStartWithWindows = _autoStartWithWindows,
             AppRenderMode = _selectedAppRenderMode,
             TopStatusComponentIds = [.. _topStatusComponentIds],

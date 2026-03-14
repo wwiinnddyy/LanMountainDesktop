@@ -10,3 +10,7 @@ public sealed record PluginSettingsSectionContribution(
 public sealed record PluginDesktopComponentContribution(
     LoadedPlugin Plugin,
     PluginDesktopComponentRegistration Registration);
+
+public sealed record PluginDesktopComponentEditorContribution(
+    LoadedPlugin Plugin,
+    PluginDesktopComponentEditorRegistration Registration);

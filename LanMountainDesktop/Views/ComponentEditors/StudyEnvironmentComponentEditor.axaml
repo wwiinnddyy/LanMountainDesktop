@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.StudyEnvironmentComponentEditor">
+    <StackPanel Spacing="16">
+        <Border Classes="component-editor-hero-card"
+                Padding="24">
+            <StackPanel Spacing="8">
+                <TextBlock x:Name="HeadlineTextBlock"
+                           Classes="component-editor-headline"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="DescriptionTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="DisplayDbHeaderTextBlock"
+                           Classes="component-editor-section-title" />
+                <ToggleSwitch x:Name="DisplayDbToggleSwitch"
+                              IsCheckedChanged="OnToggleChanged" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="DbfsHeaderTextBlock"
+                           Classes="component-editor-section-title" />
+                <ToggleSwitch x:Name="DbfsToggleSwitch"
+                              IsCheckedChanged="OnToggleChanged" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="HintTextBlock"
+                   Classes="component-editor-secondary-text"
+                   Margin="12,0"
+                   TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

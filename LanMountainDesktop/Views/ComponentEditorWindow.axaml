@@ -1,0 +1,135 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:fa="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
+        mc:Ignorable="d"
+        x:Class="LanMountainDesktop.Views.ComponentEditorWindow"
+        x:Name="RootWindow"
+        Classes="component-editor-window"
+        Width="720"
+        Height="540"
+        MinWidth="420"
+        MinHeight="320"
+        CanResize="True"
+        SizeToContent="Manual"
+        ShowInTaskbar="False"
+        SystemDecorations="BorderOnly"
+        Background="{DynamicResource EditorWindowBackgroundBrush}"
+        Title="Component Editor">
+    <Window.Resources>
+        <!-- Material Design 3 Brushes -->
+        <SolidColorBrush x:Key="EditorWindowBackgroundBrush" Color="#FFFEF7FF" />
+        <SolidColorBrush x:Key="EditorSurfaceBrush" Color="#FFFEF7FF" />
+        <SolidColorBrush x:Key="EditorSurfaceContainerBrush" Color="#FFF3EDF7" />
+        <SolidColorBrush x:Key="EditorSurfaceContainerHighBrush" Color="#FFE6E0E9" />
+        <SolidColorBrush x:Key="EditorTopAppBarBackgroundBrush" Color="#FFF3EDF7" />
+        <SolidColorBrush x:Key="EditorHeaderIconBackgroundBrush" Color="#FFEADDFF" />
+        <SolidColorBrush x:Key="EditorTitleBarButtonHoverBrush" Color="#121D1B20" />
+        <SolidColorBrush x:Key="EditorPrimaryBrush" Color="#FF6750A4" />
+        <SolidColorBrush x:Key="EditorOnPrimaryBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="EditorSecondaryBrush" Color="#FF625B71" />
+        <SolidColorBrush x:Key="EditorTertiaryBrush" Color="#FF7D5260" />
+        <SolidColorBrush x:Key="EditorSelectFieldBackgroundBrush" Color="#FFE6E0E9" />
+        <SolidColorBrush x:Key="EditorSelectFieldHoverBrush" Color="#FFE0DAE4" />
+        <SolidColorBrush x:Key="EditorSelectFieldFocusBrush" Color="#FFDDD3E6" />
+        <SolidColorBrush x:Key="EditorSelectOutlineBrush" Color="#FF79747E" />
+        <SolidColorBrush x:Key="EditorSelectOutlineStrongBrush" Color="#FF6750A4" />
+        <SolidColorBrush x:Key="EditorSelectMenuItemHoverBrush" Color="#1F6750A4" />
+        <SolidColorBrush x:Key="EditorSelectMenuItemSelectedBrush" Color="#306750A4" />
+        <SolidColorBrush x:Key="ComponentEditorHeroBackgroundBrush" Color="#FFEADDFF" />
+        <SolidColorBrush x:Key="ComponentEditorCardBackgroundBrush" Color="#FFF3EDF7" />
+        <SolidColorBrush x:Key="ComponentEditorCardBorderBrush" Color="#FFCAC4D0" />
+        <SolidColorBrush x:Key="ComponentEditorPrimaryTextBrush" Color="#FF1D1B20" />
+        <SolidColorBrush x:Key="ComponentEditorSecondaryTextBrush" Color="#FF49454F" />
+        <SolidColorBrush x:Key="EditorDividerBrush" Color="#FFCAC4D0" />
+    </Window.Resources>
+
+    <Window.Styles>
+        <themes:CustomMaterialTheme BaseTheme="Light" PrimaryColor="#6750A4" SecondaryColor="#625B71" />
+        <StyleInclude Source="avares://LanMountainDesktop/Styles/ComponentEditorThemeResources.axaml" />
+        
+        <!-- MD3 Button Styles -->
+        <Style Selector="Button.component-editor-footer-button">
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Background" Value="{DynamicResource EditorPrimaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource EditorOnPrimaryBrush}" />
+            <Setter Property="Height" Value="40" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Background="{DynamicResource EditorWindowBackgroundBrush}"
+          RowDefinitions="Auto,*">
+        <Border x:Name="CustomTitleBarHost"
+                Padding="24,16"
+                Background="{DynamicResource EditorWindowBackgroundBrush}"
+                IsVisible="False"
+                PointerPressed="OnWindowTitleBarPointerPressed">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="16">
+                <mi:MaterialIcon x:Name="HeaderIcon"
+                                 Width="28"
+                                 Height="28"
+                                 Foreground="{DynamicResource EditorPrimaryBrush}"
+                                 VerticalAlignment="Center" />
+
+                <StackPanel Grid.Column="1"
+                            Spacing="0"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="TitleTextBlock"
+                               Classes="component-editor-headline"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <Button Grid.Column="2"
+                        Classes="component-editor-titlebar-button"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Width="40" Height="40"
+                        Padding="8"
+                        Click="OnCloseClick">
+                    <mi:MaterialIcon Kind="Close"
+                                     Width="24" Height="24" />
+                </Button>
+            </Grid>
+        </Border>
+
+        <Panel Grid.Row="1">
+            <ScrollViewer Classes="component-editor-scroll-host"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ContentControl x:Name="EditorContentHost"
+                                Margin="24,0,24,100"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch" />
+            </ScrollViewer>
+
+            <!-- Floating Save Button (MD3 Style) -->
+            <Button x:Name="SaveFAB"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Margin="28"
+                    Width="64"
+                    Height="64"
+                    Background="{DynamicResource EditorPrimaryBrush}"
+                    Foreground="{DynamicResource EditorOnPrimaryBrush}"
+                    CornerRadius="18"
+                    Classes="accent"
+                    Click="OnCloseClick">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="RenderTransform" Value="scale(1.05)" />
+                    </Style>
+                </Button.Styles>
+                <mi:MaterialIcon Kind="Check"
+                                 Width="32"
+                                 Height="32" />
+            </Button>
+        </Panel>
+    </Grid>
+</Window>

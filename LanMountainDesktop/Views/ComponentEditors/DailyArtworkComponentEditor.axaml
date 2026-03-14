@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.DailyArtworkComponentEditor">
+    <StackPanel Spacing="16">
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="SourceLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="SourceComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnSourceSelectionChanged">
+                    <ComboBoxItem x:Name="DomesticItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="Domestic" />
+                    <ComboBoxItem x:Name="OverseasItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="Overseas" />
+                </ComboBox>
+                <TextBlock x:Name="StatusTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

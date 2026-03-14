@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -45,8 +46,10 @@ public partial class App : Application
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
+    private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private ISettingsPageRegistry? _settingsPageRegistry;
     private ISettingsWindowService? _settingsWindowService;
+    private WeatherLocationRefreshService? _weatherLocationRefreshService;
     private bool _exitCleanupCompleted;
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
@@ -92,6 +95,7 @@ public partial class App : Application
         ApplyThemeFromSettings();
         ApplyCurrentCultureFromSettings();
         EnsureSettingsWindowService();
+        EnsureWeatherLocationRefreshService();
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -118,6 +122,8 @@ public partial class App : Application
             CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         }
+
+        StartWeatherLocationRefreshIfNeeded();
 
         base.OnFrameworkInitializationCompleted();
     }
@@ -298,6 +304,35 @@ public partial class App : Application
             _settingsPageRegistry,
             _hostApplicationLifecycle,
             _settingsFacade);
+    }
+
+    private void EnsureWeatherLocationRefreshService()
+    {
+        _weatherLocationRefreshService ??= new WeatherLocationRefreshService(
+            _settingsFacade,
+            _locationService,
+            _localizationService);
+    }
+
+    private void StartWeatherLocationRefreshIfNeeded()
+    {
+        EnsureWeatherLocationRefreshService();
+        if (_weatherLocationRefreshService is null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _weatherLocationRefreshService.TryRefreshOnStartupAsync();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Weather.Location", "Failed to refresh weather location during startup.", ex);
+            }
+        });
     }
 
     private void ApplyThemeFromSettings()

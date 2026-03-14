@@ -95,7 +95,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
     private readonly ComponentRegistry _componentRegistry;
     private readonly DesktopComponentRuntimeRegistry _componentRuntimeRegistry;
+    private readonly DesktopComponentEditorRegistry _componentEditorRegistry;
     private readonly IComponentLibraryService _componentLibraryService;
+    private readonly IComponentEditorWindowService _componentEditorWindowService;
     private readonly IEmbeddedComponentLibraryService _componentLibraryWindowService = new EmbeddedComponentLibraryService();
     private ComponentLibraryWindow? _detachedComponentLibraryWindow;
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
@@ -164,7 +166,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private double _weatherLongitude = 116.4074;
     private bool _weatherAutoRefreshLocation;
     private string _weatherExcludedAlertsRaw = string.Empty;
-    private string _weatherIconPackId = "FluentRegular";
+    private string _weatherIconPackId = "HyperOS3";
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private bool _suppressAutoStartToggleEvents;
@@ -197,7 +199,11 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             _componentRegistry,
             pluginRuntimeService,
             _settingsFacade);
+        _componentEditorRegistry = DesktopComponentEditorRegistryFactory.Create(
+            _componentRegistry,
+            pluginRuntimeService);
         _componentLibraryService = new ComponentLibraryService(_componentRegistry, _componentRuntimeRegistry);
+        _componentEditorWindowService = new ComponentEditorWindowService(_settingsFacade);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         _settingsService.Changed += OnSettingsChanged;
         PropertyChanged += OnWindowPropertyChanged;
@@ -307,6 +313,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     protected override void OnClosed(EventArgs e)
     {
         PersistSettings();
+        _componentEditorWindowService.Close();
         if (_detachedComponentLibraryWindow is not null)
         {
             _detachedComponentLibraryWindow.AddComponentRequested -= OnDetachedComponentLibraryAddComponentRequested;

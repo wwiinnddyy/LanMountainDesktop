@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="using:FluentAvalonia.UI.Controls">
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia.Fluent">
 
     <Style Selector="StackPanel.settings-page-container">
         <Setter Property="Spacing" Value="0" />
@@ -187,6 +188,41 @@
     <Style Selector=".settings-section-card Button, .settings-option-card Button, .settings-list-item Button, ui|SettingsExpander.settings-expander-card Button">
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Padding" Value="14,8" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,2,0,0" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results ListBoxItem">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results ListBoxItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results ListBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveAccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results ListBoxItem:selected TextBlock.settings-item-label, ListBox.weather-settings-search-results ListBoxItem:selected TextBlock.settings-item-description">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}" />
+    </Style>
+
+    <Style Selector="ListBox.weather-settings-search-results ListBoxItem:selected fi|SymbolIcon">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}" />
     </Style>
 
     <Style Selector="Button.settings-accent-button">

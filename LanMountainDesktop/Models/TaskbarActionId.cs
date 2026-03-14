@@ -5,6 +5,7 @@ public enum TaskbarActionId
     MinimizeToWindows,
     AddDesktopPage,
     DeleteDesktopPage,
+    EditComponent,
     DeleteComponent,
     HideLauncherEntry
 }

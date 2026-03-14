@@ -48,7 +48,7 @@ public sealed class AppSettingsSnapshot
 
     public string WeatherExcludedAlerts { get; set; } = string.Empty;
 
-    public string WeatherIconPackId { get; set; } = "FluentRegular";
+    public string WeatherIconPackId { get; set; } = "HyperOS3";
 
     public bool WeatherNoTlsRequests { get; set; }
 

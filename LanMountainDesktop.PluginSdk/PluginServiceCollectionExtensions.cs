@@ -61,6 +61,27 @@ public static class PluginServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddPluginDesktopComponentEditor<TControl>(
+        this IServiceCollection services,
+        string componentId,
+        double preferredWidth = 720d,
+        double preferredHeight = 540d,
+        double minScale = 0.85d,
+        double maxScale = 1.45d)
+        where TControl : Control
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton(new PluginDesktopComponentEditorRegistration(
+            componentId,
+            (provider, context) => ActivatorUtilities.CreateInstance<TControl>(provider, context),
+            preferredWidth,
+            preferredHeight,
+            minScale,
+            maxScale));
+        return services;
+    }
+
     public static IServiceCollection AddPluginExport<TContract, TImplementation>(this IServiceCollection services)
         where TContract : class
         where TImplementation : class, TContract

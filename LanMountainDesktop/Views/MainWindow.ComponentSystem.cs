@@ -508,6 +508,17 @@ public partial class MainWindow
 
             if (_selectedDesktopComponentHost is not null)
             {
+                if (TryGetSelectedDesktopPlacement(out var selectedPlacement) &&
+                    _componentEditorRegistry.TryGetDescriptor(selectedPlacement.ComponentId, out _))
+                {
+                    actions.Add(new TaskbarActionItem(
+                        TaskbarActionId.EditComponent,
+                        L("component.edit", "Edit"),
+                        "Edit",
+                        IsVisible: true,
+                        CommandKey: "component.edit"));
+                }
+
                 actions.Add(new TaskbarActionItem(
                     TaskbarActionId.DeleteComponent,
                     L("component.delete", "Delete"),
@@ -606,15 +617,12 @@ public partial class MainWindow
                                  action.Id == TaskbarActionId.DeleteComponent;
             var isHideAction = action.Id == TaskbarActionId.HideLauncherEntry;
 
-            Symbol iconSymbol;
-            if (isDeleteAction || isHideAction)
+            var iconSymbol = action.Id switch
             {
-                iconSymbol = Symbol.Delete;
-            }
-            else
-            {
-                iconSymbol = Symbol.Add;
-            }
+                TaskbarActionId.EditComponent => Symbol.Edit,
+                _ when isDeleteAction || isHideAction => Symbol.Delete,
+                _ => Symbol.Add
+            };
 
             Control icon = new SymbolIcon
             {
@@ -675,6 +683,9 @@ public partial class MainWindow
             case "component.delete":
                 DeleteSelectedComponent();
                 break;
+            case "component.edit":
+                OpenSelectedComponentEditor();
+                break;
             case "launcher.hide":
                 HideSelectedLauncherEntry();
                 break;
@@ -695,6 +706,11 @@ public partial class MainWindow
             return;
         }
 
+        if (string.Equals(_componentEditorWindowService.CurrentPlacementId, placement.PlacementId, StringComparison.OrdinalIgnoreCase))
+        {
+            _componentEditorWindowService.Close();
+        }
+
         ClearTimeZoneServiceBindings(_selectedDesktopComponentHost);
         DisposeComponentIfNeeded(_selectedDesktopComponentHost);
 
@@ -713,6 +729,90 @@ public partial class MainWindow
         PersistSettings();
     }
 
+    private void OpenSelectedComponentEditor()
+    {
+        if (!TryGetSelectedDesktopPlacement(out var placement) ||
+            !_componentEditorRegistry.TryGetDescriptor(placement.ComponentId, out var descriptor))
+        {
+            return;
+        }
+
+        _componentEditorWindowService.Open(new ComponentEditorOpenRequest(
+            Owner: this,
+            Descriptor: descriptor,
+            ComponentId: placement.ComponentId,
+            PlacementId: placement.PlacementId,
+            RefreshAction: () => RefreshDesktopComponentPlacement(placement.PlacementId)));
+    }
+
+    private bool TryGetSelectedDesktopPlacement(out DesktopComponentPlacementSnapshot placement)
+    {
+        placement = null!;
+        if (_selectedDesktopComponentHost?.Tag is not string placementId)
+        {
+            return false;
+        }
+
+        var matchedPlacement = _desktopComponentPlacements.FirstOrDefault(candidate =>
+            string.Equals(candidate.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (matchedPlacement is null)
+        {
+            return false;
+        }
+
+        placement = matchedPlacement;
+        return true;
+    }
+
+    private void RefreshDesktopComponentPlacement(string placementId)
+    {
+        if (string.IsNullOrWhiteSpace(placementId))
+        {
+            return;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(candidate =>
+            string.Equals(candidate.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null ||
+            !_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
+        {
+            return;
+        }
+
+        var host = pageGrid.Children
+            .OfType<Border>()
+            .FirstOrDefault(candidate => string.Equals(candidate.Tag as string, placementId, StringComparison.OrdinalIgnoreCase));
+        if (host is null)
+        {
+            RestoreDesktopPageComponents(placement.PageIndex);
+            ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+            return;
+        }
+
+        var component = CreateDesktopComponentControl(placement.ComponentId, placement.PlacementId, placement.PageIndex);
+        if (component is null)
+        {
+            return;
+        }
+
+        if (TryGetContentHost(host) is not Border contentHost)
+        {
+            RestoreDesktopPageComponents(placement.PageIndex);
+            ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+            return;
+        }
+
+        ClearTimeZoneServiceBindings(host);
+        DisposeComponentIfNeeded(host);
+        contentHost.Child = component;
+        ApplyDesktopEditStateToHost(host, _isComponentLibraryOpen);
+        UpdateDesktopPageAwareComponentContext();
+        if (_selectedDesktopComponentHost == host)
+        {
+            ApplySelectionStateToHost(host, true);
+        }
+    }
+
     private static void DisposeComponentIfNeeded(Border host)
     {
         if (TryGetContentHost(host) is Border contentHost && contentHost.Child is Control componentControl)
@@ -724,7 +824,7 @@ public partial class MainWindow
         }
     }
 
-    // Component settings popup UI is removed in API-only settings hard-cut mode.
+    // Legacy in-window popup editor is removed; component editing now routes through the Material editor window service.
 
     private void AddDesktopPage()
     {
@@ -1680,6 +1780,9 @@ public partial class MainWindow
             ApplySelectionStateToHost(_selectedDesktopComponentHost, false);
             _selectedDesktopComponentHost = null;
         }
+
+        _componentEditorWindowService.Close();
+        ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
 
     private void BeginDesktopComponentMoveDrag(Border sourceHost, DesktopComponentPlacementSnapshot placement, PointerPressedEventArgs e)

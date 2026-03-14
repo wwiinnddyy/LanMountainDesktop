@@ -36,6 +36,7 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly List<PluginCatalogEntry> _catalog = [];
     private readonly List<PluginSettingsSectionContribution> _settingsSections = [];
     private readonly List<PluginDesktopComponentContribution> _desktopComponents = [];
+    private readonly List<PluginDesktopComponentEditorContribution> _desktopComponentEditors = [];
     private readonly object _packageMutationGate = new();
 
     public PluginRuntimeService(ISettingsFacadeService? settingsFacade = null)
@@ -73,6 +74,7 @@ public sealed class PluginRuntimeService : IDisposable
     public IReadOnlyList<PluginSettingsSectionContribution> SettingsSections => _settingsSections;
 
     public IReadOnlyList<PluginDesktopComponentContribution> DesktopComponents => _desktopComponents;
+    public IReadOnlyList<PluginDesktopComponentEditorContribution> DesktopComponentEditors => _desktopComponentEditors;
 
     public IPluginExportRegistry ExportRegistry => _exportRegistry;
 
@@ -193,7 +195,7 @@ public sealed class PluginRuntimeService : IDisposable
                     loadResult.LoadedPlugin.DesktopComponents.Count));
                 AppLogger.Info(
                     "PluginRuntime",
-                    $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsSections={loadResult.LoadedPlugin.SettingsSections.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}.");
+                    $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsSections={loadResult.LoadedPlugin.SettingsSections.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}; Editors={loadResult.LoadedPlugin.DesktopComponentEditors.Count}.");
                 Debug.WriteLine($"[PluginRuntime] Loaded '{loadResult.Manifest?.Id}' from '{loadResult.SourcePath}'.");
                 continue;
             }
@@ -622,6 +624,10 @@ public sealed class PluginRuntimeService : IDisposable
             entry.Plugin.Manifest.Id,
             loadedPlugin.Manifest.Id,
             StringComparison.OrdinalIgnoreCase));
+        _desktopComponentEditors.RemoveAll(entry => string.Equals(
+            entry.Plugin.Manifest.Id,
+            loadedPlugin.Manifest.Id,
+            StringComparison.OrdinalIgnoreCase));
 
         foreach (var settingsSection in loadedPlugin.SettingsSections)
         {
@@ -631,6 +637,11 @@ public sealed class PluginRuntimeService : IDisposable
         foreach (var desktopComponent in loadedPlugin.DesktopComponents)
         {
             _desktopComponents.Add(new PluginDesktopComponentContribution(loadedPlugin, desktopComponent));
+        }
+
+        foreach (var desktopComponentEditor in loadedPlugin.DesktopComponentEditors)
+        {
+            _desktopComponentEditors.Add(new PluginDesktopComponentEditorContribution(loadedPlugin, desktopComponentEditor));
         }
     }
 

@@ -34,6 +34,12 @@ public sealed record WeatherQueryResult<T>(
 public interface IWeatherInfoService
 {
     Task<WeatherQueryResult<WeatherSnapshot>> GetWeatherAsync(WeatherQuery query, CancellationToken cancellationToken = default);
+
+    Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IWeatherDataService : IWeatherInfoService

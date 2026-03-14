@@ -18,6 +18,8 @@ public sealed record XiaomiWeatherApiOptions
 
     public string CitySearchPath { get; init; } = "/wtr-v3/location/city/search";
 
+    public string CityGeoPath { get; init; } = "/wtr-v3/location/city/geo";
+
     public string AppKey { get; init; } = "weather20151024";
 
     public string Sign { get; init; } = "zUFJoAR2ZVrDy1vF3D07";
@@ -173,6 +175,63 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         }
     }
 
+    public async Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedLocale = string.IsNullOrWhiteSpace(locale) ? _options.Locale : locale.Trim();
+        var parameters = new Dictionary<string, string>
+        {
+            ["longitude"] = longitude.ToString("F6", CultureInfo.InvariantCulture),
+            ["latitude"] = latitude.ToString("F6", CultureInfo.InvariantCulture),
+            ["locale"] = normalizedLocale
+        };
+
+        var requestUri = BuildUri(_options.CityGeoPath, parameters);
+        string responseText;
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return WeatherQueryResult<WeatherLocation>.Fail(
+                    "http_error",
+                    $"HTTP {(int)response.StatusCode}: {Truncate(responseText, 180)}");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return WeatherQueryResult<WeatherLocation>.Fail("network_error", ex.Message);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseText);
+            var root = document.RootElement;
+            if (TryGetProperty(root, out var dataNode, "data"))
+            {
+                root = dataNode;
+            }
+
+            var location = ParseSingleLocation(root, latitude, longitude);
+            return location is null
+                ? WeatherQueryResult<WeatherLocation>.Fail("not_found", "No weather location could be resolved from the provided coordinates.")
+                : WeatherQueryResult<WeatherLocation>.Ok(location);
+        }
+        catch (Exception ex)
+        {
+            return WeatherQueryResult<WeatherLocation>.Fail("parse_error", ex.Message);
+        }
+    }
+
     public async Task<WeatherQueryResult<WeatherSnapshot>> GetWeatherAsync(
         WeatherQuery query,
         CancellationToken cancellationToken = default)
@@ -283,6 +342,44 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         }
 
         return results;
+    }
+
+    private static WeatherLocation? ParseSingleLocation(JsonElement root, double latitude, double longitude)
+    {
+        if (TryResolveLocationArray(root, out var locationArray))
+        {
+            foreach (var item in locationArray.EnumerateArray())
+            {
+                var location = ParseLocationItem(item);
+                if (location is not null)
+                {
+                    return location;
+                }
+            }
+
+            return null;
+        }
+
+        return ParseLocationItem(root, latitude, longitude);
+    }
+
+    private static WeatherLocation? ParseLocationItem(JsonElement item, double? fallbackLatitude = null, double? fallbackLongitude = null)
+    {
+        var locationKey = ReadString(item, "locationKey") ??
+                          ReadString(item, "key") ??
+                          ReadString(item, "id");
+        if (string.IsNullOrWhiteSpace(locationKey))
+        {
+            return null;
+        }
+
+        var name = ReadString(item, "name") ??
+                   ReadString(item, "city") ??
+                   locationKey;
+        var affiliation = ReadString(item, "affiliation") ?? ReadString(item, "province");
+        var latitude = ReadDouble(item, "latitude") ?? fallbackLatitude ?? 0;
+        var longitude = ReadDouble(item, "longitude") ?? fallbackLongitude ?? 0;
+        return new WeatherLocation(name, locationKey, latitude, longitude, affiliation);
     }
 
     private WeatherSnapshot ParseWeatherSnapshot(

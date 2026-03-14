@@ -634,6 +634,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         {
             "DesignIdeas" => Symbol.Color,
             "Image" => Symbol.Image,
+            "WeatherMoon" => Symbol.WeatherMoon,
+            "Apps" => Symbol.Apps,
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "Info" => Symbol.Info,

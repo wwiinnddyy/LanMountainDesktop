@@ -350,6 +350,15 @@ internal sealed class WeatherProviderAdapter : IWeatherProvider, IWeatherInfoSer
         return _weatherDataService.GetWeatherAsync(query, cancellationToken);
     }
 
+    public Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _weatherDataService.ResolveLocationAsync(latitude, longitude, locale, cancellationToken);
+    }
+
     public void Dispose()
     {
         if (_weatherDataService is IDisposable disposable)
@@ -380,7 +389,7 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
             snapshot.WeatherLongitude,
             snapshot.WeatherAutoRefreshLocation,
             snapshot.WeatherExcludedAlerts,
-            snapshot.WeatherIconPackId,
+            NormalizeIconPackId(snapshot.WeatherIconPackId),
             snapshot.WeatherNoTlsRequests,
             snapshot.WeatherLocationQuery);
     }
@@ -395,7 +404,7 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
         snapshot.WeatherLongitude = state.Longitude;
         snapshot.WeatherAutoRefreshLocation = state.AutoRefreshLocation;
         snapshot.WeatherExcludedAlerts = state.ExcludedAlerts;
-        snapshot.WeatherIconPackId = state.IconPackId;
+        snapshot.WeatherIconPackId = NormalizeIconPackId(state.IconPackId);
         snapshot.WeatherNoTlsRequests = state.NoTlsRequests;
         snapshot.WeatherLocationQuery = state.LocationQuery;
         _settingsService.SaveSnapshot(
@@ -416,6 +425,23 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
             ]);
     }
 
+    public Task<WeatherQueryResult<IReadOnlyList<WeatherLocation>>> SearchLocationsAsync(
+        string keyword,
+        string? locale = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _weatherProvider.SearchLocationsAsync(keyword, locale, cancellationToken);
+    }
+
+    public Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _weatherProvider.ResolveLocationAsync(latitude, longitude, locale, cancellationToken);
+    }
+
     public IWeatherInfoService GetWeatherInfoService()
     {
         return _weatherProvider;
@@ -424,6 +450,13 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
     public void Dispose()
     {
         _weatherProvider.Dispose();
+    }
+
+    private static string NormalizeIconPackId(string? iconPackId)
+    {
+        return string.IsNullOrWhiteSpace(iconPackId)
+            ? "HyperOS3"
+            : "HyperOS3";
     }
 }
 

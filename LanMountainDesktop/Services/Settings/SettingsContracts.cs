@@ -120,12 +120,27 @@ public interface IWeatherProvider
     Task<WeatherQueryResult<WeatherSnapshot>> GetWeatherAsync(
         WeatherQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IWeatherSettingsService
 {
     WeatherSettingsState Get();
     void Save(WeatherSettingsState state);
+    Task<WeatherQueryResult<IReadOnlyList<WeatherLocation>>> SearchLocationsAsync(
+        string keyword,
+        string? locale = null,
+        CancellationToken cancellationToken = default);
+    Task<WeatherQueryResult<WeatherLocation>> ResolveLocationAsync(
+        double latitude,
+        double longitude,
+        string? locale = null,
+        CancellationToken cancellationToken = default);
     IWeatherInfoService GetWeatherInfoService();
 }
 

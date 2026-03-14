@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.LauncherSettingsPage"
+             x:DataType="vm:LauncherSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+
+            <Border Classes="settings-section-card">
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="18">
+                    <Border Classes="settings-section-card-icon-host"
+                            Width="72"
+                            Height="72"
+                            Padding="10">
+                        <fi:SymbolIcon Symbol="Apps"
+                                       FontSize="34"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1"
+                                Spacing="4"
+                                VerticalAlignment="Center">
+                        <TextBlock Classes="settings-card-header"
+                                   Text="{Binding LauncherHeader}" />
+                        <TextBlock Classes="settings-card-description"
+                                   Text="{Binding LauncherSubtitle}" />
+                        <TextBlock Classes="settings-item-description"
+                                   Margin="0,10,0,0"
+                                   Text="{Binding HiddenHint}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                Spacing="4"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <TextBlock Classes="settings-section-title"
+                                   FontSize="28"
+                                   HorizontalAlignment="Right"
+                                   Margin="0"
+                                   Text="{Binding HiddenCountText}" />
+                        <TextBlock Classes="settings-item-description"
+                                   HorizontalAlignment="Right"
+                                   Text="{Binding HiddenSummary}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <controls:IconText Icon="Apps"
+                               Text="{Binding HiddenHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding HiddenHeader}"
+                                 Description="{Binding HiddenDescription}"
+                                 IsExpanded="True">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Apps" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="settings-item-description"
+                                   IsVisible="{Binding IsHiddenItemsEmpty}"
+                                   Margin="0,0,0,4"
+                                   Text="{Binding HiddenEmptyText}"
+                                   TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding HiddenItems}"
+                                      IsVisible="{Binding HasHiddenItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LauncherHiddenItemViewModel">
+                                    <ui:SettingsExpanderItem Content="{Binding DisplayName}"
+                                                             Description="{Binding TypeLabel}"
+                                                             IsClickEnabled="False">
+                                        <ui:SettingsExpanderItem.IconSource>
+                                            <fi:SymbolIconSource Symbol="{Binding IconSymbol}" />
+                                        </ui:SettingsExpanderItem.IconSource>
+                                        <ui:SettingsExpanderItem.Footer>
+                                            <Button Command="{Binding RestoreCommand}"
+                                                    Content="{Binding RestoreButtonText}"
+                                                    VerticalAlignment="Center" />
+                                        </ui:SettingsExpanderItem.Footer>
+                                    </ui:SettingsExpanderItem>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

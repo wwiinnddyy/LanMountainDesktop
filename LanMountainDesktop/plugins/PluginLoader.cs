@@ -181,10 +181,14 @@ public sealed class PluginLoader
                 .OrderBy(component => component.Category, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(component => component.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+            var desktopComponentEditors = pluginServices
+                .GetServices<PluginDesktopComponentEditorRegistration>()
+                .OrderBy(editor => editor.ComponentId, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             var exportedServices = ResolveExports(manifest, pluginServices);
             AppLogger.Info(
                 "PluginLoader",
-                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Exports={exportedServices.Count}."); 
+                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Editors={desktopComponentEditors.Length}; Exports={exportedServices.Count}."); 
             hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
             StartHostedServices(hostedServices);
             AppLogger.Info("PluginLoader", $"Hosted services started. PluginId='{manifest.Id}'; HostedServices={hostedServices.Count}."); 
@@ -199,6 +203,7 @@ public sealed class PluginLoader
                 pluginServices,
                 settingsSections,
                 desktopComponents,
+                desktopComponentEditors,
                 exportedServices,
                 hostedServices,
                 loadContext);

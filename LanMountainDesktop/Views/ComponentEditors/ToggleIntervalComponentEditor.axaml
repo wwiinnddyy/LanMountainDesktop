@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.ToggleIntervalComponentEditor">
+    <StackPanel Spacing="16">
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="16"
+                  RowSpacing="6">
+                <StackPanel Spacing="4">
+                    <TextBlock x:Name="ToggleLabelTextBlock"
+                               Classes="component-editor-section-title" />
+                    <TextBlock x:Name="ToggleDescriptionTextBlock"
+                               Classes="component-editor-secondary-text"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch x:Name="EnabledToggleSwitch"
+                              Grid.Column="1"
+                              VerticalAlignment="Center"
+                              Checked="OnEnabledChanged"
+                              Unchecked="OnEnabledChanged" />
+            </Grid>
+        </Border>
+
+        <Border x:Name="IntervalCard"
+                Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="IntervalLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="IntervalComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnIntervalSelectionChanged" />
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="ExtraSelectorCard"
+                Classes="component-editor-card"
+                Padding="20"
+                IsVisible="False">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="ExtraSelectorLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="ExtraSelectorComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnExtraSelectionChanged" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
