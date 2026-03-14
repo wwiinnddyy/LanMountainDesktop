@@ -5,6 +5,7 @@ using System.Reflection;
 using Avalonia.Controls;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Plugins;
+using LanMountainDesktop.Services.PluginMarket;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views.SettingsPages;
@@ -180,6 +181,8 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         services.AddSingleton(_localizationService);
         services.AddSingleton<ILocationService>(_ => HostLocationServiceProvider.GetOrCreate());
         services.AddSingleton<WeatherLocationRefreshService>();
+        services.AddSingleton<AirAppMarketIconService>();
+        services.AddSingleton<AirAppMarketReadmeService>();
 
         var pluginRuntime = _pluginRuntimeAccessor();
         if (pluginRuntime is not null)

@@ -7,7 +7,7 @@ using Avalonia.Media.Imaging;
 
 namespace LanMountainDesktop.Services.PluginMarket;
 
-internal sealed class AirAppMarketIconService : IDisposable
+public sealed class AirAppMarketIconService : IDisposable
 {
     private readonly HttpClient _httpClient;
 
@@ -20,8 +20,28 @@ internal sealed class AirAppMarketIconService : IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-PluginMarketplace/1.0");
     }
 
-    public async Task<Bitmap> LoadAsync(
+    internal async Task<Bitmap> LoadAsync(
         AirAppMarketPluginEntry plugin,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+
+        if (AirAppMarketDefaults.TryResolveWorkspaceFile(plugin.IconUrl, out var localIconPath))
+        {
+            return new Bitmap(localIconPath);
+        }
+
+        using var response = await _httpClient.GetAsync(plugin.IconUrl, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, cancellationToken);
+        memory.Position = 0;
+        return new Bitmap(memory);
+    }
+
+    public async Task<Bitmap> LoadAsync(
+        LanMountainDesktop.Services.Settings.PluginMarketPluginInfo plugin,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plugin);

@@ -9,8 +9,6 @@
              x:DataType="vm:PluginsSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-
-            <!-- 刷新按钮和状态 -->
             <ui:SettingsExpander Header="{Binding RefreshButtonText}"
                                  Description="{Binding StatusMessage}">
                 <ui:SettingsExpander.IconSource>
@@ -24,7 +22,6 @@
 
             <Separator Classes="settings-separator" />
 
-            <!-- 已安装插件分组 -->
             <controls:IconText Icon="PuzzleCube"
                                Text="{Binding InstalledHeader}"
                                Margin="0,0,0,4" />
@@ -56,37 +53,6 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-
-            <Separator Classes="settings-separator" />
-
-            <!-- 市场插件分组 -->
-            <controls:IconText Icon="ShoppingBag"
-                               Text="{Binding MarketplaceHeader}"
-                               Margin="0,0,0,4" />
-
-            <ItemsControl ItemsSource="{Binding MarketPlugins}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PluginMarketItemViewModel">
-                        <ui:SettingsExpander>
-                            <ui:SettingsExpander.IconSource>
-                                <fi:SymbolIconSource Symbol="ShoppingBag" />
-                            </ui:SettingsExpander.IconSource>
-                            <ui:SettingsExpander.Header>
-                                <StackPanel>
-                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                    <TextBlock Opacity="0.76" FontSize="12" Text="{Binding Description}" />
-                                </StackPanel>
-                            </ui:SettingsExpander.Header>
-                            <ui:SettingsExpander.Footer>
-                                <Button Command="{Binding #Root.DataContext.InstallPluginCommand}"
-                                        CommandParameter="{Binding}"
-                                        Content="{Binding #Root.DataContext.InstallButtonText}" />
-                            </ui:SettingsExpander.Footer>
-                        </ui:SettingsExpander>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
         </StackPanel>
     </ScrollViewer>
 </UserControl>

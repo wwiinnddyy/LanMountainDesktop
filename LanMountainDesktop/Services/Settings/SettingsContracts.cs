@@ -39,6 +39,10 @@ public sealed record WeatherSettingsState(
 public sealed record RegionSettingsState(string LanguageCode, string? TimeZoneId);
 public sealed record UpdateSettingsState(bool AutoCheckUpdates, bool IncludePrereleaseUpdates, string UpdateChannel);
 public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
+public sealed record PluginMarketDependencyInfo(
+    string Id,
+    string Version,
+    string AssemblyName);
 public sealed record PluginMarketPluginInfo(
     string Id,
     string Name,
@@ -55,6 +59,7 @@ public sealed record PluginMarketPluginInfo(
     string HomepageUrl,
     string RepositoryUrl,
     IReadOnlyList<string> Tags,
+    IReadOnlyList<PluginMarketDependencyInfo> Dependencies,
     DateTimeOffset PublishedAt,
     DateTimeOffset UpdatedAt);
 public sealed record PluginMarketIndexResult(

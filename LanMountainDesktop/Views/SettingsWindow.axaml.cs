@@ -638,6 +638,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "Apps" => Symbol.Apps,
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
+            "ShoppingBag" => Symbol.ShoppingBag,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             _ => Symbol.Settings

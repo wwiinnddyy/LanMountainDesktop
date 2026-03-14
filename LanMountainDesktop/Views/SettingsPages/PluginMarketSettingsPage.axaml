@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PluginMarketSettingsPage"
+             x:Name="Root"
+             x:DataType="vm:PluginMarketSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <ui:SettingsExpander Header="{Binding RefreshButtonText}"
+                                 Description="{Binding StatusMessage}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ShoppingBag" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                        <TextBox Text="{Binding SearchText}"
+                                 Watermark="{Binding SearchPlaceholder}" />
+                        <Button Grid.Column="1"
+                                Command="{Binding RefreshCommand}"
+                                Content="{Binding RefreshButtonText}" />
+                    </Grid>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <TextBlock Classes="settings-item-description"
+                       IsVisible="{Binding ShowEmptyState}"
+                       Margin="0,4,0,14"
+                       Text="{Binding EmptyStateText}"
+                       TextWrapping="Wrap" />
+
+            <ListBox ItemsSource="{Binding FilteredPlugins}"
+                     BorderThickness="0"
+                     Padding="0"
+                     Background="Transparent">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,10" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PluginMarketItemViewModel">
+                        <Border Classes="settings-list-item">
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="14">
+                                <Border Classes="settings-section-card-icon-host"
+                                        Width="52"
+                                        Height="52"
+                                        Padding="0"
+                                        VerticalAlignment="Center">
+                                    <Grid>
+                                        <Image IsVisible="{Binding HasIcon}"
+                                               Source="{Binding IconBitmap}"
+                                               Stretch="UniformToFill" />
+                                        <TextBlock IsVisible="{Binding !HasIcon}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold"
+                                                   Text="{Binding IconFallbackText}" />
+                                    </Grid>
+                                </Border>
+
+                                <Button Grid.Column="1"
+                                        Classes="plugin-market-row-button"
+                                        Command="{Binding #Root.DataContext.OpenDetailsCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="4"
+                                                HorizontalAlignment="Stretch">
+                                        <TextBlock Classes="settings-item-label"
+                                                   Text="{Binding Name}" />
+                                        <TextBlock Classes="settings-item-description"
+                                                   Text="{Binding DeveloperInfo}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="2"
+                                        Classes="plugin-market-icon-button"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding #Root.DataContext.ExecutePrimaryActionCommand}"
+                                        CommandParameter="{Binding}"
+                                        IsEnabled="{Binding IsActionEnabled}"
+                                        ToolTip.Tip="{Binding ActionTooltip}">
+                                    <fi:SymbolIcon Symbol="{Binding ActionSymbol}" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

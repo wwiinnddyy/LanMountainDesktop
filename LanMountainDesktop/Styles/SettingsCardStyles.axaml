@@ -238,6 +238,38 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveAccentLightBrush}" />
     </Style>
 
+    <Style Selector="Button.plugin-market-row-button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Button.plugin-market-row-button:pointerover">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.plugin-market-icon-button">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Button.plugin-market-icon-button:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
+    </Style>
+
+    <Style Selector="Button.plugin-market-icon-button fi|SymbolIcon">
+        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+
     <Style Selector="Separator.settings-separator">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
         <Setter Property="Margin" Value="0,18" />

@@ -725,6 +725,12 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
                     entry.HomepageUrl,
                     entry.RepositoryUrl,
                     entry.Tags,
+                    entry.SharedContracts
+                        .Select(contract => new PluginMarketDependencyInfo(
+                            contract.Id,
+                            contract.Version,
+                            contract.AssemblyName))
+                        .ToArray(),
                     entry.PublishedAt,
                     entry.UpdatedAt);
             })

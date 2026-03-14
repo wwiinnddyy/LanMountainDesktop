@@ -834,31 +834,6 @@ public sealed partial class InstalledPluginItemViewModel : ViewModelBase
     private bool _isEnabled;
 }
 
-public sealed class PluginMarketItemViewModel
-{
-    public PluginMarketItemViewModel(PluginMarketPluginInfo plugin)
-    {
-        PluginId = plugin.Id;
-        Name = plugin.Name;
-        Description = plugin.Description;
-        Version = plugin.Version;
-        Author = plugin.Author;
-        ApiVersion = plugin.ApiVersion;
-    }
-
-    public string PluginId { get; }
-
-    public string Name { get; }
-
-    public string Description { get; }
-
-    public string Version { get; }
-
-    public string Author { get; }
-
-    public string ApiVersion { get; }
-}
-
 public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
@@ -879,8 +854,6 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
 
     public ObservableCollection<InstalledPluginItemViewModel> InstalledPlugins { get; } = [];
 
-    public ObservableCollection<PluginMarketItemViewModel> MarketPlugins { get; } = [];
-
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
@@ -900,26 +873,17 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
     private string _installedHeader = string.Empty;
 
     [ObservableProperty]
-    private string _marketplaceHeader = string.Empty;
-
-    [ObservableProperty]
     private string _deleteButtonText = string.Empty;
 
     [ObservableProperty]
-    private string _installButtonText = string.Empty;
-
-    [ObservableProperty]
     private string _emptyInstalledText = string.Empty;
-
-    [ObservableProperty]
-    private string _emptyMarketplaceText = string.Empty;
 
     [ObservableProperty]
     private string _restartRequiredMessage = string.Empty;
 
     public async Task InitializeAsync()
     {
-        if (InstalledPlugins.Count > 0 || MarketPlugins.Count > 0)
+        if (InstalledPlugins.Count > 0)
         {
             return;
         }
@@ -945,29 +909,12 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
                 InstalledPlugins.Add(new InstalledPluginItemViewModel(plugin));
             }
 
-            MarketPlugins.Clear();
-            var marketResult = await _settingsFacade.PluginMarket.LoadIndexAsync();
-            if (marketResult.Success)
-            {
-                foreach (var plugin in marketResult.Plugins)
-                {
-                    MarketPlugins.Add(new PluginMarketItemViewModel(plugin));
-                }
-
-                StatusMessage = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L(
-                        "settings.plugins.refresh_success_format",
-                        "Loaded {0} installed plugins and {1} marketplace entries."),
-                    InstalledPlugins.Count,
-                    MarketPlugins.Count);
-            }
-            else
-            {
-                StatusMessage = string.IsNullOrWhiteSpace(marketResult.ErrorMessage)
-                    ? L("settings.plugins.refresh_failed", "Failed to load plugin market index.")
-                    : marketResult.ErrorMessage;
-            }
+            StatusMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                L(
+                    "settings.plugins.refresh_success_installed_format",
+                    "Loaded {0} installed plugins."),
+                InstalledPlugins.Count);
         }
         finally
         {
@@ -1034,55 +981,14 @@ public sealed partial class PluginsSettingsPageViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private async Task InstallPluginAsync(PluginMarketItemViewModel? item)
-    {
-        if (item is null || IsBusy)
-        {
-            return;
-        }
-
-        try
-        {
-            IsBusy = true;
-            var result = await _settingsFacade.PluginMarket.InstallAsync(item.PluginId);
-            if (result.Success)
-            {
-                StatusMessage = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L(
-                        "settings.plugins.install_success_format",
-                        "Installed plugin '{0}'. Restart the app to apply newly added settings pages and widgets."),
-                    item.Name);
-                RestartRequested?.Invoke();
-                await RefreshAsync();
-                return;
-            }
-
-            StatusMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                ? string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.plugins.install_failed_name_format", "Failed to install '{0}'."),
-                    item.Name)
-                : result.ErrorMessage;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.plugins.title", "Plugins");
-        PageDescription = L("settings.plugins.description", "Manage installed plugins and discover marketplace packages.");
+        PageDescription = L("settings.plugins.description", "Manage installed plugins and review their runtime state.");
         RefreshButtonText = L("settings.plugins.refresh_button", "Refresh Plugins");
         InstalledHeader = L("settings.plugins.installed_header", "Installed Plugins");
-        MarketplaceHeader = L("settings.plugins.marketplace_header", "Marketplace");
         DeleteButtonText = L("settings.plugins.delete_button_short", "Delete");
-        InstallButtonText = L("settings.plugins.install_button_short", "Install");
         EmptyInstalledText = L("settings.plugins.empty", "No plugins found.");
-        EmptyMarketplaceText = L("settings.plugins.marketplace_empty", "No marketplace plugins available.");
         RestartRequiredMessage = L("settings.plugins.restart_required", "Plugin changes take effect after restart.");
     }
 

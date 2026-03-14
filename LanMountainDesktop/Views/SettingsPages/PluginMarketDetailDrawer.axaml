@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
+             xmlns:helpers="using:LanMountainDesktop.Helpers"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PluginMarketDetailDrawer"
+             x:DataType="vm:PluginMarketDetailViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container"
+                    Margin="0,0,0,8">
+            <Border Classes="settings-section-card">
+                <Grid ColumnDefinitions="Auto,*,Auto"
+                      ColumnSpacing="14">
+                    <Border Classes="settings-section-card-icon-host"
+                            Width="64"
+                            Height="64"
+                            Padding="0"
+                            VerticalAlignment="Center">
+                        <Grid>
+                            <Image IsVisible="{Binding Item.HasIcon}"
+                                   Source="{Binding Item.IconBitmap}"
+                                   Stretch="UniformToFill" />
+                            <TextBlock IsVisible="{Binding !Item.HasIcon}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding Item.IconFallbackText}" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1"
+                                Spacing="4"
+                                VerticalAlignment="Center">
+                        <TextBlock Classes="settings-card-header"
+                                   Margin="0"
+                                   Text="{Binding Item.Name}" />
+                        <TextBlock Classes="settings-item-description"
+                                   Text="{Binding Item.DeveloperInfo}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Classes="plugin-market-icon-button"
+                            VerticalAlignment="Center"
+                            Command="{Binding PerformPrimaryActionCommand}"
+                            IsEnabled="{Binding Item.IsActionEnabled}"
+                            ToolTip.Tip="{Binding Item.ActionTooltip}">
+                        <fi:SymbolIcon Symbol="{Binding Item.ActionSymbol}" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding VersionLabel}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="settings-item-description"
+                                   Text="{Binding Item.Version}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding PublisherLabel}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="settings-item-description"
+                                   Text="{Binding Item.DeveloperInfo}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding MinHostVersionLabel}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="settings-item-description"
+                                   Text="{Binding Item.MinHostVersion}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                        <TextBlock Classes="settings-item-label"
+                                   Text="{Binding ApiVersionLabel}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="settings-item-description"
+                                   Text="{Binding Item.ApiVersion}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="settings-card-header"
+                               Margin="0"
+                               Text="{Binding ReadmeHeader}" />
+
+                    <TextBlock Classes="settings-item-description"
+                               IsVisible="{Binding IsReadmeLoading}"
+                               Text="{Binding ReadmeLoadingText}" />
+                    <TextBlock Classes="settings-item-description"
+                               IsVisible="{Binding HasReadmeError}"
+                               Text="{Binding ReadmeError}"
+                               TextWrapping="Wrap" />
+                    <mdxaml:MarkdownScrollViewer IsVisible="{Binding HasReadmeContent}"
+                                                 Markdown="{Binding ReadmeMarkdown}"
+                                                 Engine="{x:Static helpers:PluginMarketMarkdownHelper.Engine}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="settings-card-header"
+                               Margin="0"
+                               Text="{Binding DependenciesHeader}" />
+
+                    <TextBlock Classes="settings-item-description"
+                               IsVisible="{Binding !HasDependencies}"
+                               Text="{Binding EmptyDependenciesText}"
+                               TextWrapping="Wrap" />
+
+                    <ItemsControl IsVisible="{Binding HasDependencies}"
+                                  ItemsSource="{Binding Dependencies}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="settings-list-item">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="settings-item-label"
+                                                   Text="{Binding Id}" />
+                                        <TextBlock Classes="settings-item-description"
+                                                   Text="{Binding AssemblyName}" />
+                                        <TextBlock Classes="settings-item-description"
+                                                   Text="{Binding Version, StringFormat=v{0}}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

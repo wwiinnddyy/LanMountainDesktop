@@ -6,5 +6,6 @@ public enum SettingsPageCategory
     Appearance = 10,
     Components = 20,
     Plugins = 30,
+    PluginMarket = 35,
     About = 40
 }

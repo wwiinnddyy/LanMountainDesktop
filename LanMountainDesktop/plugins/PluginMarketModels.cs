@@ -438,6 +438,29 @@ internal sealed class AirAppMarketSharedContractEntry
     }
 }
 
+internal sealed class AirAppMarketPluginDependencyEntry
+{
+    public string Id { get; init; } = string.Empty;
+
+    public string Version { get; init; } = string.Empty;
+
+    public string AssemblyName { get; init; } = string.Empty;
+
+    public AirAppMarketPluginDependencyEntry ValidateAndNormalize(string sourceName)
+    {
+        return new AirAppMarketPluginDependencyEntry
+        {
+            Id = AirAppMarketIndexDocument.NormalizeValue(Id)
+                ?? throw new InvalidOperationException(
+                    $"Market index '{sourceName}' is missing dependency id for a plugin entry."),
+            Version = AirAppMarketIndexDocument.NormalizeVersion(Version, nameof(Version), sourceName),
+            AssemblyName = AirAppMarketIndexDocument.NormalizeValue(AssemblyName)
+                ?? throw new InvalidOperationException(
+                    $"Market index '{sourceName}' is missing assemblyName for dependency '{Id}'.")
+        };
+    }
+}
+
 internal sealed class AirAppMarketPluginEntry
 {
     public string Id { get; init; } = string.Empty;
@@ -476,6 +499,8 @@ internal sealed class AirAppMarketPluginEntry
 
     public List<string> Tags { get; init; } = [];
 
+    public List<AirAppMarketPluginDependencyEntry> SharedContracts { get; init; } = [];
+
     public DateTimeOffset PublishedAt { get; init; }
 
     public DateTimeOffset UpdatedAt { get; init; }
@@ -495,6 +520,21 @@ internal sealed class AirAppMarketPluginEntry
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var normalizedDependencies = new List<AirAppMarketPluginDependencyEntry>((SharedContracts ?? []).Count);
+        var seenDependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dependency in SharedContracts ?? [])
+        {
+            var normalizedDependency = dependency.ValidateAndNormalize(sourceName);
+            var dependencyKey = $"{normalizedDependency.Id}@{normalizedDependency.Version}";
+            if (!seenDependencies.Add(dependencyKey))
+            {
+                throw new InvalidOperationException(
+                    $"Market index '{sourceName}' declares duplicate dependency '{dependencyKey}' for plugin '{Id}'.");
+            }
+
+            normalizedDependencies.Add(normalizedDependency);
+        }
 
         var normalizedSha = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant()
             ?? throw new InvalidOperationException(
@@ -590,6 +630,7 @@ internal sealed class AirAppMarketPluginEntry
             HomepageUrl = normalizedHomepageUrl,
             RepositoryUrl = normalizedRepositoryUrl,
             Tags = normalizedTags,
+            SharedContracts = normalizedDependencies,
             PublishedAt = PublishedAt,
             UpdatedAt = UpdatedAt,
             ReleaseNotes = AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes)
