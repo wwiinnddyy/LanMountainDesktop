@@ -13,7 +13,7 @@
         <TextBlock x:Name="TextElement"
                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                    FontSize="14"
-                   FontWeight="Medium"
+                   FontWeight="SemiBold"
                    VerticalAlignment="Center" />
     </StackPanel>
 </UserControl>

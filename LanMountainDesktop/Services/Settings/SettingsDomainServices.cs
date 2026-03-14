@@ -91,13 +91,19 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
     public WallpaperSettingsState Get()
     {
         var snapshot = _settingsService.Load();
-        return new WallpaperSettingsState(snapshot.WallpaperPath, snapshot.WallpaperPlacement);
+        return new WallpaperSettingsState(
+            snapshot.WallpaperPath,
+            snapshot.WallpaperType ?? "Image",
+            snapshot.WallpaperColor,
+            snapshot.WallpaperPlacement);
     }
 
     public void Save(WallpaperSettingsState state)
     {
         var snapshot = _settingsService.Load();
         snapshot.WallpaperPath = state.WallpaperPath;
+        snapshot.WallpaperType = state.Type;
+        snapshot.WallpaperColor = state.Color;
         snapshot.WallpaperPlacement = string.IsNullOrWhiteSpace(state.Placement)
             ? "Fill"
             : state.Placement.Trim();
@@ -107,6 +113,8 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
             changedKeys:
             [
                 nameof(AppSettingsSnapshot.WallpaperPath),
+                nameof(AppSettingsSnapshot.WallpaperType),
+                nameof(AppSettingsSnapshot.WallpaperColor),
                 nameof(AppSettingsSnapshot.WallpaperPlacement)
             ]);
     }

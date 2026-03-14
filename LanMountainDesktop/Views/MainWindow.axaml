@@ -47,6 +47,12 @@
                             VerticalAlignment="Stretch"
                             Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
 
+                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
+                                   IsVisible="False"
+                                   IsHitTestVisible="False"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" />
+
                     <Image x:Name="DesktopVideoWallpaperImage"
                            IsVisible="False"
                            IsHitTestVisible="False"

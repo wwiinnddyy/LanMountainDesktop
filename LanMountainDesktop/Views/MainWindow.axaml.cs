@@ -45,7 +45,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     {
         None,
         Image,
-        Video
+        Video,
+        SolidColor
     }
 
     private enum WeatherLocationMode
@@ -119,6 +120,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private Bitmap? _wallpaperBitmap;
     private WallpaperMediaType _wallpaperMediaType;
     private string? _wallpaperVideoPath;
+    private string _wallpaperType = "Image";
+    private Color? _wallpaperSolidColor;
     private LibVLC? _libVlc;
     private MediaPlayer? _videoWallpaperPlayer;
     private Media? _videoWallpaperMedia;
@@ -277,7 +280,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         InitializeDesktopComponentPlacements(desktopLayoutSnapshot);
         InitializeSettingsIcons();
 
-        TryRestoreWallpaper(snapshot.WallpaperPath);
+        TryRestoreWallpaper(snapshot.WallpaperPath, snapshot.WallpaperType, snapshot.WallpaperColor);
         ApplyWallpaperBrush();
         UpdateWallpaperDisplay();
 

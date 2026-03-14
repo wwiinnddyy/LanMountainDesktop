@@ -36,9 +36,7 @@
                     <fi:SymbolIconSource Symbol="Color" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <TextBox Watermark="#AABBCC"
-                             Width="180"
-                             Text="{Binding ThemeColor}" />
+                    <ColorPicker Color="{Binding ThemeColorPickerValue}" />
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 

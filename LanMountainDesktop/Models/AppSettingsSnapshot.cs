@@ -18,6 +18,10 @@ public sealed class AppSettingsSnapshot
 
     public string? WallpaperPath { get; set; }
 
+    public string WallpaperType { get; set; } = "Image";
+
+    public string? WallpaperColor { get; set; }
+
     public string WallpaperPlacement { get; set; } = "Fill";
 
     public int SettingsTabIndex { get; set; } = 0;

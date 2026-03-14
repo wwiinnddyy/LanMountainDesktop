@@ -20,25 +20,37 @@
                     <fi:SymbolIconSource Symbol="GridDots" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
                         <TextBlock Text="{Binding ShortSideCellsLabel}"
                                    VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1"
-                                       Width="120"
-                                       Minimum="6"
-                                       Maximum="96"
-                                       Value="{Binding ShortSideCells}" />
+                        <Slider Grid.Column="1"
+                                Minimum="6"
+                                Maximum="96"
+                                IsSnapToTickEnabled="True"
+                                TickFrequency="1"
+                                Value="{Binding ShortSideCells}" />
+                        <TextBlock Grid.Column="2"
+                                   Width="32"
+                                   Text="{Binding ShortSideCells}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right" />
                     </Grid>
                 </ui:SettingsExpanderItem>
                 <ui:SettingsExpanderItem>
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
                         <TextBlock Text="{Binding EdgeInsetPercentLabel}"
                                    VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1"
-                                       Width="120"
-                                       Minimum="0"
-                                       Maximum="30"
-                                       Value="{Binding EdgeInsetPercent}" />
+                        <Slider Grid.Column="1"
+                                Minimum="0"
+                                Maximum="30"
+                                IsSnapToTickEnabled="True"
+                                TickFrequency="1"
+                                Value="{Binding EdgeInsetPercent}" />
+                        <TextBlock Grid.Column="2"
+                                   Width="32"
+                                   Text="{Binding EdgeInsetPercent, StringFormat='{}{0}%'}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right" />
                     </Grid>
                 </ui:SettingsExpanderItem>
                 <ui:SettingsExpanderItem>

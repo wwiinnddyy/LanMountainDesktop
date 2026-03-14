@@ -15,6 +15,8 @@ using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
+using LibVLCSharp.Shared;
+using LibVLCSharp.Avalonia;
 
 namespace LanMountainDesktop.Views;
 
@@ -218,12 +220,23 @@ public partial class MainWindow
         _defaultDesktopBackground = GetThemeBrush("AdaptiveSurfaceBaseBrush");
     }
 
-    private void TryRestoreWallpaper(string? savedWallpaperPath)
+    private void TryRestoreWallpaper(string? savedWallpaperPath, string? type = null, string? color = null)
     {
         _wallpaperPath = string.IsNullOrWhiteSpace(savedWallpaperPath) ? null : savedWallpaperPath;
+        _wallpaperType = type ?? "Image";
+        if (TryParseColor(color, out var parsedColor))
+        {
+            _wallpaperSolidColor = parsedColor;
+        }
 
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
+
+        if (_wallpaperType == "SolidColor")
+        {
+            _wallpaperMediaType = WallpaperMediaType.SolidColor;
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(_wallpaperPath) || !File.Exists(_wallpaperPath))
         {
@@ -232,7 +245,7 @@ public partial class MainWindow
         }
 
         var extension = Path.GetExtension(_wallpaperPath);
-        if (SupportedVideoExtensions.Contains(extension))
+        if (SupportedVideoExtensions.Contains(extension) || _wallpaperType == "Video")
         {
             _wallpaperMediaType = WallpaperMediaType.Video;
             _wallpaperVideoPath = _wallpaperPath;
@@ -263,6 +276,12 @@ public partial class MainWindow
 
     private void ApplyWallpaperBrush()
     {
+        if (_wallpaperMediaType == WallpaperMediaType.SolidColor && _wallpaperSolidColor.HasValue)
+        {
+            DesktopWallpaperLayer.Background = new SolidColorBrush(_wallpaperSolidColor.Value);
+            return;
+        }
+
         if (_wallpaperMediaType == WallpaperMediaType.Image && _wallpaperBitmap is not null)
         {
             DesktopWallpaperLayer.Background = new ImageBrush(_wallpaperBitmap)
@@ -277,16 +296,65 @@ public partial class MainWindow
 
     private void UpdateWallpaperDisplay()
     {
+        if (_wallpaperMediaType == WallpaperMediaType.Video)
+        {
+            if (!string.IsNullOrWhiteSpace(_wallpaperVideoPath))
+            {
+                StartVideoWallpaper(_wallpaperVideoPath);
+            }
+        }
+        else
+        {
+            StopVideoWallpaper();
+        }
+
         ApplyWallpaperBrush();
+    }
+
+    private void StartVideoWallpaper(string videoPath)
+    {
+        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
+        {
+            return;
+        }
+
+        try
+        {
+            _libVlc ??= new LibVLC();
+            _videoWallpaperPlayer ??= new MediaPlayer(_libVlc);
+
+            if (_videoWallpaperMedia?.Mrl != videoPath)
+            {
+                _videoWallpaperMedia?.Dispose();
+                _videoWallpaperMedia = new Media(_libVlc, new Uri(videoPath));
+                _videoWallpaperPlayer.Media = _videoWallpaperMedia;
+            }
+
+            if (DesktopVideoWallpaperView is { } videoView)
+            {
+                videoView.MediaPlayer = _videoWallpaperPlayer;
+                videoView.IsVisible = true;
+            }
+
+            if (!_videoWallpaperPlayer.IsPlaying)
+            {
+                _videoWallpaperPlayer.Play();
+            }
+        }
+        catch
+        {
+        }
     }
 
     private void StopVideoWallpaper()
     {
-        _wallpaperVideoPath = null;
-        if (_wallpaperMediaType == WallpaperMediaType.Video)
+        if (DesktopVideoWallpaperView is { } videoView)
         {
-            _wallpaperMediaType = WallpaperMediaType.None;
+            videoView.IsVisible = false;
         }
+
+        _videoWallpaperPlayer?.Stop();
+        _wallpaperVideoPath = null;
     }
 
     private double CalculateCurrentBackgroundLuminance()
@@ -398,7 +466,7 @@ public partial class MainWindow
             InitializeDesktopSurfaceState(layoutSnapshot);
             InitializeLauncherVisibilitySettings(launcherSnapshot);
             InitializeDesktopComponentPlacements(layoutSnapshot);
-            TryRestoreWallpaper(snapshot.WallpaperPath);
+            TryRestoreWallpaper(snapshot.WallpaperPath, snapshot.WallpaperType, snapshot.WallpaperColor);
             if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
             {
                 _selectedThemeColor = savedThemeColor;
@@ -428,6 +496,8 @@ public partial class MainWindow
             IsNightMode = _isNightMode,
             ThemeColor = _selectedThemeColor.ToString(),
             WallpaperPath = _wallpaperPath,
+            WallpaperType = _wallpaperType,
+            WallpaperColor = _wallpaperSolidColor?.ToString(),
             LanguageCode = _languageCode,
             TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
             WeatherLocationMode = _weatherLocationMode.ToString(),

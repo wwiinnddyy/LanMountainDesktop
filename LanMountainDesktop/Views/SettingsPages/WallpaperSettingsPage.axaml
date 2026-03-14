@@ -9,34 +9,116 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
 
+            <!-- 预览与颜色选择区域 -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="32" Margin="0,0,0,32">
+                <!-- 左侧：模拟屏幕预览 (占一半宽度) -->
+                <Border Grid.Column="0" VerticalAlignment="Top">
+                    <Viewbox Stretch="Uniform">
+                        <Border Width="1600" Height="900"
+                                Background="#080808" 
+                                BorderBrush="#1A1A1A" 
+                                BorderThickness="24" 
+                                CornerRadius="48"
+                                BoxShadow="0 12 32 #50000000">
+                            <Panel Background="{DynamicResource AdaptiveSurfaceBaseBrush}" Margin="2">
+                                <!-- 图片/视频预览 -->
+                                <Image Source="{Binding PreviewImage}" 
+                                       IsVisible="{Binding IsImageOrVideo}" 
+                                       Stretch="UniformToFill" />
+                                <!-- 纯色预览 -->
+                                <Border Background="{Binding SelectedColor}" 
+                                        IsVisible="{Binding IsSolidColor}" />
+                            </Panel>
+                        </Border>
+                    </Viewbox>
+                </Border>
+
+                <!-- 右侧：颜色选择网格 -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsSolidColor}">
+                    <TextBlock Text="{Binding WallpaperColorLabel}" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Opacity="0.8" />
+                    <ItemsControl ItemsSource="{Binding PresetColors}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="4" Rows="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Width="48" Height="48" Margin="4" Padding="0"
+                                        Background="{Binding}"
+                                        BorderThickness="0"
+                                        CornerRadius="6"
+                                        Command="{Binding $parent[UserControl].((vm:WallpaperSettingsPageViewModel)DataContext).SelectColorCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{Binding}">
+                                    <!-- 简单的悬停与选中效果由 Button 默认样式提供，
+                                         由于使用了低饱和度颜色，背景色本身就很柔和 -->
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+
+            <Separator Classes="settings-separator" Margin="0,0,0,24" />
+
+            <!-- 基本设置项 -->
             <controls:IconText Icon="Image"
                                Text="{Binding WallpaperHeader}"
-                               Margin="0,0,0,4" />
+                               Margin="0,0,0,8" />
 
-            <ui:SettingsExpander Header="{Binding WallpaperPathLabel}">
+            <!-- 壁纸类型 -->
+            <ui:SettingsExpander Header="{Binding WallpaperTypeLabel}">
                 <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Image" />
+                    <fi:SymbolIconSource Symbol="Layer" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <Grid ColumnDefinitions="220,Auto"
-                          ColumnSpacing="8">
-                        <TextBox IsReadOnly="True"
-                                 Grid.Column="0"
-                                 Text="{Binding WallpaperPath}" />
-                        <Button Grid.Column="1"
-                                Click="OnBrowseWallpaperClick"
-                                Content="{Binding ImportWallpaperButtonText}" />
-                    </Grid>
+                    <ComboBox Width="200"
+                              ItemsSource="{Binding WallpaperTypes}"
+                              SelectedItem="{Binding SelectedWallpaperType}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
+            <!-- 图片/视频文件选择 -->
+            <ui:SettingsExpander Header="{Binding WallpaperPathLabel}" 
+                                 IsVisible="{Binding IsImageOrVideo}"
+                                 Margin="0,4,0,0">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="FolderOpen" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox IsReadOnly="True"
+                                 Width="300"
+                                 Text="{Binding WallpaperPath}"
+                                 VerticalAlignment="Center" />
+                        <Button Click="OnBrowseWallpaperClick"
+                                Classes="accent"
+                                Content="{Binding ImportWallpaperButtonText}"
+                                VerticalAlignment="Center" />
+                    </StackPanel>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <!-- 填充方式 -->
             <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
-                                 Description="{Binding WallpaperPlacementDescription}">
+                                 Description="{Binding WallpaperPlacementDescription}"
+                                 IsVisible="{Binding IsImageOrVideo}"
+                                 Margin="0,4,0,0">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Maximize" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <ComboBox Width="180"
+                    <ComboBox Width="200"
                               ItemsSource="{Binding WallpaperPlacements}"
                               SelectedItem="{Binding SelectedWallpaperPlacement}">
                         <ComboBox.ItemTemplate>

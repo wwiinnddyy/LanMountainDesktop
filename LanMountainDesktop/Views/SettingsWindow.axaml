@@ -29,7 +29,7 @@
 
         <Style Selector="TextBlock.page-title-text">
             <Setter Property="FontSize" Value="28" />
-            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <Style Selector="TextBlock.page-title-text:narrow">

@@ -413,6 +413,19 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _themeColor = string.Empty;
 
     [ObservableProperty]
+    private Color _themeColorPickerValue;
+
+    partial void OnThemeColorPickerValueChanged(Color value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        ThemeColor = value.ToString();
+    }
+
+    [ObservableProperty]
     private bool _useSystemChrome;
 
     [ObservableProperty]
@@ -474,6 +487,14 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         var theme = _settingsFacade.Theme.Get();
         IsNightMode = theme.IsNightMode;
         ThemeColor = theme.ThemeColor ?? string.Empty;
+        if (Color.TryParse(ThemeColor, out var color))
+        {
+            ThemeColorPickerValue = color;
+        }
+        else
+        {
+            ThemeColorPickerValue = Color.Parse("#FF3B82F6");
+        }
         UseSystemChrome = theme.UseSystemChrome;
 
         var wallpaper = _settingsFacade.Wallpaper.Get();
@@ -588,8 +609,11 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 
     private void SaveWallpaper()
     {
+        var current = _settingsFacade.Wallpaper.Get();
         _settingsFacade.Wallpaper.Save(new WallpaperSettingsState(
             string.IsNullOrWhiteSpace(WallpaperPath) ? null : WallpaperPath,
+            current.Type,
+            current.Color,
             SelectedWallpaperPlacement.Value));
     }
 
