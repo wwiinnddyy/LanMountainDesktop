@@ -37,7 +37,7 @@
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
                     <TextBox Watermark="#AABBCC"
-                             MinWidth="160"
+                             Width="180"
                              Text="{Binding ThemeColor}" />
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
@@ -61,8 +61,7 @@
                         <TextBlock Text="{Binding ClockFormatLabel}"
                                    VerticalAlignment="Center" />
                         <ComboBox Grid.Column="1"
-                                  MinWidth="160"
-                                  HorizontalAlignment="Right"
+                                  Width="180"
                                   ItemsSource="{Binding ClockFormats}"
                                   SelectedItem="{Binding SelectedClockFormat}">
                             <ComboBox.ItemTemplate>

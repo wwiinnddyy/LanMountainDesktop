@@ -18,17 +18,21 @@ namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow : Window, ISettingsPageHostContext
 {
-    private const double BaseSettingsContentWidth = 960d;
+    private const double BaseSettingsContainerWidth = 960d;
     private const double MinSettingsContentWidth = 320d;
-    private const double MaxSettingsContentWidth = 1280d;
+    private const double MinSettingsContainerWidth = 840d;
+    private const double MaxSettingsContainerWidth = 1160d;
     private const double BaseDrawerWidth = 296d;
+    private const double BasePaneOpenLength = 283d;
+    private const double MinPaneOpenLength = 260d;
+    private const double MaxPaneOpenLength = 288d;
     private const double BaseNarrowThreshold = 800d;
 
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
     private readonly bool _useSystemChrome;
-    private bool _isResponsiveLayoutRefreshPending;
+    private bool _isResponsiveRefreshPending;
 
     public SettingsWindow()
         : this(
@@ -326,27 +330,26 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
         var width = Bounds.Width > 1 ? Bounds.Width : Math.Max(Width, MinWidth);
         var renderScale = RenderScaling > 0 ? RenderScaling : 1d;
-        var titleScale = WindowTitleTextBlock?.FontSize > 0
-            ? WindowTitleTextBlock.FontSize / 12d
-            : 1d;
-        var pageTitleScale = PageTitleTextBlock?.FontSize > 0
-            ? PageTitleTextBlock.FontSize / 28d
-            : 1d;
-        var typographyScale = Math.Max(titleScale, pageTitleScale);
-        var contentScale = Math.Clamp(
-            1d + ((renderScale - 1d) * 0.7d) + ((typographyScale - 1d) * 0.45d),
-            1d,
-            1.45d);
+        var contentScale = GetContentScale();
 
-        var horizontalMargin = Math.Clamp(16d * renderScale, 12d, 32d);
+        var horizontalMargin = Math.Clamp(16d * renderScale, 12d, 24d);
         var topMargin = Math.Clamp(2d * renderScale, 0d, 8d);
         var bottomMargin = Math.Clamp(16d * renderScale, 12d, 28d);
-        var columnSpacing = Math.Clamp(20d * renderScale, 12d, 28d);
+        var columnSpacing = Math.Clamp(20d * renderScale, 16d, 28d);
+        var edgePadding = Math.Clamp(20d * renderScale, 12d, 28d);
         var drawerWidth = Math.Clamp(BaseDrawerWidth * contentScale, 276d, 380d);
         var compactPaneWidth = Math.Clamp(48d * renderScale, 40d, 60d);
         var narrowThreshold = Math.Clamp(BaseNarrowThreshold * renderScale, 760d, 980d);
         var isNarrow = width < narrowThreshold;
-        var paneReservedWidth = GetReservedPaneWidth(compactPaneWidth, isNarrow);
+        var paneOpenWidth = ComputePaneOpenLength();
+        var paneReservedWidth = GetReservedPaneWidth(compactPaneWidth, isNarrow, paneOpenWidth);
+        var containerMaxWidth = ComputeSettingsContainerMaxWidth();
+
+        if (RootNavigationView is not null &&
+            Math.Abs(RootNavigationView.OpenPaneLength - paneOpenWidth) > 0.5d)
+        {
+            RootNavigationView.OpenPaneLength = paneOpenWidth;
+        }
 
         SettingsContentGrid.Margin = new Thickness(horizontalMargin, topMargin, horizontalMargin, bottomMargin);
         DrawerBorder.Width = drawerWidth;
@@ -359,8 +362,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             {
                 ViewModel.IsDrawerOpen = false;
             }
-
-            DrawerBorder.IsVisible = false;
         }
         else
         {
@@ -368,33 +369,14 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             SettingsContentGrid.ColumnSpacing = columnSpacing;
         }
 
-        var contentHostWidth = ContentFrame?.Bounds.Width > 1
-            ? ContentFrame.Bounds.Width
-            : 0d;
-        if (contentHostWidth <= 1)
-        {
-            var rootContentWidth = RootNavigationView?.Bounds.Width > 1
-                ? RootNavigationView.Bounds.Width - paneReservedWidth
-                : SettingsContentGrid.Bounds.Width;
-            contentHostWidth = rootContentWidth - (isNarrow ? 0d : drawerWidth + SettingsContentGrid.ColumnSpacing);
-        }
-
-        contentHostWidth = Math.Max(MinSettingsContentWidth, contentHostWidth);
-
-        var edgePadding = Math.Clamp(24d * renderScale, 14d, 40d);
-        var preferredContentWidth = Math.Clamp(BaseSettingsContentWidth * contentScale, 820d, MaxSettingsContentWidth);
+        var rootContentWidth = RootNavigationView?.Bounds.Width > 1
+            ? RootNavigationView.Bounds.Width - paneReservedWidth
+            : Math.Max(SettingsContentGrid.Bounds.Width, width - horizontalMargin * 2d - paneReservedWidth);
+        var contentHostWidth = rootContentWidth - (isNarrow ? 0d : drawerWidth + SettingsContentGrid.ColumnSpacing);
         var availableContentWidth = Math.Max(MinSettingsContentWidth, contentHostWidth - edgePadding * 2d);
-        var resolvedContentWidth = availableContentWidth > preferredContentWidth
-            ? preferredContentWidth
-            : availableContentWidth;
+        var resolvedContentWidth = Math.Min(containerMaxWidth, availableContentWidth);
 
-        Resources["SettingsPageContentWidth"] = resolvedContentWidth;
-
-        if (PageTitleContainer is not null)
-        {
-            PageTitleContainer.Width = resolvedContentWidth;
-            PageTitleContainer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
-        }
+        Resources["SettingsContainerMaxWidth"] = containerMaxWidth;
 
         if (PageTitleTextBlock is not null)
         {
@@ -408,34 +390,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     private void UpdateResponsiveLayout()
     {
         _ = TryApplyResponsiveLayout();
-        return;
-
-        if (SettingsContentGrid is null || DrawerBorder is null)
-        {
-            return;
-        }
-
-        var width = Bounds.Width;
-        const double narrowThreshold = 800;
-
-        var isNarrow = width < narrowThreshold;
 
         // 小窗口时隐藏抽屉面板
-        if (isNarrow)
-        {
-            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*");
-            SettingsContentGrid.ColumnSpacing = 0;
-            if (DrawerBorder.IsVisible)
-            {
-                ViewModel.IsDrawerOpen = false;
-            }
-            DrawerBorder.IsVisible = false;
-        }
-        else
-        {
-            SettingsContentGrid.ColumnDefinitions = new ColumnDefinitions("*,Auto");
-            SettingsContentGrid.ColumnSpacing = 20;
-        }
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -496,20 +452,22 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
     private void RequestResponsiveLayoutRefresh()
     {
-        if (_isResponsiveLayoutRefreshPending)
+        if (_isResponsiveRefreshPending)
         {
             return;
         }
 
-        _isResponsiveLayoutRefreshPending = true;
-        Dispatcher.UIThread.Post(() =>
-        {
-            _isResponsiveLayoutRefreshPending = false;
-            UpdateResponsiveLayout();
-        }, DispatcherPriority.Background);
+        _isResponsiveRefreshPending = true;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _isResponsiveRefreshPending = false;
+                UpdateResponsiveLayout();
+            },
+            DispatcherPriority.Loaded);
     }
 
-    private double GetReservedPaneWidth(double compactPaneWidth, bool isNarrow)
+    private double GetReservedPaneWidth(double compactPaneWidth, bool isNarrow, double openPaneWidth)
     {
         if (RootNavigationView is null || isNarrow)
         {
@@ -517,7 +475,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
 
         return RootNavigationView.IsPaneOpen
-            ? RootNavigationView.OpenPaneLength
+            ? openPaneWidth
             : compactPaneWidth;
     }
 
@@ -599,8 +557,36 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         CloseWindowButtonIcon.FontSize = titleBarIconSize;
 
         DrawerTitleTextBlock.FontSize = drawerTitleFontSize;
+    }
 
-        RootNavigationView.OpenPaneLength = Math.Clamp(283d * layoutScale, 248d, 320d);
+    private double GetContentScale()
+    {
+        var renderScale = RenderScaling > 0 ? RenderScaling : 1d;
+        var titleScale = WindowTitleTextBlock?.FontSize > 0
+            ? WindowTitleTextBlock.FontSize / 12d
+            : 1d;
+        var pageTitleScale = PageTitleTextBlock?.FontSize > 0
+            ? PageTitleTextBlock.FontSize / 28d
+            : 1d;
+        var typographyScale = Math.Max(titleScale, pageTitleScale);
+
+        return Math.Clamp(
+            1d + ((renderScale - 1d) * 0.65d) + ((typographyScale - 1d) * 0.35d),
+            1d,
+            1.18d);
+    }
+
+    private double ComputePaneOpenLength()
+    {
+        return Math.Clamp(BasePaneOpenLength * GetContentScale(), MinPaneOpenLength, MaxPaneOpenLength);
+    }
+
+    private double ComputeSettingsContainerMaxWidth()
+    {
+        return Math.Clamp(
+            BaseSettingsContainerWidth * GetContentScale(),
+            MinSettingsContainerWidth,
+            MaxSettingsContainerWidth);
     }
 
     private void SyncTitleText()

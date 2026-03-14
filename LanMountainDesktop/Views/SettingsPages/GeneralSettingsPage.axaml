@@ -19,7 +19,7 @@
                     <fi:SymbolIconSource Symbol="Settings" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <ComboBox MinWidth="240"
+                    <ComboBox Width="220"
                               ItemsSource="{Binding Languages}"
                               SelectedItem="{Binding SelectedLanguage}">
                         <ComboBox.ItemTemplate>
@@ -37,7 +37,7 @@
                     <fi:SymbolIconSource Symbol="Clock" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <ComboBox MinWidth="280"
+                    <ComboBox Width="240"
                               ItemsSource="{Binding TimeZones}"
                               SelectedItem="{Binding SelectedTimeZone}">
                         <ComboBox.ItemTemplate>
@@ -88,7 +88,7 @@
                     <fi:SymbolIconSource Symbol="DeveloperBoard" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <ComboBox MinWidth="240"
+                    <ComboBox Width="220"
                               ItemsSource="{Binding RenderModes}"
                               SelectedItem="{Binding SelectedRenderMode}">
                         <ComboBox.ItemTemplate>

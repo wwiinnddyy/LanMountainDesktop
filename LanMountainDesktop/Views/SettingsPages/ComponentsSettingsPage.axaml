@@ -24,8 +24,7 @@
                         <TextBlock Text="{Binding ShortSideCellsLabel}"
                                    VerticalAlignment="Center" />
                         <NumericUpDown Grid.Column="1"
-                                       MinWidth="120"
-                                       HorizontalAlignment="Right"
+                                       Width="120"
                                        Minimum="6"
                                        Maximum="96"
                                        Value="{Binding ShortSideCells}" />
@@ -36,8 +35,7 @@
                         <TextBlock Text="{Binding EdgeInsetPercentLabel}"
                                    VerticalAlignment="Center" />
                         <NumericUpDown Grid.Column="1"
-                                       MinWidth="120"
-                                       HorizontalAlignment="Right"
+                                       Width="120"
                                        Minimum="0"
                                        Maximum="30"
                                        Value="{Binding EdgeInsetPercent}" />
@@ -48,8 +46,7 @@
                         <TextBlock Text="{Binding SpacingPresetLabel}"
                                    VerticalAlignment="Center" />
                         <ComboBox Grid.Column="1"
-                                  MinWidth="160"
-                                  HorizontalAlignment="Right"
+                                  Width="180"
                                   ItemsSource="{Binding SpacingPresets}"
                                   SelectedItem="{Binding SelectedSpacingPreset}">
                             <ComboBox.ItemTemplate>

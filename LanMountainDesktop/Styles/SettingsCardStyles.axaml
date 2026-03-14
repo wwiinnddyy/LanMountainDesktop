@@ -5,8 +5,7 @@
     <Style Selector="StackPanel.settings-page-container">
         <Setter Property="Spacing" Value="0" />
         <Setter Property="Margin" Value="0,12,0,24" />
-        <Setter Property="Width" Value="{DynamicResource SettingsPageContentWidth}" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="MaxWidth" Value="{DynamicResource SettingsContainerMaxWidth}" />
     </Style>
 
     <Style Selector="TextBlock.settings-section-title">
@@ -136,6 +135,20 @@
     <Style Selector="ui|SettingsExpander">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander ComboBox, ui|SettingsExpander TextBox, ui|SettingsExpander NumericUpDown">
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpanderItem ComboBox, ui|SettingsExpanderItem TextBox, ui|SettingsExpanderItem NumericUpDown">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <Style Selector="ui|SettingsExpander ToggleSwitch, ui|SettingsExpanderItem ToggleSwitch">
+        <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
     <Style Selector="ui|SettingsExpander.settings-expander-card">
