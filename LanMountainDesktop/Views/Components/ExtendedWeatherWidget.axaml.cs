@@ -84,7 +84,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         [
             DailyIcon0, DailyIcon1, DailyIcon2, DailyIcon3, DailyIcon4
         ];
-        _dailyIconKinds = Enumerable.Repeat(HyperOS3WeatherVisualKind.CloudyDay, _dailyIconBlocks.Length).ToArray();
+        _dailyIconKinds = Enumerable.Repeat(HyperOS3WeatherVisualKind.Unknown, _dailyIconBlocks.Length).ToArray();
         ConfigureTextOverflowGuards();
         _refreshTimer.Tick += OnRefreshTimerTick;
         _animationTimer.Tick += OnAnimationTick;
@@ -328,12 +328,17 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             snapshot,
             _timeZoneService?.CurrentTimeZone,
             _timeZoneService?.GetCurrentTime() ?? DateTime.Now);
-        var kind = HyperOS3WeatherTheme.ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
+        var currentVisual = XiaomiWeatherVisualResolver.Resolve(
+            snapshot.Current.WeatherText,
+            snapshot.Current.WeatherCode,
+            isNight,
+            _languageCode);
+        var kind = currentVisual.VisualKind;
         ApplyVisualTheme(kind);
         SetLoadingSkeleton(false);
-        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(kind));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(currentVisual.PrimaryIconAsset);
         CityTextBlock.Text = ResolveLocation(snapshot.LocationName, fallbackLocationName);
-        ConditionTextBlock.Text = ResolveWeatherText(snapshot.Current.WeatherText, kind);
+        ConditionTextBlock.Text = currentVisual.DisplayText;
         TemperatureTextBlock.Text = FormatTemperature(snapshot.Current.TemperatureC);
 
         var today = snapshot.DailyForecasts.FirstOrDefault();
@@ -354,12 +359,17 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
                 .OrderBy(entry => Math.Abs((entry.Time - target).TotalMinutes))
                 .FirstOrDefault();
             var weatherCode = item?.Source.WeatherCode ?? snapshot.Current.WeatherCode;
-            var hourKind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, IsNightHour(target));
+            var hourVisual = XiaomiWeatherVisualResolver.Resolve(
+                item?.Source.WeatherText,
+                weatherCode,
+                IsNightHour(target),
+                _languageCode);
+            var hourKind = hourVisual.VisualKind;
             _hourlyTempBlocks[i].Text = i == sunsetSlotIndex
                 ? L("weather.hourly.sunset", "Sunset")
                 : FormatTemperature(item?.Source.TemperatureC ?? snapshot.Current.TemperatureC);
             _hourlyTimeBlocks[i].Text = target.ToString("HH:mm", CultureInfo.InvariantCulture);
-            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(hourKind));
+            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(hourVisual.CompactIconAsset);
         }
 
         var todayDate = DateOnly.FromDateTime(now);
@@ -368,21 +378,26 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             var date = todayDate.AddDays(i + 1);
             var daily = snapshot.DailyForecasts.FirstOrDefault(entry => entry.Date == date) ?? snapshot.DailyForecasts.FirstOrDefault();
             var weatherCode = daily?.DayWeatherCode ?? daily?.NightWeatherCode ?? snapshot.Current.WeatherCode;
-            var dayKind = HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, false);
-            var dayText = ResolveWeatherText(daily?.DayWeatherText ?? daily?.NightWeatherText, dayKind);
+            var dayVisual = XiaomiWeatherVisualResolver.Resolve(
+                daily?.DayWeatherText ?? daily?.NightWeatherText,
+                weatherCode,
+                false,
+                _languageCode);
+            var dayKind = dayVisual.VisualKind;
+            var dayText = dayVisual.DisplayText;
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(date, i + 1)}·{dayText}";
             _dailyHighBlocks[i].Text = FormatTemperatureValue(daily?.HighTemperatureC);
             _dailyLowBlocks[i].Text = FormatTemperatureValue(daily?.LowTemperatureC);
             _dailyIconKinds[i] = dayKind;
-            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(dayKind));
+            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(dayVisual.CompactIconAsset);
         }
     }
 
     private void ApplyFallback()
     {
-        ApplyVisualTheme(HyperOS3WeatherVisualKind.CloudyDay);
+        ApplyVisualTheme(HyperOS3WeatherVisualKind.Unknown);
         SetLoadingSkeleton(false);
-        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+        WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(HyperOS3WeatherVisualKind.Unknown));
         CityTextBlock.Text = L("weather.widget.location_unknown", "Unknown location");
         ConditionTextBlock.Text = L("weather.widget.loading", "Loading...");
         TemperatureTextBlock.Text = "--°";
@@ -393,7 +408,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         {
             _hourlyTempBlocks[i].Text = i == 3 ? L("weather.hourly.sunset", "Sunset") : "--°";
             _hourlyTimeBlocks[i].Text = timelineStart.AddHours(i).ToString("HH:mm", CultureInfo.InvariantCulture);
-            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+            _hourlyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.Unknown));
         }
 
         for (var i = 0; i < _dailyLabelBlocks.Length; i++)
@@ -401,8 +416,8 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
             _dailyLabelBlocks[i].Text = $"{ResolveDayLabel(DateOnly.FromDateTime(DateTime.Now).AddDays(i + 1), i + 1)}·{L("weather.widget.condition_cloudy", "Cloudy")}";
             _dailyHighBlocks[i].Text = "--";
             _dailyLowBlocks[i].Text = "--";
-            _dailyIconKinds[i] = HyperOS3WeatherVisualKind.CloudyDay;
-            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.CloudyDay));
+            _dailyIconKinds[i] = HyperOS3WeatherVisualKind.Unknown;
+            _dailyIconBlocks[i].Source = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveMiniIconAsset(HyperOS3WeatherVisualKind.Unknown));
         }
     }
 
@@ -417,7 +432,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         BackgroundMotionLayer.Background = background ?? CreateGradientBrush(palette.GradientFrom, palette.GradientTo);
         BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
 
-        var isNightVisual = kind is HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.CloudyNight;
+        var isNightVisual = kind is HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.PartlyCloudyNight or HyperOS3WeatherVisualKind.CloudyNight;
         var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
             palette.GradientFrom,
             palette.GradientTo,
@@ -612,7 +627,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
 
             var dailyKind = i < _dailyIconKinds.Length
                 ? _dailyIconKinds[i]
-                : HyperOS3WeatherVisualKind.CloudyDay;
+                : HyperOS3WeatherVisualKind.Unknown;
             var dailyIconVisualSize = Math.Clamp(
                 dailyIconSize * ResolveDailyMiniIconScaleBoost(dailyKind),
                 8,
@@ -851,18 +866,10 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         return score;
     }
 
-    private string ResolveWeatherText(string? weatherText, HyperOS3WeatherVisualKind kind)
+    private string ResolveWeatherText(string? weatherText, int? weatherCode, HyperOS3WeatherVisualKind kind)
     {
-        if (!string.IsNullOrWhiteSpace(weatherText)) return weatherText;
-        return kind switch
-        {
-            HyperOS3WeatherVisualKind.ClearDay or HyperOS3WeatherVisualKind.ClearNight => L("weather.widget.condition_clear", "Clear"),
-            HyperOS3WeatherVisualKind.CloudyDay or HyperOS3WeatherVisualKind.CloudyNight => L("weather.widget.condition_cloudy", "Cloudy"),
-            HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy => L("weather.widget.condition_rain", "Rain"),
-            HyperOS3WeatherVisualKind.Storm => L("weather.widget.condition_storm", "Thunderstorm"),
-            HyperOS3WeatherVisualKind.Snow => L("weather.widget.condition_snow", "Snow"),
-            _ => L("weather.widget.condition_fog", "Fog")
-        };
+        _ = kind;
+        return XiaomiWeatherVisualResolver.ResolveDisplayText(weatherText, weatherCode, _languageCode);
     }
 
     private DateTime ConvertToConfiguredTime(DateTimeOffset sourceTime)
@@ -999,7 +1006,8 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         kind switch
         {
             HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy or HyperOS3WeatherVisualKind.Storm or HyperOS3WeatherVisualKind.Snow => 1.16,
-            HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.CloudyNight => 1.08,
+            HyperOS3WeatherVisualKind.ClearNight or HyperOS3WeatherVisualKind.PartlyCloudyNight or HyperOS3WeatherVisualKind.CloudyNight => 1.08,
+            HyperOS3WeatherVisualKind.Haze or HyperOS3WeatherVisualKind.Fog => 1.04,
             _ => 1.0
         };
 
@@ -1008,9 +1016,13 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         {
             HyperOS3WeatherVisualKind.CloudyDay => 1.30,
             HyperOS3WeatherVisualKind.CloudyNight => 1.28,
+            HyperOS3WeatherVisualKind.PartlyCloudyDay => 1.28,
+            HyperOS3WeatherVisualKind.PartlyCloudyNight => 1.26,
             HyperOS3WeatherVisualKind.ClearDay => 1.26,
             HyperOS3WeatherVisualKind.ClearNight => 1.24,
+            HyperOS3WeatherVisualKind.Haze => 1.20,
             HyperOS3WeatherVisualKind.Fog => 1.18,
+            HyperOS3WeatherVisualKind.Sleet => 1.14,
             HyperOS3WeatherVisualKind.RainLight => 1.14,
             HyperOS3WeatherVisualKind.RainHeavy => 1.12,
             HyperOS3WeatherVisualKind.Snow => 1.12,

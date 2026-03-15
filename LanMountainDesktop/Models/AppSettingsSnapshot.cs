@@ -16,6 +16,12 @@ public sealed class AppSettingsSnapshot
 
     public bool UseSystemChrome { get; set; }
 
+    public string ThemeColorMode { get; set; } = "default_neutral";
+
+    public string SystemMaterialMode { get; set; } = "none";
+
+    public string? SelectedWallpaperSeed { get; set; }
+
     public string? WallpaperPath { get; set; }
 
     public string WallpaperType { get; set; } = "Image";
@@ -59,6 +65,10 @@ public sealed class AppSettingsSnapshot
     public bool AutoCheckUpdates { get; set; } = true;
 
     public bool IncludePrereleaseUpdates { get; set; }
+
+    public bool UploadAnonymousCrashData { get; set; }
+
+    public bool UploadAnonymousUsageData { get; set; }
 
     public string UpdateChannel { get; set; } = "stable";
 

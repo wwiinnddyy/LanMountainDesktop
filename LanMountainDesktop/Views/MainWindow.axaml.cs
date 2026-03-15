@@ -78,6 +78,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         TaskbarActionId.MinimizeToWindows
     ];
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+    private readonly IAppearanceThemeService _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
     private readonly IGridSettingsService _gridSettingsService;
     private readonly IThemeAppearanceService _themeSettingsService;
     private readonly IWeatherSettingsService _weatherSettingsService;
@@ -206,6 +207,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         _componentEditorWindowService = new ComponentEditorWindowService(_settingsFacade);
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         _settingsService.Changed += OnSettingsChanged;
+        _appearanceThemeService.Changed += OnAppearanceThemeChanged;
         PropertyChanged += OnWindowPropertyChanged;
         InitializeDesktopSurfaceSwipeHandlers();
         InitializeDesktopComponentDragHandlers();
@@ -340,6 +342,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
         _settingsService.Changed -= OnSettingsChanged;
+        _appearanceThemeService.Changed -= OnAppearanceThemeChanged;
         PropertyChanged -= OnWindowPropertyChanged;
         DesktopHost.SizeChanged -= OnDesktopHostSizeChanged;
         if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
@@ -347,6 +350,23 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             settingsWindowService.StateChanged -= OnSettingsWindowStateChanged;
         }
         base.OnClosed(e);
+    }
+
+    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot snapshot)
+    {
+        _ = sender;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsVisible)
+            {
+                return;
+            }
+
+            ApplyAdaptiveThemeResources();
+            _recommendedColors = snapshot.MonetPalette.RecommendedColors;
+            _monetColors = snapshot.MonetPalette.MonetColors;
+        }, DispatcherPriority.Background);
     }
 
     private int CalculateDefaultShortSideCellCountFromDpi()

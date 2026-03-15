@@ -19,7 +19,7 @@
         CanResize="False"
         UseLayoutRounding="True"
         Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-        Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+        Background="Transparent"
         Title="LanMountainDesktop">
 
     <Design.DataContext>

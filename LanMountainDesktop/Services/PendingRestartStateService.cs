@@ -7,6 +7,7 @@ public static class PendingRestartStateService
 {
     public const string RenderModeReason = "RenderMode";
     public const string PluginCatalogReason = "PluginCatalog";
+    public const string SettingsWindowReason = "SettingsWindow";
 
     private static readonly object Gate = new();
     private static readonly HashSet<string> PendingReasons = new(StringComparer.OrdinalIgnoreCase);

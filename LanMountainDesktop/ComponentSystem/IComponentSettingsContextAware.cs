@@ -9,6 +9,7 @@ public sealed record DesktopComponentSettingsContext(
     string? PlacementId,
     ISettingsFacadeService SettingsFacade,
     ISettingsService SettingsService,
+    IAppearanceThemeService AppearanceTheme,
     IComponentSettingsAccessor ComponentSettingsAccessor,
     IComponentInstanceSettingsStore ComponentSettingsStore);
 

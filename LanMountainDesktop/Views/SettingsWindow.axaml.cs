@@ -33,6 +33,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
     private readonly bool _useSystemChrome;
     private bool _isResponsiveRefreshPending;
+    private bool _isRestartPromptVisible;
 
     public SettingsWindow()
         : this(
@@ -129,6 +130,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             ? ViewModel.GetDefaultRestartMessage()
             : reason;
         ViewModel.IsRestartRequested = true;
+        PendingRestartStateService.SetPending(PendingRestartStateService.SettingsWindowReason, true);
+        ShowRestartPrompt();
     }
 
     public void ApplyChromeMode(bool useSystemChrome)
@@ -269,14 +272,11 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
     }
 
-    private async void OnRestartNowClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnRestartNowClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
-            Source: "SettingsWindow",
-            Reason: "User accepted restart from settings window."));
-        await Task.CompletedTask;
+        ShowRestartPrompt();
     }
 
     private void OnCloseDrawerClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -304,6 +304,58 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
 
         ViewModel.IsRestartRequested = ViewModel.IsRestartRequested || PendingRestartStateService.HasPendingRestart;
+    }
+
+    private void ShowRestartPrompt()
+    {
+        void ShowPrompt()
+        {
+            UiExceptionGuard.FireAndForgetGuarded(
+                ShowRestartPromptCoreAsync,
+                "SettingsWindow.ShowRestartPrompt");
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ShowPrompt();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(ShowPrompt, DispatcherPriority.Send);
+    }
+
+    private async Task ShowRestartPromptCoreAsync()
+    {
+        if (_isRestartPromptVisible)
+        {
+            return;
+        }
+
+        _isRestartPromptVisible = true;
+
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = ViewModel.RestartDialogTitle,
+                Content = ViewModel.RestartMessage,
+                PrimaryButtonText = ViewModel.RestartDialogPrimaryText,
+                CloseButtonText = ViewModel.RestartDialogCloseText,
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            var result = await dialog.ShowAsync(this);
+            if (result == ContentDialogResult.Primary)
+            {
+                _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
+                    Source: "SettingsWindow",
+                    Reason: "User accepted restart from settings window."));
+            }
+        }
+        finally
+        {
+            _isRestartPromptVisible = false;
+        }
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -642,6 +694,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "ShoppingBag" => Symbol.ShoppingBag,
+            "Shield" => Symbol.ShieldDismiss,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             _ => Symbol.Settings

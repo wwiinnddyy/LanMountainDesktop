@@ -177,6 +177,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         services.AddSingleton(_settingsFacade);
         services.AddSingleton(_settingsFacade.Settings);
         services.AddSingleton(_settingsFacade.Catalog);
+        services.AddSingleton<IAppearanceThemeService>(_ => HostAppearanceThemeProvider.GetOrCreate());
         services.AddSingleton(_hostApplicationLifecycle);
         services.AddSingleton(_localizationService);
         services.AddSingleton<ILocationService>(_ => HostLocationServiceProvider.GetOrCreate());

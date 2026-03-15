@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -68,11 +69,19 @@ public static class ThemeColorSystemService
 
     private static AppThemePalette BuildPalette(ThemeColorContext context)
     {
+        var monetPalette = context.MonetPalette;
         var monetColors = context.MonetColors?.Where(color => color.A > 0).ToArray() ?? [];
-        var accent = monetColors.Length > 0 ? monetColors[0] : context.AccentColor;
-        var secondarySeed = monetColors.Length > 1
-            ? monetColors[1]
-            : ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.14);
+        var accent = context.UseNeutralSurfaces
+            ? context.AccentColor
+            : monetPalette?.Primary ?? GetColorOrDefault(monetColors, 0, context.AccentColor);
+        var secondarySeed = monetPalette?.Secondary
+            ?? GetColorOrDefault(monetColors, 1, ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.14));
+        var tertiarySeed = monetPalette?.Tertiary
+            ?? GetColorOrDefault(monetColors, 2, ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.22));
+        var neutralSeed = monetPalette?.Neutral
+            ?? GetColorOrDefault(monetColors, 3, context.IsNightMode ? Color.Parse("#FF171C23") : Color.Parse("#FFF2F4F7"));
+        var neutralVariantSeed = monetPalette?.NeutralVariant
+            ?? GetColorOrDefault(monetColors, 4, context.IsNightMode ? Color.Parse("#FF20262E") : Color.Parse("#FFE8EDF2"));
 
         var accentLight1 = ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.22);
         var accentLight2 = ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.38);
@@ -83,18 +92,23 @@ public static class ThemeColorSystemService
 
         var primary = context.IsNightMode ? accentLight1 : accentDark1;
         var secondary = context.IsNightMode
-            ? ColorMath.Blend(secondarySeed, Color.Parse("#FFFFFFFF"), 0.16)
-            : ColorMath.Blend(secondarySeed, Color.Parse("#FF111827"), 0.14);
+            ? ColorMath.Blend(secondarySeed, Color.Parse("#FFFFFFFF"), 0.12)
+            : ColorMath.Blend(secondarySeed, Color.Parse("#FF111827"), 0.10);
 
-        var surfaceBase = context.IsNightMode
-            ? ColorMath.Blend(Color.Parse("#FF0A1018"), accent, 0.18)
-            : ColorMath.Blend(Color.Parse("#FFF7F9FD"), accent, 0.09);
-        var surfaceRaised = context.IsNightMode
-            ? ColorMath.Blend(Color.Parse("#FF121A24"), secondarySeed, 0.24)
-            : ColorMath.Blend(Color.Parse("#FFFCFEFF"), secondarySeed, 0.12);
-        var surfaceOverlayBase = context.IsNightMode
-            ? ColorMath.Blend(Color.Parse("#FF18212D"), accent, 0.28)
-            : ColorMath.Blend(Color.Parse("#FFF1F5FB"), accent, 0.16);
+        var baseSurface = context.IsNightMode ? Color.Parse("#FF0B0F14") : Color.Parse("#FFF7F8FA");
+        var raisedSurface = context.IsNightMode ? Color.Parse("#FF131922") : Color.Parse("#FFFFFFFF");
+        var overlaySurface = context.IsNightMode ? Color.Parse("#FF171E28") : Color.Parse("#FFF1F4F8");
+        var navSurfaceBase = context.IsLightNavBackground ? Color.Parse("#FFF8FAFC") : Color.Parse("#FF111827");
+
+        var surfaceBase = context.UseNeutralSurfaces
+            ? baseSurface
+            : ColorMath.Blend(baseSurface, neutralSeed, context.IsNightMode ? 0.84 : 0.78);
+        var surfaceRaised = context.UseNeutralSurfaces
+            ? raisedSurface
+            : ColorMath.Blend(raisedSurface, neutralVariantSeed, context.IsNightMode ? 0.72 : 0.60);
+        var surfaceOverlayBase = context.UseNeutralSurfaces
+            ? overlaySurface
+            : ColorMath.Blend(overlaySurface, neutralVariantSeed, context.IsNightMode ? 0.76 : 0.64);
         var surfaceOverlay = Color.FromArgb(
             context.IsNightMode ? (byte)0xE8 : (byte)0xF2,
             surfaceOverlayBase.R,
@@ -115,9 +129,9 @@ public static class ThemeColorSystemService
             ? ColorMath.EnsureContrast(ColorMath.Blend(accent, Color.Parse("#FF0B1220"), 0.20), surfaceRaised, WcagNormalTextContrast)
             : ColorMath.EnsureContrast(ColorMath.Blend(accent, Color.Parse("#FFFFFFFF"), 0.16), surfaceRaised, WcagNormalTextContrast);
 
-        var navSurface = context.IsLightNavBackground
-            ? ColorMath.Blend(surfaceRaised, accentLight2, 0.08)
-            : ColorMath.Blend(Color.Parse("#FF111827"), accentDark2, 0.24);
+        var navSurface = context.UseNeutralSurfaces
+            ? navSurfaceBase
+            : ColorMath.Blend(navSurfaceBase, neutralSeed, context.IsNightMode ? 0.66 : 0.70);
         var navText = ColorMath.EnsureContrast(
             context.IsLightNavBackground ? Color.Parse("#FF0B1220") : Color.Parse("#FFF8FAFC"),
             navSurface,
@@ -129,18 +143,23 @@ public static class ThemeColorSystemService
             ? Color.FromArgb(0x33, surfaceRaised.R, surfaceRaised.G, surfaceRaised.B)
             : Color.FromArgb(0x38, navSurface.R, navSurface.G, navSurface.B);
         var navItemHoverBackground = context.IsLightNavBackground
-            ? ColorMath.WithAlpha(ColorMath.Blend(accentLight2, surfaceRaised, 0.30), 0x7A)
-            : ColorMath.WithAlpha(ColorMath.Blend(accentDark1, navSurface, 0.26), 0x88);
-        var navItemSelectedBackground = ColorMath.WithAlpha(accent, context.IsNightMode ? (byte)0xCE : (byte)0xD9);
-        var navSelectionIndicator = ColorMath.EnsureContrast(accentLight1, navSurface, WcagLargeTextContrast);
+            ? ColorMath.WithAlpha(ColorMath.Blend(accentLight2, navSurface, 0.12), 0x64)
+            : ColorMath.WithAlpha(ColorMath.Blend(accentDark1, navSurface, 0.18), 0x74);
+        var navItemSelectedBackground = context.UseNeutralSurfaces
+            ? ColorMath.WithAlpha(ColorMath.Blend(accent, navSurface, 0.24), context.IsNightMode ? (byte)0x8F : (byte)0x6A)
+            : ColorMath.WithAlpha(ColorMath.Blend(accent, navSurface, context.IsNightMode ? 0.28 : 0.22), context.IsNightMode ? (byte)0x88 : (byte)0x72);
+        var navSelectionIndicator = ColorMath.EnsureContrast(
+            context.UseNeutralSurfaces ? accent : accentLight1,
+            navSurface,
+            WcagLargeTextContrast);
 
         var toggleOn = context.IsNightMode ? accent : accentDark1;
         var toggleOff = context.IsNightMode
-            ? Color.FromArgb(0x88, accentDark2.R, accentDark2.G, accentDark2.B)
-            : Color.FromArgb(0x88, accentLight2.R, accentLight2.G, accentLight2.B);
+            ? Color.FromArgb(0x88, neutralVariantSeed.R, neutralVariantSeed.G, neutralVariantSeed.B)
+            : Color.FromArgb(0x88, neutralVariantSeed.R, neutralVariantSeed.G, neutralVariantSeed.B);
         var toggleBorder = context.IsNightMode
-            ? ColorMath.WithAlpha(ColorMath.Blend(accentLight2, Color.Parse("#FFF8FAFC"), 0.28), 0x8C)
-            : ColorMath.WithAlpha(ColorMath.Blend(accentDark2, Color.Parse("#FF334155"), 0.26), 0x78);
+            ? ColorMath.WithAlpha(ColorMath.Blend(neutralVariantSeed, Color.Parse("#FFF8FAFC"), 0.20), 0x8C)
+            : ColorMath.WithAlpha(ColorMath.Blend(tertiarySeed, Color.Parse("#FF334155"), 0.18), 0x78);
         var onAccent = ColorMath.EnsureContrast(Color.Parse("#FFFFFFFF"), accent, WcagNormalTextContrast);
 
         return new AppThemePalette(
@@ -170,5 +189,12 @@ public static class ThemeColorSystemService
             toggleOn,
             toggleOff,
             toggleBorder);
+    }
+
+    private static Color GetColorOrDefault(IReadOnlyList<Color> colors, int index, Color fallback)
+    {
+        return index >= 0 && index < colors.Count
+            ? colors[index]
+            : fallback;
     }
 }

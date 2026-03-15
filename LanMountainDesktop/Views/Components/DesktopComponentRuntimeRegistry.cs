@@ -96,6 +96,7 @@ public sealed class DesktopComponentRuntimeDescriptor
         ArgumentNullException.ThrowIfNull(settingsFacade);
 
         var settingsService = settingsFacade.Settings;
+        var appearanceTheme = HostAppearanceThemeProvider.GetOrCreate();
         var componentAccessor = settingsService.GetComponentAccessor(Definition.Id, placementId);
         var componentSettingsStore = new ComponentSettingsService(settingsService);
         componentSettingsStore.SetScopedComponentContext(Definition.Id, placementId);
@@ -116,6 +117,7 @@ public sealed class DesktopComponentRuntimeDescriptor
             placementId,
             settingsFacade,
             settingsService,
+            appearanceTheme,
             componentAccessor,
             componentSettingsStore);
 
@@ -133,6 +135,7 @@ public sealed class DesktopComponentRuntimeDescriptor
                 placementId,
                 settingsFacade,
                 settingsService,
+                appearanceTheme,
                 componentAccessor,
                 componentSettingsStore));
         }

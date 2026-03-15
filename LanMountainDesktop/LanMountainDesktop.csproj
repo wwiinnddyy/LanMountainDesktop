@@ -54,6 +54,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.5" />
     <PackageReference Include="PortAudioSharp2" Version="1.0.6" />
+    <PackageReference Include="MaterialColorUtilities" Version="0.3.0" />
     <PackageReference Include="System.Runtime.WindowsRuntime" Version="4.7.0" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" Condition="('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')))&#xA;                              or '$(RuntimeIdentifier)' == 'win-x64'&#xA;                              or '$(RuntimeIdentifier)' == 'win-x86'" />

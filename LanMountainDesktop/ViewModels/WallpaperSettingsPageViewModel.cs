@@ -169,8 +169,11 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     private void SaveWallpaper()
     {
+        var normalizedPath = SelectedWallpaperType?.Value == "SolidColor" || string.IsNullOrWhiteSpace(WallpaperPath)
+            ? null
+            : WallpaperPath;
         _settingsFacade.Wallpaper.Save(new WallpaperSettingsState(
-            string.IsNullOrWhiteSpace(WallpaperPath) ? null : WallpaperPath,
+            normalizedPath,
             SelectedWallpaperType.Value,
             SelectedColor,
             SelectedWallpaperPlacement.Value));

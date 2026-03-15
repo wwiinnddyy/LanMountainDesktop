@@ -835,10 +835,11 @@ public sealed class PluginRuntimeService : IDisposable
     {
         private readonly IPluginPackageManager _packageManager;
         private readonly IHostApplicationLifecycle _applicationLifecycle;
-        private readonly IPluginExportRegistry _exportRegistry;
-        private readonly ISettingsFacadeService _settingsFacade;
-        private readonly ISettingsService _settingsService;
-        private readonly ISettingsCatalog _settingsCatalog;
+    private readonly IPluginExportRegistry _exportRegistry;
+    private readonly ISettingsFacadeService _settingsFacade;
+    private readonly ISettingsService _settingsService;
+    private readonly ISettingsCatalog _settingsCatalog;
+    private readonly IAppearanceThemeService _appearanceThemeService;
 
         public PluginHostServiceProvider(
             IPluginPackageManager packageManager,
@@ -854,6 +855,7 @@ public sealed class PluginRuntimeService : IDisposable
             _settingsFacade = settingsFacade;
             _settingsService = settingsService;
             _settingsCatalog = settingsCatalog;
+            _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
         }
 
         public object? GetService(Type serviceType)
@@ -886,6 +888,11 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(ISettingsCatalog))
             {
                 return _settingsCatalog;
+            }
+
+            if (serviceType == typeof(IAppearanceThemeService))
+            {
+                return _appearanceThemeService;
             }
 
             return null;

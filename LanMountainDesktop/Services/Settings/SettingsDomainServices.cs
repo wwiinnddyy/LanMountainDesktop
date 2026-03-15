@@ -93,9 +93,12 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
     public WallpaperSettingsState Get()
     {
         var snapshot = _settingsService.Load();
+        var normalizedType = snapshot.WallpaperType ?? "Image";
         return new WallpaperSettingsState(
-            snapshot.WallpaperPath,
-            snapshot.WallpaperType ?? "Image",
+            string.Equals(normalizedType, "SolidColor", StringComparison.OrdinalIgnoreCase)
+                ? null
+                : snapshot.WallpaperPath,
+            normalizedType,
             snapshot.WallpaperColor,
             snapshot.WallpaperPlacement);
     }
@@ -103,9 +106,24 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
     public void Save(WallpaperSettingsState state)
     {
         var snapshot = _settingsService.Load();
-        snapshot.WallpaperPath = state.WallpaperPath;
-        snapshot.WallpaperType = state.Type;
-        snapshot.WallpaperColor = state.Color;
+        var normalizedType = string.IsNullOrWhiteSpace(state.Type)
+            ? "Image"
+            : state.Type.Trim();
+        var normalizedPath = string.IsNullOrWhiteSpace(state.WallpaperPath)
+            ? null
+            : state.WallpaperPath.Trim();
+        var normalizedColor = string.IsNullOrWhiteSpace(state.Color)
+            ? null
+            : state.Color.Trim();
+
+        if (string.Equals(normalizedType, "SolidColor", StringComparison.OrdinalIgnoreCase))
+        {
+            normalizedPath = null;
+        }
+
+        snapshot.WallpaperPath = normalizedPath;
+        snapshot.WallpaperType = normalizedType;
+        snapshot.WallpaperColor = normalizedColor;
         snapshot.WallpaperPlacement = string.IsNullOrWhiteSpace(state.Placement)
             ? "Fill"
             : state.Placement.Trim();
@@ -233,24 +251,68 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         return new ThemeAppearanceSettingsState(
             snapshot.IsNightMode ?? false,
             snapshot.ThemeColor,
-            snapshot.UseSystemChrome);
+            snapshot.UseSystemChrome,
+            ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
+            ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
+            snapshot.SelectedWallpaperSeed);
     }
 
     public void Save(ThemeAppearanceSettingsState state)
     {
         var snapshot = _settingsService.Load();
-        snapshot.IsNightMode = state.IsNightMode;
-        snapshot.ThemeColor = state.ThemeColor;
-        snapshot.UseSystemChrome = state.UseSystemChrome;
+        var changedKeys = new List<string>();
+        var normalizedThemeColor = string.IsNullOrWhiteSpace(state.ThemeColor) ? null : state.ThemeColor;
+        var normalizedThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(state.ThemeColorMode, state.ThemeColor);
+        var normalizedSystemMaterialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(state.SystemMaterialMode);
+        var normalizedSelectedWallpaperSeed = string.IsNullOrWhiteSpace(state.SelectedWallpaperSeed)
+            ? null
+            : state.SelectedWallpaperSeed;
+
+        if ((snapshot.IsNightMode ?? false) != state.IsNightMode)
+        {
+            snapshot.IsNightMode = state.IsNightMode;
+            changedKeys.Add(nameof(AppSettingsSnapshot.IsNightMode));
+        }
+
+        if (!string.Equals(snapshot.ThemeColor, normalizedThemeColor, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.ThemeColor = normalizedThemeColor;
+            changedKeys.Add(nameof(AppSettingsSnapshot.ThemeColor));
+        }
+
+        if (snapshot.UseSystemChrome != state.UseSystemChrome)
+        {
+            snapshot.UseSystemChrome = state.UseSystemChrome;
+            changedKeys.Add(nameof(AppSettingsSnapshot.UseSystemChrome));
+        }
+
+        if (!string.Equals(snapshot.ThemeColorMode, normalizedThemeColorMode, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.ThemeColorMode = normalizedThemeColorMode;
+            changedKeys.Add(nameof(AppSettingsSnapshot.ThemeColorMode));
+        }
+
+        if (!string.Equals(snapshot.SystemMaterialMode, normalizedSystemMaterialMode, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.SystemMaterialMode = normalizedSystemMaterialMode;
+            changedKeys.Add(nameof(AppSettingsSnapshot.SystemMaterialMode));
+        }
+
+        if (!string.Equals(snapshot.SelectedWallpaperSeed, normalizedSelectedWallpaperSeed, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.SelectedWallpaperSeed = normalizedSelectedWallpaperSeed;
+            changedKeys.Add(nameof(AppSettingsSnapshot.SelectedWallpaperSeed));
+        }
+
+        if (changedKeys.Count == 0)
+        {
+            return;
+        }
+
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
-            changedKeys:
-            [
-                nameof(AppSettingsSnapshot.IsNightMode),
-                nameof(AppSettingsSnapshot.ThemeColor),
-                nameof(AppSettingsSnapshot.UseSystemChrome)
-            ]);
+            changedKeys: changedKeys);
     }
 
     public MonetPalette BuildPalette(bool nightMode, string? wallpaperPath, string? preferredSeedColor = null)
@@ -522,6 +584,39 @@ internal sealed class RegionSettingsService : IRegionSettingsService
         {
             _timeZoneService.CurrentTimeZone = TimeZoneInfo.Local;
         }
+    }
+}
+
+internal sealed class PrivacySettingsService : IPrivacySettingsService
+{
+    private readonly ISettingsService _settingsService;
+
+    public PrivacySettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
+
+    public PrivacySettingsState Get()
+    {
+        var snapshot = _settingsService.Load();
+        return new PrivacySettingsState(
+            snapshot.UploadAnonymousCrashData,
+            snapshot.UploadAnonymousUsageData);
+    }
+
+    public void Save(PrivacySettingsState state)
+    {
+        var snapshot = _settingsService.Load();
+        snapshot.UploadAnonymousCrashData = state.UploadAnonymousCrashData;
+        snapshot.UploadAnonymousUsageData = state.UploadAnonymousUsageData;
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.UploadAnonymousCrashData),
+                nameof(AppSettingsSnapshot.UploadAnonymousUsageData)
+            ]);
     }
 }
 
@@ -920,6 +1015,7 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         _weatherSettingsService = new WeatherSettingsService(Settings);
         Weather = _weatherSettingsService;
         Region = new RegionSettingsService(Settings);
+        Privacy = new PrivacySettingsService(Settings);
         _updateSettingsService = new UpdateSettingsService(Settings);
         Update = _updateSettingsService;
         LauncherCatalog = new LauncherCatalogService();
@@ -948,6 +1044,8 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
     public IWeatherSettingsService Weather { get; }
 
     public IRegionSettingsService Region { get; }
+
+    public IPrivacySettingsService Privacy { get; }
 
     public IUpdateSettingsService Update { get; }
 

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Avalonia.Media;
+using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Theme;
 
@@ -8,4 +10,7 @@ public sealed record ThemeColorContext(
     bool IsLightBackground,
     bool IsLightNavBackground,
     bool IsNightMode,
-    IReadOnlyList<Color>? MonetColors = null);
+    MonetPalette? MonetPalette = null,
+    IReadOnlyList<Color>? MonetColors = null,
+    bool UseNeutralSurfaces = false,
+    string SystemMaterialMode = ThemeAppearanceValues.MaterialNone);

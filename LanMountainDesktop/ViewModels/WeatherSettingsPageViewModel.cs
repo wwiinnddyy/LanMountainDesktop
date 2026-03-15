@@ -41,19 +41,8 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         LocationModes = CreateLocationModes();
 
         var weatherState = _settingsFacade.Weather.Get();
-        SearchKeyword = weatherState.LocationQuery;
-        SelectedLocationMode = LocationModes.FirstOrDefault(option =>
-                                   string.Equals(option.Value, weatherState.LocationMode, StringComparison.OrdinalIgnoreCase))
-                               ?? LocationModes[0];
-
         _isInitializing = true;
-        Latitude = weatherState.Latitude;
-        Longitude = weatherState.Longitude;
-        LocationKey = weatherState.LocationKey;
-        LocationName = weatherState.LocationName;
-        AutoRefreshLocation = weatherState.AutoRefreshLocation;
-        ExcludedAlerts = weatherState.ExcludedAlerts;
-        NoTlsRequests = weatherState.NoTlsRequests;
+        ApplySavedState(weatherState, save: false);
         _isInitializing = false;
 
         IsLocationSupported = _locationService.IsSupported;
@@ -455,15 +444,19 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             var isNight = snapshot.Current.IsDaylight.HasValue
                 ? !snapshot.Current.IsDaylight.Value
                 : _settingsFacade.Theme.Get().IsNightMode;
-            var visualKind = HyperOS3WeatherTheme.ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
-            PreviewIcon = HyperOS3WeatherAssetLoader.LoadImage(HyperOS3WeatherTheme.ResolveHeroIconAsset(visualKind));
+            var preview = XiaomiWeatherVisualResolver.Resolve(
+                snapshot.Current.WeatherText,
+                snapshot.Current.WeatherCode,
+                isNight,
+                _languageCode);
+            PreviewIcon = HyperOS3WeatherAssetLoader.LoadImage(preview.PrimaryIconAsset);
             PreviewLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
                 ? state.LocationName
                 : snapshot.LocationName!;
             PreviewTemperature = snapshot.Current.TemperatureC.HasValue
                 ? string.Format(CultureInfo.InvariantCulture, "{0:0.#}°C", snapshot.Current.TemperatureC.Value)
                 : "--";
-            PreviewCondition = snapshot.Current.WeatherText ?? L("settings.weather.preview_unknown", "Unknown");
+            PreviewCondition = preview.DisplayText;
 
             var updatedAt = (snapshot.ObservationTime ?? snapshot.FetchedAt).ToLocalTime();
             PreviewUpdated = string.Format(

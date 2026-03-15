@@ -43,6 +43,7 @@ public partial class App : Application
     }
 
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+    private readonly IAppearanceThemeService _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
@@ -84,6 +85,7 @@ public partial class App : Application
     public App()
     {
         _settingsFacade.Settings.Changed += OnSettingsChanged;
+        _appearanceThemeService.Changed += OnAppearanceThemeChanged;
     }
 
     public override void Initialize()
@@ -104,7 +106,6 @@ public partial class App : Application
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePluginRuntime();
-        AppSettingsService.SettingsSaved += OnAppSettingsSaved;
         InitializeTrayIcon();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -337,11 +338,11 @@ public partial class App : Application
 
     private void ApplyThemeFromSettings()
     {
-        var themeState = _settingsFacade.Theme.Get();
-        RequestedThemeVariant = themeState.IsNightMode
+        var snapshot = _appearanceThemeService.GetCurrent();
+        RequestedThemeVariant = snapshot.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
-        ApplyAdaptiveThemeResources(themeState);
+        ApplyAdaptiveThemeResources();
     }
 
     private void ApplyCurrentCultureFromSettings()
@@ -464,19 +465,6 @@ public partial class App : Application
         Dispatcher.UIThread.InvokeAsync(Reset, DispatcherPriority.Send).GetAwaiter().GetResult();
     }
 
-    private void OnAppSettingsSaved(string _)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            ApplyThemeFromSettings();
-            ApplyCurrentCultureFromSettings();
-            if (_trayIcons is not null)
-            {
-                InitializeTrayIcon();
-            }
-        }, DispatcherPriority.Background);
-    }
-
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
         _ = sender;
@@ -490,13 +478,17 @@ public partial class App : Application
         {
             var changedKeys = e.ChangedKeys?.ToArray();
             var refreshAll = changedKeys is null || changedKeys.Length == 0;
+            var liveAppearance = _appearanceThemeService.GetCurrent();
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase);
+                changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) ||
+                (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&
+                 changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) ||
+                (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
+                 (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase)));
             var languageChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
@@ -517,48 +509,17 @@ public partial class App : Application
         }, DispatcherPriority.Background);
     }
 
-    private void ApplyAdaptiveThemeResources(ThemeAppearanceSettingsState themeState)
+    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot e)
     {
-        var wallpaperState = _settingsFacade.Wallpaper.Get();
-        var monetPalette = _settingsFacade.Theme.BuildPalette(
-            themeState.IsNightMode,
-            wallpaperState.WallpaperPath,
-            themeState.ThemeColor);
-        var accentColor = ResolveAccentColor(themeState.ThemeColor, monetPalette);
-        var context = new ThemeColorContext(
-            accentColor,
-            IsLightBackground: !themeState.IsNightMode,
-            IsLightNavBackground: !themeState.IsNightMode,
-            IsNightMode: themeState.IsNightMode,
-            MonetColors: monetPalette.MonetColors);
-        ThemeColorSystemService.ApplyThemeResources(Resources, context);
-        GlassEffectService.ApplyGlassResources(Resources, context);
+        _ = sender;
+        _ = e;
+
+        Dispatcher.UIThread.Post(ApplyThemeFromSettings, DispatcherPriority.Background);
     }
 
-    private static Color ResolveAccentColor(string? colorText, MonetPalette monetPalette)
+    private void ApplyAdaptiveThemeResources()
     {
-        if (monetPalette.MonetColors is { Count: > 0 })
-        {
-            return monetPalette.MonetColors[0];
-        }
-
-        return TryParseThemeColor(colorText);
-    }
-
-    private static Color TryParseThemeColor(string? colorText)
-    {
-        if (!string.IsNullOrWhiteSpace(colorText))
-        {
-            try
-            {
-                return Color.Parse(colorText);
-            }
-            catch
-            {
-            }
-        }
-
-        return DefaultAccentColor;
+        _appearanceThemeService.ApplyThemeResources(Resources);
     }
 
     private void RegisterUiUnhandledExceptionGuard()
@@ -606,8 +567,8 @@ public partial class App : Application
         }
 
         _exitCleanupCompleted = true;
-        AppSettingsService.SettingsSaved -= OnAppSettingsSaved;
         _settingsFacade.Settings.Changed -= OnSettingsChanged;
+        _appearanceThemeService.Changed -= OnAppearanceThemeChanged;
         try
         {
             HostUpdateWorkflowServiceProvider.GetOrCreate().TryApplyPendingUpdateOnExit();

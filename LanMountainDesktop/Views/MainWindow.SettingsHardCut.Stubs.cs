@@ -71,7 +71,19 @@ public partial class MainWindow
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
     {
         _ = sender;
-        _ = e;
+
+        if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
+        {
+            var changedKeys = e.ChangedKeys.ToArray();
+            if (changedKeys.All(key =>
+                string.Equals(key, nameof(AppSettingsSnapshot.ThemeColorMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+        }
+
         ScheduleReloadFromExternalSettings();
     }
 
@@ -198,16 +210,20 @@ public partial class MainWindow
 
     private ThemeColorContext BuildAdaptiveThemeContext()
     {
-        var palette = _themeSettingsService.BuildPalette(_isNightMode, _wallpaperPath, _selectedThemeColor.ToString());
-        var accentColor = palette.MonetColors is { Count: > 0 }
-            ? palette.MonetColors[0]
-            : _selectedThemeColor;
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+
         return new ThemeColorContext(
-            accentColor,
-            IsLightBackground: !_isNightMode,
-            IsLightNavBackground: !_isNightMode,
-            IsNightMode: _isNightMode,
-            MonetColors: palette.MonetColors);
+            appearanceSnapshot.AccentColor,
+            IsLightBackground: !appearanceSnapshot.IsNightMode,
+            IsLightNavBackground: !appearanceSnapshot.IsNightMode,
+            IsNightMode: appearanceSnapshot.IsNightMode,
+            MonetPalette: appearanceSnapshot.MonetPalette,
+            MonetColors: appearanceSnapshot.MonetPalette.MonetColors,
+            UseNeutralSurfaces: string.Equals(
+                appearanceSnapshot.ThemeColorMode,
+                ThemeAppearanceValues.ColorModeDefaultNeutral,
+                StringComparison.OrdinalIgnoreCase),
+            SystemMaterialMode: appearanceSnapshot.SystemMaterialMode);
     }
 
     private void ApplyAdaptiveThemeResources()
@@ -222,7 +238,8 @@ public partial class MainWindow
             GlassEffectService.ApplyGlassResources(applicationResources, context);
         }
 
-        _defaultDesktopBackground = GetThemeBrush("AdaptiveSurfaceBaseBrush");
+        _defaultDesktopBackground = GetThemeBrush("AdaptiveWindowBackgroundBrush")
+            ?? GetThemeBrush("AdaptiveSurfaceBaseBrush");
     }
 
     private void TryRestoreWallpaper(string? savedWallpaperPath, string? type = null, string? color = null)
@@ -391,9 +408,9 @@ public partial class MainWindow
             return;
         }
 
-        var palette = _themeSettingsService.BuildPalette(enabled, _wallpaperPath, _selectedThemeColor.ToString());
-        _recommendedColors = palette.RecommendedColors;
-        _monetColors = palette.MonetColors;
+        var snapshot = _appearanceThemeService.GetCurrent();
+        _recommendedColors = snapshot.MonetPalette.RecommendedColors;
+        _monetColors = snapshot.MonetPalette.MonetColors;
     }
 
     private static double CalculateRelativeLuminance(Color color)
@@ -521,13 +538,18 @@ public partial class MainWindow
     {
         var latestWeatherState = _weatherSettingsService.Get();
         var latestUpdateState = _updateSettingsService.Get();
+        var latestThemeState = _themeSettingsService.Get();
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
             GridSpacingPreset = _gridSpacingPreset,
             DesktopEdgeInsetPercent = _desktopEdgeInsetPercent,
             IsNightMode = _isNightMode,
-            ThemeColor = _selectedThemeColor.ToString(),
+            ThemeColor = latestThemeState.ThemeColor,
+            ThemeColorMode = latestThemeState.ThemeColorMode,
+            SystemMaterialMode = latestThemeState.SystemMaterialMode,
+            SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
+            UseSystemChrome = latestThemeState.UseSystemChrome,
             WallpaperPath = _wallpaperPath,
             WallpaperType = _wallpaperType,
             WallpaperColor = _wallpaperSolidColor?.ToString(),

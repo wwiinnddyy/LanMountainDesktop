@@ -49,15 +49,19 @@ internal static class ComponentEditorMaterialThemeAdapter
         ArgumentNullException.ThrowIfNull(monetPalette);
 
         var isNightMode = themeState.IsNightMode;
-        var monetColors = monetPalette.MonetColors?.Where(color => color.A > 0).ToArray() ?? [];
         var fallbackThemeColor = TryParseColor(themeState.ThemeColor);
-        var useWallpaperPalette = wallpaperMediaType == WallpaperMediaType.Image && monetColors.Length > 0;
+        var useWallpaperPalette = wallpaperMediaType == WallpaperMediaType.Image && monetPalette.Primary.A > 0;
 
         var primary = useWallpaperPalette
-            ? monetColors[0]
-            : fallbackThemeColor ?? monetColors.FirstOrDefault(DefaultPrimary);
-        var secondary = ResolveSecondaryColor(primary, monetColors, isNightMode);
-        var tertiary = ResolveTertiaryColor(primary, secondary, monetColors, isNightMode);
+            ? monetPalette.Primary
+            : fallbackThemeColor ?? monetPalette.Primary;
+        if (primary == default)
+        {
+            primary = DefaultPrimary;
+        }
+
+        var secondary = ResolveSecondaryColor(primary, monetPalette, isNightMode);
+        var tertiary = ResolveTertiaryColor(primary, secondary, monetPalette, isNightMode);
 
         var backgroundBase = isNightMode ? DarkBackgroundBase : LightBackgroundBase;
         var surfaceBase = isNightMode ? DarkSurfaceBase : LightSurfaceBase;
@@ -120,11 +124,11 @@ internal static class ComponentEditorMaterialThemeAdapter
             onPrimary);
     }
 
-    private static Color ResolveSecondaryColor(Color primary, IReadOnlyList<Color> monetColors, bool isNightMode)
+    private static Color ResolveSecondaryColor(Color primary, MonetPalette monetPalette, bool isNightMode)
     {
-        if (monetColors.Count > 1)
+        if (monetPalette.Secondary != default)
         {
-            return monetColors[1];
+            return monetPalette.Secondary;
         }
 
         return ColorMath.Blend(
@@ -136,12 +140,12 @@ internal static class ComponentEditorMaterialThemeAdapter
     private static Color ResolveTertiaryColor(
         Color primary,
         Color secondary,
-        IReadOnlyList<Color> monetColors,
+        MonetPalette monetPalette,
         bool isNightMode)
     {
-        if (monetColors.Count > 2)
+        if (monetPalette.Tertiary != default)
         {
-            return monetColors[2];
+            return monetPalette.Tertiary;
         }
 
         var blendTarget = isNightMode ? Color.Parse("#FFFFFFFF") : Color.Parse("#FF2A2230");

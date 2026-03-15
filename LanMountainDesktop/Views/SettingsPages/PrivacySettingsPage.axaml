@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PrivacySettingsPage"
+             x:DataType="vm:PrivacySettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container">
+            <controls:IconText Icon="Info"
+                               Text="{Binding PrivacyHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding CrashUploadHeader}"
+                                 Description="{Binding CrashUploadDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ShieldDismiss" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding UploadAnonymousCrashData}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="{Binding UsageUploadHeader}"
+                                 Description="{Binding UsageUploadDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Info" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding UploadAnonymousUsageData}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -239,6 +239,7 @@ public partial class MainWindow
     private void ApplyTopStatusComponentVisibility()
     {
         var showClock = _topStatusComponentIds.Contains(BuiltInComponentIds.Clock);
+        var hasVisibleTopStatusComponent = false;
 
         if (ClockWidget is not null)
         {
@@ -248,7 +249,32 @@ public partial class MainWindow
                 ClockWidget.SetDisplayFormat(_clockDisplayFormat);
                 var columnSpan = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? 2 : 3;
                 Grid.SetColumnSpan(ClockWidget, columnSpan);
+                hasVisibleTopStatusComponent = true;
             }
+        }
+
+        if (TopStatusBarHost is not null)
+        {
+            TopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
+        }
+
+        if (WallpaperPreviewClockWidget is not null)
+        {
+            WallpaperPreviewClockWidget.IsVisible = showClock;
+            if (showClock)
+            {
+                WallpaperPreviewClockWidget.SetDisplayFormat(_clockDisplayFormat);
+            }
+        }
+
+        if (WallpaperPreviewTopStatusBarHost is not null)
+        {
+            WallpaperPreviewTopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
+        }
+
+        if (GridPreviewTopStatusBarHost is not null)
+        {
+            GridPreviewTopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
         }
     }
 

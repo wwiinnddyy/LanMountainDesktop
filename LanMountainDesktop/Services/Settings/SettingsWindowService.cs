@@ -52,10 +52,10 @@ public interface ISettingsWindowService
 
 internal sealed class SettingsWindowService : ISettingsWindowService
 {
-    private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly IAppearanceThemeService _appearanceThemeService;
     private readonly LocalizationService _localizationService;
     private SettingsWindowViewModel _viewModel = null!;
     private SettingsWindow? _window;
@@ -68,8 +68,10 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _pageRegistry = pageRegistry;
         _hostApplicationLifecycle = hostApplicationLifecycle;
         _settingsFacade = settingsFacade;
+        _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
         _localizationService = new();
         _settingsFacade.Settings.Changed += OnSettingsChanged;
+        _appearanceThemeService.Changed += OnAppearanceThemeChanged;
     }
 
     private string L(string key)
@@ -86,9 +88,9 @@ internal sealed class SettingsWindowService : ISettingsWindowService
     {
         _pageRegistry.Rebuild();
         _window ??= CreateWindow();
-        var themeState = _settingsFacade.Theme.Get();
-        _window.ApplyChromeMode(themeState.UseSystemChrome);
-        ApplyTheme(_window, themeState);
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
+        ApplyTheme(_window);
         _window.ReloadPages(request.PageId);
         PositionWindow(_window, request);
 
@@ -135,15 +137,15 @@ internal sealed class SettingsWindowService : ISettingsWindowService
 
         _viewModel = new SettingsWindowViewModel(_localizationService, languageCode).Initialize();
 
-        var themeState = _settingsFacade.Theme.Get();
-        var useSystemChrome = themeState.UseSystemChrome;
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        var useSystemChrome = appearanceSnapshot.UseSystemChrome;
 
         var window = new SettingsWindow(
             _viewModel,
             _pageRegistry,
             _hostApplicationLifecycle,
             useSystemChrome);
-        ApplyTheme(window, themeState);
+        ApplyTheme(window);
         window.ShowInTaskbar = false;
         window.Closed += (_, _) =>
         {
@@ -277,13 +279,16 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             var changedKeys = e.ChangedKeys?.ToArray();
             var refreshAll = changedKeys is null || changedKeys.Length == 0;
             var languageChanged = refreshAll || changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
+            var liveAppearance = _appearanceThemeService.GetCurrent();
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-                changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase) ||
+                (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&
+                 changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) ||
+                (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
+                 (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase))) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase);
 
             if (languageChanged)
@@ -297,59 +302,36 @@ internal sealed class SettingsWindowService : ISettingsWindowService
 
             if (themeChanged)
             {
-                var themeState = _settingsFacade.Theme.Get();
-                _window.ApplyChromeMode(themeState.UseSystemChrome);
-                ApplyTheme(_window, themeState);
+                var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+                _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
+                ApplyTheme(_window);
             }
         }, DispatcherPriority.Background);
     }
 
-    private static void ApplyTheme(SettingsWindow window, ThemeAppearanceSettingsState themeState)
+    private void ApplyTheme(SettingsWindow window)
     {
-        window.RequestedThemeVariant = themeState.IsNightMode
+        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        window.RequestedThemeVariant = appearanceSnapshot.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
-
-        var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
-        var wallpaperState = settingsFacade.Wallpaper.Get();
-        var monetPalette = settingsFacade.Theme.BuildPalette(
-            themeState.IsNightMode,
-            wallpaperState.WallpaperPath,
-            themeState.ThemeColor);
-        var accentColor = ResolveAccentColor(themeState.ThemeColor, monetPalette);
-        var context = new ThemeColorContext(
-            accentColor,
-            IsLightBackground: !themeState.IsNightMode,
-            IsLightNavBackground: !themeState.IsNightMode,
-            IsNightMode: themeState.IsNightMode,
-            MonetColors: monetPalette.MonetColors);
-        ThemeColorSystemService.ApplyThemeResources(window.Resources, context);
-        GlassEffectService.ApplyGlassResources(window.Resources, context);
+        _appearanceThemeService.ApplyThemeResources(window.Resources);
+        _appearanceThemeService.ApplyWindowMaterial(window, MaterialSurfaceRole.SettingsWindowBackground);
     }
 
-    private static Color ResolveAccentColor(string? colorText, MonetPalette monetPalette)
+    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot e)
     {
-        if (monetPalette.MonetColors is { Count: > 0 })
+        _ = sender;
+        _ = e;
+
+        Dispatcher.UIThread.Post(() =>
         {
-            return monetPalette.MonetColors[0];
-        }
-
-        return TryParseThemeColor(colorText);
-    }
-
-    private static Color TryParseThemeColor(string? colorText)
-    {
-        if (!string.IsNullOrWhiteSpace(colorText))
-        {
-            try
+            if (_window is null || _viewModel is null)
             {
-                return Color.Parse(colorText);
+                return;
             }
-            catch
-            {
-            }
-        }
 
-        return DefaultAccentColor;
+            ApplyTheme(_window);
+        }, DispatcherPriority.Background);
     }
 }

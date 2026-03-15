@@ -7,9 +7,9 @@ namespace LanMountainDesktop.Views.SettingsPages;
 [SettingsPageInfo(
     "status-bar",
     "Status Bar",
-    SettingsPageCategory.Appearance,
+    SettingsPageCategory.Components,
     IconKey = "Apps",
-    SortOrder = 17,
+    SortOrder = 15,
     TitleLocalizationKey = "settings.status_bar.title",
     DescriptionLocalizationKey = "settings.status_bar.description")]
 public partial class StatusBarSettingsPage : SettingsPageBase

@@ -3,15 +3,21 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
 public enum HyperOS3WeatherVisualKind
 {
+    Unknown,
     ClearDay,
     ClearNight,
+    PartlyCloudyDay,
+    PartlyCloudyNight,
     CloudyDay,
     CloudyNight,
+    Haze,
+    Sleet,
     RainLight,
     RainHeavy,
     Storm,
@@ -91,38 +97,53 @@ public static class HyperOS3WeatherTheme
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> BackgroundAssets =
         new Dictionary<HyperOS3WeatherVisualKind, string>
         {
+            [HyperOS3WeatherVisualKind.Unknown] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_back.png",
             [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_cross_sky_day.png",
             [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_cross_sky_night.png",
+            [HyperOS3WeatherVisualKind.PartlyCloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_cross_sky_day.png",
+            [HyperOS3WeatherVisualKind.PartlyCloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_cross_sky_night.png",
             [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_front.png",
             [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_back.png",
+            [HyperOS3WeatherVisualKind.Haze] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_haze.png",
+            [HyperOS3WeatherVisualKind.Sleet] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_front.png",
             [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_front.png",
             [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_back.png",
             [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_cross_sky_night.png",
             [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_top.png",
-            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_sky_back.png"
+            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_fog.png"
         };
 
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> HeroIconAssets =
         new Dictionary<HyperOS3WeatherVisualKind, string>
         {
+            [HyperOS3WeatherVisualKind.Unknown] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_cloudy.webp",
             [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png",
             [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_moon_soft.png",
-            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png",
-            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_moon_soft.png",
-            [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_light_soft.png",
-            [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_heavy_soft.png",
-            [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_storm_soft.png",
-            [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_snow_soft.png",
-            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_hero_sun_soft.png"
+            [HyperOS3WeatherVisualKind.PartlyCloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_partly_cloudy_day.webp",
+            [HyperOS3WeatherVisualKind.PartlyCloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_partly_cloudy_night.webp",
+            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_cloudy.webp",
+            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_cloudy.webp",
+            [HyperOS3WeatherVisualKind.Haze] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_haze.webp",
+            [HyperOS3WeatherVisualKind.Sleet] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_sleet.webp",
+            [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_rain_light.webp",
+            [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_rain_heavy.webp",
+            [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_thunder.webp",
+            [HyperOS3WeatherVisualKind.Snow] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_snow.webp",
+            [HyperOS3WeatherVisualKind.Fog] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_fog_soft.png"
         };
 
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, string> MiniIconAssets =
         new Dictionary<HyperOS3WeatherVisualKind, string>
         {
+            [HyperOS3WeatherVisualKind.Unknown] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_cloudy_soft.png",
             [HyperOS3WeatherVisualKind.ClearDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_day_soft.png",
             [HyperOS3WeatherVisualKind.ClearNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_night_soft.png",
-            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_day_soft.png",
-            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_night_soft.png",
+            [HyperOS3WeatherVisualKind.PartlyCloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_day_soft.png",
+            [HyperOS3WeatherVisualKind.PartlyCloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_partly_cloudy_night_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyDay] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_cloudy_soft.png",
+            [HyperOS3WeatherVisualKind.CloudyNight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_cloudy_soft.png",
+            [HyperOS3WeatherVisualKind.Haze] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_haze.webp",
+            [HyperOS3WeatherVisualKind.Sleet] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_sleet.webp",
             [HyperOS3WeatherVisualKind.RainLight] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_light_soft.png",
             [HyperOS3WeatherVisualKind.RainHeavy] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_rain_heavy_soft.png",
             [HyperOS3WeatherVisualKind.Storm] = "avares://LanMountainDesktop/Assets/Weather/HyperOS3/Icons/icon_mini_storm_soft.png",
@@ -133,6 +154,14 @@ public static class HyperOS3WeatherTheme
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherPalette> Palettes =
         new Dictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherPalette>
         {
+            [HyperOS3WeatherVisualKind.Unknown] = new(
+                GradientFrom: "#6B7785",
+                GradientTo: "#98A4B3",
+                Tint: "#55606E",
+                PrimaryText: "#F8FBFF",
+                SecondaryText: "#E1E8F0",
+                TertiaryText: "#C2CCD8",
+                ParticleColor: "#24FFFFFF"),
             [HyperOS3WeatherVisualKind.ClearDay] = new(
                 GradientFrom: "#5F7FA3",
                 GradientTo: "#9BB4CF",
@@ -149,6 +178,22 @@ public static class HyperOS3WeatherTheme
                 SecondaryText: "#D9E4F0",
                 TertiaryText: "#B4C3D6",
                 ParticleColor: "#00FFFFFF"),
+            [HyperOS3WeatherVisualKind.PartlyCloudyDay] = new(
+                GradientFrom: "#607D9F",
+                GradientTo: "#9BB2C8",
+                Tint: "#55728F",
+                PrimaryText: "#F8FCFF",
+                SecondaryText: "#E4EDF7",
+                TertiaryText: "#C4D4E4",
+                ParticleColor: "#12FFFFFF"),
+            [HyperOS3WeatherVisualKind.PartlyCloudyNight] = new(
+                GradientFrom: "#5A6E87",
+                GradientTo: "#8FA4BC",
+                Tint: "#4D6178",
+                PrimaryText: "#F8FBFF",
+                SecondaryText: "#D9E5F0",
+                TertiaryText: "#B6C5D7",
+                ParticleColor: "#1FE8F2FF"),
             [HyperOS3WeatherVisualKind.CloudyDay] = new(
                 GradientFrom: "#5D799A",
                 GradientTo: "#95ADC6",
@@ -165,6 +210,22 @@ public static class HyperOS3WeatherTheme
                 SecondaryText: "#D4E0ED",
                 TertiaryText: "#B0BFD2",
                 ParticleColor: "#30F0F5FF"),
+            [HyperOS3WeatherVisualKind.Haze] = new(
+                GradientFrom: "#6A7E95",
+                GradientTo: "#A5B2BE",
+                Tint: "#657789",
+                PrimaryText: "#F7FBFF",
+                SecondaryText: "#E3E8EE",
+                TertiaryText: "#C1CBD6",
+                ParticleColor: "#6FD6DEE8"),
+            [HyperOS3WeatherVisualKind.Sleet] = new(
+                GradientFrom: "#61788F",
+                GradientTo: "#9AB0C4",
+                Tint: "#587087",
+                PrimaryText: "#F7FBFF",
+                SecondaryText: "#DCE6F0",
+                TertiaryText: "#B8C7D7",
+                ParticleColor: "#98DCEBFF"),
             [HyperOS3WeatherVisualKind.RainLight] = new(
                 GradientFrom: "#4F6786",
                 GradientTo: "#7A92AF",
@@ -210,6 +271,14 @@ public static class HyperOS3WeatherTheme
     private static readonly IReadOnlyDictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherMotion> Motions =
         new Dictionary<HyperOS3WeatherVisualKind, HyperOS3WeatherMotion>
         {
+            [HyperOS3WeatherVisualKind.Unknown] = new(
+                DriftX: 8.0, DriftY: 5.0, ZoomBase: 1.050, ZoomAmplitude: 0.010,
+                MotionOpacityBase: 0.24, MotionOpacityPulse: 0.05,
+                LightOpacityBase: 0.60, LightOpacityPulse: 0.05,
+                ShadeOpacityBase: 0.80, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.018, ParticleCount: 0,
+                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
+                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
             [HyperOS3WeatherVisualKind.ClearDay] = new(
                 DriftX: 8.0, DriftY: 4.0, ZoomBase: 1.055, ZoomAmplitude: 0.012,
                 MotionOpacityBase: 0.22, MotionOpacityPulse: 0.05,
@@ -224,6 +293,22 @@ public static class HyperOS3WeatherTheme
                 LightOpacityBase: 0.58, LightOpacityPulse: 0.07,
                 ShadeOpacityBase: 0.82, ShadeOpacityPulse: 0.04,
                 PhaseStep: 0.018, ParticleCount: 0,
+                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
+                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
+            [HyperOS3WeatherVisualKind.PartlyCloudyDay] = new(
+                DriftX: 10.0, DriftY: 6.0, ZoomBase: 1.058, ZoomAmplitude: 0.013,
+                MotionOpacityBase: 0.26, MotionOpacityPulse: 0.05,
+                LightOpacityBase: 0.65, LightOpacityPulse: 0.06,
+                ShadeOpacityBase: 0.76, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.017, ParticleCount: 0,
+                ParticleSpeedMin: 0, ParticleSpeedMax: 0,
+                ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
+            [HyperOS3WeatherVisualKind.PartlyCloudyNight] = new(
+                DriftX: 12.0, DriftY: 7.0, ZoomBase: 1.061, ZoomAmplitude: 0.013,
+                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.06,
+                LightOpacityBase: 0.55, LightOpacityPulse: 0.05,
+                ShadeOpacityBase: 0.82, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.019, ParticleCount: 0,
                 ParticleSpeedMin: 0, ParticleSpeedMax: 0,
                 ParticleLengthMin: 0, ParticleLengthMax: 0, ParticleDriftPerTick: 0),
             [HyperOS3WeatherVisualKind.CloudyDay] = new(
@@ -242,6 +327,22 @@ public static class HyperOS3WeatherTheme
                 PhaseStep: 0.021, ParticleCount: 0,
                 ParticleSpeedMin: 0.35, ParticleSpeedMax: 0.80,
                 ParticleLengthMin: 16, ParticleLengthMax: 30, ParticleDriftPerTick: 0.12),
+            [HyperOS3WeatherVisualKind.Haze] = new(
+                DriftX: 9.0, DriftY: 5.0, ZoomBase: 1.052, ZoomAmplitude: 0.010,
+                MotionOpacityBase: 0.30, MotionOpacityPulse: 0.04,
+                LightOpacityBase: 0.54, LightOpacityPulse: 0.04,
+                ShadeOpacityBase: 0.85, ShadeOpacityPulse: 0.03,
+                PhaseStep: 0.018, ParticleCount: 0,
+                ParticleSpeedMin: 0.20, ParticleSpeedMax: 0.45,
+                ParticleLengthMin: 12, ParticleLengthMax: 28, ParticleDriftPerTick: 0.10),
+            [HyperOS3WeatherVisualKind.Sleet] = new(
+                DriftX: 7.0, DriftY: 9.0, ZoomBase: 1.048, ZoomAmplitude: 0.011,
+                MotionOpacityBase: 0.31, MotionOpacityPulse: 0.06,
+                LightOpacityBase: 0.52, LightOpacityPulse: 0.05,
+                ShadeOpacityBase: 0.82, ShadeOpacityPulse: 0.04,
+                PhaseStep: 0.026, ParticleCount: 20,
+                ParticleSpeedMin: 1.20, ParticleSpeedMax: 2.40,
+                ParticleLengthMin: 8, ParticleLengthMax: 18, ParticleDriftPerTick: 0.34),
             [HyperOS3WeatherVisualKind.RainLight] = new(
                 DriftX: 6.0, DriftY: 10.0, ZoomBase: 1.050, ZoomAmplitude: 0.010,
                 MotionOpacityBase: 0.30, MotionOpacityPulse: 0.08,
@@ -296,16 +397,20 @@ public static class HyperOS3WeatherTheme
 
     public static HyperOS3WeatherVisualKind ResolveVisualKind(int? weatherCode, bool isNight)
     {
-        return weatherCode switch
+        return XiaomiWeatherCodeMapper.ResolveBucket(weatherCode) switch
         {
-            0 => isNight ? HyperOS3WeatherVisualKind.ClearNight : HyperOS3WeatherVisualKind.ClearDay,
-            1 or 2 => isNight ? HyperOS3WeatherVisualKind.CloudyNight : HyperOS3WeatherVisualKind.CloudyDay,
-            3 or 7 => HyperOS3WeatherVisualKind.RainLight,
-            8 or 9 => HyperOS3WeatherVisualKind.RainHeavy,
-            4 => HyperOS3WeatherVisualKind.Storm,
-            13 or 14 or 15 or 16 => HyperOS3WeatherVisualKind.Snow,
-            18 or 32 => HyperOS3WeatherVisualKind.Fog,
-            _ => isNight ? HyperOS3WeatherVisualKind.CloudyNight : HyperOS3WeatherVisualKind.CloudyDay
+            WeatherConditionBucket.Unknown => HyperOS3WeatherVisualKind.Unknown,
+            WeatherConditionBucket.Clear => isNight ? HyperOS3WeatherVisualKind.ClearNight : HyperOS3WeatherVisualKind.ClearDay,
+            WeatherConditionBucket.PartlyCloudy => isNight ? HyperOS3WeatherVisualKind.PartlyCloudyNight : HyperOS3WeatherVisualKind.PartlyCloudyDay,
+            WeatherConditionBucket.Cloudy => isNight ? HyperOS3WeatherVisualKind.CloudyNight : HyperOS3WeatherVisualKind.CloudyDay,
+            WeatherConditionBucket.Haze => HyperOS3WeatherVisualKind.Haze,
+            WeatherConditionBucket.Sleet => HyperOS3WeatherVisualKind.Sleet,
+            WeatherConditionBucket.RainLight => HyperOS3WeatherVisualKind.RainLight,
+            WeatherConditionBucket.RainHeavy => HyperOS3WeatherVisualKind.RainHeavy,
+            WeatherConditionBucket.Storm => HyperOS3WeatherVisualKind.Storm,
+            WeatherConditionBucket.Snow => HyperOS3WeatherVisualKind.Snow,
+            WeatherConditionBucket.Fog => HyperOS3WeatherVisualKind.Fog,
+            _ => HyperOS3WeatherVisualKind.Unknown
         };
     }
 
@@ -360,12 +465,14 @@ public static class HyperOS3WeatherTheme
     {
         return kind switch
         {
-            HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy or HyperOS3WeatherVisualKind.Storm
+            HyperOS3WeatherVisualKind.Sleet or HyperOS3WeatherVisualKind.RainLight or HyperOS3WeatherVisualKind.RainHeavy or HyperOS3WeatherVisualKind.Storm
                 => "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_rain_drop.png",
+            HyperOS3WeatherVisualKind.Haze
+                => "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_haze.png",
+            HyperOS3WeatherVisualKind.Fog
+                => "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_fog.png",
             HyperOS3WeatherVisualKind.Snow
                 => "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_snow_flake.png",
-            HyperOS3WeatherVisualKind.Fog
-                => "avares://LanMountainDesktop/Assets/Weather/HyperOS3/hyper_haze.png",
             _ => null
         };
     }

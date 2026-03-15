@@ -22,10 +22,15 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
 {
     private enum WeatherVisualKind
     {
+        Unknown,
         ClearDay,
         ClearNight,
+        PartlyCloudyDay,
+        PartlyCloudyNight,
         CloudyDay,
         CloudyNight,
+        Haze,
+        Sleet,
         RainLight,
         RainHeavy,
         Storm,
@@ -427,7 +432,12 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
     private void ApplySnapshot(WeatherSnapshot snapshot, string fallbackLocationName)
     {
         var isNight = ResolveIsNight(snapshot);
-        var visualKind = ResolveVisualKind(snapshot.Current.WeatherCode, isNight);
+        var visual = XiaomiWeatherVisualResolver.Resolve(
+            snapshot.Current.WeatherText,
+            snapshot.Current.WeatherCode,
+            isNight,
+            _languageCode);
+        var visualKind = ResolveVisualKind(visual.VisualKind);
         ApplyVisualTheme(visualKind);
 
         var rawLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
@@ -435,8 +445,8 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
             : snapshot.LocationName;
         CityTextBlock.Text = ResolvePreciseDisplayLocation(rawLocation, _languageCode, L("weather.widget.location_unknown", "Unknown location"));
 
-        ConditionTextBlock.Text = ResolveWeatherConditionText(snapshot.Current.WeatherText, visualKind);
-        SetWeatherIcon(visualKind);
+        ConditionTextBlock.Text = visual.DisplayText;
+        SetWeatherIcon(visual.PrimaryIconAsset, visualKind);
         SetLoadingSkeleton(false);
 
         TemperatureTextBlock.Text = FormatTemperature(snapshot.Current.TemperatureC);
@@ -449,7 +459,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
     {
         var fallbackKind = ResolveFallbackVisualKind();
         ApplyVisualTheme(fallbackKind);
-        SetWeatherIcon(fallbackKind);
+        SetWeatherIcon(null, fallbackKind);
         SetLoadingSkeleton(false);
         CityTextBlock.Text = L("weather.widget.location_not_configured", "Weather location is not configured");
         ConditionTextBlock.Text = L("weather.widget.configure_hint", "Open Settings > Weather to configure");
@@ -463,7 +473,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
     {
         var loadingKind = IsNightNow() ? WeatherVisualKind.CloudyNight : WeatherVisualKind.CloudyDay;
         ApplyVisualTheme(loadingKind);
-        SetWeatherIcon(loadingKind);
+        SetWeatherIcon(null, loadingKind);
         SetLoadingSkeleton(true);
         CityTextBlock.Text = ResolvePreciseDisplayLocation(
             locationName,
@@ -477,8 +487,8 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
 
     private void ApplyFailedState(string locationName)
     {
-        ApplyVisualTheme(WeatherVisualKind.Fog);
-        SetWeatherIcon(WeatherVisualKind.Fog);
+        ApplyVisualTheme(WeatherVisualKind.Unknown);
+        SetWeatherIcon(HyperOS3WeatherTheme.ResolveHeroIconAsset(HyperOS3WeatherVisualKind.Unknown), WeatherVisualKind.Unknown);
         SetLoadingSkeleton(false);
         CityTextBlock.Text = ResolvePreciseDisplayLocation(
             locationName,
@@ -500,7 +510,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         BackgroundMotionLayer.Background = ResolveWeatherBackgroundBrush(kind, palette);
         BackgroundTintLayer.Background = CreateSolidBrush(palette.Tint);
 
-        var isNightVisual = kind is WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight;
+        var isNightVisual = kind is WeatherVisualKind.ClearNight or WeatherVisualKind.PartlyCloudyNight or WeatherVisualKind.CloudyNight;
         var backgroundSamples = WeatherTypographyAccessibility.BuildBackgroundSamples(
             palette.GradientFrom,
             palette.GradientTo,
@@ -610,17 +620,28 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
 
     private static WeatherVisualKind ResolveVisualKind(int? weatherCode, bool isNight)
     {
-        return HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, isNight) switch
+        return ResolveVisualKind(HyperOS3WeatherTheme.ResolveVisualKind(weatherCode, isNight));
+    }
+
+    private static WeatherVisualKind ResolveVisualKind(HyperOS3WeatherVisualKind kind)
+    {
+        return kind switch
         {
+            HyperOS3WeatherVisualKind.Unknown => WeatherVisualKind.Unknown,
             HyperOS3WeatherVisualKind.ClearDay => WeatherVisualKind.ClearDay,
             HyperOS3WeatherVisualKind.ClearNight => WeatherVisualKind.ClearNight,
+            HyperOS3WeatherVisualKind.PartlyCloudyDay => WeatherVisualKind.PartlyCloudyDay,
+            HyperOS3WeatherVisualKind.PartlyCloudyNight => WeatherVisualKind.PartlyCloudyNight,
             HyperOS3WeatherVisualKind.CloudyDay => WeatherVisualKind.CloudyDay,
             HyperOS3WeatherVisualKind.CloudyNight => WeatherVisualKind.CloudyNight,
+            HyperOS3WeatherVisualKind.Haze => WeatherVisualKind.Haze,
+            HyperOS3WeatherVisualKind.Sleet => WeatherVisualKind.Sleet,
             HyperOS3WeatherVisualKind.RainLight => WeatherVisualKind.RainLight,
             HyperOS3WeatherVisualKind.RainHeavy => WeatherVisualKind.RainHeavy,
             HyperOS3WeatherVisualKind.Storm => WeatherVisualKind.Storm,
             HyperOS3WeatherVisualKind.Snow => WeatherVisualKind.Snow,
-            _ => WeatherVisualKind.Fog
+            HyperOS3WeatherVisualKind.Fog => WeatherVisualKind.Fog,
+            _ => WeatherVisualKind.Unknown
         };
     }
 
@@ -641,35 +662,28 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
     {
         return kind switch
         {
+            WeatherVisualKind.Unknown => HyperOS3WeatherVisualKind.Unknown,
             WeatherVisualKind.ClearDay => HyperOS3WeatherVisualKind.ClearDay,
             WeatherVisualKind.ClearNight => HyperOS3WeatherVisualKind.ClearNight,
+            WeatherVisualKind.PartlyCloudyDay => HyperOS3WeatherVisualKind.PartlyCloudyDay,
+            WeatherVisualKind.PartlyCloudyNight => HyperOS3WeatherVisualKind.PartlyCloudyNight,
             WeatherVisualKind.CloudyDay => HyperOS3WeatherVisualKind.CloudyDay,
             WeatherVisualKind.CloudyNight => HyperOS3WeatherVisualKind.CloudyNight,
+            WeatherVisualKind.Haze => HyperOS3WeatherVisualKind.Haze,
+            WeatherVisualKind.Sleet => HyperOS3WeatherVisualKind.Sleet,
             WeatherVisualKind.RainLight => HyperOS3WeatherVisualKind.RainLight,
             WeatherVisualKind.RainHeavy => HyperOS3WeatherVisualKind.RainHeavy,
             WeatherVisualKind.Storm => HyperOS3WeatherVisualKind.Storm,
             WeatherVisualKind.Snow => HyperOS3WeatherVisualKind.Snow,
-            _ => HyperOS3WeatherVisualKind.Fog
+            WeatherVisualKind.Fog => HyperOS3WeatherVisualKind.Fog,
+            _ => HyperOS3WeatherVisualKind.Unknown
         };
     }
 
-    private string ResolveWeatherConditionText(string? weatherText, WeatherVisualKind kind)
+    private string ResolveWeatherConditionText(string? weatherText, int? weatherCode, WeatherVisualKind kind)
     {
-        if (!string.IsNullOrWhiteSpace(weatherText))
-        {
-            return weatherText;
-        }
-
-        return kind switch
-        {
-            WeatherVisualKind.ClearDay or WeatherVisualKind.ClearNight => L("weather.widget.condition_clear", "Clear"),
-            WeatherVisualKind.CloudyDay or WeatherVisualKind.CloudyNight => L("weather.widget.condition_cloudy", "Cloudy"),
-            WeatherVisualKind.RainLight or WeatherVisualKind.RainHeavy => L("weather.widget.condition_rain", "Rain"),
-            WeatherVisualKind.Storm => L("weather.widget.condition_storm", "Thunderstorm"),
-            WeatherVisualKind.Snow => L("weather.widget.condition_snow", "Snow"),
-            WeatherVisualKind.Fog => L("weather.widget.condition_fog", "Fog"),
-            _ => L("weather.widget.condition_unknown", "Unknown")
-        };
+        _ = kind;
+        return XiaomiWeatherVisualResolver.ResolveDisplayText(weatherText, weatherCode, _languageCode);
     }
 
     private static (double? Low, double? High) ResolveTemperatureRange(WeatherSnapshot snapshot)
@@ -965,15 +979,16 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         return kind switch
         {
             WeatherVisualKind.RainLight or WeatherVisualKind.RainHeavy or WeatherVisualKind.Storm or WeatherVisualKind.Snow => 1.16,
-            WeatherVisualKind.ClearNight or WeatherVisualKind.CloudyNight => 1.08,
+            WeatherVisualKind.ClearNight or WeatherVisualKind.PartlyCloudyNight or WeatherVisualKind.CloudyNight => 1.08,
+            WeatherVisualKind.Haze or WeatherVisualKind.Fog => 1.04,
             _ => 1.0
         };
     }
 
-    private void SetWeatherIcon(WeatherVisualKind kind)
+    private void SetWeatherIcon(string? assetUri, WeatherVisualKind fallbackKind)
     {
         WeatherIconImage.Source = HyperOS3WeatherAssetLoader.LoadImage(
-            HyperOS3WeatherTheme.ResolveHeroIconAsset(ToThemeKind(kind)));
+            assetUri ?? HyperOS3WeatherTheme.ResolveHeroIconAsset(ToThemeKind(fallbackKind)));
     }
 
     private void SetLoadingSkeleton(bool isLoading)
@@ -1190,7 +1205,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
 
             var sway = _activeVisualKind == WeatherVisualKind.Snow
                 ? Math.Sin(_animationPhase + (i * 0.45)) * 0.55
-                : _activeVisualKind == WeatherVisualKind.Fog
+                : _activeVisualKind is WeatherVisualKind.Fog or WeatherVisualKind.Haze
                     ? Math.Sin((_animationPhase * 0.7) + (i * 0.31)) * 0.18
                     : 0;
 
@@ -1220,16 +1235,16 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         var thickness = _activeVisualKind switch
         {
             WeatherVisualKind.Snow => NextRange(2.2, 4.3),
-            WeatherVisualKind.Fog => NextRange(10.0, 22.0),
+            WeatherVisualKind.Fog or WeatherVisualKind.Haze => NextRange(10.0, 22.0),
             _ => NextRange(1.0, 2.2)
         };
         var opacity = _activeVisualKind switch
         {
             WeatherVisualKind.Storm => NextRange(0.26, 0.52),
             WeatherVisualKind.RainHeavy => NextRange(0.24, 0.46),
-            WeatherVisualKind.RainLight => NextRange(0.18, 0.34),
+            WeatherVisualKind.RainLight or WeatherVisualKind.Sleet => NextRange(0.18, 0.34),
             WeatherVisualKind.Snow => NextRange(0.40, 0.72),
-            WeatherVisualKind.Fog => NextRange(0.08, 0.20),
+            WeatherVisualKind.Fog or WeatherVisualKind.Haze => NextRange(0.08, 0.20),
             _ => NextRange(0.10, 0.24)
         };
 
@@ -1241,7 +1256,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         {
             WeatherVisualKind.Storm => -24,
             WeatherVisualKind.RainHeavy => -20,
-            WeatherVisualKind.RainLight => -14,
+            WeatherVisualKind.RainLight or WeatherVisualKind.Sleet => -14,
             WeatherVisualKind.Snow => -6,
             _ => 0
         });

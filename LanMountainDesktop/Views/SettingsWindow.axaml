@@ -13,7 +13,7 @@
         WindowStartupLocation="Manual"
         SystemDecorations="BorderOnly"
         FontFamily="{DynamicResource AppFontFamily}"
-        Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+        Background="Transparent"
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding Title}">
 
@@ -38,13 +38,13 @@
     </Window.Styles>
 
     <Grid Classes="settings-scope"
-          Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
-          RowDefinitions="Auto,Auto,*">
+          Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+          RowDefinitions="Auto,*">
         <Border x:Name="WindowTitleBarHost"
                 Height="48"
                 Padding="12,0,12,0"
-                Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
-                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+                BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
                 BorderThickness="0,0,0,1"
                 PointerPressed="OnWindowTitleBarPointerPressed">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
@@ -113,22 +113,8 @@
             </Grid>
         </Border>
 
-        <ui:InfoBar x:Name="RestartInfoBar"
-                    Grid.Row="1"
-                    IsOpen="{Binding IsRestartRequested}"
-                    Margin="16,8,16,0"
-                    Severity="Informational"
-                    IsClosable="False"
-                    Title="{Binding RestartTitle}"
-                    Message="{Binding RestartMessage}">
-            <ui:InfoBar.ActionButton>
-                <Button Click="OnRestartNowClick"
-                        Content="{Binding RestartButtonText}" />
-            </ui:InfoBar.ActionButton>
-        </ui:InfoBar>
-
         <ui:NavigationView x:Name="RootNavigationView"
-                           Grid.Row="2"
+                           Grid.Row="1"
                            Margin="0,8,0,0"
                            Background="Transparent"
                            PaneDisplayMode="Auto"

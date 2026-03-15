@@ -31,13 +31,224 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding ThemeColorLabel}">
+            <ui:SettingsExpander Header="{Binding ThemeColorModeLabel}"
+                                 Description="{Binding ThemeColorSourceDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="PaintBrush" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="240"
+                              ItemsSource="{Binding ThemeColorModes}"
+                              SelectedItem="{Binding SelectedThemeColorMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="{Binding SystemMaterialLabel}"
+                                 Description="{Binding SystemMaterialDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="WindowDevTools" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding SystemMaterialModes}"
+                              SelectedItem="{Binding SelectedSystemMaterialMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="{Binding ThemeColorLabel}"
+                                 Description="{Binding ThemeColorSourceDescription}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Color" />
                 </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <ColorPicker Color="{Binding ThemeColorPickerValue}" />
-                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
+                                    IsVisible="{Binding ShowNeutralPreview}">
+                            <StackPanel Width="96"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding NeutralLightPreviewBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewNeutralLightLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Width="96"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding NeutralDarkPreviewBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewNeutralDarkLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
+                                    IsVisible="{Binding ShowMonetPreview}">
+                            <StackPanel Width="92"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding PrimarySwatchBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewPrimaryLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Width="92"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding SecondarySwatchBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewSecondaryLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Width="92"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding TertiarySwatchBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewTertiaryLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Width="92"
+                                        Spacing="6">
+                                <Border Height="54"
+                                        Background="{Binding NeutralSwatchBrush}"
+                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="14" />
+                                <TextBlock Text="{Binding PreviewNeutralLabel}"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center" />
+                            </StackPanel>
+
+                            <Button x:Name="CustomSeedButton"
+                                    Width="92"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Left"
+                                    IsVisible="{Binding IsThemeColorEditable}">
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedLeft"
+                                            Closed="OnCustomSeedFlyoutClosed">
+                                        <StackPanel Width="300"
+                                                    Spacing="12">
+                                            <ColorPicker Color="{Binding CustomSeedPickerValue}" />
+                                            <Button Content="{Binding SeedApplyButtonText}"
+                                                    HorizontalAlignment="Right"
+                                                    Click="OnApplyCustomSeedClick" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                                <StackPanel Width="92"
+                                            Spacing="6">
+                                    <Border Height="54"
+                                            Background="{Binding SeedSwatchBrush}"
+                                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="14" />
+                                    <TextBlock Text="{Binding PreviewSeedLabel}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="WallpaperSeedButton"
+                                    Width="92"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Left"
+                                    IsVisible="{Binding IsWallpaperMode}"
+                                    IsEnabled="{Binding IsWallpaperSeedSelectable}">
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                        <StackPanel Width="280"
+                                                    Spacing="12">
+                                            <TextBlock Text="{Binding WallpaperSeedFlyoutTitle}"
+                                                       FontWeight="SemiBold" />
+                                            <ItemsControl ItemsSource="{Binding WallpaperSeedCandidates}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ThemeSeedCandidateOption">
+                                                        <Button Padding="0"
+                                                                Margin="0,0,8,8"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Click="OnWallpaperSeedCandidateClick">
+                                                            <StackPanel Width="76"
+                                                                        Spacing="6">
+                                                                <Border Height="44"
+                                                                        Background="{Binding Brush}"
+                                                                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="12" />
+                                                                <TextBlock Text="{Binding Label}"
+                                                                           HorizontalAlignment="Center"
+                                                                           TextAlignment="Center"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Text="{Binding $parent[vm:AppearanceSettingsPageViewModel].WallpaperSeedCurrentText}"
+                                                                           HorizontalAlignment="Center"
+                                                                           FontSize="10"
+                                                                           IsVisible="{Binding IsSelected}" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                                <StackPanel Width="92"
+                                            Spacing="6">
+                                    <Border Height="54"
+                                            Background="{Binding SeedSwatchBrush}"
+                                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="14" />
+                                    <TextBlock Text="{Binding PreviewSeedLabel}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
         </StackPanel>
     </ScrollViewer>

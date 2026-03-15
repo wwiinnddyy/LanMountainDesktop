@@ -1,84 +1,86 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using LanMountainDesktop.Models;
+using MaterialColorUtilities.Palettes;
+using MaterialColorUtilities.Utils;
 using Microsoft.Win32;
 
 namespace LanMountainDesktop.Services;
 
 public sealed class MonetColorService
 {
+    private static readonly Color DefaultSeedColor = Color.Parse("#FF3B82F6");
+
     public MonetPalette BuildPalette(Bitmap? wallpaper, bool nightMode, Color? preferredSeed = null)
     {
-        var recommended = BuildRecommendedPalette(nightMode);
-        var seed = preferredSeed ?? TryExtractSeedColor(wallpaper) ?? TryGetSystemMonetSeedColor() ?? Color.Parse("#FF3B82F6");
-        var monet = BuildMonetPalette(seed, nightMode);
-        return new MonetPalette(recommended, monet);
+        var wallpaperCandidates = wallpaper is null
+            ? []
+            : ExtractSeedCandidates(wallpaper);
+        return BuildPaletteCore(wallpaperCandidates, nightMode, preferredSeed);
     }
 
-    private static IReadOnlyList<Color> BuildRecommendedPalette(bool nightMode)
+    public MonetPalette BuildPaletteFromSeedCandidates(
+        IReadOnlyList<Color>? seedCandidates,
+        bool nightMode,
+        Color? preferredSeed = null)
     {
-        if (nightMode)
-        {
-            return
-            [
-                Color.Parse("#FF3B82F6"),
-                Color.Parse("#FF22C55E"),
-                Color.Parse("#FFF59E0B"),
-                Color.Parse("#FFF97316"),
-                Color.Parse("#FFA855F7"),
-                Color.Parse("#FFEF4444")
-            ];
-        }
-
-        return
-        [
-            Color.Parse("#FF1D4ED8"),
-            Color.Parse("#FF15803D"),
-            Color.Parse("#FFB45309"),
-            Color.Parse("#FFC2410C"),
-            Color.Parse("#FF7E22CE"),
-            Color.Parse("#FFB91C1C")
-        ];
+        return BuildPaletteCore(seedCandidates ?? [], nightMode, preferredSeed);
     }
 
-    private static IReadOnlyList<Color> BuildMonetPalette(Color seed, bool nightMode)
+    public IReadOnlyList<Color> ExtractSeedCandidates(Bitmap wallpaper)
     {
-        var (hue, saturation, value) = ToHsv(seed);
-        var valueBase = nightMode ? Math.Max(0.70, value) : Math.Min(0.72, Math.Max(0.35, value));
-        var saturationBase = Math.Clamp(saturation, 0.22, 0.74);
-        var offsets = new[] { 0d, 16d, -16d, 36d, -36d, 180d };
-        var palette = new List<Color>(offsets.Length);
-
-        for (var i = 0; i < offsets.Length; i++)
-        {
-            var hueShift = NormalizeHue(hue + offsets[i]);
-            var sat = Math.Clamp(saturationBase + ((i % 2 == 0) ? 0.05 : -0.05), 0.18, 0.86);
-            var val = Math.Clamp(valueBase + ((i < 3) ? 0.06 : -0.04), 0.32, 0.92);
-            palette.Add(FromHsv(hueShift, sat, val));
-        }
-
-        return palette;
+        ArgumentNullException.ThrowIfNull(wallpaper);
+        return ExtractWallpaperSeedCandidates(wallpaper);
     }
 
-    private static Color? TryExtractSeedColor(Bitmap? wallpaper)
+    private static Color? ResolveSeedColor(
+        IReadOnlyList<Color> wallpaperCandidates,
+        Color? preferredSeed)
     {
-        if (wallpaper is null)
+        if (wallpaperCandidates.Count == 0)
         {
             return null;
         }
 
+        if (preferredSeed is { } explicitSeed)
+        {
+            var exact = wallpaperCandidates.FirstOrDefault(candidate => candidate == explicitSeed);
+            if (exact != default)
+            {
+                return exact;
+            }
+        }
+
+        return wallpaperCandidates[0];
+    }
+
+    private static IReadOnlyList<Color> BuildFallbackSeedCandidates()
+    {
+        return
+        [
+            Color.Parse("#FF3B82F6"),
+            Color.Parse("#FF22C55E"),
+            Color.Parse("#FFF59E0B"),
+            Color.Parse("#FFF97316"),
+            Color.Parse("#FFA855F7")
+        ];
+    }
+
+    private static IReadOnlyList<Color> ExtractWallpaperSeedCandidates(Bitmap wallpaper)
+    {
         try
         {
-            var sampleWidth = Math.Clamp(wallpaper.PixelSize.Width, 1, 48);
-            var sampleHeight = Math.Clamp(wallpaper.PixelSize.Height, 1, 48);
+            var width = Math.Clamp(wallpaper.PixelSize.Width, 1, 96);
+            var height = Math.Clamp(wallpaper.PixelSize.Height, 1, 96);
 
             using var scaledBitmap = wallpaper.CreateScaledBitmap(
-                new PixelSize(sampleWidth, sampleHeight),
+                new PixelSize(width, height),
                 BitmapInterpolationMode.MediumQuality);
             using var writeable = new WriteableBitmap(
                 scaledBitmap.PixelSize,
@@ -91,55 +93,52 @@ public sealed class MonetColorService
             var byteCount = framebuffer.RowBytes * framebuffer.Size.Height;
             if (byteCount <= 0 || framebuffer.Address == IntPtr.Zero)
             {
-                return null;
+                return [];
             }
 
             var pixelBuffer = new byte[byteCount];
             Marshal.Copy(framebuffer.Address, pixelBuffer, 0, byteCount);
 
-            double bestScore = double.MinValue;
-            Color? bestColor = null;
-
+            var argbPixels = new List<uint>(framebuffer.Size.Width * framebuffer.Size.Height);
             for (var y = 0; y < framebuffer.Size.Height; y++)
             {
                 var rowOffset = y * framebuffer.RowBytes;
                 for (var x = 0; x < framebuffer.Size.Width; x++)
                 {
                     var index = rowOffset + (x * 4);
-                    var alpha = pixelBuffer[index + 3] / 255d;
-                    if (alpha <= 0.15)
+                    var alpha = pixelBuffer[index + 3];
+                    if (alpha <= 32)
                     {
                         continue;
                     }
 
-                    var blue = (pixelBuffer[index] / 255d) / alpha;
-                    var green = (pixelBuffer[index + 1] / 255d) / alpha;
-                    var red = (pixelBuffer[index + 2] / 255d) / alpha;
-                    red = Math.Clamp(red, 0, 1);
-                    green = Math.Clamp(green, 0, 1);
-                    blue = Math.Clamp(blue, 0, 1);
-
-                    var color = Color.FromRgb(
-                        (byte)Math.Round(red * 255),
-                        (byte)Math.Round(green * 255),
-                        (byte)Math.Round(blue * 255));
-                    var (_, saturation, value) = ToHsv(color);
-                    var score = (saturation * 1.8) + (value * 0.6);
-                    if (score <= bestScore)
-                    {
-                        continue;
-                    }
-
-                    bestScore = score;
-                    bestColor = color;
+                    var blue = pixelBuffer[index];
+                    var green = pixelBuffer[index + 1];
+                    var red = pixelBuffer[index + 2];
+                    argbPixels.Add(
+                        ((uint)alpha << 24) |
+                        ((uint)red << 16) |
+                        ((uint)green << 8) |
+                        blue);
                 }
             }
 
-            return bestColor;
+            if (argbPixels.Count == 0)
+            {
+                return [];
+            }
+
+            var extracted = ImageUtils.ColorsFromImage(argbPixels.ToArray());
+            return extracted
+                .Select(FromArgb)
+                .Distinct()
+                .Take(6)
+                .ToArray();
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            AppLogger.Warn("Appearance.WallpaperPalette", "Failed to extract wallpaper seed candidates.", ex);
+            return [];
         }
     }
 
@@ -161,11 +160,17 @@ public sealed class MonetColorService
                 return null;
             }
 
-            var bytes = BitConverter.GetBytes(accentDword);
-            var blue = bytes[0];
-            var green = bytes[1];
-            var red = bytes[2];
-            return Color.FromRgb(red, green, blue);
+            var accentColor = unchecked((uint)accentDword);
+            var a = (byte)((accentColor >> 24) & 0xFF);
+            var b = (byte)((accentColor >> 16) & 0xFF);
+            var g = (byte)((accentColor >> 8) & 0xFF);
+            var r = (byte)(accentColor & 0xFF);
+            if (a == 0)
+            {
+                a = 0xFF;
+            }
+
+            return Color.FromArgb(a, r, g, b);
         }
         catch
         {
@@ -173,78 +178,51 @@ public sealed class MonetColorService
         }
     }
 
-    private static (double Hue, double Saturation, double Value) ToHsv(Color color)
+    private static uint ToArgb(Color color)
     {
-        var red = color.R / 255d;
-        var green = color.G / 255d;
-        var blue = color.B / 255d;
-        var max = Math.Max(red, Math.Max(green, blue));
-        var min = Math.Min(red, Math.Min(green, blue));
-        var delta = max - min;
-
-        double hue;
-        if (delta < 0.0001)
-        {
-            hue = 0;
-        }
-        else if (Math.Abs(max - red) < 0.0001)
-        {
-            hue = 60 * (((green - blue) / delta) % 6);
-        }
-        else if (Math.Abs(max - green) < 0.0001)
-        {
-            hue = 60 * (((blue - red) / delta) + 2);
-        }
-        else
-        {
-            hue = 60 * (((red - green) / delta) + 4);
-        }
-
-        hue = NormalizeHue(hue);
-        var saturation = max <= 0.0001 ? 0 : delta / max;
-        return (hue, saturation, max);
+        return
+            ((uint)color.A << 24) |
+            ((uint)color.R << 16) |
+            ((uint)color.G << 8) |
+            color.B;
     }
 
-    private static Color FromHsv(double hue, double saturation, double value)
+    private static Color FromArgb(uint argb)
     {
-        hue = NormalizeHue(hue);
-        saturation = Math.Clamp(saturation, 0, 1);
-        value = Math.Clamp(value, 0, 1);
-
-        if (saturation <= 0.0001)
-        {
-            var gray = (byte)Math.Round(value * 255);
-            return Color.FromRgb(gray, gray, gray);
-        }
-
-        var chroma = value * saturation;
-        var x = chroma * (1 - Math.Abs(((hue / 60d) % 2) - 1));
-        var m = value - chroma;
-
-        (double r, double g, double b) = hue switch
-        {
-            >= 0 and < 60 => (chroma, x, 0d),
-            >= 60 and < 120 => (x, chroma, 0d),
-            >= 120 and < 180 => (0d, chroma, x),
-            >= 180 and < 240 => (0d, x, chroma),
-            >= 240 and < 300 => (x, 0d, chroma),
-            _ => (chroma, 0d, x)
-        };
-
-        var red = (byte)Math.Round((r + m) * 255);
-        var green = (byte)Math.Round((g + m) * 255);
-        var blue = (byte)Math.Round((b + m) * 255);
-        return Color.FromRgb(red, green, blue);
+        var a = (byte)((argb >> 24) & 0xFF);
+        var r = (byte)((argb >> 16) & 0xFF);
+        var g = (byte)((argb >> 8) & 0xFF);
+        var b = (byte)(argb & 0xFF);
+        return Color.FromArgb(a, r, g, b);
     }
 
-    private static double NormalizeHue(double hue)
+    private static MonetPalette BuildPaletteCore(
+        IReadOnlyList<Color> wallpaperCandidates,
+        bool nightMode,
+        Color? preferredSeed)
     {
-        hue %= 360;
-        if (hue < 0)
-        {
-            hue += 360;
-        }
+        var recommendedColors = wallpaperCandidates.Count > 0
+            ? wallpaperCandidates
+            : BuildFallbackSeedCandidates();
+        var seed = ResolveSeedColor(wallpaperCandidates, preferredSeed)
+            ?? preferredSeed
+            ?? TryGetSystemMonetSeedColor()
+            ?? DefaultSeedColor;
 
-        return hue;
+        var corePalette = CorePalette.Of(ToArgb(seed), Style.TonalSpot);
+        var primary = FromArgb(corePalette.Primary.Tone(nightMode ? 80u : 40u));
+        var secondary = FromArgb(corePalette.Secondary.Tone(nightMode ? 80u : 40u));
+        var tertiary = FromArgb(corePalette.Tertiary.Tone(nightMode ? 80u : 40u));
+        var neutral = FromArgb(corePalette.Neutral.Tone(nightMode ? 20u : 94u));
+        var neutralVariant = FromArgb(corePalette.NeutralVariant.Tone(nightMode ? 30u : 90u));
+
+        return new MonetPalette(
+            recommendedColors,
+            seed,
+            primary,
+            secondary,
+            tertiary,
+            neutral,
+            neutralVariant);
     }
 }

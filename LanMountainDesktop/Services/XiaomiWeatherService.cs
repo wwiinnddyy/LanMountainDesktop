@@ -39,42 +39,6 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
 {
     private sealed record CacheEntry(WeatherSnapshot Snapshot, DateTimeOffset ExpireAt);
 
-    private static readonly IReadOnlyDictionary<int, string> ZhWeatherDescriptions = new Dictionary<int, string>
-    {
-        [0] = "\u6674",
-        [1] = "\u591a\u4e91",
-        [2] = "\u9634",
-        [3] = "\u9635\u96e8",
-        [4] = "\u96f7\u9635\u96e8",
-        [7] = "\u5c0f\u96e8",
-        [8] = "\u4e2d\u96e8",
-        [9] = "\u5927\u96e8",
-        [13] = "\u9635\u96ea",
-        [14] = "\u5c0f\u96ea",
-        [15] = "\u4e2d\u96ea",
-        [16] = "\u5927\u96ea",
-        [18] = "\u96fe",
-        [32] = "\u973e"
-    };
-
-    private static readonly IReadOnlyDictionary<int, string> EnWeatherDescriptions = new Dictionary<int, string>
-    {
-        [0] = "Clear",
-        [1] = "Partly Cloudy",
-        [2] = "Cloudy",
-        [3] = "Shower",
-        [4] = "Thunder Shower",
-        [7] = "Light Rain",
-        [8] = "Moderate Rain",
-        [9] = "Heavy Rain",
-        [13] = "Snow Flurry",
-        [14] = "Light Snow",
-        [15] = "Moderate Snow",
-        [16] = "Heavy Snow",
-        [18] = "Fog",
-        [32] = "Haze"
-    };
-
     private readonly XiaomiWeatherApiOptions _options;
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
@@ -412,9 +376,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
                          TryGetNode(payload, "hourly") ??
                          TryGetNode(payload, "hourlyForecast");
 
-        var weatherCode = ReadInt(currentNode, "weather", "value") ??
-                          ReadInt(currentNode, "weatherCode") ??
-                          ReadInt(currentNode, "code");
+        var weatherCode = ReadWeatherCode(currentNode);
 
         var weatherText = ReadString(currentNode, "weather", "desc") ??
                           ReadString(currentNode, "weather", "text") ??
@@ -497,8 +459,12 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             var sunItem = GetArrayItem(sunArray, i);
             var precipitationItem = GetArrayItem(precipitationArray, i);
 
-            var dayCode = ReadInt(weatherItem, "from") ?? ReadInt(weatherItem, "day");
-            var nightCode = ReadInt(weatherItem, "to") ?? ReadInt(weatherItem, "night");
+            var dayCode = ReadInt(weatherItem, "from") ??
+                          ReadInt(weatherItem, "day") ??
+                          ReadWeatherCode(weatherItem);
+            var nightCode = ReadInt(weatherItem, "to") ??
+                            ReadInt(weatherItem, "night") ??
+                            ReadWeatherCode(weatherItem);
             var dayText = ResolveWeatherDescription(dayCode, locale);
             var nightText = ResolveWeatherDescription(nightCode, locale);
 
@@ -591,11 +557,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
                 continue;
             }
 
-            var code = ReadInt(weatherItem, "value") ??
-                       ReadInt(weatherItem, "code") ??
-                       ReadInt(weatherItem, "weatherCode") ??
-                       ReadInt(weatherItem, "from") ??
-                       ReadInt(weatherItem);
+            var code = ReadInt(weatherItem, "from") ?? ReadWeatherCode(weatherItem);
             var weatherText = ReadString(weatherItem, "text") ??
                               ReadString(weatherItem, "desc") ??
                               ResolveWeatherDescription(code, locale);
@@ -640,11 +602,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
                 continue;
             }
 
-            var code = ReadInt(item, "weatherCode") ??
-                       ReadInt(item, "code") ??
-                       ReadInt(item, "weather", "value") ??
-                       ReadInt(item, "weather") ??
-                       ReadInt(item, "from");
+            var code = ReadInt(item, "from") ?? ReadWeatherCode(item);
             var weatherText = ReadString(item, "weatherText") ??
                               ReadString(item, "weather", "desc") ??
                               ReadString(item, "weather", "text") ??
@@ -903,6 +861,16 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         return null;
     }
 
+    private static int? ReadWeatherCode(JsonElement? node)
+    {
+        return ReadInt(node, "weather", "value") ??
+               ReadInt(node, "weatherCode") ??
+               ReadInt(node, "code") ??
+               ReadInt(node, "weather") ??
+               ReadInt(node, "value") ??
+               ReadInt(node);
+    }
+
     private static double? ReadDouble(JsonElement? node, params string[] path)
     {
         if (!node.HasValue)
@@ -995,19 +963,7 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
 
     private static string? ResolveWeatherDescription(int? code, string locale)
     {
-        if (!code.HasValue)
-        {
-            return null;
-        }
-
-        var isZh = locale.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
-        var source = isZh ? ZhWeatherDescriptions : EnWeatherDescriptions;
-        if (source.TryGetValue(code.Value, out var text))
-        {
-            return text;
-        }
-
-        return isZh ? $"\u5929\u6c14\u7801 {code.Value}" : $"Weather {code.Value}";
+        return XiaomiWeatherCodeMapper.ResolveDisplayText(code, locale);
     }
 
     private static string Truncate(string? text, int maxLength)

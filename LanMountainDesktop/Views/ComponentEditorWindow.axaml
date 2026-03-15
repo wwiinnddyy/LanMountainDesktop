@@ -17,7 +17,7 @@
         SizeToContent="Manual"
         ShowInTaskbar="False"
         SystemDecorations="BorderOnly"
-        Background="{DynamicResource EditorWindowBackgroundBrush}"
+        Background="Transparent"
         Title="Component Editor">
     <Window.Resources>
         <!-- Material Design 3 Brushes -->

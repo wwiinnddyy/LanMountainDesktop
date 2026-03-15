@@ -327,6 +327,7 @@ public sealed class PluginLoader
         RegisterHostService<ISettingsFacadeService>(services, hostServices);
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
+        RegisterHostService<IAppearanceThemeService>(services, hostServices);
 
         return services;
     }

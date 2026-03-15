@@ -184,8 +184,8 @@
     </Style>
 
     <Style Selector="Border.glass-island">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AdaptiveDockGlassBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveDockGlassBorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
         <Setter Property="CornerRadius" Value="36" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
