@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <Version>1.0.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\logo_nightly.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
   </PropertyGroup>

@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
+    private readonly IAppLogoService _appLogoService = HostAppLogoProvider.GetOrCreate();
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
     private readonly bool _useSystemChrome;
     private bool _isResponsiveRefreshPending;
@@ -55,6 +56,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         _hostApplicationLifecycle = hostApplicationLifecycle;
         DataContext = ViewModel;
         InitializeComponent();
+        Icon = _appLogoService.CreateWindowIcon();
         ApplyChromeMode(useSystemChrome);
 
         if (RootNavigationView is not null)

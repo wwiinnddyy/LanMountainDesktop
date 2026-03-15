@@ -4,6 +4,7 @@
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:comp="using:LanMountainDesktop.Views.Components"
         xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -13,7 +14,6 @@
         d:DesignHeight="720"
         x:Class="LanMountainDesktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
         WindowState="FullScreen"
         SystemDecorations="None"
         CanResize="False"
@@ -25,6 +25,75 @@
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
+
+    <Window.Styles>
+        <Style Selector="Border.taskbar-profile-popup-panel">
+            <Setter Property="Background" Value="{DynamicResource TaskbarProfilePopupSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TaskbarProfilePopupOutlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="26" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="BoxShadow" Value="0 14 36 #2A000000" />
+        </Style>
+
+        <Style Selector="Border.taskbar-profile-popup-avatar">
+            <Setter Property="Background" Value="{DynamicResource TaskbarProfilePopupAvatarSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TaskbarProfilePopupOutlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="22" />
+        </Style>
+
+        <Style Selector="TextBlock.taskbar-profile-popup-primary">
+            <Setter Property="Foreground" Value="{DynamicResource TaskbarProfilePopupTextBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.taskbar-profile-popup-title">
+            <Setter Property="Foreground" Value="{DynamicResource TaskbarProfilePopupTextBrush}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="TextBlock.taskbar-profile-popup-action-text">
+            <Setter Property="Foreground" Value="{DynamicResource TaskbarProfilePopupTextBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="mi|MaterialIcon.taskbar-profile-popup-action-icon">
+            <Setter Property="Foreground" Value="{DynamicResource TaskbarProfilePopupAccentBrush}" />
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.taskbar-profile-popup-action">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.taskbar-profile-popup-action:pointerover">
+            <Setter Property="Background" Value="{DynamicResource TaskbarProfilePopupActionHoverBrush}" />
+            <Setter Property="RenderTransform" Value="scale(1.01)" />
+        </Style>
+
+        <Style Selector="Button.taskbar-profile-popup-action:pressed">
+            <Setter Property="Background" Value="{DynamicResource TaskbarProfilePopupActionPressedBrush}" />
+            <Setter Property="RenderTransform" Value="scale(0.985)" />
+        </Style>
+    </Window.Styles>
+
     <Grid>
         <Grid x:Name="DesktopPage"
               HorizontalAlignment="Stretch"
@@ -45,13 +114,14 @@
                             IsHitTestVisible="False"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
-                            Background="{DynamicResource AdaptiveSurfaceBaseBrush}" />
+                            Background="#FFF6F7F9" />
 
-                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
-                                   IsVisible="False"
-                                   IsHitTestVisible="False"
-                                   HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Stretch" />
+                    <Border x:Name="DesktopWallpaperImageLayer"
+                            IsVisible="False"
+                            IsHitTestVisible="False"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="Transparent" />
 
                     <Image x:Name="DesktopVideoWallpaperImage"
                            IsVisible="False"
@@ -59,6 +129,12 @@
                            Stretch="UniformToFill"
                            HorizontalAlignment="Stretch"
                            VerticalAlignment="Stretch" />
+
+                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
+                                   IsVisible="False"
+                                   IsHitTestVisible="False"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" />
 
                     <Grid x:Name="DesktopGrid"
                           HorizontalAlignment="Center"
@@ -254,57 +330,109 @@
                                         Grid.Column="2"
                                         Background="Transparent"
                                         BorderThickness="0">
-                                    <Grid ColumnDefinitions="Auto,Auto,Auto"
-                                          ColumnSpacing="8">
-                                        <Button x:Name="OpenSettingsButton"
-                                                Grid.Column="0"
-                                                IsVisible="False"
-                                                Padding="8"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
+                                    <Grid>
+                                        <Button x:Name="TaskbarProfileButton"
+                                                Padding="0"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
                                                 Background="Transparent"
                                                 BorderThickness="0"
                                                 Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnOpenSettingsClick"
-                                                ToolTip.Tip="Settings">
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="8">
-                                                <fi:FluentIcon x:Name="OpenSettingsIcon"
-                                                               Icon="Settings"
-                                                               IconVariant="Regular" />
-                                                <TextBlock x:Name="OpenSettingsButtonTextBlock"
-                                                           IsVisible="False"
-                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                           Text="Settings" />
-                                            </StackPanel>
+                                                Click="OnTaskbarProfileButtonClick">
+                                            <Grid HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center">
+                                                <Border x:Name="TaskbarProfileAvatarBorder"
+                                                        Background="{DynamicResource AdaptiveButtonHoverBackgroundBrush}"
+                                                        BorderBrush="{DynamicResource AdaptiveDockGlassBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="999"
+                                                        ClipToBounds="True">
+                                                    <Grid>
+                                                        <Image x:Name="TaskbarProfileAvatarImage"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="False" />
+                                                        <TextBlock x:Name="TaskbarProfileAvatarFallbackText"
+                                                                   Classes="taskbar-profile-popup-primary"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   FontWeight="SemiBold"
+                                                                   Text="U" />
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
                                         </Button>
 
-                                        <Button x:Name="OpenComponentLibraryButton"
-                                                Grid.Column="1"
-                                                IsVisible="False"
-                                                Padding="8"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnOpenComponentLibraryClick"
-                                                ToolTip.Tip="&#32452;&#20214;&#24211;">
-                                            <StackPanel Orientation="Horizontal"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="8">
-                                                <fi:FluentIcon x:Name="OpenComponentLibraryIcon"
-                                                               Icon="Apps"
-                                                               IconVariant="Regular" />
-                                                <TextBlock x:Name="OpenComponentLibraryTextBlock"
-                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                           Text="&#32452;&#20214;&#24211;" />
-                                            </StackPanel>
-                                        </Button>
+                                        <Popup x:Name="TaskbarProfilePopup"
+                                               Placement="TopEdgeAlignedRight"
+                                               IsLightDismissEnabled="True">
+                                            <Border x:Name="TaskbarProfilePopupPanel"
+                                                    Classes="taskbar-profile-popup-panel"
+                                                    Margin="0,0,0,10">
+                                                <StackPanel Width="280"
+                                                            Spacing="12">
+                                                    <Grid ColumnDefinitions="Auto,*"
+                                                          ColumnSpacing="12">
+                                                        <Border x:Name="TaskbarProfileHeaderAvatarBorder"
+                                                                Classes="taskbar-profile-popup-avatar"
+                                                                Width="44"
+                                                                Height="44"
+                                                                ClipToBounds="True">
+                                                            <Grid>
+                                                                <Image x:Name="TaskbarProfileHeaderAvatarImage"
+                                                                       Stretch="UniformToFill"
+                                                                       IsVisible="False" />
+                                                                <TextBlock x:Name="TaskbarProfileHeaderAvatarFallbackText"
+                                                                           Classes="taskbar-profile-popup-primary"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"
+                                                                           FontWeight="SemiBold"
+                                                                           Text="U" />
+                                                            </Grid>
+                                                        </Border>
 
+                                                        <StackPanel Grid.Column="1"
+                                                                    VerticalAlignment="Center"
+                                                                    Spacing="2">
+                                                            <TextBlock x:Name="TaskbarProfileDisplayNameTextBlock"
+                                                                       Classes="taskbar-profile-popup-title"
+                                                                       Text="User" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <Border x:Name="TaskbarProfilePopupDivider"
+                                                            Height="1"
+                                                            Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
+
+                                                    <Button x:Name="TaskbarProfileSettingsActionButton"
+                                                            Classes="taskbar-profile-popup-action"
+                                                            Click="OnOpenSettingsClick">
+                                                        <Grid ColumnDefinitions="Auto,*"
+                                                              ColumnSpacing="12">
+                                                            <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                             Kind="Settings" />
+                                                            <TextBlock x:Name="TaskbarProfileSettingsActionTextBlock"
+                                                                       Grid.Column="1"
+                                                                       Classes="taskbar-profile-popup-action-text"
+                                                                       Text="Settings" />
+                                                        </Grid>
+                                                    </Button>
+
+                                                    <Button x:Name="TaskbarProfileDesktopEditActionButton"
+                                                            Classes="taskbar-profile-popup-action"
+                                                            Click="OnOpenComponentLibraryClick">
+                                                        <Grid ColumnDefinitions="Auto,*"
+                                                              ColumnSpacing="12">
+                                                            <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                             Kind="Pencil" />
+                                                            <TextBlock x:Name="TaskbarProfileDesktopEditActionTextBlock"
+                                                                       Grid.Column="1"
+                                                                       Classes="taskbar-profile-popup-action-text"
+                                                                       Text="Edit Desktop" />
+                                                        </Grid>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
                                     </Grid>
                                 </Border>
                             </Grid>

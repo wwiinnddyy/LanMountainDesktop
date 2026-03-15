@@ -14,7 +14,6 @@
         SystemDecorations="BorderOnly"
         FontFamily="{DynamicResource AppFontFamily}"
         Background="Transparent"
-        Icon="/Assets/avalonia-logo.ico"
         Title="{Binding Title}">
 
     <Window.Resources>

@@ -44,6 +44,7 @@ public partial class App : Application
 
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
     private readonly IAppearanceThemeService _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
+    private readonly IAppLogoService _appLogoService = HostAppLogoProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
@@ -229,10 +230,9 @@ public partial class App : Application
         {
             DisposeTrayIcon();
 
-            using var iconStream = AssetLoader.Open(new Uri("avares://LanMountainDesktop/Assets/avalonia-logo.ico"));
             var trayIcon = new TrayIcon
             {
-                Icon = new WindowIcon(iconStream),
+                Icon = _appLogoService.CreateTrayIcon(),
                 ToolTipText = L("tray.tooltip", "LanMountainDesktop"),
                 Menu = BuildTrayMenu(),
                 IsVisible = true

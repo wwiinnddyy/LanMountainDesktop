@@ -31,7 +31,7 @@ UsePreviousAppDir=no
 ShowLanguageDialog=yes
 UsePreviousLanguage=no
 LanguageDetectionMethod=uilanguage
-DefaultGroupName={#MyAppName}
+DefaultGroupName={cm:AppShortcutName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir={#MyOutputDir}
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}-{#MyAppArch}
@@ -62,6 +62,8 @@ Name: "chinesesimplified"; MessagesFile: "{#SourcePath}\ChineseSimplified.isl"
 [CustomMessages]
 english.StartupTaskDescription=Launch LanMountainDesktop when you sign in to Windows
 chinesesimplified.StartupTaskDescription=登录 Windows 时启动 LanMountainDesktop
+english.AppShortcutName=LanMountainDesktop
+chinesesimplified.AppShortcutName=阑山桌面
 english.WebView2MissingMessage=Microsoft Edge WebView2 Runtime is required for the browser component.
 chinesesimplified.WebView2MissingMessage=浏览器组件需要 Microsoft Edge WebView2 Runtime。
 english.WebView2MissingAction=Click "Yes" to open the official download page. Install it first, then run this installer again.
@@ -111,8 +113,8 @@ Type: files; Name: "{app}\LanMontainDesktop.pdb"
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{cm:AppShortcutName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{cm:AppShortcutName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
 Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: startup; Flags: uninsdeletevalue

@@ -99,12 +99,186 @@ public partial class MainWindow
         IReadOnlyList<ComponentLibraryComponentEntry> Components);
 
     private readonly record struct ComponentScaleRule(int WidthUnit, int HeightUnit, int MinScale);
+    private readonly record struct TaskbarProfilePopupMaterialPalette(
+        Color SurfaceColor,
+        Color OutlineColor,
+        Color AvatarSurfaceColor,
+        Color PrimaryTextColor,
+        Color AccentColor,
+        Color HoverColor,
+        Color PressedColor,
+        Color DividerColor);
+
+    private void InitializeTaskbarProfileFlyout()
+    {
+        if (TaskbarProfileButton is null || TaskbarProfilePopup is null)
+        {
+            return;
+        }
+
+        TaskbarProfilePopup.PlacementTarget = TaskbarProfileButton;
+        RefreshTaskbarProfilePresentation();
+    }
+
+    private void RefreshTaskbarProfilePresentation()
+    {
+        if (TaskbarProfileButton is null)
+        {
+            return;
+        }
+
+        var profile = _currentUserProfileService.GetCurrentProfile();
+        ApplyProfileAvatarVisual(TaskbarProfileAvatarImage, TaskbarProfileAvatarFallbackText, profile);
+        ApplyProfileAvatarVisual(TaskbarProfileHeaderAvatarImage, TaskbarProfileHeaderAvatarFallbackText, profile);
+        TaskbarProfileDisplayNameTextBlock.Text = profile.DisplayName;
+        TaskbarProfileSettingsActionTextBlock.Text = L("tooltip.open_settings", "Settings");
+        TaskbarProfileDesktopEditActionTextBlock.Text = L("button.component_library", "Edit Desktop");
+        ApplyTaskbarProfilePopupTheme(_appearanceThemeService.GetCurrent());
+
+        ToolTip.SetTip(TaskbarProfileButton, profile.DisplayName);
+    }
+
+    private static void ApplyProfileAvatarVisual(Image? image, TextBlock? fallbackText, CurrentUserProfileSnapshot profile)
+    {
+        if (image is not null)
+        {
+            image.Source = profile.AvatarBitmap;
+            image.IsVisible = profile.AvatarBitmap is not null;
+        }
+
+        if (fallbackText is not null)
+        {
+            fallbackText.Text = profile.FallbackMonogram;
+            fallbackText.IsVisible = profile.AvatarBitmap is null;
+        }
+    }
+
+    private void ApplyTaskbarProfilePopupTheme(AppearanceThemeSnapshot snapshot)
+    {
+        if (TaskbarProfilePopupPanel is null)
+        {
+            return;
+        }
+
+        var palette = BuildTaskbarProfilePopupMaterialPalette(snapshot);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupSurfaceBrush", palette.SurfaceColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupOutlineBrush", palette.OutlineColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupAvatarSurfaceBrush", palette.AvatarSurfaceColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupTextBrush", palette.PrimaryTextColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupAccentBrush", palette.AccentColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupActionHoverBrush", palette.HoverColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupActionPressedBrush", palette.PressedColor);
+        SetTaskbarProfilePopupBrush("TaskbarProfilePopupDividerBrush", palette.DividerColor);
+    }
+
+    private void SetTaskbarProfilePopupBrush(string resourceKey, Color color)
+    {
+        TaskbarProfilePopupPanel.Resources[resourceKey] = new SolidColorBrush(color);
+    }
+
+    private static TaskbarProfilePopupMaterialPalette BuildTaskbarProfilePopupMaterialPalette(AppearanceThemeSnapshot snapshot)
+    {
+        var primary = snapshot.MonetPalette.Primary.A > 0
+            ? snapshot.MonetPalette.Primary
+            : snapshot.AccentColor;
+        if (primary == default)
+        {
+            primary = Color.Parse("#FF6750A4");
+        }
+
+        var neutral = snapshot.MonetPalette.Neutral.A > 0
+            ? snapshot.MonetPalette.Neutral
+            : snapshot.IsNightMode
+                ? Color.Parse("#FF1A1F27")
+                : Color.Parse("#FFF7F9FD");
+        var neutralVariant = snapshot.MonetPalette.NeutralVariant.A > 0
+            ? snapshot.MonetPalette.NeutralVariant
+            : ColorMath.Blend(neutral, primary, snapshot.IsNightMode ? 0.20 : 0.10);
+
+        var surfaceBase = snapshot.IsNightMode
+            ? Color.Parse("#FF141A22")
+            : Color.Parse("#FFFCFCFF");
+        var surface = ColorMath.Blend(surfaceBase, neutral, snapshot.IsNightMode ? 0.52 : 0.46);
+        surface = ColorMath.Blend(surface, primary, snapshot.IsNightMode ? 0.12 : 0.05);
+
+        var outlineSeed = snapshot.IsNightMode
+            ? ColorMath.Blend(neutralVariant, Color.Parse("#FFFFFFFF"), 0.28)
+            : ColorMath.Blend(neutralVariant, Color.Parse("#FF111827"), 0.12);
+        var outline = Color.FromArgb(
+            snapshot.IsNightMode ? (byte)0x82 : (byte)0x38,
+            outlineSeed.R,
+            outlineSeed.G,
+            outlineSeed.B);
+
+        var primaryTextPreferred = snapshot.IsNightMode
+            ? Color.Parse("#FFF4F7FB")
+            : Color.Parse("#FF14171B");
+        var primaryText = ColorMath.EnsureContrast(primaryTextPreferred, surface, 7.0);
+        var accent = ColorMath.EnsureContrast(primary, surface, 3.0);
+        var avatarSurface = ColorMath.Blend(surface, primary, snapshot.IsNightMode ? 0.26 : 0.16);
+        var hover = ColorMath.Blend(surface, primary, snapshot.IsNightMode ? 0.20 : 0.10);
+        var pressed = ColorMath.Blend(surface, primary, snapshot.IsNightMode ? 0.30 : 0.18);
+        var divider = Color.FromArgb(
+            snapshot.IsNightMode ? (byte)0x44 : (byte)0x20,
+            outlineSeed.R,
+            outlineSeed.G,
+            outlineSeed.B);
+
+        return new TaskbarProfilePopupMaterialPalette(
+            surface,
+            outline,
+            avatarSurface,
+            primaryText,
+            accent,
+            hover,
+            pressed,
+            divider);
+    }
+
+    private void OnTaskbarProfileButtonClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (TaskbarProfileButton is null || TaskbarProfilePopup is null)
+        {
+            return;
+        }
+
+        if (TaskbarProfilePopup.IsOpen)
+        {
+            TaskbarProfilePopup.IsOpen = false;
+            return;
+        }
+
+        RefreshTaskbarProfilePresentation();
+        TaskbarProfilePopup.IsOpen = true;
+    }
 
     private void OnOpenComponentLibraryClick(object? sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
+        if (TaskbarProfilePopup is not null)
+        {
+            TaskbarProfilePopup.IsOpen = false;
+        }
+        ExecuteTaskbarDesktopEditAction();
+    }
 
+    private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        if (TaskbarProfilePopup is not null)
+        {
+            TaskbarProfilePopup.IsOpen = false;
+        }
+        ExecuteTaskbarSettingsAction();
+    }
+
+    private void ExecuteTaskbarDesktopEditAction()
+    {
         if (_isComponentLibraryOpen)
         {
             CloseComponentLibraryWindow(reopenSettings: false);
@@ -121,11 +295,8 @@ public partial class MainWindow
         OpenComponentLibraryWindow();
     }
 
-    private void OnOpenSettingsClick(object? sender, RoutedEventArgs e)
+    private void ExecuteTaskbarSettingsAction()
     {
-        _ = sender;
-        _ = e;
-
         if (_isComponentLibraryOpen)
         {
             CloseComponentLibraryWindow(reopenSettings: false);
@@ -163,7 +334,6 @@ public partial class MainWindow
 
         _topStatusComponentIds.Add(BuiltInComponentIds.Clock);
         ApplyTopStatusComponentVisibility();
-        UpdateWallpaperPreviewLayout();
         PersistSettings();
     }
 
@@ -176,7 +346,6 @@ public partial class MainWindow
 
         _topStatusComponentIds.Remove(BuiltInComponentIds.Clock);
         ApplyTopStatusComponentVisibility();
-        UpdateWallpaperPreviewLayout();
         PersistSettings();
     }
 
@@ -257,25 +426,6 @@ public partial class MainWindow
         {
             TopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
         }
-
-        if (WallpaperPreviewClockWidget is not null)
-        {
-            WallpaperPreviewClockWidget.IsVisible = showClock;
-            if (showClock)
-            {
-                WallpaperPreviewClockWidget.SetDisplayFormat(_clockDisplayFormat);
-            }
-        }
-
-        if (WallpaperPreviewTopStatusBarHost is not null)
-        {
-            WallpaperPreviewTopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
-        }
-
-        if (GridPreviewTopStatusBarHost is not null)
-        {
-            GridPreviewTopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
-        }
     }
 
     private TaskbarContext GetCurrentTaskbarContext()
@@ -286,19 +436,15 @@ public partial class MainWindow
     private void ApplyTaskbarActionVisibility(TaskbarContext context)
     {
         if (BackToWindowsButton is null ||
-            OpenComponentLibraryButton is null ||
-            OpenSettingsButton is null)
+            TaskbarProfileButton is null)
         {
             return;
         }
 
         var showMinimize = _pinnedTaskbarActions.Contains(TaskbarActionId.MinimizeToWindows);
-        var showSettings = true;
-        var showDesktopEdit = _isSettingsOpen;
 
         BackToWindowsButton.IsVisible = showMinimize;
-        OpenSettingsButton.IsVisible = showSettings;
-        OpenComponentLibraryButton.IsVisible = showDesktopEdit;
+        TaskbarProfileButton.IsVisible = true;
 
         if (TaskbarFixedActionsHost is not null)
         {
@@ -307,7 +453,7 @@ public partial class MainWindow
 
         if (TaskbarSettingsActionHost is not null)
         {
-            TaskbarSettingsActionHost.IsVisible = showSettings || showDesktopEdit;
+            TaskbarSettingsActionHost.IsVisible = true;
         }
 
         UpdateOpenSettingsActionVisualState();
@@ -326,24 +472,10 @@ public partial class MainWindow
 
     private void UpdateOpenSettingsActionVisualState()
     {
-        if (OpenSettingsButtonTextBlock is null || OpenSettingsButton is null)
-        {
-            return;
-        }
-
-        var showBackToDesktop = _isSettingsOpen;
-        var buttonText = L("settings.back_to_desktop", "Back to Desktop");
-        OpenSettingsButtonTextBlock.IsVisible = showBackToDesktop;
-        OpenSettingsButtonTextBlock.Text = buttonText;
-        ToolTip.SetTip(
-            OpenSettingsButton,
-            showBackToDesktop
-                ? buttonText
-                : L("tooltip.open_settings", "Settings"));
-
         var effectiveCellSize = _currentDesktopCellSize > 0
             ? _currentDesktopCellSize
             : Math.Max(32, Math.Min(Bounds.Width, Bounds.Height) / Math.Max(1, _targetShortSideCells));
+        RefreshTaskbarProfilePresentation();
         ApplyWidgetSizing(effectiveCellSize);
     }
 

@@ -464,6 +464,7 @@ internal sealed class MaterialSurfaceService : IMaterialSurfaceService
 internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposable
 {
     private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
+    private static readonly Color NeutralFallbackSeedColor = Color.Parse("#FF8A8A8A");
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly ISystemWallpaperService _systemWallpaperService;
     private readonly IWindowMaterialService _windowMaterialService;
@@ -811,7 +812,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
 
     private WallpaperPaletteResolution BuildFallbackWallpaperPaletteResolution(bool nightMode, string? resolvedWallpaperPath)
     {
-        var palette = _settingsFacade.Theme.BuildPalette(nightMode, null, null);
+        var palette = _monetColorService.BuildPaletteFromSeedCandidates([], nightMode, NeutralFallbackSeedColor);
         return new WallpaperPaletteResolution(
             palette,
             [],

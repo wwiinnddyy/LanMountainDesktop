@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -25,45 +26,6 @@ public partial class MainWindow
     private TextBlock? CurrentRenderBackendLabelTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendLabelTextBlock");
     private TextBlock? CurrentRenderBackendValueTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendValueTextBlock");
     private TextBlock? CurrentRenderBackendImplementationTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendImplementationTextBlock");
-    private Slider? GridSizeSlider => this.FindControl<Slider>("GridSizeSlider");
-    private NumberBox? GridSizeNumberBox => this.FindControl<NumberBox>("GridSizeNumberBox");
-    private Slider? GridEdgeInsetSlider => this.FindControl<Slider>("GridEdgeInsetSlider");
-    private NumberBox? GridEdgeInsetNumberBox => this.FindControl<NumberBox>("GridEdgeInsetNumberBox");
-    private TextBlock? GridEdgeInsetComputedPxTextBlock => this.FindControl<TextBlock>("GridEdgeInsetComputedPxTextBlock");
-    private TextBlock? GridInfoTextBlock => this.FindControl<TextBlock>("GridInfoTextBlock");
-    private ComboBox? GridSpacingPresetComboBox => this.FindControl<ComboBox>("GridSpacingPresetComboBox");
-    private Border? GridPreviewHost => this.FindControl<Border>("GridPreviewHost");
-    private Border? GridPreviewFrame => this.FindControl<Border>("GridPreviewFrame");
-    private Border? GridPreviewViewport => this.FindControl<Border>("GridPreviewViewport");
-    private Grid? GridPreviewGrid => this.FindControl<Grid>("GridPreviewGrid");
-    private Canvas? GridPreviewLinesCanvas => this.FindControl<Canvas>("GridPreviewLinesCanvas");
-    private Border? GridPreviewTopStatusBarHost => this.FindControl<Border>("GridPreviewTopStatusBarHost");
-    private StackPanel? GridPreviewTopStatusComponentsPanel => this.FindControl<StackPanel>("GridPreviewTopStatusComponentsPanel");
-    private Border? GridPreviewBottomTaskbarContainer => this.FindControl<Border>("GridPreviewBottomTaskbarContainer");
-    private StackPanel? GridPreviewBackButtonVisual => this.FindControl<StackPanel>("GridPreviewBackButtonVisual");
-    private TextBlock? GridPreviewBackButtonTextBlock => this.FindControl<TextBlock>("GridPreviewBackButtonTextBlock");
-    private StackPanel? GridPreviewComponentLibraryVisual => this.FindControl<StackPanel>("GridPreviewComponentLibraryVisual");
-    private FluentIcons.Avalonia.FluentIcon? GridPreviewComponentLibraryIcon => this.FindControl<FluentIcons.Avalonia.FluentIcon>("GridPreviewComponentLibraryIcon");
-    private TextBlock? GridPreviewComponentLibraryTextBlock => this.FindControl<TextBlock>("GridPreviewComponentLibraryTextBlock");
-    private FluentIcons.Avalonia.SymbolIcon? GridPreviewSettingsButtonIcon => this.FindControl<FluentIcons.Avalonia.SymbolIcon>("GridPreviewSettingsButtonIcon");
-    private Border? WallpaperPreviewHost => this.FindControl<Border>("WallpaperPreviewHost");
-    private Border? WallpaperPreviewFrame => this.FindControl<Border>("WallpaperPreviewFrame");
-    private Border? WallpaperPreviewViewport => this.FindControl<Border>("WallpaperPreviewViewport");
-    private Grid? WallpaperPreviewGrid => this.FindControl<Grid>("WallpaperPreviewGrid");
-    private Border? WallpaperPreviewTopStatusBarHost => this.FindControl<Border>("WallpaperPreviewTopStatusBarHost");
-    private StackPanel? WallpaperPreviewTopStatusComponentsPanel => this.FindControl<StackPanel>("WallpaperPreviewTopStatusComponentsPanel");
-    private Border? WallpaperPreviewBottomTaskbarContainer => this.FindControl<Border>("WallpaperPreviewBottomTaskbarContainer");
-    private ClockWidget? WallpaperPreviewClockWidget => this.FindControl<ClockWidget>("WallpaperPreviewClockWidget");
-    private StackPanel? WallpaperPreviewBackButtonVisual => this.FindControl<StackPanel>("WallpaperPreviewBackButtonVisual");
-    private TextBlock? WallpaperPreviewBackButtonTextBlock => this.FindControl<TextBlock>("WallpaperPreviewBackButtonTextBlock");
-    private StackPanel? WallpaperPreviewComponentLibraryVisual => this.FindControl<StackPanel>("WallpaperPreviewComponentLibraryVisual");
-    private TextBlock? WallpaperPreviewComponentLibraryTextBlock => this.FindControl<TextBlock>("WallpaperPreviewComponentLibraryTextBlock");
-    private FluentIcons.Avalonia.SymbolIcon? WallpaperPreviewSettingsButtonIcon => this.FindControl<FluentIcons.Avalonia.SymbolIcon>("WallpaperPreviewSettingsButtonIcon");
-    private ComboBox? StatusBarSpacingModeComboBox => this.FindControl<ComboBox>("StatusBarSpacingModeComboBox");
-    private SettingsExpanderItem? StatusBarSpacingCustomPanel => this.FindControl<SettingsExpanderItem>("StatusBarSpacingCustomPanel");
-    private Slider? StatusBarSpacingSlider => this.FindControl<Slider>("StatusBarSpacingSlider");
-    private NumberBox? StatusBarSpacingNumberBox => this.FindControl<NumberBox>("StatusBarSpacingNumberBox");
-    private TextBlock? StatusBarSpacingComputedPxTextBlock => this.FindControl<TextBlock>("StatusBarSpacingComputedPxTextBlock");
     private ComboBox? TimeZoneComboBox => this.FindControl<ComboBox>("TimeZoneComboBox");
     private SettingsExpander? LauncherHiddenItemsSettingsExpander => this.FindControl<SettingsExpander>("LauncherHiddenItemsSettingsExpander");
     private TextBlock? LauncherHiddenItemsEmptyTextBlock => this.FindControl<TextBlock>("LauncherHiddenItemsEmptyTextBlock");
@@ -138,12 +100,12 @@ public partial class MainWindow
     {
         Title = L("app.title", "LanMountainDesktop");
         BackToWindowsTextBlock.Text = L("button.back_to_windows", "Back to Windows");
-        OpenComponentLibraryTextBlock.Text = L("button.component_library", "Edit Desktop");
         ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
         LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
         LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()
             ? L("launcher.subtitle_linux", "Displays installed apps discovered from Linux desktop entries.")
             : L("launcher.subtitle", "Displays all apps and folders based on the Windows Start menu structure.");
+        RefreshTaskbarProfilePresentation();
 
         UpdateCurrentRenderBackendStatus();
         RenderLauncherHiddenItemsList();
@@ -238,46 +200,63 @@ public partial class MainWindow
             GlassEffectService.ApplyGlassResources(applicationResources, context);
         }
 
-        _defaultDesktopBackground = GetThemeBrush("AdaptiveWindowBackgroundBrush")
-            ?? GetThemeBrush("AdaptiveSurfaceBaseBrush");
+        _defaultDesktopBackground = CreateNeutralWallpaperFallbackBrush();
     }
 
-    private void TryRestoreWallpaper(string? savedWallpaperPath, string? type = null, string? color = null)
+    private void TryRestoreWallpaper(
+        string? savedWallpaperPath,
+        string? type = null,
+        string? color = null,
+        string? placement = null)
     {
         _wallpaperPath = string.IsNullOrWhiteSpace(savedWallpaperPath) ? null : savedWallpaperPath;
-        _wallpaperType = type ?? "Image";
-        if (TryParseColor(color, out var parsedColor))
-        {
-            _wallpaperSolidColor = parsedColor;
-        }
+        _wallpaperType = string.IsNullOrWhiteSpace(type) ? "Image" : type.Trim();
+        _wallpaperPlacement = WallpaperImageBrushFactory.NormalizePlacement(placement);
+        _wallpaperSolidColor = TryParseColor(color, out var parsedColor) ? parsedColor : null;
+        _wallpaperVideoPath = null;
+        _wallpaperDisplayState = WallpaperDisplayState.NoWallpaperConfigured;
 
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
 
-        if (_wallpaperType == "SolidColor")
+        if (string.Equals(_wallpaperType, "SolidColor", StringComparison.OrdinalIgnoreCase))
         {
             _wallpaperMediaType = WallpaperMediaType.SolidColor;
+            _wallpaperDisplayState = _wallpaperSolidColor.HasValue
+                ? WallpaperDisplayState.CurrentValidWallpaper
+                : WallpaperDisplayState.NoWallpaperConfigured;
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_wallpaperPath) || !File.Exists(_wallpaperPath))
+        if (string.IsNullOrWhiteSpace(_wallpaperPath))
         {
             _wallpaperMediaType = WallpaperMediaType.None;
             return;
         }
 
         var extension = Path.GetExtension(_wallpaperPath);
-        if (SupportedVideoExtensions.Contains(extension) || _wallpaperType == "Video")
+        var requestedTypeIsVideo = string.Equals(_wallpaperType, "Video", StringComparison.OrdinalIgnoreCase);
+        if (SupportedVideoExtensions.Contains(extension) || requestedTypeIsVideo)
         {
             _wallpaperMediaType = WallpaperMediaType.Video;
             _wallpaperVideoPath = _wallpaperPath;
+            _wallpaperDisplayState = File.Exists(_wallpaperPath)
+                ? WallpaperDisplayState.CurrentValidWallpaper
+                : WallpaperDisplayState.TemporarilyUnavailable;
             return;
         }
 
         if (!SupportedImageExtensions.Contains(extension))
         {
-            _wallpaperMediaType = WallpaperMediaType.None;
-            _wallpaperPath = null;
+            _wallpaperMediaType = WallpaperMediaType.Image;
+            _wallpaperDisplayState = WallpaperDisplayState.TemporarilyUnavailable;
+            return;
+        }
+
+        if (!File.Exists(_wallpaperPath))
+        {
+            _wallpaperMediaType = WallpaperMediaType.Image;
+            _wallpaperDisplayState = WallpaperDisplayState.TemporarilyUnavailable;
             return;
         }
 
@@ -286,11 +265,13 @@ public partial class MainWindow
             using var stream = File.OpenRead(_wallpaperPath);
             _wallpaperBitmap = new Bitmap(stream);
             _wallpaperMediaType = WallpaperMediaType.Image;
+            _wallpaperDisplayState = WallpaperDisplayState.CurrentValidWallpaper;
+            CacheLastValidWallpaperBitmap(_wallpaperPath);
         }
         catch
         {
-            _wallpaperMediaType = WallpaperMediaType.None;
-            _wallpaperPath = null;
+            _wallpaperMediaType = WallpaperMediaType.Image;
+            _wallpaperDisplayState = WallpaperDisplayState.TemporarilyUnavailable;
             _wallpaperBitmap?.Dispose();
             _wallpaperBitmap = null;
         }
@@ -298,22 +279,42 @@ public partial class MainWindow
 
     private void ApplyWallpaperBrush()
     {
+        DesktopWallpaperImageLayer.Background = null;
+        DesktopWallpaperImageLayer.IsVisible = false;
+
         if (_wallpaperMediaType == WallpaperMediaType.SolidColor && _wallpaperSolidColor.HasValue)
         {
             DesktopWallpaperLayer.Background = new SolidColorBrush(_wallpaperSolidColor.Value);
+            ApplyVideoWallpaperPosterVisibility(showPoster: false);
             return;
         }
 
-        if (_wallpaperMediaType == WallpaperMediaType.Image && _wallpaperBitmap is not null)
+        if (_wallpaperDisplayState == WallpaperDisplayState.CurrentValidWallpaper &&
+            _wallpaperMediaType == WallpaperMediaType.Image &&
+            _wallpaperBitmap is not null)
         {
-            DesktopWallpaperLayer.Background = new ImageBrush(_wallpaperBitmap)
-            {
-                Stretch = Stretch.UniformToFill
-            };
+            DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
+            DesktopWallpaperImageLayer.Background = WallpaperImageBrushFactory.Create(_wallpaperBitmap, _wallpaperPlacement);
+            DesktopWallpaperImageLayer.IsVisible = true;
+            ApplyVideoWallpaperPosterVisibility(showPoster: false);
             return;
         }
 
-        DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? Brushes.Transparent;
+        if (_wallpaperDisplayState == WallpaperDisplayState.TemporarilyUnavailable &&
+            _lastValidWallpaperBitmap is not null &&
+            !string.IsNullOrWhiteSpace(_wallpaperPath) &&
+            string.Equals(_lastValidWallpaperPath, _wallpaperPath, StringComparison.OrdinalIgnoreCase))
+        {
+            DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
+            DesktopWallpaperImageLayer.Background = WallpaperImageBrushFactory.Create(_lastValidWallpaperBitmap, _wallpaperPlacement);
+            DesktopWallpaperImageLayer.IsVisible = true;
+            ApplyVideoWallpaperPosterVisibility(showPoster: false);
+            return;
+        }
+
+        DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
+        ApplyVideoWallpaperPosterVisibility(
+            showPoster: _wallpaperMediaType == WallpaperMediaType.Video && _videoWallpaperPosterBitmap is not null);
     }
 
     private void UpdateWallpaperDisplay()
@@ -337,6 +338,7 @@ public partial class MainWindow
     {
         if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
         {
+            ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
             return;
         }
 
@@ -358,13 +360,25 @@ public partial class MainWindow
                 videoView.IsVisible = true;
             }
 
+            if (!string.Equals(_videoWallpaperPosterPath, videoPath, StringComparison.OrdinalIgnoreCase))
+            {
+                ApplyVideoWallpaperPosterVisibility(showPoster: false);
+            }
+            else
+            {
+                ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
+            }
+
             if (!_videoWallpaperPlayer.IsPlaying)
             {
                 _videoWallpaperPlayer.Play();
             }
+
+            TryCaptureVideoWallpaperPosterFrame(videoPath);
         }
         catch
         {
+            ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
         }
     }
 
@@ -377,6 +391,7 @@ public partial class MainWindow
 
         _videoWallpaperPlayer?.Stop();
         _wallpaperVideoPath = null;
+        ApplyVideoWallpaperPosterVisibility(showPoster: false);
     }
 
     private double CalculateCurrentBackgroundLuminance()
@@ -514,13 +529,22 @@ public partial class MainWindow
             InitializeDesktopSurfaceState(layoutSnapshot);
             InitializeLauncherVisibilitySettings(launcherSnapshot);
             InitializeDesktopComponentPlacements(layoutSnapshot);
-            TryRestoreWallpaper(snapshot.WallpaperPath, snapshot.WallpaperType, snapshot.WallpaperColor);
             if (TryParseColor(snapshot.ThemeColor, out var savedThemeColor))
             {
                 _selectedThemeColor = savedThemeColor;
             }
 
-            _isNightMode = snapshot.IsNightMode ?? (CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold);
+            _isNightMode = snapshot.IsNightMode ?? _isNightMode;
+            _defaultDesktopBackground = CreateNeutralWallpaperFallbackBrush();
+            TryRestoreWallpaper(
+                snapshot.WallpaperPath,
+                snapshot.WallpaperType,
+                snapshot.WallpaperColor,
+                snapshot.WallpaperPlacement);
+            if (!snapshot.IsNightMode.HasValue)
+            {
+                _isNightMode = CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold;
+            }
             ApplyNightModeState(_isNightMode, refreshPalettes: true);
             ApplyWallpaperBrush();
             UpdateWallpaperDisplay();
@@ -536,6 +560,7 @@ public partial class MainWindow
 
     private AppSettingsSnapshot BuildAppSettingsSnapshot()
     {
+        var latestWallpaperState = _settingsFacade.Wallpaper.Get();
         var latestWeatherState = _weatherSettingsService.Get();
         var latestUpdateState = _updateSettingsService.Get();
         var latestThemeState = _themeSettingsService.Get();
@@ -550,9 +575,12 @@ public partial class MainWindow
             SystemMaterialMode = latestThemeState.SystemMaterialMode,
             SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
             UseSystemChrome = latestThemeState.UseSystemChrome,
-            WallpaperPath = _wallpaperPath,
-            WallpaperType = _wallpaperType,
-            WallpaperColor = _wallpaperSolidColor?.ToString(),
+            WallpaperPath = latestWallpaperState.WallpaperPath,
+            WallpaperType = latestWallpaperState.Type,
+            WallpaperColor = string.Equals(latestWallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase)
+                ? latestWallpaperState.Color
+                : null,
+            WallpaperPlacement = latestWallpaperState.Placement,
             LanguageCode = _languageCode,
             TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
             WeatherLocationMode = latestWeatherState.LocationMode,
@@ -585,6 +613,141 @@ public partial class MainWindow
             StatusBarSpacingMode = _statusBarSpacingMode,
             StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent
         };
+    }
+
+    private IBrush CreateNeutralWallpaperFallbackBrush()
+    {
+        var neutralColor = _isNightMode
+            ? Color.Parse("#FF0B0F14")
+            : Color.Parse("#FFF6F7F9");
+        return new SolidColorBrush(neutralColor);
+    }
+
+    private void CacheLastValidWallpaperBitmap(string wallpaperPath)
+    {
+        if (string.IsNullOrWhiteSpace(wallpaperPath) || !File.Exists(wallpaperPath))
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(wallpaperPath);
+            var cachedBitmap = new Bitmap(stream);
+            _lastValidWallpaperBitmap?.Dispose();
+            _lastValidWallpaperBitmap = cachedBitmap;
+            _lastValidWallpaperPath = wallpaperPath;
+        }
+        catch
+        {
+            // Best effort cache only.
+        }
+    }
+
+    private void ApplyVideoWallpaperPosterVisibility(bool showPoster)
+    {
+        if (DesktopVideoWallpaperImage is not { } posterImage)
+        {
+            return;
+        }
+
+        if (!showPoster ||
+            _videoWallpaperPosterBitmap is null ||
+            !string.Equals(_videoWallpaperPosterPath, _wallpaperVideoPath, StringComparison.OrdinalIgnoreCase))
+        {
+            posterImage.IsVisible = false;
+            return;
+        }
+
+        posterImage.Source = _videoWallpaperPosterBitmap;
+        posterImage.IsVisible = true;
+    }
+
+    private void TryCaptureVideoWallpaperPosterFrame(string videoPath)
+    {
+        if (_videoWallpaperPlayer is null || string.IsNullOrWhiteSpace(videoPath))
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            var snapshotPath = Path.Combine(
+                Path.GetTempPath(),
+                $"lanmountaindesktop-wallpaper-poster-{Guid.NewGuid():N}.png");
+
+            try
+            {
+                for (var attempt = 0; attempt < 12; attempt++)
+                {
+                    await Task.Delay(250).ConfigureAwait(false);
+
+                    if (_wallpaperMediaType != WallpaperMediaType.Video ||
+                        !string.Equals(_wallpaperVideoPath, videoPath, StringComparison.OrdinalIgnoreCase) ||
+                        _videoWallpaperPlayer is null)
+                    {
+                        return;
+                    }
+
+                    if (!_videoWallpaperPlayer.TakeSnapshot(0, snapshotPath, 640, 360))
+                    {
+                        continue;
+                    }
+
+                    if (!File.Exists(snapshotPath))
+                    {
+                        continue;
+                    }
+
+                    var fileInfo = new FileInfo(snapshotPath);
+                    if (fileInfo.Length <= 0)
+                    {
+                        continue;
+                    }
+
+                    Bitmap posterBitmap;
+                    await using (var stream = File.OpenRead(snapshotPath))
+                    {
+                        posterBitmap = new Bitmap(stream);
+                    }
+
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (_wallpaperMediaType != WallpaperMediaType.Video ||
+                            !string.Equals(_wallpaperVideoPath, videoPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            posterBitmap.Dispose();
+                            return;
+                        }
+
+                        _videoWallpaperPosterBitmap?.Dispose();
+                        _videoWallpaperPosterBitmap = posterBitmap;
+                        _videoWallpaperPosterPath = videoPath;
+                        ApplyVideoWallpaperPosterVisibility(showPoster: true);
+                    });
+
+                    return;
+                }
+            }
+            catch
+            {
+                // Best effort poster capture only.
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(snapshotPath))
+                    {
+                        File.Delete(snapshotPath);
+                    }
+                }
+                catch
+                {
+                    // Best effort cleanup only.
+                }
+            }
+        });
     }
 
     private DesktopLayoutSettingsSnapshot BuildDesktopLayoutSettingsSnapshot()

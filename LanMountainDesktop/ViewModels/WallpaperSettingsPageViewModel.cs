@@ -80,7 +80,19 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     private bool _isSolidColor;
 
     [ObservableProperty]
+    private bool _isImage;
+
+    [ObservableProperty]
+    private bool _isVideo;
+
+    [ObservableProperty]
     private Bitmap? _previewImage;
+
+    [ObservableProperty]
+    private IBrush? _previewBrush;
+
+    [ObservableProperty]
+    private string _videoModeHintText = string.Empty;
 
     public void Load()
     {
@@ -98,18 +110,21 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
             ?? WallpaperPlacements[0];
         
         UpdateVisibility();
-        UpdatePreviewImage(WallpaperPath);
+        UpdatePreviewFromCurrentSelection();
     }
 
     partial void OnSelectedWallpaperTypeChanged(SelectionOption value)
     {
         UpdateVisibility();
+        UpdatePreviewFromCurrentSelection();
         if (_isInitializing) return;
         SaveWallpaper();
     }
 
     private void UpdateVisibility()
     {
+        IsImage = SelectedWallpaperType?.Value == "Image";
+        IsVideo = SelectedWallpaperType?.Value == "Video";
         IsImageOrVideo = SelectedWallpaperType?.Value is "Image" or "Video";
         IsSolidColor = SelectedWallpaperType?.Value == "SolidColor";
     }
@@ -131,32 +146,65 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     partial void OnWallpaperPathChanged(string value)
     {
-        UpdatePreviewImage(value);
+        UpdatePreviewFromCurrentSelection();
         if (_isInitializing) return;
         SaveWallpaper();
     }
 
+    private void UpdatePreviewFromCurrentSelection()
+    {
+        if (!IsImage)
+        {
+            ClearPreviewImage();
+            PreviewBrush = null;
+            return;
+        }
+
+        UpdatePreviewImage(WallpaperPath);
+    }
+
     private void UpdatePreviewImage(string path)
     {
+        var previousPreview = PreviewImage;
         if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
         {
+            previousPreview?.Dispose();
             PreviewImage = null;
+            PreviewBrush = null;
             return;
         }
 
         try
         {
             using var stream = System.IO.File.OpenRead(path);
-            PreviewImage = new Bitmap(stream);
+            var bitmap = new Bitmap(stream);
+            PreviewImage = bitmap;
+            PreviewBrush = WallpaperImageBrushFactory.Create(bitmap, SelectedWallpaperPlacement?.Value);
+            previousPreview?.Dispose();
         }
         catch
         {
+            previousPreview?.Dispose();
             PreviewImage = null;
+            PreviewBrush = null;
         }
+    }
+
+    private void ClearPreviewImage()
+    {
+        var previousPreview = PreviewImage;
+        PreviewImage = null;
+        PreviewBrush = null;
+        previousPreview?.Dispose();
     }
 
     partial void OnSelectedWallpaperPlacementChanged(SelectionOption value)
     {
+        if (IsImage && PreviewImage is not null)
+        {
+            PreviewBrush = WallpaperImageBrushFactory.Create(PreviewImage, value?.Value);
+        }
+
         if (_isInitializing || value is null) return;
         SaveWallpaper();
     }
@@ -169,14 +217,16 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     private void SaveWallpaper()
     {
+        var selectedType = SelectedWallpaperType?.Value ?? "Image";
+        var selectedPlacement = SelectedWallpaperPlacement?.Value ?? WallpaperImageBrushFactory.Fill;
         var normalizedPath = SelectedWallpaperType?.Value == "SolidColor" || string.IsNullOrWhiteSpace(WallpaperPath)
             ? null
             : WallpaperPath;
         _settingsFacade.Wallpaper.Save(new WallpaperSettingsState(
             normalizedPath,
-            SelectedWallpaperType.Value,
+            selectedType,
             SelectedColor,
-            SelectedWallpaperPlacement.Value));
+            selectedPlacement));
     }
 
     private IReadOnlyList<SelectionOption> CreateWallpaperPlacements()
@@ -221,6 +271,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         WallpaperPlacementDescription = L("settings.wallpaper.placement_desc", "Adjust how the image fills the desktop.");
         ImportWallpaperButtonText = L("settings.wallpaper.pick_button", "Import Wallpaper");
         FilePickerTitle = L("filepicker.title", "Select wallpaper");
+        VideoModeHintText = L("settings.wallpaper.video_mode", "Video wallpaper uses automatic fill mode.");
     }
 
     private string L(string key, string fallback)

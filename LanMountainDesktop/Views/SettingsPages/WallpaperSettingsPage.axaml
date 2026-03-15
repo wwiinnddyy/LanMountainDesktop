@@ -22,9 +22,26 @@
                                 BoxShadow="0 12 32 #50000000">
                             <Panel Background="{DynamicResource AdaptiveSurfaceBaseBrush}" Margin="2">
                                 <!-- 图片/视频预览 -->
-                                <Image Source="{Binding PreviewImage}" 
-                                       IsVisible="{Binding IsImageOrVideo}" 
-                                       Stretch="UniformToFill" />
+                                <Border Background="#FFF6F7F9"
+                                        IsVisible="{Binding IsImage}">
+                                    <Border Background="{Binding PreviewBrush}" />
+                                </Border>
+                                <Border Background="#FFF6F7F9"
+                                        IsVisible="{Binding IsVideo}">
+                                    <StackPanel HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Spacing="12">
+                                        <fi:FluentIcon Icon="Video"
+                                                       Width="72"
+                                                       Height="72"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                        <TextBlock Text="{Binding VideoModeHintText}"
+                                                   Width="300"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                    </StackPanel>
+                                </Border>
                                 <!-- 纯色预览 -->
                                 <Border Background="{Binding SelectedColor}" 
                                         IsVisible="{Binding IsSolidColor}" />
@@ -90,7 +107,7 @@
 
             <!-- 图片/视频文件选择 -->
             <ui:SettingsExpander Header="{Binding WallpaperPathLabel}" 
-                                 IsVisible="{Binding IsImageOrVideo}"
+                                 IsVisible="{Binding IsImage}"
                                  Margin="0,4,0,0">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="FolderOpen" />
@@ -129,6 +146,12 @@
                     </ComboBox>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
+
+            <TextBlock Margin="0,8,0,0"
+                       IsVisible="{Binding IsVideo}"
+                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                       Text="{Binding VideoModeHintText}"
+                       TextWrapping="Wrap" />
 
         </StackPanel>
     </ScrollViewer>
