@@ -83,22 +83,23 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     private bool _isImage;
 
     [ObservableProperty]
-    private bool _isVideo;
-
-    [ObservableProperty]
     private Bitmap? _previewImage;
 
     [ObservableProperty]
     private IBrush? _previewBrush;
 
+    // 自定义颜色持久化
     [ObservableProperty]
-    private string _videoModeHintText = string.Empty;
+    private Color _customColor = Colors.White;
+
+    [ObservableProperty]
+    private IBrush _customColorBrush = new SolidColorBrush(Colors.White);
 
     public void Load()
     {
         var wallpaper = _settingsFacade.Wallpaper.Get();
         WallpaperPath = wallpaper.WallpaperPath ?? string.Empty;
-        
+
         SelectedWallpaperType = WallpaperTypes.FirstOrDefault(t => t.Value == wallpaper.Type) ?? WallpaperTypes[0];
         SelectedColor = wallpaper.Color ?? PresetColors[0];
 
@@ -108,7 +109,14 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         SelectedWallpaperPlacement = WallpaperPlacements.FirstOrDefault(option =>
             string.Equals(option.Value, wallpaperPlacement, StringComparison.OrdinalIgnoreCase))
             ?? WallpaperPlacements[0];
-        
+
+        // 加载自定义颜色
+        if (!string.IsNullOrWhiteSpace(wallpaper.CustomColor) && Color.TryParse(wallpaper.CustomColor, out var customColor))
+        {
+            CustomColor = customColor;
+            CustomColorBrush = new SolidColorBrush(customColor);
+        }
+
         UpdateVisibility();
         UpdatePreviewFromCurrentSelection();
     }
@@ -124,13 +132,22 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     private void UpdateVisibility()
     {
         IsImage = SelectedWallpaperType?.Value == "Image";
-        IsVideo = SelectedWallpaperType?.Value == "Video";
-        IsImageOrVideo = SelectedWallpaperType?.Value is "Image" or "Video";
+        IsImageOrVideo = IsImage;
         IsSolidColor = SelectedWallpaperType?.Value == "SolidColor";
     }
 
     partial void OnSelectedColorChanged(string? value)
     {
+        if (_isInitializing) return;
+        SaveWallpaper();
+    }
+
+    partial void OnCustomColorChanged(Color value)
+    {
+        CustomColorBrush = new SolidColorBrush(value);
+        // 将自定义颜色应用到壁纸
+        var colorHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
+        SelectedColor = colorHex;
         if (_isInitializing) return;
         SaveWallpaper();
     }
@@ -222,11 +239,13 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         var normalizedPath = SelectedWallpaperType?.Value == "SolidColor" || string.IsNullOrWhiteSpace(WallpaperPath)
             ? null
             : WallpaperPath;
+        var customColorHex = $"#{CustomColor.A:X2}{CustomColor.R:X2}{CustomColor.G:X2}{CustomColor.B:X2}";
         _settingsFacade.Wallpaper.Save(new WallpaperSettingsState(
             normalizedPath,
             selectedType,
             SelectedColor,
-            selectedPlacement));
+            selectedPlacement,
+            customColorHex));
     }
 
     private IReadOnlyList<SelectionOption> CreateWallpaperPlacements()
@@ -246,7 +265,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         return
         [
             new SelectionOption("Image", L("settings.wallpaper.type.image", "Image")),
-            new SelectionOption("Video", L("settings.wallpaper.type.video", "Video")),
             new SelectionOption("SolidColor", L("settings.wallpaper.type.solid_color", "Solid Color"))
         ];
     }
@@ -257,7 +275,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         [
             "#D8A7B1", "#B6C9BB", "#A2B5BB", "#E6E2D3",
             "#B5A397", "#C5C1C0", "#D4BE8D", "#C08261",
-            "#8E9775", "#9FBAD3", "#E5BAA2", "#4E596F"
+            "#8E9775", "#9FBAD3", "#E5BAA2"
         ];
     }
 
@@ -271,7 +289,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         WallpaperPlacementDescription = L("settings.wallpaper.placement_desc", "Adjust how the image fills the desktop.");
         ImportWallpaperButtonText = L("settings.wallpaper.pick_button", "Import Wallpaper");
         FilePickerTitle = L("filepicker.title", "Select wallpaper");
-        VideoModeHintText = L("settings.wallpaper.video_mode", "Video wallpaper uses automatic fill mode.");
     }
 
     private string L(string key, string fallback)

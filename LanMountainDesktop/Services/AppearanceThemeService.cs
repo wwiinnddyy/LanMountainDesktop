@@ -15,7 +15,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
-using LibVLCSharp.Shared;
 using Microsoft.Win32;
 
 namespace LanMountainDesktop.Services;
@@ -89,11 +88,6 @@ internal interface IMaterialSurfaceService
     AppearanceMaterialSurface GetSurface(ThemeColorContext context, MaterialSurfaceRole role);
 }
 
-internal interface IVideoWallpaperSeedExtractor
-{
-    IReadOnlyList<Color> ExtractSeedCandidates(string videoPath, MonetColorService monetColorService);
-}
-
 internal readonly record struct WallpaperSeedSourceDescriptor(
     string SourceKind,
     string SourceKey,
@@ -113,75 +107,6 @@ internal readonly record struct WallpaperPaletteResolution(
     string ResolvedSeedSource,
     Color EffectiveSeedColor,
     string? ResolvedWallpaperPath);
-
-internal sealed class LibVlcVideoWallpaperSeedExtractor : IVideoWallpaperSeedExtractor
-{
-    public IReadOnlyList<Color> ExtractSeedCandidates(string videoPath, MonetColorService monetColorService)
-    {
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
-        {
-            return [];
-        }
-
-        var snapshotPath = Path.Combine(
-            Path.GetTempPath(),
-            $"lanmountaindesktop-video-seed-{Guid.NewGuid():N}.png");
-
-        try
-        {
-            using var libVlc = new LibVLC("--no-audio", "--intf=dummy", "--no-video-title-show");
-            using var media = new Media(libVlc, new Uri(videoPath));
-            using var mediaPlayer = new MediaPlayer(libVlc)
-            {
-                Media = media
-            };
-
-            mediaPlayer.Play();
-
-            var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(5))
-            {
-                Thread.Sleep(180);
-                if (!mediaPlayer.TakeSnapshot(0, snapshotPath, 320, 180))
-                {
-                    continue;
-                }
-
-                var fileInfo = new FileInfo(snapshotPath);
-                if (!fileInfo.Exists || fileInfo.Length <= 0)
-                {
-                    continue;
-                }
-
-                using var bitmap = new Bitmap(snapshotPath);
-                return monetColorService.ExtractSeedCandidates(bitmap);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn(
-                "Appearance.VideoWallpaperPalette",
-                $"Failed to extract wallpaper seed candidates from video '{videoPath}'.",
-                ex);
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(snapshotPath))
-                {
-                    File.Delete(snapshotPath);
-                }
-            }
-            catch
-            {
-                // Best effort cleanup only.
-            }
-        }
-
-        return [];
-    }
-}
 
 internal sealed class SystemWallpaperService : ISystemWallpaperService
 {
@@ -477,7 +402,6 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     private readonly ISystemWallpaperService _systemWallpaperService;
     private readonly IWindowMaterialService _windowMaterialService;
     private readonly IMaterialSurfaceService _materialSurfaceService;
-    private readonly IVideoWallpaperSeedExtractor _videoWallpaperSeedExtractor;
     private readonly MonetColorService _monetColorService = new();
     private readonly string _liveThemeColorMode;
     private readonly string _liveSystemMaterialMode;
@@ -490,14 +414,12 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         ISettingsFacadeService settingsFacade,
         ISystemWallpaperService systemWallpaperService,
         IWindowMaterialService windowMaterialService,
-        IMaterialSurfaceService materialSurfaceService,
-        IVideoWallpaperSeedExtractor? videoWallpaperSeedExtractor = null)
+        IMaterialSurfaceService materialSurfaceService)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _systemWallpaperService = systemWallpaperService ?? throw new ArgumentNullException(nameof(systemWallpaperService));
         _windowMaterialService = windowMaterialService ?? throw new ArgumentNullException(nameof(windowMaterialService));
         _materialSurfaceService = materialSurfaceService ?? throw new ArgumentNullException(nameof(materialSurfaceService));
-        _videoWallpaperSeedExtractor = videoWallpaperSeedExtractor ?? new LibVlcVideoWallpaperSeedExtractor();
         var initialThemeState = _settingsFacade.Theme.Get();
         _liveThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(
             initialThemeState.ThemeColorMode,
@@ -886,7 +808,6 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         IReadOnlyList<Color> seedCandidates = source.SourceKind switch
         {
             "app_wallpaper" or "system_wallpaper" => ExtractImageSeedCandidates(source.FilePath),
-            "app_video" => ExtractVideoSeedCandidates(source.FilePath),
             "app_solid" when source.SolidColor is { } solidColor => new[] { solidColor },
             _ => []
         };
@@ -920,16 +841,6 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         }
     }
 
-    private IReadOnlyList<Color> ExtractVideoSeedCandidates(string? wallpaperPath)
-    {
-        if (string.IsNullOrWhiteSpace(wallpaperPath) || !File.Exists(wallpaperPath))
-        {
-            return [];
-        }
-
-        return _videoWallpaperSeedExtractor.ExtractSeedCandidates(wallpaperPath, _monetColorService);
-    }
-
     private WallpaperSeedSourceDescriptor ResolveWallpaperSeedSource(WallpaperSettingsState wallpaperState)
     {
         if (string.Equals(wallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase) &&
@@ -956,16 +867,6 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
                 return new WallpaperSeedSourceDescriptor(
                     "app_wallpaper",
                     CreateWallpaperSourceKey("app_wallpaper", wallpaperPath),
-                    wallpaperPath,
-                    wallpaperPath,
-                    null);
-            }
-
-            if (appWallpaperMediaType == WallpaperMediaType.Video)
-            {
-                return new WallpaperSeedSourceDescriptor(
-                    "app_video",
-                    CreateWallpaperSourceKey("app_video", wallpaperPath),
                     wallpaperPath,
                     wallpaperPath,
                     null);

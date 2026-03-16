@@ -21,26 +21,10 @@
                                 CornerRadius="48"
                                 BoxShadow="0 12 32 #50000000">
                             <Panel Background="{DynamicResource AdaptiveSurfaceBaseBrush}" Margin="2">
-                                <!-- 图片/视频预览 -->
+                                <!-- 图片预览 -->
                                 <Border Background="#FFF6F7F9"
                                         IsVisible="{Binding IsImage}">
                                     <Border Background="{Binding PreviewBrush}" />
-                                </Border>
-                                <Border Background="#FFF6F7F9"
-                                        IsVisible="{Binding IsVideo}">
-                                    <StackPanel HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Spacing="12">
-                                        <fi:FluentIcon Icon="Video"
-                                                       Width="72"
-                                                       Height="72"
-                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                                        <TextBlock Text="{Binding VideoModeHintText}"
-                                                   Width="300"
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
-                                    </StackPanel>
                                 </Border>
                                 <!-- 纯色预览 -->
                                 <Border Background="{Binding SelectedColor}" 
@@ -52,31 +36,104 @@
 
                 <!-- 右侧：颜色选择网格 -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsSolidColor}">
-                    <TextBlock Text="{Binding WallpaperColorLabel}" 
-                               FontSize="14" 
-                               FontWeight="SemiBold" 
+                    <TextBlock Text="{Binding WallpaperColorLabel}"
+                               FontSize="14"
+                               FontWeight="SemiBold"
                                Opacity="0.8" />
-                    <ItemsControl ItemsSource="{Binding PresetColors}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="4" Rows="3" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Width="48" Height="48" Margin="4" Padding="0"
-                                        Background="{Binding}"
-                                        BorderThickness="0"
-                                        CornerRadius="6"
-                                        Command="{Binding $parent[UserControl].((vm:WallpaperSettingsPageViewModel)DataContext).SelectColorCommand}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="{Binding}">
-                                    <!-- 简单的悬停与选中效果由 Button 默认样式提供，
-                                         由于使用了低饱和度颜色，背景色本身就很柔和 -->
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <UniformGrid Columns="4" Rows="3">
+                        <!-- 预设颜色 1-11 -->
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#D8A7B1"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#D8A7B1"
+                                ToolTip.Tip="#D8A7B1" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#B6C9BB"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#B6C9BB"
+                                ToolTip.Tip="#B6C9BB" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#A2B5BB"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#A2B5BB"
+                                ToolTip.Tip="#A2B5BB" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#E6E2D3"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#E6E2D3"
+                                ToolTip.Tip="#E6E2D3" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#B5A397"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#B5A397"
+                                ToolTip.Tip="#B5A397" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#C5C1C0"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#C5C1C0"
+                                ToolTip.Tip="#C5C1C0" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#D4BE8D"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#D4BE8D"
+                                ToolTip.Tip="#D4BE8D" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#C08261"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#C08261"
+                                ToolTip.Tip="#C08261" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#8E9775"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#8E9775"
+                                ToolTip.Tip="#8E9775" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#9FBAD3"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#9FBAD3"
+                                ToolTip.Tip="#9FBAD3" />
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="#E5BAA2"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                Command="{Binding SelectColorCommand}"
+                                CommandParameter="#E5BAA2"
+                                ToolTip.Tip="#E5BAA2" />
+                        <!-- 第12个位置：自定义颜色选择器 -->
+                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                                Background="{Binding CustomColorBrush}"
+                                BorderThickness="0"
+                                CornerRadius="6"
+                                ToolTip.Tip="自定义颜色">
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedLeft">
+                                    <StackPanel Width="260" Spacing="12">
+                                        <ColorPicker Color="{Binding CustomColor}" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </UniformGrid>
                 </StackPanel>
             </Grid>
 
@@ -105,7 +162,7 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
-            <!-- 图片/视频文件选择 -->
+            <!-- 图片文件选择 -->
             <ui:SettingsExpander Header="{Binding WallpaperPathLabel}" 
                                  IsVisible="{Binding IsImage}"
                                  Margin="0,4,0,0">
@@ -129,7 +186,7 @@
             <!-- 填充方式 -->
             <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
                                  Description="{Binding WallpaperPlacementDescription}"
-                                 IsVisible="{Binding IsImageOrVideo}"
+                                 IsVisible="{Binding IsImage}"
                                  Margin="0,4,0,0">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Maximize" />
@@ -146,12 +203,6 @@
                     </ComboBox>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
-
-            <TextBlock Margin="0,8,0,0"
-                       IsVisible="{Binding IsVideo}"
-                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                       Text="{Binding VideoModeHintText}"
-                       TextWrapping="Wrap" />
 
         </StackPanel>
     </ScrollViewer>

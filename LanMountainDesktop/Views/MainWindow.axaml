@@ -6,7 +6,7 @@
         xmlns:ic="using:FluentIcons.Avalonia.Fluent"
         xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:comp="using:LanMountainDesktop.Views.Components"
-        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -123,18 +123,7 @@
                             VerticalAlignment="Stretch"
                             Background="Transparent" />
 
-                    <Image x:Name="DesktopVideoWallpaperImage"
-                           IsVisible="False"
-                           IsHitTestVisible="False"
-                           Stretch="UniformToFill"
-                           HorizontalAlignment="Stretch"
-                           VerticalAlignment="Stretch" />
 
-                    <vlc:VideoView x:Name="DesktopVideoWallpaperView"
-                                   IsVisible="False"
-                                   IsHitTestVisible="False"
-                                   HorizontalAlignment="Stretch"
-                                   VerticalAlignment="Stretch" />
 
                     <Grid x:Name="DesktopGrid"
                           HorizontalAlignment="Center"

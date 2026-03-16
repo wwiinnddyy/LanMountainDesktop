@@ -25,7 +25,7 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
-using LibVLCSharp.Shared;
+
 
 namespace LanMountainDesktop.Views;
 
@@ -35,7 +35,6 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     {
         None,
         Image,
-        Video,
         SolidColor
     }
 
@@ -64,10 +63,6 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"
-    };
-    private static readonly HashSet<string> SupportedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mp4", ".mkv", ".webm", ".avi", ".mov", ".m4v"
     };
     private static readonly TaskbarActionId[] DefaultPinnedTaskbarActions =
     [
@@ -120,30 +115,11 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private Bitmap? _wallpaperBitmap;
     private Bitmap? _lastValidWallpaperBitmap;
     private string? _lastValidWallpaperPath;
-    private Bitmap? _videoWallpaperPosterBitmap;
-    private string? _videoWallpaperPosterPath;
     private WallpaperMediaType _wallpaperMediaType;
     private WallpaperDisplayState _wallpaperDisplayState = WallpaperDisplayState.NoWallpaperConfigured;
     private string _wallpaperPlacement = WallpaperImageBrushFactory.Fill;
-    private string? _wallpaperVideoPath;
     private string _wallpaperType = "Image";
     private Color? _wallpaperSolidColor;
-    private LibVLC? _libVlc;
-    private MediaPlayer? _videoWallpaperPlayer;
-    private Media? _videoWallpaperMedia;
-    private readonly object _desktopVideoFrameSync = new();
-    private MediaPlayer.LibVLCVideoLockCb? _desktopVideoLockCallback;
-    private MediaPlayer.LibVLCVideoUnlockCb? _desktopVideoUnlockCallback;
-    private MediaPlayer.LibVLCVideoDisplayCb? _desktopVideoDisplayCallback;
-    private DispatcherTimer? _desktopVideoFrameRefreshTimer;
-    private IntPtr _desktopVideoFrameBufferPtr;
-    private byte[]? _desktopVideoStagingBuffer;
-    private WriteableBitmap? _desktopVideoBitmap;
-    private int _desktopVideoFrameWidth;
-    private int _desktopVideoFrameHeight;
-    private int _desktopVideoFramePitch;
-    private int _desktopVideoFrameBufferSize;
-    private int _desktopVideoFrameDirtyFlag;
     private string? _wallpaperPath;
     private string _wallpaperStatus = "Current background uses solid color.";
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
@@ -333,21 +309,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             _detachedComponentLibraryWindow.Close();
         }
         _detachedComponentLibraryWindow = null;
-        StopVideoWallpaper();
         DisposeLauncherResources();
-        _videoWallpaperMedia?.Dispose();
-        _videoWallpaperMedia = null;
-        _videoWallpaperPlayer?.Dispose();
-        _videoWallpaperPlayer = null;
-        _desktopVideoFrameRefreshTimer?.Stop();
-        _desktopVideoFrameRefreshTimer = null;
-        _videoWallpaperPosterBitmap?.Dispose();
-        _videoWallpaperPosterBitmap = null;
-        _videoWallpaperPosterPath = null;
         _lastValidWallpaperBitmap?.Dispose();
         _lastValidWallpaperBitmap = null;
-        _libVlc?.Dispose();
-        _libVlc = null;
         if (_recommendationInfoService is IDisposable recommendationServiceDisposable)
         {
             recommendationServiceDisposable.Dispose();

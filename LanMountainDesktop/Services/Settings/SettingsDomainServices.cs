@@ -147,11 +147,6 @@ internal sealed class WallpaperMediaService : IWallpaperMediaService
         ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"
     };
 
-    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mp4", ".mkv", ".webm", ".avi", ".mov", ".m4v"
-    };
-
     private readonly string _wallpapersDirectory;
 
     public WallpaperMediaService()
@@ -178,11 +173,6 @@ internal sealed class WallpaperMediaService : IWallpaperMediaService
         if (ImageExtensions.Contains(extension))
         {
             return WallpaperMediaType.Image;
-        }
-
-        if (VideoExtensions.Contains(extension))
-        {
-            return WallpaperMediaType.Video;
         }
 
         return WallpaperMediaType.None;

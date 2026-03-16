@@ -16,8 +16,6 @@ using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
-using LibVLCSharp.Shared;
-using LibVLCSharp.Avalonia;
 
 namespace LanMountainDesktop.Views;
 
@@ -213,7 +211,6 @@ public partial class MainWindow
         _wallpaperType = string.IsNullOrWhiteSpace(type) ? "Image" : type.Trim();
         _wallpaperPlacement = WallpaperImageBrushFactory.NormalizePlacement(placement);
         _wallpaperSolidColor = TryParseColor(color, out var parsedColor) ? parsedColor : null;
-        _wallpaperVideoPath = null;
         _wallpaperDisplayState = WallpaperDisplayState.NoWallpaperConfigured;
 
         _wallpaperBitmap?.Dispose();
@@ -235,17 +232,6 @@ public partial class MainWindow
         }
 
         var extension = Path.GetExtension(_wallpaperPath);
-        var requestedTypeIsVideo = string.Equals(_wallpaperType, "Video", StringComparison.OrdinalIgnoreCase);
-        if (SupportedVideoExtensions.Contains(extension) || requestedTypeIsVideo)
-        {
-            _wallpaperMediaType = WallpaperMediaType.Video;
-            _wallpaperVideoPath = _wallpaperPath;
-            _wallpaperDisplayState = File.Exists(_wallpaperPath)
-                ? WallpaperDisplayState.CurrentValidWallpaper
-                : WallpaperDisplayState.TemporarilyUnavailable;
-            return;
-        }
-
         if (!SupportedImageExtensions.Contains(extension))
         {
             _wallpaperMediaType = WallpaperMediaType.Image;
@@ -285,7 +271,6 @@ public partial class MainWindow
         if (_wallpaperMediaType == WallpaperMediaType.SolidColor && _wallpaperSolidColor.HasValue)
         {
             DesktopWallpaperLayer.Background = new SolidColorBrush(_wallpaperSolidColor.Value);
-            ApplyVideoWallpaperPosterVisibility(showPoster: false);
             return;
         }
 
@@ -296,7 +281,6 @@ public partial class MainWindow
             DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
             DesktopWallpaperImageLayer.Background = WallpaperImageBrushFactory.Create(_wallpaperBitmap, _wallpaperPlacement);
             DesktopWallpaperImageLayer.IsVisible = true;
-            ApplyVideoWallpaperPosterVisibility(showPoster: false);
             return;
         }
 
@@ -308,90 +292,15 @@ public partial class MainWindow
             DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
             DesktopWallpaperImageLayer.Background = WallpaperImageBrushFactory.Create(_lastValidWallpaperBitmap, _wallpaperPlacement);
             DesktopWallpaperImageLayer.IsVisible = true;
-            ApplyVideoWallpaperPosterVisibility(showPoster: false);
             return;
         }
 
         DesktopWallpaperLayer.Background = _defaultDesktopBackground ?? CreateNeutralWallpaperFallbackBrush();
-        ApplyVideoWallpaperPosterVisibility(
-            showPoster: _wallpaperMediaType == WallpaperMediaType.Video && _videoWallpaperPosterBitmap is not null);
     }
 
     private void UpdateWallpaperDisplay()
     {
-        if (_wallpaperMediaType == WallpaperMediaType.Video)
-        {
-            if (!string.IsNullOrWhiteSpace(_wallpaperVideoPath))
-            {
-                StartVideoWallpaper(_wallpaperVideoPath);
-            }
-        }
-        else
-        {
-            StopVideoWallpaper();
-        }
-
         ApplyWallpaperBrush();
-    }
-
-    private void StartVideoWallpaper(string videoPath)
-    {
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
-        {
-            ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
-            return;
-        }
-
-        try
-        {
-            _libVlc ??= new LibVLC();
-            _videoWallpaperPlayer ??= new MediaPlayer(_libVlc);
-
-            if (_videoWallpaperMedia?.Mrl != videoPath)
-            {
-                _videoWallpaperMedia?.Dispose();
-                _videoWallpaperMedia = new Media(_libVlc, new Uri(videoPath));
-                _videoWallpaperPlayer.Media = _videoWallpaperMedia;
-            }
-
-            if (DesktopVideoWallpaperView is { } videoView)
-            {
-                videoView.MediaPlayer = _videoWallpaperPlayer;
-                videoView.IsVisible = true;
-            }
-
-            if (!string.Equals(_videoWallpaperPosterPath, videoPath, StringComparison.OrdinalIgnoreCase))
-            {
-                ApplyVideoWallpaperPosterVisibility(showPoster: false);
-            }
-            else
-            {
-                ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
-            }
-
-            if (!_videoWallpaperPlayer.IsPlaying)
-            {
-                _videoWallpaperPlayer.Play();
-            }
-
-            TryCaptureVideoWallpaperPosterFrame(videoPath);
-        }
-        catch
-        {
-            ApplyVideoWallpaperPosterVisibility(showPoster: _videoWallpaperPosterBitmap is not null);
-        }
-    }
-
-    private void StopVideoWallpaper()
-    {
-        if (DesktopVideoWallpaperView is { } videoView)
-        {
-            videoView.IsVisible = false;
-        }
-
-        _videoWallpaperPlayer?.Stop();
-        _wallpaperVideoPath = null;
-        ApplyVideoWallpaperPosterVisibility(showPoster: false);
     }
 
     private double CalculateCurrentBackgroundLuminance()
@@ -642,112 +551,6 @@ public partial class MainWindow
         {
             // Best effort cache only.
         }
-    }
-
-    private void ApplyVideoWallpaperPosterVisibility(bool showPoster)
-    {
-        if (DesktopVideoWallpaperImage is not { } posterImage)
-        {
-            return;
-        }
-
-        if (!showPoster ||
-            _videoWallpaperPosterBitmap is null ||
-            !string.Equals(_videoWallpaperPosterPath, _wallpaperVideoPath, StringComparison.OrdinalIgnoreCase))
-        {
-            posterImage.IsVisible = false;
-            return;
-        }
-
-        posterImage.Source = _videoWallpaperPosterBitmap;
-        posterImage.IsVisible = true;
-    }
-
-    private void TryCaptureVideoWallpaperPosterFrame(string videoPath)
-    {
-        if (_videoWallpaperPlayer is null || string.IsNullOrWhiteSpace(videoPath))
-        {
-            return;
-        }
-
-        _ = Task.Run(async () =>
-        {
-            var snapshotPath = Path.Combine(
-                Path.GetTempPath(),
-                $"lanmountaindesktop-wallpaper-poster-{Guid.NewGuid():N}.png");
-
-            try
-            {
-                for (var attempt = 0; attempt < 12; attempt++)
-                {
-                    await Task.Delay(250).ConfigureAwait(false);
-
-                    if (_wallpaperMediaType != WallpaperMediaType.Video ||
-                        !string.Equals(_wallpaperVideoPath, videoPath, StringComparison.OrdinalIgnoreCase) ||
-                        _videoWallpaperPlayer is null)
-                    {
-                        return;
-                    }
-
-                    if (!_videoWallpaperPlayer.TakeSnapshot(0, snapshotPath, 640, 360))
-                    {
-                        continue;
-                    }
-
-                    if (!File.Exists(snapshotPath))
-                    {
-                        continue;
-                    }
-
-                    var fileInfo = new FileInfo(snapshotPath);
-                    if (fileInfo.Length <= 0)
-                    {
-                        continue;
-                    }
-
-                    Bitmap posterBitmap;
-                    await using (var stream = File.OpenRead(snapshotPath))
-                    {
-                        posterBitmap = new Bitmap(stream);
-                    }
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        if (_wallpaperMediaType != WallpaperMediaType.Video ||
-                            !string.Equals(_wallpaperVideoPath, videoPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            posterBitmap.Dispose();
-                            return;
-                        }
-
-                        _videoWallpaperPosterBitmap?.Dispose();
-                        _videoWallpaperPosterBitmap = posterBitmap;
-                        _videoWallpaperPosterPath = videoPath;
-                        ApplyVideoWallpaperPosterVisibility(showPoster: true);
-                    });
-
-                    return;
-                }
-            }
-            catch
-            {
-                // Best effort poster capture only.
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(snapshotPath))
-                    {
-                        File.Delete(snapshotPath);
-                    }
-                }
-                catch
-                {
-                    // Best effort cleanup only.
-                }
-            }
-        });
     }
 
     private DesktopLayoutSettingsSnapshot BuildDesktopLayoutSettingsSnapshot()
