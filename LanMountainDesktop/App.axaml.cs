@@ -63,6 +63,7 @@ public partial class App : Application
     private bool _uiUnhandledExceptionHooked;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
+    internal static (UserBehaviorAnalyticsService?, CrashReportService?) AnalyticsServices { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
 
@@ -569,6 +570,18 @@ public partial class App : Application
         _exitCleanupCompleted = true;
         _settingsFacade.Settings.Changed -= OnSettingsChanged;
         _appearanceThemeService.Changed -= OnAppearanceThemeChanged;
+
+        try
+        {
+            var (analytics, crashReport) = App.AnalyticsServices;
+            analytics?.SendShutdownEvent();
+            crashReport?.SendShutdownEvent();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Analytics", "Failed to send shutdown events during exit cleanup.", ex);
+        }
+
         try
         {
             HostUpdateWorkflowServiceProvider.GetOrCreate().TryApplyPendingUpdateOnExit();

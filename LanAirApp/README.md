@@ -1,21 +1,33 @@
-# LanAirApp
+# LanAirApp (Mirror)
 
 ## 中文
 
-`LanAirApp` 是阑山桌面插件生态的对外工作区。这个目录是宿主仓库中的镜像副本，权威版本以独立 `LanAirApp` 仓库为准。
+这里的 `LanAirApp/` 是放在宿主仓库里的镜像副本，只用于本地联调和工作区构建，不是插件市场或插件开发资料的最终权威来源。
 
-### 目录说明
+### 这份镜像的角色
 
-- `docs/`：插件开发与打包文档。
-- `samples/`：示例插件与参考项目。
-- `standards/`：插件清单和目录结构约定。
-- `tools/`：插件打包与辅助工具。
+- 提供本地工作区里的 `airappmarket` 索引副本
+- 提供插件文档、工具和样例镜像，便于和宿主一起联调
+- 不承担宿主运行时职责
 
-### 与宿主的关系
+### 权威来源
 
-- 宿主程序只连接独立 `LanAirApp` 仓库中的官方市场索引。
-- 每个插件项目应在仓库根目录提供 `.laapp` 和 `README.md`。
+- 插件市场与开发文档：独立 `LanAirApp` 仓库
+- 权威示例插件：独立 `LanMountainDesktop.SamplePlugin`
+- 本目录中的 `samples/LanMountainDesktop.SamplePlugin` 只是镜像模板副本
 
 ## English
 
-`LanAirApp` is the external-facing workspace for the LanMountainDesktop plugin ecosystem. This copy is only a mirror inside the host repository; the standalone `LanAirApp` repository remains the source of truth.
+This `LanAirApp/` directory is a mirror that lives inside the host repository. It exists for local workspace integration and build convenience only. It is not the final authority for the plugin market or developer-facing plugin materials.
+
+### Role of this mirror
+
+- keep a local copy of the `airappmarket` index for workspace integration
+- keep mirrored docs, tools, and sample templates for local development
+- avoid duplicating host runtime responsibilities
+
+### Sources of truth
+
+- Plugin market and developer docs: standalone `LanAirApp`
+- Authoritative sample plugin: standalone `LanMountainDesktop.SamplePlugin`
+- `samples/LanMountainDesktop.SamplePlugin` in this mirror is template/mirror content only

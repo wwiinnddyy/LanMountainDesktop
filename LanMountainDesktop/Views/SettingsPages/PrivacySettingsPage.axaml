@@ -31,6 +31,33 @@
                     <ToggleSwitch IsChecked="{Binding UploadAnonymousUsageData}" />
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
+
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,16,0,0">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding DeviceIdHeader}"
+                                   FontWeight="SemiBold"
+                                   FontSize="14" />
+                        <TextBlock Text="{Binding DeviceIdDescription}"
+                                   FontSize="12"
+                                   Opacity="0.7"
+                                   Margin="0,4,0,8" />
+                        <TextBox Text="{Binding DeviceId}"
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas"
+                                 FontSize="12" />
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Content="{Binding RefreshDeviceIdText}"
+                            Command="{Binding RefreshDeviceIdCommand}"
+                            VerticalAlignment="Center"
+                            Margin="16,0,0,0"
+                            Classes="accent-button" />
+                </Grid>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

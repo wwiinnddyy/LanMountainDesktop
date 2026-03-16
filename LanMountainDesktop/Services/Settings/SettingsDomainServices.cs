@@ -609,6 +609,7 @@ internal sealed class PrivacySettingsService : IPrivacySettingsService
         var snapshot = _settingsService.Load();
         snapshot.UploadAnonymousCrashData = state.UploadAnonymousCrashData;
         snapshot.UploadAnonymousUsageData = state.UploadAnonymousUsageData;
+        AppLogger.Info("PrivacySettings", $"Saving: UploadAnonymousCrashData={state.UploadAnonymousCrashData}, UploadAnonymousUsageData={state.UploadAnonymousUsageData}");
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,

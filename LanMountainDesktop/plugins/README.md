@@ -1,38 +1,30 @@
-# 宿主侧插件运行时
+# 宿主侧插件运行时 / Host Plugin Runtime
 
 ## 中文
 
-本目录保存阑山桌面宿主程序中的插件运行时实现。
+本目录保存阑山桌面宿主侧插件运行时实现。
 
 ### 主要职责
 
-- 发现已安装插件
-- 安装和替换 `.laapp` 插件包
-- 加载插件程序集
-- 接入插件贡献的设置页和桌面组件
-- 在宿主设置界面中展示插件与市场信息
+- 发现、安装和替换 `.laapp` 插件包
+- 加载插件程序集和共享契约
+- 接入插件设置页、桌面组件与市场界面
+- 为 `3.0.0` API 基线插件构建插件作用域的 `IServiceCollection` / `ServiceProvider`
+- 在激活前解析共享契约缓存，并暴露显式插件导出
 
-### 市场安装优先级
+### 与 LanAirApp 的分工
 
-1. 宿主先连接 `LanAirApp/airappmarket/index.json`。
-2. 当条目同时提供 `releaseTag` 和 `releaseAssetName` 时，宿主优先按精确标签读取插件仓库的 GitHub Release 资产。
-3. 如果 Release 不存在、资产缺失、GitHub API 失败，或当前是本地工作区测试但找不到远程资产，宿主会退回 `downloadUrl` 指向的仓库根目录 `.laapp`。
-4. 插件介绍始终读取仓库根目录 `README.md`。
-5. 安装完成后只做暂存，重启后生效，不在运行时热重载市场安装插件。
+- `LanAirApp` 负责官方市场索引、开发文档、校验工具和镜像样例
+- 本目录负责宿主运行时发现、安装、加载和界面接入
+- 权威示例插件是独立仓库 `LanMountainDesktop.SamplePlugin`，`LanAirApp` 中的样例目录只是镜像模板
 
-### 核心文件
+### 市场安装顺序
 
-- `PluginLoader.cs`
-- `PluginLoadContext.cs`
-- `PluginRuntimeService.cs`
-- `PluginCatalogEntry.cs`
-- `PluginMarketIndexService.cs`
-- `PluginMarketInstallService.cs`
-
-### 与 `LanAirApp` 的分工
-
-- `LanAirApp` 负责插件开发文档、示例、市场索引和校验工具。
-- 宿主目录负责运行时发现、安装、加载和界面接入。
+1. 宿主读取官方 `LanAirApp/airappmarket/index.json`
+2. 若条目同时包含 `releaseTag` 与 `releaseAssetName`，优先解析 GitHub Release 资产
+3. 若 Release 解析失败，则回退到仓库根目录 `.laapp`
+4. 插件详情始终读取插件仓库根目录 `README.md`
+5. 市场安装为暂存安装，重启后生效
 
 ## English
 
@@ -40,25 +32,22 @@ This directory contains the host-side plugin runtime for LanMountainDesktop.
 
 ### Responsibilities
 
-- discover installed plugins
-- install and replace `.laapp` packages
-- load plugin assemblies
-- integrate plugin settings pages and desktop components
-- expose market and plugin management in the host UI
-- build a plugin-scoped `IServiceCollection`/`ServiceProvider` for API `2.0.0` plugins
-- resolve shared contract assemblies into a version-isolated cache before plugin activation
-- expose explicit cross-plugin exports through `IPluginExportRegistry`
+- discover, install, and replace `.laapp` packages
+- load plugin assemblies and shared contracts
+- integrate plugin settings pages, desktop components, and market UI
+- build a plugin-scoped `IServiceCollection` / `ServiceProvider` for API `3.0.0` plugins
+- resolve shared contract caches before activation and expose explicit plugin exports
+
+### Relationship with LanAirApp
+
+- `LanAirApp` owns the official market index, developer docs, validation tools, and mirrored sample templates
+- this directory owns host-side discovery, installation, loading, and UI integration
+- the authoritative sample plugin lives in the standalone `LanMountainDesktop.SamplePlugin` repository; the `LanAirApp` sample directory is only a mirror/template copy
 
 ### Market install order
 
-1. The host reads `LanAirApp/airappmarket/index.json`.
-2. If an entry declares both `releaseTag` and `releaseAssetName`, the host first resolves the exact GitHub Release asset.
-3. If Release resolution fails, the host falls back to the repository root `.laapp` from `downloadUrl`.
-4. Plugin details always come from the repository root `README.md`.
-5. Market installs are staged and take effect after restart.
-
-### Dependency model
-
-- Plugin-private managed and native NuGet dependencies remain plugin-local and are resolved through `AssemblyDependencyResolver`.
-- Shared contract assemblies are downloaded from the official market index, cached under `LocalAppData/LanMountainDesktop/SharedContracts/<id>/<version>/`, and loaded into the default context so host and plugins share the same contract types.
-- Different contract versions are isolated on disk. If two active plugins request incompatible versions of the same shared assembly name in one process, the host fails the later activation with a clear error instead of loading an ambiguous contract.
+1. The host reads the official `LanAirApp/airappmarket/index.json`
+2. If an entry contains both `releaseTag` and `releaseAssetName`, the host first resolves the exact GitHub Release asset
+3. If Release resolution fails, the host falls back to the repository-root `.laapp`
+4. Plugin details always come from the plugin repository root `README.md`
+5. Market installs are staged and take effect after restart

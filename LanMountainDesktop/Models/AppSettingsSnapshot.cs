@@ -70,6 +70,8 @@ public sealed class AppSettingsSnapshot
 
     public bool UploadAnonymousUsageData { get; set; }
 
+    public string? DeviceId { get; set; }
+
     public string UpdateChannel { get; set; } = "stable";
 
     public string UpdateMode { get; set; } = "download_then_confirm";
