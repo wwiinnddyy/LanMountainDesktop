@@ -67,6 +67,15 @@ public partial class App : Application
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
 
+    // 隐私政策查看事件
+    public static event Action? CurrentPrivacyPolicyViewRequested;
+
+    // 触发隐私政策查看事件的方法
+    public static void RaisePrivacyPolicyViewRequested()
+    {
+        CurrentPrivacyPolicyViewRequested?.Invoke();
+    }
+
     public PluginRuntimeService? PluginRuntimeService => _pluginRuntimeService;
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;

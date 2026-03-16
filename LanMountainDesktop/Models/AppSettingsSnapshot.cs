@@ -62,8 +62,6 @@ public sealed class AppSettingsSnapshot
 
     public string AppRenderMode { get; set; } = "Default";
 
-    public bool AutoCheckUpdates { get; set; } = true;
-
     public bool IncludePrereleaseUpdates { get; set; }
 
     public bool UploadAnonymousCrashData { get; set; }
@@ -71,6 +69,8 @@ public sealed class AppSettingsSnapshot
     public bool UploadAnonymousUsageData { get; set; }
 
     public string? DeviceId { get; set; }
+
+    public string? PersistentUserId { get; set; }
 
     public string UpdateChannel { get; set; } = "stable";
 

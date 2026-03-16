@@ -628,7 +628,6 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             snapshot.UpdateChannel,
             snapshot.IncludePrereleaseUpdates);
         return new UpdateSettingsState(
-            snapshot.AutoCheckUpdates,
             string.Equals(normalizedChannel, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase),
             normalizedChannel,
             UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
@@ -646,7 +645,6 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         var normalizedChannel = UpdateSettingsValues.NormalizeChannel(
             state.UpdateChannel,
             state.IncludePrereleaseUpdates);
-        snapshot.AutoCheckUpdates = state.AutoCheckUpdates;
         snapshot.IncludePrereleaseUpdates = string.Equals(
             normalizedChannel,
             UpdateSettingsValues.ChannelPreview,
@@ -672,7 +670,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             snapshot,
             changedKeys:
             [
-                nameof(AppSettingsSnapshot.AutoCheckUpdates),
+                nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
                 nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
                 nameof(AppSettingsSnapshot.UpdateChannel),
                 nameof(AppSettingsSnapshot.UpdateMode),

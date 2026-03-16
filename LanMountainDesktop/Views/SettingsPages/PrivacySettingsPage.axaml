@@ -45,10 +45,13 @@
                                    FontSize="12"
                                    Opacity="0.7"
                                    Margin="0,4,0,8" />
-                        <TextBox Text="{Binding DeviceId}"
+                        <TextBox x:Name="DeviceIdTextBox"
+                                 Text="{Binding DeviceId}"
                                  IsReadOnly="True"
                                  FontFamily="Consolas"
-                                 FontSize="12" />
+                                 FontSize="12"
+                                 Focusable="False"
+                                 IsTabStop="False" />
                     </StackPanel>
                     <Button Grid.Column="1"
                             Content="{Binding RefreshDeviceIdText}"
@@ -58,6 +61,28 @@
                             Classes="accent-button" />
                 </Grid>
             </Border>
+
+            <StackPanel Orientation="Horizontal"
+                        Margin="0,16,0,0"
+                        Spacing="4">
+                <TextBlock Text="{Binding PrivacyPolicyHintPrefix}"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <Button Content="{Binding ViewPrivacyPolicyText}"
+                        Command="{Binding ViewPrivacyPolicyCommand}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0"
+                        FontSize="13"
+                        Foreground="{DynamicResource SystemAccentColor}"
+                        Cursor="Hand">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="TextBlock.Foreground" Value="{DynamicResource SystemAccentColorDark1}" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

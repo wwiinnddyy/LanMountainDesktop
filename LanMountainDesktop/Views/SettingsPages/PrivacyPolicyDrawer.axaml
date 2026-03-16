@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
+             xmlns:helpers="using:LanMountainDesktop.Helpers"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.PrivacyPolicyDrawer"
+             x:DataType="vm:PrivacyPolicyViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container"
+                    Margin="0,0,0,8">
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="12">
+                        <Border Classes="settings-section-card-icon-host"
+                                Width="48"
+                                Height="48">
+                            <Viewbox Stretch="Uniform">
+                                <fi:SymbolIcon Symbol="Document" />
+                            </Viewbox>
+                        </Border>
+                        
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                            <TextBlock Classes="settings-card-header"
+                                       Margin="0"
+                                       Text="{Binding Title}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding Description}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="settings-section-card">
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="settings-item-description"
+                               IsVisible="{Binding IsLoading}"
+                               Text="{Binding LoadingText}" />
+                    
+                    <TextBlock Classes="settings-item-description"
+                               IsVisible="{Binding HasError}"
+                               Text="{Binding ErrorText}"
+                               TextWrapping="Wrap" />
+                    
+                    <mdxaml:MarkdownScrollViewer IsVisible="{Binding HasContent}"
+                                                 Markdown="{Binding MarkdownContent}"
+                                                 Engine="{x:Static helpers:PluginMarketMarkdownHelper.Engine}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

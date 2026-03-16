@@ -22,9 +22,17 @@ public partial class PrivacySettingsPage : SettingsPageBase
     public PrivacySettingsPage(PrivacySettingsPageViewModel viewModel)
     {
         ViewModel = viewModel;
+        ViewModel.ViewPrivacyPolicyRequested += OnViewPrivacyPolicyRequested;
         DataContext = ViewModel;
         InitializeComponent();
     }
 
     public PrivacySettingsPageViewModel ViewModel { get; }
+
+    private void OnViewPrivacyPolicyRequested()
+    {
+        var privacyPolicyViewModel = new PrivacyPolicyViewModel();
+        var drawer = new PrivacyPolicyDrawer(privacyPolicyViewModel);
+        OpenDrawer(drawer, privacyPolicyViewModel.Title);
+    }
 }

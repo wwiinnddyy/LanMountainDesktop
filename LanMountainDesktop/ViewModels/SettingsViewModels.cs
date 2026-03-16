@@ -1330,9 +1330,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    private bool _autoCheckUpdates;
-
-    [ObservableProperty]
     private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
 
     [ObservableProperty]
@@ -1379,9 +1376,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _preferencesDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _autoCheckUpdatesLabel = string.Empty;
 
     [ObservableProperty]
     private string _updateChannelLabel = string.Empty;
@@ -1519,16 +1513,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
 
     private bool IsBusy => IsCheckingForUpdates || IsDownloading;
-
-    partial void OnAutoCheckUpdatesChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SaveUpdateSettings();
-    }
 
     partial void OnSelectedUpdateChannelOptionChanged(SelectionOption? value)
     {
@@ -1729,7 +1713,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         var current = _settingsFacade.Update.Get();
         _settingsFacade.Update.Save(current with
         {
-            AutoCheckUpdates = AutoCheckUpdates,
             IncludePrereleaseUpdates = string.Equals(
                 SelectedUpdateChannelValue,
                 UpdateSettingsValues.ChannelPreview,
@@ -1841,7 +1824,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         StatusCardDescription = L("settings.update.status_card_description", "Check for updates and review the latest release information.");
         PreferencesHeader = L("settings.update.preferences_header", "Update Preferences");
         PreferencesDescription = L("settings.update.preferences_description", "Choose your release channel, download source, behavior, and download speed.");
-        AutoCheckUpdatesLabel = L("settings.update.auto_check_toggle", "Automatically check for updates on startup");
         UpdateChannelLabel = L("settings.update.channel_label", "Update Channel");
         UpdateSourceLabel = L("settings.update.source_label", "Download Source");
         UpdateModeLabel = L("settings.update.mode_label", "Update Mode");
@@ -1870,7 +1852,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         var update = _settingsFacade.Update.Get();
         _isInitializing = true;
-        AutoCheckUpdates = update.AutoCheckUpdates;
         SelectedUpdateChannelValue = UpdateSettingsValues.NormalizeChannel(update.UpdateChannel, update.IncludePrereleaseUpdates);
         SelectedUpdateSourceValue = UpdateSettingsValues.NormalizeDownloadSource(update.UpdateDownloadSource);
         SelectedUpdateModeValue = UpdateSettingsValues.NormalizeMode(update.UpdateMode);

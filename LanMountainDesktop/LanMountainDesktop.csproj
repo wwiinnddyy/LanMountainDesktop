@@ -21,6 +21,7 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <EmbeddedResource Include="Assets\Documents\Privacy.md" />
     <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Extensions\Components\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

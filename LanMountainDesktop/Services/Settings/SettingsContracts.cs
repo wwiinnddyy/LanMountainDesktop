@@ -47,7 +47,6 @@ public sealed record PrivacySettingsState(
     bool UploadAnonymousCrashData,
     bool UploadAnonymousUsageData);
 public sealed record UpdateSettingsState(
-    bool AutoCheckUpdates,
     bool IncludePrereleaseUpdates,
     string UpdateChannel,
     string UpdateMode,

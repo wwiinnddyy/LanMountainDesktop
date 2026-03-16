@@ -16,8 +16,11 @@
                 <ui:SettingsExpander.Footer>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="12">
-                        <TextBox Text="{Binding SearchText}"
-                                 Watermark="{Binding SearchPlaceholder}" />
+                        <TextBox x:Name="SearchTextBox"
+                                 Text="{Binding SearchText}"
+                                 Watermark="{Binding SearchPlaceholder}"
+                                 Focusable="True"
+                                 IsTabStop="True" />
                         <Button Grid.Column="1"
                                 Command="{Binding RefreshCommand}"
                                 Content="{Binding RefreshButtonText}" />

@@ -15,6 +15,7 @@ public sealed class DeviceIdService
 {
     private static DeviceIdService? _instance;
     private string? _deviceId;
+    private string? _persistentUserId;  // 持久化的用户ID，用于关联设备
     private readonly ISettingsFacadeService _settingsFacade;
     private bool _isInitialized;
 
@@ -43,6 +44,19 @@ public sealed class DeviceIdService
         }
     }
 
+    // 持久化的用户ID，用于跨设备关联用户
+    public string PersistentUserId
+    {
+        get
+        {
+            if (_persistentUserId is null)
+            {
+                throw new InvalidOperationException("PersistentUserId not initialized");
+            }
+            return _persistentUserId;
+        }
+    }
+
     private void EnsureDeviceId()
     {
         if (_isInitialized)
@@ -56,13 +70,22 @@ public sealed class DeviceIdService
         {
             var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
 
+            // 初始化或生成持久化用户ID（只生成一次，永不改变）
+            if (string.IsNullOrEmpty(snapshot.PersistentUserId))
+            {
+                snapshot.PersistentUserId = GeneratePersistentUserId();
+                AppLogger.Info("DeviceId", $"Generated new persistent user ID: {snapshot.PersistentUserId}");
+            }
+            _persistentUserId = snapshot.PersistentUserId;
+
+            // 初始化或生成设备ID（可以刷新）
             if (string.IsNullOrEmpty(snapshot.DeviceId))
             {
                 snapshot.DeviceId = GenerateDeviceId();
                 _settingsFacade.Settings.SaveSnapshot(
                     SettingsScope.App,
                     snapshot,
-                    changedKeys: [nameof(AppSettingsSnapshot.DeviceId)]);
+                    changedKeys: [nameof(AppSettingsSnapshot.DeviceId), nameof(AppSettingsSnapshot.PersistentUserId)]);
                 _deviceId = snapshot.DeviceId;
                 AppLogger.Info("DeviceId", $"Generated new device ID: {_deviceId}");
             }
@@ -75,6 +98,7 @@ public sealed class DeviceIdService
         catch (Exception ex)
         {
             _deviceId = GenerateDeviceId();
+            _persistentUserId = GeneratePersistentUserId();
             AppLogger.Warn("DeviceId", $"Failed to persist device ID, using generated ID: {_deviceId}", ex);
         }
     }
@@ -85,6 +109,15 @@ public sealed class DeviceIdService
         var deviceInfo = $"{Environment.MachineName}|{Environment.ProcessorCount}|{Environment.OSVersion}|{Environment.UserName}|{timestamp}";
         using var sha = System.Security.Cryptography.SHA256.Create();
         var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(deviceInfo));
+        return Convert.ToHexString(hash)[..32].ToLower();
+    }
+
+    private static string GeneratePersistentUserId()
+    {
+        // 生成一个永久性的用户ID，基于机器名和用户名的哈希
+        var userInfo = $"{Environment.MachineName}|{Environment.UserName}|LanMountainDesktop";
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(userInfo));
         return Convert.ToHexString(hash)[..32].ToLower();
     }
 }
@@ -140,9 +173,18 @@ public sealed class UserBehaviorAnalyticsService : IDisposable
                 TimeSpan.FromSeconds(10),
                 TimeSpan.FromSeconds(30));
 
+            // 发送PostHog标准的$pageview事件用于统计日活（始终发送，不受开关影响）
+            CaptureEvent("$pageview", new Dictionary<string, object>
+            {
+                { "$current_url", "app://main" },
+                { "$title", "LanMountainDesktop" }
+            });
+
+            // 发送应用启动事件（始终发送，用于统计用户数量）
             CaptureEvent("app_online", new Dictionary<string, object>
             {
-                { "event_type", "app_start" }
+                { "event_type", "app_start" },
+                { "analytics_enabled", _isEnabled }
             });
 
             AppLogger.Info("UserBehaviorAnalytics", $"Analytics initialized. DeviceId={_deviceIdService.DeviceId}, Enabled={_isEnabled}");
@@ -382,10 +424,22 @@ public sealed class UserBehaviorAnalyticsService : IDisposable
 
         try
         {
+            // 基础事件（$pageview, app_online, app_shutdown等）始终发送，用于统计用户数量
+            bool isBasicEvent = eventName.StartsWith("$") || 
+                               eventName == "app_online" || 
+                               eventName == "app_shutdown" ||
+                               eventName == "$identify";
+
+            // 非基础事件只有在启用时才发送
+            if (!isBasicEvent && !_isEnabled)
+            {
+                return;
+            }
+
             var eventData = new UserBehaviorEvent
             {
                 Event = eventName,
-                DistinctId = _deviceIdService.DeviceId,
+                DistinctId = _deviceIdService.PersistentUserId,  // 使用持久化用户ID
                 Timestamp = DateTimeOffset.UtcNow,
                 Properties = properties ?? new Dictionary<string, object>(),
                 IncludeDetailedData = _isEnabled
@@ -542,21 +596,29 @@ public sealed class UserBehaviorAnalyticsService : IDisposable
         {
             var userProperties = new Dictionary<string, object>
             {
-                { "$device_id", distinctId },
                 { "$app_version", GetAppVersion() },
                 { "$os", GetOsName() },
-                { "$os_version", GetOsVersion() }
+                { "$os_version", GetOsVersion() },
+                { "$device_type", GetDeviceModel() },
+                { "$device_id", _deviceIdService.DeviceId }  // 当前设备ID
             };
 
+            // PostHog正确的$identify格式
+            // 使用PersistentUserId作为distinct_id，确保设备ID刷新后仍能关联到同一用户
             var requestBody = new Dictionary<string, object>
             {
                 { "api_key", PostHogApiKey },
                 { "event", "$identify" },
+                { "distinct_id", _deviceIdService.PersistentUserId },  // 使用持久化用户ID
                 { "timestamp", DateTimeOffset.UtcNow.ToString("o") },
                 { "properties", new Dictionary<string, object>
                     {
-                        { "distinct_id", distinctId },
-                        { "$set", userProperties }
+                        { "$set", userProperties },
+                        { "$set_once", new Dictionary<string, object>
+                            {
+                                { "first_app_open", DateTimeOffset.UtcNow.ToString("o") }
+                            }
+                        }
                     }
                 }
             };
@@ -796,6 +858,9 @@ public sealed class CrashReportService
             });
 
             ConfigureCrashReportingScope();
+            
+            // 显式开始会话跟踪
+            SentrySdk.StartSession();
 
             AppLogger.Info("CrashReport", $"Sentry crash reporting initialized. DeviceId={_deviceIdService.DeviceId}");
 
@@ -849,7 +914,10 @@ public sealed class CrashReportService
         {
             if (_isEnabled && _isInitialized)
             {
-                AppLogger.Info("CrashReport", $"Shutdown event will be sent via Sentry. DeviceId={_deviceIdService.DeviceId}");
+                // 结束Sentry会话
+                SentrySdk.EndSession();
+                SentrySdk.Flush(TimeSpan.FromSeconds(3));
+                AppLogger.Info("CrashReport", $"Shutdown event sent via Sentry. DeviceId={_deviceIdService.DeviceId}");
                 return;
             }
 

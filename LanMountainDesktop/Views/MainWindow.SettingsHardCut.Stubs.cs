@@ -473,6 +473,7 @@ public partial class MainWindow
         var latestWeatherState = _weatherSettingsService.Get();
         var latestUpdateState = _updateSettingsService.Get();
         var latestThemeState = _themeSettingsService.Get();
+        var latestPrivacyState = _settingsFacade.Privacy.Get();
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
@@ -504,7 +505,8 @@ public partial class MainWindow
             WeatherNoTlsRequests = latestWeatherState.NoTlsRequests,
             AutoStartWithWindows = _autoStartWithWindows,
             AppRenderMode = _selectedAppRenderMode,
-            AutoCheckUpdates = latestUpdateState.AutoCheckUpdates,
+            UploadAnonymousCrashData = latestPrivacyState.UploadAnonymousCrashData,
+            UploadAnonymousUsageData = latestPrivacyState.UploadAnonymousUsageData,
             IncludePrereleaseUpdates = latestUpdateState.IncludePrereleaseUpdates,
             UpdateChannel = latestUpdateState.UpdateChannel,
             UpdateMode = latestUpdateState.UpdateMode,

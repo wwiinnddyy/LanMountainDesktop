@@ -21,12 +21,17 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Opacity" Value="0.68" />
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxWidth" Value="200" />
         </Style>
 
         <Style Selector="TextBlock.update-kv-value">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxWidth" Value="200" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
     </UserControl.Styles>
 
@@ -64,9 +69,9 @@
                                 Content="{Binding CheckForUpdatesButtonText}" />
                     </Grid>
 
-                    <Grid ColumnDefinitions="*,*"
-                          ColumnSpacing="14"
-                          RowSpacing="12">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="20"
+                          RowSpacing="16">
                         <StackPanel Grid.Column="0"
                                     Spacing="4">
                             <TextBlock Classes="update-kv-label"
@@ -105,18 +110,23 @@
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel Spacing="8">
+                    <StackPanel Spacing="12">
                         <TextBlock Classes="settings-item-description"
-                                   Text="{Binding UpdateStatus}" />
+                                   Text="{Binding UpdateStatus}"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="500" />
 
                         <ProgressBar Minimum="0"
                                      Maximum="100"
                                      Value="{Binding DownloadProgressValue}"
-                                     IsVisible="{Binding IsDownloadProgressVisible}" />
+                                     IsVisible="{Binding IsDownloadProgressVisible}"
+                                     Margin="0,4,0,4" />
 
                         <TextBlock Classes="settings-item-description"
                                    IsVisible="{Binding IsDownloadProgressVisible}"
-                                   Text="{Binding DownloadProgressText}" />
+                                   Text="{Binding DownloadProgressText}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0" />
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal"
@@ -210,15 +220,7 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding AutoCheckUpdatesLabel}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ClockAlarm" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding AutoCheckUpdates}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

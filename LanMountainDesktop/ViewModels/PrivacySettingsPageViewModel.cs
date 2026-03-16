@@ -15,6 +15,8 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
     private readonly string _languageCode;
     private bool _isInitializing;
 
+    public event Action? ViewPrivacyPolicyRequested;
+
     public PrivacySettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
@@ -58,6 +60,12 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _refreshDeviceIdText = string.Empty;
+
+    [ObservableProperty]
+    private string _viewPrivacyPolicyText = string.Empty;
+
+    [ObservableProperty]
+    private string _privacyPolicyHintPrefix = string.Empty;
 
     public void Load()
     {
@@ -130,6 +138,25 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
         DeviceIdHeader = L("settings.privacy.device_id_title", "Device ID");
         DeviceIdDescription = L("settings.privacy.device_id_description", "Unique identifier for this device. Click refresh to regenerate.");
         RefreshDeviceIdText = L("settings.privacy.refresh_device_id", "Refresh");
+        PrivacyPolicyHintPrefix = L("settings.privacy.policy_hint_prefix", "For more details, please ");
+        ViewPrivacyPolicyText = L("settings.privacy.view_policy", "view our privacy policy");
+    }
+
+    [RelayCommand]
+    private void ViewPrivacyPolicy()
+    {
+        try
+        {
+            // 触发隐私政策查看事件
+            AppLogger.Info("PrivacySettings", "User requested to view privacy policy.");
+            
+            // 发送事件通知显示隐私政策
+            ViewPrivacyPolicyRequested?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PrivacySettings", "Failed to view privacy policy.", ex);
+        }
     }
 
     private string L(string key, string fallback)

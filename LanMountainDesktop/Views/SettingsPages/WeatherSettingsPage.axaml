@@ -96,8 +96,11 @@
                     <StackPanel Spacing="14">
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="12">
-                            <TextBox Text="{Binding SearchKeyword}"
-                                     Watermark="{Binding SearchPlaceholder}" />
+                            <TextBox x:Name="SearchKeywordTextBox"
+                                     Text="{Binding SearchKeyword}"
+                                     Watermark="{Binding SearchPlaceholder}"
+                                     Focusable="True"
+                                     IsTabStop="True" />
                             <Button Grid.Column="1"
                                     Command="{Binding SearchCommand}"
                                     Content="{Binding SearchButtonText}" />
@@ -178,12 +181,18 @@
                     </Grid>
                 </ui:SettingsExpanderItem>
                 <ui:SettingsExpanderItem>
-                    <TextBox Text="{Binding LocationKey}"
-                             Watermark="{Binding LocationKeyPlaceholder}" />
+                    <TextBox x:Name="LocationKeyTextBox"
+                             Text="{Binding LocationKey}"
+                             Watermark="{Binding LocationKeyPlaceholder}"
+                             Focusable="True"
+                             IsTabStop="True" />
                 </ui:SettingsExpanderItem>
                 <ui:SettingsExpanderItem>
-                    <TextBox Text="{Binding LocationName}"
-                             Watermark="{Binding LocationNamePlaceholder}" />
+                    <TextBox x:Name="LocationNameTextBox"
+                             Text="{Binding LocationName}"
+                             Watermark="{Binding LocationNamePlaceholder}"
+                             Focusable="True"
+                             IsTabStop="True" />
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
@@ -230,11 +239,14 @@
                     <fi:SymbolIconSource Symbol="Warning" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <TextBox Width="360"
+                    <TextBox x:Name="ExcludedAlertsTextBox"
+                             Width="360"
                              MinHeight="120"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             Text="{Binding ExcludedAlerts}" />
+                             Text="{Binding ExcludedAlerts}"
+                             Focusable="True"
+                             IsTabStop="True" />
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 

@@ -131,13 +131,10 @@ public sealed class UpdateWorkflowService
         CancellationToken cancellationToken = default)
     {
         var state = _settingsFacade.Update.Get();
-        if (!state.AutoCheckUpdates)
-        {
-            return;
-        }
 
         try
         {
+            // Always check for updates on startup (removed AutoCheckUpdates check)
             var result = await CheckForUpdatesAsync(currentVersion, cancellationToken);
             if (!result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
             {
@@ -145,12 +142,14 @@ public sealed class UpdateWorkflowService
             }
 
             var normalizedMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
-            if (string.Equals(normalizedMode, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+            
+            // For "Silent Download" and "Silent Install" modes, automatically download the update
+            if (string.Equals(normalizedMode, UpdateSettingsValues.ModeDownloadThenConfirm, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalizedMode, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase))
             {
-                return;
+                await DownloadReleaseAsync(result, cancellationToken: cancellationToken);
             }
-
-            await DownloadReleaseAsync(result, cancellationToken: cancellationToken);
+            // For "Manual" mode, just check but don't download
         }
         catch (OperationCanceledException)
         {
