@@ -1,0 +1,108 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:vm="using:LanMountainDesktop.Views.Components"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="320"
+             x:Class="LanMountainDesktop.Views.Components.OfficeRecentDocumentsWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="34"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="AccentCorner"
+                    Width="140"
+                    Height="140"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-40,-40,0"
+                    CornerRadius="70"
+                    Background="{DynamicResource SystemAccentColorLight2Brush}"
+                    Opacity="0.2"
+                    IsHitTestVisible="False" />
+
+            <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="16,14,16,14">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="HeaderTextBlock"
+                               Text="最近文档"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <Button x:Name="RefreshButton"
+                            Grid.Column="1"
+                            Width="28"
+                            Height="28"
+                            CornerRadius="14"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            Padding="0"
+                            Focusable="False"
+                            PointerPressed="OnRefreshPointerPressed">
+                        <fi:SymbolIcon Symbol="ArrowSync"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                    </Button>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              Margin="0,4,0,0">
+                    <ItemsControl x:Name="DocumentsItemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OfficeRecentDocumentViewModel">
+                                <Border x:Name="DocumentCard"
+                                        Width="130"
+                                        Height="90"
+                                        CornerRadius="10"
+                                        Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
+                                        Padding="10"
+                                        Cursor="Hand"
+                                        PointerPressed="OnDocumentCardPointerPressed">
+                                    <Grid RowDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Row="0"
+                                                   Text="{Binding FileName}"
+                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                   FontSize="12"
+                                                   FontWeight="Medium"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="2"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Top" />
+                                        <TextBlock Grid.Row="2"
+                                                   Text="{Binding TimeAgo}"
+                                                   Foreground="{DynamicResource AdaptiveTextTertiaryBrush}"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="1" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="暂无最近文档"
+                       Foreground="{DynamicResource AdaptiveTextTertiaryBrush}"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

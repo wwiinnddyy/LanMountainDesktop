@@ -163,7 +163,7 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
         var totalElapsedWeeks = (int)Math.Floor(
             (referenceDate.ToDateTime(TimeOnly.MinValue) - cycleRule.SingleWeekStartDate.Value.ToDateTime(TimeOnly.MinValue)).TotalDays / 7d);
 
-        for (var cycleLength = 2; cycleLength <= maxCycle; cycleLength++)
+        for (var cycleLength = 1; cycleLength <= maxCycle; cycleLength++)
         {
             var cycleOffset = cycleLength < cycleRule.MultiWeekRotationOffset.Count
                 ? cycleRule.MultiWeekRotationOffset[cycleLength]
@@ -668,7 +668,7 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
             return true;
         }
 
-        if (weekCountDivTotal <= 1 || weekCountDivTotal >= cyclePositions.Count)
+        if (weekCountDivTotal <= 0 || weekCountDivTotal >= cyclePositions.Count)
         {
             return false;
         }

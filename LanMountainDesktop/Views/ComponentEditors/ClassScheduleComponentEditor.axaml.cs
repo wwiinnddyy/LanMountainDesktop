@@ -11,13 +11,15 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.ComponentEditors;
 
 public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
 {
     private readonly List<ImportedClassScheduleSnapshot> _importedSchedules = [];
-    private string _activeScheduleId = string.Empty;
+    private string? _activeScheduleId;
+    private bool _suppressEvents;
 
     public ClassScheduleComponentEditor()
         : this(null)
@@ -62,10 +64,49 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
 
     private void ApplyState()
     {
+        var snapshot = LoadSnapshot();
+        var colorSchemeSource = snapshot.ColorSchemeSource;
+
         HeadlineTextBlock.Text = Context?.Definition.DisplayName ?? "Class Schedule";
         DescriptionTextBlock.Text = L("schedule.settings.desc", "导入 ClassIsland 的 CSES 课表文件并选择启用项。");
+        
+        ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "配色方案");
+        FollowSystemRadioButton.Content = L("component.color_scheme.follow_system", "跟随系统配色");
+        UseNativeRadioButton.Content = L("component.color_scheme.native", "使用组件自定义配色");
+        
         AddScheduleButton.Content = L("schedule.settings.add", "添加课表");
         EmptyStateTextBlock.Text = L("schedule.settings.empty", "暂无导入课表");
+
+        _suppressEvents = true;
+        
+        if (string.IsNullOrEmpty(colorSchemeSource) || 
+            colorSchemeSource == ThemeAppearanceValues.ColorSchemeFollowSystem)
+        {
+            FollowSystemRadioButton.IsChecked = true;
+        }
+        else
+        {
+            UseNativeRadioButton.IsChecked = true;
+        }
+        
+        _suppressEvents = false;
+    }
+
+    private void OnColorSchemeChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents)
+        {
+            return;
+        }
+
+        var useNative = UseNativeRadioButton.IsChecked == true;
+        var colorSchemeSource = useNative 
+            ? ThemeAppearanceValues.ColorSchemeNative 
+            : ThemeAppearanceValues.ColorSchemeFollowSystem;
+
+        var snapshot = LoadSnapshot();
+        snapshot.ColorSchemeSource = colorSchemeSource;
+        SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ColorSchemeSource));
     }
 
     private async void OnAddScheduleClick(object? sender, RoutedEventArgs e)

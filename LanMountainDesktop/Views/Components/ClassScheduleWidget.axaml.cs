@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -25,8 +26,16 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
-        Interval = TimeSpan.FromMinutes(4)
+        Interval = TimeSpan.FromMinutes(1)
     };
+
+    private int _lastCurrentCourseIndex = -1;
+    private DateOnly _lastRefreshDate = DateOnly.MinValue;
+
+    private bool _isUserScrolling;
+    private Vector _lastScrollOffset;
+    private Point _dragStartPoint;
+    private Point _lastDragPoint;
 
     private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
@@ -39,6 +48,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private string _languageCode = "zh-CN";
     private string _componentId = BuiltInComponentIds.DesktopClassSchedule;
     private string _placementId = string.Empty;
+    private string? _componentColorScheme;
 
     public ClassScheduleWidget()
     {
@@ -49,6 +59,10 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
+
+        ContentScrollViewer.PointerPressed += OnScrollViewerPointerPressed;
+        ContentScrollViewer.PointerMoved += OnScrollViewerPointerMoved;
+        ContentScrollViewer.PointerReleased += OnScrollViewerPointerReleased;
 
         ApplyCellSize(_currentCellSize);
         RefreshSchedule();
@@ -107,9 +121,89 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         RefreshSchedule();
     }
 
+    private void OnScrollViewerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _isUserScrolling = true;
+        _dragStartPoint = e.GetCurrentPoint(ContentScrollViewer).Position;
+        _lastDragPoint = _dragStartPoint;
+        _lastScrollOffset = ContentScrollViewer.Offset;
+    }
+
+    private void OnScrollViewerPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isUserScrolling)
+        {
+            return;
+        }
+
+        var currentPoint = e.GetCurrentPoint(ContentScrollViewer);
+        var currentPosition = currentPoint.Position;
+        var deltaY = currentPosition.Y - _lastDragPoint.Y;
+
+        var newOffset = _lastScrollOffset;
+        newOffset = newOffset.WithY(newOffset.Y - deltaY);
+
+        ContentScrollViewer.Offset = newOffset;
+        _lastDragPoint = currentPosition;
+    }
+
+    private void OnScrollViewerPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _lastScrollOffset = ContentScrollViewer.Offset;
+    }
+
     private void OnRefreshTimerTick(object? sender, EventArgs e)
     {
+        var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
+        var currentDate = DateOnly.FromDateTime(now);
+        
+        var previousCourseIndex = _lastCurrentCourseIndex;
+        
         RefreshSchedule();
+        
+        var newCurrentCourseIndex = FindCurrentCourseIndex();
+        _lastCurrentCourseIndex = newCurrentCourseIndex;
+        
+        if (previousCourseIndex != newCurrentCourseIndex && newCurrentCourseIndex >= 0)
+        {
+            if (_isUserScrolling)
+            {
+                _isUserScrolling = false;
+            }
+            ScrollToCurrentCourse(newCurrentCourseIndex);
+        }
+        
+        if (_lastRefreshDate != currentDate && currentDate > _lastRefreshDate)
+        {
+            _lastRefreshDate = currentDate;
+        }
+    }
+
+    private int FindCurrentCourseIndex()
+    {
+        for (var i = 0; i < _courseItems.Count; i++)
+        {
+            if (_courseItems[i].IsCurrent)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void ScrollToCurrentCourse(int courseIndex)
+    {
+        if (courseIndex < 0 || courseIndex >= _courseItems.Count)
+        {
+            return;
+        }
+
+        if (courseIndex < CourseListPanel.Children.Count)
+        {
+            var targetChild = CourseListPanel.Children[courseIndex];
+            var bounds = targetChild.Bounds;
+            ContentScrollViewer.Offset = new Vector(0, bounds.Position.Y);
+        }
     }
 
     public void RefreshFromSettings()
@@ -134,44 +228,75 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             _componentId,
             _placementId);
         _languageCode = _localizationService.NormalizeLanguageCode(appSettings.LanguageCode);
+        _componentColorScheme = componentSettings.ColorSchemeSource;
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
-        UpdateHeader(now);
+        var today = DateOnly.FromDateTime(now);
 
         var importedSchedulePath = ResolveImportedSchedulePath(componentSettings);
         var readResult = _scheduleService.Load(importedSchedulePath);
         if (!readResult.Success || readResult.Snapshot is null)
         {
             _courseItems = Array.Empty<CourseItemViewModel>();
+            UpdateHeader(now);
             ShowStatus(L("schedule.widget.no_source", "未读取到 ClassIsland 课表"));
             RenderScheduleItems();
             return;
         }
 
         var snapshot = readResult.Snapshot;
-        var today = DateOnly.FromDateTime(now);
+        
         if (!_scheduleService.TryResolveClassPlanForDate(snapshot, today, out var resolvedClassPlan))
         {
-            _courseItems = Array.Empty<CourseItemViewModel>();
-            ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
-            RenderScheduleItems();
-            return;
+            var nextDay = today.AddDays(1);
+            if (_scheduleService.TryResolveClassPlanForDate(snapshot, nextDay, out var nextDayClassPlan))
+            {
+                resolvedClassPlan = nextDayClassPlan;
+                today = nextDay;
+            }
+            else
+            {
+                _courseItems = Array.Empty<CourseItemViewModel>();
+                UpdateHeader(now);
+                ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
+                RenderScheduleItems();
+                return;
+            }
         }
 
         if (!snapshot.TimeLayouts.TryGetValue(resolvedClassPlan.ClassPlan.TimeLayoutId, out var layout))
         {
             _courseItems = Array.Empty<CourseItemViewModel>();
+            UpdateHeader(now);
             ShowStatus(L("schedule.widget.layout_missing", "课表时间布局缺失"));
             RenderScheduleItems();
             return;
         }
 
-        _courseItems = BuildCourseItemViewModels(snapshot, resolvedClassPlan.ClassPlan, layout, now);
+        var adjustedNow = today == DateOnly.FromDateTime(now) ? now : DateTime.Today.AddHours(8);
+        _courseItems = BuildCourseItemViewModels(snapshot, resolvedClassPlan.ClassPlan, layout, adjustedNow);
+        
+        if (_courseItems.Count == 0)
+        {
+            var nextDay = today.AddDays(1);
+            if (_scheduleService.TryResolveClassPlanForDate(snapshot, nextDay, out var nextDayClassPlan) &&
+                snapshot.TimeLayouts.TryGetValue(nextDayClassPlan.ClassPlan.TimeLayoutId, out var nextLayout))
+            {
+                today = nextDay;
+                adjustedNow = DateTime.Today.AddHours(8);
+                _courseItems = BuildCourseItemViewModels(snapshot, nextDayClassPlan.ClassPlan, nextLayout, adjustedNow);
+            }
+        }
+
+        UpdateHeader(today.ToDateTime(TimeOnly.MinValue));
+        
         if (_courseItems.Count == 0)
         {
             ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
         }
         else
         {
+            var currentIndex = FindCurrentCourseIndex();
+            _lastCurrentCourseIndex = currentIndex;
             HideStatus();
         }
 
@@ -336,6 +461,10 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             return;
         }
 
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme,
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
         var scale = ResolveScale();
         var bulletSize = Math.Clamp(10 * scale, 5, 12);
         var courseNameSize = Math.Clamp(42 * scale, 14, 42);
@@ -350,7 +479,9 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
         var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
         var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
-        var currentBrush = CreateBrush("#FF4D5A");
+        var currentBrush = useMonetColor
+            ? CreateBrush("#FF4FC3F7")
+            : CreateBrush("#FF4D5A");
         var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
 
         var visibleItems = _courseItems.Take(maxVisibleItems).ToList();
@@ -438,8 +569,21 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private void ApplyAdaptiveLayout()
     {
+        if (Bounds.Width <= 0 || Bounds.Height <= 0)
+        {
+            return;
+        }
+
         var scale = ResolveScale();
         _isNightVisual = ResolveNightMode();
+
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme,
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
+        var slashBrush = useMonetColor
+            ? CreateBrush("#FF4FC3F7")
+            : CreateBrush("#FF3250");
 
         var cornerRadius = Math.Clamp(_currentCellSize * 0.45, 24, 44);
         RootBorder.CornerRadius = new CornerRadius(cornerRadius);
@@ -468,7 +612,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
         MonthTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
         DayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
-        SlashTextBlock.Foreground = CreateBrush("#FF3250");
+        SlashTextBlock.Foreground = slashBrush;
         WeekdayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#C6CBD5" : "#4B5463");
         ClassCountTextBlock.Foreground = CreateBrush(_isNightVisual ? "#8D95A4" : "#738095");
         StatusTextBlock.Foreground = CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");

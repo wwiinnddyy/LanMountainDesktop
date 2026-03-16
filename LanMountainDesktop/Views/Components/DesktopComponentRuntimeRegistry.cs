@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -439,6 +439,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.browser",
                     () => new BrowserWidget(),
                     cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopOfficeRecentDocuments,
+                    "component.office_recent_documents",
+                    () => new OfficeRecentDocumentsWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.50, 10, 24)),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.HolidayCalendar,
                     "component.holiday_calendar",

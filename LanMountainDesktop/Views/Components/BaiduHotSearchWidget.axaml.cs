@@ -13,6 +13,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -50,6 +51,7 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     private bool _autoRefreshEnabled = true;
     private string _sourceType = BaiduHotSearchSourceTypes.Official;
     private bool _isNightVisual = true;
+    private string? _componentColorScheme;
 
     private sealed record HotItemVisual(
         Border Host,
@@ -180,17 +182,25 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
 
     private void ApplyNightModeVisual()
     {
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme, 
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
+        var brandColor = useMonetColor
+            ? (_isNightVisual ? Color.Parse("#9FABFF") : Color.Parse("#4F6BEB"))
+            : (_isNightVisual ? Color.Parse("#5D93FF") : Color.Parse("#2932E1"));
+
         CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
-        BrandTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#5D93FF") : Color.Parse("#2932E1"));
+        BrandTextBlock.Foreground = new SolidColorBrush(brandColor);
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
         RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
 
         foreach (var visual in _hotItemVisuals)
         {
-            visual.IndexTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#5D93FF") : Color.Parse("#2932E1"));
+            visual.IndexTextBlock.Foreground = new SolidColorBrush(brandColor);
             visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
         }
 
@@ -488,10 +498,11 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
             enabled = snapshot.BaiduHotSearchAutoRefreshEnabled;
             intervalMinutes = NormalizeAutoRefreshIntervalMinutes(snapshot.BaiduHotSearchAutoRefreshIntervalMinutes);
             sourceType = BaiduHotSearchSourceTypes.Normalize(snapshot.BaiduHotSearchSourceType);
+            _componentColorScheme = snapshot.ColorSchemeSource;
         }
         catch
         {
-            // Keep fallback defaults.
+            _componentColorScheme = null;
         }
 
         _autoRefreshEnabled = enabled;

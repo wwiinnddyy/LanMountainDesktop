@@ -6,6 +6,8 @@ public sealed class ComponentSettingsSnapshot
 {
     public string DailyArtworkMirrorSource { get; set; } = DailyArtworkMirrorSources.Overseas;
 
+    public string? ColorSchemeSource { get; set; }
+
     public List<ImportedClassScheduleSnapshot> ImportedClassSchedules { get; set; } = [];
 
     public string ActiveImportedClassScheduleId { get; set; } = string.Empty;

@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -24,6 +25,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private double _currentCellSize = 48;
     private bool _showDisplayDb = true;
     private bool _showDbfs;
+    private string? _componentColorScheme;
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -147,6 +149,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
         _showDisplayDb = componentSnapshot.StudyEnvironmentShowDisplayDb;
         _showDbfs = componentSnapshot.StudyEnvironmentShowDbfs;
+        _componentColorScheme = componentSnapshot.ColorSchemeSource;
         if (!_showDisplayDb && !_showDbfs)
         {
             _showDisplayDb = true;
@@ -287,22 +290,26 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private IBrush ResolveStatusBrush(StudyAnalyticsSnapshot snapshot)
     {
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme,
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
         if (snapshot.State == StudyAnalyticsRuntimeState.Unsupported ||
             snapshot.State == StudyAnalyticsRuntimeState.Error ||
             snapshot.StreamStatus == NoiseStreamStatus.Error)
         {
-            return CreateBrush("#FFFF7B7B");
+            return useMonetColor ? CreateBrush("#FF6FD7A2") : CreateBrush("#FFFF7B7B");
         }
 
         if (snapshot.StreamStatus == NoiseStreamStatus.Noisy)
         {
-            return CreateBrush("#FFFFB14A");
+            return useMonetColor ? CreateBrush("#FF4FC3F7") : CreateBrush("#FFFFB14A");
         }
 
         if (snapshot.State == StudyAnalyticsRuntimeState.Running &&
             snapshot.StreamStatus == NoiseStreamStatus.Quiet)
         {
-            return CreateBrush("#FF6FD7A2");
+            return useMonetColor ? CreateBrush("#FF81C784") : CreateBrush("#FF6FD7A2");
         }
 
         return TryResolveThemeBrush("AdaptiveTextPrimaryBrush", "#FFEFF3FF");

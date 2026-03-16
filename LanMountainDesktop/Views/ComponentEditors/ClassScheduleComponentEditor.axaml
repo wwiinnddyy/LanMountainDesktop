@@ -20,6 +20,22 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <StackPanel Spacing="12">
+                <TextBlock x:Name="ColorSchemeHeaderTextBlock"
+                           Classes="component-editor-section-title" />
+                <StackPanel Spacing="8">
+                    <RadioButton x:Name="FollowSystemRadioButton"
+                                 GroupName="ColorScheme"
+                                 IsCheckedChanged="OnColorSchemeChanged" />
+                    <RadioButton x:Name="UseNativeRadioButton"
+                                 GroupName="ColorScheme"
+                                 IsCheckedChanged="OnColorSchemeChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
                 <Button x:Name="AddScheduleButton"
                         HorizontalAlignment="Left"
                         Classes="accent"

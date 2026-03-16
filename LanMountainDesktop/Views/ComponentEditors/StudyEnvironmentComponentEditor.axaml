@@ -2,10 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
              mc:Ignorable="d"
              x:Class="LanMountainDesktop.Views.ComponentEditors.StudyEnvironmentComponentEditor">
     <StackPanel Spacing="16">
-        <Border Classes="component-editor-hero-card"
+        <Border Classes="component-editor-hero_card"
                 Padding="24">
             <StackPanel Spacing="8">
                 <TextBlock x:Name="HeadlineTextBlock"
@@ -20,6 +21,22 @@
         <Border Classes="component-editor-card"
                 Padding="20">
             <StackPanel Spacing="12">
+                <TextBlock x:Name="ColorSchemeHeaderTextBlock"
+                           Classes="component-editor-section-title" />
+                <StackPanel Spacing="8">
+                    <RadioButton x:Name="FollowSystemRadioButton"
+                                 GroupName="ColorScheme"
+                                 IsCheckedChanged="OnColorSchemeChanged" />
+                    <RadioButton x:Name="UseNativeRadioButton"
+                                 GroupName="ColorScheme"
+                                 IsCheckedChanged="OnColorSchemeChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
                 <TextBlock x:Name="DisplayDbHeaderTextBlock"
                            Classes="component-editor-section-title" />
                 <ToggleSwitch x:Name="DisplayDbToggleSwitch"
@@ -27,7 +44,7 @@
             </StackPanel>
         </Border>
 
-        <Border Classes="component-editor-card"
+        <Border Classes="component-editor_card"
                 Padding="20">
             <StackPanel Spacing="12">
                 <TextBlock x:Name="DbfsHeaderTextBlock"

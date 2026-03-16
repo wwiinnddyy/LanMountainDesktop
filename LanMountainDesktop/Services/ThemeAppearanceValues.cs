@@ -10,6 +10,9 @@ public static class ThemeAppearanceValues
     public const string ColorModeSeedMonet = "seed_monet";
     public const string ColorModeWallpaperMonet = "wallpaper_monet";
 
+    public const string ColorSchemeFollowSystem = "follow_system";
+    public const string ColorSchemeNative = "native";
+
     public const string MaterialNone = "none";
     public const string MaterialMica = "mica";
     public const string MaterialAcrylic = "acrylic";

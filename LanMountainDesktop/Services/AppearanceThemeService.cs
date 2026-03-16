@@ -248,6 +248,15 @@ internal sealed class WindowMaterialService : IWindowMaterialService
     {
         ArgumentNullException.ThrowIfNull(window);
 
+        var normalizedMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(materialMode);
+
+        if (normalizedMode == ThemeAppearanceValues.MaterialNone)
+        {
+            window.Background = Brushes.White;
+            window.TransparencyLevelHint = [WindowTransparencyLevel.None];
+            return;
+        }
+
         window.Background = Brushes.Transparent;
 
         if (!OperatingSystem.IsWindows() || !IsTransparencyEnabled())
@@ -259,7 +268,6 @@ internal sealed class WindowMaterialService : IWindowMaterialService
             return;
         }
 
-        var normalizedMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(materialMode);
         window.TransparencyLevelHint = normalizedMode switch
         {
             ThemeAppearanceValues.MaterialMica =>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LanMountainDesktop.ComponentSystem.Extensions;
@@ -327,6 +327,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopOfficeRecentDocuments,
+                "Office Recent Documents",
+                "Folder",
+                "File",
+                MinWidthCells: 4,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
                 BuiltInComponentIds.Date,
                 "Calendar",

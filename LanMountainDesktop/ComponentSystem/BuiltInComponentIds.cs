@@ -1,4 +1,4 @@
-﻿namespace LanMountainDesktop.ComponentSystem;
+namespace LanMountainDesktop.ComponentSystem;
 
 public static class BuiltInComponentIds
 {
@@ -40,4 +40,5 @@ public static class BuiltInComponentIds
     public const string DesktopWhiteboard = "DesktopWhiteboard";
     public const string DesktopBlackboardLandscape = "DesktopBlackboardLandscape";
     public const string DesktopBrowser = "DesktopBrowser";
+    public const string DesktopOfficeRecentDocuments = "DesktopOfficeRecentDocuments";
 }
