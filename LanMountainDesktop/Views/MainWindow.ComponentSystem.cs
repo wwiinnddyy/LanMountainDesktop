@@ -964,6 +964,7 @@ public partial class MainWindow
         DisposeComponentIfNeeded(host);
         contentHost.Child = component;
         ApplyDesktopEditStateToHost(host, _isComponentLibraryOpen);
+        InvalidateDesktopPageAwareComponentContextCache();
         UpdateDesktopPageAwareComponentContext();
         if (_selectedDesktopComponentHost == host)
         {
@@ -1102,6 +1103,7 @@ public partial class MainWindow
 
         ClearTimeZoneServiceBindings(pageGrid.Children.OfType<Control>().ToList());
         pageGrid.Children.Clear();
+        InvalidateDesktopPageAwareComponentContextCache();
 
         var maxColumns = pageGrid.ColumnDefinitions.Count;
         var maxRows = pageGrid.RowDefinitions.Count;
@@ -1204,6 +1206,7 @@ public partial class MainWindow
         pageGrid.Children.Add(host);
 
         _desktopComponentPlacements.Add(placement);
+        InvalidateDesktopPageAwareComponentContextCache();
         UpdateDesktopPageAwareComponentContext();
         PersistSettings();
 
@@ -1577,14 +1580,86 @@ public partial class MainWindow
         }
     }
 
+    private void InvalidateDesktopPageAwareComponentContextCache()
+    {
+        _desktopPageContextInitialized = false;
+        _desktopPageContextActiveMask = 0;
+    }
+
+    private int BuildDesktopPageAwareComponentActiveMask()
+    {
+        if (_isSettingsOpen)
+        {
+            return 0;
+        }
+
+        var activeMask = 0;
+        if (_desktopSurfacePageWidth > 1 &&
+            _desktopPagesHostTransform is not null &&
+            (_isDesktopSwipeActive ||
+             _desktopPageContextSettlingSourceIndex is not null ||
+             _desktopPageContextSettlingTargetIndex is not null))
+        {
+            var viewportLeft = -_desktopPagesHostTransform.X;
+            var viewportRight = viewportLeft + _desktopSurfacePageWidth;
+            for (var pageIndex = 0; pageIndex < _desktopPageCount; pageIndex++)
+            {
+                var pageLeft = pageIndex * _desktopSurfacePageWidth;
+                var pageRight = pageLeft + _desktopSurfacePageWidth;
+                if (pageRight > viewportLeft + 0.5d && pageLeft < viewportRight - 0.5d)
+                {
+                    activeMask |= 1 << pageIndex;
+                }
+            }
+        }
+
+        if (_currentDesktopSurfaceIndex >= 0 && _currentDesktopSurfaceIndex < _desktopPageCount)
+        {
+            activeMask |= 1 << _currentDesktopSurfaceIndex;
+        }
+
+        if (_desktopPageContextSettlingSourceIndex is int sourceIndex &&
+            sourceIndex >= 0 &&
+            sourceIndex < _desktopPageCount)
+        {
+            activeMask |= 1 << sourceIndex;
+        }
+
+        if (_desktopPageContextSettlingTargetIndex is int targetIndex &&
+            targetIndex >= 0 &&
+            targetIndex < _desktopPageCount)
+        {
+            activeMask |= 1 << targetIndex;
+        }
+
+        return activeMask;
+    }
+
     private void UpdateDesktopPageAwareComponentContext()
     {
-        var activeDesktopPageIndex = _isSettingsOpen ? -1 : _currentDesktopSurfaceIndex;
         var isEditMode = _isComponentLibraryOpen || _isSettingsOpen;
+        var activeMask = BuildDesktopPageAwareComponentActiveMask();
+        var pageUpdateMask = !_desktopPageContextInitialized || isEditMode != _desktopPageContextEditMode
+            ? _desktopPageComponentGrids.Keys.Aggregate(0, (mask, pageIndex) => mask | (1 << pageIndex))
+            : activeMask ^ _desktopPageContextActiveMask;
+
+        if (_desktopPageContextInitialized &&
+            pageUpdateMask == 0 &&
+            isEditMode == _desktopPageContextEditMode &&
+            activeMask == _desktopPageContextActiveMask)
+        {
+            return;
+        }
 
         foreach (var pair in _desktopPageComponentGrids)
         {
-            var isOnActivePage = pair.Key == activeDesktopPageIndex;
+            var pageBit = 1 << pair.Key;
+            if ((pageUpdateMask & pageBit) == 0)
+            {
+                continue;
+            }
+
+            var isOnActivePage = (activeMask & pageBit) != 0;
             foreach (var host in pair.Value.Children.OfType<Border>())
             {
                 if (!host.Classes.Contains(DesktopComponentHostClass))
@@ -1598,6 +1673,10 @@ public partial class MainWindow
                 }
             }
         }
+
+        _desktopPageContextInitialized = true;
+        _desktopPageContextEditMode = isEditMode;
+        _desktopPageContextActiveMask = activeMask;
     }
 
     private static void ApplyDesktopPageContext(Control root, bool isOnActivePage, bool isEditMode)

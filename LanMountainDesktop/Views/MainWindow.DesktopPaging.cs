@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -16,6 +17,7 @@ using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views;
 
@@ -54,6 +56,8 @@ public partial class MainWindow
     private int _currentDesktopSurfaceIndex;
     private double _desktopSurfacePageWidth;
     private TranslateTransform? _desktopPagesHostTransform;
+    private Transitions? _desktopPagesHostSnapTransitions;
+    private bool _desktopPagesHostTransitionsSuspended;
     private bool _isDesktopSwipeActive;
     private bool _isDesktopSwipeDirectionLocked;
     private Point _desktopSwipeStartPoint;
@@ -62,6 +66,12 @@ public partial class MainWindow
     private long _desktopSwipeLastTimestamp;
     private double _desktopSwipeVelocityX;
     private double _desktopSwipeBaseOffset;
+    private bool _desktopPageContextInitialized;
+    private bool _desktopPageContextEditMode;
+    private int _desktopPageContextActiveMask;
+    private int? _desktopPageContextSettlingSourceIndex;
+    private int? _desktopPageContextSettlingTargetIndex;
+    private int _desktopPageContextSettleRevision;
 
     private int LauncherSurfaceIndex => Math.Max(MinDesktopPageCount, _desktopPageCount);
 
@@ -164,6 +174,15 @@ public partial class MainWindow
             DesktopPagesHost.RenderTransform = _desktopPagesHostTransform;
         }
 
+        if (_desktopPagesHostTransitionsSuspended)
+        {
+            _desktopPagesHostTransform.Transitions = null;
+        }
+        else
+        {
+            _desktopPagesHostSnapTransitions ??= _desktopPagesHostTransform.Transitions;
+        }
+
         var viewportRow = gridMetrics.RowCount > 2 ? 1 : 0;
         var viewportRowSpan = gridMetrics.RowCount > 2 ? gridMetrics.RowCount - 2 : 1;
         var pageWidth = Math.Max(1, gridMetrics.GridWidthPx);
@@ -200,6 +219,7 @@ public partial class MainWindow
         DesktopPagesContainer.Width = pageWidth * _desktopPageCount;
         DesktopPagesContainer.Height = pageHeight;
         _desktopPageComponentGrids.Clear();
+        InvalidateDesktopPageAwareComponentContextCache();
         for (var index = 0; index < _desktopPageCount; index++)
         {
             DesktopPagesContainer.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(pageWidth, GridUnitType.Pixel)));
@@ -354,6 +374,88 @@ public partial class MainWindow
         UpdateDesktopPageAwareComponentContext();
     }
 
+    private void SetDesktopPagesHostSnapAnimationEnabled(bool enabled)
+    {
+        if (_desktopPagesHostTransform is null)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            if (!_desktopPagesHostTransitionsSuspended)
+            {
+                return;
+            }
+
+            _desktopPagesHostTransform.Transitions = _desktopPagesHostSnapTransitions;
+            _desktopPagesHostTransitionsSuspended = false;
+            return;
+        }
+
+        if (_desktopPagesHostTransitionsSuspended)
+        {
+            return;
+        }
+
+        _desktopPagesHostSnapTransitions ??= _desktopPagesHostTransform.Transitions;
+        _desktopPagesHostTransform.Transitions = null;
+        _desktopPagesHostTransitionsSuspended = true;
+    }
+
+    private void ClearDesktopPageContextSettle(bool refreshContext)
+    {
+        _desktopPageContextSettleRevision++;
+        _desktopPageContextSettlingSourceIndex = null;
+        _desktopPageContextSettlingTargetIndex = null;
+
+        if (refreshContext)
+        {
+            UpdateDesktopPageAwareComponentContext();
+        }
+    }
+
+    private void BeginDesktopPageContextSettle(int previousIndex, int targetIndex)
+    {
+        var sourceIndex = previousIndex >= 0 && previousIndex < _desktopPageCount
+            ? previousIndex
+            : (int?)null;
+        var destinationIndex = targetIndex >= 0 && targetIndex < _desktopPageCount
+            ? targetIndex
+            : (int?)null;
+
+        if (sourceIndex == destinationIndex && destinationIndex is not null)
+        {
+            ClearDesktopPageContextSettle(refreshContext: false);
+            return;
+        }
+
+        if (sourceIndex is null && destinationIndex is null)
+        {
+            ClearDesktopPageContextSettle(refreshContext: false);
+            return;
+        }
+
+        _desktopPageContextSettleRevision++;
+        var settleRevision = _desktopPageContextSettleRevision;
+        _desktopPageContextSettlingSourceIndex = sourceIndex;
+        _desktopPageContextSettlingTargetIndex = destinationIndex;
+
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                if (settleRevision != _desktopPageContextSettleRevision)
+                {
+                    return;
+                }
+
+                _desktopPageContextSettlingSourceIndex = null;
+                _desktopPageContextSettlingTargetIndex = null;
+                UpdateDesktopPageAwareComponentContext();
+            },
+            FluttermotionToken.Page + TimeSpan.FromMilliseconds(36));
+    }
+
     private void MoveSurfaceBy(int delta)
     {
         if (delta == 0)
@@ -373,7 +475,9 @@ public partial class MainWindow
             return;
         }
 
+        var previousIndex = _currentDesktopSurfaceIndex;
         _currentDesktopSurfaceIndex = target;
+        BeginDesktopPageContextSettle(previousIndex, target);
         ApplyDesktopSurfaceOffset();
         PersistSettings();
     }
@@ -426,6 +530,7 @@ public partial class MainWindow
             return;
         }
 
+        ClearDesktopPageContextSettle(refreshContext: false);
         _isDesktopSwipeActive = true;
         _isDesktopSwipeDirectionLocked = false;
         _desktopSwipeStartPoint = pointerInViewport;
@@ -603,6 +708,7 @@ public partial class MainWindow
             }
 
             _isDesktopSwipeDirectionLocked = true;
+            SetDesktopPagesHostSnapAnimationEnabled(enabled: false);
             if (e.Pointer.Captured != DesktopPagesViewport)
             {
                 e.Pointer.Capture(DesktopPagesViewport);
@@ -621,6 +727,7 @@ public partial class MainWindow
         }
 
         _desktopPagesHostTransform.X = tentative;
+        UpdateDesktopPageAwareComponentContext();
         e.Handled = true;
     }
 
@@ -656,6 +763,7 @@ public partial class MainWindow
         _desktopSwipeLastTimestamp = 0;
         if (wasDirectionLocked)
         {
+            SetDesktopPagesHostSnapAnimationEnabled(enabled: true);
             ApplyDesktopSurfaceOffset();
         }
     }
@@ -681,6 +789,8 @@ public partial class MainWindow
             _desktopSwipeVelocityX = 0;
             return false;
         }
+
+        SetDesktopPagesHostSnapAnimationEnabled(enabled: true);
 
         var deltaX = _desktopSwipeCurrentPoint.X - _desktopSwipeStartPoint.X;
         var deltaY = _desktopSwipeCurrentPoint.Y - _desktopSwipeStartPoint.Y;

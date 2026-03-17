@@ -70,9 +70,11 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto"
                           ColumnSpacing="20"
                           RowSpacing="16">
-                        <StackPanel Grid.Column="0"
+                        <StackPanel Grid.Row="0"
+                                    Grid.Column="0"
                                     Spacing="4">
                             <TextBlock Classes="update-kv-label"
                                        Text="{Binding CurrentVersionLabel}" />
@@ -80,7 +82,8 @@
                                        Text="{Binding CurrentVersionText}" />
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1"
+                        <StackPanel Grid.Row="0"
+                                    Grid.Column="1"
                                     Spacing="4"
                                     IsVisible="{Binding IsLatestVersionVisible}">
                             <TextBlock Classes="update-kv-label"
@@ -110,22 +113,26 @@
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel Spacing="12">
+                    <StackPanel Spacing="12"
+                                HorizontalAlignment="Left">
                         <TextBlock Classes="settings-item-description"
                                    Text="{Binding UpdateStatus}"
                                    TextWrapping="Wrap"
+                                   HorizontalAlignment="Left"
                                    MaxWidth="500" />
 
                         <ProgressBar Minimum="0"
                                      Maximum="100"
                                      Value="{Binding DownloadProgressValue}"
                                      IsVisible="{Binding IsDownloadProgressVisible}"
+                                     HorizontalAlignment="Stretch"
                                      Margin="0,4,0,4" />
 
                         <TextBlock Classes="settings-item-description"
                                    IsVisible="{Binding IsDownloadProgressVisible}"
                                    Text="{Binding DownloadProgressText}"
                                    TextWrapping="Wrap"
+                                   HorizontalAlignment="Left"
                                    Margin="0,4,0,0" />
                     </StackPanel>
 
