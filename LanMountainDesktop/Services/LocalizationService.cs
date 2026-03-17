@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 
 namespace LanMountainDesktop.Services;
@@ -42,11 +43,14 @@ public sealed class LocalizationService
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            var filePath = Path.Combine(AppContext.BaseDirectory, "Localization", $"{languageCode}.json");
-            if (File.Exists(filePath))
+            var json = TryLoadFromFileSystem(languageCode);
+            if (string.IsNullOrEmpty(json))
             {
-                var json = File.ReadAllText(filePath);
-                // Defensive: tolerate accidentally duplicated UTF-8 BOM characters at file start.
+                json = TryLoadFromEmbeddedResource(languageCode);
+            }
+
+            if (!string.IsNullOrEmpty(json))
+            {
                 json = json.TrimStart('\uFEFF');
                 var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
                 if (data is not null)
@@ -62,5 +66,42 @@ public sealed class LocalizationService
 
         _cache[languageCode] = result;
         return result;
+    }
+
+    private string? TryLoadFromFileSystem(string languageCode)
+    {
+        try
+        {
+            var filePath = Path.Combine(AppContext.BaseDirectory, "Localization", $"{languageCode}.json");
+            if (File.Exists(filePath))
+            {
+                return File.ReadAllText(filePath);
+            }
+        }
+        catch
+        {
+            // Continue to next method
+        }
+        return null;
+    }
+
+    private string? TryLoadFromEmbeddedResource(string languageCode)
+    {
+        try
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = $"LanMountainDesktop.Localization.{languageCode}.json";
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream != null)
+            {
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
+            }
+        }
+        catch
+        {
+            // Continue to next method
+        }
+        return null;
     }
 }

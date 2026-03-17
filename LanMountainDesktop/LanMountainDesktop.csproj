@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,7 +21,9 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Localization\**" />
     <EmbeddedResource Include="Assets\Documents\Privacy.md" />
+    <EmbeddedResource Include="Localization\*.json" />
     <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Extensions\Components\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

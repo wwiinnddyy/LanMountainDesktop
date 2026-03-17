@@ -2702,6 +2702,11 @@ public partial class MainWindow
             return Symbol.Apps;
         }
 
+        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase))
+        {
+            return Symbol.Folder;
+        }
+
         return Symbol.Apps;
     }
 
@@ -2745,6 +2750,11 @@ public partial class MainWindow
         if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
         {
             return L("component_category.study", "Study");
+        }
+
+        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase))
+        {
+            return L("component_category.file", "File");
         }
 
         return categoryId;

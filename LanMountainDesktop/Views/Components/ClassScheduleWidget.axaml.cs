@@ -198,12 +198,32 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             return;
         }
 
-        if (courseIndex < CourseListPanel.Children.Count)
+        // 确保在UI线程执行
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
+            if (courseIndex >= CourseListPanel.Children.Count)
+            {
+                return;
+            }
+
             var targetChild = CourseListPanel.Children[courseIndex];
+            if (targetChild == null || !targetChild.IsArrangeValid)
+            {
+                return;
+            }
+
             var bounds = targetChild.Bounds;
-            ContentScrollViewer.Offset = new Vector(0, bounds.Position.Y);
-        }
+            var scrollViewerHeight = ContentScrollViewer.Bounds.Height;
+            var contentHeight = CourseListPanel.Bounds.Height;
+            
+            // 计算滚动位置，使当前课程居中显示
+            var targetOffset = bounds.Position.Y - (scrollViewerHeight / 2) + (bounds.Height / 2);
+            
+            // 确保不超出边界
+            targetOffset = Math.Max(0, Math.Min(targetOffset, contentHeight - scrollViewerHeight));
+            
+            ContentScrollViewer.Offset = new Vector(0, targetOffset);
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
     public void RefreshFromSettings()
@@ -298,6 +318,15 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var currentIndex = FindCurrentCourseIndex();
             _lastCurrentCourseIndex = currentIndex;
             HideStatus();
+            
+            // 初始化时自动跳转到当前课程
+            if (currentIndex >= 0)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    ScrollToCurrentCourse(currentIndex);
+                }, Avalonia.Threading.DispatcherPriority.Loaded);
+            }
         }
 
         RenderScheduleItems();
@@ -484,10 +513,9 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             : CreateBrush("#FF4D5A");
         var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
 
-        var visibleItems = _courseItems.Take(maxVisibleItems).ToList();
-        for (var i = 0; i < visibleItems.Count; i++)
+        for (var i = 0; i < _courseItems.Count; i++)
         {
-            var item = visibleItems[i];
+            var item = _courseItems[i];
             var bulletBrush = item.IsCurrent ? currentBrush : normalBulletBrush;
 
             var bullet = new Border

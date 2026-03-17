@@ -268,12 +268,17 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase
 
     partial void OnSelectedLanguageChanged(SelectionOption value)
     {
-        RefreshPreview();
         if (_isInitializing || value is null)
         {
             return;
         }
 
+        // 更新语言代码并刷新UI文本
+        _languageCode = _localizationService.NormalizeLanguageCode(value.Value);
+        RefreshLocalizedText();
+        RefreshPreview();
+        
+        // 保存设置
         _settingsFacade.Region.Save(new RegionSettingsState(
             value.Value,
             NormalizeTimeZoneId(SelectedTimeZone?.Id)));

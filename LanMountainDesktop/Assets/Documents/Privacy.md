@@ -1,6 +1,6 @@
 # LanMountainDesktop 隐私政策
 
-**最后更新日期：2024年**
+**最后更新日期：2026年3月17日**
 
 ---
 
@@ -321,6 +321,6 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 
 ---
 
-**感谢您信任 LanMountainDesktop！**
+**感谢您信任阑山桌面LanMountainDesktop！**
 
 我们承诺保护您的隐私，并持续改进我们的隐私保护措施。

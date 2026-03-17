@@ -564,11 +564,19 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
             {
                 RefreshInstalledSnapshot();
                 RefreshItemStates();
+                
+                // 设置更明显的状态消息
+                var pluginName = result.PluginName ?? item.Name;
                 StatusMessage = string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.install_success_format", "Plugin '{0}' has been staged. Restart the app to apply it."),
-                    result.PluginName ?? item.Name);
-                RestartRequested?.Invoke(RestartRequiredMessage);
+                    L("market.status.install_success_restart_format", "✓ Plugin '{0}' installed successfully! Please restart the application to activate it."),
+                    pluginName);
+                
+                // 触发重启提醒
+                RestartRequested?.Invoke(string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("market.dialog.restart_message_format", "Plugin '{0}' has been installed successfully.\n\nTo use this plugin, you need to restart the application now.\n\nWould you like to restart?"),
+                    pluginName));
                 return;
             }
 
