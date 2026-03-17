@@ -294,6 +294,8 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             if (languageChanged)
             {
                 var regionState = _settingsFacade.Region.Get();
+                // 清除本地化缓存，强制重新加载语言文件
+                _localizationService.ClearCache();
                 _viewModel.RefreshLanguage(regionState.LanguageCode);
                 _pageRegistry.Rebuild();
                 _window.ReloadPages(_viewModel.CurrentPageId);

@@ -17,6 +17,23 @@ public sealed class LocalizationService
     private readonly Dictionary<string, Dictionary<string, string>> _cache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// 清除指定语言代码的缓存，强制下次重新加载。
+    /// 在语言切换时调用此方法以确保加载最新的语言文件。
+    /// </summary>
+    public void ClearCache(string? languageCode = null)
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
+        {
+            _cache.Clear();
+        }
+        else
+        {
+            var normalizedCode = NormalizeLanguageCode(languageCode);
+            _cache.Remove(normalizedCode);
+        }
+    }
+
     public string NormalizeLanguageCode(string? languageCode)
     {
         return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
@@ -53,7 +70,7 @@ public sealed class LocalizationService
             {
                 json = json.TrimStart('\uFEFF');
                 var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOptions);
-                if (data is not null)
+                if (data is not null && data.Count > 0)
                 {
                     result = new Dictionary<string, string>(data, StringComparer.OrdinalIgnoreCase);
                 }
@@ -64,7 +81,11 @@ public sealed class LocalizationService
             // Keep empty table for resilience.
         }
 
-        _cache[languageCode] = result;
+        // 只有当语言表非空时才缓存，这样如果加载失败可以下次重试
+        if (result.Count > 0)
+        {
+            _cache[languageCode] = result;
+        }
         return result;
     }
 

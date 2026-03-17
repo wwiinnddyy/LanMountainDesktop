@@ -510,6 +510,8 @@ public partial class App : Application
 
             if (languageChanged)
             {
+                // 清除本地化缓存，强制重新加载语言文件
+                _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
                 if (_trayIcons is not null)
                 {
