@@ -479,7 +479,7 @@ public partial class MainWindow
         _currentDesktopSurfaceIndex = target;
         BeginDesktopPageContextSettle(previousIndex, target);
         ApplyDesktopSurfaceOffset();
-        PersistSettings();
+        SchedulePersistSettings(delayMs: Math.Max(280, (int)FluttermotionToken.Page.TotalMilliseconds + 80));
     }
 
     private bool CanSwipeDesktopSurface()

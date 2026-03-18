@@ -153,6 +153,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private bool _isWeatherPreviewInProgress;
     private ClockDisplayFormat _clockDisplayFormat = ClockDisplayFormat.HourMinuteSecond;
     private bool _externalSettingsReloadPending;
+    private int _persistSettingsRevision;
+    private int _suppressOwnSettingsReloadCount;
     private double CurrentDesktopPitch => _currentDesktopCellSize + _currentDesktopCellGap;
 
     public MainWindow()

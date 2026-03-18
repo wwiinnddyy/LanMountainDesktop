@@ -32,6 +32,11 @@ public partial class MainWindow
     {
         _ = sender;
 
+        if (_suppressOwnSettingsReloadCount > 0)
+        {
+            return;
+        }
+
         if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
@@ -382,6 +387,7 @@ public partial class MainWindow
 
     private void PersistSettings()
     {
+        _persistSettingsRevision++;
         if (_suppressSettingsPersistence)
         {
             return;
@@ -389,6 +395,8 @@ public partial class MainWindow
 
         try
         {
+            // Saving our own state should not trigger a full external reload cycle.
+            _suppressOwnSettingsReloadCount++;
             _settingsService.SaveSnapshot(SettingsScope.App, BuildAppSettingsSnapshot());
             _componentLayoutStore.SaveLayout(BuildDesktopLayoutSettingsSnapshot());
             _settingsService.SaveSnapshot(SettingsScope.Launcher, BuildLauncherSettingsSnapshot());
@@ -397,11 +405,29 @@ public partial class MainWindow
         {
             AppLogger.Warn("SettingsRuntime", "Failed to persist settings.", ex);
         }
+        finally
+        {
+            if (_suppressOwnSettingsReloadCount > 0)
+            {
+                _suppressOwnSettingsReloadCount--;
+            }
+        }
     }
 
     private void SchedulePersistSettings(int delayMs = 200)
     {
-        DispatcherTimer.RunOnce(PersistSettings, TimeSpan.FromMilliseconds(Math.Max(0, delayMs)));
+        var revision = ++_persistSettingsRevision;
+        DispatcherTimer.RunOnce(
+            () =>
+            {
+                if (revision != _persistSettingsRevision)
+                {
+                    return;
+                }
+
+                PersistSettings();
+            },
+            TimeSpan.FromMilliseconds(Math.Max(0, delayMs)));
     }
 
     internal void ReloadFromPersistedSettings()
