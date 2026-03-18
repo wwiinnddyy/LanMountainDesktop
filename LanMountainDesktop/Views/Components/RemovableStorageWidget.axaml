@@ -1,0 +1,119 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="280"
+             d:DesignHeight="280"
+             x:Class="LanMountainDesktop.Views.Components.RemovableStorageWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="28"
+            BorderThickness="1"
+            Padding="16"
+            ClipToBounds="True">
+        <Grid>
+            <Border x:Name="AccentOrb"
+                    Width="132"
+                    Height="132"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,-48,-48,0"
+                    CornerRadius="66"
+                    IsHitTestVisible="False" />
+
+            <Border x:Name="AccentGlow"
+                    Height="76"
+                    Margin="-18,0,-18,-34"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Bottom"
+                    CornerRadius="38"
+                    Opacity="0.42"
+                    IsHitTestVisible="False" />
+
+            <Grid x:Name="LayoutGrid"
+                  RowDefinitions="Auto,*,Auto,Auto"
+                  RowSpacing="10">
+                <Grid x:Name="HeaderGrid"
+                      ColumnDefinitions="Auto,*"
+                      ColumnSpacing="12">
+                    <Border x:Name="IconBadge"
+                            Width="44"
+                            Height="44"
+                            CornerRadius="22"
+                            VerticalAlignment="Top">
+                        <fi:FluentIcon x:Name="DriveIcon"
+                                       Icon="UsbStick"
+                                       IconVariant="Regular"
+                                       FontSize="24"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel x:Name="HeaderTextStack"
+                                Grid.Column="1"
+                                Spacing="2"
+                                VerticalAlignment="Center">
+                        <TextBlock x:Name="DriveNameTextBlock"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="DriveDetailTextBlock"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock x:Name="StatusTextBlock"
+                           Grid.Row="1"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap" />
+
+                <Button x:Name="OpenButton"
+                        Grid.Row="2"
+                        Height="42"
+                        Padding="14,0"
+                        CornerRadius="999"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnOpenClick">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8">
+                        <fi:FluentIcon x:Name="OpenButtonIcon"
+                                       Icon="OpenFolder"
+                                       IconVariant="Regular"
+                                       FontSize="16"
+                                       VerticalAlignment="Center" />
+                        <TextBlock x:Name="OpenButtonTextBlock"
+                                   Grid.Column="1"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Button>
+
+                <Button x:Name="EjectButton"
+                        Grid.Row="3"
+                        Height="42"
+                        Padding="14,0"
+                        CornerRadius="999"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Click="OnEjectClick">
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8">
+                        <fi:FluentIcon x:Name="EjectButtonIcon"
+                                       Icon="ArrowEject"
+                                       IconVariant="Regular"
+                                       FontSize="16"
+                                       VerticalAlignment="Center" />
+                        <TextBlock x:Name="EjectButtonTextBlock"
+                                   Grid.Column="1"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

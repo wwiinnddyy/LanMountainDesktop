@@ -22,14 +22,17 @@
             <StackPanel Spacing="12">
                 <TextBlock x:Name="ColorSchemeHeaderTextBlock"
                            Classes="component-editor-section-title" />
-                <StackPanel Spacing="8">
-                    <RadioButton x:Name="FollowSystemRadioButton"
-                                 GroupName="ColorScheme"
-                                 IsCheckedChanged="OnColorSchemeChanged" />
-                    <RadioButton x:Name="UseNativeRadioButton"
-                                 GroupName="ColorScheme"
-                                 IsCheckedChanged="OnColorSchemeChanged" />
-                </StackPanel>
+                <ComboBox x:Name="ColorSchemeComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnColorSchemeSelectionChanged">
+                    <ComboBoxItem x:Name="FollowSystemColorSchemeItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="follow_system" />
+                    <ComboBoxItem x:Name="UseNativeColorSchemeItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="native" />
+                </ComboBox>
             </StackPanel>
         </Border>
 

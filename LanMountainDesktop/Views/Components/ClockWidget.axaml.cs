@@ -23,6 +23,8 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
 
     private TimeZoneService? _timeZoneService;
     private ClockDisplayFormat _displayFormat = ClockDisplayFormat.HourMinuteSecond;
+    private bool _transparentBackground;
+    private double _lastAppliedCellSize = 100;
 
     public ClockWidget()
     {
@@ -44,9 +46,30 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         }
     }
 
+    public bool TransparentBackground
+    {
+        get => _transparentBackground;
+        set
+        {
+            if (_transparentBackground == value)
+            {
+                return;
+            }
+
+            _transparentBackground = value;
+            ApplyChrome();
+            ApplyCellSize(_lastAppliedCellSize);
+        }
+    }
+
     public void SetDisplayFormat(ClockDisplayFormat format)
     {
         DisplayFormat = format;
+    }
+
+    public void SetTransparentBackground(bool transparentBackground)
+    {
+        TransparentBackground = transparentBackground;
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
@@ -101,6 +124,8 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
 
     public void ApplyCellSize(double cellSize)
     {
+        _lastAppliedCellSize = cellSize;
+
         // --- Class Island “满盈”风格算法 ---
         
         // 1. 计算组件高度：保持与任务栏核心比例一致 (0.74x)
@@ -129,8 +154,39 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         {
             panel.Spacing = Math.Clamp(cellSize * 0.06, 2, 8);
         }
-        
+
+        if (_transparentBackground)
+        {
+            RootBorder.MinWidth = 0;
+            RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 4, 10), 0);
+            return;
+        }
+
         // 确保清除可能存在的固定 Padding，由代码控制“紧密感”
+        RootBorder.MinWidth = cellSize * 2.2;
         RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.15, 12, 24), 0);
+    }
+
+    private void ApplyChrome()
+    {
+        if (_transparentBackground)
+        {
+            RootBorder.Classes.Remove("glass-panel");
+            RootBorder.Background = Brushes.Transparent;
+            RootBorder.BorderBrush = Brushes.Transparent;
+            RootBorder.BorderThickness = new Thickness(0);
+            RootBorder.BoxShadow = default;
+            return;
+        }
+
+        if (!RootBorder.Classes.Contains("glass-panel"))
+        {
+            RootBorder.Classes.Add("glass-panel");
+        }
+
+        RootBorder.ClearValue(Border.BackgroundProperty);
+        RootBorder.ClearValue(Border.BorderBrushProperty);
+        RootBorder.ClearValue(Border.BorderThicknessProperty);
+        RootBorder.ClearValue(Border.BoxShadowProperty);
     }
 }

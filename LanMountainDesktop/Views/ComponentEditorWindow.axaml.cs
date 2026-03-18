@@ -241,6 +241,7 @@ public partial class ComponentEditorWindow : Window
             "DataLine" => MaterialIconKind.ChartLine,
             "Edit" => MaterialIconKind.Pencil,
             "Calculator" => MaterialIconKind.Calculator,
+            "Storage" => MaterialIconKind.UsbFlashDrive,
             "Globe" => MaterialIconKind.Web,
             "Play" => MaterialIconKind.Play,
             _ => MaterialIconKind.Settings

@@ -445,6 +445,11 @@ public sealed class DesktopComponentRuntimeRegistry
                     () => new OfficeRecentDocumentsWidget(),
                     cellSize => Math.Clamp(cellSize * 0.50, 10, 24)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopRemovableStorage,
+                    "component.removable_storage",
+                    () => new RemovableStorageWidget(),
+                    cellSize => Math.Clamp(cellSize * 0.46, 12, 26)),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.HolidayCalendar,
                     "component.holiday_calendar",
                     () => new HolidayCalendarWidget(),

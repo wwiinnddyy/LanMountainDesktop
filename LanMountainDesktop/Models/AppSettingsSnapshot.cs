@@ -101,6 +101,8 @@ public sealed class AppSettingsSnapshot
 
     public string ClockDisplayFormat { get; set; } = "HourMinuteSecond";
 
+    public bool StatusBarClockTransparentBackground { get; set; }
+
     public string StatusBarSpacingMode { get; set; } = "Relaxed";
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;

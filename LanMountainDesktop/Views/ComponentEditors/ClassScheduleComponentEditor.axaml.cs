@@ -68,40 +68,37 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
         var colorSchemeSource = snapshot.ColorSchemeSource;
 
         HeadlineTextBlock.Text = Context?.Definition.DisplayName ?? "Class Schedule";
-        DescriptionTextBlock.Text = L("schedule.settings.desc", "导入 ClassIsland 的 CSES 课表文件并选择启用项。");
-        
-        ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "配色方案");
-        FollowSystemRadioButton.Content = L("component.color_scheme.follow_system", "跟随系统配色");
-        UseNativeRadioButton.Content = L("component.color_scheme.native", "使用组件自定义配色");
-        
-        AddScheduleButton.Content = L("schedule.settings.add", "添加课表");
-        EmptyStateTextBlock.Text = L("schedule.settings.empty", "暂无导入课表");
+        DescriptionTextBlock.Text = L(
+            "schedule.settings.desc",
+            "Import a ClassIsland CSES schedule file and choose which one to use.");
+
+        ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "Color Scheme");
+        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
+        UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
+
+        AddScheduleButton.Content = L("schedule.settings.add", "Add Schedule");
+        EmptyStateTextBlock.Text = L("schedule.settings.empty", "No imported schedules yet.");
 
         _suppressEvents = true;
-        
-        if (string.IsNullOrEmpty(colorSchemeSource) || 
-            colorSchemeSource == ThemeAppearanceValues.ColorSchemeFollowSystem)
-        {
-            FollowSystemRadioButton.IsChecked = true;
-        }
-        else
-        {
-            UseNativeRadioButton.IsChecked = true;
-        }
-        
+        ColorSchemeComboBox.SelectedItem =
+            string.IsNullOrEmpty(colorSchemeSource) ||
+            string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
+                ? FollowSystemColorSchemeItem
+                : UseNativeColorSchemeItem;
         _suppressEvents = false;
     }
 
-    private void OnColorSchemeChanged(object? sender, RoutedEventArgs e)
+    private void OnColorSchemeSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        _ = sender;
+        _ = e;
         if (_suppressEvents)
         {
             return;
         }
 
-        var useNative = UseNativeRadioButton.IsChecked == true;
-        var colorSchemeSource = useNative 
-            ? ThemeAppearanceValues.ColorSchemeNative 
+        var colorSchemeSource = ColorSchemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
+            ? tag
             : ThemeAppearanceValues.ColorSchemeFollowSystem;
 
         var snapshot = LoadSnapshot();
@@ -121,11 +118,11 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
 
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = L("schedule.settings.picker_title", "选择 ClassIsland 课表文件"),
+            Title = L("schedule.settings.picker_title", "Choose ClassIsland schedule file"),
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType(L("schedule.settings.picker_file_type", "ClassIsland CSES 课表"))
+                new FilePickerFileType(L("schedule.settings.picker_file_type", "ClassIsland CSES Schedule"))
                 {
                     Patterns = ["*.cses", "*.yaml", "*.yml"]
                 }
@@ -155,7 +152,7 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             {
                 Id = Guid.NewGuid().ToString("N"),
                 DisplayName = Path.GetFileNameWithoutExtension(importedPath)?.Trim()
-                    ?? L("schedule.settings.unnamed", "未命名课表"),
+                    ?? L("schedule.settings.unnamed", "Untitled Schedule"),
                 FilePath = importedPath
             });
             _activeScheduleId = _importedSchedules[^1].Id;
@@ -219,7 +216,7 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             var title = new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(item.DisplayName)
-                    ? L("schedule.settings.unnamed", "未命名课表")
+                    ? L("schedule.settings.unnamed", "Untitled Schedule")
                     : item.DisplayName,
                 FontWeight = FontWeight.SemiBold
             };
@@ -234,7 +231,7 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
 
             var deleteButton = new Button
             {
-                Content = L("schedule.settings.delete", "删除"),
+                Content = L("schedule.settings.delete", "Delete"),
                 Tag = item.Id,
                 Padding = new Thickness(12, 8),
                 HorizontalAlignment = HorizontalAlignment.Right

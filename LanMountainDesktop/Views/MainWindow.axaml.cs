@@ -131,6 +131,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private string _gridSpacingPreset = "Relaxed";
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
+    private bool _statusBarClockTransparentBackground;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";

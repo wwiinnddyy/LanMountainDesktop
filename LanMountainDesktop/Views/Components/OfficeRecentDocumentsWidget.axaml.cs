@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -44,27 +44,34 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         }
     }
 
-    private void LoadDocuments()
+    private async void LoadDocuments()
     {
+        if (_isLoading)
+        {
+            return;
+        }
+
         try
         {
             _isLoading = true;
             StatusTextBlock.IsVisible = false;
+            DocumentsItemsControl.ItemsSource = null;
 
-            _documents = _recentDocumentsService.GetRecentDocuments(20);
+            _documents = await Task.Run(() => _recentDocumentsService.GetRecentDocuments(20));
 
             if (_documents.Count == 0)
             {
-                StatusTextBlock.Text = "暂无最近文档";
+                StatusTextBlock.Text = "\u6682\u65e0\u6700\u8fd1\u6587\u6863";
                 StatusTextBlock.IsVisible = true;
                 return;
             }
 
             UpdateDisplay();
         }
-        catch
+        catch (Exception ex)
         {
-            StatusTextBlock.Text = "加载失败";
+            AppLogger.Warn("OfficeRecentDocsWidget", "Failed to load recent Office documents.", ex);
+            StatusTextBlock.Text = "\u52a0\u8f7d\u5931\u8d25";
             StatusTextBlock.IsVisible = true;
         }
         finally
@@ -90,15 +97,29 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         var span = DateTime.Now - dateTime;
 
         if (span.TotalMinutes < 1)
-            return "刚刚";
+        {
+            return "\u521a\u521a";
+        }
+
         if (span.TotalMinutes < 60)
-            return $"{(int)span.TotalMinutes} 分钟前";
+        {
+            return $"{(int)span.TotalMinutes} \u5206\u949f\u524d";
+        }
+
         if (span.TotalHours < 24)
-            return $"{(int)span.TotalHours} 小时前";
+        {
+            return $"{(int)span.TotalHours} \u5c0f\u65f6\u524d";
+        }
+
         if (span.TotalDays < 7)
-            return $"{(int)span.TotalDays} 天前";
+        {
+            return $"{(int)span.TotalDays} \u5929\u524d";
+        }
+
         if (span.TotalDays < 30)
-            return $"{(int)(span.TotalDays / 7)} 周前";
+        {
+            return $"{(int)(span.TotalDays / 7)} \u5468\u524d";
+        }
 
         return dateTime.ToString("MM/dd");
     }

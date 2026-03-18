@@ -398,10 +398,12 @@ public partial class MainWindow
         _clockDisplayFormat = snapshot.ClockDisplayFormat == "HourMinute"
             ? ClockDisplayFormat.HourMinute
             : ClockDisplayFormat.HourMinuteSecond;
+        _statusBarClockTransparentBackground = snapshot.StatusBarClockTransparentBackground;
 
         if (ClockWidget is not null)
         {
             ClockWidget.SetDisplayFormat(_clockDisplayFormat);
+            ClockWidget.SetTransparentBackground(_statusBarClockTransparentBackground);
         }
     }
 
@@ -413,6 +415,7 @@ public partial class MainWindow
         if (ClockWidget is not null)
         {
             ClockWidget.IsVisible = showClock;
+            ClockWidget.SetTransparentBackground(_statusBarClockTransparentBackground);
             if (showClock)
             {
                 ClockWidget.SetDisplayFormat(_clockDisplayFormat);

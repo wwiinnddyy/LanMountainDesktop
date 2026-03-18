@@ -1,3 +1,5 @@
+using System;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -34,43 +36,40 @@ public partial class StudyEnvironmentComponentEditor : ComponentEditorViewBase
         }
 
         HeadlineTextBlock.Text = Context?.Definition.DisplayName ?? "Study Environment";
-        DescriptionTextBlock.Text = L("study.environment.settings.desc", "配置右侧实时噪音值显示内容。");
-        
-        ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "配色方案");
-        FollowSystemRadioButton.Content = L("component.color_scheme.follow_system", "跟随系统配色");
-        UseNativeRadioButton.Content = L("component.color_scheme.native", "使用组件自定义配色");
-        
-        DisplayDbToggleSwitch.Content = L("study.environment.settings.show_display_db", "显示 display dB");
-        DbfsToggleSwitch.Content = L("study.environment.settings.show_dbfs", "显示 dBFS");
-        HintTextBlock.Text = L("study.environment.settings.hint", "至少启用一种显示方式。");
+        DescriptionTextBlock.Text = L(
+            "study.environment.settings.desc",
+            "Configure the realtime audio level information shown on the right side.");
+
+        ColorSchemeHeaderTextBlock.Text = L("component.settings.color_scheme", "Color Scheme");
+        FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
+        UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
+
+        DisplayDbToggleSwitch.Content = L("study.environment.settings.show_display_db", "Show display dB");
+        DbfsToggleSwitch.Content = L("study.environment.settings.show_dbfs", "Show dBFS");
+        HintTextBlock.Text = L("study.environment.settings.hint", "At least one display mode must stay enabled.");
 
         _suppressEvents = true;
-        
-        if (string.IsNullOrEmpty(colorSchemeSource) || 
-            colorSchemeSource == ThemeAppearanceValues.ColorSchemeFollowSystem)
-        {
-            FollowSystemRadioButton.IsChecked = true;
-        }
-        else
-        {
-            UseNativeRadioButton.IsChecked = true;
-        }
-        
+        ColorSchemeComboBox.SelectedItem =
+            string.IsNullOrEmpty(colorSchemeSource) ||
+            string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
+                ? FollowSystemColorSchemeItem
+                : UseNativeColorSchemeItem;
         DisplayDbToggleSwitch.IsChecked = showDisplayDb;
         DbfsToggleSwitch.IsChecked = showDbfs;
         _suppressEvents = false;
     }
 
-    private void OnColorSchemeChanged(object? sender, RoutedEventArgs e)
+    private void OnColorSchemeSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        _ = sender;
+        _ = e;
         if (_suppressEvents)
         {
             return;
         }
 
-        var useNative = UseNativeRadioButton.IsChecked == true;
-        var colorSchemeSource = useNative 
-            ? ThemeAppearanceValues.ColorSchemeNative 
+        var colorSchemeSource = ColorSchemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag
+            ? tag
             : ThemeAppearanceValues.ColorSchemeFollowSystem;
 
         var snapshot = LoadSnapshot();

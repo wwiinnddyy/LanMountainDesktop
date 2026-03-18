@@ -547,6 +547,7 @@ public partial class MainWindow
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
             TaskbarLayoutMode = _taskbarLayoutMode,
             ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
+            StatusBarClockTransparentBackground = _statusBarClockTransparentBackground,
             StatusBarSpacingMode = _statusBarSpacingMode,
             StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent
         };

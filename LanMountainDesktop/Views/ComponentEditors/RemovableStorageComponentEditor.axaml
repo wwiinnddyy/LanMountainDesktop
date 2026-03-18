@@ -2,9 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
              mc:Ignorable="d"
-             x:Class="LanMountainDesktop.Views.ComponentEditors.StudyEnvironmentComponentEditor">
+             x:Class="LanMountainDesktop.Views.ComponentEditors.RemovableStorageComponentEditor">
     <StackPanel Spacing="16">
         <Border Classes="component-editor-hero-card"
                 Padding="24">
@@ -39,27 +38,13 @@
 
         <Border Classes="component-editor-card"
                 Padding="20">
-            <StackPanel Spacing="12">
-                <TextBlock x:Name="DisplayDbHeaderTextBlock"
+            <StackPanel Spacing="10">
+                <TextBlock x:Name="BehaviorHeaderTextBlock"
                            Classes="component-editor-section-title" />
-                <ToggleSwitch x:Name="DisplayDbToggleSwitch"
-                              IsCheckedChanged="OnToggleChanged" />
+                <TextBlock x:Name="BehaviorTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
             </StackPanel>
         </Border>
-
-        <Border Classes="component-editor-card"
-                Padding="20">
-            <StackPanel Spacing="12">
-                <TextBlock x:Name="DbfsHeaderTextBlock"
-                           Classes="component-editor-section-title" />
-                <ToggleSwitch x:Name="DbfsToggleSwitch"
-                              IsCheckedChanged="OnToggleChanged" />
-            </StackPanel>
-        </Border>
-
-        <TextBlock x:Name="HintTextBlock"
-                   Classes="component-editor-secondary-text"
-                   Margin="12,0"
-                   TextWrapping="Wrap" />
     </StackPanel>
 </UserControl>

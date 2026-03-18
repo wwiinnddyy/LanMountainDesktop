@@ -40,6 +40,9 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     private SelectionOption _selectedClockFormat = new("HourMinuteSecond", "Hour:Minute:Second");
 
     [ObservableProperty]
+    private bool _clockTransparentBackground;
+
+    [ObservableProperty]
     private SelectionOption _selectedSpacingMode = new("Relaxed", "Relaxed");
 
     [ObservableProperty]
@@ -67,6 +70,12 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     private string _clockFormatLabel = string.Empty;
 
     [ObservableProperty]
+    private string _clockTransparentBackgroundLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _clockTransparentBackgroundDescription = string.Empty;
+
+    [ObservableProperty]
     private string _spacingHeader = string.Empty;
 
     [ObservableProperty]
@@ -88,6 +97,7 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         SelectedClockFormat = ClockFormats.FirstOrDefault(option =>
             string.Equals(option.Value, clockFormat, StringComparison.OrdinalIgnoreCase))
             ?? ClockFormats[1];
+        ClockTransparentBackground = state.ClockTransparentBackground;
 
         var spacingMode = NormalizeSpacingMode(state.SpacingMode);
         SelectedSpacingMode = SpacingModes.FirstOrDefault(option =>
@@ -110,6 +120,16 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     partial void OnSelectedClockFormatChanged(SelectionOption value)
     {
         if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnClockTransparentBackgroundChanged(bool value)
+    {
+        if (_isInitializing)
         {
             return;
         }
@@ -163,6 +183,7 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
             state.EnableDynamicTaskbarActions,
             state.TaskbarLayoutMode,
             SelectedClockFormat.Value,
+            ClockTransparentBackground,
             NormalizeSpacingMode(SelectedSpacingMode.Value),
             Math.Clamp(CustomSpacingPercent, 0, 30)));
     }
@@ -194,6 +215,8 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         ClockHeader = L("settings.status_bar.clock_header", "Clock Component");
         ClockDescription = L("settings.status_bar.clock_description", "Display a clock on the top status bar.");
         ClockFormatLabel = L("settings.status_bar.clock_format_label", "Clock format");
+        ClockTransparentBackgroundLabel = L("settings.status_bar.clock_transparent_background_label", "Transparent background");
+        ClockTransparentBackgroundDescription = L("settings.status_bar.clock_transparent_background_desc", "Remove the capsule background and keep only the clock text.");
         SpacingHeader = L("settings.status_bar.spacing_header", "Component Spacing");
         SpacingDescription = L("settings.status_bar.spacing_desc", "Adjust spacing between status bar components.");
         CustomSpacingLabel = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");

@@ -41,4 +41,5 @@ public static class BuiltInComponentIds
     public const string DesktopBlackboardLandscape = "DesktopBlackboardLandscape";
     public const string DesktopBrowser = "DesktopBrowser";
     public const string DesktopOfficeRecentDocuments = "DesktopOfficeRecentDocuments";
+    public const string DesktopRemovableStorage = "DesktopRemovableStorage";
 }

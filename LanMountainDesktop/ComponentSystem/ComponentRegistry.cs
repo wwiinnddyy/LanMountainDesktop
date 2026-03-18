@@ -337,6 +337,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopRemovableStorage,
+                "Removable Storage",
+                "Storage",
+                "File",
+                MinWidthCells: 2,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.Date,
                 "Calendar",
                 "Calendar",

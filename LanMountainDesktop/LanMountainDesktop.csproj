@@ -55,6 +55,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="MudTools.OfficeInterop" Version="2.0.8" />
+    <PackageReference Include="MudTools.OfficeInterop.Word" Version="2.0.8" />
+    <PackageReference Include="MudTools.OfficeInterop.Excel" Version="2.0.8" />
+    <PackageReference Include="MudTools.OfficeInterop.PowerPoint" Version="2.0.8" />
 
     <PackageReference Include="PortAudioSharp2" Version="1.0.6" />
     <PackageReference Include="MaterialColorUtilities" Version="0.3.0" />

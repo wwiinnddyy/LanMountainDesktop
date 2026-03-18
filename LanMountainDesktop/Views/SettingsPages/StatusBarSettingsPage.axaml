@@ -38,6 +38,20 @@
                         </ComboBox>
                     </Grid>
                 </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="16">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding ClockTransparentBackgroundLabel}" />
+                            <TextBlock Text="{Binding ClockTransparentBackgroundDescription}"
+                                       Opacity="0.75"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding ClockTransparentBackground}"
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
             <Separator Classes="settings-separator" />

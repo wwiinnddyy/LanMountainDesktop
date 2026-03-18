@@ -361,6 +361,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
             snapshot.EnableDynamicTaskbarActions,
             snapshot.TaskbarLayoutMode,
             snapshot.ClockDisplayFormat,
+            snapshot.StatusBarClockTransparentBackground,
             snapshot.StatusBarSpacingMode,
             snapshot.StatusBarCustomSpacingPercent);
     }
@@ -373,6 +374,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
         snapshot.EnableDynamicTaskbarActions = state.EnableDynamicTaskbarActions;
         snapshot.TaskbarLayoutMode = state.TaskbarLayoutMode;
         snapshot.ClockDisplayFormat = state.ClockDisplayFormat;
+        snapshot.StatusBarClockTransparentBackground = state.ClockTransparentBackground;
         snapshot.StatusBarSpacingMode = state.SpacingMode;
         snapshot.StatusBarCustomSpacingPercent = state.CustomSpacingPercent;
         _settingsService.SaveSnapshot(
@@ -385,6 +387,7 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
                 nameof(AppSettingsSnapshot.EnableDynamicTaskbarActions),
                 nameof(AppSettingsSnapshot.TaskbarLayoutMode),
                 nameof(AppSettingsSnapshot.ClockDisplayFormat),
+                nameof(AppSettingsSnapshot.StatusBarClockTransparentBackground),
                 nameof(AppSettingsSnapshot.StatusBarSpacingMode),
                 nameof(AppSettingsSnapshot.StatusBarCustomSpacingPercent)
             ]);

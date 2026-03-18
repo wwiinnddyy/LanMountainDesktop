@@ -29,6 +29,7 @@ public sealed record StatusBarSettingsState(
     bool EnableDynamicTaskbarActions,
     string TaskbarLayoutMode,
     string ClockDisplayFormat,
+    bool ClockTransparentBackground,
     string SpacingMode,
     int CustomSpacingPercent);
 public sealed record WeatherSettingsState(

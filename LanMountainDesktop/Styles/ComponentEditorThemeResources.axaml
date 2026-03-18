@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:assists="clr-namespace:Material.Styles.Assists;assembly=Material.Styles">
     <Style Selector="Window.component-editor-window">
         <Setter Property="Background" Value="{DynamicResource EditorWindowBackgroundBrush}" />
     </Style>
@@ -74,7 +75,21 @@
     </Style>
 
     <Style Selector="Window.component-editor-window RadioButton">
+        <Setter Property="Theme" Value="{StaticResource MaterialRadioButton}" />
         <Setter Property="Foreground" Value="{DynamicResource ComponentEditorPrimaryTextBrush}" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="assists:SelectionControlAssist.Size" Value="20" />
+        <Setter Property="assists:SelectionControlAssist.Foreground" Value="{DynamicResource ComponentEditorSecondaryTextBrush}" />
+        <Setter Property="assists:SelectionControlAssist.InnerForeground" Value="{DynamicResource EditorPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Window.component-editor-window RadioButton:pointerover">
+        <Setter Property="assists:SelectionControlAssist.Foreground" Value="{DynamicResource EditorSelectOutlineStrongBrush}" />
+    </Style>
+
+    <Style Selector="Window.component-editor-window RadioButton:checked">
+        <Setter Property="assists:SelectionControlAssist.Foreground" Value="{DynamicResource EditorPrimaryBrush}" />
     </Style>
 
     <Style Selector="Window.component-editor-window ToggleSwitch">
