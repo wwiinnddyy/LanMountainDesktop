@@ -3,8 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -102,7 +103,11 @@ public partial class MainWindow
     private void ApplyLocalization()
     {
         Title = L("app.title", "LanMountainDesktop");
-        BackToWindowsTextBlock.Text = L("button.back_to_windows", "Back to Windows");
+        var platformName = OperatingSystem.IsWindows() ? "Windows" 
+            : OperatingSystem.IsMacOS() ? "macOS" 
+            : "Linux";
+        BackToWindowsTextBlock.Text = Lf("button.back_to_platform", "Back to {0}", platformName);
+        ToolTip.SetTip(BackToWindowsButton, Lf("tooltip.back_to_platform", "Back to {0}", platformName));
         ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
         LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
         LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()

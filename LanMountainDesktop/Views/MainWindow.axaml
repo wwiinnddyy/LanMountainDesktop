@@ -290,8 +290,7 @@
                                                 Background="Transparent"
                                                 BorderThickness="0"
                                                 Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                Click="OnMinimizeClick"
-                                                ToolTip.Tip="&#22238;&#21040;Windows">
+                                                Click="OnMinimizeClick">
                                             <StackPanel Orientation="Horizontal"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
@@ -300,8 +299,7 @@
                                                                Icon="Window"
                                                                IconVariant="Regular" />
                                                 <TextBlock x:Name="BackToWindowsTextBlock"
-                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                           Text="&#22238;&#21040;Windows" />
+                                                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                             </StackPanel>
                                         </Button>
                                     </Grid>
