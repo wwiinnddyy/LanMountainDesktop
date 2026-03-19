@@ -18,7 +18,7 @@
         <Setter Property="Background" Value="{DynamicResource EditorSelectFieldBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource EditorSelectOutlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
         <Setter Property="Padding" Value="16,14,12,14" />
         <Setter Property="MinHeight" Value="56" />
         <Setter Property="FontSize" Value="14" />
@@ -40,7 +40,7 @@
         <Setter Property="Background" Value="{DynamicResource EditorSelectFieldBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource EditorSelectOutlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
         <Setter Property="Padding" Value="16,14,12,14" />
         <Setter Property="MinHeight" Value="56" />
         <Setter Property="Foreground" Value="{DynamicResource ComponentEditorPrimaryTextBrush}" />
@@ -61,7 +61,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Padding" Value="16,12" />
         <Setter Property="Margin" Value="6,4" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="MinHeight" Value="44" />
     </Style>
 
@@ -100,7 +100,7 @@
         <Setter Property="Background" Value="{DynamicResource EditorSurfaceContainerHighBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource EditorSelectOutlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusLg}" />
         <Setter Property="Padding" Value="4" />
     </Style>
 
@@ -108,7 +108,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="Padding" Value="18,12" />
         <Setter Property="MinHeight" Value="48" />
         <Setter Property="FontSize" Value="14" />
@@ -139,14 +139,14 @@
         <Setter Property="Background" Value="{DynamicResource ComponentEditorHeroBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ComponentEditorCardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXl}" />
     </Style>
 
     <Style Selector="Border.component-editor-card">
         <Setter Property="Background" Value="{DynamicResource ComponentEditorCardBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource ComponentEditorCardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusLg}" />
     </Style>
 
     <Style Selector="TextBlock.component-editor-headline">

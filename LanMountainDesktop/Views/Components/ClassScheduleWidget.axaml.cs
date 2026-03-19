@@ -613,18 +613,17 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             ? CreateBrush("#FF4FC3F7")
             : CreateBrush("#FF3250");
 
-        var cornerRadius = Math.Clamp(_currentCellSize * 0.45, 24, 44);
-        RootBorder.CornerRadius = new CornerRadius(cornerRadius);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.45, 24, 44);
         RootBorder.Background = _isNightVisual
             ? CreateGradientBrush("#171A21", "#0C0E14")
             : CreateGradientBrush("#F7F8FC", "#ECEFF6");
         RootBorder.BorderBrush = CreateBrush(_isNightVisual ? "#24FFFFFF" : "#15000000");
 
         var rootPadding = new Thickness(
-            Math.Clamp(16 * scale, 10, 24),
-            Math.Clamp(14 * scale, 9, 20),
-            Math.Clamp(16 * scale, 10, 24),
-            Math.Clamp(14 * scale, 8, 20));
+            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 9, 20),
+            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 20));
         RootBorder.Padding = rootPadding;
 
         LayoutGrid.RowSpacing = Math.Clamp(14 * scale, 6, 20);

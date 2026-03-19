@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Models;
 
@@ -15,6 +16,8 @@ public sealed class AppSettingsSnapshot
     public string? ThemeColor { get; set; }
 
     public bool UseSystemChrome { get; set; }
+
+    public double GlobalCornerRadiusScale { get; set; } = GlobalAppearanceSettings.DefaultCornerRadiusScale;
 
     public string ThemeColorMode { get; set; } = "default_neutral";
 

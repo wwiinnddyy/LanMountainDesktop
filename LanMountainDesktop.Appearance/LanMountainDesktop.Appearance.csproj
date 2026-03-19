@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Settings.Core\LanMountainDesktop.Settings.Core.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Host.Abstractions\LanMountainDesktop.Host.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

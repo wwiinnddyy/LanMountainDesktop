@@ -48,21 +48,21 @@
     </Style>
 
     <Style Selector="Border.settings-section-card">
-        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusLg}" />
         <Setter Property="Padding" Value="20" />
         <Setter Property="Margin" Value="0,0,0,14" />
         <Setter Property="BoxShadow" Value="0 2 8 #12000000" />
     </Style>
 
     <Style Selector="Border.settings-option-card">
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="Padding" Value="16" />
         <Setter Property="Margin" Value="0,0,0,12" />
         <Setter Property="BoxShadow" Value="0 1 4 #0F000000" />
     </Style>
 
     <Style Selector="Border.settings-list-item">
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="Padding" Value="16" />
         <Setter Property="Margin" Value="0,0,0,10" />
         <Setter Property="BoxShadow" Value="0 1 4 #0F000000" />
@@ -77,7 +77,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="VerticalAlignment" Value="Top" />
     </Style>
@@ -201,7 +201,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="Padding" Value="14,12" />
         <Setter Property="Margin" Value="0,0,0,8" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -229,7 +229,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="Padding" Value="16,10" />
         <Setter Property="MinHeight" Value="36" />
     </Style>
@@ -254,7 +254,7 @@
         <Setter Property="Width" Value="36" />
         <Setter Property="Height" Value="36" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />

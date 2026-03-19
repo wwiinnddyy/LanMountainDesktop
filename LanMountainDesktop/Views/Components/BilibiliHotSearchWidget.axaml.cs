@@ -386,12 +386,12 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * softScale, 16, 52));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
         RootBorder.Padding = new Thickness(0);
 
         var horizontalPadding = Math.Clamp(16 * softScale, 8, 24);
         var verticalPadding = Math.Clamp(14 * softScale, 7, 20);
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * softScale, 16, 52));
+        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
         CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
         var innerWidth = Math.Max(120, totalWidth - (horizontalPadding * 2d));

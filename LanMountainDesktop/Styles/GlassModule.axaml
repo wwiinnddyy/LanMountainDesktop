@@ -4,11 +4,13 @@
 
     <Styles.Resources>
         <!-- Unified corner radius tokens used across settings and widget panels -->
+        <CornerRadius x:Key="DesignCornerRadiusMicro">6</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusXl">32</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusLg">28</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusMd">20</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusSm">14</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusXs">12</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusIsland">36</CornerRadius>
     </Styles.Resources>
 
     <Style Selector="TextBlock">
@@ -19,7 +21,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Padding" Value="16,10" />
@@ -155,7 +157,7 @@
 
     <Style Selector="Button.swatch-button">
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXs}" />
         <Setter Property="Opacity" Value="0.88" />
     </Style>
 
@@ -175,7 +177,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
         <Setter Property="BorderThickness" Value="1.2" />
-        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusLg}" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassPanelOpacity}" />
         <Setter Property="BoxShadow" Value="0 4 12 #1A000000" />
     </Style>
@@ -184,7 +186,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="CornerRadius" Value="32" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusXl}" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
         <Setter Property="BoxShadow" Value="0 8 24 #26000000" />
     </Style>
@@ -193,7 +195,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveDockGlassBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveDockGlassBorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="CornerRadius" Value="36" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusIsland}" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
         <Setter Property="BoxShadow" Value="0 12 32 #33000000" />
         <Setter Property="Transitions">
@@ -206,7 +208,7 @@
     <Style Selector="Border.surface-solid-strong">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="36" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusIsland}" />
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
         <Setter Property="BoxShadow" Value="0 8 22 #2A000000" />
     </Style>

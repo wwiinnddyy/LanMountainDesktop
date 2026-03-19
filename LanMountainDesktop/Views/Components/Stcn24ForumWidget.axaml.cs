@@ -602,8 +602,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(30 * softScale, 14, 44));
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(30 * softScale, 14, 44));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * softScale, 14, 44);
+        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * softScale, 14, 44);
         CardBorder.Padding = new Thickness(
             Math.Clamp(12 * softScale, 8, 18),
             Math.Clamp(12 * softScale, 8, 18),
@@ -628,7 +628,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var innerWidth = Math.Max(100, totalWidth - CardBorder.Padding.Left - CardBorder.Padding.Right);
         var rowPaddingHorizontal = Math.Clamp(8 * softScale, 5, 14);
         var rowPaddingVertical = Math.Clamp(6 * softScale, 3, 10);
-        var itemCornerRadius = Math.Clamp(10 * softScale, 6, 14);
         var avatarSize = Math.Clamp(30 * softScale, 20, 40);
         var avatarFont = Math.Clamp(13 * softScale, 9, 18);
         var titleFont = Math.Clamp(14 * softScale, 10, 19);
@@ -658,7 +657,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
         foreach (var visual in _itemVisuals)
         {
-            visual.Host.CornerRadius = new CornerRadius(itemCornerRadius);
+            visual.Host.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(10 * softScale, 6, 14);
             visual.Host.Padding = new Thickness(rowPaddingHorizontal, rowPaddingVertical);
             visual.RowGrid.ColumnSpacing = Math.Clamp(8 * softScale, 4, 12);
 

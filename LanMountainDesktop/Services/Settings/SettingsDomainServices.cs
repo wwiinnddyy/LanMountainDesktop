@@ -10,6 +10,7 @@ using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Services.PluginMarket;
 
 namespace LanMountainDesktop.Services.Settings;
@@ -242,6 +243,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             snapshot.IsNightMode ?? false,
             snapshot.ThemeColor,
             snapshot.UseSystemChrome,
+            GlobalAppearanceSettings.NormalizeCornerRadiusScale(snapshot.GlobalCornerRadiusScale),
             ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
             ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
             snapshot.SelectedWallpaperSeed);
@@ -252,6 +254,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         var snapshot = _settingsService.Load();
         var changedKeys = new List<string>();
         var normalizedThemeColor = string.IsNullOrWhiteSpace(state.ThemeColor) ? null : state.ThemeColor;
+        var normalizedCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(state.GlobalCornerRadiusScale);
         var normalizedThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(state.ThemeColorMode, state.ThemeColor);
         var normalizedSystemMaterialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(state.SystemMaterialMode);
         var normalizedSelectedWallpaperSeed = string.IsNullOrWhiteSpace(state.SelectedWallpaperSeed)
@@ -274,6 +277,12 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         {
             snapshot.UseSystemChrome = state.UseSystemChrome;
             changedKeys.Add(nameof(AppSettingsSnapshot.UseSystemChrome));
+        }
+
+        if (Math.Abs(GlobalAppearanceSettings.NormalizeCornerRadiusScale(snapshot.GlobalCornerRadiusScale) - normalizedCornerRadiusScale) > 0.0001d)
+        {
+            snapshot.GlobalCornerRadiusScale = normalizedCornerRadiusScale;
+            changedKeys.Add(nameof(AppSettingsSnapshot.GlobalCornerRadiusScale));
         }
 
         if (!string.Equals(snapshot.ThemeColorMode, normalizedThemeColorMode, StringComparison.OrdinalIgnoreCase))

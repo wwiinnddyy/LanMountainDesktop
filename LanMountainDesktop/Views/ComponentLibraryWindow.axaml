@@ -39,7 +39,7 @@
               ColumnDefinitions="240,*"
               ColumnSpacing="12">
             <Border Classes="surface-translucent-panel"
-                    CornerRadius="24"
+                    CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                     Padding="10">
                 <ListBox x:Name="CategoryListBox"
                          Background="Transparent"
@@ -50,7 +50,7 @@
                         <DataTemplate x:DataType="vm:ComponentLibraryCategoryViewModel">
                             <Border Padding="10"
                                     Margin="0,0,0,6"
-                                    CornerRadius="14"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                     Background="{DynamicResource AdaptiveNavItemBackgroundBrush}">
                                 <Grid ColumnDefinitions="Auto,*"
                                       ColumnSpacing="8">
@@ -71,7 +71,7 @@
 
             <Border Grid.Column="1"
                     Classes="surface-translucent-strong"
-                    CornerRadius="24"
+                    CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                     Padding="10">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
@@ -87,14 +87,14 @@
                                 <Border Width="240"
                                         Height="220"
                                         Margin="6"
-                                        CornerRadius="18"
+                                        CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                                         Padding="10"
                                         Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                                         BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
                                         BorderThickness="1">
                                     <Grid RowDefinitions="*,Auto,Auto"
                                           RowSpacing="8">
-                                        <Border CornerRadius="12"
+                                        <Border CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                                                 Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
                                                 BorderThickness="1"
                                                 BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"

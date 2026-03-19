@@ -298,10 +298,11 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             isFourByThree = widthRatio >= 0.9 && heightRatio >= 1.35;
         }
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
+        var containerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
+        RootBorder.CornerRadius = containerRadius;
         RootBorder.Padding = new Thickness(0);
 
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
+        CardBorder.CornerRadius = containerRadius;
         CardBorder.Padding = new Thickness(
             Math.Clamp(16 * scale, 8, 24),
             Math.Clamp(14 * scale, 7, 22),

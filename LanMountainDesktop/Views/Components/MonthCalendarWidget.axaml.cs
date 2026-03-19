@@ -217,8 +217,8 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
     {
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(28 * scale, 14, 40));
-        RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 22));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(28 * scale, 14, 40);
+        RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 22));
         LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 16);
         LayoutRoot.Width = Math.Clamp(280 * scale, 220, 420);
         LayoutRoot.Height = Math.Clamp(280 * scale, 220, 420);

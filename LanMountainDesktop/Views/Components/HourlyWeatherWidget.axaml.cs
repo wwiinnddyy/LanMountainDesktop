@@ -12,13 +12,14 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
+public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentChromeContextAware
 {
     private enum WeatherVisualKind
     {
@@ -117,6 +118,7 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
     private WeatherSnapshot? _latestSnapshot;
     private string _languageCode = "zh-CN";
     private double _currentCellSize = 48;
+    private ComponentChromeContext? _chromeContext;
     private WeatherVisualKind _activeVisualKind = WeatherVisualKind.ClearDay;
     private double _animationPhase;
     private int _activeParticleCount;
@@ -254,6 +256,13 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         }
     }
 
+    public void SetComponentChromeContext(ComponentChromeContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        _chromeContext = context;
+        ApplyCellSize(_currentCellSize);
+    }
+
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
@@ -261,17 +270,23 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         var scale = ResolveScale();
         var hostWidth = Bounds.Width > 1 ? Bounds.Width : Math.Max(140, _currentCellSize * 4);
         var hostHeight = Bounds.Height > 1 ? Bounds.Height : Math.Max(78, _currentCellSize * 2);
-        var cornerRadius = Math.Clamp(_currentCellSize * metrics.CornerRadiusScale, 24, 46);
+        var cornerRadius = ComponentChromeCornerRadiusHelper.Scale(
+            _currentCellSize * metrics.CornerRadiusScale,
+            24,
+            46,
+            _chromeContext);
 
-        RootBorder.CornerRadius = new CornerRadius(cornerRadius);
-        BackgroundImageLayer.CornerRadius = new CornerRadius(cornerRadius);
-        BackgroundMotionLayer.CornerRadius = new CornerRadius(cornerRadius);
-        BackgroundTintLayer.CornerRadius = new CornerRadius(cornerRadius);
-        BackgroundLightLayer.CornerRadius = new CornerRadius(cornerRadius);
-        BackgroundShadeLayer.CornerRadius = new CornerRadius(cornerRadius);
+        ComponentChromeCornerRadiusHelper.Apply(
+            cornerRadius,
+            RootBorder,
+            BackgroundImageLayer,
+            BackgroundMotionLayer,
+            BackgroundTintLayer,
+            BackgroundLightLayer,
+            BackgroundShadeLayer);
         ContentPaddingBorder.Padding = new Thickness(
-            Math.Clamp(Math.Min((_currentCellSize * metrics.HorizontalPaddingScale) * scale, hostWidth * 0.034), 4, 22),
-            Math.Clamp(Math.Min((_currentCellSize * metrics.VerticalPaddingScale) * scale, hostHeight * 0.068), 3, 18));
+            ComponentChromeCornerRadiusHelper.SafeValue(Math.Min((_currentCellSize * metrics.HorizontalPaddingScale) * scale, hostWidth * 0.034), 4, 22, _chromeContext),
+            ComponentChromeCornerRadiusHelper.SafeValue(Math.Min((_currentCellSize * metrics.VerticalPaddingScale) * scale, hostHeight * 0.068), 3, 18, _chromeContext));
         ApplyAdaptiveTypography();
         ResetParticles();
     }

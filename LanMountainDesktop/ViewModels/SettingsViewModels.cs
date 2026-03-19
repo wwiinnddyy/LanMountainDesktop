@@ -12,6 +12,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -482,6 +483,9 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private bool _useSystemChrome;
 
     [ObservableProperty]
+    private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
+
+    [ObservableProperty]
     private SelectionOption _selectedThemeColorMode = new(ThemeAppearanceValues.ColorModeSeedMonet, "User theme color Monet");
 
     [ObservableProperty]
@@ -546,6 +550,12 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _systemMaterialLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _globalCornerRadiusLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _globalCornerRadiusDescription = string.Empty;
 
     [ObservableProperty]
     private string _themeHeader = string.Empty;
@@ -668,6 +678,32 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PersistCurrentState(restartRequired: false);
     }
 
+    partial void OnGlobalCornerRadiusScaleChanged(double value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        var normalized = GlobalAppearanceSettings.NormalizeCornerRadiusScale(value);
+        if (Math.Abs(normalized - value) > 0.0001d)
+        {
+            _isInitializing = true;
+            try
+            {
+                GlobalCornerRadiusScale = normalized;
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
+
+            return;
+        }
+
+        PersistCurrentState(restartRequired: false);
+    }
+
     partial void OnSelectedThemeColorModeChanged(SelectionOption value)
     {
         if (_isInitializing || value is null)
@@ -732,6 +768,8 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeColorLabel = L("settings.color.theme_color_label", "Theme Accent Color");
         ThemeColorModeLabel = L("settings.appearance.theme_color_mode_label", "Theme color source");
         SystemMaterialLabel = L("settings.appearance.system_material_label", "System material");
+        GlobalCornerRadiusLabel = L("settings.appearance.corner_radius.label", "Global corner radius");
+        GlobalCornerRadiusDescription = L("settings.appearance.corner_radius.description", "Adjust the shared radius scale used by cards, panels, and component containers.");
         ThemeSourceNeutralText = L("settings.appearance.theme_color_mode.neutral", "Default neutral");
         ThemeSourceUserColorText = L("settings.appearance.theme_color_mode.user", "User theme color Monet");
         ThemeSourceWallpaperText = L("settings.appearance.theme_color_mode.wallpaper", "Wallpaper Monet");
@@ -776,6 +814,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         IsNightMode = theme.IsNightMode;
         ThemeColor = theme.ThemeColor ?? string.Empty;
         UseSystemChrome = theme.UseSystemChrome;
+        GlobalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(theme.GlobalCornerRadiusScale);
         _selectedWallpaperSeed = theme.SelectedWallpaperSeed;
         SyncCustomSeedPickerWithSavedThemeColor();
 
@@ -825,6 +864,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             IsNightMode,
             themeColor,
             UseSystemChrome,
+            GlobalAppearanceSettings.NormalizeCornerRadiusScale(GlobalCornerRadiusScale),
             themeColorMode,
             ThemeAppearanceValues.NormalizeSystemMaterialMode(SelectedSystemMaterialMode?.Value),
             _selectedWallpaperSeed);
@@ -956,7 +996,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private string _pageDescription = string.Empty;
 
     [ObservableProperty]
-    private string _gridHeader = string.Empty;
+    private string _componentsHeader = string.Empty;
 
     [ObservableProperty]
     private string _shortSideCellsLabel = string.Empty;
@@ -967,6 +1007,18 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _spacingPresetLabel = string.Empty;
 
+    [ObservableProperty]
+    private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
+
+    [ObservableProperty]
+    private string _componentRadiusHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _globalCornerRadiusLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _globalCornerRadiusDescription = string.Empty;
+
     public void Load()
     {
         var state = _settingsFacade.Grid.Get();
@@ -976,6 +1028,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SelectedSpacingPreset = SpacingPresets.FirstOrDefault(option =>
             string.Equals(option.Value, spacingPreset, StringComparison.OrdinalIgnoreCase))
             ?? SpacingPresets[1];
+
+        var theme = _settingsFacade.Theme.Get();
+        GlobalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(theme.GlobalCornerRadiusScale);
     }
 
     partial void OnShortSideCellsChanged(int value)
@@ -1008,6 +1063,32 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SaveGrid();
     }
 
+    partial void OnGlobalCornerRadiusScaleChanged(double value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        var normalized = GlobalAppearanceSettings.NormalizeCornerRadiusScale(value);
+        if (Math.Abs(normalized - value) > 0.0001d)
+        {
+            _isInitializing = true;
+            try
+            {
+                GlobalCornerRadiusScale = normalized;
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
+
+            return;
+        }
+
+        SaveComponentCornerRadius();
+    }
+
     private void SaveGrid()
     {
         _settingsFacade.Grid.Save(new GridSettingsState(
@@ -1016,23 +1097,39 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
             Math.Clamp(EdgeInsetPercent, 0, 30)));
     }
 
+    private void SaveComponentCornerRadius()
+    {
+        var theme = _settingsFacade.Theme.Get();
+        _settingsFacade.Theme.Save(new ThemeAppearanceSettingsState(
+            theme.IsNightMode,
+            theme.ThemeColor,
+            theme.UseSystemChrome,
+            GlobalAppearanceSettings.NormalizeCornerRadiusScale(GlobalCornerRadiusScale),
+            theme.ThemeColorMode,
+            theme.SystemMaterialMode,
+            theme.SelectedWallpaperSeed));
+    }
+
     private IReadOnlyList<SelectionOption> CreateSpacingPresets()
     {
         return
         [
-            new SelectionOption("Compact", L("settings.grid.spacing_compact", "Compact")),
-            new SelectionOption("Relaxed", L("settings.grid.spacing_relaxed", "Relaxed"))
+            new SelectionOption("Compact", L("settings.components.spacing_compact", "Compact")),
+            new SelectionOption("Relaxed", L("settings.components.spacing_relaxed", "Relaxed"))
         ];
     }
 
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.components.title", "Components");
-        PageDescription = L("settings.components.description", "Desktop grid and widget placement density.");
-        GridHeader = L("settings.components.grid_header", "Grid Layout");
-        ShortSideCellsLabel = L("settings.grid.short_side_label", "Short Side Cells");
-        EdgeInsetPercentLabel = L("settings.grid.edge_inset_label", "Screen Inset");
-        SpacingPresetLabel = L("settings.grid.spacing_label", "Grid Spacing");
+        PageDescription = L("settings.components.description", "Adjust component layout and corner design.");
+        ComponentsHeader = L("settings.components.header", "Grid Settings");
+        ShortSideCellsLabel = L("settings.components.short_side_label", "Short Side Cells");
+        EdgeInsetPercentLabel = L("settings.components.edge_inset_label", "Screen Inset");
+        SpacingPresetLabel = L("settings.components.spacing_label", "Component Spacing");
+        ComponentRadiusHeader = L("settings.components.corner_radius.header", "Corner Design");
+        GlobalCornerRadiusLabel = L("settings.components.corner_radius.label", "Component Corner Radius");
+        GlobalCornerRadiusDescription = L("settings.components.corner_radius.description", "Adjust the shared corner radius used by component containers, and expand the internal safe area with it.");
     }
 
     private string L(string key, string fallback)

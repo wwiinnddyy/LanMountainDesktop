@@ -13,11 +13,13 @@ using Avalonia.VisualTree;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
+using PathShape = Avalonia.Controls.Shapes.Path;
 
 namespace LanMountainDesktop.Views;
 
@@ -579,13 +581,18 @@ public partial class MainWindow
     {
         var window = new ComponentLibraryWindow(
             _componentLibraryService,
-            cellSize => new ComponentLibraryCreateContext(
-                cellSize,
-                _timeZoneService,
-                _weatherDataService,
-                _recommendationInfoService,
-                _calculatorDataService,
-                _settingsFacade),
+            cellSize =>
+            {
+                var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
+                return new ComponentLibraryCreateContext(
+                    cellSize,
+                    appearanceSnapshot.GlobalCornerRadiusScale,
+                    _timeZoneService,
+                    _weatherDataService,
+                    _recommendationInfoService,
+                    _calculatorDataService,
+                    _settingsFacade);
+            },
             L);
         window.AddComponentRequested += OnDetachedComponentLibraryAddComponentRequested;
         window.Closed += OnDetachedComponentLibraryClosed;
@@ -1258,7 +1265,7 @@ public partial class MainWindow
             Height = handleVisualSize,
             IsHitTestVisible = false
         };
-        resizeHandleVisual.Children.Add(new Path
+        resizeHandleVisual.Children.Add(new PathShape
         {
             Data = arcData,
             Stretch = Stretch.Fill,
@@ -1266,7 +1273,7 @@ public partial class MainWindow
             StrokeThickness = arcThickness + 3,
             StrokeLineCap = PenLineCap.Round
         });
-        resizeHandleVisual.Children.Add(new Path
+        resizeHandleVisual.Children.Add(new PathShape
         {
             Data = arcData,
             Stretch = Stretch.Fill,
@@ -1513,12 +1520,20 @@ public partial class MainWindow
 
     private double GetComponentCornerRadius(string componentId)
     {
+        var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
+
         if (_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor))
         {
-            return runtimeDescriptor.ResolveCornerRadius(_currentDesktopCellSize);
+            return runtimeDescriptor.ResolveCornerRadius(new ComponentChromeContext(
+                componentId,
+                null,
+                _currentDesktopCellSize,
+                appearanceSnapshot.GlobalCornerRadiusScale,
+                appearanceSnapshot.CornerRadiusTokens));
         }
 
-        return Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18);
+        var scale = Math.Max(0.1d, appearanceSnapshot.GlobalCornerRadiusScale);
+        return Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18) * scale;
     }
 
     private Thickness GetDesktopComponentVisualInset(int widthCells, int heightCells)
@@ -1767,8 +1782,10 @@ public partial class MainWindow
     {
         try
         {
+            var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
             var createContext = new ComponentLibraryCreateContext(
                 cellSize,
+                appearanceSnapshot.GlobalCornerRadiusScale,
                 _timeZoneService,
                 _weatherDataService,
                 _recommendationInfoService,

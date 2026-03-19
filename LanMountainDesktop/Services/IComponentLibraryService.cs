@@ -20,6 +20,7 @@ public sealed record ComponentLibraryCategoryEntry(
 
 public sealed record ComponentLibraryCreateContext(
     double CellSize,
+    double GlobalCornerRadiusScale,
     TimeZoneService TimeZoneService,
     IWeatherInfoService WeatherInfoService,
     IRecommendationInfoService RecommendationInfoService,

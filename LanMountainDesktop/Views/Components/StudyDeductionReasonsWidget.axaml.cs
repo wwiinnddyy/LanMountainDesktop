@@ -229,7 +229,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         _isUltraCompactMode = scale < 0.72 || (Bounds.Width > 1 && Bounds.Width < 300) || (Bounds.Height > 1 && Bounds.Height < 145);
 
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.46, 12, 34));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.46, 12, 34);
         RootBorder.Padding = new Thickness(
             Math.Clamp(12 * scale * compactMultiplier, 6, 18),
             Math.Clamp(10 * scale * compactMultiplier, 5, 16));

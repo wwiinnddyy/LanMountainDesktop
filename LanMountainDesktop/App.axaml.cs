@@ -15,6 +15,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
@@ -61,6 +62,7 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
+    private DesktopShellHost? _desktopShellHost;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static (UserBehaviorAnalyticsService?, CrashReportService?) AnalyticsServices { get; set; }
@@ -116,28 +118,32 @@ public partial class App : Application
         AppLogger.Info("App", "Framework initialization completed.");
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
-        InitializePluginRuntime();
-        InitializeTrayIcon();
+        DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
-            // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
-            DisableAvaloniaDataAnnotationValidation();
-            desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
-            desktop.Exit += (_, _) =>
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private void InitializeDesktopShell()
+    {
+        _desktopShellHost ??= new DesktopShellHost(
+            InitializePluginRuntime,
+            InitializeTrayIcon,
+            desktop =>
+            {
+                // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
+                // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
+                DisableAvaloniaDataAnnotationValidation();
+                desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
+                CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
+            },
+            () =>
             {
                 AppLogger.Info("App", "Desktop lifetime exit triggered.");
                 PerformExitCleanup();
-            };
-
-            CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
-            CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
-        }
-
-        StartWeatherLocationRefreshIfNeeded();
-
-        base.OnFrameworkInitializationCompleted();
+            },
+            () => CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow),
+            StartWeatherLocationRefreshIfNeeded);
+        _desktopShellHost.Initialize(this);
     }
 
     private void OnTrayExitClick(object? sender, EventArgs e)
@@ -493,6 +499,7 @@ public partial class App : Application
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.GlobalCornerRadiusScale), StringComparer.OrdinalIgnoreCase) ||
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&
                  changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) ||
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&

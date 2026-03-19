@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
@@ -18,7 +19,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
+public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentChromeContextAware
 {
     private static readonly IWeatherInfoService DefaultWeatherInfoService = new XiaomiWeatherService();
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
@@ -34,6 +35,7 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
     private TimeZoneService? _timeZoneService;
     private CancellationTokenSource? _refreshCts;
     private double _currentCellSize = 48;
+    private ComponentChromeContext? _chromeContext;
     private double _phase;
     private bool _isAttached;
     private bool _isOnActivePage = true;
@@ -122,19 +124,32 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Extended4x4);
         var width = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 4;
         var height = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4;
-        var radius = Math.Clamp(_currentCellSize * metrics.CornerRadiusScale, 28, 54);
-        RootBorder.CornerRadius = new CornerRadius(radius);
-        BackgroundImageLayer.CornerRadius = new CornerRadius(radius);
-        BackgroundMotionLayer.CornerRadius = new CornerRadius(radius);
-        BackgroundTintLayer.CornerRadius = new CornerRadius(radius);
-        BackgroundLightLayer.CornerRadius = new CornerRadius(radius);
-        BackgroundShadeLayer.CornerRadius = new CornerRadius(radius);
+        var radius = ComponentChromeCornerRadiusHelper.Scale(
+            _currentCellSize * metrics.CornerRadiusScale,
+            28,
+            54,
+            _chromeContext);
+        ComponentChromeCornerRadiusHelper.Apply(
+            radius,
+            RootBorder,
+            BackgroundImageLayer,
+            BackgroundMotionLayer,
+            BackgroundTintLayer,
+            BackgroundLightLayer,
+            BackgroundShadeLayer);
         var horizontalPadding = Math.Clamp(Math.Min(width * metrics.HorizontalPaddingScale * 0.30, width * 0.11), 4, 34);
         var verticalPadding = Math.Clamp(Math.Min(height * metrics.VerticalPaddingScale * 0.30, height * 0.11), 4, 34);
         ContentPaddingBorder.Padding = new Thickness(
-            horizontalPadding,
-            verticalPadding);
+            ComponentChromeCornerRadiusHelper.SafeValue(horizontalPadding, 4, 34, _chromeContext),
+            ComponentChromeCornerRadiusHelper.SafeValue(verticalPadding, 4, 34, _chromeContext));
         ApplyTypography(width, height);
+    }
+
+    public void SetComponentChromeContext(ComponentChromeContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        _chromeContext = context;
+        ApplyCellSize(_currentCellSize);
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)

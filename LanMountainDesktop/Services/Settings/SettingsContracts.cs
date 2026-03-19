@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Services.Settings;
 
@@ -20,6 +21,7 @@ public sealed record ThemeAppearanceSettingsState(
     bool IsNightMode,
     string? ThemeColor,
     bool UseSystemChrome,
+    double GlobalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale,
     string ThemeColorMode = ThemeAppearanceValues.ColorModeDefaultNeutral,
     string SystemMaterialMode = ThemeAppearanceValues.MaterialNone,
     string? SelectedWallpaperSeed = null);

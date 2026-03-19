@@ -83,7 +83,7 @@
                                         Background="{Binding NeutralLightPreviewBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewNeutralLightLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -94,7 +94,7 @@
                                         Background="{Binding NeutralDarkPreviewBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewNeutralDarkLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -110,7 +110,7 @@
                                         Background="{Binding PrimarySwatchBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewPrimaryLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -122,7 +122,7 @@
                                         Background="{Binding SecondarySwatchBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewSecondaryLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -134,7 +134,7 @@
                                         Background="{Binding TertiarySwatchBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewTertiaryLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -146,7 +146,7 @@
                                         Background="{Binding NeutralSwatchBrush}"
                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="14" />
+                                        CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                 <TextBlock Text="{Binding PreviewNeutralLabel}"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center" />
@@ -177,7 +177,7 @@
                                             Background="{Binding SeedSwatchBrush}"
                                             BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="14" />
+                                            CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                     <TextBlock Text="{Binding PreviewSeedLabel}"
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center" />
@@ -217,7 +217,7 @@
                                                                         Background="{Binding Brush}"
                                                                         BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                                                         BorderThickness="1"
-                                                                        CornerRadius="12" />
+                                                                        CornerRadius="{DynamicResource DesignCornerRadiusXs}" />
                                                                 <TextBlock Text="{Binding Label}"
                                                                            HorizontalAlignment="Center"
                                                                            TextAlignment="Center"
@@ -240,7 +240,7 @@
                                             Background="{Binding SeedSwatchBrush}"
                                             BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                             BorderThickness="1"
-                                            CornerRadius="14" />
+                                            CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
                                     <TextBlock Text="{Binding PreviewSeedLabel}"
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center" />

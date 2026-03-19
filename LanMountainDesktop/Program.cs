@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.WebView.Desktop;
+using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -20,9 +21,11 @@ sealed class Program
     {
         AppLogger.Initialize();
         RegisterGlobalExceptionLogging();
-        InitializeDeviceId();
-        InitializeCrashReporting();
-        InitializeUserBehaviorAnalytics();
+        DesktopBootstrap.InitializeStartupServices(
+            InitializeDeviceId,
+            InitializeCrashReporting,
+            InitializeUserBehaviorAnalytics,
+            ScheduleWhiteboardNoteStartupCleanup);
         var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
 
         using var singleInstance = AcquireSingleInstance(restartParentProcessId);
@@ -43,7 +46,6 @@ sealed class Program
 
         var diagnostics = StartupDiagnosticsService.Run(args);
         StartupDiagnosticsService.ShowLegacyExecutableWarningIfNeeded(diagnostics);
-        ScheduleWhiteboardNoteStartupCleanup();
 
         try
         {

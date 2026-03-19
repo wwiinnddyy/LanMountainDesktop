@@ -122,6 +122,7 @@ public static class DesktopComponentRegistryFactory
             var pluginSettings = new PluginScopedSettingsService(
                 contribution.Plugin.Manifest.Id,
                 settingsService);
+            var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
             var pluginContext = new PluginDesktopComponentContext(
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,
@@ -131,6 +132,8 @@ public static class DesktopComponentRegistryFactory
                 contribution.Registration.ComponentId,
                 context.PlacementId,
                 context.CellSize,
+                appearanceSnapshot.GlobalCornerRadiusScale,
+                appearanceSnapshot.CornerRadiusTokens,
                 pluginSettings);
 
             return contribution.Registration.ControlFactory(contribution.Plugin.Services, pluginContext);

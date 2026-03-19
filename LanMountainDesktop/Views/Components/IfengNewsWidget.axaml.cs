@@ -400,8 +400,8 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(32 * softScale, 16, 46));
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(32 * softScale, 16, 46));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
+        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
 
         var horizontalPadding = Math.Clamp(14 * softScale, 8, 20);
         var verticalPadding = Math.Clamp(14 * softScale, 8, 20);
@@ -452,7 +452,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
             visual.ImageHost.Width = imageWidth;
             visual.ImageHost.Height = imageHeight;
-            visual.ImageHost.CornerRadius = new CornerRadius(Math.Clamp(imageHeight * 0.15, 8, 16));
+            visual.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(imageHeight * 0.15, 8, 16);
 
             visual.TitleTextBlock.MaxWidth = textWidth;
             visual.TitleTextBlock.FontSize = titleFont;

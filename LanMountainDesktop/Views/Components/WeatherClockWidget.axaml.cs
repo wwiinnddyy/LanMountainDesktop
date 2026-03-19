@@ -11,12 +11,13 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware
+public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IWeatherInfoAwareComponentWidget, IComponentPlacementContextAware, IComponentChromeContextAware
 {
     private sealed record WeatherClockConfig(
         string LanguageCode,
@@ -52,6 +53,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
     private TimeZoneService? _timeZoneService;
     private CancellationTokenSource? _refreshCts;
     private double _currentCellSize = 48;
+    private ComponentChromeContext? _chromeContext;
     private bool _isAttached;
     private bool _dialInitialized;
     private bool _handsInitialized;
@@ -128,6 +130,13 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         RefreshFromSettings();
     }
 
+    public void SetComponentChromeContext(ComponentChromeContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        _chromeContext = context;
+        ApplyCellSize(_currentCellSize);
+    }
+
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = Math.Max(1, cellSize);
@@ -142,12 +151,24 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         var compactness = Math.Clamp((176 - targetWidth) / 86d, 0, 1);
         var ultraCompact = targetWidth < 126 || targetHeight < 46;
         var compactFactor = Lerp(1, ultraCompact ? 0.64 : 0.72, compactness);
-        var cornerRadius = Math.Clamp(targetHeight * metrics.CornerRadiusScale, 15, 36);
+        var cornerRadius = ComponentChromeCornerRadiusHelper.Scale(
+            targetHeight * metrics.CornerRadiusScale,
+            15,
+            36,
+            _chromeContext);
 
-        var horizontalPadding = Math.Clamp(targetHeight * Lerp(0.18, 0.12, compactness), 5, 30);
-        var verticalPadding = Math.Clamp(targetHeight * Lerp(0.14, 0.10, compactness), 3, 20);
+        var horizontalPadding = ComponentChromeCornerRadiusHelper.SafeValue(
+            targetHeight * Lerp(0.18, 0.12, compactness),
+            5,
+            30,
+            _chromeContext);
+        var verticalPadding = ComponentChromeCornerRadiusHelper.SafeValue(
+            targetHeight * Lerp(0.14, 0.10, compactness),
+            3,
+            20,
+            _chromeContext);
 
-        RootBorder.CornerRadius = new CornerRadius(cornerRadius);
+        RootBorder.CornerRadius = cornerRadius;
         RootBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
         var columnSpacing = Math.Clamp(targetHeight * Lerp(0.16, 0.08, compactness), 2, 22);

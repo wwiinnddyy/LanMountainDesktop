@@ -105,7 +105,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         _currentCellSize = Math.Max(1, cellSize);
         var scale = Math.Clamp(_currentCellSize / 48d, 0.78, 2.4);
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(_currentCellSize * 0.44, 14, 42));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 14, 42);
         RootBorder.Padding = new Thickness(
             Math.Clamp(14 * scale, 8, 22),
             Math.Clamp(10 * scale, 6, 16));

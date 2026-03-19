@@ -92,7 +92,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
         RootBorder.Padding = new Thickness(
             Math.Clamp(20 * scale, 10, 34),
             Math.Clamp(16 * scale, 8, 28),

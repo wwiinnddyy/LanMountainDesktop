@@ -63,15 +63,15 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         var chromeScale = Math.Clamp(rawScale, 0.62, 2.0);
         var contentScale = Math.Clamp(rawScale, 0.74, 1.0);
 
-        var rootRadius = Math.Clamp(34 * chromeScale, 16, 56);
-        RootBorder.CornerRadius = new CornerRadius(rootRadius);
+        var rootRadius = ComponentChromeCornerRadiusHelper.Scale(34 * chromeScale, 16, 56);
+        RootBorder.CornerRadius = rootRadius;
         RootBorder.Padding = new Thickness(0);
-        RecorderCardBorder.CornerRadius = new CornerRadius(rootRadius);
+        RecorderCardBorder.CornerRadius = rootRadius;
         RecorderContentGrid.Margin = new Thickness(
-            Math.Clamp(24 * contentScale, 14, 26),
-            Math.Clamp(18 * contentScale, 10, 22),
-            Math.Clamp(24 * contentScale, 14, 26),
-            Math.Clamp(18 * contentScale, 10, 24));
+            ComponentChromeCornerRadiusHelper.SafeValue(24 * contentScale, 14, 26),
+            ComponentChromeCornerRadiusHelper.SafeValue(18 * contentScale, 10, 22),
+            ComponentChromeCornerRadiusHelper.SafeValue(24 * contentScale, 14, 26),
+            ComponentChromeCornerRadiusHelper.SafeValue(18 * contentScale, 10, 24));
 
         var sideButtonSize = Math.Clamp(54 * contentScale, 34, 58);
         DiscardButtonBorder.Width = sideButtonSize;

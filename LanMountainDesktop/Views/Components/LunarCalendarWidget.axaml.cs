@@ -182,8 +182,8 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
     {
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(30 * scale, 16, 44));
-        RootBorder.Padding = new Thickness(Math.Clamp(16 * scale, 8, 24));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 16, 44);
+        RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 8, 24));
         LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 18);
         DividerBorder.Margin = new Thickness(
             Math.Clamp(8 * scale, 3, 14),

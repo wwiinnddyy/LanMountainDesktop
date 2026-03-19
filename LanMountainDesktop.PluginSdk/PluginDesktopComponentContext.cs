@@ -1,3 +1,5 @@
+using LanMountainDesktop.Shared.Contracts;
+
 namespace LanMountainDesktop.PluginSdk;
 
 public sealed class PluginDesktopComponentContext
@@ -11,6 +13,8 @@ public sealed class PluginDesktopComponentContext
         string componentId,
         string? placementId,
         double cellSize,
+        double globalCornerRadiusScale,
+        AppearanceCornerRadiusTokens cornerRadiusTokens,
         IPluginSettingsService? pluginSettings = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -19,6 +23,7 @@ public sealed class PluginDesktopComponentContext
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(properties);
+        ArgumentNullException.ThrowIfNull(cornerRadiusTokens);
 
         Manifest = manifest;
         PluginDirectory = pluginDirectory;
@@ -28,6 +33,8 @@ public sealed class PluginDesktopComponentContext
         ComponentId = componentId.Trim();
         PlacementId = string.IsNullOrWhiteSpace(placementId) ? null : placementId.Trim();
         CellSize = Math.Max(1, cellSize);
+        GlobalCornerRadiusScale = Math.Max(0.1d, globalCornerRadiusScale);
+        CornerRadiusTokens = cornerRadiusTokens;
         PluginSettings = pluginSettings;
     }
 
@@ -47,7 +54,21 @@ public sealed class PluginDesktopComponentContext
 
     public double CellSize { get; }
 
+    public double GlobalCornerRadiusScale { get; }
+
+    public AppearanceCornerRadiusTokens CornerRadiusTokens { get; }
+
     public IPluginSettingsService? PluginSettings { get; }
+
+    public double ResolveScaledCornerRadius(double baseRadius, double? minimum = null, double? maximum = null)
+    {
+        var scaled = Math.Max(0d, baseRadius) * GlobalCornerRadiusScale;
+        var scaledMin = minimum.HasValue ? minimum.Value * GlobalCornerRadiusScale : scaled;
+        var scaledMax = maximum.HasValue ? maximum.Value * GlobalCornerRadiusScale : scaled;
+        return minimum.HasValue || maximum.HasValue
+            ? Math.Clamp(scaled, scaledMin, scaledMax)
+            : scaled;
+    }
 
     public T? GetService<T>()
     {

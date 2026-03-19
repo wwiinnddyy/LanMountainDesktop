@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Avalonia.Controls;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -30,7 +32,11 @@ public sealed class DesktopComponentRuntimeRegistration
         string? displayNameLocalizationKey,
         Func<Control> controlFactory,
         Func<double, double>? cornerRadiusResolver = null)
-        : this(componentId, displayNameLocalizationKey, _ => controlFactory(), cornerRadiusResolver)
+        : this(
+            componentId,
+            displayNameLocalizationKey,
+            _ => controlFactory(),
+            cornerRadiusResolver is null ? null : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
     {
     }
 
@@ -39,6 +45,19 @@ public sealed class DesktopComponentRuntimeRegistration
         string? displayNameLocalizationKey,
         Func<DesktopComponentControlFactoryContext, Control> controlFactory,
         Func<double, double>? cornerRadiusResolver = null)
+        : this(
+            componentId,
+            displayNameLocalizationKey,
+            controlFactory,
+            cornerRadiusResolver is null ? null : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
+    {
+    }
+
+    public DesktopComponentRuntimeRegistration(
+        string componentId,
+        string? displayNameLocalizationKey,
+        Func<DesktopComponentControlFactoryContext, Control> controlFactory,
+        Func<ComponentChromeContext, double>? cornerRadiusResolver = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
         ArgumentNullException.ThrowIfNull(controlFactory);
@@ -57,22 +76,27 @@ public sealed class DesktopComponentRuntimeRegistration
 
     public Func<DesktopComponentControlFactoryContext, Control> ControlFactory { get; }
 
-    public Func<double, double>? CornerRadiusResolver { get; }
+    public Func<ComponentChromeContext, double>? CornerRadiusResolver { get; }
 }
 
 public sealed class DesktopComponentRuntimeDescriptor
 {
-    private static readonly Func<double, double> DefaultCornerRadiusResolver =
-        cellSize => Math.Clamp(cellSize * 0.22, 8, 18);
+    private static readonly Func<ComponentChromeContext, double> DefaultCornerRadiusResolver =
+        chromeContext =>
+        {
+            var scale = Math.Max(0.1d, chromeContext.GlobalCornerRadiusScale);
+            var baseRadius = Math.Clamp(chromeContext.CellSize * 0.22, 8, 18);
+            return Math.Clamp(baseRadius * scale, 8 * scale, 18 * scale);
+        };
 
     private readonly Func<DesktopComponentControlFactoryContext, Control> _controlFactory;
-    private readonly Func<double, double> _cornerRadiusResolver;
+    private readonly Func<ComponentChromeContext, double> _cornerRadiusResolver;
 
     internal DesktopComponentRuntimeDescriptor(
         DesktopComponentDefinition definition,
         string? displayNameLocalizationKey,
         Func<DesktopComponentControlFactoryContext, Control> controlFactory,
-        Func<double, double>? cornerRadiusResolver)
+        Func<ComponentChromeContext, double>? cornerRadiusResolver)
     {
         Definition = definition;
         DisplayNameLocalizationKey = displayNameLocalizationKey;
@@ -97,9 +121,16 @@ public sealed class DesktopComponentRuntimeDescriptor
 
         var settingsService = settingsFacade.Settings;
         var appearanceTheme = HostAppearanceThemeProvider.GetOrCreate();
+        var appearanceSnapshot = appearanceTheme.GetCurrent();
         var componentAccessor = settingsService.GetComponentAccessor(Definition.Id, placementId);
         var componentSettingsStore = new ComponentSettingsService(settingsService);
         componentSettingsStore.SetScopedComponentContext(Definition.Id, placementId);
+        var chromeContext = new ComponentChromeContext(
+            Definition.Id,
+            placementId,
+            cellSize,
+            appearanceSnapshot.GlobalCornerRadiusScale,
+            appearanceSnapshot.CornerRadiusTokens);
         var control = _controlFactory(new DesktopComponentControlFactoryContext(
             Definition,
             cellSize,
@@ -118,6 +149,7 @@ public sealed class DesktopComponentRuntimeDescriptor
             settingsFacade,
             settingsService,
             appearanceTheme,
+            chromeContext,
             componentAccessor,
             componentSettingsStore);
 
@@ -143,6 +175,11 @@ public sealed class DesktopComponentRuntimeDescriptor
         if (control is IComponentPlacementContextAware placementAwareComponent)
         {
             placementAwareComponent.SetComponentPlacementContext(Definition.Id, placementId);
+        }
+
+        if (control is IComponentChromeContextAware chromeContextAwareComponent)
+        {
+            chromeContextAwareComponent.SetComponentChromeContext(chromeContext);
         }
 
         if (control is IDesktopComponentWidget sizedComponent)
@@ -173,9 +210,22 @@ public sealed class DesktopComponentRuntimeDescriptor
         return control;
     }
 
+    public double ResolveCornerRadius(ComponentChromeContext chromeContext)
+    {
+        ArgumentNullException.ThrowIfNull(chromeContext);
+
+        var resolved = _cornerRadiusResolver(chromeContext with { CellSize = Math.Max(1, chromeContext.CellSize) });
+        return double.IsFinite(resolved) ? Math.Max(0d, resolved) : DefaultCornerRadiusResolver(chromeContext);
+    }
+
     public double ResolveCornerRadius(double cellSize)
     {
-        return _cornerRadiusResolver(Math.Max(1, cellSize));
+        return ResolveCornerRadius(new ComponentChromeContext(
+            Definition.Id,
+            null,
+            Math.Max(1, cellSize),
+            1d,
+            AppearanceCornerRadiusTokenFactory.Create(1d)));
     }
 
     private static void ApplySettingsDependencies(

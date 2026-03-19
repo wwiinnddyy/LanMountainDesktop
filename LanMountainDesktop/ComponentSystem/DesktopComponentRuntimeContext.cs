@@ -1,3 +1,4 @@
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -10,5 +11,6 @@ public sealed record DesktopComponentRuntimeContext(
     ISettingsFacadeService SettingsFacade,
     ISettingsService SettingsService,
     IAppearanceThemeService AppearanceTheme,
+    ComponentChromeContext Chrome,
     IComponentSettingsAccessor ComponentSettingsAccessor,
     IComponentInstanceSettingsStore ComponentSettingsStore);

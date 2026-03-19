@@ -11,9 +11,12 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.Media.Imaging;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.Theme;
 using Microsoft.Win32;
 
@@ -41,6 +44,8 @@ public sealed record AppearanceThemeSnapshot(
     string ThemeColorMode,
     string? UserThemeColor,
     string? SelectedWallpaperSeed,
+    double GlobalCornerRadiusScale,
+    AppearanceCornerRadiusTokens CornerRadiusTokens,
     string ResolvedSeedSource,
     MonetPalette MonetPalette,
     Color AccentColor,
@@ -464,6 +469,13 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         var context = CreateThemeContext(snapshot);
         ThemeColorSystemService.ApplyThemeResources(resources, context);
         GlassEffectService.ApplyGlassResources(resources, context);
+        resources["DesignCornerRadiusMicro"] = snapshot.CornerRadiusTokens.Micro;
+        resources["DesignCornerRadiusXs"] = snapshot.CornerRadiusTokens.Xs;
+        resources["DesignCornerRadiusSm"] = snapshot.CornerRadiusTokens.Sm;
+        resources["DesignCornerRadiusMd"] = snapshot.CornerRadiusTokens.Md;
+        resources["DesignCornerRadiusLg"] = snapshot.CornerRadiusTokens.Lg;
+        resources["DesignCornerRadiusXl"] = snapshot.CornerRadiusTokens.Xl;
+        resources["DesignCornerRadiusIsland"] = snapshot.CornerRadiusTokens.Island;
     }
 
     public AppearanceMaterialSurface GetMaterialSurface(MaterialSurfaceRole role)
@@ -538,6 +550,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         if (!refreshAll &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.GlobalCornerRadiusScale), StringComparer.OrdinalIgnoreCase) &&
             !(respondsToThemeColor &&
               changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) &&
             !(respondsToWallpaper &&
@@ -559,6 +572,8 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         bool queueWallpaperPaletteBuild)
     {
         var availableModes = _windowMaterialService.GetAvailableModes();
+        var globalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(themeState.GlobalCornerRadiusScale);
+        var cornerRadiusTokens = AppearanceCornerRadiusTokenFactory.Create(globalCornerRadiusScale);
         MonetPalette palette;
         IReadOnlyList<Color> wallpaperSeedCandidates;
         Color effectiveSeedColor;
@@ -598,6 +613,8 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             themeColorMode,
             themeState.ThemeColor,
             selectedWallpaperSeed,
+            globalCornerRadiusScale,
+            cornerRadiusTokens,
             resolvedSeedSource,
             palette,
             ResolveAccentColor(themeColorMode, themeState.ThemeColor, palette),

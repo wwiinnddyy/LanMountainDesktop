@@ -480,7 +480,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             {
                 Width = 160,
                 Height = 90,
-                CornerRadius = new CornerRadius(16),
+                CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16, 8, 22),
                 ClipToBounds = true,
                 Background = new SolidColorBrush(Color.Parse("#E6E6E6")),
                 IsHitTestVisible = false
@@ -545,10 +545,10 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         var scale = ResolveScale();
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
 
-        RootBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
         RootBorder.Padding = new Thickness(0);
 
-        CardBorder.CornerRadius = new CornerRadius(Math.Clamp(34 * scale, 16, 52));
+        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
         CardBorder.Padding = new Thickness(
             Math.Clamp(16 * scale, 8, 24),
             Math.Clamp(14 * scale, 7, 22),
@@ -573,8 +573,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         News1ImageHost.Height = imageHeight;
         News2ImageHost.Width = imageWidth;
         News2ImageHost.Height = imageHeight;
-        News1ImageHost.CornerRadius = new CornerRadius(Math.Clamp(16 * scale, 8, 22));
-        News2ImageHost.CornerRadius = new CornerRadius(Math.Clamp(16 * scale, 8, 22));
+        News1ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
+        News2ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
 
         var columnGap = Math.Clamp(12 * scale, 6, 18);
         NewsItem1Grid.ColumnSpacing = columnGap;
@@ -611,7 +611,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
             row.ImageHost.Width = imageWidth;
             row.ImageHost.Height = imageHeight;
-            row.ImageHost.CornerRadius = new CornerRadius(Math.Clamp(16 * scale, 8, 22));
+            row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
 
             row.TitleTextBlock.MaxWidth = availableTextWidth;
             row.TitleTextBlock.FontSize = Math.Clamp(19 * scale, 10, 25);

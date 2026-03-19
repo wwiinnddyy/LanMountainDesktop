@@ -8,16 +8,14 @@
              x:DataType="vm:ComponentsSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container">
-
-            <!-- 网格布局设置分组 -->
-            <controls:IconText Icon="GridDots"
-                               Text="{Binding GridHeader}"
+            <controls:IconText Icon="Apps"
+                               Text="{Binding ComponentsHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding GridHeader}"
+            <ui:SettingsExpander Header="{Binding ComponentsHeader}"
                                  IsExpanded="True">
                 <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="GridDots" />
+                    <fi:SymbolIconSource Symbol="Apps" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
@@ -71,6 +69,33 @@
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
+            <controls:IconText Icon="ShapeOrganic"
+                               Text="{Binding ComponentRadiusHeader}"
+                               Margin="0,12,0,4" />
+
+            <ui:SettingsExpander Header="{Binding GlobalCornerRadiusLabel}"
+                                 Description="{Binding GlobalCornerRadiusDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ShapeOrganic" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                        <TextBlock Text="{Binding GlobalCornerRadiusLabel}"
+                                   VerticalAlignment="Center" />
+                        <Slider Grid.Column="1"
+                                Minimum="0.7"
+                                Maximum="1.4"
+                                IsSnapToTickEnabled="True"
+                                TickFrequency="0.05"
+                                Value="{Binding GlobalCornerRadiusScale}" />
+                        <TextBlock Grid.Column="2"
+                                   Width="48"
+                                   Text="{Binding GlobalCornerRadiusScale, StringFormat={}{0:F2}x}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
