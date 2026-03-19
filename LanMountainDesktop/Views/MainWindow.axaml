@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LanMountainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -158,7 +158,7 @@
 
                                     <Border x:Name="LauncherPagePanel"
                                             Grid.Column="1"
-                                            Classes="glass-panel"
+                                            Classes="surface-translucent-panel"
                                             ClipToBounds="False"
                                             CornerRadius="36"
                                             Padding="18">
@@ -166,11 +166,9 @@
                                             <StackPanel Spacing="4">
                                                 <TextBlock x:Name="LauncherTitleTextBlock"
                                                            FontSize="24"
-                                                           FontWeight="SemiBold"
-                                                           Text="App Launcher" />
+                                                           FontWeight="SemiBold" />
                                                 <TextBlock x:Name="LauncherSubtitleTextBlock"
-                                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                           Text="Apps and folders from Windows Start Menu." />
+                                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
                                             </StackPanel>
 
                                             <Grid Grid.Row="1"
@@ -188,7 +186,7 @@
                                                       Opacity="{DynamicResource AdaptiveGlassOverlayOpacity}"
                                                       PointerPressed="OnLauncherFolderOverlayPointerPressed">
                                                     <Border x:Name="LauncherFolderPanel"
-                                                            Classes="mica-strong"
+                                                            Classes="surface-solid-strong"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
                                                             Margin="52"
@@ -216,8 +214,7 @@
                                                                            Grid.Column="1"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"
-                                                                           FontWeight="SemiBold"
-                                                                           Text="Folder" />
+                                                                           FontWeight="SemiBold" />
                                                                 <Button x:Name="LauncherFolderCloseButton"
                                                                         Grid.Column="2"
                                                                         Width="38"
@@ -266,7 +263,7 @@
                         </Border>
 
                         <Border x:Name="BottomTaskbarContainer"
-                                Classes="glass-island"
+                                Classes="surface-translucent-island"
                                 Grid.Row="0"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="1"
@@ -434,7 +431,7 @@
         <Border x:Name="ComponentLibraryWindow"
                 IsVisible="False"
                 Opacity="0"
-                Classes="glass-strong"
+                Classes="surface-translucent-strong"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
                 Width="620"
@@ -479,7 +476,7 @@
                 </Grid>
 
                 <Border Grid.Row="1"
-                        Classes="glass-panel"
+                        Classes="surface-translucent-panel"
                         CornerRadius="12"
                         Padding="14">
                     <Grid>

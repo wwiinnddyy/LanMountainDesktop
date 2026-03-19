@@ -8,7 +8,7 @@
              d:DesignHeight="320"
              x:Class="LanMountainDesktop.Views.Components.StudyNoiseDistributionWidget">
     <Border x:Name="RootBorder"
-            Classes="glass-strong"
+            Classes="surface-translucent-strong"
             CornerRadius="24"
             Padding="14,10"
             ClipToBounds="True">

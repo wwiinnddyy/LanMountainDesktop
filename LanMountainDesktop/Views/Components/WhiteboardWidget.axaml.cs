@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -9,13 +10,18 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using DotNetCampus.Inking;
+using DotNetCampus.Inking.Primitive;
 using FluentIcons.Avalonia;
+using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Models;
+using LanMountainDesktop.Services;
 using SkiaSharp;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
+public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
 {
     private enum WhiteboardToolMode
     {
@@ -24,11 +30,22 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
     }
 
     private static readonly PropertyInfo? StrokeColorProperty = typeof(SkiaStroke).GetProperty(nameof(SkiaStroke.Color));
+    private static readonly PropertyInfo? StrokePointListProperty = typeof(SkiaStroke).GetProperty("PointList");
     private readonly int _baseWidthCells;
+    private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
+    private readonly IWhiteboardNotePersistenceService _notePersistenceService = new WhiteboardNotePersistenceService();
+    private readonly DispatcherTimer _noteSaveTimer = new() { Interval = TimeSpan.FromMinutes(5) };
     private double _currentCellSize = 48;
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
     private bool? _isNightModeApplied;
     private SKColor _currentInkColor = SKColors.Black;
+    private string _componentId = BuiltInComponentIds.DesktopWhiteboard;
+    private string _placementId = string.Empty;
+    private int _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
+    private bool _isApplyingPersistedSnapshot;
+    private bool _noteDirty;
+    private int _noteLoadRevision;
+    private bool _disposed;
 
     public WhiteboardWidget()
         : this(baseWidthCells: 2)
@@ -43,21 +60,26 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        _noteSaveTimer.Tick += OnNoteSaveTimerTick;
 
         ConfigureInkCanvas();
         ApplyCellSize(_currentCellSize);
+        RefreshFromSettings();
         ApplyThemeVisual(force: true);
         SetToolMode(WhiteboardToolMode.Pen);
     }
 
+    public int NoteRetentionDays => _noteRetentionDays;
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         ApplyThemeVisual(force: true);
+        SchedulePersistedNoteLoad();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        // Keep all state in-memory for lightweight re-attach scenarios.
+        PersistNoteImmediately();
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -79,6 +101,9 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
         settings.EraserSize = new Size(20, 20);
         settings.IsBitmapCacheEnabled = true;
         settings.MaxBitmapCacheSize = 2048;
+        InkCanvas.StrokeCollected += OnInkCanvasStrokeCollected;
+        InkCanvas.PointerReleased += OnInkCanvasPointerReleased;
+        InkCanvas.PointerCaptureLost += OnInkCanvasPointerCaptureLost;
     }
 
     public void ApplyCellSize(double cellSize)
@@ -134,6 +159,63 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
         RefreshToolButtonVisuals();
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        var nextComponentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopWhiteboard
+            : componentId.Trim();
+        var nextPlacementId = placementId?.Trim() ?? string.Empty;
+
+        if (_noteDirty &&
+            HasValidPersistenceContext() &&
+            (string.Compare(_componentId, nextComponentId, StringComparison.OrdinalIgnoreCase) != 0 ||
+             string.Compare(_placementId, nextPlacementId, StringComparison.OrdinalIgnoreCase) != 0))
+        {
+            PersistNoteImmediately();
+        }
+
+        _componentId = nextComponentId;
+        _placementId = nextPlacementId;
+        RefreshFromSettings();
+        ClearAllStrokes();
+        SchedulePersistedNoteLoad();
+    }
+
+    public void RefreshFromSettings()
+    {
+        try
+        {
+            if (!HasValidPersistenceContext())
+            {
+                _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
+                return;
+            }
+
+            var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+            _noteRetentionDays = NormalizeRetentionDays(snapshot.WhiteboardNoteRetentionDays);
+            _notePersistenceService.TryDeleteExpiredNote(_componentId, _placementId, _noteRetentionDays);
+        }
+        catch
+        {
+            _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _noteSaveTimer.Stop();
+        _noteSaveTimer.Tick -= OnNoteSaveTimerTick;
+        InkCanvas.StrokeCollected -= OnInkCanvasStrokeCollected;
+        InkCanvas.PointerReleased -= OnInkCanvasPointerReleased;
+        InkCanvas.PointerCaptureLost -= OnInkCanvasPointerCaptureLost;
+    }
+
     private void RecolorAllStrokes(SKColor targetColor)
     {
         for (var i = 0; i < InkCanvas.Strokes.Count; i++)
@@ -181,6 +263,14 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
         }
 
         return false;
+    }
+
+    private static int NormalizeRetentionDays(int days)
+    {
+        return WhiteboardNoteRetentionPolicy.NormalizeDays(
+            days <= 0
+                ? WhiteboardNoteRetentionPolicy.DefaultDays
+                : days);
     }
 
     private static double CalculateRelativeLuminance(Color color)
@@ -267,25 +357,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
 
     private void OnClearButtonClick(object? sender, RoutedEventArgs e)
     {
-        var strokeList = InkCanvas.Strokes.ToList();
-        foreach (var stroke in strokeList)
-        {
-            try
-            {
-                if (ReferenceEquals(stroke.InkCanvas, InkCanvas.AvaloniaSkiaInkCanvas))
-                {
-                    InkCanvas.AvaloniaSkiaInkCanvas.RemoveStaticStroke(stroke);
-                }
-            }
-            catch
-            {
-                // Keep the widget alive even if one stroke removal fails.
-            }
-        }
-
-        InkCanvas.AvaloniaSkiaInkCanvas.UseBitmapCache(false);
-        InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
-        InkCanvas.InvalidateVisual();
+        ClearAllStrokes();
+        QueueNoteSave();
     }
 
     private async void OnExportButtonClick(object? sender, RoutedEventArgs e)
@@ -357,5 +430,274 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget
         }
 
         svgCanvas.Flush();
+    }
+
+    private void OnInkCanvasStrokeCollected(object? sender, DotNetCampus.Inking.Contexts.AvaloniaSkiaInkCanvasStrokeCollectedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueNoteSave();
+    }
+
+    private void OnInkCanvasPointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueNoteSave();
+    }
+
+    private void OnInkCanvasPointerCaptureLost(object? sender, Avalonia.Input.PointerCaptureLostEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueNoteSave();
+    }
+
+    private void OnNoteSaveTimerTick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        if (_disposed || _isApplyingPersistedSnapshot || !HasValidPersistenceContext())
+        {
+            _noteSaveTimer.Stop();
+            return;
+        }
+
+        if (!_noteDirty)
+        {
+            _noteSaveTimer.Stop();
+            return;
+        }
+
+        var noteSnapshot = BuildNoteSnapshot();
+        var componentId = _componentId;
+        var placementId = _placementId;
+        var retentionDays = _noteRetentionDays;
+        _noteDirty = false;
+        _noteSaveTimer.Stop();
+        _ = Task.Run(() => _notePersistenceService.SaveNote(componentId, placementId, noteSnapshot, retentionDays));
+    }
+
+    private void QueueNoteSave()
+    {
+        if (_disposed || _isApplyingPersistedSnapshot || !HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        _noteDirty = true;
+        if (!_noteSaveTimer.IsEnabled)
+        {
+            _noteSaveTimer.Start();
+        }
+    }
+
+    private void PersistNoteImmediately()
+    {
+        if (_disposed || _isApplyingPersistedSnapshot || !HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        if (!_noteDirty)
+        {
+            return;
+        }
+
+        _noteDirty = false;
+        _noteSaveTimer.Stop();
+        var noteSnapshot = BuildNoteSnapshot();
+        var componentId = _componentId;
+        var placementId = _placementId;
+        var retentionDays = _noteRetentionDays;
+        _ = Task.Run(() => _notePersistenceService.SaveNote(
+            componentId,
+            placementId,
+            noteSnapshot,
+            retentionDays));
+    }
+
+    private async void SchedulePersistedNoteLoad()
+    {
+        if (!HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        var revision = ++_noteLoadRevision;
+        var componentId = _componentId;
+        var placementId = _placementId;
+        var retentionDays = _noteRetentionDays;
+
+        try
+        {
+            var noteSnapshot = await Task.Run(() => _notePersistenceService.LoadNote(componentId, placementId, retentionDays));
+            if (_disposed || revision != _noteLoadRevision ||
+                !string.Equals(_componentId, componentId, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(_placementId, placementId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_disposed || revision != _noteLoadRevision)
+                {
+                    return;
+                }
+
+                _isApplyingPersistedSnapshot = true;
+                try
+                {
+                    ClearAllStrokes();
+                    ApplyNoteSnapshot(noteSnapshot);
+                    RecolorAllStrokes(_currentInkColor);
+                }
+                finally
+                {
+                    _isApplyingPersistedSnapshot = false;
+                }
+            });
+        }
+        catch
+        {
+            // Best effort only. Whiteboard should stay usable if persistence is unavailable.
+        }
+    }
+
+    private WhiteboardNoteSnapshot BuildNoteSnapshot()
+    {
+        return new WhiteboardNoteSnapshot
+        {
+            Strokes = InkCanvas.Strokes
+                .Select(BuildStrokeSnapshot)
+                .Where(static stroke => stroke.Points.Count > 0)
+                .ToList()
+        };
+    }
+
+    private static WhiteboardStrokeSnapshot BuildStrokeSnapshot(SkiaStroke stroke)
+    {
+        var pointList = TryGetStrokePoints(stroke);
+        return new WhiteboardStrokeSnapshot
+        {
+            Color = ToHexColor(stroke.Color),
+            InkThickness = stroke.InkThickness,
+            IgnorePressure = stroke.IgnorePressure,
+            Points = pointList
+                .Select(static point => new WhiteboardStylusPointSnapshot
+                {
+                    X = point.X,
+                    Y = point.Y,
+                    Pressure = point.Pressure,
+                    Width = point.Width ?? 0,
+                    Height = point.Height ?? 0
+                })
+                .ToList()
+        };
+    }
+
+    private void ApplyNoteSnapshot(WhiteboardNoteSnapshot snapshot)
+    {
+        if (snapshot.Strokes.Count == 0)
+        {
+            return;
+        }
+
+        var renderer = InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkStrokeRenderer;
+        foreach (var strokeSnapshot in snapshot.Strokes)
+        {
+            var stylusPoints = strokeSnapshot.Points
+                .Select(ConvertStylusPoint)
+                .ToList();
+            if (stylusPoints.Count == 0)
+            {
+                continue;
+            }
+
+            var path = renderer.RenderInkToPath(stylusPoints, strokeSnapshot.InkThickness);
+            var staticStroke = SkiaStroke.CreateStaticStroke(
+                InkId.NewId(),
+                path,
+                new StylusPointListSpan(stylusPoints, 0, stylusPoints.Count),
+                ParseStrokeColor(strokeSnapshot.Color),
+                (float)strokeSnapshot.InkThickness,
+                strokeSnapshot.IgnorePressure,
+                renderer);
+            InkCanvas.AvaloniaSkiaInkCanvas.AddStaticStroke(staticStroke);
+        }
+
+        InkCanvas.AvaloniaSkiaInkCanvas.UpdateBitmapCache();
+        InkCanvas.InvalidateVisual();
+    }
+
+    private static InkStylusPoint ConvertStylusPoint(WhiteboardStylusPointSnapshot point)
+    {
+        return new InkStylusPoint(point.X, point.Y, (float)Math.Clamp(point.Pressure, 0f, 1f))
+        {
+            Width = point.Width > 0 ? point.Width : null,
+            Height = point.Height > 0 ? point.Height : null
+        };
+    }
+
+    private static SKColor ParseStrokeColor(string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            try
+            {
+                var color = Color.Parse(value);
+                return new SKColor(color.R, color.G, color.B, color.A);
+            }
+            catch
+            {
+                // Fall through to the default color.
+            }
+        }
+
+        return SKColors.Black;
+    }
+
+    private static string ToHexColor(SKColor color)
+    {
+        return $"#{color.Alpha:X2}{color.Red:X2}{color.Green:X2}{color.Blue:X2}";
+    }
+
+    private void ClearAllStrokes()
+    {
+        var strokeList = InkCanvas.Strokes.ToList();
+        foreach (var stroke in strokeList)
+        {
+            try
+            {
+                if (ReferenceEquals(stroke.InkCanvas, InkCanvas.AvaloniaSkiaInkCanvas))
+                {
+                    InkCanvas.AvaloniaSkiaInkCanvas.RemoveStaticStroke(stroke);
+                }
+            }
+            catch
+            {
+                // Keep the widget alive even if one stroke removal fails.
+            }
+        }
+
+        InkCanvas.AvaloniaSkiaInkCanvas.UseBitmapCache(false);
+        InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
+        InkCanvas.InvalidateVisual();
+    }
+
+    private bool HasValidPersistenceContext()
+    {
+        return !string.IsNullOrWhiteSpace(_componentId) &&
+               !string.IsNullOrWhiteSpace(_placementId);
+    }
+
+    private static IReadOnlyList<InkStylusPoint> TryGetStrokePoints(SkiaStroke stroke)
+    {
+        if (StrokePointListProperty?.GetValue(stroke) is IReadOnlyList<InkStylusPoint> pointList)
+        {
+            return pointList;
+        }
+
+        return Array.Empty<InkStylusPoint>();
     }
 }

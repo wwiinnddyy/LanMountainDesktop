@@ -7,7 +7,7 @@
              d:DesignHeight="220"
              x:Class="LanMountainDesktop.Views.Components.StudyDeductionReasonsWidget">
     <Border x:Name="RootBorder"
-            Classes="glass-strong"
+            Classes="surface-translucent-strong"
             CornerRadius="22"
             Padding="12,10"
             ClipToBounds="True">

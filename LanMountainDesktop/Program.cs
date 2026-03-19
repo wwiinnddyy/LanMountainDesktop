@@ -43,6 +43,7 @@ sealed class Program
 
         var diagnostics = StartupDiagnosticsService.Run(args);
         StartupDiagnosticsService.ShowLegacyExecutableWarningIfNeeded(diagnostics);
+        ScheduleWhiteboardNoteStartupCleanup();
 
         try
         {
@@ -86,6 +87,25 @@ sealed class Program
         }
 
         return builder;
+    }
+
+    private static void ScheduleWhiteboardNoteStartupCleanup()
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var deletedCount = new WhiteboardNotePersistenceService().DeleteExpiredNotesBatch(batchSize: 512);
+                if (deletedCount > 0)
+                {
+                    AppLogger.Info("Startup", $"Deleted {deletedCount} expired whiteboard notes during startup maintenance.");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Startup", "Failed to run whiteboard note startup maintenance.", ex);
+            }
+        });
     }
 
     private static SingleInstanceService AcquireSingleInstance(int? restartParentProcessId)

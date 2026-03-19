@@ -29,6 +29,16 @@ public sealed class AppDatabaseService
         _databasePath = Path.Combine(dataDirectory, "app.db");
     }
 
+    public AppDatabaseService(string databasePath)
+    {
+        if (string.IsNullOrWhiteSpace(databasePath))
+        {
+            throw new ArgumentException("Database path cannot be null or whitespace.", nameof(databasePath));
+        }
+
+        _databasePath = databasePath;
+    }
+
     public SqliteConnection OpenConnection()
     {
         var directory = Path.GetDirectoryName(_databasePath);

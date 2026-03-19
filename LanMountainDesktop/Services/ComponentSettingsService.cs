@@ -106,6 +106,8 @@ public sealed class ComponentSettingsService : IComponentInstanceSettingsStore
 
     public void DeleteForComponent(string componentId, string? placementId)
     {
+        _ = new WhiteboardNotePersistenceService().DeleteNote(componentId, placementId);
+
         if (_settingsService is not null)
         {
             _settingsService.SaveSnapshot(

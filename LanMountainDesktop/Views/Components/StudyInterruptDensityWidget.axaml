@@ -7,7 +7,7 @@
              d:DesignHeight="220"
              x:Class="LanMountainDesktop.Views.Components.StudyInterruptDensityWidget">
     <Border x:Name="RootBorder"
-            Classes="glass-strong"
+            Classes="surface-translucent-strong"
             CornerRadius="22"
             Padding="14,10"
             ClipToBounds="True">

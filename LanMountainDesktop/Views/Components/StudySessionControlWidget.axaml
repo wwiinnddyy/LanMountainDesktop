@@ -8,7 +8,7 @@
              d:DesignHeight="150"
              x:Class="LanMountainDesktop.Views.Components.StudySessionControlWidget">
     <Border x:Name="RootBorder"
-            Classes="glass-strong"
+            Classes="surface-translucent-strong"
             CornerRadius="18"
             Padding="14,10"
             ClipToBounds="True">

@@ -75,6 +75,12 @@ public static class DesktopComponentEditorRegistryFactory
             [BuiltInComponentIds.DesktopRemovableStorage] = new(
                 BuiltInComponentIds.DesktopRemovableStorage,
                 context => new RemovableStorageComponentEditor(context)),
+            [BuiltInComponentIds.DesktopWhiteboard] = new(
+                BuiltInComponentIds.DesktopWhiteboard,
+                context => new WhiteboardComponentEditor(context)),
+            [BuiltInComponentIds.DesktopBlackboardLandscape] = new(
+                BuiltInComponentIds.DesktopBlackboardLandscape,
+                context => new WhiteboardComponentEditor(context)),
             [BuiltInComponentIds.DesktopOfficeRecentDocuments] = new(
                 BuiltInComponentIds.DesktopOfficeRecentDocuments,
                 context => new OfficeRecentDocumentsComponentEditor(context)),

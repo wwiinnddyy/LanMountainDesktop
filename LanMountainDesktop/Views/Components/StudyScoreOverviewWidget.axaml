@@ -7,7 +7,7 @@
              d:DesignHeight="360"
              x:Class="LanMountainDesktop.Views.Components.StudyScoreOverviewWidget">
     <Border x:Name="RootBorder"
-            Classes="glass-strong"
+            Classes="surface-translucent-strong"
             CornerRadius="24"
             Padding="16,14"
             ClipToBounds="True">

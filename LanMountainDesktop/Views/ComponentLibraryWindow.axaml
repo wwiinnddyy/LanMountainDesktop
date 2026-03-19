@@ -38,7 +38,7 @@
         <Grid Grid.Row="1"
               ColumnDefinitions="240,*"
               ColumnSpacing="12">
-            <Border Classes="glass-panel"
+            <Border Classes="surface-translucent-panel"
                     CornerRadius="24"
                     Padding="10">
                 <ListBox x:Name="CategoryListBox"
@@ -70,7 +70,7 @@
             </Border>
 
             <Border Grid.Column="1"
-                    Classes="glass-strong"
+                    Classes="surface-translucent-strong"
                     CornerRadius="24"
                     Padding="10">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"

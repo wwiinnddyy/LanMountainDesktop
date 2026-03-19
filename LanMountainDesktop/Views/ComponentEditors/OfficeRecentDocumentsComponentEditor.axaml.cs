@@ -29,7 +29,9 @@ public partial class OfficeRecentDocumentsComponentEditor : ComponentEditorViewB
             snapshot.OfficeRecentDocumentsEnabledSources,
             useDefaultWhenEmpty: snapshot.OfficeRecentDocumentsEnabledSources is null);
 
-        HeadlineTextBlock.Text = Context?.Definition.DisplayName ?? "Office Recent Documents";
+        HeadlineTextBlock.Text = Context?.Definition.DisplayName ?? L(
+            "component.office_recent_documents",
+            "Recent Documents");
         DescriptionTextBlock.Text = L(
             "office_recent_documents.settings.desc",
             "Choose which Windows and Office sources this widget should scan for recent documents.");
