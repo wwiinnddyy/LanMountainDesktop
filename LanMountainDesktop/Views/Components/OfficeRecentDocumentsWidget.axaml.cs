@@ -4,14 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
+using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IComponentPlacementContextAware
 {
     private readonly IOfficeRecentDocumentsService _recentDocumentsService;
+    private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private List<OfficeRecentDocument> _documents = new();
+    private string _componentId = BuiltInComponentIds.DesktopOfficeRecentDocuments;
+    private string _placementId = string.Empty;
+    private IReadOnlyList<string> _enabledSources = OfficeRecentDocumentSourceTypes.DefaultValues;
     private bool _isOnActivePage;
     private bool _isEditMode;
     private bool _isLoading;
@@ -20,6 +26,7 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
     {
         InitializeComponent();
         _recentDocumentsService = new OfficeRecentDocumentsService();
+        ReloadSettings();
     }
 
     public void ApplyCellSize(double cellSize)
@@ -44,6 +51,15 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         }
     }
 
+    public void SetComponentPlacementContext(string componentId, string? placementId)
+    {
+        _componentId = string.IsNullOrWhiteSpace(componentId)
+            ? BuiltInComponentIds.DesktopOfficeRecentDocuments
+            : componentId.Trim();
+        _placementId = placementId?.Trim() ?? string.Empty;
+        ReloadSettings();
+    }
+
     private async void LoadDocuments()
     {
         if (_isLoading)
@@ -54,10 +70,12 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         try
         {
             _isLoading = true;
+            ReloadSettings();
             StatusTextBlock.IsVisible = false;
             DocumentsItemsControl.ItemsSource = null;
 
-            _documents = await Task.Run(() => _recentDocumentsService.GetRecentDocuments(20));
+            var enabledSources = _enabledSources.ToArray();
+            _documents = await Task.Run(() => _recentDocumentsService.GetRecentDocuments(20, enabledSources));
 
             if (_documents.Count == 0)
             {
@@ -78,6 +96,14 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         {
             _isLoading = false;
         }
+    }
+
+    private void ReloadSettings()
+    {
+        var snapshot = _componentSettingsStore.LoadForComponent(_componentId, _placementId);
+        _enabledSources = OfficeRecentDocumentSourceTypes.NormalizeValues(
+            snapshot.OfficeRecentDocumentsEnabledSources,
+            useDefaultWhenEmpty: snapshot.OfficeRecentDocumentsEnabledSources is null);
     }
 
     private void UpdateDisplay()

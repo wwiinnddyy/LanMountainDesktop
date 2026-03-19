@@ -75,6 +75,9 @@ public static class DesktopComponentEditorRegistryFactory
             [BuiltInComponentIds.DesktopRemovableStorage] = new(
                 BuiltInComponentIds.DesktopRemovableStorage,
                 context => new RemovableStorageComponentEditor(context)),
+            [BuiltInComponentIds.DesktopOfficeRecentDocuments] = new(
+                BuiltInComponentIds.DesktopOfficeRecentDocuments,
+                context => new OfficeRecentDocumentsComponentEditor(context)),
             [BuiltInComponentIds.DesktopWeather] = CreateWeatherRegistration(BuiltInComponentIds.DesktopWeather),
             [BuiltInComponentIds.DesktopWeatherClock] = CreateWeatherRegistration(BuiltInComponentIds.DesktopWeatherClock),
             [BuiltInComponentIds.DesktopHourlyWeather] = CreateWeatherRegistration(BuiltInComponentIds.DesktopHourlyWeather),

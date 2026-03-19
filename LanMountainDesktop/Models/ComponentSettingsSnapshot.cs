@@ -64,6 +64,7 @@ public sealed class ComponentSettingsSnapshot
 
     public string Stcn24ForumSourceType { get; set; } = Stcn24ForumSourceTypes.LatestCreated;
 
+
     public ComponentSettingsSnapshot Clone()
     {
         var clone = (ComponentSettingsSnapshot)MemberwiseClone();
@@ -91,6 +92,9 @@ public sealed class ComponentSettingsSnapshot
         clone.WorldClockTimeZoneIds = WorldClockTimeZoneIds is { Count: > 0 }
             ? new List<string>(WorldClockTimeZoneIds)
             : [];
+        clone.OfficeRecentDocumentsEnabledSources = OfficeRecentDocumentsEnabledSources is not null
+            ? new List<string>(OfficeRecentDocumentsEnabledSources)
+            : null;
 
         return clone;
     }

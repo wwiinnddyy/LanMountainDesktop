@@ -9,6 +9,7 @@ using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using LanMountainDesktop.Models;
 using Microsoft.Win32;
 using MudTools.OfficeInterop;
 using MudTools.OfficeInterop.Excel;
@@ -18,7 +19,7 @@ namespace LanMountainDesktop.Services;
 
 public interface IOfficeRecentDocumentsService
 {
-    List<OfficeRecentDocument> GetRecentDocuments(int maxCount = 20);
+    List<OfficeRecentDocument> GetRecentDocuments(int maxCount = 20, IReadOnlyCollection<string>? enabledSources = null);
     void OpenDocument(string filePath);
 }
 
@@ -48,20 +49,38 @@ public sealed class OfficeRecentDocumentsService : IOfficeRecentDocumentsService
         @"\[T(?<filetime>[0-9A-F]+)\]",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public List<OfficeRecentDocument> GetRecentDocuments(int maxCount = 20)
+    public List<OfficeRecentDocument> GetRecentDocuments(int maxCount = 20, IReadOnlyCollection<string>? enabledSources = null)
     {
         var documents = new List<OfficeRecentDocument>();
+        var normalizedSources = OfficeRecentDocumentSourceTypes.NormalizeValues(
+            enabledSources,
+            useDefaultWhenEmpty: enabledSources is null);
 
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() || normalizedSources.Count == 0)
         {
             return documents;
         }
 
-        TryGetFromRegistry(documents);
-        TryGetFromRecentFolders(documents);
-        TryGetFromJumpLists(documents);
+        var useRegistry = normalizedSources.Contains(OfficeRecentDocumentSourceTypes.Registry, StringComparer.OrdinalIgnoreCase);
+        var useRecentFolders = normalizedSources.Contains(OfficeRecentDocumentSourceTypes.RecentFolders, StringComparer.OrdinalIgnoreCase);
+        var useJumpLists = normalizedSources.Contains(OfficeRecentDocumentSourceTypes.JumpLists, StringComparer.OrdinalIgnoreCase);
 
-        if (documents.Count < maxCount)
+        if (useRegistry)
+        {
+            TryGetFromRegistry(documents);
+        }
+
+        if (useRecentFolders)
+        {
+            TryGetFromRecentFolders(documents);
+        }
+
+        if (useJumpLists)
+        {
+            TryGetFromJumpLists(documents);
+        }
+
+        if (useRegistry && documents.Count < maxCount)
         {
             TryGetFromMudToolsInterop(documents);
         }
