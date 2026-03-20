@@ -9,7 +9,6 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentIcons.Avalonia;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -365,6 +364,11 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         IconBadge.CornerRadius = new CornerRadius(badgeSize * 0.5);
         DriveIcon.FontSize = Math.Clamp(24 * scale, 20, 32);
 
+        DriveNameTextBlock.FontSize = Math.Clamp(16 * scale, 13, 24);
+        DriveDetailTextBlock.FontSize = Math.Clamp(11.5 * scale, 10, 16);
+        StatusTextBlock.FontSize = Math.Clamp(12 * scale, 10, 17);
+        StatusTextBlock.MaxWidth = Math.Max(96, width - (RootBorder.Padding.Left + RootBorder.Padding.Right));
+
         var buttonHeight = Math.Clamp(42 * scale, 38, 54);
         var buttonPadding = Math.Clamp(14 * scale, 10, 20);
         var buttonCornerRadius = Math.Clamp(buttonHeight * 0.5, 18, 999);
@@ -379,14 +383,14 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
 
         OpenButtonIcon.FontSize = Math.Clamp(16 * scale, 14, 20);
         EjectButtonIcon.FontSize = Math.Clamp(16 * scale, 14, 20);
+        OpenButtonTextBlock.FontSize = Math.Clamp(13 * scale, 11.5, 18);
+        EjectButtonTextBlock.FontSize = Math.Clamp(13 * scale, 11.5, 18);
 
         AccentOrb.Width = Math.Clamp(width * 0.44, 96, 176);
         AccentOrb.Height = AccentOrb.Width;
         AccentOrb.CornerRadius = new CornerRadius(AccentOrb.Width * 0.5);
         AccentGlow.Height = Math.Clamp(76 * scale, 52, 110);
         AccentGlow.CornerRadius = new CornerRadius(AccentGlow.Height * 0.5);
-
-        UpdateTypography();
     }
 
     private RemovableStorageDrive? GetSelectedDrive()
@@ -516,67 +520,6 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 220d, 0.72, 2.4) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 220d, 0.72, 2.4) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.72, 2.2);
-    }
-
-    private void UpdateTypography()
-    {
-        var scale = ResolveScale();
-        var width = Bounds.Width > 1 ? Bounds.Width : 220d;
-        var rootPadding = RootBorder.Padding;
-        var headerWidth = Math.Max(96, width - rootPadding.Left - rootPadding.Right - Math.Max(44, IconBadge.Width) - HeaderGrid.ColumnSpacing);
-        var statusWidth = Math.Max(120, width - rootPadding.Left - rootPadding.Right);
-        var buttonWidth = Math.Max(88, width - rootPadding.Left - rootPadding.Right);
-
-        DriveNameTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            DriveNameTextBlock.Text,
-            headerWidth,
-            22,
-            1,
-            13,
-            24,
-            FontWeight.SemiBold,
-            1.05d);
-        DriveDetailTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            DriveDetailTextBlock.Text,
-            headerWidth,
-            18,
-            1,
-            10,
-            16,
-            FontWeight.Normal,
-            1.05d);
-        StatusTextBlock.FontSize = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            StatusTextBlock.Text,
-            statusWidth,
-            Math.Max(28, 40 * scale),
-            1,
-            3,
-            10,
-            17,
-            [FontWeight.Medium, FontWeight.Normal],
-            1.10d).FontSize;
-        StatusTextBlock.MaxWidth = statusWidth;
-        StatusTextBlock.MaxLines = 3;
-        StatusTextBlock.TextWrapping = TextWrapping.Wrap;
-
-        OpenButtonTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            OpenButtonTextBlock.Text,
-            buttonWidth - 32,
-            Math.Max(18, OpenButton.Height - 8),
-            1,
-            11,
-            18,
-            FontWeight.SemiBold,
-            1.04d);
-        EjectButtonTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            EjectButtonTextBlock.Text,
-            buttonWidth - 32,
-            Math.Max(18, EjectButton.Height - 8),
-            1,
-            11,
-            18,
-            FontWeight.SemiBold,
-            1.04d);
     }
 
     private string L(string key, string fallback)

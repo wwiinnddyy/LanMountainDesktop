@@ -11,7 +11,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
@@ -926,21 +925,12 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         var temperatureSample = string.IsNullOrWhiteSpace(TemperatureTextBlock.Text)
             ? "00°"
             : TemperatureTextBlock.Text.Trim();
-        var temperatureGlyphCount = Math.Clamp(ComponentTypographyLayoutService.CountTextDisplayUnits(temperatureSample), 3, 6);
+        var temperatureGlyphCount = Math.Clamp(temperatureSample.Length, 3, 6);
         var temperatureMaxWidth = Math.Max(34, innerWidth - iconSize - TopRowGrid.ColumnSpacing - 2);
         var rawTemperatureSize = Math.Clamp(Lerp(94, 118, iconGrowth) * topScale, 22, 340);
-        var temperatureLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TemperatureTextBlock.Text,
-            temperatureMaxWidth,
-            Math.Max(18, topZoneHeight * 0.84),
-            1,
-            1,
-            Math.Max(10, rawTemperatureSize * 0.42),
-            rawTemperatureSize,
-            [ToVariableWeight(Lerp(300, 360, emphasis))],
-            1.02);
-        TemperatureTextBlock.FontSize = temperatureLayout.FontSize;
-        TemperatureTextBlock.FontWeight = temperatureLayout.Weight;
+        var fitTemperatureSize = temperatureMaxWidth / (temperatureGlyphCount * 0.62);
+        TemperatureTextBlock.FontSize = Math.Clamp(Math.Min(rawTemperatureSize, fitTemperatureSize), 10, 340);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 360, emphasis));
         TemperatureTextBlock.Margin = new Thickness(Math.Clamp(-1.4 * topScale, -6, 0), Math.Clamp(-7.6 * topScale, -16, -1), 0, 0);
         TemperatureTextBlock.MaxWidth = Math.Clamp(temperatureMaxWidth, 34, Math.Max(34, innerWidth * 0.76));
 
@@ -971,76 +961,26 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         }
 
         var infoFontWeight = ToVariableWeight(Lerp(580, 690, emphasis));
-        var conditionBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
-            bottomTextMaxWidth,
-            Math.Max(16, bottomZoneHeight * 0.34),
-            preferredSizeScale: 0.26d,
-            minSize: 10,
-            maxSize: 24,
-            insetScale: 0.18d);
-        ConditionStack.Margin = new Thickness(
-            conditionBadge.Padding.Left,
-            conditionBadge.Padding.Top,
-            conditionBadge.Padding.Right,
-            conditionBadge.Padding.Bottom);
-        var conditionContentMaxWidth = Math.Max(24, bottomTextMaxWidth - conditionBadge.Padding.Left - conditionBadge.Padding.Right);
-        var conditionLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            ConditionTextBlock.Text,
-            conditionContentMaxWidth,
-            Math.Max(12, bottomZoneHeight * 0.30),
-            1,
-            1,
-            7,
-            Math.Max(6, infoFontSize * 0.96),
-            [infoFontWeight],
-            infoLineHeightFactor);
-        var rangeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            RangeTextBlock.Text,
-            conditionContentMaxWidth,
-            Math.Max(12, bottomZoneHeight * 0.30),
-            1,
-            1,
-            7,
-            Math.Max(6, infoFontSize * 1.03),
-            [infoFontWeight],
-            infoLineHeightFactor);
-        ConditionTextBlock.FontSize = conditionLayout.FontSize;
-        ConditionTextBlock.FontWeight = conditionLayout.Weight;
-        ConditionTextBlock.LineHeight = conditionLayout.LineHeight;
+        ConditionTextBlock.FontSize = Math.Max(6, infoFontSize * 0.96);
+        ConditionTextBlock.FontWeight = infoFontWeight;
+        ConditionTextBlock.LineHeight = ConditionTextBlock.FontSize * infoLineHeightFactor;
         ConditionTextBlock.MaxWidth = bottomTextMaxWidth;
-        RangeTextBlock.FontSize = rangeLayout.FontSize;
-        RangeTextBlock.FontWeight = rangeLayout.Weight;
-        RangeTextBlock.LineHeight = rangeLayout.LineHeight;
+        RangeTextBlock.FontSize = Math.Max(6, infoFontSize * 1.03);
+        RangeTextBlock.FontWeight = infoFontWeight;
+        RangeTextBlock.LineHeight = RangeTextBlock.FontSize * infoLineHeightFactor;
         RangeTextBlock.MaxWidth = bottomTextMaxWidth;
 
-        var cityBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
-            bottomTextMaxWidth,
-            Math.Max(16, bottomZoneHeight * 0.38),
-            preferredSizeScale: 0.28d,
-            minSize: 10,
-            maxSize: 24,
-            insetScale: 0.18d);
-        CityInfoBadge.Padding = cityBadge.Padding;
-        CityInfoBadge.CornerRadius = new CornerRadius(cityBadge.Size / 2d);
+        CityInfoBadge.Padding = new Thickness(0);
+        CityInfoBadge.CornerRadius = new CornerRadius(0);
         CityInfoBadge.MaxWidth = bottomTextMaxWidth;
         LocationIcon.FontSize = Math.Clamp(
             12 * bottomScale,
             6,
             34);
         LocationIcon.FontSize = Math.Min(LocationIcon.FontSize, infoFontSize * 0.72);
-        var cityLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            CityTextBlock.Text,
-            Math.Max(24, bottomTextMaxWidth - cityBadge.Padding.Left - cityBadge.Padding.Right),
-            Math.Max(12, bottomZoneHeight * 0.36),
-            1,
-            1,
-            6,
-            Math.Max(6, infoFontSize * 0.84),
-            [ToVariableWeight(Lerp(500, 620, emphasis))],
-            infoLineHeightFactor);
-        CityTextBlock.FontSize = cityLayout.FontSize;
-        CityTextBlock.FontWeight = cityLayout.Weight;
-        CityTextBlock.LineHeight = cityLayout.LineHeight;
+        CityTextBlock.FontSize = Math.Max(6, infoFontSize * 0.84);
+        CityTextBlock.FontWeight = ToVariableWeight(Lerp(500, 620, emphasis));
+        CityTextBlock.LineHeight = CityTextBlock.FontSize * infoLineHeightFactor;
         CityTextBlock.MaxWidth = bottomTextMaxWidth;
     }
 

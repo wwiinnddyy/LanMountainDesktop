@@ -6,7 +6,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using AvaloniaWebView;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using WebViewCore.Events;
@@ -53,7 +52,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         }
 
         AddressTextBox.Text = DefaultHomeUri.ToString();
-        UpdateAddressTypography();
         UpdateWebViewActiveState();
     }
 
@@ -118,7 +116,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         AddressTextBox.FontSize = Math.Clamp(_currentCellSize * 0.30, 12, 15);
         AddressTextBox.Height = buttonSize;
-        UpdateAddressTypography();
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
@@ -286,7 +283,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
     {
         _lastKnownUri = uri;
         AddressTextBox.Text = uri.ToString();
-        UpdateAddressTypography();
         if (_isWebViewActive)
         {
             TryNavigate(uri, "NavigateTo");
@@ -302,7 +298,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         _lastKnownUri = e.Url;
         AddressTextBox.Text = e.Url.ToString();
-        UpdateAddressTypography();
     }
 
     private void UpdateWebViewActiveState()
@@ -412,7 +407,6 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         GoButton.IsEnabled = false;
         AddressTextBox.IsEnabled = false;
         AddressTextBox.Text = _lastKnownUri.ToString();
-        UpdateAddressTypography();
 
         UnavailableMessageTextBlock.Text = _isWebViewFaulted
             ? "The browser component is temporarily unavailable. Restart the app to retry."
@@ -456,26 +450,5 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
                uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
             ? uri
             : null;
-    }
-
-    private void UpdateAddressTypography()
-    {
-        var maxWidth = AddressTextBox.Bounds.Width > 1
-            ? AddressTextBox.Bounds.Width
-            : Math.Max(120, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 7) - 120);
-        var maxHeight = AddressTextBox.Bounds.Height > 1
-            ? AddressTextBox.Bounds.Height
-            : Math.Max(20, AddressTextBox.Height);
-
-        AddressTextBox.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            AddressTextBox.Text,
-            maxWidth,
-            maxHeight,
-            maxLines: 1,
-            minFontSize: 12,
-            maxFontSize: 16,
-            weight: FontWeight.Normal,
-            lineHeightFactor: 1.06d,
-            fontFamily: AddressTextBox.FontFamily);
     }
 }

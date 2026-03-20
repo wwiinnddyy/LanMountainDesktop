@@ -15,7 +15,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -676,32 +675,9 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
             visual.AvatarHost.Height = avatarSize;
             visual.AvatarHost.CornerRadius = new CornerRadius(avatarSize / 2d);
 
-            var avatarGlyphBox = ComponentTypographyLayoutService.ResolveGlyphBox(
-                avatarSize,
-                avatarSize,
-                preferredSizeScale: 0.60d,
-                minSize: 12,
-                maxSize: 18);
-            visual.AvatarFallbackText.Margin = avatarGlyphBox.Margin;
-            visual.AvatarFallbackText.FontSize = Math.Min(avatarFont, Math.Max(avatarGlyphBox.Width * 0.55d, 10));
-            visual.AvatarFallbackText.MaxWidth = avatarGlyphBox.Width;
-
-            var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                visual.TitleTextBlock.Text,
-                titleMaxWidth,
-                Math.Max(avatarSize, rowPaddingVertical * 2d + 18),
-                minLines: 1,
-                maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(visual.TitleTextBlock.Text) > 24 ? 2 : 1,
-                minFontSize: Math.Clamp(titleFont * 0.72, 10, 14),
-                maxFontSize: titleFont,
-                weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
-                lineHeightFactor: 1.08d,
-                fontFamily: MiSansFontFamily);
-            visual.TitleTextBlock.FontSize = titleLayout.FontSize;
-            visual.TitleTextBlock.LineHeight = titleLayout.LineHeight;
+            visual.AvatarFallbackText.FontSize = avatarFont;
+            visual.TitleTextBlock.FontSize = titleFont;
             visual.TitleTextBlock.MaxWidth = titleMaxWidth;
-            visual.TitleTextBlock.MaxLines = titleLayout.MaxLines;
-            visual.TitleTextBlock.FontWeight = titleLayout.Weight;
         }
 
         StatusTextBlock.FontSize = Math.Clamp(14 * softScale, 10, 18);

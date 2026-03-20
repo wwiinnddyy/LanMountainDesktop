@@ -5,7 +5,6 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -252,77 +251,6 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         LayoutGrid.ColumnSpacing = hideStatusLabel
             ? Math.Clamp(6 * scale, 4, 10)
             : Math.Clamp(10 * scale, 7, 14);
-
-        var availableWidth = Math.Max(72, (width > 0 ? width : _currentCellSize * 4) - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var availableHeight = Math.Max(34, (height > 0 ? height : _currentCellSize * 2) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-        var statusTitleWidth = Math.Max(50, availableWidth * 0.32);
-        var statusValueWidth = Math.Max(78, availableWidth - statusTitleWidth - Math.Clamp(6 * scale, 3, 8));
-        var valueHeight = Math.Max(18, availableHeight * 0.44);
-
-        var statusTitleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            StatusTitleTextBlock.Text,
-            statusTitleWidth,
-            valueHeight,
-            1,
-            1,
-            9,
-            Math.Clamp(18 * scale, 9, 18),
-            [StatusTitleTextBlock.FontWeight],
-            1.04);
-        StatusTitleTextBlock.FontSize = statusTitleLayout.FontSize;
-        StatusTitleTextBlock.FontWeight = statusTitleLayout.Weight;
-        StatusTitleTextBlock.MaxLines = 1;
-        StatusTitleTextBlock.TextWrapping = TextWrapping.NoWrap;
-        StatusTitleTextBlock.LineHeight = statusTitleLayout.LineHeight;
-
-        var statusValueLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            StatusValueTextBlock.Text,
-            statusValueWidth,
-            valueHeight,
-            1,
-            1,
-            12,
-            Math.Clamp(34 * scale, 12, 34),
-            [StatusValueTextBlock.FontWeight],
-            1.04);
-        StatusValueTextBlock.FontSize = statusValueLayout.FontSize;
-        StatusValueTextBlock.FontWeight = statusValueLayout.Weight;
-        StatusValueTextBlock.MaxLines = 1;
-        StatusValueTextBlock.TextWrapping = TextWrapping.NoWrap;
-        StatusValueTextBlock.LineHeight = statusValueLayout.LineHeight;
-
-        var noiseValueLines = _showDisplayDb && _showDbfs ? 2 : 1;
-        var noiseValueLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            NoiseValueTextBlock.Text,
-            Math.Max(92, availableWidth * 0.48),
-            Math.Max(22, availableHeight * 0.56),
-            1,
-            noiseValueLines,
-            12,
-            Math.Clamp(38 * scale, 12, 38),
-            [NoiseValueTextBlock.FontWeight],
-            1.06);
-        NoiseValueTextBlock.FontSize = noiseValueLayout.FontSize;
-        NoiseValueTextBlock.FontWeight = noiseValueLayout.Weight;
-        NoiseValueTextBlock.MaxLines = noiseValueLayout.MaxLines;
-        NoiseValueTextBlock.TextWrapping = noiseValueLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        NoiseValueTextBlock.LineHeight = noiseValueLayout.LineHeight;
-
-        var noiseSubValueLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            NoiseSubValueTextBlock.Text,
-            Math.Max(72, availableWidth * 0.34),
-            Math.Max(18, availableHeight * 0.24),
-            1,
-            1,
-            9,
-            Math.Clamp(18 * scale, 9, 18),
-            [NoiseSubValueTextBlock.FontWeight],
-            1.04);
-        NoiseSubValueTextBlock.FontSize = noiseSubValueLayout.FontSize;
-        NoiseSubValueTextBlock.FontWeight = noiseSubValueLayout.Weight;
-        NoiseSubValueTextBlock.MaxLines = 1;
-        NoiseSubValueTextBlock.TextWrapping = TextWrapping.NoWrap;
-        NoiseSubValueTextBlock.LineHeight = noiseSubValueLayout.LineHeight;
     }
 
     private string ResolveStatusText(StudyAnalyticsSnapshot snapshot)

@@ -9,7 +9,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
@@ -545,91 +544,34 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var temperatureSample = string.IsNullOrWhiteSpace(TemperatureTextBlock.Text)
             ? "00°"
             : TemperatureTextBlock.Text.Trim();
+        var temperatureGlyphCount = Math.Clamp(temperatureSample.Length, 3, 6);
         var temperatureMaxWidth = Math.Max(30, innerWidth - iconSize - SummaryGrid.ColumnSpacing - 6);
         var rawTemperatureSize = Math.Clamp(Lerp(72, 102, iconGrowth) * topScale, 14, 340);
-        var temperatureLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TemperatureTextBlock.Text,
-            temperatureMaxWidth,
-            Math.Max(18, summaryHeight * 0.84),
-            1,
-            1,
-            Math.Max(10, rawTemperatureSize * 0.42),
-            rawTemperatureSize,
-            [ToVariableWeight(Lerp(300, 380, emphasis))],
-            1.02);
-        TemperatureTextBlock.FontSize = temperatureLayout.FontSize;
-        TemperatureTextBlock.FontWeight = temperatureLayout.Weight;
+        var fitTemperatureSize = temperatureMaxWidth / (temperatureGlyphCount * 0.62);
+        TemperatureTextBlock.FontSize = Math.Clamp(Math.Min(rawTemperatureSize, fitTemperatureSize), 10, 340);
+        TemperatureTextBlock.FontWeight = ToVariableWeight(Lerp(300, 380, emphasis));
         TemperatureTextBlock.MaxWidth = Math.Clamp(temperatureMaxWidth, 30, Math.Max(300, innerWidth * 0.66));
         TemperatureTextBlock.Margin = new Thickness(0, Math.Clamp(-2.2 * topScale, -12, 0), 0, 0);
 
-        var cityBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
-            innerWidth * 0.36,
-            Math.Max(16, summaryHeight * 0.34),
-            preferredSizeScale: 0.28d,
-            minSize: 10,
-            maxSize: 24,
-            insetScale: 0.18d);
-        CityInfoBadge.Padding = cityBadge.Padding;
-        CityInfoBadge.CornerRadius = new CornerRadius(cityBadge.Size / 2d);
-        CityInfoBadge.MaxWidth = Math.Clamp(innerWidth * 0.36, 34, 420);
-        var cityLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            CityTextBlock.Text,
-            Math.Max(24, CityInfoBadge.MaxWidth - cityBadge.Padding.Left - cityBadge.Padding.Right),
-            Math.Max(12, summaryHeight * 0.36),
-            1,
-            1,
-            6,
-            Math.Max(6, 18.5 * topScale),
-            [ToVariableWeight(Lerp(530, 620, emphasis))],
-            1.08);
-        CityTextBlock.FontSize = cityLayout.FontSize;
-        CityTextBlock.FontWeight = cityLayout.Weight;
-        CityTextBlock.LineHeight = cityLayout.LineHeight;
-        CityTextBlock.MaxWidth = CityInfoBadge.MaxWidth;
-
-        var conditionBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
-            innerWidth * 0.25,
-            Math.Max(16, summaryHeight * 0.34),
-            preferredSizeScale: 0.26d,
-            minSize: 10,
-            maxSize: 24,
-            insetScale: 0.18d);
-        ConditionInfoBadge.Padding = conditionBadge.Padding;
-        ConditionInfoBadge.CornerRadius = new CornerRadius(conditionBadge.Size / 2d);
-        ConditionInfoBadge.MaxWidth = Math.Clamp(innerWidth * 0.25, 26, 340);
-        var conditionLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            ConditionTextBlock.Text,
-            Math.Max(24, ConditionInfoBadge.MaxWidth - conditionBadge.Padding.Left - conditionBadge.Padding.Right),
-            Math.Max(12, summaryHeight * 0.30),
-            1,
-            1,
-            7,
-            Math.Max(6, 20 * topScale),
-            [ToVariableWeight(Lerp(580, 660, emphasis))],
-            1.06);
-        var rangeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            RangeTextBlock.Text,
-            Math.Max(24, ConditionInfoBadge.MaxWidth - conditionBadge.Padding.Left - conditionBadge.Padding.Right),
-            Math.Max(12, summaryHeight * 0.30),
-            1,
-            1,
-            7,
-            Math.Max(6, 20 * topScale),
-            [ToVariableWeight(Lerp(600, 680, emphasis))],
-            1.06);
-        ConditionTextBlock.FontSize = conditionLayout.FontSize;
-        ConditionTextBlock.FontWeight = conditionLayout.Weight;
-        ConditionTextBlock.LineHeight = conditionLayout.LineHeight;
-        RangeTextBlock.FontSize = rangeLayout.FontSize;
-        RangeTextBlock.FontWeight = rangeLayout.Weight;
-        RangeTextBlock.LineHeight = rangeLayout.LineHeight;
-        CityTextBlock.MaxWidth = CityInfoBadge.MaxWidth;
-        ConditionTextBlock.MaxWidth = ConditionInfoBadge.MaxWidth;
-        RangeTextBlock.MaxWidth = ConditionInfoBadge.MaxWidth;
+        var cityFontSize = Math.Clamp(18.5 * topScale, 7, 86);
+        var conditionFontSize = Math.Clamp(20 * topScale, 7, 90);
+        var rangeFontSize = Math.Clamp(20 * topScale, 7, 90);
+        CityTextBlock.FontSize = cityFontSize;
+        ConditionTextBlock.FontSize = conditionFontSize;
+        RangeTextBlock.FontSize = rangeFontSize;
+        CityTextBlock.FontWeight = ToVariableWeight(Lerp(530, 620, emphasis));
+        ConditionTextBlock.FontWeight = ToVariableWeight(Lerp(580, 660, emphasis));
+        RangeTextBlock.FontWeight = ToVariableWeight(Lerp(600, 680, emphasis));
+        CityTextBlock.LineHeight = cityFontSize * 1.08;
+        ConditionTextBlock.LineHeight = conditionFontSize * 1.06;
+        RangeTextBlock.LineHeight = rangeFontSize * 1.06;
 
         WeatherIconImage.Width = iconSize;
         WeatherIconImage.Height = iconSize;
         WeatherIconImage.Margin = new Thickness(0, Math.Clamp(-2.4 * topScale, -12, 0), 0, 0);
+        ConditionTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.25, 28, 340);
+        RangeTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.31, 34, 380);
+        CityTextBlock.MaxWidth = Math.Clamp(innerWidth * 0.36, 34, 420);
 
         HourlyPanelBorder.Padding = new Thickness(0);
         HourlyPanelBorder.CornerRadius = new CornerRadius(0);
@@ -648,30 +590,10 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var hourlyStackSpacing = Math.Clamp(2 * hourlyCellScale, 0.2, 10);
         for (var i = 0; i < _hourlyTempBlocks.Length; i++)
         {
-            var hourlyTempLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                _hourlyTempBlocks[i].Text,
-                Math.Clamp(hourlyCellWidth, 12, 260),
-                Math.Max(10, hourlyHeight * 0.42),
-                1,
-                1,
-                6,
-                hourlyTempSize,
-                [ToVariableWeight(Lerp(540, 650, emphasis))],
-                1.02);
-            var hourlyTimeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                _hourlyTimeBlocks[i].Text,
-                Math.Clamp(hourlyCellWidth, 12, 260),
-                Math.Max(10, hourlyHeight * 0.34),
-                1,
-                1,
-                6,
-                hourlyTimeSize,
-                [ToVariableWeight(Lerp(450, 560, emphasis))],
-                1.02);
-            _hourlyTempBlocks[i].FontSize = hourlyTempLayout.FontSize;
-            _hourlyTimeBlocks[i].FontSize = hourlyTimeLayout.FontSize;
-            _hourlyTempBlocks[i].FontWeight = hourlyTempLayout.Weight;
-            _hourlyTimeBlocks[i].FontWeight = hourlyTimeLayout.Weight;
+            _hourlyTempBlocks[i].FontSize = hourlyTempSize;
+            _hourlyTimeBlocks[i].FontSize = hourlyTimeSize;
+            _hourlyTempBlocks[i].FontWeight = ToVariableWeight(Lerp(540, 650, emphasis));
+            _hourlyTimeBlocks[i].FontWeight = ToVariableWeight(Lerp(450, 560, emphasis));
             _hourlyTempBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 12, 260);
             _hourlyTimeBlocks[i].MaxWidth = Math.Clamp(hourlyCellWidth, 12, 260);
             _hourlyIconBlocks[i].Width = hourlyIconSize;
@@ -698,42 +620,12 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var dailyHighRightGap = Math.Clamp(innerWidth * 0.018, 1, 28);
         for (var i = 0; i < _dailyLabelBlocks.Length; i++)
         {
-            var dailyLabelLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                _dailyLabelBlocks[i].Text,
-                dailyLabelMaxWidth,
-                Math.Max(10, dailyRowHeight * 0.50),
-                1,
-                1,
-                6,
-                dailyLabelSize,
-                [ToVariableWeight(Lerp(520, 620, emphasis))],
-                1.04);
-            var dailyHighLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                _dailyHighBlocks[i].Text,
-                dailyHighWidth,
-                Math.Max(10, dailyRowHeight * 0.42),
-                1,
-                1,
-                6,
-                dailyTempSize,
-                [ToVariableWeight(Lerp(560, 680, emphasis))],
-                1.02);
-            var dailyLowLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                _dailyLowBlocks[i].Text,
-                dailyLowWidth,
-                Math.Max(10, dailyRowHeight * 0.42),
-                1,
-                1,
-                6,
-                dailyTempSize,
-                [ToVariableWeight(Lerp(470, 590, emphasis))],
-                1.02);
-            _dailyLabelBlocks[i].FontSize = dailyLabelLayout.FontSize;
-            _dailyHighBlocks[i].FontSize = dailyHighLayout.FontSize;
-            _dailyLowBlocks[i].FontSize = dailyLowLayout.FontSize;
-            _dailyLabelBlocks[i].FontWeight = dailyLabelLayout.Weight;
-            _dailyHighBlocks[i].FontWeight = dailyHighLayout.Weight;
-            _dailyLowBlocks[i].FontWeight = dailyLowLayout.Weight;
+            _dailyLabelBlocks[i].FontSize = dailyLabelSize;
+            _dailyHighBlocks[i].FontSize = dailyTempSize;
+            _dailyLowBlocks[i].FontSize = dailyTempSize;
+            _dailyLabelBlocks[i].FontWeight = ToVariableWeight(Lerp(520, 620, emphasis));
+            _dailyHighBlocks[i].FontWeight = ToVariableWeight(Lerp(560, 680, emphasis));
+            _dailyLowBlocks[i].FontWeight = ToVariableWeight(Lerp(470, 590, emphasis));
             _dailyLabelBlocks[i].MaxWidth = dailyLabelMaxWidth;
             _dailyHighBlocks[i].Width = dailyHighWidth;
             _dailyLowBlocks[i].Width = dailyLowWidth;

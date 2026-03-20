@@ -6,7 +6,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -359,85 +358,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         SummaryTextBlock.IsVisible = true;
 
         ApplyVariableWeights(scale);
-
-        var contentWidth = Math.Max(120, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 8) - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var contentHeight = Math.Max(78, (Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 3) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-
-        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TitleTextBlock.Text,
-            Math.Max(120, contentWidth * 0.38),
-            Math.Max(18, contentHeight * 0.18),
-            1,
-            1,
-            9,
-            Math.Clamp(22 * scale, 9, 22),
-            [TitleTextBlock.FontWeight],
-            1.05);
-        TitleTextBlock.FontSize = titleLayout.FontSize;
-        TitleTextBlock.FontWeight = titleLayout.Weight;
-        TitleTextBlock.MaxLines = 1;
-        TitleTextBlock.TextWrapping = TextWrapping.NoWrap;
-        TitleTextBlock.LineHeight = titleLayout.LineHeight;
-
-        var summaryLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            SummaryTextBlock.Text,
-            Math.Max(104, contentWidth * 0.44),
-            Math.Max(18, contentHeight * 0.16),
-            1,
-            _isUltraCompactMode ? 1 : 2,
-            8,
-            Math.Clamp(20 * scale, 8, 20),
-            [SummaryTextBlock.FontWeight],
-            1.06);
-        SummaryTextBlock.FontSize = summaryLayout.FontSize;
-        SummaryTextBlock.FontWeight = summaryLayout.Weight;
-        SummaryTextBlock.MaxLines = summaryLayout.MaxLines;
-        SummaryTextBlock.TextWrapping = summaryLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        SummaryTextBlock.LineHeight = summaryLayout.LineHeight;
-
-        var modeBadgeBox = ComponentTypographyLayoutService.ResolveBadgeBox(
-            Math.Max(64, contentWidth * 0.22),
-            Math.Max(20, contentHeight * 0.14),
-            preferredSizeScale: 0.46d,
-            minSize: 18,
-            maxSize: 42,
-            insetScale: 0.18d);
-        ModeBadgeBorder.Padding = modeBadgeBox.Padding;
-        ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(modeBadgeBox.Size * 0.36, 4, 12));
-        var modeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            ModeTextBlock.Text,
-            Math.Max(52, modeBadgeBox.Width),
-            Math.Max(18, modeBadgeBox.Height),
-            1,
-            1,
-            8,
-            Math.Clamp(18 * scale, 8, 18),
-            [ModeTextBlock.FontWeight],
-            1.02);
-        ModeTextBlock.FontSize = modeLayout.FontSize;
-        ModeTextBlock.FontWeight = modeLayout.Weight;
-        ModeTextBlock.MaxLines = 1;
-        ModeTextBlock.TextWrapping = TextWrapping.NoWrap;
-        ModeTextBlock.LineHeight = modeLayout.LineHeight;
-
-        foreach (var block in new[] { YExtremeTextBlock, YNoisyTextBlock, YNormalTextBlock, YQuietTextBlock, XLeftTextBlock, XCenterTextBlock, XRightTextBlock })
-        {
-            var layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                block.Text,
-                Math.Max(36, contentWidth * 0.12),
-                Math.Max(14, contentHeight * 0.08),
-                1,
-                1,
-                8,
-                Math.Clamp(16 * scale, 8, 16),
-                [block.FontWeight],
-                1.02);
-            block.FontSize = layout.FontSize;
-            block.FontWeight = layout.Weight;
-            block.MaxLines = 1;
-            block.TextWrapping = TextWrapping.NoWrap;
-            block.LineHeight = layout.LineHeight;
-        }
     }
 
     private void ApplyTypographyByBackground(Color panelColor)

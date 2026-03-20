@@ -5,7 +5,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -129,50 +128,6 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         XLeftTextBlock.FontSize = axisFontSize;
         XCenterTextBlock.FontSize = axisFontSize;
         XRightTextBlock.FontSize = axisFontSize;
-
-        var contentWidth = Math.Max(110, (_currentCellSize * 4) - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var contentHeight = Math.Max(72, (_currentCellSize * 2) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-        var statusLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            StatusTextBlock.Text,
-            Math.Max(72, contentWidth * 0.34),
-            Math.Max(18, contentHeight * 0.18),
-            1,
-            1,
-            12,
-            Math.Clamp(30 * scale, 12, 30),
-            [StatusTextBlock.FontWeight],
-            1.03);
-        StatusTextBlock.FontSize = statusLayout.FontSize;
-        StatusTextBlock.FontWeight = statusLayout.Weight;
-        StatusTextBlock.MaxLines = 1;
-        StatusTextBlock.TextWrapping = TextWrapping.NoWrap;
-        StatusTextBlock.LineHeight = statusLayout.LineHeight;
-
-        var realtimeValueLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            RealtimeValueTextBlock.Text,
-            Math.Max(82, contentWidth * 0.40),
-            Math.Max(20, contentHeight * 0.22),
-            1,
-            1,
-            12,
-            Math.Clamp(34 * scale, 12, 34),
-            [RealtimeValueTextBlock.FontWeight],
-            1.03);
-        RealtimeValueTextBlock.FontSize = realtimeValueLayout.FontSize;
-        RealtimeValueTextBlock.FontWeight = realtimeValueLayout.Weight;
-        RealtimeValueTextBlock.MaxLines = 1;
-        RealtimeValueTextBlock.TextWrapping = TextWrapping.NoWrap;
-        RealtimeValueTextBlock.LineHeight = realtimeValueLayout.LineHeight;
-
-        var badgeBox = ComponentTypographyLayoutService.ResolveBadgeBox(
-            Math.Max(64, contentWidth * 0.20),
-            Math.Max(20, contentHeight * 0.12),
-            preferredSizeScale: 0.46d,
-            minSize: 18,
-            maxSize: 40,
-            insetScale: 0.18d);
-        StatusBadgeBorder.Padding = badgeBox.Padding;
-        StatusBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(badgeBox.Size * 0.36, 5, 12));
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)

@@ -6,7 +6,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -285,88 +284,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
 
         ApplyVariableWeights(scale);
         ApplyLocalizedLabels();
-
-        var contentWidth = Math.Max(120, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 8) - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var contentHeight = Math.Max(78, (Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 3) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-
-        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TitleTextBlock.Text,
-            Math.Max(120, contentWidth * 0.44),
-            Math.Max(18, contentHeight * 0.22),
-            1,
-            1,
-            9,
-            Math.Clamp(20 * scale, 9, 20),
-            [TitleTextBlock.FontWeight],
-            1.05);
-        TitleTextBlock.FontSize = titleLayout.FontSize;
-        TitleTextBlock.FontWeight = titleLayout.Weight;
-        TitleTextBlock.MaxLines = 1;
-        TitleTextBlock.TextWrapping = TextWrapping.NoWrap;
-        TitleTextBlock.LineHeight = titleLayout.LineHeight;
-
-        var modeBadgeBox = ComponentTypographyLayoutService.ResolveBadgeBox(
-            Math.Max(64, contentWidth * 0.24),
-            Math.Max(20, contentHeight * 0.14),
-            preferredSizeScale: 0.48d,
-            minSize: 18,
-            maxSize: 42,
-            insetScale: 0.18d);
-        ModeBadgeBorder.Padding = modeBadgeBox.Padding;
-        ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(modeBadgeBox.Size * 0.36, 5, 12));
-        var modeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            ModeTextBlock.Text,
-            Math.Max(54, modeBadgeBox.Width),
-            Math.Max(18, modeBadgeBox.Height),
-            1,
-            1,
-            8,
-            Math.Clamp(16 * scale, 8, 16),
-            [ModeTextBlock.FontWeight],
-            1.02);
-        ModeTextBlock.FontSize = modeLayout.FontSize;
-        ModeTextBlock.FontWeight = modeLayout.Weight;
-        ModeTextBlock.MaxLines = 1;
-        ModeTextBlock.TextWrapping = TextWrapping.NoWrap;
-        ModeTextBlock.LineHeight = modeLayout.LineHeight;
-
-        foreach (var block in new[] { SustainedReasonTextBlock, TimeReasonTextBlock, SegmentReasonTextBlock })
-        {
-            var layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                block.Text,
-                Math.Max(84, contentWidth * 0.34),
-                Math.Max(18, contentHeight * 0.14),
-                1,
-                _isUltraCompactMode ? 1 : 2,
-                9,
-                Math.Clamp(18 * scale, 9, 18),
-                [block.FontWeight],
-                1.05);
-            block.FontSize = layout.FontSize;
-            block.FontWeight = layout.Weight;
-            block.MaxLines = layout.MaxLines;
-            block.TextWrapping = layout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-            block.LineHeight = layout.LineHeight;
-        }
-
-        foreach (var block in new[] { SustainedMetricTextBlock, TimeMetricTextBlock, SegmentMetricTextBlock, TotalLossTextBlock, ScoreTextBlock })
-        {
-            var layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                block.Text,
-                Math.Max(72, contentWidth * 0.22),
-                Math.Max(16, contentHeight * 0.10),
-                1,
-                1,
-                8,
-                Math.Clamp(16 * scale, 8, 16),
-                [block.FontWeight],
-                1.02);
-            block.FontSize = layout.FontSize;
-            block.FontWeight = layout.Weight;
-            block.MaxLines = 1;
-            block.TextWrapping = TextWrapping.NoWrap;
-            block.LineHeight = layout.LineHeight;
-        }
     }
 
     private void ApplyTypographyByBackground(Color panelColor)

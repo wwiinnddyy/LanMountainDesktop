@@ -9,7 +9,6 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -196,7 +195,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
             StatusTextBlock.Text = _transientStatus ?? L("study.session_history.empty", "No session history");
             StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
-            ApplyHistoryTypographyLayout();
             UpdateDialogVisual(snapshot, panelColor);
             return;
         }
@@ -221,7 +219,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
         StatusTextBlock.Text = _transientStatus ?? string.Empty;
         StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
-        ApplyHistoryTypographyLayout();
         UpdateDialogVisual(snapshot, panelColor);
     }
 
@@ -264,25 +261,15 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         {
             Spacing = _isUltraCompactMode ? 0 : 2
         };
-        var rowTitleTextBlock = new TextBlock
+        textStack.Children.Add(new TextBlock
         {
             Text = entry.Label,
+            FontSize = Math.Clamp(12 * (_isCompactMode ? 0.92 : 1.0), 10, 17),
+            FontWeight = FontWeight.SemiBold,
+            MaxLines = 1,
+            TextTrimming = TextTrimming.CharacterEllipsis,
             Foreground = rowPrimaryBrush
-        };
-        ApplyTextLayout(
-            rowTitleTextBlock,
-            ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                entry.Label,
-                ResolveHistoryContentWidth(),
-                _isUltraCompactMode ? 18 : 22,
-                1,
-                1,
-                10,
-                17,
-                new[] { FontWeight.SemiBold, FontWeight.Medium },
-                1.08d),
-            TextWrapping.NoWrap);
-        textStack.Children.Add(rowTitleTextBlock);
+        });
 
         if (!_isUltraCompactMode)
         {
@@ -294,25 +281,14 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
                     FormatDuration(entry.Duration),
                     entry.AverageScore);
 
-            var metaTextBlock = new TextBlock
+            textStack.Children.Add(new TextBlock
             {
                 Text = metaText,
+                FontSize = Math.Clamp(10.5 * (_isCompactMode ? 0.94 : 1.0), 9, 14),
+                MaxLines = 1,
+                TextTrimming = TextTrimming.CharacterEllipsis,
                 Foreground = rowSecondaryBrush
-            };
-            ApplyTextLayout(
-                metaTextBlock,
-                ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    metaText,
-                    ResolveHistoryContentWidth(),
-                    _isUltraCompactMode ? 16 : 20,
-                    1,
-                    1,
-                    9,
-                    14,
-                    new[] { FontWeight.Normal, FontWeight.Medium },
-                    1.08d),
-                TextWrapping.NoWrap);
-            textStack.Children.Add(metaTextBlock);
+            });
         }
         rowGrid.Children.Add(textStack);
 
@@ -590,8 +566,6 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             DialogConfirmButton.Content = L("study.session_history.dialog.delete_confirm", "Delete");
             DialogCancelButton.Content = L("study.session_history.rename_cancel", "Cancel rename");
         }
-
-        ApplyHistoryTypographyLayout();
     }
 
     private void SetTransientStatus(string status, double seconds = 2.2)
@@ -625,6 +599,8 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             ? Math.Clamp(4 * scale, 2, 6)
             : Math.Clamp(7 * scale, 4, 10);
 
+        TitleTextBlock.FontSize = Math.Clamp(13 * scale, 10, 22);
+        StatusTextBlock.FontSize = Math.Clamp(11 * scale, 9, 18);
         SessionListPanel.Spacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 5)
             : Math.Clamp(6 * scale, 3, 8);
@@ -636,108 +612,13 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DialogCardBorder.Padding = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 9, 20),
             ComponentChromeCornerRadiusHelper.SafeValue(11 * scale, 8, 18));
+        DialogTitleTextBlock.FontSize = Math.Clamp(14 * scale, 11, 20);
+        DialogMessageTextBlock.FontSize = Math.Clamp(12 * scale, 10, 17);
+        DialogRenameTextBox.FontSize = Math.Clamp(11.5 * scale, 10, 16);
         DialogCancelButton.FontSize = Math.Clamp(11 * scale, 10, 16);
         DialogConfirmButton.FontSize = Math.Clamp(11 * scale, 10, 16);
         DialogCancelButton.Height = Math.Clamp(30 * scale, 26, 38);
         DialogConfirmButton.Height = Math.Clamp(30 * scale, 26, 38);
-
-        ApplyHistoryTypographyLayout();
-    }
-
-    private void ApplyHistoryTypographyLayout()
-    {
-        var contentWidth = ResolveHistoryContentWidth();
-
-        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TitleTextBlock.Text,
-            contentWidth,
-            _isUltraCompactMode ? 18 : 24,
-            1,
-            1,
-            10,
-            22,
-            new[] { FontWeight.SemiBold, FontWeight.Medium },
-            1.08d);
-        ApplyTextLayout(TitleTextBlock, titleLayout, TextWrapping.NoWrap);
-
-        var statusLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            StatusTextBlock.Text,
-            contentWidth,
-            _isUltraCompactMode ? 18 : 28,
-            1,
-            _isUltraCompactMode ? 1 : 2,
-            9,
-            18,
-            new[] { FontWeight.Normal, FontWeight.Medium },
-            1.10d);
-        ApplyTextLayout(StatusTextBlock, statusLayout, statusLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap);
-
-        if (!DialogOverlayBorder.IsVisible)
-        {
-            return;
-        }
-
-        var dialogWidth = DialogCardBorder.Bounds.Width > 1
-            ? Math.Max(1, DialogCardBorder.Bounds.Width - DialogCardBorder.Padding.Left - DialogCardBorder.Padding.Right)
-            : Math.Max(180, contentWidth);
-
-        var dialogTitleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            DialogTitleTextBlock.Text,
-            dialogWidth,
-            _isUltraCompactMode ? 18 : 24,
-            1,
-            1,
-            11,
-            20,
-            new[] { FontWeight.SemiBold, FontWeight.Medium },
-            1.08d);
-        ApplyTextLayout(DialogTitleTextBlock, dialogTitleLayout, TextWrapping.NoWrap);
-
-        var dialogMessageLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            DialogMessageTextBlock.Text,
-            dialogWidth,
-            _isUltraCompactMode ? 42 : 56,
-            1,
-            3,
-            10,
-            17,
-            new[] { FontWeight.Normal, FontWeight.Medium },
-            1.12d);
-        ApplyTextLayout(DialogMessageTextBlock, dialogMessageLayout, dialogMessageLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap);
-
-        var renameLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            DialogRenameTextBox.Text ?? DialogRenameTextBox.Watermark,
-            dialogWidth,
-            _isUltraCompactMode ? 30 : 36,
-            1,
-            1,
-            10,
-            16,
-            new[] { FontWeight.Normal },
-            1.08d);
-        DialogRenameTextBox.FontSize = renameLayout.FontSize;
-        DialogRenameTextBox.FontWeight = renameLayout.Weight;
-    }
-
-    private double ResolveHistoryContentWidth()
-    {
-        if (Bounds.Width <= 1)
-        {
-            return Math.Max(90, _currentCellSize * 4.5);
-        }
-
-        var reservedWidth = _isUltraCompactMode ? 126 : 150;
-        return Math.Max(90, Bounds.Width - reservedWidth);
-    }
-
-    private static void ApplyTextLayout(TextBlock textBlock, ComponentAdaptiveTextLayout layout, TextWrapping wrapping)
-    {
-        textBlock.FontSize = layout.FontSize;
-        textBlock.FontWeight = layout.Weight;
-        textBlock.LineHeight = layout.LineHeight;
-        textBlock.MaxLines = layout.MaxLines;
-        textBlock.TextWrapping = wrapping;
-        textBlock.TextTrimming = TextTrimming.CharacterEllipsis;
     }
 
     private static StudySessionHistoryEntry? FindHistoryEntry(IReadOnlyList<StudySessionHistoryEntry> history, string? sessionId)

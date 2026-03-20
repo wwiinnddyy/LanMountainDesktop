@@ -10,7 +10,6 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -109,8 +108,10 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         HintTextBlock.Margin = new Thickness(0, Math.Clamp(8 * contentScale, 4, 10), 0, 0);
 
         WaveformBarsPanel.Spacing = Math.Clamp(3 * contentScale, 1.6, 3.4);
+        TitleTextBlock.FontSize = Math.Clamp(19 * contentScale, 12, 20);
+        TimerTextBlock.FontSize = Math.Clamp(66 * contentScale, 34, 66);
+        HintTextBlock.FontSize = Math.Clamp(13 * contentScale, 9, 13);
 
-        UpdateTypography();
         UpdateWaveformVisual();
     }
 
@@ -378,43 +379,49 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         PauseGlyphIcon.IsVisible = snapshot.State == AudioRecorderRuntimeState.Recording;
         PlayGlyphIcon.IsVisible = snapshot.State == AudioRecorderRuntimeState.Paused;
 
-        string hintText;
         if (!isSupported)
         {
-            hintText = L("recording.widget.hint.unsupported", "Microphone is unavailable");
+            HintTextBlock.Text = L("recording.widget.hint.unsupported", "Microphone is unavailable");
+            return;
         }
-        else if (snapshot.State == AudioRecorderRuntimeState.Recording)
+
+        if (snapshot.State == AudioRecorderRuntimeState.Recording)
         {
-            hintText = L("recording.widget.hint.recording", "Recording");
+            HintTextBlock.Text = L("recording.widget.hint.recording", "Recording");
+            return;
         }
-        else if (snapshot.State == AudioRecorderRuntimeState.Paused)
+
+        if (snapshot.State == AudioRecorderRuntimeState.Paused)
         {
-            hintText = L("recording.widget.hint.paused", "Paused");
+            HintTextBlock.Text = L("recording.widget.hint.paused", "Paused");
+            return;
         }
-        else if (snapshot.State == AudioRecorderRuntimeState.Error)
+
+        if (snapshot.State == AudioRecorderRuntimeState.Error)
         {
-            hintText = string.IsNullOrWhiteSpace(snapshot.LastError)
+            HintTextBlock.Text = string.IsNullOrWhiteSpace(snapshot.LastError)
                 ? L("recording.widget.hint.error", "Recording failed")
                 : snapshot.LastError;
+            return;
         }
-        else
+
+        if (!string.IsNullOrWhiteSpace(snapshot.LastSavedFilePath) &&
+            !string.Equals(snapshot.LastSavedFilePath, _lastSavedFilePath, StringComparison.OrdinalIgnoreCase))
         {
-            if (!string.IsNullOrWhiteSpace(snapshot.LastSavedFilePath) &&
-                !string.Equals(snapshot.LastSavedFilePath, _lastSavedFilePath, StringComparison.OrdinalIgnoreCase))
-            {
-                _lastSavedFilePath = snapshot.LastSavedFilePath;
-            }
-
-            hintText = !string.IsNullOrWhiteSpace(_lastSavedFilePath)
-                ? string.Format(
-                    CultureInfo.InvariantCulture,
-                    L("recording.widget.hint.saved_format", "Saved {0}"),
-                    Path.GetFileName(_lastSavedFilePath))
-                : L("recording.widget.hint.ready", "Tap red button to record");
+            _lastSavedFilePath = snapshot.LastSavedFilePath;
         }
 
-        HintTextBlock.Text = hintText;
-        UpdateTypography();
+        if (!string.IsNullOrWhiteSpace(_lastSavedFilePath))
+        {
+            var fileName = Path.GetFileName(_lastSavedFilePath);
+            HintTextBlock.Text = string.Format(
+                CultureInfo.InvariantCulture,
+                L("recording.widget.hint.saved_format", "Saved {0}"),
+                fileName);
+            return;
+        }
+
+        HintTextBlock.Text = L("recording.widget.hint.ready", "Tap red button to record");
     }
 
     private bool TryStartRecordingWithMonitoringHandoff()
@@ -565,51 +572,6 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
         }
 
         return duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
-    }
-
-    private void UpdateTypography()
-    {
-        var contentWidth = RecorderContentGrid.Bounds.Width > 1 ? RecorderContentGrid.Bounds.Width : 252d;
-        var contentHeight = RecorderContentGrid.Bounds.Height > 1 ? RecorderContentGrid.Bounds.Height : 240d;
-        var timerWidth = Math.Max(88, contentWidth * 0.84);
-        var timerHeight = Math.Max(34, contentHeight * 0.24);
-        var hintWidth = Math.Max(120, contentWidth * 0.86);
-        var hintHeight = Math.Max(24, contentHeight * 0.12);
-
-        TitleTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            TitleTextBlock.Text,
-            Math.Max(96, contentWidth * 0.62),
-            20,
-            1,
-            12,
-            20,
-            FontWeight.SemiBold,
-            1.05d);
-
-        TimerTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            TimerTextBlock.Text,
-            timerWidth,
-            timerHeight,
-            1,
-            34,
-            66,
-            FontWeight.SemiBold,
-            1.0d);
-
-        var hintLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            HintTextBlock.Text,
-            hintWidth,
-            hintHeight,
-            1,
-            2,
-            9,
-            13,
-            [FontWeight.Medium, FontWeight.Normal],
-            1.10d);
-        HintTextBlock.FontSize = hintLayout.FontSize;
-        HintTextBlock.FontWeight = hintLayout.Weight;
-        HintTextBlock.MaxLines = hintLayout.MaxLines;
-        HintTextBlock.TextWrapping = hintLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
     }
 
     private static IBrush CreateBrush(string colorHex)

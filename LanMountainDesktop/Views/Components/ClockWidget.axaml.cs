@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -121,13 +120,11 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         SecondsTextBlock.Text = now.ToString("ss", CultureInfo.CurrentCulture);
         
         SecondsTextBlock.IsVisible = _displayFormat == ClockDisplayFormat.HourMinuteSecond;
-        ApplyTypographyLayout();
     }
 
     public void ApplyCellSize(double cellSize)
     {
         _lastAppliedCellSize = cellSize;
-        var layoutScale = Math.Clamp((cellSize / 44d) * (0.9d + (ComponentChromeCornerRadiusHelper.ResolveScale() * 0.1d)), 0.65d, 1.95d);
 
         // --- Class Island “满盈”风格算法 ---
         
@@ -141,7 +138,7 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         
         // 3. 核心：满盈字阶 (Filled Typography)
         // 使主时间文字占据容器高度的 ~68%，产生饱满的视觉张力
-        var mainFontSize = targetHeight * 0.68 * layoutScale;
+        var mainFontSize = targetHeight * 0.68;
         MainTimeTextBlock.FontSize = mainFontSize;
         MainTimeTextBlock.FontWeight = FontWeight.SemiBold;
         
@@ -155,74 +152,19 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         // 6. 间距微调
         if (MainTimeTextBlock.Parent is StackPanel panel)
         {
-            panel.Spacing = Math.Clamp(cellSize * 0.06 * layoutScale, 2, 8);
+            panel.Spacing = Math.Clamp(cellSize * 0.06, 2, 8);
         }
 
         if (_transparentBackground)
         {
             RootBorder.MinWidth = 0;
-            RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.06 * layoutScale, 4, 10), 0);
+            RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.06, 4, 10), 0);
             return;
         }
 
         // 确保清除可能存在的固定 Padding，由代码控制“紧密感”
         RootBorder.MinWidth = cellSize * 2.2;
-        RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.15 * layoutScale, 12, 24), 0);
-        ApplyTypographyLayout();
-    }
-
-    private void ApplyTypographyLayout()
-    {
-        var layoutScale = Math.Clamp((_lastAppliedCellSize / 44d) * (0.9d + (ComponentChromeCornerRadiusHelper.ResolveScale() * 0.1d)), 0.65d, 1.95d);
-        var availableWidth = Math.Max(1, RootBorder.Bounds.Width > 1 ? RootBorder.Bounds.Width : Math.Max(1, _lastAppliedCellSize * 2.2));
-        var availableHeight = Math.Max(1, RootBorder.Bounds.Height > 1 ? RootBorder.Bounds.Height : Math.Clamp(_lastAppliedCellSize * 0.74, 34, 74));
-        var contentWidth = Math.Max(1, availableWidth - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var contentHeight = Math.Max(1, availableHeight - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-
-        var mainLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            MainTimeTextBlock.Text,
-            contentWidth * (SecondsTextBlock.IsVisible ? 0.78d : 0.84d),
-            contentHeight * 0.80d,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: Math.Clamp(18 * layoutScale, 16, 28),
-            maxFontSize: Math.Clamp(44 * layoutScale, 28, 64),
-            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-            lineHeightFactor: 0.96d);
-        MainTimeTextBlock.FontSize = mainLayout.FontSize;
-        MainTimeTextBlock.FontWeight = mainLayout.Weight;
-
-        if (SecondsTextBlock.IsVisible)
-        {
-            var secondsLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                SecondsTextBlock.Text,
-                contentWidth * 0.28d,
-                contentHeight * 0.46d,
-                minLines: 1,
-                maxLines: 1,
-                minFontSize: Math.Clamp(11 * layoutScale, 9, 18),
-                maxFontSize: Math.Clamp(28 * layoutScale, 14, 34),
-                weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
-                lineHeightFactor: 0.96d);
-            SecondsTextBlock.FontSize = secondsLayout.FontSize;
-            SecondsTextBlock.FontWeight = secondsLayout.Weight;
-            SecondsTextBlock.Opacity = 0.55;
-        }
-
-        if (MainTimeTextBlock.Parent is StackPanel panel)
-        {
-            panel.Spacing = Math.Clamp(contentHeight * 0.06 * layoutScale, 2, 8);
-        }
-
-        if (_transparentBackground)
-        {
-            RootBorder.MinWidth = 0;
-            RootBorder.Padding = new Thickness(Math.Clamp(_lastAppliedCellSize * 0.06 * layoutScale, 4, 10), 0);
-            return;
-        }
-
-        RootBorder.MinWidth = _lastAppliedCellSize * 2.2;
-        RootBorder.Padding = new Thickness(Math.Clamp(_lastAppliedCellSize * 0.15 * layoutScale, 12, 24), 0);
+        RootBorder.Padding = new Thickness(Math.Clamp(cellSize * 0.15, 12, 24), 0);
     }
 
     private void ApplyChrome()

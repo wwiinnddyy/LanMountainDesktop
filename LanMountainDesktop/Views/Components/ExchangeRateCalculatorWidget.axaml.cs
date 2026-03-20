@@ -9,7 +9,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -75,7 +74,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         UpdateCurrencyLabels();
         UpdateAmounts();
         ApplyLoadingState();
-        UpdateTypography();
     }
 
     public void ApplyCellSize(double cellSize)
@@ -84,7 +82,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         var scale = ResolveScale();
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 14, 48);
         RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(12 * scale, 12 * scale, null, 0.55d);
-        UpdateTypography();
     }
 
     public void SetRecommendationInfoService(IRecommendationInfoService recommendationInfoService)
@@ -246,7 +243,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         FromCurrencyNameTextBlock.Text = IsZh() ? from.ZhName : from.EnName;
         ToCurrencyCodeTextBlock.Text = to.Code;
         ToCurrencyNameTextBlock.Text = IsZh() ? to.ZhName : to.EnName;
-        UpdateTypography();
     }
 
     private void UpdateAmounts()
@@ -262,7 +258,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
             _fromCurrency,
             _calculatorDataService.FormatAmount(_currentRate, maxFractionDigits: 6),
             _toCurrency);
-        UpdateTypography();
     }
 
     private void ApplyLoadingState()
@@ -336,103 +331,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 304d, 0.72, 2.0) : 1;
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 304d, 0.72, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.72, 1.95);
-    }
-
-    private void UpdateTypography()
-    {
-        var layoutWidth = LayoutRoot.Width > 1 ? LayoutRoot.Width : 304d;
-        var layoutHeight = LayoutRoot.Height > 1 ? LayoutRoot.Height : 304d;
-
-        var fromStackWidth = Math.Max(72, (layoutWidth - 86) * 0.36);
-        var amountWidth = Math.Max(116, (layoutWidth - 86) * 0.50);
-        var rateWidth = Math.Max(120, layoutWidth - 24);
-        var statusWidth = Math.Max(120, layoutWidth - 24);
-
-        FromCurrencyCodeTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            FromCurrencyCodeTextBlock.Text,
-            fromStackWidth,
-            26,
-            1,
-            11,
-            20,
-            FontWeight.SemiBold,
-            1.06d,
-            MiSansFontFamily);
-        FromCurrencyNameTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            FromCurrencyNameTextBlock.Text,
-            fromStackWidth,
-            18,
-            1,
-            9,
-            14,
-            FontWeight.Normal,
-            1.06d,
-            MiSansFontFamily);
-        ToCurrencyCodeTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            ToCurrencyCodeTextBlock.Text,
-            fromStackWidth,
-            26,
-            1,
-            11,
-            20,
-            FontWeight.SemiBold,
-            1.06d,
-            MiSansFontFamily);
-        ToCurrencyNameTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            ToCurrencyNameTextBlock.Text,
-            fromStackWidth,
-            18,
-            1,
-            9,
-            14,
-            FontWeight.Normal,
-            1.06d,
-            MiSansFontFamily);
-
-        InputAmountTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            InputAmountTextBlock.Text,
-            amountWidth,
-            Math.Max(42, layoutHeight * 0.16),
-            1,
-            20,
-            42,
-            FontWeight.Bold,
-            1.02d,
-            MiSansFontFamily);
-        ConvertedAmountTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            ConvertedAmountTextBlock.Text,
-            amountWidth,
-            Math.Max(42, layoutHeight * 0.16),
-            1,
-            20,
-            42,
-            FontWeight.Bold,
-            1.02d,
-            MiSansFontFamily);
-        RateTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            RateTextBlock.Text,
-            rateWidth,
-            20,
-            1,
-            10,
-            15,
-            FontWeight.Normal,
-            1.06d,
-            MiSansFontFamily);
-
-        if (StatusTextBlock.IsVisible)
-        {
-            StatusTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-                StatusTextBlock.Text,
-                statusWidth,
-                22,
-                1,
-                10,
-                16,
-                FontWeight.Normal,
-                1.06d,
-                MiSansFontFamily);
-        }
     }
 
     private void CancelRefreshRequest()

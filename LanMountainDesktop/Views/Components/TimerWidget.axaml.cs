@@ -7,7 +7,6 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -123,7 +122,6 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         MainNumberTextBlock.Text = current.ToString(CultureInfo.InvariantCulture);
         NextNumberTextBlock.Text = next.ToString(CultureInfo.InvariantCulture);
         NextNextNumberTextBlock.Text = nextNext.ToString(CultureInfo.InvariantCulture);
-        UpdateTypography();
     }
 
     private void UpdateHandGeometry()
@@ -208,7 +206,6 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         PlayButtonBorder.Height = Math.Clamp(42 * scale, 28, 58);
         PlayButtonBorder.CornerRadius = new CornerRadius(PlayButtonBorder.Width / 2d);
 
-        UpdateTypography();
         ApplyModeVisualIfNeeded();
     }
 
@@ -218,51 +215,6 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         var heightScale = Bounds.Height > 1 ? Math.Clamp(Bounds.Height / 300d, 0.58, 2.0) : 1;
         var widthScale = Bounds.Width > 1 ? Math.Clamp(Bounds.Width / 300d, 0.58, 2.0) : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(heightScale, widthScale) * 1.05), 0.58, 1.95);
-    }
-
-    private void UpdateTypography()
-    {
-        var panelWidth = TimerPanelBorder.Bounds.Width > 1 ? TimerPanelBorder.Bounds.Width : 224d;
-        var panelHeight = TimerPanelBorder.Bounds.Height > 1 ? TimerPanelBorder.Bounds.Height : 224d;
-        var leftColumnWidth = Math.Max(72, panelWidth * 0.38);
-        var leftColumnHeight = Math.Max(120, panelHeight - 36);
-
-        TopNumberTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            TopNumberTextBlock.Text,
-            leftColumnWidth,
-            Math.Max(20, leftColumnHeight * 0.20),
-            1,
-            18,
-            38,
-            FontWeight.SemiBold,
-            1.02d);
-        MainNumberTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            MainNumberTextBlock.Text,
-            leftColumnWidth,
-            Math.Max(28, leftColumnHeight * 0.30),
-            1,
-            28,
-            64,
-            FontWeight.Bold,
-            1.00d);
-        NextNumberTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            NextNumberTextBlock.Text,
-            leftColumnWidth,
-            Math.Max(18, leftColumnHeight * 0.16),
-            1,
-            14,
-            34,
-            FontWeight.Medium,
-            1.02d);
-        NextNextNumberTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
-            NextNextNumberTextBlock.Text,
-            leftColumnWidth,
-            Math.Max(16, leftColumnHeight * 0.12),
-            1,
-            12,
-            26,
-            FontWeight.Medium,
-            1.02d);
     }
 
     private bool ResolveIsNightMode()

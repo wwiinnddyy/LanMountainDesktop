@@ -8,7 +8,6 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -44,7 +43,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
-    private double _layoutScale = 1d;
     private IReadOnlyList<CourseItemViewModel> _courseItems = Array.Empty<CourseItemViewModel>();
     private bool _isNightVisual = true;
     private string _languageCode = "zh-CN";
@@ -495,20 +493,18 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
             _componentColorScheme,
             ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
-        var chromeScale = ComponentChromeCornerRadiusHelper.ResolveScale();
-        _layoutScale = Math.Clamp(ResolveScale() * (0.9d + (chromeScale * 0.1d)), 0.52d, 2.2d);
 
-        var bulletSize = Math.Clamp(10 * _layoutScale, 5, 12);
-        var lineSpacing = Math.Clamp(4 * _layoutScale, 1.5, 8);
+        var scale = ResolveScale();
+        var bulletSize = Math.Clamp(10 * scale, 5, 12);
+        var courseNameSize = Math.Clamp(42 * scale, 14, 42);
+        var secondarySize = Math.Clamp(29 * scale, 10, 28);
+        var lineSpacing = Math.Clamp(4 * scale, 1.5, 8);
         var itemPadding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(6 * _layoutScale, 3, 10),
-            ComponentChromeCornerRadiusHelper.SafeValue(4 * _layoutScale, 2, 8),
-            ComponentChromeCornerRadiusHelper.SafeValue(4 * _layoutScale, 2, 8),
-            ComponentChromeCornerRadiusHelper.SafeValue(4 * _layoutScale, 2, 8));
-        var maxVisibleItems = ResolveMaxVisibleItems(_layoutScale);
-        var itemContentWidth = Math.Max(28, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 4) - itemPadding.Left - itemPadding.Right - bulletSize - Math.Clamp(10 * _layoutScale, 4, 14));
-        var titleHeight = Math.Clamp(34 * _layoutScale, 16, 42);
-        var secondaryHeight = Math.Clamp(24 * _layoutScale, 12, 30);
+            ComponentChromeCornerRadiusHelper.SafeValue(6 * scale, 3, 10),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8));
+        var maxVisibleItems = ResolveMaxVisibleItems(scale);
 
         var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
         var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
@@ -529,32 +525,14 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
                 CornerRadius = new CornerRadius(bulletSize * 0.5),
                 Background = bulletBrush,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                Margin = new Thickness(0, Math.Clamp(8 * _layoutScale, 2, 12), 0, 0)
+                Margin = new Thickness(0, Math.Clamp(8 * scale, 2, 12), 0, 0)
             };
 
             var titleText = new TextBlock
             {
                 Text = item.Name,
-                FontSize = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.Name,
-                    itemContentWidth,
-                    titleHeight,
-                    minLines: 1,
-                    maxLines: 2,
-                    minFontSize: 14,
-                    maxFontSize: Math.Clamp(42 * _layoutScale, 14, 42),
-                    weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-                    lineHeightFactor: 1.05d).FontSize,
-                FontWeight = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.Name,
-                    itemContentWidth,
-                    titleHeight,
-                    minLines: 1,
-                    maxLines: 2,
-                    minFontSize: 14,
-                    maxFontSize: Math.Clamp(42 * _layoutScale, 14, 42),
-                    weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-                    lineHeightFactor: 1.05d).Weight,
+                FontSize = courseNameSize,
+                FontWeight = ToVariableWeight(Lerp(620, 780, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
                 Foreground = primaryBrush,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 TextWrapping = TextWrapping.NoWrap
@@ -563,26 +541,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var timeText = new TextBlock
             {
                 Text = item.TimeRange,
-                FontSize = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.TimeRange,
-                    itemContentWidth,
-                    secondaryHeight,
-                    minLines: 1,
-                    maxLines: 1,
-                    minFontSize: 10,
-                    maxFontSize: Math.Clamp(28 * _layoutScale, 10, 28),
-                    weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
-                    lineHeightFactor: 1d).FontSize,
-                FontWeight = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.TimeRange,
-                    itemContentWidth,
-                    secondaryHeight,
-                    minLines: 1,
-                    maxLines: 1,
-                    minFontSize: 10,
-                    maxFontSize: Math.Clamp(28 * _layoutScale, 10, 28),
-                    weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
-                    lineHeightFactor: 1d).Weight,
+                FontSize = secondarySize,
+                FontWeight = ToVariableWeight(Lerp(520, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
                 Foreground = secondaryBrush,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 TextWrapping = TextWrapping.NoWrap
@@ -591,26 +551,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var detailText = new TextBlock
             {
                 Text = item.Detail,
-                FontSize = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.Detail,
-                    itemContentWidth,
-                    secondaryHeight,
-                    minLines: 1,
-                    maxLines: 1,
-                    minFontSize: 10,
-                    maxFontSize: Math.Clamp(28 * _layoutScale, 10, 28),
-                    weightCandidates: new[] { FontWeight.Normal, FontWeight.Medium },
-                    lineHeightFactor: 1d).FontSize,
-                FontWeight = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                    item.Detail,
-                    itemContentWidth,
-                    secondaryHeight,
-                    minLines: 1,
-                    maxLines: 1,
-                    minFontSize: 10,
-                    maxFontSize: Math.Clamp(28 * _layoutScale, 10, 28),
-                    weightCandidates: new[] { FontWeight.Normal, FontWeight.Medium },
-                    lineHeightFactor: 1d).Weight,
+                FontSize = secondarySize,
+                FontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
                 Foreground = secondaryBrush,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 TextWrapping = TextWrapping.NoWrap
@@ -625,7 +567,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var itemGrid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-                ColumnSpacing = Math.Clamp(10 * _layoutScale, 4, 14)
+                ColumnSpacing = Math.Clamp(10 * scale, 4, 14)
             };
             itemGrid.Children.Add(bullet);
             itemGrid.Children.Add(textStack);
@@ -661,8 +603,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         }
 
         var scale = ResolveScale();
-        var chromeScale = ComponentChromeCornerRadiusHelper.ResolveScale();
-        _layoutScale = Math.Clamp(scale * (0.9d + (chromeScale * 0.1d)), 0.52d, 2.2d);
         _isNightVisual = ResolveNightMode();
 
         var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
@@ -672,66 +612,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var slashBrush = useMonetColor
             ? CreateBrush("#FF4FC3F7")
             : CreateBrush("#FF3250");
-        var sampleNow = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
-        var headerWidth = Math.Max(42, Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 4);
-        var headerHeight = Math.Max(42, Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4);
-        var headerPrimaryWidth = Math.Clamp(headerWidth * 0.34, 28, 92);
-        var headerSecondaryWidth = Math.Clamp(headerWidth * 0.52, 40, 148);
-        var dateHeight = Math.Clamp(headerHeight * 0.30, 26, 96);
-        var secondaryHeaderHeight = Math.Clamp(headerHeight * 0.12, 16, 42);
-        var weekdayLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            FormatWeekday(sampleNow.DayOfWeek),
-            headerSecondaryWidth,
-            secondaryHeaderHeight,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: 13,
-            maxFontSize: 32,
-            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-            lineHeightFactor: 1.02d);
-        var classCountLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            FormatClassCount(_courseItems.Count),
-            headerSecondaryWidth,
-            secondaryHeaderHeight,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: 14,
-            maxFontSize: 36,
-            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-            lineHeightFactor: 1.02d);
-        var statusText = string.IsNullOrWhiteSpace(StatusTextBlock.Text)
-            ? L("schedule.widget.no_class_today", "浠婂ぉ娌℃湁璇剧▼")
-            : StatusTextBlock.Text;
-        var statusLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            statusText,
-            headerSecondaryWidth,
-            secondaryHeaderHeight,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: 12,
-            maxFontSize: 30,
-            weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
-            lineHeightFactor: 1.02d);
-        var monthLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            sampleNow.Month.ToString(CultureInfo.InvariantCulture),
-            headerPrimaryWidth,
-            dateHeight,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: 26,
-            maxFontSize: 82,
-            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-            lineHeightFactor: 1d);
-        var dayLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            sampleNow.Day.ToString(CultureInfo.InvariantCulture),
-            headerPrimaryWidth,
-            dateHeight,
-            minLines: 1,
-            maxLines: 1,
-            minFontSize: 26,
-            maxFontSize: 82,
-            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
-            lineHeightFactor: 1d);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.45, 24, 44);
         RootBorder.Background = _isNightVisual
@@ -740,21 +620,21 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         RootBorder.BorderBrush = CreateBrush(_isNightVisual ? "#24FFFFFF" : "#15000000");
 
         var rootPadding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(16 * _layoutScale, 10, 24),
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * _layoutScale, 9, 20),
-            ComponentChromeCornerRadiusHelper.SafeValue(16 * _layoutScale, 10, 24),
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * _layoutScale, 8, 20));
+            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 9, 20),
+            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 20));
         RootBorder.Padding = rootPadding;
 
-        LayoutGrid.RowSpacing = Math.Clamp(14 * _layoutScale, 6, 20);
-        HeaderGrid.ColumnSpacing = Math.Clamp(10 * _layoutScale, 4, 16);
-        DateGroup.Spacing = Math.Clamp(1.5 * _layoutScale, 0.5, 3);
-        MetaStack.Spacing = Math.Clamp(6 * _layoutScale, 3, 10);
-        CourseListPanel.Spacing = Math.Clamp(6 * _layoutScale, 3, 10);
+        LayoutGrid.RowSpacing = Math.Clamp(14 * scale, 6, 20);
+        HeaderGrid.ColumnSpacing = Math.Clamp(10 * scale, 4, 16);
+        DateGroup.Spacing = Math.Clamp(1.5 * scale, 0.5, 3);
+        MetaStack.Spacing = Math.Clamp(6 * scale, 3, 10);
+        CourseListPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
 
-        var dateFont = Math.Clamp(66 * _layoutScale, 26, 82);
-        MonthTextBlock.FontSize = monthLayout.FontSize;
-        DayTextBlock.FontSize = dayLayout.FontSize;
+        var dateFont = Math.Clamp(66 * scale, 26, 82);
+        MonthTextBlock.FontSize = dateFont;
+        DayTextBlock.FontSize = dateFont;
         SlashTextBlock.FontSize = dateFont;
 
         MonthTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
@@ -764,13 +644,12 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         ClassCountTextBlock.Foreground = CreateBrush(_isNightVisual ? "#8D95A4" : "#738095");
         StatusTextBlock.Foreground = CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
 
-        WeekdayTextBlock.FontSize = weekdayLayout.FontSize;
-        ClassCountTextBlock.FontSize = classCountLayout.FontSize;
-        StatusTextBlock.FontSize = statusLayout.FontSize;
+        WeekdayTextBlock.FontSize = Math.Clamp(34 * scale, 13, 32);
+        ClassCountTextBlock.FontSize = Math.Clamp(40 * scale, 14, 36);
+        StatusTextBlock.FontSize = Math.Clamp(30 * scale, 12, 30);
 
-        WeekdayTextBlock.FontWeight = weekdayLayout.Weight;
-        ClassCountTextBlock.FontWeight = classCountLayout.Weight;
-        StatusTextBlock.FontWeight = statusLayout.Weight;
+        WeekdayTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+        ClassCountTextBlock.FontWeight = ToVariableWeight(Lerp(560, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
     }
 
     private static string FormatTime(TimeSpan time)

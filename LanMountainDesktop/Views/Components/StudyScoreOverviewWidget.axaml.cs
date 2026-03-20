@@ -6,7 +6,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -337,92 +336,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
         ApplyVariableWeights(scale);
         ApplyLocalizedLabels();
-
-        var contentWidth = Math.Max(140, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 8) - RootBorder.Padding.Left - RootBorder.Padding.Right);
-        var contentHeight = Math.Max(96, (Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
-
-        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            TitleTextBlock.Text,
-            Math.Max(120, contentWidth * 0.42),
-            Math.Max(18, contentHeight * 0.14),
-            1,
-            1,
-            9,
-            Math.Clamp(30 * scale * labelFactor, 9, 30),
-            [TitleTextBlock.FontWeight],
-            1.05);
-        TitleTextBlock.FontSize = titleLayout.FontSize;
-        TitleTextBlock.FontWeight = titleLayout.Weight;
-        TitleTextBlock.MaxLines = 1;
-        TitleTextBlock.TextWrapping = TextWrapping.NoWrap;
-        TitleTextBlock.LineHeight = titleLayout.LineHeight;
-
-        var modeBadgeBox = ComponentTypographyLayoutService.ResolveBadgeBox(
-            Math.Max(64, contentWidth * 0.22),
-            Math.Max(20, contentHeight * 0.12),
-            preferredSizeScale: 0.46d,
-            minSize: 18,
-            maxSize: 42,
-            insetScale: 0.18d);
-        ModeBadgeBorder.Padding = modeBadgeBox.Padding;
-        ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(modeBadgeBox.Size * 0.36, 5, 14));
-        var modeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            ModeTextBlock.Text,
-            Math.Max(52, modeBadgeBox.Width),
-            Math.Max(18, modeBadgeBox.Height),
-            1,
-            1,
-            8,
-            Math.Clamp(22 * scale * labelFactor, 8, 22),
-            [ModeTextBlock.FontWeight],
-            1.02);
-        ModeTextBlock.FontSize = modeLayout.FontSize;
-        ModeTextBlock.FontWeight = modeLayout.Weight;
-        ModeTextBlock.MaxLines = 1;
-        ModeTextBlock.TextWrapping = TextWrapping.NoWrap;
-        ModeTextBlock.LineHeight = modeLayout.LineHeight;
-
-        foreach (var block in new[] { CurrentLabelTextBlock, AverageLabelTextBlock, MinimumLabelTextBlock, MaximumLabelTextBlock })
-        {
-            var layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                block.Text,
-                Math.Max(64, contentWidth * 0.16),
-                Math.Max(14, contentHeight * 0.10),
-                1,
-                1,
-                8,
-                Math.Clamp(22 * scale * labelFactor, 8, 22),
-                [block.FontWeight],
-                1.02);
-            block.FontSize = layout.FontSize;
-            block.FontWeight = layout.Weight;
-            block.MaxLines = 1;
-            block.TextWrapping = TextWrapping.NoWrap;
-            block.LineHeight = layout.LineHeight;
-        }
-
-        foreach (var block in new[] { CurrentScoreTextBlock, AverageValueTextBlock, MinimumValueTextBlock, MaximumValueTextBlock })
-        {
-            var minFont = block == CurrentScoreTextBlock ? 22 : 11;
-            var maxFont = block == CurrentScoreTextBlock ? Math.Clamp(190 * scale * headlineFactor, 22, 190) : Math.Clamp(64 * scale * statFactor, 11, 64);
-            var maxWidth = block == CurrentScoreTextBlock ? Math.Max(96, contentWidth * 0.30) : Math.Max(72, contentWidth * 0.18);
-            var maxHeight = block == CurrentScoreTextBlock ? Math.Max(30, contentHeight * 0.24) : Math.Max(20, contentHeight * 0.14);
-            var layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-                block.Text,
-                maxWidth,
-                maxHeight,
-                1,
-                1,
-                minFont,
-                maxFont,
-                [block.FontWeight],
-                1.02);
-            block.FontSize = layout.FontSize;
-            block.FontWeight = layout.Weight;
-            block.MaxLines = 1;
-            block.TextWrapping = TextWrapping.NoWrap;
-            block.LineHeight = layout.LineHeight;
-        }
     }
 
     private void PushRealtimeScore(double score, DateTimeOffset now)
