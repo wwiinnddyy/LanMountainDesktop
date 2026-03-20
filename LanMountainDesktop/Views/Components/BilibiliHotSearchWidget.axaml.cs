@@ -11,6 +11,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -437,37 +438,93 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
             Math.Clamp(searchBoxHeight * 0.24, 5, 10),
             0);
         SearchGlyphIcon.FontSize = Math.Clamp(searchBoxHeight * 0.45, 10, 20);
-        SearchEntryTextBlock.FontSize = Math.Clamp(searchBoxHeight * 0.44, 10, 18);
+
+        var searchLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            SearchEntryTextBlock.Text,
+            Math.Max(54, SearchBoxBorder.Width - Math.Clamp(searchBoxHeight * 0.48, 8, 16)),
+            searchBoxHeight,
+            minLines: 1,
+            maxLines: 1,
+            minFontSize: 10,
+            maxFontSize: Math.Clamp(searchBoxHeight * 0.44, 10, 18),
+            weightCandidates: new[] { FontWeight.Medium, FontWeight.SemiBold },
+            lineHeightFactor: 1.0d,
+            fontFamily: MiSansFontFamily);
+        SearchEntryTextBlock.FontSize = searchLayout.FontSize;
+        SearchEntryTextBlock.LineHeight = searchLayout.LineHeight;
 
         TopRightTitleTextBlock.MaxWidth = Math.Max(80, innerWidth - SearchBoxBorder.Width - HeaderGrid.ColumnSpacing);
-        TopRightTitleTextBlock.FontSize = Math.Clamp(topRowHeight * 0.46, 11, 22);
+        var topRightLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            TopRightTitleTextBlock.Text,
+            TopRightTitleTextBlock.MaxWidth,
+            topRowHeight,
+            minLines: 1,
+            maxLines: 1,
+            minFontSize: 11,
+            maxFontSize: Math.Clamp(topRowHeight * 0.46, 11, 22),
+            weightCandidates: new[] { FontWeight.Medium, FontWeight.SemiBold },
+            lineHeightFactor: 1.0d,
+            fontFamily: MiSansFontFamily);
+        TopRightTitleTextBlock.FontSize = topRightLayout.FontSize;
+        TopRightTitleTextBlock.LineHeight = topRightLayout.LineHeight;
 
         var lineColumnGap = Math.Clamp(lineRowHeight * 0.34, 5, 12);
-        var indexWidth = Math.Clamp(lineRowHeight * 1.02, 16, 28);
-        var indexFont = Math.Clamp(lineRowHeight * 0.50, 10, 16);
-        var itemFont = Math.Clamp(lineRowHeight * 0.62, 12, 24);
+        var indexBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
+            lineRowHeight,
+            lineRowHeight,
+            preferredSizeScale: 0.62d,
+            minSize: 16,
+            maxSize: 28);
+        var indexFont = ComponentTypographyLayoutService.FitFontSize(
+            "88",
+            indexBadge.Width,
+            indexBadge.Height,
+            1,
+            minFontSize: 10,
+            maxFontSize: Math.Clamp(indexBadge.Height * 0.82d, 10, 18),
+            weight: FontWeight.Bold,
+            lineHeightFactor: 1.0d,
+            fontFamily: MiSansFontFamily);
+        var itemFontMin = Math.Clamp(lineRowHeight * 0.42, 11, 16);
+        var itemFontMax = Math.Clamp(lineRowHeight * 0.68, 12, 24);
         var rowPadding = Math.Clamp(lineRowHeight * 0.08, 1, 4);
-        var itemTextWidth = Math.Max(56, innerWidth - indexWidth - lineColumnGap);
+        var itemTextWidth = Math.Max(56, innerWidth - indexBadge.Width - lineColumnGap);
 
         foreach (var visual in _hotItemVisuals)
         {
             visual.RowGrid.ColumnSpacing = lineColumnGap;
             if (visual.RowGrid.ColumnDefinitions.Count > 0)
             {
-                visual.RowGrid.ColumnDefinitions[0].Width = new GridLength(indexWidth, GridUnitType.Pixel);
+                visual.RowGrid.ColumnDefinitions[0].Width = new GridLength(indexBadge.Width, GridUnitType.Pixel);
             }
 
             visual.Host.Padding = new Thickness(0, rowPadding, 0, rowPadding);
             visual.IndexTextBlock.FontSize = indexFont;
-            visual.IndexTextBlock.MaxWidth = indexWidth;
+            visual.IndexTextBlock.MaxWidth = indexBadge.Width;
+            visual.IndexTextBlock.MinWidth = indexBadge.Width;
+            visual.IndexTextBlock.Margin = indexBadge.Margin;
             visual.IndexTextBlock.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             visual.IndexTextBlock.TextAlignment = TextAlignment.Right;
-            visual.TitleTextBlock.FontSize = itemFont;
+            var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+                visual.TitleTextBlock.Text,
+                itemTextWidth,
+                lineRowHeight * 1.9d,
+                minLines: 1,
+                maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(visual.TitleTextBlock.Text) > 24 ? 2 : 1,
+                minFontSize: itemFontMin,
+                maxFontSize: itemFontMax,
+                weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
+                lineHeightFactor: 1.08d,
+                fontFamily: MiSansFontFamily);
+            visual.TitleTextBlock.FontSize = titleLayout.FontSize;
+            visual.TitleTextBlock.LineHeight = titleLayout.LineHeight;
+            visual.TitleTextBlock.MaxLines = titleLayout.MaxLines;
+            visual.TitleTextBlock.FontWeight = titleLayout.Weight;
             visual.TitleTextBlock.MaxWidth = itemTextWidth;
             visual.TitleTextBlock.TextAlignment = TextAlignment.Left;
         }
 
-        StatusTextBlock.FontSize = Math.Clamp(itemFont, 10, 20);
+        StatusTextBlock.FontSize = Math.Clamp(itemFontMax, 10, 20);
         ApplyNightModeVisual();
     }
 

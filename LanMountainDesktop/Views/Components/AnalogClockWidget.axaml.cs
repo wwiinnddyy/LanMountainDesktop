@@ -7,6 +7,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -65,6 +66,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private readonly LocalizationService _localizationService = new();
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
+    private double _layoutScale = 1d;
     private bool _dialInitialized;
     private bool _handsInitialized;
     private bool? _isNightModeApplied;
@@ -185,17 +187,18 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void BuildTicks(bool isNightMode)
     {
         TickCanvas.Children.Clear();
+        var scale = Math.Clamp(_layoutScale, 0.78d, 1.22d);
         var majorBrush = CreateBrush(isNightMode ? "#1A1A1A" : "#1E2430");
         var minorBrush = CreateBrush(isNightMode ? "#D0D0D0" : "#D7DCE5");
-        var majorThickness = isNightMode ? 3.0 : 2.8;
-        var minorThickness = isNightMode ? 1.4 : 1.2;
+        var majorThickness = (isNightMode ? 3.0 : 2.8) * scale;
+        var minorThickness = (isNightMode ? 1.4 : 1.2) * scale;
 
         for (var i = 0; i < 60; i++)
         {
             var angle = (i * 6 - 90) * Math.PI / 180d;
             var isHourTick = i % 5 == 0;
-            var outerRadius = Center - 7;
-            var innerRadius = outerRadius - (isHourTick ? 16 : 8);
+            var outerRadius = Center - (7 * scale);
+            var innerRadius = outerRadius - (isHourTick ? 16 * scale : 8 * scale);
 
             var x1 = Center + Math.Cos(angle) * innerRadius;
             var y1 = Center + Math.Sin(angle) * innerRadius;
@@ -218,34 +221,50 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void BuildNumbers(bool isNightMode)
     {
         NumberCanvas.Children.Clear();
+        var scale = Math.Clamp(_layoutScale, 0.78d, 1.22d);
         var foreground = CreateBrush(isNightMode ? "#101010" : "#0F131A");
         var fontWeight = isNightMode ? FontWeight.Bold : FontWeight.SemiBold;
 
         for (var number = 1; number <= 12; number++)
         {
             var angle = (number * 30 - 90) * Math.PI / 180d;
-            var radius = 88;
+            var radius = 88 * scale;
             var x = Center + Math.Cos(angle) * radius;
             var y = Center + Math.Sin(angle) * radius;
             var isDoubleDigit = number >= 10;
-            var width = isDoubleDigit ? 44 : 28;
-            var height = 34;
+            var glyphBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+                isDoubleDigit ? 44 * scale : 36 * scale,
+                34 * scale,
+                preferredSizeScale: isDoubleDigit ? 0.92d : 0.88d,
+                minSize: 18,
+                maxSize: isDoubleDigit ? 36 : 30,
+                insetScale: 0d);
+            var text = number.ToString(CultureInfo.InvariantCulture);
+            var fontSize = ComponentTypographyLayoutService.FitFontSize(
+                text,
+                glyphBox.Width,
+                glyphBox.Height,
+                maxLines: 1,
+                minFontSize: 12 * scale,
+                maxFontSize: 18 * scale,
+                weight: fontWeight,
+                lineHeightFactor: 1d);
 
-            var text = new TextBlock
+            var numberText = new TextBlock
             {
-                Text = number.ToString(CultureInfo.InvariantCulture),
-                Width = width,
-                Height = height,
+                Text = text,
+                Width = glyphBox.Width,
+                Height = glyphBox.Height,
                 TextAlignment = TextAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                FontSize = 18,
+                FontSize = fontSize,
                 FontWeight = fontWeight,
                 Foreground = foreground
             };
 
-            Canvas.SetLeft(text, x - width / 2d);
-            Canvas.SetTop(text, y - height / 2d);
-            NumberCanvas.Children.Add(text);
+            Canvas.SetLeft(numberText, x - glyphBox.Width / 2d);
+            Canvas.SetTop(numberText, y - glyphBox.Height / 2d);
+            NumberCanvas.Children.Add(numberText);
         }
     }
 
@@ -325,10 +344,14 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     {
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
+        var chromeScale = ComponentChromeCornerRadiusHelper.ResolveScale();
+        _layoutScale = Math.Clamp(scale * (0.9d + (chromeScale * 0.1d)), 0.58d, 2.0d);
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(42 * scale, 16, 56);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(14 * scale, 14 * scale, null, 0.55d);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(42 * _layoutScale, 16, 56);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(14 * _layoutScale, 14 * _layoutScale, null, 0.55d);
         ApplyModeVisualIfNeeded();
+        BuildTicks(_isNightModeApplied ?? ResolveIsNightMode());
+        BuildNumbers(_isNightModeApplied ?? ResolveIsNightMode());
     }
 
     private double ResolveScale()

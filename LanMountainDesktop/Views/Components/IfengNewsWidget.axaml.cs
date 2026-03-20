@@ -15,6 +15,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -462,11 +463,23 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
             visual.ImageHost.Height = imageHeight;
             visual.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(imageHeight * 0.15, 8, 16);
 
+            var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+                visual.TitleTextBlock.Text,
+                textWidth,
+                itemHeight,
+                minLines: 1,
+                maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(visual.TitleTextBlock.Text) > 28 ? 2 : 1,
+                minFontSize: Math.Clamp(titleFont * 0.72, 10, 16),
+                maxFontSize: titleFont,
+                weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
+                lineHeightFactor: 1.12d,
+                fontFamily: MiSansFontFamily);
             visual.TitleTextBlock.MaxWidth = textWidth;
-            visual.TitleTextBlock.FontSize = titleFont;
-            visual.TitleTextBlock.LineHeight = titleFont * 1.12;
-            visual.TitleTextBlock.MinHeight = visual.TitleTextBlock.LineHeight * 2;
-            visual.TitleTextBlock.MaxLines = 2;
+            visual.TitleTextBlock.FontSize = titleLayout.FontSize;
+            visual.TitleTextBlock.LineHeight = titleLayout.LineHeight;
+            visual.TitleTextBlock.MinHeight = titleLayout.LineHeight * titleLayout.MaxLines;
+            visual.TitleTextBlock.MaxLines = titleLayout.MaxLines;
+            visual.TitleTextBlock.FontWeight = titleLayout.Weight;
         }
 
         StatusTextBlock.FontSize = Math.Clamp(titleFont, 10, 20);

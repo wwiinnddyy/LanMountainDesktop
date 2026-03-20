@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -293,6 +294,40 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         ActionIcon.Height = Math.Clamp(buttonSize * 0.44, 14, 30);
 
         SecondaryTextBlock.IsVisible = !_isUltraCompactMode;
+
+        var contentWidth = Math.Max(96, (Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 4) - RootBorder.Padding.Left - RootBorder.Padding.Right);
+        var contentHeight = Math.Max(44, (Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 2) - RootBorder.Padding.Top - RootBorder.Padding.Bottom);
+        var primaryLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            PrimaryTextBlock.Text,
+            Math.Max(72, contentWidth * 0.58),
+            Math.Max(18, contentHeight * 0.28),
+            1,
+            1,
+            10,
+            Math.Clamp(30 * scale, 10, 30),
+            [PrimaryTextBlock.FontWeight],
+            1.04);
+        PrimaryTextBlock.FontSize = primaryLayout.FontSize;
+        PrimaryTextBlock.FontWeight = primaryLayout.Weight;
+        PrimaryTextBlock.MaxLines = 1;
+        PrimaryTextBlock.TextWrapping = TextWrapping.NoWrap;
+        PrimaryTextBlock.LineHeight = primaryLayout.LineHeight;
+
+        var secondaryLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            SecondaryTextBlock.Text,
+            Math.Max(64, contentWidth * 0.58),
+            Math.Max(16, contentHeight * 0.22),
+            1,
+            _isUltraCompactMode ? 1 : 2,
+            8,
+            Math.Clamp(18 * scale, 8, 18),
+            [SecondaryTextBlock.FontWeight],
+            1.04);
+        SecondaryTextBlock.FontSize = secondaryLayout.FontSize;
+        SecondaryTextBlock.FontWeight = secondaryLayout.Weight;
+        SecondaryTextBlock.MaxLines = secondaryLayout.MaxLines;
+        SecondaryTextBlock.TextWrapping = secondaryLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        SecondaryTextBlock.LineHeight = secondaryLayout.LineHeight;
     }
 
     private void ApplyTypographyByBackground(Color panelColor)

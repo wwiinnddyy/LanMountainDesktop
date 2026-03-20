@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -47,8 +48,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
     private const int BaseHeightCells = 2;
     private const double MinPoetryFontSize = 8;
     private const double MinAuthorFontSize = 7;
-
-    private readonly record struct TextFitResult(double FontSize, FontWeight FontWeight, double LineHeight);
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -268,7 +267,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         {
             if (!string.IsNullOrWhiteSpace(snapshot.Origin))
             {
-                return $"{snapshot.Origin.Trim()} \u00B7 {snapshot.Author.Trim()}";
+                return $"{snapshot.Origin.Trim()} · {snapshot.Author.Trim()}";
             }
 
             return snapshot.Author.Trim();
@@ -297,7 +296,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
     private void ApplyLoadingState()
     {
         _poetryRawText = L("poetry.widget.loading_content", "Loading...");
-        _authorRawText = L("poetry.widget.loading_author", "...");
+        _authorRawText = L("poetry.widget.loading_author", "·");
         StatusTextBlock.IsVisible = false;
         ApplyModeVisualIfNeeded(force: true);
     }
@@ -484,23 +483,29 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             minFontWeight: ToVariableWeight(poemMinWeight),
             lineHeightFactor: 1.12);
 
-        var poemFit = FitTextStable(
+        var poemFit = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             poemPrepared,
             poemWidth,
             availablePoemHeight,
             minFontSize: poemMinFontSize,
             maxFontSize: Math.Clamp(poemPreferredFontSize * 1.20, poemMinFontSize, 62),
+            minLines: poemMaxLines,
             maxLines: poemMaxLines,
+            weightCandidates: new[]
+            {
+                ToVariableWeight(poemMinWeight),
+                ToVariableWeight((poemMinWeight + poemMaxWeight) / 2d),
+                ToVariableWeight(poemMaxWeight)
+            },
             lineHeightFactor: 1.12,
-            minWeight: poemMinWeight,
-            maxWeight: poemMaxWeight);
+            fontFamily: MiSansFontFamily);
 
         PoetryContentTextBlock.Text = poemPrepared;
         PoetryContentTextBlock.MaxWidth = poemWidth;
         PoetryContentTextBlock.MaxLines = poemMaxLines;
         PoetryContentTextBlock.FontSize = poemFit.FontSize;
         PoetryContentTextBlock.LineHeight = poemFit.LineHeight;
-        PoetryContentTextBlock.FontWeight = poemFit.FontWeight;
+        PoetryContentTextBlock.FontWeight = poemFit.Weight;
 
         var authorWidth = Math.Max(72, Math.Min(innerWidth * (isNightMode ? 0.5 : 0.56), innerWidth - 8));
         var authorUnitsTarget = 20;
@@ -520,16 +525,22 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             minFontWeight: ToVariableWeight(authorMinWeight),
             lineHeightFactor: 1.12);
 
-        var authorFit = FitTextStable(
+        var authorFit = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             authorPrepared,
             authorWidth,
             AuthorAccent.Height,
             minFontSize: authorMinFontSize,
             maxFontSize: Math.Clamp(authorPreferredFontSize * 1.15, authorMinFontSize, 42),
+            minLines: 1,
             maxLines: 1,
+            weightCandidates: new[]
+            {
+                ToVariableWeight(authorMinWeight),
+                ToVariableWeight((authorMinWeight + authorMaxWeight) / 2d),
+                ToVariableWeight(authorMaxWeight)
+            },
             lineHeightFactor: 1.12,
-            minWeight: authorMinWeight,
-            maxWeight: authorMaxWeight);
+            fontFamily: MiSansFontFamily);
 
         AuthorTextBlock.Text = authorPrepared;
         AuthorTextBlock.TextWrapping = TextWrapping.NoWrap;
@@ -537,7 +548,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         AuthorTextBlock.MaxWidth = authorWidth;
         AuthorTextBlock.FontSize = authorFit.FontSize;
         AuthorTextBlock.LineHeight = authorFit.LineHeight;
-        AuthorTextBlock.FontWeight = authorFit.FontWeight;
+        AuthorTextBlock.FontWeight = authorFit.Weight;
     }
 
     private void UpdateRefreshButtonState()
@@ -691,7 +702,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
 
                 if (current.Length == 0)
                 {
-                    if (EstimateDisplayUnits(remain) <= target || lines.Count == lineLimit - 1)
+                    if (ComponentTypographyLayoutService.CountTextDisplayUnits(remain) <= target || lines.Count == lineLimit - 1)
                     {
                         current.Append(remain);
                         remain = string.Empty;
@@ -714,7 +725,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
                 }
 
                 var merged = current + remain;
-                if (EstimateDisplayUnits(merged) <= target || lines.Count == lineLimit - 1)
+                if (ComponentTypographyLayoutService.CountTextDisplayUnits(merged) <= target || lines.Count == lineLimit - 1)
                 {
                     current.Append(remain);
                     remain = string.Empty;
@@ -848,7 +859,13 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         }
 
         var lineHeight = fontSize * lineHeightFactor;
-        var measured = MeasureTextSize(text, fontSize, fontWeight, maxWidth, lineHeight);
+        var measured = ComponentTypographyLayoutService.MeasureTextSize(
+            text,
+            fontSize,
+            fontWeight,
+            maxWidth,
+            lineHeight,
+            MiSansFontFamily);
         var lineCount = Math.Max(1, (int)Math.Ceiling(measured.Height / Math.Max(1, lineHeight)));
         return measured.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
     }
@@ -891,86 +908,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         return text.Length;
     }
 
-    private static double EstimateDisplayUnits(string text)
-    {
-        var units = 0d;
-        foreach (var ch in text)
-        {
-            units += ch <= 127 ? 0.56 : 1d;
-        }
-
-        return units;
-    }
-
-    private static TextFitResult FitTextStable(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        double minFontSize,
-        double maxFontSize,
-        int maxLines,
-        double lineHeightFactor,
-        double minWeight,
-        double maxWeight)
-    {
-        var normalizedText = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-
-        var bestSize = min;
-        var bestWeight = ToVariableWeight(minWeight);
-
-        for (var i = 0; i < 22; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var progress = max <= min
-                ? 0
-                : Math.Clamp((candidate - min) / (max - min), 0, 1);
-            var candidateWeight = ToVariableWeight(Lerp(minWeight, maxWeight, progress));
-            var lineHeight = candidate * lineHeightFactor;
-
-            var measured = MeasureTextSize(normalizedText, candidate, candidateWeight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(measured.Height / Math.Max(1, lineHeight)));
-            var fits = measured.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                bestSize = candidate;
-                bestWeight = candidateWeight;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        var lineHeightResult = bestSize * lineHeightFactor;
-        return new TextFitResult(bestSize, bestWeight, lineHeightResult);
-    }
-
-    private static Size MeasureTextSize(
-        string text,
-        double fontSize,
-        FontWeight fontWeight,
-        double maxWidth,
-        double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontFamily = MiSansFontFamily,
-            FontSize = fontSize,
-            FontWeight = fontWeight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
-    }
 
     private static FontWeight ToVariableWeight(double weight)
     {

@@ -12,6 +12,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentIcons.Common;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 
@@ -123,6 +124,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         NextIcon.FontSize = Math.Clamp(18 * scale, 13, 24);
         FavoriteIcon.FontSize = Math.Clamp(16 * scale, 11, 21);
 
+        UpdateTypography();
         UpdateProgressVisual(_progressRatio, _isProgressIndeterminate);
     }
 
@@ -418,6 +420,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         SetCoverImage(state.ThumbnailBytes);
         ApplyActionButtonState(state);
+        UpdateTypography();
         UpdateSourceAppButtonTooltip();
     }
 
@@ -550,6 +553,67 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
             MusicPlaybackStatus.Opened => L("music.widget.status.opened", "Opened"),
             _ => "--"
         };
+    }
+
+    private void UpdateTypography()
+    {
+        var scale = ResolveScale();
+        var rootWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 10.5;
+        var rootHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4.2;
+        var headerWidth = Math.Max(120, rootWidth - Math.Max(84, SourceAppButton.MinWidth) - 86);
+        var titleWidth = Math.Max(96, headerWidth);
+        var metaWidth = Math.Max(96, headerWidth);
+        var timelineWidth = Math.Max(52, rootWidth * 0.18);
+        var statusWidth = Math.Max(72, Math.Min(headerWidth, rootWidth * 0.26));
+
+        TitleTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
+            TitleTextBlock.Text,
+            titleWidth,
+            Math.Max(24, rootHeight * 0.12),
+            1,
+            12,
+            Math.Clamp(20 * scale, 12, 28),
+            FontWeight.SemiBold,
+            1.06d);
+
+        var artistMaxLines = ArtistTextBlock.MaxLines <= 0 ? 1 : ArtistTextBlock.MaxLines;
+        ArtistTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
+            ArtistTextBlock.Text,
+            metaWidth,
+            artistMaxLines > 1 ? Math.Max(32, rootHeight * 0.12) : Math.Max(20, rootHeight * 0.08),
+            artistMaxLines,
+            9,
+            Math.Clamp(14 * scale, 9, 18),
+            FontWeight.SemiBold,
+            1.06d);
+
+        PositionTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
+            PositionTextBlock.Text,
+            timelineWidth,
+            18,
+            1,
+            8,
+            Math.Clamp(13 * scale, 8, 15),
+            FontWeight.SemiBold,
+            1.05d);
+        DurationTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
+            DurationTextBlock.Text,
+            timelineWidth,
+            18,
+            1,
+            8,
+            Math.Clamp(13 * scale, 8, 15),
+            FontWeight.SemiBold,
+            1.05d);
+        StatusTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
+            StatusTextBlock.Text,
+            statusWidth,
+            18,
+            1,
+            8,
+            Math.Clamp(13 * scale, 8, 15),
+            FontWeight.Medium,
+            1.05d);
     }
 
     private string L(string key, string fallback)

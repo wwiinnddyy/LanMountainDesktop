@@ -10,6 +10,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
@@ -218,14 +219,36 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         }
 
         var leftWidthFactor = Math.Clamp(leftContentWidth / 122d, 0.48, 1.35);
-        TimeTextBlock.FontSize = Math.Clamp((metrics.PrimaryTemperatureFont * 0.74) * scale * compactFactor * leftWidthFactor, 10, 62);
-        DateTextBlock.FontSize = Math.Clamp(metrics.SecondaryTextFont * scale * compactFactor * leftWidthFactor, 8, 30);
+        var timeLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            TimeTextBlock.Text,
+            leftContentWidth,
+            Math.Max(12, contentHeight * 0.42),
+            1,
+            1,
+            10,
+            Math.Clamp((metrics.PrimaryTemperatureFont * 0.74) * scale * compactFactor * leftWidthFactor, 10, 62),
+            [ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.68) / 1.35, 0, 1)))],
+            1.04);
+        var dateLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            DateTextBlock.Text,
+            Math.Max(12, leftContentWidth),
+            Math.Max(10, contentHeight * 0.24),
+            1,
+            1,
+            8,
+            Math.Clamp(metrics.SecondaryTextFont * scale * compactFactor * leftWidthFactor, 8, 30),
+            [ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.68) / 1.35, 0, 1)))],
+            1.04);
+        TimeTextBlock.FontSize = timeLayout.FontSize;
+        DateTextBlock.FontSize = dateLayout.FontSize;
         var weatherIconSize = Math.Clamp(metrics.IconFont * scale * compactFactor * leftWidthFactor, 9, 32);
         WeatherIconImage.Width = weatherIconSize;
         WeatherIconImage.Height = weatherIconSize;
 
-        TimeTextBlock.FontWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
-        DateTextBlock.FontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.68) / 1.35, 0, 1)));
+        TimeTextBlock.FontWeight = timeLayout.Weight;
+        DateTextBlock.FontWeight = dateLayout.Weight;
+        TimeTextBlock.LineHeight = timeLayout.LineHeight;
+        DateTextBlock.LineHeight = dateLayout.LineHeight;
 
         LeftStack.Width = leftContentWidth;
         LeftStack.MaxWidth = leftContentWidth;

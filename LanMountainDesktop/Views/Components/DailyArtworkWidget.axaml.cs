@@ -1,4 +1,4 @@
-Ôªøusing System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -13,6 +13,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -26,13 +27,13 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     private static readonly IReadOnlyDictionary<DayOfWeek, string> ZhWeekdays =
         new Dictionary<DayOfWeek, string>
         {
-            [DayOfWeek.Monday] = "ÊòüÊúü‰∏Ä",
-            [DayOfWeek.Tuesday] = "ÊòüÊúü‰∫å",
-            [DayOfWeek.Wednesday] = "ÊòüÊúü‰∏â",
-            [DayOfWeek.Thursday] = "ÊòüÊúüÂõõ",
-            [DayOfWeek.Friday] = "ÊòüÊúü‰∫î",
-            [DayOfWeek.Saturday] = "ÊòüÊúüÂÖ≠",
-            [DayOfWeek.Sunday] = "ÊòüÊúüÊó•"
+            [DayOfWeek.Monday] = "–«∆⁄“ª",
+            [DayOfWeek.Tuesday] = "–«∆⁄∂˛",
+            [DayOfWeek.Wednesday] = "–«∆⁄»˝",
+            [DayOfWeek.Thursday] = "–«∆⁄Àƒ",
+            [DayOfWeek.Friday] = "–«∆⁄ŒÂ",
+            [DayOfWeek.Saturday] = "–«∆⁄¡˘",
+            [DayOfWeek.Sunday] = "–«∆⁄»’"
         };
 
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
@@ -449,7 +450,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var leftSingleLineHeight = Math.Max(12, (leftContentHeight - dateStackSpacing) / 2d);
 
         var dateBase = Math.Clamp(44 * scale, 16, 62);
-        DateTextBlock.FontSize = FitFontSize(
+        DateTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
             DateTextBlock.Text,
             leftContentWidth,
             leftSingleLineHeight,
@@ -457,10 +458,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.10);
+            lineHeightFactor: 1.10,
+            fontFamily: MiSansFontFamily);
         DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.10;
 
-        WeekdayTextBlock.FontSize = FitFontSize(
+        WeekdayTextBlock.FontSize = ComponentTypographyLayoutService.FitFontSize(
             WeekdayTextBlock.Text,
             leftContentWidth,
             leftSingleLineHeight,
@@ -468,7 +470,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             minFontSize: Math.Max(12, dateBase * 0.68),
             maxFontSize: dateBase,
             weight: FontWeight.Bold,
-            lineHeightFactor: 1.10);
+            lineHeightFactor: 1.10,
+            fontFamily: MiSansFontFamily);
         WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.10;
 
         var rightContentHeight = Math.Max(42, totalHeight - rootPadding.Top - rootPadding.Bottom - InfoPanel.Padding.Top - InfoPanel.Padding.Bottom);
@@ -516,7 +519,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             yearHeightBudget = minYearHeight + extraHeight * (yearWeight / weightSum);
         }
 
-        var titleLayout = FitAdaptiveTextLayout(
+        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             PaintingTitleTextBlock.Text,
             rightContentWidth,
             titleHeightBudget,
@@ -525,7 +528,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             minFontSize: titleMin,
             maxFontSize: titleBase,
             weightCandidates: TitleWeightCandidates,
-            lineHeightFactor: 1.10);
+            lineHeightFactor: 1.10,
+            fontFamily: MiSansFontFamily);
         PaintingTitleTextBlock.MaxWidth = rightContentWidth;
         PaintingTitleTextBlock.Margin = new Thickness(0, 0, 0, titleBottomMargin);
         PaintingTitleTextBlock.MaxLines = titleLayout.MaxLines;
@@ -538,7 +542,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             artistInfoStack.Spacing = bottomStackSpacing;
         }
 
-        var artistLayout = FitAdaptiveTextLayout(
+        var artistLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             ArtistTextBlock.Text,
             rightContentWidth,
             artistHeightBudget,
@@ -547,14 +551,15 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             minFontSize: artistMin,
             maxFontSize: artistBase,
             weightCandidates: ArtistWeightCandidates,
-            lineHeightFactor: 1.14);
+            lineHeightFactor: 1.14,
+            fontFamily: MiSansFontFamily);
         ArtistTextBlock.MaxWidth = rightContentWidth;
         ArtistTextBlock.MaxLines = artistLayout.MaxLines;
         ArtistTextBlock.FontWeight = artistLayout.Weight;
         ArtistTextBlock.FontSize = artistLayout.FontSize;
         ArtistTextBlock.LineHeight = artistLayout.LineHeight;
 
-        var yearLayout = FitAdaptiveTextLayout(
+        var yearLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             YearTextBlock.Text,
             rightContentWidth,
             yearHeightBudget,
@@ -563,7 +568,8 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             minFontSize: yearMin,
             maxFontSize: yearBase,
             weightCandidates: SecondaryWeightCandidates,
-            lineHeightFactor: 1.08);
+            lineHeightFactor: 1.08,
+            fontFamily: MiSansFontFamily);
         YearTextBlock.MaxWidth = rightContentWidth;
         YearTextBlock.MaxLines = yearLayout.MaxLines;
         YearTextBlock.FontWeight = yearLayout.Weight;
@@ -717,7 +723,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             normalized = "Untitled";
         }
 
-        return $"‚Äú{normalized}‚Äù";
+        return $"°∞{normalized}°±";
     }
 
     private void CancelRefreshRequest()
@@ -771,222 +777,4 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
-
-    private static AdaptiveTextLayout FitAdaptiveTextLayout(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int minLines,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight[] weightCandidates,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var safeMinLines = Math.Max(1, minLines);
-        var safeMaxLines = Math.Max(safeMinLines, maxLines);
-        var linesByHeight = ResolveMaxLinesByHeight(maxHeight, minFontSize, lineHeightFactor, safeMinLines, safeMaxLines);
-
-        var candidates = weightCandidates is { Length: > 0 }
-            ? weightCandidates
-            : new[] { FontWeight.Normal };
-
-        AdaptiveTextLayout? best = null;
-        foreach (var weight in candidates)
-        {
-            for (var lineLimit = linesByHeight; lineLimit >= safeMinLines; lineLimit--)
-            {
-                var fontSize = FitFontSize(
-                    content,
-                    maxWidth,
-                    maxHeight,
-                    lineLimit,
-                    minFontSize,
-                    maxFontSize,
-                    weight,
-                    lineHeightFactor);
-                var lineHeight = fontSize * lineHeightFactor;
-                var measuredSize = MeasureTextSize(content, fontSize, weight, Math.Max(1, maxWidth), lineHeight);
-                var measuredLineCount = ResolveLineCount(measuredSize.Height, lineHeight);
-                var overflowLines = Math.Max(0, measuredLineCount - lineLimit);
-                var overflowHeight = Math.Max(0, measuredSize.Height - maxHeight);
-                var overflowScore = overflowLines * 1000d + overflowHeight;
-                var fitsCompletely = overflowLines == 0 && overflowHeight <= 0.6;
-                var candidate = new AdaptiveTextLayout(fontSize, weight, lineLimit, lineHeight, overflowScore, fitsCompletely);
-
-                if (best is null || IsBetterAdaptiveTextCandidate(candidate, best.Value))
-                {
-                    best = candidate;
-                }
-            }
-        }
-
-        if (best is not null)
-        {
-            return best.Value;
-        }
-
-        var fallbackFontSize = Math.Max(6, minFontSize);
-        return new AdaptiveTextLayout(
-            fallbackFontSize,
-            FontWeight.Normal,
-            safeMinLines,
-            fallbackFontSize * lineHeightFactor,
-            double.MaxValue,
-            fitsCompletely: false);
-    }
-
-    private static bool IsBetterAdaptiveTextCandidate(AdaptiveTextLayout candidate, AdaptiveTextLayout best)
-    {
-        if (candidate.FitsCompletely && !best.FitsCompletely)
-        {
-            return true;
-        }
-
-        if (!candidate.FitsCompletely && best.FitsCompletely)
-        {
-            return false;
-        }
-
-        if (candidate.FitsCompletely && best.FitsCompletely)
-        {
-            if (candidate.FontSize > best.FontSize + 0.12)
-            {
-                return true;
-            }
-
-            if (Math.Abs(candidate.FontSize - best.FontSize) <= 0.12 && candidate.MaxLines < best.MaxLines)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        if (candidate.OverflowScore < best.OverflowScore - 0.2)
-        {
-            return true;
-        }
-
-        if (Math.Abs(candidate.OverflowScore - best.OverflowScore) <= 0.2 &&
-            candidate.FontSize > best.FontSize + 0.12)
-        {
-            return true;
-        }
-
-        if (Math.Abs(candidate.OverflowScore - best.OverflowScore) <= 0.2 &&
-            Math.Abs(candidate.FontSize - best.FontSize) <= 0.12 &&
-            candidate.MaxLines > best.MaxLines)
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    private static int ResolveMaxLinesByHeight(
-        double maxHeight,
-        double minFontSize,
-        double lineHeightFactor,
-        int minLines,
-        int maxLines)
-    {
-        var safeMinLines = Math.Max(1, minLines);
-        var safeMaxLines = Math.Max(safeMinLines, maxLines);
-        var lineHeight = Math.Max(1, Math.Max(6, minFontSize) * lineHeightFactor);
-        var maxHeightWithTolerance = Math.Max(1, maxHeight + 0.6);
-        var linesByHeight = (int)Math.Floor(maxHeightWithTolerance / lineHeight);
-        return Math.Clamp(linesByHeight, safeMinLines, safeMaxLines);
-    }
-
-    private static int ResolveLineCount(double measuredHeight, double lineHeight)
-    {
-        return Math.Max(1, (int)Math.Ceiling(measuredHeight / Math.Max(1, lineHeight)));
-    }
-
-    private readonly struct AdaptiveTextLayout
-    {
-        public AdaptiveTextLayout(
-            double fontSize,
-            FontWeight weight,
-            int maxLines,
-            double lineHeight,
-            double overflowScore,
-            bool fitsCompletely)
-        {
-            FontSize = fontSize;
-            Weight = weight;
-            MaxLines = Math.Max(1, maxLines);
-            LineHeight = lineHeight;
-            OverflowScore = overflowScore;
-            FitsCompletely = fitsCompletely;
-        }
-
-        public double FontSize { get; }
-
-        public FontWeight Weight { get; }
-
-        public int MaxLines { get; }
-
-        public double LineHeight { get; }
-
-        public double OverflowScore { get; }
-
-        public bool FitsCompletely { get; }
-    }
-
-    private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontFamily = MiSansFontFamily,
-            FontSize = fontSize,
-            FontWeight = weight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
-    }
 }

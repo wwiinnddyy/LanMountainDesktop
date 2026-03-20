@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -73,8 +75,6 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         Resources["OfficeRecentDocumentsAccentSize"] = accentSize;
         Resources["OfficeRecentDocumentsAccentCornerRadius"] = new CornerRadius(accentSize / 2d);
 
-        Resources["OfficeRecentDocumentsHeaderFontSize"] = Math.Clamp(18 * scale, 12, 24);
-        Resources["OfficeRecentDocumentsStatusFontSize"] = Math.Clamp(14 * scale, 10, 18);
         Resources["OfficeRecentDocumentsDocumentSpacing"] = ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 12, null, 0.40d);
 
         var cardWidth = Math.Clamp(130 * scale, 96, 180);
@@ -83,8 +83,7 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         Resources["OfficeRecentDocumentsDocumentCardHeight"] = cardHeight;
         Resources["OfficeRecentDocumentsCardCornerRadius"] = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 10, 24);
         Resources["OfficeRecentDocumentsCardPadding"] = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(10 * scale, 6, 16, null, 0.50d));
-        Resources["OfficeRecentDocumentsDocumentTitleFontSize"] = Math.Clamp(12 * scale, 10, 18);
-        Resources["OfficeRecentDocumentsDocumentTimeFontSize"] = Math.Clamp(10 * scale, 8, 14);
+        UpdateTypographyResources();
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
@@ -128,16 +127,19 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
             {
                 StatusTextBlock.Text = "\u6682\u65e0\u6700\u8fd1\u6587\u6863";
                 StatusTextBlock.IsVisible = true;
+                UpdateTypographyResources();
                 return;
             }
 
             UpdateDisplay();
+            UpdateTypographyResources();
         }
         catch (Exception ex)
         {
             AppLogger.Warn("OfficeRecentDocsWidget", "Failed to load recent Office documents.", ex);
             StatusTextBlock.Text = "\u52a0\u8f7d\u5931\u8d25";
             StatusTextBlock.IsVisible = true;
+            UpdateTypographyResources();
         }
         finally
         {
@@ -163,6 +165,7 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
         }).ToList();
 
         DocumentsItemsControl.ItemsSource = displayItems;
+        UpdateTypographyResources();
     }
 
     private static string GetTimeAgo(DateTime dateTime)
@@ -214,5 +217,71 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
                 _recentDocumentsService.OpenDocument(filePath);
             }
         }
+    }
+
+    private void UpdateTypographyResources()
+    {
+        var width = Bounds.Width > 1 ? Bounds.Width : 640d;
+        var cardWidth = (double?)Resources["OfficeRecentDocumentsDocumentCardWidth"] ?? 130d;
+        var cardHeight = (double?)Resources["OfficeRecentDocumentsDocumentCardHeight"] ?? 90d;
+        var cardPadding = (Thickness?)Resources["OfficeRecentDocumentsCardPadding"] ?? new Thickness(10);
+        var rootPadding = (Thickness?)Resources["OfficeRecentDocumentsRootPadding"] ?? new Thickness(12, 10, 12, 10);
+        var contentMargin = (Thickness?)Resources["OfficeRecentDocumentsContentMargin"] ?? new Thickness(16, 14, 16, 14);
+
+        var innerWidth = Math.Max(180, width - rootPadding.Left - rootPadding.Right - contentMargin.Left - contentMargin.Right);
+        var headerWidth = Math.Max(120, innerWidth * 0.48);
+        var statusWidth = Math.Max(120, innerWidth * 0.40);
+
+        Resources["OfficeRecentDocumentsHeaderFontSize"] = ComponentTypographyLayoutService.FitFontSize(
+            HeaderTextBlock.Text,
+            headerWidth,
+            24,
+            1,
+            12,
+            24,
+            FontWeight.SemiBold,
+            1.05d);
+
+        Resources["OfficeRecentDocumentsStatusFontSize"] = ComponentTypographyLayoutService.FitFontSize(
+            StatusTextBlock.Text,
+            statusWidth,
+            22,
+            1,
+            10,
+            18,
+            FontWeight.Normal,
+            1.06d);
+
+        var documentTexts = _documents.Count == 0
+            ? new[] { "Sample Office Document" }
+            : _documents.Select(item => item.FileName).Where(text => !string.IsNullOrWhiteSpace(text)).ToArray();
+        var longestDocumentText = documentTexts.Length == 0
+            ? "Sample Office Document"
+            : documentTexts.OrderByDescending(ComponentTypographyLayoutService.CountTextDisplayUnits).First();
+        var titleWidth = Math.Max(72, cardWidth - cardPadding.Left - cardPadding.Right);
+        var titleHeight = Math.Max(28, cardHeight - cardPadding.Top - cardPadding.Bottom - 18);
+        Resources["OfficeRecentDocumentsDocumentTitleFontSize"] = ComponentTypographyLayoutService.FitFontSize(
+            longestDocumentText,
+            titleWidth,
+            titleHeight,
+            2,
+            10,
+            18,
+            FontWeight.Medium,
+            1.08d);
+
+        var timeSamples = _documents.Count == 0
+            ? new[] { "00/00" }
+            : _documents.Select(item => GetTimeAgo(item.LastModifiedTime)).ToArray();
+        var longestTimeText = timeSamples.OrderByDescending(ComponentTypographyLayoutService.CountTextDisplayUnits).First();
+        Resources["OfficeRecentDocumentsDocumentTimeFontSize"] = ComponentTypographyLayoutService.FitFontSize(
+            longestTimeText,
+            Math.Max(56, titleWidth * 0.72),
+            18,
+            1,
+            8,
+            14,
+            FontWeight.Normal,
+            1.06d);
     }
 }

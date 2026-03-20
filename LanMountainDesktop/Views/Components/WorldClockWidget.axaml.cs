@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 
@@ -101,6 +102,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private TimeZoneService? _timeZoneService;
     private string _languageCode = "zh-CN";
     private double _currentCellSize = BaseCellSize;
+    private double _layoutScale = 1d;
     private DateTime _nextLanguageProbeUtc = DateTime.MinValue;
     private string _secondHandMode = ClockSecondHandMode.Tick;
     private bool _isNightVisual = true;
@@ -163,14 +165,16 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     {
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
+        var chromeScale = ComponentChromeCornerRadiusHelper.ResolveScale();
+        _layoutScale = Math.Clamp(scale * (0.9d + (chromeScale * 0.1d)), 0.58d, 2.0d);
 
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        var horizontalPadding = Math.Clamp(10 * scale, 4, 26);
-        var verticalPadding = Math.Clamp(8 * scale, 3, 22);
+        var horizontalPadding = Math.Clamp(10 * _layoutScale, 4, 26);
+        var verticalPadding = Math.Clamp(8 * _layoutScale, 3, 22);
         RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(horizontalPadding, verticalPadding, null, 0.55d);
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * scale, 10, 46);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * _layoutScale, 10, 46);
 
         var usableWidth = Math.Max(48, totalWidth - horizontalPadding * 2);
         var usableHeight = Math.Max(28, totalHeight - verticalPadding * 2);
@@ -179,11 +183,8 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         ClockHostGrid.ColumnSpacing = columnSpacing;
         var widthPerClock = Math.Max(18, (usableWidth - columnSpacing * 3) / WorldClockTimeZoneCatalog.ClockCount);
 
-        var secondaryFont = Math.Clamp(10.5 * scale * (widthPerClock / 46d), 7, 18);
-        var cityFont = Math.Clamp(secondaryFont * 1.42, 9, 24);
-        var textSpacing = Math.Clamp(2.8 * scale, 1, 7);
-
-        var estimatedTextHeight = cityFont * 1.2 + secondaryFont * 2.35 + textSpacing * 3;
+        var textSpacing = Math.Clamp(2.8 * _layoutScale, 1, 7);
+        var estimatedTextHeight = Math.Clamp(78 * _layoutScale, 42, 128);
         var dialSize = Math.Clamp(Math.Min(widthPerClock, usableHeight - estimatedTextHeight), 18, 108);
         if (dialSize < 18)
         {
@@ -197,15 +198,13 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
             entry.DialBorder.Height = dialSize;
             entry.DialBorder.CornerRadius = new CornerRadius(dialSize / 2d);
 
-            entry.CityTextBlock.FontSize = cityFont;
-            entry.DayTextBlock.FontSize = secondaryFont;
-            entry.OffsetTextBlock.FontSize = secondaryFont;
-
             var maxTextWidth = Math.Max(16, widthPerClock + 10);
             entry.CityTextBlock.MaxWidth = maxTextWidth;
             entry.DayTextBlock.MaxWidth = maxTextWidth;
             entry.OffsetTextBlock.MaxWidth = maxTextWidth;
         }
+
+        RefreshDialArtwork(_isNightVisual);
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -476,6 +475,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private static void BuildDialTicks(ClockEntryVisual entry, bool isNight)
     {
         entry.TickCanvas.Children.Clear();
+        var scale = Math.Clamp(entry.Host.Spacing / 3d, 0.78d, 1.22d);
         var majorColor = isNight ? "#E3E7F2" : "#2D3341";
         var minorColor = isNight ? "#9EA7B8" : "#9AA4B3";
 
@@ -483,8 +483,8 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         {
             var isMajor = i % 5 == 0;
             var angle = (i * 6 - 90) * Math.PI / 180d;
-            var outerRadius = DialCenter - 6.5;
-            var innerRadius = outerRadius - (isMajor ? 9 : 4.5);
+            var outerRadius = DialCenter - (6.5 * scale);
+            var innerRadius = outerRadius - (isMajor ? 9 * scale : 4.5 * scale);
 
             var x1 = DialCenter + Math.Cos(angle) * innerRadius;
             var y1 = DialCenter + Math.Sin(angle) * innerRadius;
@@ -496,7 +496,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
                 StartPoint = new Point(x1, y1),
                 EndPoint = new Point(x2, y2),
                 Stroke = CreateBrush(isMajor ? majorColor : minorColor),
-                StrokeThickness = isMajor ? 1.9 : 0.8,
+                StrokeThickness = (isMajor ? 1.9 : 0.8) * scale,
                 StrokeLineCap = PenLineCap.Round
             });
         }
@@ -505,8 +505,9 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private static void BuildDialNumbers(ClockEntryVisual entry, bool isNight)
     {
         entry.NumberCanvas.Children.Clear();
+        var scale = Math.Clamp(entry.Host.Spacing / 3d, 0.78d, 1.22d);
         var numberColor = isNight ? "#F2F5FB" : "#1B202A";
-        var radius = 36;
+        var radius = 36 * scale;
         for (var number = 1; number <= 12; number++)
         {
             var angle = (number * 30 - 90) * Math.PI / 180d;
@@ -514,22 +515,37 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
             var y = DialCenter + Math.Sin(angle) * radius;
             var text = number.ToString(CultureInfo.InvariantCulture);
             var isDoubleDigit = number >= 10;
-            var width = isDoubleDigit ? 14 : 10;
-            var height = 12;
+            var glyphBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+                isDoubleDigit ? 16 * scale : 12 * scale,
+                12 * scale,
+                preferredSizeScale: 0.98d,
+                minSize: 8,
+                maxSize: 16,
+                insetScale: 0d);
+            var fontSize = ComponentTypographyLayoutService.FitFontSize(
+                text,
+                glyphBox.Width,
+                glyphBox.Height,
+                maxLines: 1,
+                minFontSize: 7 * scale,
+                maxFontSize: 11 * scale,
+                weight: FontWeight.SemiBold,
+                lineHeightFactor: 1d,
+                fontFamily: MiSansFontFamily);
             var numberText = new TextBlock
             {
                 Text = text,
-                Width = width,
-                Height = height,
+                Width = glyphBox.Width,
+                Height = glyphBox.Height,
                 FontFamily = MiSansFontFamily,
-                FontSize = 9,
+                FontSize = fontSize,
                 FontWeight = FontWeight.SemiBold,
                 Foreground = CreateBrush(numberColor),
                 TextAlignment = TextAlignment.Center
             };
 
-            Canvas.SetLeft(numberText, x - width / 2d);
-            Canvas.SetTop(numberText, y - height / 2d);
+            Canvas.SetLeft(numberText, x - glyphBox.Width / 2d);
+            Canvas.SetTop(numberText, y - glyphBox.Height / 2d);
             entry.NumberCanvas.Children.Add(numberText);
         }
     }
@@ -584,16 +600,67 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
             var minuteAngle = minuteValue * 6d;
             var secondAngle = secondValue * 6d;
 
-            SetHandGeometry(entry.HourHand, hourAngle, forwardLength: 24, backwardLength: 4.8);
-            SetHandGeometry(entry.MinuteHand, minuteAngle, forwardLength: 33, backwardLength: 6);
-            SetHandGeometry(entry.SecondHand, secondAngle, forwardLength: 37, backwardLength: 8.5);
+            SetHandGeometry(entry.HourHand, hourAngle, forwardLength: 24 * _layoutScale, backwardLength: 4.8 * _layoutScale);
+            SetHandGeometry(entry.MinuteHand, minuteAngle, forwardLength: 33 * _layoutScale, backwardLength: 6 * _layoutScale);
+            SetHandGeometry(entry.SecondHand, secondAngle, forwardLength: 37 * _layoutScale, backwardLength: 8.5 * _layoutScale);
 
             entry.CityTextBlock.Text = ResolveCityName(zone);
             entry.DayTextBlock.Text = ResolveRelativeDayLabel((zonedNow.Date - baseNow.Date).Days);
 
             var offsetDelta = zone.GetUtcOffset(utcNow) - baseOffset;
             entry.OffsetTextBlock.Text = ResolveOffsetLabel(offsetDelta);
+            ApplyEntryTypography(entry);
         }
+    }
+
+    private void ApplyEntryTypography(ClockEntryVisual entry)
+    {
+        var hostWidth = entry.Host.Bounds.Width > 1 ? entry.Host.Bounds.Width : Math.Max(18, _currentCellSize * 0.74);
+        var hostHeight = entry.Host.Bounds.Height > 1 ? entry.Host.Bounds.Height : Math.Max(18, _currentCellSize * 1.7);
+        var textWidth = Math.Max(16, hostWidth);
+        var cityHeight = Math.Clamp(hostHeight * 0.18, 12, 28);
+        var secondaryHeight = Math.Clamp(hostHeight * 0.14, 10, 22);
+
+        var cityLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            entry.CityTextBlock.Text,
+            textWidth,
+            cityHeight,
+            minLines: 1,
+            maxLines: 1,
+            minFontSize: 9,
+            maxFontSize: 24,
+            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Medium },
+            lineHeightFactor: 1d,
+            fontFamily: MiSansFontFamily);
+        var dayLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            entry.DayTextBlock.Text,
+            textWidth,
+            secondaryHeight,
+            minLines: 1,
+            maxLines: 1,
+            minFontSize: 8,
+            maxFontSize: 18,
+            weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
+            lineHeightFactor: 1d,
+            fontFamily: MiSansFontFamily);
+        var offsetLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            entry.OffsetTextBlock.Text,
+            textWidth,
+            secondaryHeight,
+            minLines: 1,
+            maxLines: 1,
+            minFontSize: 8,
+            maxFontSize: 18,
+            weightCandidates: new[] { FontWeight.Medium, FontWeight.Normal },
+            lineHeightFactor: 1d,
+            fontFamily: MiSansFontFamily);
+
+        entry.CityTextBlock.FontSize = cityLayout.FontSize;
+        entry.CityTextBlock.FontWeight = cityLayout.Weight;
+        entry.DayTextBlock.FontSize = dayLayout.FontSize;
+        entry.DayTextBlock.FontWeight = dayLayout.Weight;
+        entry.OffsetTextBlock.FontSize = offsetLayout.FontSize;
+        entry.OffsetTextBlock.FontWeight = offsetLayout.Weight;
     }
 
     private static void ApplyDialTheme(ClockEntryVisual entry, bool isNight)
@@ -613,6 +680,21 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
 
         BuildDialTicks(entry, isNight);
         BuildDialNumbers(entry, isNight);
+    }
+
+    private void RefreshDialArtwork(bool isNight)
+    {
+        for (var index = 0; index < _entryVisuals.Length; index++)
+        {
+            var entry = _entryVisuals[index];
+            if (entry is null)
+            {
+                continue;
+            }
+
+            BuildDialTicks(entry, isNight);
+            BuildDialNumbers(entry, isNight);
+        }
     }
 
     private void ProbeLanguageCodeIfNeeded(DateTime utcNow)

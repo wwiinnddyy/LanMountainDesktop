@@ -16,6 +16,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -599,17 +600,40 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         News2TitleTextBlock.MaxWidth = availableTextWidth;
 
         var newsFont = Math.Clamp(21 * scale, 10.5, 28);
-        News1TitleTextBlock.FontSize = newsFont;
-        News2TitleTextBlock.FontSize = newsFont;
-        var mainNewsLineHeight = newsFont * 1.14;
-        News1TitleTextBlock.LineHeight = mainNewsLineHeight;
-        News2TitleTextBlock.LineHeight = mainNewsLineHeight;
-        var mainNewsMinHeight = mainNewsLineHeight * 2;
-        News1TitleTextBlock.MinHeight = mainNewsMinHeight;
-        News2TitleTextBlock.MinHeight = mainNewsMinHeight;
+        var newsHeightBudget = Math.Max(28, imageHeight + columnGap * 2d);
+        var news1Layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            News1TitleTextBlock.Text,
+            availableTextWidth,
+            newsHeightBudget,
+            minLines: 1,
+            maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(News1TitleTextBlock.Text) > 30 ? 2 : 1,
+            minFontSize: Math.Clamp(newsFont * 0.72, 10.5, 18),
+            maxFontSize: newsFont,
+            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
+            lineHeightFactor: 1.14d,
+            fontFamily: MiSansFontFamily);
+        var news2Layout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            News2TitleTextBlock.Text,
+            availableTextWidth,
+            newsHeightBudget,
+            minLines: 1,
+            maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(News2TitleTextBlock.Text) > 30 ? 2 : 1,
+            minFontSize: Math.Clamp(newsFont * 0.72, 10.5, 18),
+            maxFontSize: newsFont,
+            weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
+            lineHeightFactor: 1.14d,
+            fontFamily: MiSansFontFamily);
+        News1TitleTextBlock.FontSize = news1Layout.FontSize;
+        News1TitleTextBlock.LineHeight = news1Layout.LineHeight;
+        News1TitleTextBlock.MinHeight = news1Layout.LineHeight * news1Layout.MaxLines;
+        News1TitleTextBlock.MaxLines = news1Layout.MaxLines;
+        News1TitleTextBlock.FontWeight = news1Layout.Weight;
+        News2TitleTextBlock.FontSize = news2Layout.FontSize;
+        News2TitleTextBlock.LineHeight = news2Layout.LineHeight;
+        News2TitleTextBlock.MinHeight = news2Layout.LineHeight * news2Layout.MaxLines;
+        News2TitleTextBlock.MaxLines = news2Layout.MaxLines;
+        News2TitleTextBlock.FontWeight = news2Layout.Weight;
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 9, 24);
-        News1TitleTextBlock.MaxLines = 2;
-        News2TitleTextBlock.MaxLines = 2;
 
         foreach (var row in _extraNewsRows)
         {
@@ -623,11 +647,23 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             row.ImageHost.Height = imageHeight;
             row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
 
+            var rowTitleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+                row.TitleTextBlock.Text,
+                availableTextWidth,
+                Math.Max(32, imageHeight + columnGap),
+                minLines: 1,
+                maxLines: ComponentTypographyLayoutService.CountTextDisplayUnits(row.TitleTextBlock.Text) > 28 ? 2 : 1,
+                minFontSize: Math.Clamp(19 * scale, 10, 16),
+                maxFontSize: Math.Clamp(19 * scale, 10, 25),
+                weightCandidates: new[] { FontWeight.SemiBold, FontWeight.Bold },
+                lineHeightFactor: 1.12d,
+                fontFamily: MiSansFontFamily);
             row.TitleTextBlock.MaxWidth = availableTextWidth;
-            row.TitleTextBlock.FontSize = Math.Clamp(19 * scale, 10, 25);
-            row.TitleTextBlock.LineHeight = row.TitleTextBlock.FontSize * 1.12;
-            row.TitleTextBlock.MinHeight = row.TitleTextBlock.LineHeight * 2;
-            row.TitleTextBlock.MaxLines = 2;
+            row.TitleTextBlock.FontSize = rowTitleLayout.FontSize;
+            row.TitleTextBlock.LineHeight = rowTitleLayout.LineHeight;
+            row.TitleTextBlock.MinHeight = rowTitleLayout.LineHeight * rowTitleLayout.MaxLines;
+            row.TitleTextBlock.MaxLines = rowTitleLayout.MaxLines;
+            row.TitleTextBlock.FontWeight = rowTitleLayout.Weight;
         }
 
         ExtraNewsItemsPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
