@@ -33,7 +33,7 @@ public sealed class PluginDesktopComponentContext
         ComponentId = componentId.Trim();
         PlacementId = string.IsNullOrWhiteSpace(placementId) ? null : placementId.Trim();
         CellSize = Math.Max(1, cellSize);
-        GlobalCornerRadiusScale = Math.Max(0.1d, globalCornerRadiusScale);
+        GlobalCornerRadiusScale = Math.Max(0d, globalCornerRadiusScale);
         CornerRadiusTokens = cornerRadiusTokens;
         PluginSettings = pluginSettings;
     }

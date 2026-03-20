@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -12,10 +13,12 @@ internal static class ComponentChromeCornerRadiusHelper
     {
         if (chromeContext is not null)
         {
-            return Math.Max(0.1d, chromeContext.GlobalCornerRadiusScale);
+            return Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale);
         }
 
-        return Math.Max(0.1d, HostAppearanceThemeProvider.GetOrCreate().GetCurrent().GlobalCornerRadiusScale);
+        return Math.Max(
+            GlobalAppearanceSettings.MinimumCornerRadiusScale,
+            HostAppearanceThemeProvider.GetOrCreate().GetCurrent().GlobalCornerRadiusScale);
     }
 
     public static CornerRadius Scale(double baseRadius, double min, double max, ComponentChromeContext? chromeContext = null)

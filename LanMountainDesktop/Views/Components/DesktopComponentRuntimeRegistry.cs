@@ -9,6 +9,7 @@ using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -36,7 +37,10 @@ public sealed class DesktopComponentRuntimeRegistration
             componentId,
             displayNameLocalizationKey,
             _ => controlFactory(),
-            cornerRadiusResolver is null ? null : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
+            cornerRadiusResolver is null
+                ? null
+                : chromeContext => cornerRadiusResolver(chromeContext.CellSize) *
+                    Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale))
     {
     }
 
@@ -49,7 +53,10 @@ public sealed class DesktopComponentRuntimeRegistration
             componentId,
             displayNameLocalizationKey,
             controlFactory,
-            cornerRadiusResolver is null ? null : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
+            cornerRadiusResolver is null
+                ? null
+                : chromeContext => cornerRadiusResolver(chromeContext.CellSize) *
+                    Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale))
     {
     }
 
@@ -84,7 +91,7 @@ public sealed class DesktopComponentRuntimeDescriptor
     private static readonly Func<ComponentChromeContext, double> DefaultCornerRadiusResolver =
         chromeContext =>
         {
-            var scale = Math.Max(0.1d, chromeContext.GlobalCornerRadiusScale);
+            var scale = Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale);
             var baseRadius = Math.Clamp(chromeContext.CellSize * 0.22, 8, 18);
             return Math.Clamp(baseRadius * scale, 8 * scale, 18 * scale);
         };
@@ -492,8 +499,9 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopOfficeRecentDocuments,
                     "component.office_recent_documents",
-                    () => new OfficeRecentDocumentsWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.50, 10, 24)),
+                    _ => new OfficeRecentDocumentsWidget(),
+                    chromeContext => Math.Clamp(chromeContext.CellSize * 0.50, 10, 24) *
+                        Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale)),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopRemovableStorage,
                     "component.removable_storage",

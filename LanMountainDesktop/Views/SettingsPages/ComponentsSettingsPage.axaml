@@ -83,13 +83,13 @@
                         <TextBlock Text="{Binding GlobalCornerRadiusLabel}"
                                    VerticalAlignment="Center" />
                         <Slider Grid.Column="1"
-                                Minimum="0.7"
-                                Maximum="1.4"
-                                IsSnapToTickEnabled="True"
-                                TickFrequency="0.05"
+                                Minimum="{Binding GlobalCornerRadiusMinimum}"
+                                Maximum="{Binding GlobalCornerRadiusMaximum}"
+                                SmallChange="0.01"
+                                LargeChange="0.1"
                                 Value="{Binding GlobalCornerRadiusScale}" />
                         <TextBlock Grid.Column="2"
-                                   Width="48"
+                                   Width="56"
                                    Text="{Binding GlobalCornerRadiusScale, StringFormat={}{0:F2}x}"
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Right" />

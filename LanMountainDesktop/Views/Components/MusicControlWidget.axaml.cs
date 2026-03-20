@@ -63,8 +63,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        var rootRadius = Math.Clamp(30 * scale, 16, 44);
-        var rootCornerRadius = new CornerRadius(rootRadius);
+        var rootCornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 16, 44);
 
         RootBorder.CornerRadius = rootCornerRadius;
         ContentPaddingBorder.Padding = new Thickness(
@@ -85,7 +84,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         CoverBorder.Width = Math.Clamp(56 * scale, 38, 86);
         CoverBorder.Height = Math.Clamp(56 * scale, 38, 86);
-        CoverBorder.CornerRadius = new CornerRadius(Math.Clamp(12 * scale, 8, 16));
+        CoverBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(12 * scale, 8, 16);
 
         TitleTextBlock.FontSize = Math.Clamp(20 * scale, 12, 28);
         ArtistTextBlock.FontSize = Math.Clamp(14 * scale, 9, 18);

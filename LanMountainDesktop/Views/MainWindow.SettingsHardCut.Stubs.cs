@@ -516,6 +516,7 @@ public partial class MainWindow
             SystemMaterialMode = latestThemeState.SystemMaterialMode,
             SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
             UseSystemChrome = latestThemeState.UseSystemChrome,
+            GlobalCornerRadiusScale = latestThemeState.GlobalCornerRadiusScale,
             WallpaperPath = latestWallpaperState.WallpaperPath,
             WallpaperType = latestWallpaperState.Type,
             WallpaperColor = string.Equals(latestWallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase)

@@ -1010,6 +1010,10 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
 
+    public double GlobalCornerRadiusMinimum => GlobalAppearanceSettings.MinimumCornerRadiusScale;
+
+    public double GlobalCornerRadiusMaximum => GlobalAppearanceSettings.MaximumCornerRadiusScale;
+
     [ObservableProperty]
     private string _componentRadiusHeader = string.Empty;
 
@@ -1129,7 +1133,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SpacingPresetLabel = L("settings.components.spacing_label", "Component Spacing");
         ComponentRadiusHeader = L("settings.components.corner_radius.header", "Corner Design");
         GlobalCornerRadiusLabel = L("settings.components.corner_radius.label", "Component Corner Radius");
-        GlobalCornerRadiusDescription = L("settings.components.corner_radius.description", "Adjust the shared corner radius used by component containers, and expand the internal safe area with it.");
+        GlobalCornerRadiusDescription = L(
+            "settings.components.corner_radius.description",
+            "Adjust the shared corner radius from a square edge to a capsule-like shape, and expand the internal safe area with it.");
     }
 
     private string L(string key, string fallback)

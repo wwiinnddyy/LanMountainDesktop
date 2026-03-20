@@ -36,8 +36,7 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
             return;
         }
 
-        var scale = cellSize / 100.0;
-        RootBorder.CornerRadius = new Avalonia.CornerRadius(Math.Max(8, 34 * scale));
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(cellSize * 0.50, 10, 24);
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)

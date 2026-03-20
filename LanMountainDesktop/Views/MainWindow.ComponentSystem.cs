@@ -17,6 +17,7 @@ using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 using PathShape = Avalonia.Controls.Shapes.Path;
@@ -1532,7 +1533,7 @@ public partial class MainWindow
                 appearanceSnapshot.CornerRadiusTokens));
         }
 
-        var scale = Math.Max(0.1d, appearanceSnapshot.GlobalCornerRadiusScale);
+        var scale = Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, appearanceSnapshot.GlobalCornerRadiusScale);
         return Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18) * scale;
     }
 

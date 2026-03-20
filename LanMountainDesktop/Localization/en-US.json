@@ -313,7 +313,7 @@
     "settings.components.spacing_relaxed":  "Relaxed",
     "settings.components.corner_radius.header":  "Corner Design",
     "settings.components.corner_radius.label":  "Component Corner Radius",
-    "settings.components.corner_radius.description":  "Adjust the shared corner radius used by component containers, and expand the internal safe area with it.",
+    "settings.components.corner_radius.description":  "Adjust the shared corner radius from a square edge to a capsule-like shape, and expand the internal safe area with it.",
     "settings.update.title":  "Update",
     "settings.update.current_version_label":  "Current Version",
     "settings.update.latest_version_label":  "Latest Release",

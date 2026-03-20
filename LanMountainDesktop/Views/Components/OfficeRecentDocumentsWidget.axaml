@@ -10,7 +10,7 @@
              x:Class="LanMountainDesktop.Views.Components.OfficeRecentDocumentsWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="34"
+            CornerRadius="{DynamicResource DesignCornerRadiusIsland}"
             Background="#2D5A8E"
             ClipToBounds="True"
             BorderThickness="0"
@@ -39,7 +39,7 @@
                             Grid.Column="1"
                             Width="28"
                             Height="28"
-                            CornerRadius="14"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="Transparent"
                             BorderBrush="Transparent"
                             BorderThickness="0"
@@ -67,7 +67,7 @@
                                 <Border x:Name="DocumentCard"
                                         Width="130"
                                         Height="90"
-                                        CornerRadius="10"
+                                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                                         Background="#3AFFFFFF"
                                         Padding="10"
                                         Cursor="Hand"

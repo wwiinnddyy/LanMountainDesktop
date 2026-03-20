@@ -312,7 +312,7 @@
     "settings.components.spacing_relaxed":  "宽松",
     "settings.components.corner_radius.header":  "圆角设计",
     "settings.components.corner_radius.label":  "组件圆角",
-    "settings.components.corner_radius.description":  "统一调整组件容器圆角，并随圆角增大同步扩展内部安全区。",
+    "settings.components.corner_radius.description":  "将组件容器圆角从直角连续调到接近胶囊的形态，并随圆角增大同步扩展内部安全区。",
     "settings.update.title":  "更新",
     "settings.update.current_version_label":  "当前版本",
     "settings.update.latest_version_label":  "最新发布",
