@@ -603,20 +603,12 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * softScale, 14, 44);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
-            10 * softScale,
-            8 * softScale,
-            null,
-            0.45d);
         CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * softScale, 14, 44);
-        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+        CardBorder.Padding = new Thickness(
             Math.Clamp(12 * softScale, 8, 18),
             Math.Clamp(12 * softScale, 8, 18),
-            null,
-            0.55d);
-
-        var rootPadding = RootBorder.Padding;
-        var cardPadding = CardBorder.Padding;
+            Math.Clamp(12 * softScale, 8, 18),
+            Math.Clamp(12 * softScale, 8, 18));
 
         var rowSpacing = Math.Clamp(6 * softScale, 3, 10);
         ContentGrid.RowSpacing = rowSpacing;
@@ -633,7 +625,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         RefreshButton.CornerRadius = new CornerRadius(refreshSize / 2d);
         RefreshGlyphIcon.FontSize = Math.Clamp(16 * softScale, 10, 20);
 
-        var innerWidth = Math.Max(100, totalWidth - rootPadding.Left - rootPadding.Right - cardPadding.Left - cardPadding.Right);
+        var innerWidth = Math.Max(100, totalWidth - CardBorder.Padding.Left - CardBorder.Padding.Right);
         var rowPaddingHorizontal = Math.Clamp(8 * softScale, 5, 14);
         var rowPaddingVertical = Math.Clamp(6 * softScale, 3, 10);
         var avatarSize = Math.Clamp(30 * softScale, 20, 40);
@@ -648,10 +640,8 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
         var availablePostsHeight = Math.Max(
             0d,
             totalHeight -
-            rootPadding.Top -
-            rootPadding.Bottom -
-            cardPadding.Top -
-            cardPadding.Bottom -
+            CardBorder.Padding.Top -
+            CardBorder.Padding.Bottom -
             estimatedHeaderHeight -
             rowSpacing);
         var rowFootprint = Math.Max(1d, estimatedRowHeight + rowSpacing);

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using LanMountainDesktop.ComponentSystem;
@@ -37,54 +36,8 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
             return;
         }
 
-        var normalizedCellSize = Math.Max(1, cellSize);
-        var scale = Math.Clamp(normalizedCellSize / 48d, 0.72d, 1.65d);
-        var rootCornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
-
-        RootBorder.CornerRadius = rootCornerRadius;
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
-            10 * scale,
-            8 * scale,
-            null,
-            0.45d);
-
-        Resources["OfficeRecentDocumentsRootCornerRadius"] = rootCornerRadius;
-        Resources["OfficeRecentDocumentsRootPadding"] = RootBorder.Padding;
-
-        var contentMargin = ComponentChromeCornerRadiusHelper.SafeThickness(
-            16 * scale,
-            14 * scale,
-            null,
-            0.55d);
-        Resources["OfficeRecentDocumentsContentMargin"] = contentMargin;
-        Resources["OfficeRecentDocumentsScrollMargin"] = new Thickness(
-            0,
-            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8, null, 0.40d),
-            0,
-            0);
-        Resources["OfficeRecentDocumentsContentRowSpacing"] = ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 12, null, 0.40d);
-
-        var refreshButtonSize = Math.Clamp(28 * scale, 20, 40);
-        Resources["OfficeRecentDocumentsRefreshButtonSize"] = refreshButtonSize;
-        Resources["OfficeRecentDocumentsRefreshCornerRadius"] = new CornerRadius(refreshButtonSize / 2d);
-        Resources["OfficeRecentDocumentsRefreshIconFontSize"] = Math.Clamp(14 * scale, 10, 20);
-
-        var accentSize = Math.Clamp(140 * scale, 88, 188);
-        Resources["OfficeRecentDocumentsAccentSize"] = accentSize;
-        Resources["OfficeRecentDocumentsAccentCornerRadius"] = new CornerRadius(accentSize / 2d);
-
-        Resources["OfficeRecentDocumentsHeaderFontSize"] = Math.Clamp(18 * scale, 12, 24);
-        Resources["OfficeRecentDocumentsStatusFontSize"] = Math.Clamp(14 * scale, 10, 18);
-        Resources["OfficeRecentDocumentsDocumentSpacing"] = ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 12, null, 0.40d);
-
-        var cardWidth = Math.Clamp(130 * scale, 96, 180);
-        var cardHeight = Math.Clamp(90 * scale, 68, 124);
-        Resources["OfficeRecentDocumentsDocumentCardWidth"] = cardWidth;
-        Resources["OfficeRecentDocumentsDocumentCardHeight"] = cardHeight;
-        Resources["OfficeRecentDocumentsCardCornerRadius"] = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 10, 24);
-        Resources["OfficeRecentDocumentsCardPadding"] = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(10 * scale, 6, 16, null, 0.50d));
-        Resources["OfficeRecentDocumentsDocumentTitleFontSize"] = Math.Clamp(12 * scale, 10, 18);
-        Resources["OfficeRecentDocumentsDocumentTimeFontSize"] = Math.Clamp(10 * scale, 8, 14);
+        var scale = cellSize / 100.0;
+        RootBorder.CornerRadius = new Avalonia.CornerRadius(Math.Max(8, 34 * scale));
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)

@@ -241,9 +241,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             Background = new SolidColorBrush(rowBackground),
             BorderBrush = new SolidColorBrush(rowBorderColor),
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(
-                ComponentChromeCornerRadiusHelper.SafeValue(8, 6, 12),
-                ComponentChromeCornerRadiusHelper.SafeValue(6, 4, 10))
+            Padding = new Thickness(Math.Clamp(8, 6, 12), Math.Clamp(6, 4, 10))
         };
 
         var panelComposite = ToOpaqueAgainst(panelColor, DarkSubstrate);
@@ -357,7 +355,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             Width = _isUltraCompactMode ? 26 : 34,
             Height = Math.Clamp(26 * (_isCompactMode ? 0.90 : 1.0), 24, 30),
             Padding = new Thickness(0),
-            CornerRadius = ComponentChromeCornerRadiusHelper.Scale(10, 8, 12),
+            CornerRadius = new CornerRadius(10),
             Background = new SolidColorBrush(buttonBackground),
             BorderBrush = Brushes.Transparent,
             BorderThickness = new Thickness(0),
@@ -592,8 +590,8 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 12, 36);
         RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 7, 22),
-            ComponentChromeCornerRadiusHelper.SafeValue(9 * scale, 5, 16));
+            Math.Clamp(12 * scale, 7, 22),
+            Math.Clamp(9 * scale, 5, 16));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 6)
@@ -606,12 +604,12 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
             : Math.Clamp(6 * scale, 3, 8);
 
         DialogOverlayBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 8, 20),
-            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale, 8, 18));
+            Math.Clamp(12 * scale, 8, 20),
+            Math.Clamp(10 * scale, 8, 18));
         DialogCardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(12 * scale, 10, 18);
         DialogCardBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 9, 20),
-            ComponentChromeCornerRadiusHelper.SafeValue(11 * scale, 8, 18));
+            Math.Clamp(12 * scale, 9, 20),
+            Math.Clamp(11 * scale, 8, 18));
         DialogTitleTextBlock.FontSize = Math.Clamp(14 * scale, 11, 20);
         DialogMessageTextBlock.FontSize = Math.Clamp(12 * scale, 10, 17);
         DialogRenameTextBox.FontSize = Math.Clamp(11.5 * scale, 10, 16);

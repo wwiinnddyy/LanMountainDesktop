@@ -257,8 +257,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.46, 12, 34);
         RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale * compactMultiplier, 6, 18),
-            ComponentChromeCornerRadiusHelper.SafeValue(9 * scale * compactMultiplier, 5, 16));
+            Math.Clamp(12 * scale * compactMultiplier, 6, 18),
+            Math.Clamp(9 * scale * compactMultiplier, 5, 16));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(3 * scale, 2, 5)
@@ -297,8 +297,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(8 * scale, 4, 12));
 
         var cardPadding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale * compactMultiplier, 5, 14),
-            ComponentChromeCornerRadiusHelper.SafeValue(6 * scale * compactMultiplier, 3, 9));
+            Math.Clamp(10 * scale * compactMultiplier, 5, 14),
+            Math.Clamp(6 * scale * compactMultiplier, 3, 9));
         CountCardBorder.Padding = cardPadding;
         DurationCardBorder.Padding = cardPadding;
 

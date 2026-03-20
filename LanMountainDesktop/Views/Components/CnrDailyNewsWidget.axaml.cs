@@ -546,24 +546,14 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
-            10 * scale,
-            8 * scale,
-            null,
-            0.45d);
+        RootBorder.Padding = new Thickness(0);
 
         CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
-        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+        CardBorder.Padding = new Thickness(
             Math.Clamp(16 * scale, 8, 24),
             Math.Clamp(14 * scale, 7, 22),
-            null,
-            0.55d);
-
-        var rootPadding = RootBorder.Padding;
-        var cardPadding = CardBorder.Padding;
-        var contentWidth = Math.Max(
-            150,
-            totalWidth - rootPadding.Left - rootPadding.Right - cardPadding.Left - cardPadding.Right);
+            Math.Clamp(16 * scale, 8, 24),
+            Math.Clamp(14 * scale, 7, 22));
 
         var headlineFont = Math.Clamp(24 * scale, 12, 34);
         BrandPrimaryTextBlock.FontSize = headlineFont;
@@ -577,7 +567,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         RefreshGlyphIcon.FontSize = Math.Clamp(19 * scale, 11, 24);
         RefreshLabelTextBlock.FontSize = Math.Clamp(22 * scale, 11, 29);
 
-        var imageWidth = Math.Clamp(contentWidth * 0.20, 60, 170);
+        var imageWidth = Math.Clamp(totalWidth * 0.20, 60, 170);
         var imageHeight = Math.Clamp(imageWidth * 0.56, 38, 94);
         News1ImageHost.Width = imageWidth;
         News1ImageHost.Height = imageHeight;
@@ -594,7 +584,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
         var availableTextWidth = Math.Max(
             84,
-            contentWidth - imageWidth - columnGap - Math.Clamp(20 * scale, 10, 32));
+            totalWidth - imageWidth - columnGap - Math.Clamp(20 * scale, 10, 32));
         News1TitleTextBlock.MaxWidth = availableTextWidth;
         News2TitleTextBlock.MaxWidth = availableTextWidth;
 

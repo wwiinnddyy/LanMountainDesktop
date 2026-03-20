@@ -93,25 +93,25 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
-            20 * scale,
-            16 * scale,
-            null,
-            0.55d);
+        RootBorder.Padding = new Thickness(
+            Math.Clamp(20 * scale, 10, 34),
+            Math.Clamp(16 * scale, 8, 28),
+            Math.Clamp(20 * scale, 10, 34),
+            Math.Clamp(14 * scale, 7, 24));
 
         QuoteMarkTextBlock.FontSize = Math.Clamp(80 * scale, 32, 120);
         QuoteMarkTextBlock.LineHeight = Math.Clamp(68 * scale, 26, 100);
         QuoteMarkTextBlock.Margin = new Thickness(Math.Clamp(1 * scale, 0, 3), 0, 0, 0);
 
         PoetryContentTextBlock.Margin = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 16),
-            ComponentChromeCornerRadiusHelper.SafeValue(2 * scale, 0, 8),
+            Math.Clamp(8 * scale, 4, 16),
+            Math.Clamp(2 * scale, 0, 8),
             0,
             0);
 
         AuthorAccent.Width = Math.Clamp(6 * scale, 3.2, 9.5);
         AuthorAccent.Height = Math.Clamp(24 * scale, 12, 34);
-        AuthorAccent.Margin = new Thickness(0, 0, ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 13), 0);
+        AuthorAccent.Margin = new Thickness(0, 0, Math.Clamp(8 * scale, 4, 13), 0);
         AuthorAccent.CornerRadius = new CornerRadius(Math.Clamp(3 * scale, 1.5, 4.5));
 
         StatusTextBlock.FontSize = Math.Clamp(17 * scale, 9, 26);
@@ -328,13 +328,15 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
         var scale = ResolveScale();
-        var rootPadding = isNightMode
-            ? ComponentChromeCornerRadiusHelper.SafeThickness(20 * scale, 15 * scale, null, 0.55d)
-            : ComponentChromeCornerRadiusHelper.SafeThickness(20 * scale, 14 * scale, null, 0.55d);
 
         if (isNightMode)
         {
             RootBorder.Background = CreateBrush("#C5070D");
+            RootBorder.Padding = new Thickness(
+                Math.Clamp(20 * scale, 10, 34),
+                Math.Clamp(15 * scale, 7, 24),
+                Math.Clamp(20 * scale, 10, 34),
+                Math.Clamp(14 * scale, 7, 24));
 
             QuoteMarkTextBlock.IsVisible = true;
             QuoteMarkTextBlock.Foreground = CreateBrush("#4AF4C5A6");
@@ -358,6 +360,11 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         else
         {
             RootBorder.Background = CreateBrush("#F2F2F3");
+            RootBorder.Padding = new Thickness(
+                Math.Clamp(20 * scale, 10, 34),
+                Math.Clamp(14 * scale, 6, 24),
+                Math.Clamp(20 * scale, 10, 34),
+                Math.Clamp(14 * scale, 7, 24));
 
             QuoteMarkTextBlock.IsVisible = false;
 
@@ -378,7 +385,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             StatusTextBlock.Foreground = CreateBrush("#8A8F98");
         }
 
-        RootBorder.Padding = rootPadding;
         UpdateRefreshButtonState();
         ApplyAdaptiveTextLayout(isNightMode, scale, totalWidth, totalHeight);
     }

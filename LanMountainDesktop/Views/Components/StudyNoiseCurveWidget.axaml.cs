@@ -107,8 +107,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 14, 42);
         RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 22),
-            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale, 6, 16));
+            Math.Clamp(14 * scale, 8, 22),
+            Math.Clamp(10 * scale, 6, 16));
 
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 12, 30);
         RealtimeValueTextBlock.FontSize = Math.Clamp(18 * scale, 12, 34);

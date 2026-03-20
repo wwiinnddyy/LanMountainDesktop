@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
-using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -182,109 +181,36 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
     private void ApplyAdaptiveTypography()
     {
         var scale = ResolveScale();
-        var lunarUnits = ComponentTypographyLayoutService.CountTextDisplayUnits(LunarDateTextBlock.Text);
-        var itemUnits = Math.Max(
-            ComponentTypographyLayoutService.CountTextDisplayUnits(YiItemsTextBlock.Text),
-            ComponentTypographyLayoutService.CountTextDisplayUnits(JiItemsTextBlock.Text));
-        var lunarNeedsTwoLines = lunarUnits >= (scale <= 0.82 ? 18 : 24);
-        var itemsNeedTwoLines = itemUnits >= (scale <= 0.82 ? 18 : 24);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 16, 44);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(18 * scale, 18 * scale, null, 0.58d);
-        LayoutRoot.RowSpacing = Math.Clamp(12 * scale, 6, 20);
+        RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 8, 24));
+        LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 18);
         DividerBorder.Margin = new Thickness(
-            Math.Clamp(10 * scale, 4, 16),
             Math.Clamp(8 * scale, 3, 14),
-            Math.Clamp(10 * scale, 4, 16),
-            Math.Clamp(3 * scale, 1, 7));
-        AuspiciousGrid.RowSpacing = Math.Clamp(14 * scale, 7, 22);
+            Math.Clamp(8 * scale, 3, 14),
+            Math.Clamp(8 * scale, 3, 14),
+            Math.Clamp(2 * scale, 1, 6));
+        AuspiciousGrid.RowSpacing = Math.Clamp(12 * scale, 6, 20);
 
         var densityBoost = scale <= 0.72 ? 0.90 : scale <= 0.88 ? 0.95 : scale >= 1.42 ? 1.04 : 1.0;
-        var lunarTitleBox = ComponentTypographyLayoutService.ResolveGlyphBox(
-            Math.Max(1, Bounds.Width > 1 ? Bounds.Width : 300),
-            Math.Max(1, Bounds.Height > 1 ? Bounds.Height : 300),
-            preferredSizeScale: 0.50d,
-            minSize: 28,
-            maxSize: 134,
-            insetScale: 0.12d);
-        var lunarItemBox = ComponentTypographyLayoutService.ResolveBadgeBox(
-            Math.Max(1, Bounds.Width > 1 ? Bounds.Width : 300),
-            Math.Max(1, Bounds.Height > 1 ? Bounds.Height : 300),
-            preferredSizeScale: 0.32d,
-            minSize: 16,
-            maxSize: 84,
-            insetScale: 0.12d);
+        GregorianLineTextBlock.FontSize = Math.Clamp(24 * scale * densityBoost, 10, 38);
+        LunarDateTextBlock.FontSize = Math.Clamp(88 * scale * densityBoost, 28, 134);
+        YiLabelTextBlock.FontSize = Math.Clamp(30 * scale * densityBoost, 12, 46);
+        JiLabelTextBlock.FontSize = YiLabelTextBlock.FontSize;
+        YiItemsTextBlock.FontSize = Math.Clamp(24 * scale * densityBoost, 10, 36);
+        JiItemsTextBlock.FontSize = YiItemsTextBlock.FontSize;
 
-        var gregorianLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            GregorianLineTextBlock.Text,
-            Math.Max(120, lunarTitleBox.Width * 0.9),
-            Math.Max(16, 44 * scale * densityBoost),
-            1,
-            1,
-            10,
-            Math.Clamp(24 * scale * densityBoost, 10, 38),
-            [FontWeight.SemiBold, FontWeight.Medium],
-            1.06);
-        GregorianLineTextBlock.MaxLines = gregorianLayout.MaxLines;
-        GregorianLineTextBlock.TextWrapping = TextWrapping.NoWrap;
-        GregorianLineTextBlock.FontSize = gregorianLayout.FontSize;
-        GregorianLineTextBlock.FontWeight = gregorianLayout.Weight;
-        GregorianLineTextBlock.Margin = new Thickness(4 * scale, 0, 4 * scale, 0);
-        _gregorianLineWeight = gregorianLayout.Weight;
+        _gregorianLineWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _lunarDateWeight = ToVariableWeight(Lerp(650, 780, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _labelWeight = ToVariableWeight(Lerp(620, 760, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
+        _itemsWeight = ToVariableWeight(Lerp(520, 670, Math.Clamp((scale - 0.58) / 1.2, 0, 1)));
 
-        var lunarLineCount = lunarNeedsTwoLines ? 2 : 1;
-        LunarDateTextBlock.Margin = new Thickness(2 * scale, 0, 2 * scale, 0);
-        var lunarLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            LunarDateTextBlock.Text,
-            Math.Max(120, lunarTitleBox.Width - (LunarDateTextBlock.Margin.Left + LunarDateTextBlock.Margin.Right)),
-            lunarLineCount > 1
-                ? Math.Clamp(120 * scale * densityBoost, 44, 160)
-                : Math.Clamp(88 * scale * densityBoost, 28, 126),
-            1,
-            lunarLineCount,
-            24,
-            Math.Clamp(88 * scale * densityBoost, 28, 134),
-            [FontWeight.Bold, FontWeight.SemiBold],
-            1.02);
-        LunarDateTextBlock.MaxLines = lunarLayout.MaxLines;
-        LunarDateTextBlock.TextWrapping = lunarLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        LunarDateTextBlock.FontSize = lunarLayout.FontSize;
-        LunarDateTextBlock.FontWeight = lunarLayout.Weight;
-
-        var labelSize = Math.Clamp(30 * scale * densityBoost, 12, 46);
-        YiLabelTextBlock.FontSize = labelSize;
-        JiLabelTextBlock.FontSize = labelSize;
-
-        var itemMaxLines = itemsNeedTwoLines ? 2 : 1;
-        YiItemsTextBlock.Margin = new Thickness(0, 1 * scale, 0, 0);
-        var yiLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
-            YiItemsTextBlock.Text,
-            Math.Max(92, lunarItemBox.Width),
-            Math.Clamp(42 * scale * densityBoost, 16, 84),
-            1,
-            itemMaxLines,
-            9,
-            Math.Clamp(24 * scale * densityBoost, 10, 36),
-            [FontWeight.SemiBold, FontWeight.Medium],
-            1.10);
-        YiItemsTextBlock.MaxLines = yiLayout.MaxLines;
-        YiItemsTextBlock.TextWrapping = yiLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        YiItemsTextBlock.FontSize = yiLayout.FontSize;
-        YiItemsTextBlock.FontWeight = yiLayout.Weight;
-        YiItemsTextBlock.LineHeight = yiLayout.LineHeight;
-
-        JiItemsTextBlock.MaxLines = itemMaxLines;
-        JiItemsTextBlock.TextWrapping = YiItemsTextBlock.TextWrapping;
-        JiItemsTextBlock.Margin = new Thickness(0, 1 * scale, 0, 0);
-        JiItemsTextBlock.FontSize = yiLayout.FontSize;
-        JiItemsTextBlock.FontWeight = yiLayout.Weight;
-        JiItemsTextBlock.LineHeight = yiLayout.LineHeight;
-
-        LunarDateTextBlock.FontWeight = lunarLayout.Weight;
-        YiLabelTextBlock.FontWeight = ToVariableWeight(Lerp(620, 740, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
-        JiLabelTextBlock.FontWeight = YiLabelTextBlock.FontWeight;
-        YiItemsTextBlock.FontWeight = yiLayout.Weight;
-        JiItemsTextBlock.FontWeight = yiLayout.Weight;
+        GregorianLineTextBlock.FontWeight = _gregorianLineWeight;
+        LunarDateTextBlock.FontWeight = _lunarDateWeight;
+        YiLabelTextBlock.FontWeight = _labelWeight;
+        JiLabelTextBlock.FontWeight = _labelWeight;
+        YiItemsTextBlock.FontWeight = _itemsWeight;
+        JiItemsTextBlock.FontWeight = _itemsWeight;
 
         _auspiciousItemCount = scale switch
         {

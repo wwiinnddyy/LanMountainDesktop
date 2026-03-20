@@ -260,8 +260,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         var expandedMultiplier = _isExpandedMode ? 1.12 : 1.0;
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.50, 14, 42);
         RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale * compactMultiplier * expandedMultiplier, 8, 30),
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale * compactMultiplier * expandedMultiplier, 6, 26));
+            Math.Clamp(16 * scale * compactMultiplier * expandedMultiplier, 8, 30),
+            Math.Clamp(14 * scale * compactMultiplier * expandedMultiplier, 6, 26));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 5)
@@ -303,8 +303,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(8 * scale, 5, 14));
 
         var cardPadding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale * compactMultiplier * expandedMultiplier, 6, 20),
-            ComponentChromeCornerRadiusHelper.SafeValue(8 * scale * compactMultiplier * expandedMultiplier, 4, 16));
+            Math.Clamp(10 * scale * compactMultiplier * expandedMultiplier, 6, 20),
+            Math.Clamp(8 * scale * compactMultiplier * expandedMultiplier, 4, 16));
         var cardCornerRadius = ComponentChromeCornerRadiusHelper.Scale(10 * scale, 6, 18);
         AverageCardBorder.Padding = cardPadding;
         MinimumCardBorder.Padding = cardPadding;

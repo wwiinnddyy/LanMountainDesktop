@@ -198,8 +198,7 @@ public partial class TimerWidget : UserControl, IDesktopComponentWidget
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 12, 48);
-        RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 7, 22));
+        RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 7, 22));
         TimerPanelBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * scale, 12, 42);
 
         PlayButtonBorder.Width = Math.Clamp(42 * scale, 28, 58);

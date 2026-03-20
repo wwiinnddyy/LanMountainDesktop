@@ -1,6 +1,5 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,9 +9,8 @@ using System.Threading.Tasks;
 
 namespace LanMountainDesktop.Services;
 
-public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisposable
+public sealed class WindowsSmtcMusicControlService : IMusicControlService
 {
-    // WinRT Type Resolution
     private static readonly Type? SessionManagerType = ResolveWinRtType("Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager");
     private static readonly Type? AppInfoType = ResolveWinRtType("Windows.ApplicationModel.AppInfo");
     private static readonly MethodInfo? RequestSessionManagerAsyncMethod =
@@ -20,249 +18,14 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
     private static readonly MethodInfo? AsTaskGenericMethodDefinition = ResolveAsTaskGenericMethod();
     private static readonly MethodInfo? AsStreamForReadMethod = ResolveAsStreamForReadMethod();
 
-    // Synchronization
     private static readonly SemaphoreSlim ManagerLock = new(1, 1);
     private static object? _sessionManager;
 
-    // Instance State
     private readonly ConcurrentDictionary<string, string> _sourceAppNameCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _stateGate = new(1, 1);
-    private readonly object _sessionLock = new();
 
-    // Event State
-    private object? _currentSession;
-    private bool _isListening;
-    private readonly List<Delegate> _eventHandlers = new();
-
-    // Thumbnail Cache
     private string _thumbnailKey = string.Empty;
     private byte[]? _thumbnailBytesCache;
-
-    // Events
-    public event EventHandler<MusicPlaybackState>? PlaybackStateChanged;
-    public event EventHandler<MusicQueueState>? QueueChanged;
-
-    public void StartListening()
-    {
-        if (_isListening || !IsRuntimeSupported())
-        {
-            return;
-        }
-
-        _isListening = true;
-        _ = InitializeSessionManagerAsync();
-    }
-
-    public void StopListening()
-    {
-        if (!_isListening)
-        {
-            return;
-        }
-
-        _isListening = false;
-        UnsubscribeFromSessionEvents();
-    }
-
-    private async Task InitializeSessionManagerAsync()
-    {
-        try
-        {
-            var manager = await GetSessionManagerAsync(CancellationToken.None);
-            if (manager is null)
-            {
-                return;
-            }
-
-            // Subscribe to CurrentSessionChanged event
-            var currentSessionChangedEvent = SessionManagerType?.GetEvent("CurrentSessionChanged");
-            if (currentSessionChangedEvent is not null)
-            {
-                var handler = CreateTypedEventHandler(
-                    currentSessionChangedEvent.EventHandlerType,
-                    OnCurrentSessionChanged);
-                currentSessionChangedEvent.AddEventHandler(manager, handler);
-                _eventHandlers.Add(handler);
-            }
-
-            // Get initial session and subscribe to its events
-            await UpdateCurrentSessionAsync();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("MusicControl", "Failed to initialize SMTC session manager", ex);
-        }
-    }
-
-    private async Task OnCurrentSessionChanged(object? sender, object? args)
-    {
-        await UpdateCurrentSessionAsync();
-        await RaisePlaybackStateChangedAsync();
-    }
-
-    private async Task UpdateCurrentSessionAsync()
-    {
-        lock (_sessionLock)
-        {
-            UnsubscribeFromSessionEvents();
-            _currentSession = null;
-        }
-
-        var session = await GetCurrentSessionAsync(CancellationToken.None);
-        if (session is null)
-        {
-            return;
-        }
-
-        lock (_sessionLock)
-        {
-            _currentSession = session;
-            SubscribeToSessionEvents(session);
-        }
-    }
-
-    private void SubscribeToSessionEvents(object session)
-    {
-        if (!_isListening)
-        {
-            return;
-        }
-
-        try
-        {
-            // MediaPropertiesChanged event
-            var mediaPropertiesChanged = session.GetType().GetEvent("MediaPropertiesChanged");
-            if (mediaPropertiesChanged is not null)
-            {
-                var handler = CreateTypedEventHandler(
-                    mediaPropertiesChanged.EventHandlerType,
-                    async (s, e) => await RaisePlaybackStateChangedAsync());
-                mediaPropertiesChanged.AddEventHandler(session, handler);
-                _eventHandlers.Add(handler);
-            }
-
-            // PlaybackInfoChanged event
-            var playbackInfoChanged = session.GetType().GetEvent("PlaybackInfoChanged");
-            if (playbackInfoChanged is not null)
-            {
-                var handler = CreateTypedEventHandler(
-                    playbackInfoChanged.EventHandlerType,
-                    async (s, e) => await RaisePlaybackStateChangedAsync());
-                playbackInfoChanged.AddEventHandler(session, handler);
-                _eventHandlers.Add(handler);
-            }
-
-            // TimelinePropertiesChanged event
-            var timelinePropertiesChanged = session.GetType().GetEvent("TimelinePropertiesChanged");
-            if (timelinePropertiesChanged is not null)
-            {
-                var handler = CreateTypedEventHandler(
-                    timelinePropertiesChanged.EventHandlerType,
-                    async (s, e) => await RaisePlaybackStateChangedAsync());
-                timelinePropertiesChanged.AddEventHandler(session, handler);
-                _eventHandlers.Add(handler);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("MusicControl", "Failed to subscribe to session events", ex);
-        }
-    }
-
-    private void UnsubscribeFromSessionEvents()
-    {
-        if (_currentSession is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var sessionType = _currentSession.GetType();
-
-            // Remove MediaPropertiesChanged
-            var mediaPropertiesChanged = sessionType.GetEvent("MediaPropertiesChanged");
-            if (mediaPropertiesChanged is not null)
-            {
-                foreach (var handler in _eventHandlers)
-                {
-                    try
-                    {
-                        mediaPropertiesChanged.RemoveEventHandler(_currentSession, handler);
-                    }
-                    catch { }
-                }
-            }
-
-            // Remove PlaybackInfoChanged
-            var playbackInfoChanged = sessionType.GetEvent("PlaybackInfoChanged");
-            if (playbackInfoChanged is not null)
-            {
-                foreach (var handler in _eventHandlers)
-                {
-                    try
-                    {
-                        playbackInfoChanged.RemoveEventHandler(_currentSession, handler);
-                    }
-                    catch { }
-                }
-            }
-
-            // Remove TimelinePropertiesChanged
-            var timelinePropertiesChanged = sessionType.GetEvent("TimelinePropertiesChanged");
-            if (timelinePropertiesChanged is not null)
-            {
-                foreach (var handler in _eventHandlers)
-                {
-                    try
-                    {
-                        timelinePropertiesChanged.RemoveEventHandler(_currentSession, handler);
-                    }
-                    catch { }
-                }
-            }
-        }
-        catch { }
-
-        _eventHandlers.Clear();
-    }
-
-    private Delegate CreateTypedEventHandler(Type eventHandlerType, Func<object?, object?, Task> asyncAction)
-    {
-        // Create a delegate that wraps the async action
-        var handler = new EventHandler<object>((sender, args) =>
-        {
-            _ = asyncAction(sender, args);
-        });
-
-        return handler;
-    }
-
-    private async Task RaisePlaybackStateChangedAsync()
-    {
-        try
-        {
-            var state = await GetCurrentStateAsync(CancellationToken.None);
-            PlaybackStateChanged?.Invoke(this, state);
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("MusicControl", "Failed to raise playback state changed event", ex);
-        }
-    }
-
-    private async Task RaiseQueueChangedAsync()
-    {
-        try
-        {
-            var queue = await GetPlaybackQueueAsync(20, CancellationToken.None);
-            QueueChanged?.Invoke(this, queue);
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("MusicControl", "Failed to raise queue changed event", ex);
-        }
-    }
 
     public async Task<MusicPlaybackState> GetCurrentStateAsync(CancellationToken cancellationToken = default)
     {
@@ -293,17 +56,10 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
             var canSkipNext = ReadBoolProperty(controls, "IsNextEnabled");
             var canSkipPrevious = ReadBoolProperty(controls, "IsPreviousEnabled");
 
-            // Check for AutoRepeatModeChange and ShuffleEnabledChange support (indicates advanced SMTC)
-            var canToggleFavorite = ReadBoolProperty(controls, "IsChannelDownEnabled") || ReadBoolProperty(controls, "IsChannelUpEnabled");
-
-            // Try to get IsFavorite from mediaProperties (some apps support this)
-            var isFavorite = ReadBoolProperty(mediaProperties, "IsFavorite");
-
             var sourceAppId = ReadStringProperty(session, "SourceAppUserModelId");
             var sourceAppName = await ResolveSourceAppDisplayNameAsync(sourceAppId, cancellationToken);
 
-            // Use async method to get timeline properties
-            var timeline = await TryGetTimelinePropertiesAsync(session, cancellationToken);
+            var timeline = InvokeMethod(session, "GetTimelineProperties");
             var position = ReadTimeSpanProperty(timeline, "Position");
             var start = ReadTimeSpanProperty(timeline, "StartTime");
             var end = ReadTimeSpanProperty(timeline, "EndTime");
@@ -347,9 +103,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
                 PlaybackStatus: MapPlaybackStatus(playbackStatusRaw),
                 CanPlayPause: canPlayPause,
                 CanSkipPrevious: canSkipPrevious,
-                CanSkipNext: canSkipNext,
-                CanToggleFavorite: canToggleFavorite,
-                IsFavorite: isFavorite);
+                CanSkipNext: canSkipNext);
         }
         catch
         {
@@ -445,113 +199,6 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
         return await AwaitBooleanWinRtOperationAsync(InvokeMethod(session, "TrySkipPreviousAsync"), cancellationToken);
     }
 
-    public async Task<bool> ToggleFavoriteAsync(CancellationToken cancellationToken = default)
-    {
-        if (!IsRuntimeSupported())
-        {
-            return false;
-        }
-
-        var session = await GetCurrentSessionAsync(cancellationToken);
-        if (session is null)
-        {
-            return false;
-        }
-
-        // Try to toggle favorite using RateAndReview (some apps support this)
-        try
-        {
-            var playbackInfo = GetPropertyValue(session, "PlaybackInfo") ?? InvokeMethod(session, "GetPlaybackInfo");
-            var controls = GetPropertyValue(playbackInfo, "Controls");
-
-            // Check if RateAndReview is supported
-            if (ReadBoolProperty(controls, "IsRateEnabled"))
-            {
-                var operation = InvokeMethod(session, "TryRateAsync");
-                return await AwaitBooleanWinRtOperationAsync(operation, cancellationToken);
-            }
-
-            // Fallback: Try ChannelUp/ChannelDown as favorite toggle
-            if (ReadBoolProperty(controls, "IsChannelUpEnabled"))
-            {
-                var operation = InvokeMethod(session, "TryChannelUpAsync");
-                return await AwaitBooleanWinRtOperationAsync(operation, cancellationToken);
-            }
-        }
-        catch { }
-
-        return false;
-    }
-
-    public async Task<MusicQueueState> GetPlaybackQueueAsync(int maxItems = 20, CancellationToken cancellationToken = default)
-    {
-        if (!IsRuntimeSupported())
-        {
-            return MusicQueueState.Unsupported();
-        }
-
-        var session = await GetCurrentSessionAsync(cancellationToken);
-        if (session is null)
-        {
-            return MusicQueueState.Empty();
-        }
-
-        try
-        {
-            // Try to get playback queue using GetPlaybackInfo
-            var playbackInfo = GetPropertyValue(session, "PlaybackInfo") ?? InvokeMethod(session, "GetPlaybackInfo");
-
-            // Check if shuffle/repeat controls exist (indicates queue support)
-            var controls = GetPropertyValue(playbackInfo, "Controls");
-            var canShuffle = ReadBoolProperty(controls, "IsShuffleEnabled");
-            var canRepeat = ReadBoolProperty(controls, "IsRepeatEnabled");
-
-            // Since SMTC doesn't expose the actual queue directly, we'll return a simplified state
-            // indicating whether queue navigation is supported
-            var items = new List<MusicQueueItem>();
-
-            // Try to get current media properties as the current item
-            var mediaProperties = await TryGetMediaPropertiesAsync(session, cancellationToken);
-            if (mediaProperties is not null)
-            {
-                var title = ReadStringProperty(mediaProperties, "Title");
-                var artist = ReadStringProperty(mediaProperties, "Artist");
-                var albumTitle = ReadStringProperty(mediaProperties, "AlbumTitle");
-                var thumbnailBytes = await ResolveThumbnailBytesAsync(
-                    mediaProperties,
-                    ReadStringProperty(session, "SourceAppUserModelId"),
-                    title, artist, albumTitle,
-                    cancellationToken);
-
-                // Get duration
-                var timeline = await TryGetTimelinePropertiesAsync(session, cancellationToken);
-                var duration = ReadTimeSpanProperty(timeline, "EndTime") - ReadTimeSpanProperty(timeline, "StartTime");
-
-                items.Add(new MusicQueueItem(
-                    Id: "current",
-                    Title: title,
-                    Artist: artist,
-                    AlbumTitle: albumTitle,
-                    ThumbnailBytes: thumbnailBytes,
-                    Duration: duration > TimeSpan.Zero ? duration : TimeSpan.Zero,
-                    IsCurrentItem: true));
-            }
-
-            // If shuffle or repeat is supported, we assume there's a queue
-            var hasMoreItems = canShuffle || canRepeat || ReadBoolProperty(controls, "IsNextEnabled");
-
-            return new MusicQueueState(
-                IsSupported: true,
-                Items: items,
-                CurrentIndex: 0,
-                HasMoreItems: hasMoreItems);
-        }
-        catch
-        {
-            return MusicQueueState.Empty();
-        }
-    }
-
     public async Task<bool> LaunchSourceAppAsync(CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
@@ -610,20 +257,6 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
     {
         var operation = InvokeMethod(session, "TryGetMediaPropertiesAsync");
         return await AwaitWinRtOperationAsync(operation, cancellationToken);
-    }
-
-    private async Task<object?> TryGetTimelinePropertiesAsync(object session, CancellationToken cancellationToken)
-    {
-        // Use the async method TryGetTimelinePropertiesAsync if available
-        var tryGetTimelineMethod = session.GetType().GetMethod("TryGetTimelinePropertiesAsync");
-        if (tryGetTimelineMethod is not null)
-        {
-            var operation = tryGetTimelineMethod.Invoke(session, null);
-            return await AwaitWinRtOperationAsync(operation, cancellationToken);
-        }
-
-        // Fallback to synchronous method
-        return InvokeMethod(session, "GetTimelineProperties");
     }
 
     private async Task<byte[]?> ResolveThumbnailBytesAsync(
@@ -942,12 +575,5 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService, IDisp
             5 => MusicPlaybackStatus.Paused,
             _ => MusicPlaybackStatus.Unknown
         };
-    }
-
-    public void Dispose()
-    {
-        StopListening();
-        _stateGate.Dispose();
-        ManagerLock.Dispose();
     }
 }

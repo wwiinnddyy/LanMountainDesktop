@@ -11,13 +11,13 @@
             Background="#EFE6D9"
             CornerRadius="30"
             ClipToBounds="True"
-            Padding="18">
+            Padding="16">
         <Viewbox Stretch="Uniform">
             <Grid x:Name="LayoutRoot"
                   Width="300"
                   Height="300"
                   RowDefinitions="Auto,Auto,Auto,*"
-                  RowSpacing="12">
+                  RowSpacing="10">
                 <TextBlock x:Name="GregorianLineTextBlock"
                            Grid.Row="0"
                            Text="10/9 Thu"
@@ -32,25 +32,21 @@
                            FontSize="88"
                            FontWeight="Bold"
                            Foreground="#6B4936"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           TextWrapping="Wrap"
-                           MaxLines="2"
-                           Margin="4,0,4,0" />
+                           HorizontalAlignment="Center" />
 
                 <Border x:Name="DividerBorder"
                         Grid.Row="2"
                         Height="1"
-                        Margin="10,8,10,3"
+                        Margin="8,8,8,2"
                         Background="#D2C6B7" />
 
                 <Grid x:Name="AuspiciousGrid"
                       Grid.Row="3"
                       RowDefinitions="Auto,Auto"
-                      RowSpacing="14">
+                      RowSpacing="12">
                     <Grid Grid.Row="0"
                           ColumnDefinitions="Auto,*"
-                          ColumnSpacing="10">
+                          ColumnSpacing="8">
                         <TextBlock x:Name="YiLabelTextBlock"
                                    Grid.Column="0"
                                    Text="Yi"
@@ -63,13 +59,12 @@
                                    FontWeight="SemiBold"
                                    Foreground="#6B4936"
                                    TextTrimming="CharacterEllipsis"
-                                   TextWrapping="Wrap"
-                                   MaxLines="2" />
+                                   MaxLines="1" />
                     </Grid>
 
                     <Grid Grid.Row="1"
                           ColumnDefinitions="Auto,*"
-                          ColumnSpacing="10">
+                          ColumnSpacing="8">
                         <TextBlock x:Name="JiLabelTextBlock"
                                    Grid.Column="0"
                                    Text="Ji"
@@ -82,8 +77,7 @@
                                    FontWeight="SemiBold"
                                    Foreground="#6B4936"
                                    TextTrimming="CharacterEllipsis"
-                                   TextWrapping="Wrap"
-                                   MaxLines="2" />
+                                   MaxLines="1" />
                     </Grid>
                 </Grid>
             </Grid>

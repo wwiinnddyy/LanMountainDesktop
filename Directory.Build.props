@@ -4,6 +4,5 @@
     <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
     <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
     <ImplicitUsings Condition="'$(ImplicitUsings)' == ''">enable</ImplicitUsings>
-    <DefaultItemExcludes>$(DefaultItemExcludes);**\obj_audit\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

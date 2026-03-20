@@ -80,14 +80,11 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         _currentCellSize = Math.Max(1, cellSize);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.34, 12, 28);
-        RootBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(_currentCellSize * 0.20, 8, 18));
+        RootBorder.Padding = new Thickness(Math.Clamp(_currentCellSize * 0.20, 8, 18));
 
         WebViewHostBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.24, 10, 22);
         AddressBarBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.22, 10, 20);
-        AddressBarBorder.Padding = new Thickness(
-            ComponentChromeCornerRadiusHelper.SafeValue(8, 6, 12),
-            ComponentChromeCornerRadiusHelper.SafeValue(6, 4, 10));
+        AddressBarBorder.Padding = new Thickness(8, 6);
 
         if (RootBorder.Child is Grid rootGrid)
         {

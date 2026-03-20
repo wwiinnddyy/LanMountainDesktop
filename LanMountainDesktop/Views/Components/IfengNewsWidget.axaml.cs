@@ -401,26 +401,18 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
-        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
-            12 * softScale,
-            10 * softScale,
-            null,
-            0.45d);
         CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
 
         var horizontalPadding = Math.Clamp(14 * softScale, 8, 20);
         var verticalPadding = Math.Clamp(14 * softScale, 8, 20);
-        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(horizontalPadding, verticalPadding, null, 0.55d);
-
-        var rootPadding = RootBorder.Padding;
-        var cardPadding = CardBorder.Padding;
+        CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
         var rowSpacing = Math.Clamp(8 * softScale, 4, 12);
         ContentGrid.RowSpacing = rowSpacing;
         HeaderGrid.ColumnSpacing = Math.Clamp(10 * softScale, 6, 16);
 
-        var innerWidth = Math.Max(150, totalWidth - rootPadding.Left - rootPadding.Right - cardPadding.Left - cardPadding.Right);
-        var innerHeight = Math.Max(160, totalHeight - rootPadding.Top - rootPadding.Bottom - cardPadding.Top - cardPadding.Bottom);
+        var innerWidth = Math.Max(150, totalWidth - horizontalPadding * 2d);
+        var innerHeight = Math.Max(160, totalHeight - verticalPadding * 2d);
         var availableRowsHeight = Math.Max(120, innerHeight - rowSpacing * 4d);
         var headerHeight = Math.Clamp(availableRowsHeight * 0.16, 24, 54);
         var itemHeight = Math.Max(32, (availableRowsHeight - headerHeight) / 4d);

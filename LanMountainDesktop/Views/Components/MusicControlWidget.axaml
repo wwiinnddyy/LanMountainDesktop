@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -240,8 +240,7 @@
                                 Grid.Column="0"
                                 Classes="music-action"
                                 Width="31"
-                                Height="31"
-                                Click="OnQueueButtonClick">
+                                Height="31">
                             <fi:SymbolIcon x:Name="QueueIcon"
                                             Symbol="List"
                                             IconVariant="Regular"
@@ -292,8 +291,7 @@
                                 Grid.Column="4"
                                 Classes="music-action"
                                 Width="31"
-                                Height="31"
-                                Click="OnFavoriteButtonClick">
+                                Height="31">
                             <fi:SymbolIcon x:Name="FavoriteIcon"
                                            Symbol="Heart"
                                            IconVariant="Regular"
