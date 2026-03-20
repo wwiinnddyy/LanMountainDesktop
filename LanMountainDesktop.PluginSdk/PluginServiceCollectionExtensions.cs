@@ -30,34 +30,15 @@ public static class PluginServiceCollectionExtensions
 
     public static IServiceCollection AddPluginDesktopComponent<TControl>(
         this IServiceCollection services,
-        string componentId,
-        string displayName,
-        string iconKey = "PuzzlePiece",
-        string category = "Plugins",
-        int minWidthCells = 2,
-        int minHeightCells = 2,
-        bool allowDesktopPlacement = true,
-        bool allowStatusBarPlacement = false,
-        PluginDesktopComponentResizeMode resizeMode = PluginDesktopComponentResizeMode.Proportional,
-        string? displayNameLocalizationKey = null,
-        Func<double, double>? cornerRadiusResolver = null)
+        PluginDesktopComponentOptions options)
         where TControl : Control
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(options);
 
         services.AddSingleton(new PluginDesktopComponentRegistration(
-            componentId,
-            displayName,
             (provider, context) => ActivatorUtilities.CreateInstance<TControl>(provider, context),
-            iconKey,
-            category,
-            minWidthCells,
-            minHeightCells,
-            allowDesktopPlacement,
-            allowStatusBarPlacement,
-            resizeMode,
-            displayNameLocalizationKey,
-            cornerRadiusResolver));
+            options));
         return services;
     }
 

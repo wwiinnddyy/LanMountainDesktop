@@ -545,10 +545,11 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         var scale = ResolveScale();
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
+        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = unifiedMainRectangle;
         RootBorder.Padding = new Thickness(0);
 
-        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
+        CardBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.Padding = new Thickness(
             Math.Clamp(16 * scale, 8, 24),
             Math.Clamp(14 * scale, 7, 22),
@@ -864,6 +865,11 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private static string NormalizeCompactText(string? text)
     {

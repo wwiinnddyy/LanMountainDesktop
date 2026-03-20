@@ -87,8 +87,8 @@ public sealed record PluginManifest(
             throw new InvalidOperationException(
                 $"Plugin '{normalized.Id}' targets API version '{normalized.ApiVersion}' (major {requestedVersion.Major}), " +
                 $"but the host provides '{PluginSdkInfo.ApiVersion}' (major {currentVersion.Major}). " +
-                $"This host only supports v{currentVersion.Major}.x plugins. " +
-                $"Migrate the plugin to API {PluginSdkInfo.ApiVersion} and rebuild the package.");
+                $"This host only supports v{currentVersion.Major}.x plugins and rejects v{requestedVersion.Major}.x packages by default. " +
+                $"Migrate the plugin manifest and code to API {PluginSdkInfo.ApiVersion}, then rebuild and republish the package.");
         }
 
         return normalized;

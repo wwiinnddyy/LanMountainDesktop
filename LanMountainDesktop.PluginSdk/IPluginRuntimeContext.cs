@@ -12,6 +12,8 @@ public interface IPluginRuntimeContext
 
     IReadOnlyDictionary<string, object?> Properties { get; }
 
+    IPluginAppearanceContext Appearance { get; }
+
     T? GetService<T>();
 
     bool TryGetProperty<T>(string key, out T? value);

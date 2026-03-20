@@ -124,13 +124,9 @@ public partial class ExtendedWeatherWidget : UserControl, IDesktopComponentWidge
         var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Extended4x4);
         var width = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 4;
         var height = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4;
-        var radius = ComponentChromeCornerRadiusHelper.Scale(
-            _currentCellSize * metrics.CornerRadiusScale,
-            28,
-            54,
-            _chromeContext);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius(_chromeContext);
         ComponentChromeCornerRadiusHelper.Apply(
-            radius,
+            mainRectangleCornerRadius,
             RootBorder,
             BackgroundImageLayer,
             BackgroundMotionLayer,

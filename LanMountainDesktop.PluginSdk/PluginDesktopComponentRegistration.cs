@@ -5,67 +5,37 @@ namespace LanMountainDesktop.PluginSdk;
 public sealed class PluginDesktopComponentRegistration
 {
     public PluginDesktopComponentRegistration(
-        string componentId,
-        string displayName,
         Func<IServiceProvider, PluginDesktopComponentContext, Control> controlFactory,
-        string iconKey = "PuzzlePiece",
-        string category = "Plugins",
-        int minWidthCells = 2,
-        int minHeightCells = 2,
-        bool allowDesktopPlacement = true,
-        bool allowStatusBarPlacement = false,
-        PluginDesktopComponentResizeMode resizeMode = PluginDesktopComponentResizeMode.Proportional,
-        string? displayNameLocalizationKey = null,
-        Func<double, double>? cornerRadiusResolver = null)
+        PluginDesktopComponentOptions options)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(componentId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(iconKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(category);
         ArgumentNullException.ThrowIfNull(controlFactory);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.ComponentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.DisplayName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.IconKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.Category);
 
-        ComponentId = componentId.Trim();
-        DisplayName = displayName.Trim();
-        DisplayNameLocalizationKey = string.IsNullOrWhiteSpace(displayNameLocalizationKey)
+        ComponentId = options.ComponentId.Trim();
+        DisplayName = options.DisplayName.Trim();
+        DisplayNameLocalizationKey = string.IsNullOrWhiteSpace(options.DisplayNameLocalizationKey)
             ? null
-            : displayNameLocalizationKey.Trim();
+            : options.DisplayNameLocalizationKey.Trim();
         ControlFactory = controlFactory;
-        IconKey = iconKey.Trim();
-        Category = category.Trim();
-        MinWidthCells = Math.Max(1, minWidthCells);
-        MinHeightCells = Math.Max(1, minHeightCells);
-        AllowDesktopPlacement = allowDesktopPlacement;
-        AllowStatusBarPlacement = allowStatusBarPlacement;
-        ResizeMode = resizeMode;
-        CornerRadiusResolver = cornerRadiusResolver;
+        IconKey = options.IconKey.Trim();
+        Category = options.Category.Trim();
+        MinWidthCells = Math.Max(1, options.MinWidthCells);
+        MinHeightCells = Math.Max(1, options.MinHeightCells);
+        AllowDesktopPlacement = options.AllowDesktopPlacement;
+        AllowStatusBarPlacement = options.AllowStatusBarPlacement;
+        ResizeMode = options.ResizeMode;
+        CornerRadiusPreset = options.CornerRadiusPreset;
+        CornerRadiusResolver = options.CornerRadiusResolver;
     }
 
     public PluginDesktopComponentRegistration(
-        string componentId,
-        string displayName,
         Func<PluginDesktopComponentContext, Control> controlFactory,
-        string iconKey = "PuzzlePiece",
-        string category = "Plugins",
-        int minWidthCells = 2,
-        int minHeightCells = 2,
-        bool allowDesktopPlacement = true,
-        bool allowStatusBarPlacement = false,
-        PluginDesktopComponentResizeMode resizeMode = PluginDesktopComponentResizeMode.Proportional,
-        string? displayNameLocalizationKey = null,
-        Func<double, double>? cornerRadiusResolver = null)
-        : this(
-            componentId,
-            displayName,
-            (_, context) => controlFactory(context),
-            iconKey,
-            category,
-            minWidthCells,
-            minHeightCells,
-            allowDesktopPlacement,
-            allowStatusBarPlacement,
-            resizeMode,
-            displayNameLocalizationKey,
-            cornerRadiusResolver)
+        PluginDesktopComponentOptions options)
+        : this((_, context) => controlFactory(context), options)
     {
     }
 
@@ -91,5 +61,25 @@ public sealed class PluginDesktopComponentRegistration
 
     public PluginDesktopComponentResizeMode ResizeMode { get; }
 
-    public Func<double, double>? CornerRadiusResolver { get; }
+    public PluginCornerRadiusPreset CornerRadiusPreset { get; }
+
+    public Func<IPluginAppearanceContext, double, double>? CornerRadiusResolver { get; }
+
+    public double ResolveCornerRadius(IPluginAppearanceContext appearance, double cellSize)
+    {
+        ArgumentNullException.ThrowIfNull(appearance);
+
+        var resolved = CornerRadiusResolver is not null
+            ? CornerRadiusResolver(appearance, Math.Max(1d, cellSize))
+            : CornerRadiusPreset == PluginCornerRadiusPreset.Default
+                ? appearance.ResolveScaledCornerRadius(
+                    Math.Clamp(Math.Max(1d, cellSize) * 0.22, 8, 18),
+                    8,
+                    18)
+                : appearance.ResolveCornerRadius(CornerRadiusPreset);
+
+        return double.IsFinite(resolved)
+            ? Math.Max(0d, resolved)
+            : appearance.ResolveCornerRadius(PluginCornerRadiusPreset.Default);
+    }
 }

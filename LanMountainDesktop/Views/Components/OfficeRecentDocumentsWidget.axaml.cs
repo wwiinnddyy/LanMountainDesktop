@@ -36,7 +36,7 @@ public partial class OfficeRecentDocumentsWidget : UserControl, IDesktopComponen
             return;
         }
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(cellSize * 0.50, 10, 24);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)

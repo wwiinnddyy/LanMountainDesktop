@@ -381,12 +381,13 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
+        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = unifiedMainRectangle;
         RootBorder.Padding = new Thickness(0);
 
         var horizontalPadding = Math.Clamp(16 * softScale, 8, 24);
         var verticalPadding = Math.Clamp(14 * softScale, 7, 20);
-        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
+        CardBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
         var innerWidth = Math.Max(120, totalWidth - (horizontalPadding * 2d));
@@ -614,6 +615,11 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
         var scaleY = actualHeight / expectedHeight;
         return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.8);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private string L(string key, string fallback)
     {

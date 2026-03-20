@@ -151,11 +151,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         var compactness = Math.Clamp((176 - targetWidth) / 86d, 0, 1);
         var ultraCompact = targetWidth < 126 || targetHeight < 46;
         var compactFactor = Lerp(1, ultraCompact ? 0.64 : 0.72, compactness);
-        var cornerRadius = ComponentChromeCornerRadiusHelper.Scale(
-            targetHeight * metrics.CornerRadiusScale,
-            15,
-            36,
-            _chromeContext);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius(_chromeContext);
 
         var horizontalPadding = ComponentChromeCornerRadiusHelper.SafeValue(
             targetHeight * Lerp(0.18, 0.12, compactness),
@@ -168,7 +164,7 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
             20,
             _chromeContext);
 
-        RootBorder.CornerRadius = cornerRadius;
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
         var columnSpacing = Math.Clamp(targetHeight * Lerp(0.16, 0.08, compactness), 2, 22);

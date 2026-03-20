@@ -166,11 +166,12 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
 
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
 
         var horizontalPadding = Math.Clamp(10 * scale, 4, 26);
         var verticalPadding = Math.Clamp(8 * scale, 3, 22);
         RootBorder.Padding = new Thickness(horizontalPadding, verticalPadding);
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * scale, 10, 46);
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
 
         var usableWidth = Math.Max(48, totalWidth - horizontalPadding * 2);
         var usableHeight = Math.Max(28, totalHeight - verticalPadding * 2);

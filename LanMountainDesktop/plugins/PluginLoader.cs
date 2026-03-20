@@ -156,7 +156,7 @@ public sealed class PluginLoader
             var pluginType = ResolvePluginType(assembly);
             plugin = CreatePluginInstance(pluginType);
             AppLogger.Info("PluginLoader", $"Plugin instance created. PluginId='{manifest.Id}'; PluginType='{pluginType.FullName}'.");
-            runtimeContext = CreateRuntimeContext(manifest, pluginDirectory, dataDirectory, properties);
+            runtimeContext = CreateRuntimeContext(manifest, pluginDirectory, dataDirectory, properties, services);
             var serviceCollection = CreateServiceCollection(runtimeContext, services);
             var hostBuilderContext = CreateHostBuilderContext(runtimeContext);
 
@@ -297,13 +297,15 @@ public sealed class PluginLoader
         PluginManifest manifest,
         string pluginDirectory,
         string dataDirectory,
-        IReadOnlyDictionary<string, object?>? properties)
+        IReadOnlyDictionary<string, object?>? properties,
+        IServiceProvider? hostServices)
     {
         return new PluginRuntimeContext(
             manifest,
             pluginDirectory,
             dataDirectory,
-            CreateReadOnlyProperties(properties));
+            CreateReadOnlyProperties(properties),
+            BuildAppearanceSnapshot(hostServices));
     }
 
     private ServiceCollection CreateServiceCollection(
@@ -313,6 +315,7 @@ public sealed class PluginLoader
         var services = new ServiceCollection();
         services.AddSingleton(runtimeContext);
         services.AddSingleton<IPluginRuntimeContext>(runtimeContext);
+        services.AddSingleton<IPluginAppearanceContext>(runtimeContext.Appearance);
         services.AddSingleton(runtimeContext.Manifest);
         services.AddSingleton<IReadOnlyDictionary<string, object?>>(runtimeContext.Properties);
         services.AddSingleton<IPluginMessageBus, PluginMessageBus>();
@@ -330,6 +333,33 @@ public sealed class PluginLoader
         RegisterHostService<IAppearanceThemeService>(services, hostServices);
 
         return services;
+    }
+
+    private static PluginAppearanceSnapshot BuildAppearanceSnapshot(IServiceProvider? hostServices)
+    {
+        var defaultSnapshot = new PluginAppearanceSnapshot(
+            GlobalCornerRadiusScale: 1d,
+            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 10, 14, 18, 24, 30, 36),
+            ThemeVariant: "Unknown");
+
+        if (hostServices?.GetService(typeof(IAppearanceThemeService)) is not IAppearanceThemeService appearanceThemeService)
+        {
+            return defaultSnapshot;
+        }
+
+        try
+        {
+            var hostSnapshot = appearanceThemeService.GetCurrent();
+            return new PluginAppearanceSnapshot(
+                GlobalCornerRadiusScale: Math.Max(0d, hostSnapshot.GlobalCornerRadiusScale),
+                CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(hostSnapshot.CornerRadiusTokens),
+                ThemeVariant: hostSnapshot.IsNightMode ? "Dark" : "Light");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PluginLoader", "Failed to resolve host appearance snapshot for plugin runtime context.", ex);
+            return defaultSnapshot;
+        }
     }
 
     private static void RegisterHostService<TService>(IServiceCollection services, IServiceProvider? hostServices)
@@ -730,12 +760,14 @@ public sealed class PluginLoader
             PluginManifest manifest,
             string pluginDirectory,
             string dataDirectory,
-            IReadOnlyDictionary<string, object?> properties)
+            IReadOnlyDictionary<string, object?> properties,
+            PluginAppearanceSnapshot appearanceSnapshot)
         {
             Manifest = manifest;
             PluginDirectory = pluginDirectory;
             DataDirectory = dataDirectory;
             Properties = properties;
+            Appearance = new PluginAppearanceContext(appearanceSnapshot);
             Services = NullServiceProvider.Instance;
         }
 
@@ -748,6 +780,8 @@ public sealed class PluginLoader
         public IServiceProvider Services { get; private set; }
 
         public IReadOnlyDictionary<string, object?> Properties { get; }
+
+        public IPluginAppearanceContext Appearance { get; }
 
         public T? GetService<T>()
         {

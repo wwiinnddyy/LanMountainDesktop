@@ -52,7 +52,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         _currentCellSize = Math.Max(1, cellSize);
         var scale = Math.Clamp(_currentCellSize / 48d, 0.82, 2.2);
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.34, 10, 28);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(
             Math.Clamp(14 * scale, 8, 20),
             Math.Clamp(10 * scale, 6, 16));

@@ -268,7 +268,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         _isUltraCompactMode = scale < 0.74 || (Bounds.Width > 1 && Bounds.Width < 180) || (Bounds.Height > 1 && Bounds.Height < 76);
 
         var compactMultiplier = _isUltraCompactMode ? 0.78 : _isCompactMode ? 0.90 : 1.0;
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.34, 10, 28);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(
             Math.Clamp(14 * scale * compactMultiplier, 7, 22),
             Math.Clamp(10 * scale * compactMultiplier, 5, 16));

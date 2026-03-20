@@ -213,16 +213,12 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         var metrics = HyperOS3WeatherTheme.ResolveMetrics(HyperOS3WeatherWidgetKind.Realtime2x2);
         var hostWidth = Bounds.Width > 1 ? Bounds.Width : Math.Max(80, _currentCellSize * 2);
         var hostHeight = Bounds.Height > 1 ? Bounds.Height : Math.Max(80, _currentCellSize * 2);
-        var cornerRadius = ComponentChromeCornerRadiusHelper.Scale(
-            _currentCellSize * metrics.CornerRadiusScale,
-            26,
-            46,
-            _chromeContext);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius(_chromeContext);
         var horizontalPadding = Math.Clamp(_currentCellSize * metrics.HorizontalPaddingScale, 10, 24);
         var verticalPadding = Math.Clamp(_currentCellSize * metrics.VerticalPaddingScale, 10, 24);
 
         ComponentChromeCornerRadiusHelper.Apply(
-            cornerRadius,
+            mainRectangleCornerRadius,
             RootBorder,
             BackgroundImageLayer,
             BackgroundMotionLayer,

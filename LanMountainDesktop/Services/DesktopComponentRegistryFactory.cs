@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.ComponentSystem.Extensions;
+using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Views.Components;
@@ -62,7 +63,11 @@ public static class DesktopComponentRegistryFactory
                     registration.ComponentId,
                     registration.DisplayNameLocalizationKey,
                     factoryContext => CreatePluginControl(contribution, factoryContext),
-                    registration.CornerRadiusResolver));
+                    chromeContext =>
+                    {
+                        var appearanceContext = CreatePluginAppearanceContext(chromeContext);
+                        return registration.ResolveCornerRadius(appearanceContext, chromeContext.CellSize);
+                    }));
             }
         }
 
@@ -123,6 +128,10 @@ public static class DesktopComponentRegistryFactory
                 contribution.Plugin.Manifest.Id,
                 settingsService);
             var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
+            var pluginAppearance = new PluginAppearanceContext(new PluginAppearanceSnapshot(
+                GlobalCornerRadiusScale: appearanceSnapshot.GlobalCornerRadiusScale,
+                CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(appearanceSnapshot.CornerRadiusTokens),
+                ThemeVariant: appearanceSnapshot.IsNightMode ? "Dark" : "Light"));
             var pluginContext = new PluginDesktopComponentContext(
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,
@@ -132,8 +141,7 @@ public static class DesktopComponentRegistryFactory
                 contribution.Registration.ComponentId,
                 context.PlacementId,
                 context.CellSize,
-                appearanceSnapshot.GlobalCornerRadiusScale,
-                appearanceSnapshot.CornerRadiusTokens,
+                pluginAppearance,
                 pluginSettings);
 
             return contribution.Registration.ControlFactory(contribution.Plugin.Services, pluginContext);
@@ -144,6 +152,14 @@ public static class DesktopComponentRegistryFactory
                 $"[PluginRuntime] Failed to create widget '{contribution.Registration.ComponentId}' from '{contribution.Plugin.Manifest.Id}': {ex}");
             return CreatePluginErrorControl(contribution, ex);
         }
+    }
+
+    private static IPluginAppearanceContext CreatePluginAppearanceContext(ComponentChromeContext chromeContext)
+    {
+        return new PluginAppearanceContext(new PluginAppearanceSnapshot(
+            GlobalCornerRadiusScale: chromeContext.GlobalCornerRadiusScale,
+            CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(chromeContext.CornerRadiusTokens),
+            ThemeVariant: "Unknown"));
     }
 
     private static Control CreatePluginErrorControl(

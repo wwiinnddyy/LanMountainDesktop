@@ -90,16 +90,30 @@ internal static class AirAppMarketDefaults
     private static string? TryResolveWorkspacePath(string repositoryName, string relativePath)
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
+        while (current is not null && current.Exists)
         {
-            var candidate = Path.Combine(current.FullName, repositoryName);
-            if (Directory.Exists(candidate))
+            var solutionPath = Path.Combine(current.FullName, "LanMountainDesktop.slnx");
+            if (File.Exists(solutionPath))
             {
-                var candidatePath = Path.GetFullPath(Path.Combine(candidate, relativePath));
+                var workspaceRoot = current.Parent;
+                if (workspaceRoot is null)
+                {
+                    return null;
+                }
+
+                var candidateRepositoryPath = Path.Combine(workspaceRoot.FullName, repositoryName);
+                if (!Directory.Exists(candidateRepositoryPath))
+                {
+                    return null;
+                }
+
+                var candidatePath = Path.GetFullPath(Path.Combine(candidateRepositoryPath, relativePath));
                 if (File.Exists(candidatePath))
                 {
                     return candidatePath;
                 }
+
+                return null;
             }
 
             current = current.Parent;

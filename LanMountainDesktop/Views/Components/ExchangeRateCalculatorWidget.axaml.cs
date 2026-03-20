@@ -80,7 +80,7 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
     {
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 14, 48);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 6, 18));
     }
 

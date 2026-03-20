@@ -613,7 +613,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             ? CreateBrush("#FF4FC3F7")
             : CreateBrush("#FF3250");
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.45, 24, 44);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Background = _isNightVisual
             ? CreateGradientBrush("#171A21", "#0C0E14")
             : CreateGradientBrush("#F7F8FC", "#ECEFF6");

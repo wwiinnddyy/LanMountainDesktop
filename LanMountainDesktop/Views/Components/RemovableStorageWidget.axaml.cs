@@ -347,7 +347,7 @@ public partial class RemovableStorageWidget : UserControl, IDesktopComponentWidg
         var scale = ResolveScale();
         var width = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * 2;
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 18, 34);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         RootBorder.Padding = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
             ComponentChromeCornerRadiusHelper.SafeValue(15 * scale, 10, 22),

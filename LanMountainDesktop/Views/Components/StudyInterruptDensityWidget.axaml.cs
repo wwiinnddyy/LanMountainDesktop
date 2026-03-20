@@ -255,7 +255,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         _isUltraCompactMode = scale < 0.72 || (Bounds.Width > 1 && Bounds.Width < 295) || (Bounds.Height > 1 && Bounds.Height < 130);
 
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.46, 12, 34);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(
             Math.Clamp(12 * scale * compactMultiplier, 6, 18),
             Math.Clamp(9 * scale * compactMultiplier, 5, 16));
@@ -301,6 +302,8 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
             Math.Clamp(6 * scale * compactMultiplier, 3, 9));
         CountCardBorder.Padding = cardPadding;
         DurationCardBorder.Padding = cardPadding;
+        CountCardBorder.CornerRadius = mainRectangleCornerRadius;
+        DurationCardBorder.CornerRadius = mainRectangleCornerRadius;
 
         TitleTextBlock.IsVisible = !_isUltraCompactMode;
         ThresholdTextBlock.IsVisible = !_isUltraCompactMode;

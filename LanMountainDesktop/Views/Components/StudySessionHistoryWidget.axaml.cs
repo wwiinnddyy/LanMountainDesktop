@@ -237,7 +237,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
         var rowBorder = new Border
         {
-            CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.20, 8, 14),
+            CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius(),
             Background = new SolidColorBrush(rowBackground),
             BorderBrush = new SolidColorBrush(rowBorderColor),
             BorderThickness = new Thickness(1),
@@ -588,7 +588,8 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         _isCompactMode = scale < 0.92 || (Bounds.Width > 1 && Bounds.Width < 320) || (Bounds.Height > 1 && Bounds.Height < 145);
         _isUltraCompactMode = scale < 0.78 || (Bounds.Width > 1 && Bounds.Width < 280) || (Bounds.Height > 1 && Bounds.Height < 120);
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 12, 36);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(
             Math.Clamp(12 * scale, 7, 22),
             Math.Clamp(9 * scale, 5, 16));
@@ -606,7 +607,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DialogOverlayBorder.Padding = new Thickness(
             Math.Clamp(12 * scale, 8, 20),
             Math.Clamp(10 * scale, 8, 18));
-        DialogCardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(12 * scale, 10, 18);
+        DialogCardBorder.CornerRadius = mainRectangleCornerRadius;
         DialogCardBorder.Padding = new Thickness(
             Math.Clamp(12 * scale, 9, 20),
             Math.Clamp(11 * scale, 8, 18));

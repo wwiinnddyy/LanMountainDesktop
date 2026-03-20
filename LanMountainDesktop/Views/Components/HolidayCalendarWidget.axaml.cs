@@ -216,7 +216,7 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         var titleNeedsTwoLines = isUltraCompact || titleUnits >= (isCompact ? 13 : 17);
         var dateNeedsTwoLines = isUltraCompact || dateUnits >= (isCompact ? 15 : 20);
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(shortSide * 0.13, 10, 46);
+        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
         var padding = ComponentChromeCornerRadiusHelper.SafeValue(shortSide * 0.05, 4.5, 21);
         RootBorder.Padding = new Thickness(padding);
         LayoutRoot.RowSpacing = Math.Clamp(shortSide * 0.028, 2.2, 12);

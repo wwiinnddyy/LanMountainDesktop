@@ -9,6 +9,25 @@ namespace LanMountainDesktop.Views.Components;
 
 internal static class ComponentChromeCornerRadiusHelper
 {
+    public static double ResolveMainRectangleRadiusValue(ComponentChromeContext? chromeContext = null, double fallback = 24d)
+    {
+        if (chromeContext is not null)
+        {
+            return Math.Max(0d, chromeContext.CornerRadiusTokens.Lg.TopLeft);
+        }
+
+        var snapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
+        var resolved = snapshot.CornerRadiusTokens.Lg.TopLeft;
+        return double.IsFinite(resolved)
+            ? Math.Max(0d, resolved)
+            : Math.Max(0d, fallback * ResolveScale(chromeContext));
+    }
+
+    public static CornerRadius ResolveMainRectangleRadius(ComponentChromeContext? chromeContext = null, double fallback = 24d)
+    {
+        return new CornerRadius(ResolveMainRectangleRadiusValue(chromeContext, fallback));
+    }
+
     public static double ResolveScale(ComponentChromeContext? chromeContext = null)
     {
         if (chromeContext is not null)

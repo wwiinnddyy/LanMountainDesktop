@@ -1,47 +1,45 @@
-# 阑山桌面 / LanMountainDesktop
+# LanMountainDesktop
 
-## 中文
+`LanMountainDesktop` is the authoritative host repository for the desktop app and the host-side Plugin SDK.
 
-`LanMontainDesktop` 是阑山桌面的宿主应用权威仓库，负责应用本体、宿主侧插件运行时，以及宿主侧 `PluginSdk` API 基线。
+## Repository Ownership
 
-### 本仓库负责什么
+This repository owns:
 
-- `LanMountainDesktop/`：桌面宿主应用
-- `LanMountainDesktop.PluginSdk/`：宿主侧插件 API 真源
-- `LanMountainDesktop/plugins/`：插件发现、安装、加载、市场接入
-- `LanMountainDesktop.Tests/`：宿主与插件运行时测试
-- `LanAirApp/`：仅用于联调的镜像副本，权威版本仍以独立 `LanAirApp` 仓库为准
+- `LanMountainDesktop/`: desktop host app and plugin runtime
+- `LanMountainDesktop.PluginSdk/`: canonical plugin API baseline (`4.0.0`)
+- `LanMountainDesktop.Shared.Contracts/`: shared host/plugin contract types
+- `LanMountainDesktop.Appearance/`: host appearance and radius token generation
+- `LanMountainDesktop.Settings.Core/`: host settings primitives
+- `LanMountainDesktop.Tests/`: host and SDK tests
 
-### 生态边界
+This repository does not own:
 
-- 应用本体：`LanMontainDesktop`
-- 插件市场与开发资料：独立 `LanAirApp`
-- 权威示例插件：独立 `LanMountainDesktop.SamplePlugin`
+- plugin market metadata or developer portal content
+- official sample plugin release source
+- independent ecosystem documentation hub
 
-### 当前插件 API 基线
+## Ecosystem Boundaries
 
-- 宿主插件 API 基线：`3.0.0`
-- `SampleClock` 共享契约：`2.0.0`
+- Host and SDK source of truth: `LanMountainDesktop` (this repo)
+- Plugin market and developer materials: standalone `LanAirApp` repo
+- Official sample plugin source of truth: standalone `LanMountainDesktop.SamplePlugin` repo
+- `ClassIsland`: reference-only project, not part of build or release flow
 
-## English
+## Plugin SDK v4 Baseline
 
-`LanMontainDesktop` is the authoritative host repository for LanMountainDesktop. It owns the desktop application, the host-side plugin runtime, and the host-side `PluginSdk` API baseline.
+- API baseline: `4.0.0`
+- Manifest file: `plugin.json`
+- Package extension: `.laapp`
+- Entry model: `Initialize(HostBuilderContext, IServiceCollection)`
+- Appearance model: `IPluginAppearanceContext`, `PluginAppearanceSnapshot`, `PluginCornerRadiusTokens`, `PluginCornerRadiusPreset`
+- Component registration model: `AddPluginDesktopComponent<TControl>(PluginDesktopComponentOptions options)`
 
-### What this repository owns
+## Workspace Market Resolution
 
-- `LanMountainDesktop/`: the desktop host application
-- `LanMountainDesktop.PluginSdk/`: the canonical host-side plugin API
-- `LanMountainDesktop/plugins/`: plugin discovery, installation, loading, and market integration
-- `LanMountainDesktop.Tests/`: host and plugin runtime tests
-- `LanAirApp/`: a mirror kept for local workspace integration only; the standalone `LanAirApp` repository remains the source of truth
+For local market debugging, the host resolves workspace files from the sibling repository path (`..\\LanAirApp`) instead of reading the in-repo mirror folder.
 
-### Ecosystem boundaries
+See:
 
-- Application host: `LanMontainDesktop`
-- Plugin market and developer-facing materials: standalone `LanAirApp`
-- Authoritative sample plugin: standalone `LanMountainDesktop.SamplePlugin`
-
-### Current plugin API baseline
-
-- Host plugin API baseline: `3.0.0`
-- `SampleClock` shared contract: `2.0.0`
+- `docs/ECOSYSTEM_BOUNDARIES.md`
+- `docs/PLUGIN_SDK_V4_MIGRATION.md`

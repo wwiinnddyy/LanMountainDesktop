@@ -324,8 +324,9 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
     private void ApplyAdaptiveTypography()
     {
         var scale = ResolveScale();
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(28 * scale, 16, 40);
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(Math.Clamp(11 * scale, 7, 17));
 
         LayoutRoot.ColumnSpacing = Math.Clamp(10 * scale, 6, 16);
@@ -337,7 +338,7 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
             Math.Clamp(2.4 * scale, 1, 4));
         CalendarGrid.Margin = new Thickness(0, 0, 0, Math.Clamp(0.8 * scale, 0, 2));
 
-        LunarCardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * scale, 14, 34);
+        LunarCardBorder.CornerRadius = mainRectangleCornerRadius;
         LunarCardBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 20));
         RightPanelGrid.RowSpacing = Math.Clamp(7.5 * scale, 3.5, 11);
         DividerBorder.Margin = new Thickness(0, Math.Clamp(1 * scale, 0, 2), 0, Math.Clamp(1 * scale, 0, 2));

@@ -400,8 +400,9 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
-        CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(32 * softScale, 16, 46);
+        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = unifiedMainRectangle;
+        CardBorder.CornerRadius = unifiedMainRectangle;
 
         var horizontalPadding = Math.Clamp(14 * softScale, 8, 20);
         var verticalPadding = Math.Clamp(14 * softScale, 8, 20);
@@ -682,6 +683,11 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var scaleY = actualHeight / expectedHeight;
         return Math.Clamp(Math.Min(scaleX, scaleY), 0.72, 2.4);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private static string NormalizeCompactText(string? text)
     {

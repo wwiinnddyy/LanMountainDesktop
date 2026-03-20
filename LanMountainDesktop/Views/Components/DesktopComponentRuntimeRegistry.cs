@@ -89,12 +89,7 @@ public sealed class DesktopComponentRuntimeRegistration
 public sealed class DesktopComponentRuntimeDescriptor
 {
     private static readonly Func<ComponentChromeContext, double> DefaultCornerRadiusResolver =
-        chromeContext =>
-        {
-            var scale = Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale);
-            var baseRadius = Math.Clamp(chromeContext.CellSize * 0.22, 8, 18);
-            return Math.Clamp(baseRadius * scale, 8 * scale, 18 * scale);
-        };
+        chromeContext => ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue(chromeContext);
 
     private readonly Func<DesktopComponentControlFactoryContext, Control> _controlFactory;
     private readonly Func<ComponentChromeContext, double> _cornerRadiusResolver;
@@ -324,194 +319,155 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.Date,
                     "component.date",
-                    () => new DateWidget(),
-                    _ => 16),
+                    () => new DateWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.MonthCalendar,
                     "component.month_calendar",
-                    () => new MonthCalendarWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.26, 10, 22)),
+                    () => new MonthCalendarWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.LunarCalendar,
                     "component.lunar_calendar",
-                    () => new LunarCalendarWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.30, 12, 26)),
+                    () => new LunarCalendarWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopClock,
                     "component.desktop_clock",
-                    () => new AnalogClockWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.30, 12, 28)),
+                    () => new AnalogClockWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWeatherClock,
                     "component.weather_clock",
-                    () => new WeatherClockWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new WeatherClockWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWorldClock,
                     "component.world_clock",
-                    () => new WorldClockWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.30, 10, 24)),
+                    () => new WorldClockWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopTimer,
                     "component.desktop_timer",
-                    () => new TimerWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.30, 12, 28)),
+                    () => new TimerWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWeather,
                     "component.desktop_weather",
-                    () => new WeatherWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                    () => new WeatherWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopHourlyWeather,
                     "component.hourly_weather",
-                    () => new HourlyWeatherWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                    () => new HourlyWeatherWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopMultiDayWeather,
                     "component.multiday_weather",
-                    () => new MultiDayWeatherWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                    () => new MultiDayWeatherWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopExtendedWeather,
                     "component.extended_weather",
-                    () => new ExtendedWeatherWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                    () => new ExtendedWeatherWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopClassSchedule,
                     "component.class_schedule",
-                    () => new ClassScheduleWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.45, 24, 44)),
+                    () => new ClassScheduleWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopMusicControl,
                     "component.music_control",
-                    () => new MusicControlWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new MusicControlWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopAudioRecorder,
                     "component.audio_recorder",
-                    () => new RecordingWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.36, 16, 34)),
+                    () => new RecordingWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyEnvironment,
                     "component.study_environment",
-                    () => new StudyEnvironmentWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.36, 12, 26)),
+                    () => new StudyEnvironmentWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudySessionControl,
                     "component.study_session_control",
-                    () => new StudySessionControlWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.36, 10, 24)),
+                    () => new StudySessionControlWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudySessionHistory,
                     "component.study_session_history",
-                    () => new StudySessionHistoryWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 10, 24)),
+                    () => new StudySessionHistoryWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyNoiseCurve,
                     "component.study_noise_curve",
-                    () => new StudyNoiseCurveWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 12, 26)),
+                    () => new StudyNoiseCurveWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyNoiseDistribution,
                     "component.study_noise_distribution",
-                    () => new StudyNoiseDistributionWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 12, 26)),
+                    () => new StudyNoiseDistributionWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyScoreOverview,
                     "component.study_score_overview",
-                    () => new StudyScoreOverviewWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 12, 28)),
+                    () => new StudyScoreOverviewWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyDeductionReasons,
                     "component.study_deduction_reasons",
-                    () => new StudyDeductionReasonsWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 10, 24)),
+                    () => new StudyDeductionReasonsWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStudyInterruptDensity,
                     "component.study_interrupt_density",
-                    () => new StudyInterruptDensityWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 10, 24)),
+                    () => new StudyInterruptDensityWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopDailyPoetry,
                     "component.daily_poetry",
-                    () => new DailyPoetryWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new DailyPoetryWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopDailyArtwork,
                     "component.daily_artwork",
-                    () => new DailyArtworkWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new DailyArtworkWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopDailyWord,
                     "component.daily_word",
-                    () => new DailyWordWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new DailyWordWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopDailyWord2x2,
                     "component.daily_word_2x2",
-                    () => new DailyWord2x2Widget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 12, 26)),
+                    () => new DailyWord2x2Widget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopCnrDailyNews,
                     "component.cnr_daily_news",
-                    () => new CnrDailyNewsWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new CnrDailyNewsWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopIfengNews,
                     "component.ifeng_news",
-                    () => new IfengNewsWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.30, 12, 24)),
+                    () => new IfengNewsWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBilibiliHotSearch,
                     "component.bilibili_hot_search",
-                    () => new BilibiliHotSearchWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new BilibiliHotSearchWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBaiduHotSearch,
                     "component.baidu_hot_search",
-                    () => new BaiduHotSearchWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.34, 14, 30)),
+                    () => new BaiduHotSearchWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopStcn24Forum,
                     "component.stcn24_forum",
-                    () => new Stcn24ForumWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.28, 12, 24)),
+                    () => new Stcn24ForumWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopExchangeRateCalculator,
                     "component.exchange_rate_converter",
-                    () => new ExchangeRateCalculatorWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.28, 12, 26)),
+                    () => new ExchangeRateCalculatorWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWhiteboard,
                     "component.whiteboard",
-                    () => new WhiteboardWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
+                    () => new WhiteboardWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBlackboardLandscape,
                     "component.blackboard_landscape",
-                    () => new WhiteboardWidget(baseWidthCells: 4),
-                    cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
+                    () => new WhiteboardWidget(baseWidthCells: 4)),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBrowser,
                     "component.browser",
-                    () => new BrowserWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.24, 10, 24)),
+                    () => new BrowserWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopOfficeRecentDocuments,
                     "component.office_recent_documents",
-                    _ => new OfficeRecentDocumentsWidget(),
-                    chromeContext => Math.Clamp(chromeContext.CellSize * 0.50, 10, 24) *
-                        Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale)),
+                    () => new OfficeRecentDocumentsWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopRemovableStorage,
                     "component.removable_storage",
-                    () => new RemovableStorageWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.46, 12, 26)),
+                    () => new RemovableStorageWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.HolidayCalendar,
                     "component.holiday_calendar",
-                    () => new HolidayCalendarWidget(),
-                    cellSize => Math.Clamp(cellSize * 0.32, 12, 28))
+                    () => new HolidayCalendarWidget())
         ];
     }
 

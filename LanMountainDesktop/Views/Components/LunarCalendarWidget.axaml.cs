@@ -181,8 +181,9 @@ public partial class LunarCalendarWidget : UserControl, IDesktopComponentWidget,
     private void ApplyAdaptiveTypography()
     {
         var scale = ResolveScale();
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 16, 44);
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 8, 24));
         LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 18);
         DividerBorder.Margin = new Thickness(

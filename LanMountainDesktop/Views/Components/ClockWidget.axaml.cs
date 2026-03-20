@@ -132,8 +132,8 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         var targetHeight = Math.Clamp(cellSize * 0.74, 34, 74);
         RootBorder.Height = targetHeight;
         
-        // 2. 动态圆角：确保始终是完美的胶囊半圆
-        RootBorder.CornerRadius = new CornerRadius(targetHeight / 2);
+        // 2. 主矩形统一到主题主档圆角
+        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
         RootBorder.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center;
         
         // 3. 核心：满盈字阶 (Filled Typography)
@@ -189,4 +189,9 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         RootBorder.ClearValue(Border.BorderThicknessProperty);
         RootBorder.ClearValue(Border.BoxShadowProperty);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 }

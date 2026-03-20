@@ -270,14 +270,10 @@ public partial class HourlyWeatherWidget : UserControl, IDesktopComponentWidget,
         var scale = ResolveScale();
         var hostWidth = Bounds.Width > 1 ? Bounds.Width : Math.Max(140, _currentCellSize * 4);
         var hostHeight = Bounds.Height > 1 ? Bounds.Height : Math.Max(78, _currentCellSize * 2);
-        var cornerRadius = ComponentChromeCornerRadiusHelper.Scale(
-            _currentCellSize * metrics.CornerRadiusScale,
-            24,
-            46,
-            _chromeContext);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius(_chromeContext);
 
         ComponentChromeCornerRadiusHelper.Apply(
-            cornerRadius,
+            mainRectangleCornerRadius,
             RootBorder,
             BackgroundImageLayer,
             BackgroundMotionLayer,

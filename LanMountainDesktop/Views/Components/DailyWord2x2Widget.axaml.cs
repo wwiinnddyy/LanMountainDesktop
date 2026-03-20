@@ -328,8 +328,9 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 14, 40);
-        CardBorder.CornerRadius = RootBorder.CornerRadius;
+        var unifiedMainRectangle = ResolveUnifiedMainRectangle();
+        RootBorder.CornerRadius = unifiedMainRectangle;
+        CardBorder.CornerRadius = unifiedMainRectangle;
         CardBorder.Padding = new Thickness(
             Math.Clamp(12 * scale, 8, 18),
             Math.Clamp(11 * scale, 7, 16),
@@ -481,6 +482,11 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.56, 2.0);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private string L(string key, string fallback)
     {

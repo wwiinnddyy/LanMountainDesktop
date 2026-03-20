@@ -118,9 +118,10 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         var toolbarPaddingVertical = Math.Clamp(buttonSize * 0.24, 4, 8);
 
         RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(_currentCellSize * 0.14, 6, 14));
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.34, 12, 28);
-        CanvasBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.24, 10, 22);
-        ToolbarBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.22, 10, 20);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
+        CanvasBorder.CornerRadius = mainRectangleCornerRadius;
+        ToolbarBorder.CornerRadius = mainRectangleCornerRadius;
         ToolbarBorder.Padding = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(toolbarPaddingHorizontal, 6, 12),
             ComponentChromeCornerRadiusHelper.SafeValue(toolbarPaddingVertical, 4, 8));

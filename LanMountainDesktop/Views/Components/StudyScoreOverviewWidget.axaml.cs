@@ -258,7 +258,8 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
         var expandedMultiplier = _isExpandedMode ? 1.12 : 1.0;
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.50, 14, 42);
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(
             Math.Clamp(16 * scale * compactMultiplier * expandedMultiplier, 8, 30),
             Math.Clamp(14 * scale * compactMultiplier * expandedMultiplier, 6, 26));
@@ -305,7 +306,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         var cardPadding = new Thickness(
             Math.Clamp(10 * scale * compactMultiplier * expandedMultiplier, 6, 20),
             Math.Clamp(8 * scale * compactMultiplier * expandedMultiplier, 4, 16));
-        var cardCornerRadius = ComponentChromeCornerRadiusHelper.Scale(10 * scale, 6, 18);
+        var cardCornerRadius = mainRectangleCornerRadius;
         AverageCardBorder.Padding = cardPadding;
         MinimumCardBorder.Padding = cardPadding;
         MaximumCardBorder.Padding = cardPadding;

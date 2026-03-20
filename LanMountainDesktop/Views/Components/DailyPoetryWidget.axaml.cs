@@ -92,7 +92,7 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
+        RootBorder.CornerRadius = ResolveUnifiedMainRectangle();
         RootBorder.Padding = new Thickness(
             Math.Clamp(20 * scale, 10, 34),
             Math.Clamp(16 * scale, 8, 28),
@@ -451,6 +451,11 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
             : 1;
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale)), 0.52, 2.2);
     }
+
+    private CornerRadius ResolveUnifiedMainRectangle() => new(ResolveUnifiedMainRadiusValue());
+
+    private static double ResolveUnifiedMainRadiusValue() =>
+        HostAppearanceThemeProvider.GetOrCreate().GetCurrent().CornerRadiusTokens.Lg.TopLeft;
 
     private void ApplyAdaptiveTextLayout(bool isNightMode, double scale, double totalWidth, double totalHeight)
     {

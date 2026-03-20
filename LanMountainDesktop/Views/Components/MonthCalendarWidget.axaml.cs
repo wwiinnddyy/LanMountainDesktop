@@ -216,8 +216,9 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
     private void ApplyAdaptiveTypography()
     {
         var scale = ResolveScale();
+        var mainRectangleCornerRadius = ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadius();
 
-        RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(28 * scale, 14, 40);
+        RootBorder.CornerRadius = mainRectangleCornerRadius;
         RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 22));
         LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 16);
         LayoutRoot.Width = Math.Clamp(280 * scale, 220, 420);

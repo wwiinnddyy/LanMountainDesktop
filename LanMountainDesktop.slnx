@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="LanAirApp/tools/LanMountainDesktop.PluginPackager/LanMountainDesktop.PluginPackager.csproj" />
   <Project Path="LanMountainDesktop.Host.Abstractions/LanMountainDesktop.Host.Abstractions.csproj" />
   <Project Path="LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj" />
   <Project Path="LanMountainDesktop.Settings.Core/LanMountainDesktop.Settings.Core.csproj" />

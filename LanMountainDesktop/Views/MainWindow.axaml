@@ -269,7 +269,7 @@
                                 Grid.ColumnSpan="1"
                                 HorizontalAlignment="Stretch"
                                 Margin="0"
-                                CornerRadius="36"
+                                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                                 Padding="6">
                             <Grid ColumnDefinitions="Auto,*,Auto"
                                   ColumnSpacing="8">

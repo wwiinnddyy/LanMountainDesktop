@@ -346,6 +346,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             ApplyAdaptiveThemeResources();
             _recommendedColors = snapshot.MonetPalette.RecommendedColors;
             _monetColors = snapshot.MonetPalette.MonetColors;
+            ApplyUnifiedMainRectangleChrome(snapshot);
         }, DispatcherPriority.Background);
     }
 
@@ -491,7 +492,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         TopStatusBarHost.Padding = new Thickness(0);
 
         BottomTaskbarContainer.Margin = new Thickness(0);
-        BottomTaskbarContainer.CornerRadius = new CornerRadius(Math.Clamp(taskbarCellHeight * 0.58, 20, 44));
+        ApplyUnifiedMainRectangleChrome();
         BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(taskbarCellHeight * 0.16, 6, 14));
 
         ClockWidget.Margin = new Thickness(0);
@@ -525,6 +526,27 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         TaskbarProfileAvatarFallbackText.FontSize = Math.Clamp(avatarSize * 0.34, 10, 22);
 
         UpdateComponentLibraryLayout(cellSize);
+    }
+
+    private void ApplyUnifiedMainRectangleChrome(AppearanceThemeSnapshot? snapshot = null)
+    {
+        var unifiedMainRectangle = new CornerRadius(ResolveUnifiedMainRadiusValue(snapshot));
+        BottomTaskbarContainer.CornerRadius = unifiedMainRectangle;
+
+        if (_currentDesktopCellSize > 0)
+        {
+            ClockWidget.ApplyCellSize(_currentDesktopCellSize);
+        }
+    }
+
+    private double ResolveUnifiedMainRadiusValue(AppearanceThemeSnapshot? snapshot = null)
+    {
+        if (snapshot is not null)
+        {
+            return snapshot.CornerRadiusTokens.Lg.TopLeft;
+        }
+
+        return _appearanceThemeService.GetCurrent().CornerRadiusTokens.Lg.TopLeft;
     }
 
     private static void SetButtonContentSpacing(Button? button, double spacing)
