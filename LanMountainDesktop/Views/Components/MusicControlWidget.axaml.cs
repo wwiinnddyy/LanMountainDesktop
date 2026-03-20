@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -17,41 +17,42 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private const Symbol PlaySymbol = Symbol.Play;
     private const Symbol PauseSymbol = Symbol.Pause;
-
-    private readonly DispatcherTimer _refreshTimer = new()
-    {
-        Interval = TimeSpan.FromSeconds(2.4)
-    };
+    private const Symbol HeartSymbol = Symbol.Heart;
+    private const Symbol HeartFilledSymbol = Symbol.Heart;
 
     private readonly IMusicControlService _musicControlService = MusicControlServiceFactory.CreateDefault();
     private readonly MonetColorService _monetColorService = new();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
-    private CancellationTokenSource? _refreshCts;
+    private CancellationTokenSource? _commandCts;
     private Bitmap? _coverBitmap;
     private MusicPlaybackState _currentState = MusicPlaybackState.NoSession(isSupported: true);
+    private MusicQueueState _currentQueue = MusicQueueState.Empty();
     private string _languageCode = "zh-CN";
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isOnActivePage = true;
-    private bool _isRefreshing;
     private bool _isExecutingCommand;
     private double _progressRatio;
     private bool _isProgressIndeterminate;
+    private bool _isListening;
 
     public MusicControlWidget()
     {
         InitializeComponent();
 
-        _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+
+        // Subscribe to service events
+        _musicControlService.PlaybackStateChanged += OnPlaybackStateChanged;
+        _musicControlService.QueueChanged += OnQueueChanged;
 
         ApplyCellSize(_currentCellSize);
         ApplyDynamicBackground(null);
@@ -63,21 +64,19 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         _currentCellSize = Math.Max(1, cellSize);
         var scale = ResolveScale();
 
-        var rootRadius = Math.Clamp(30 * scale, 16, 44);
-        var rootCornerRadius = new CornerRadius(rootRadius);
-
+        var rootCornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 16, 44);
         RootBorder.CornerRadius = rootCornerRadius;
         ContentPaddingBorder.Padding = new Thickness(
-            Math.Clamp(14 * scale, 9, 22),
-            Math.Clamp(11 * scale, 7, 18),
-            Math.Clamp(14 * scale, 9, 22),
-            Math.Clamp(11 * scale, 7, 18));
-        LayoutGrid.RowSpacing = Math.Clamp(9 * scale, 6, 14);
-        HeaderRowGrid.ColumnSpacing = Math.Clamp(11 * scale, 8, 18);
-        MetaStackPanel.Spacing = Math.Clamp(3 * scale, 1, 6);
-        TimelineRowGrid.ColumnSpacing = Math.Clamp(9 * scale, 6, 14);
-        ActionRowGrid.ColumnSpacing = Math.Clamp(12 * scale, 8, 20);
-        ActionRowGrid.Margin = new Thickness(0, Math.Clamp(1 * scale, 0, 4), 0, 0);
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 9, 22),
+            ComponentChromeCornerRadiusHelper.SafeValue(11 * scale, 7, 18),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 9, 22),
+            ComponentChromeCornerRadiusHelper.SafeValue(11 * scale, 7, 18));
+        LayoutGrid.RowSpacing = ComponentChromeCornerRadiusHelper.SafeValue(9 * scale, 6, 14);
+        HeaderRowGrid.ColumnSpacing = ComponentChromeCornerRadiusHelper.SafeValue(11 * scale, 8, 18);
+        MetaStackPanel.Spacing = ComponentChromeCornerRadiusHelper.SafeValue(3 * scale, 1, 6);
+        TimelineRowGrid.ColumnSpacing = ComponentChromeCornerRadiusHelper.SafeValue(9 * scale, 6, 14);
+        ActionRowGrid.ColumnSpacing = ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 8, 20);
+        ActionRowGrid.Margin = new Thickness(0, ComponentChromeCornerRadiusHelper.SafeValue(1 * scale, 0, 4), 0, 0);
         DynamicBackgroundBase.CornerRadius = rootCornerRadius;
         BackdropCoverHost.CornerRadius = rootCornerRadius;
         DynamicGradientOverlay.CornerRadius = rootCornerRadius;
@@ -85,7 +84,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         CoverBorder.Width = Math.Clamp(56 * scale, 38, 86);
         CoverBorder.Height = Math.Clamp(56 * scale, 38, 86);
-        CoverBorder.CornerRadius = new CornerRadius(Math.Clamp(12 * scale, 8, 16));
+        CoverBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(12 * scale, 8, 16);
 
         TitleTextBlock.FontSize = Math.Clamp(20 * scale, 12, 28);
         ArtistTextBlock.FontSize = Math.Clamp(14 * scale, 9, 18);
@@ -132,10 +131,11 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         _ = isEditMode;
         var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
-        UpdateRefreshTimerState();
+        UpdateListeningState();
 
         if (!wasOnActivePage && _isOnActivePage && _isAttached)
         {
+            // Refresh state when becoming visible again
             _ = RefreshStateAsync();
         }
     }
@@ -143,18 +143,15 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
-        UpdateRefreshTimerState();
-        if (_isOnActivePage)
-        {
-            _ = RefreshStateAsync();
-        }
+        UpdateListeningState();
+        _ = RefreshStateAsync();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        UpdateRefreshTimerState();
-        CancelRefreshRequest();
+        UpdateListeningState();
+        CancelCommandRequest();
         DisposeCoverBitmap();
     }
 
@@ -163,9 +160,87 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         ApplyCellSize(_currentCellSize);
     }
 
-    private async void OnRefreshTimerTick(object? sender, EventArgs e)
+    private void OnPlaybackStateChanged(object? sender, MusicPlaybackState state)
     {
-        await RefreshStateAsync();
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isAttached || !_isOnActivePage)
+            {
+                return;
+            }
+
+            _currentState = state;
+            ApplyState(state);
+        });
+    }
+
+    private void OnQueueChanged(object? sender, MusicQueueState queue)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!_isAttached || !_isOnActivePage)
+            {
+                return;
+            }
+
+            _currentQueue = queue;
+            UpdateQueueButtonState();
+        });
+    }
+
+    private void UpdateListeningState()
+    {
+        var shouldListen = _isAttached && _isOnActivePage;
+
+        if (shouldListen && !_isListening)
+        {
+            _musicControlService.StartListening();
+            _isListening = true;
+        }
+        else if (!shouldListen && _isListening)
+        {
+            _musicControlService.StopListening();
+            _isListening = false;
+        }
+    }
+
+    private async Task RefreshStateAsync()
+    {
+        if (!_isAttached || !_isOnActivePage)
+        {
+            return;
+        }
+
+        UpdateLanguageCode();
+
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var state = await _musicControlService.GetCurrentStateAsync(cts.Token);
+
+            if (cts.IsCancellationRequested || !_isAttached)
+            {
+                return;
+            }
+
+            _currentState = state;
+            ApplyState(state);
+
+            // Also refresh queue
+            var queue = await _musicControlService.GetPlaybackQueueAsync(20, cts.Token);
+            _currentQueue = queue;
+            UpdateQueueButtonState();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation.
+        }
+        catch
+        {
+            var fallbackState = MusicPlaybackState.NoSession(isSupported: OperatingSystem.IsWindows());
+            _currentState = fallbackState;
+            ApplyState(fallbackState);
+        }
     }
 
     private async void OnPlayPauseButtonClick(object? sender, RoutedEventArgs e)
@@ -181,6 +256,25 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
     private async void OnNextButtonClick(object? sender, RoutedEventArgs e)
     {
         await ExecuteCommandAsync(token => _musicControlService.SkipNextAsync(token));
+    }
+
+    private async void OnFavoriteButtonClick(object? sender, RoutedEventArgs e)
+    {
+        await ExecuteCommandAsync(token => _musicControlService.ToggleFavoriteAsync(token));
+    }
+
+    private async void OnQueueButtonClick(object? sender, RoutedEventArgs e)
+    {
+        // Show queue flyout or panel
+        // For now, just refresh the queue
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var queue = await _musicControlService.GetPlaybackQueueAsync(20, cts.Token);
+            _currentQueue = queue;
+            UpdateQueueButtonState();
+        }
+        catch { }
     }
 
     private async void OnSourceAppButtonClick(object? sender, RoutedEventArgs e)
@@ -208,85 +302,39 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-            _ = await command(cts.Token);
+            CancelCommandRequest();
+            _commandCts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            _ = await command(_commandCts.Token);
         }
         catch
         {
-            // Ignore command transport errors and recover on next poll.
+            // Ignore command transport errors and recover on next event.
         }
         finally
         {
             _isExecutingCommand = false;
+            CancelCommandRequest();
         }
 
         if (refreshAfterCommand)
         {
+            // The event-driven system will update the UI automatically,
+            // but we also do a manual refresh to ensure consistency
+            await Task.Delay(100);
             await RefreshStateAsync();
         }
     }
 
-    private async Task RefreshStateAsync()
+    private void CancelCommandRequest()
     {
-        if (!_isAttached || !_isOnActivePage || _isRefreshing)
+        var cts = Interlocked.Exchange(ref _commandCts, null);
+        if (cts is null)
         {
             return;
         }
 
-        _isRefreshing = true;
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
-
-        try
-        {
-            var state = await _musicControlService.GetCurrentStateAsync(cts.Token);
-            if (cts.IsCancellationRequested || !_isAttached)
-            {
-                return;
-            }
-
-            _currentState = state;
-            ApplyState(state);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation.
-        }
-        catch
-        {
-            var fallbackState = MusicPlaybackState.NoSession(isSupported: OperatingSystem.IsWindows());
-            _currentState = fallbackState;
-            ApplyState(fallbackState);
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-        }
-    }
-
-    private void UpdateRefreshTimerState()
-    {
-        if (_isAttached && _isOnActivePage)
-        {
-            if (!_refreshTimer.IsEnabled)
-            {
-                _refreshTimer.Start();
-            }
-
-            return;
-        }
-
-        _refreshTimer.Stop();
+        cts.Cancel();
+        cts.Dispose();
     }
 
     private void ApplyState(MusicPlaybackState state)
@@ -364,6 +412,10 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
             ? PauseSymbol
             : PlaySymbol;
 
+        // Update favorite button
+        FavoriteIcon.Symbol = state.IsFavorite ? HeartFilledSymbol : HeartSymbol;
+        FavoriteIcon.IconVariant = state.IsFavorite ? IconVariant.Filled : IconVariant.Regular;
+
         SetCoverImage(state.ThumbnailBytes);
         ApplyActionButtonState(state);
         UpdateSourceAppButtonTooltip();
@@ -385,7 +437,16 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
             : showNoSessionStyle;
         SourceAppButton.IsEnabled = !_isExecutingCommand && state.IsSupported;
         QueueButton.IsEnabled = canOperate || showNoSessionStyle;
-        FavoriteButton.IsEnabled = canOperate || showNoSessionStyle;
+        FavoriteButton.IsEnabled = canOperate
+            ? state.CanToggleFavorite
+            : showNoSessionStyle;
+    }
+
+    private void UpdateQueueButtonState()
+    {
+        // Update queue button visual state based on queue availability
+        var hasQueue = _currentQueue.IsSupported && _currentQueue.HasMoreItems;
+        QueueIcon.Opacity = hasQueue ? 1.0 : 0.5;
     }
 
     private void ApplyNoMediaVisualTheme()
@@ -441,6 +502,10 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         SourceAppGlyphBadge.BorderBrush = new SolidColorBrush(Color.Parse("#00FFFFFF"));
         SourceAppIcon.IconVariant = IconVariant.Filled;
         SourceAppIcon.Foreground = new SolidColorBrush(Color.Parse("#FBFFFFFF"));
+
+        // Reset favorite icon
+        FavoriteIcon.Symbol = HeartSymbol;
+        FavoriteIcon.IconVariant = IconVariant.Regular;
     }
 
     private void ApplyActiveVisualTheme()
@@ -472,18 +537,6 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         {
             _languageCode = "zh-CN";
         }
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
     }
 
     private string ResolveStatusText(MusicPlaybackStatus status)
@@ -695,5 +748,19 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         var safeIndex = Math.Clamp(index, 0, colors.Count - 1);
         return colors[safeIndex];
+    }
+
+    public void Dispose()
+    {
+        _musicControlService.PlaybackStateChanged -= OnPlaybackStateChanged;
+        _musicControlService.QueueChanged -= OnQueueChanged;
+        _musicControlService.StopListening();
+        if (_musicControlService is IDisposable disposableService)
+        {
+            disposableService.Dispose();
+        }
+
+        CancelCommandRequest();
+        DisposeCoverBitmap();
     }
 }

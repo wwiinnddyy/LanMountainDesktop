@@ -54,8 +54,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.34, 10, 28);
         RootBorder.Padding = new Thickness(
-            Math.Clamp(14 * scale, 8, 20),
-            Math.Clamp(10 * scale, 6, 16));
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 20),
+            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale, 6, 16));
 
         StatusTitleTextBlock.FontSize = Math.Clamp(11 * scale, 9, 18);
         StatusValueTextBlock.FontSize = Math.Clamp(20 * scale, 12, 34);

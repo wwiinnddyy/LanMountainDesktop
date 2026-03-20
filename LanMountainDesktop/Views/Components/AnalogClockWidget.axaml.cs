@@ -327,7 +327,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(42 * scale, 16, 56);
-        RootBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 26));
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(14 * scale, 14 * scale, null, 0.55d);
         ApplyModeVisualIfNeeded();
     }
 

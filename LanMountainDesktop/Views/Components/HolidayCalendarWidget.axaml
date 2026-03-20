@@ -13,7 +13,7 @@
             ClipToBounds="True"
             Padding="14">
         <Grid x:Name="LayoutRoot"
-              RowDefinitions="1.1*,2.3*,0.62*,0.78*,0.95*"
+              RowDefinitions="1.15*,2.45*,0.65*,0.82*,1.0*"
               RowSpacing="8">
             <TextBlock x:Name="TitleTextBlock"
                        Grid.Row="0"
@@ -22,11 +22,12 @@
                        FontWeight="SemiBold"
                        Foreground="#61697C"
                        HorizontalAlignment="Center"
-                       VerticalAlignment="Bottom"
+                       VerticalAlignment="Center"
                        TextAlignment="Center"
+                       TextWrapping="Wrap"
                        TextTrimming="CharacterEllipsis"
-                       MaxLines="1"
-                       Margin="8,0,8,0" />
+                       MaxLines="2"
+                       Margin="10,0,10,0" />
 
             <Viewbox Grid.Row="1"
                      Stretch="Uniform"
@@ -108,10 +109,10 @@
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Center"
                        TextAlignment="Center"
-                       TextWrapping="NoWrap"
+                       TextWrapping="Wrap"
                        TextTrimming="CharacterEllipsis"
-                       MaxLines="1"
-                       Margin="8,0,8,0" />
+                       MaxLines="2"
+                       Margin="10,0,10,0" />
         </Grid>
     </Border>
 </UserControl>

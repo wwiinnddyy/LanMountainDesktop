@@ -12,6 +12,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -329,12 +330,17 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(30 * scale, 14, 40);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            12 * scale,
+            10 * scale,
+            null,
+            0.45d);
         CardBorder.CornerRadius = RootBorder.CornerRadius;
-        CardBorder.Padding = new Thickness(
-            Math.Clamp(12 * scale, 8, 18),
-            Math.Clamp(11 * scale, 7, 16),
-            Math.Clamp(12 * scale, 8, 18),
-            Math.Clamp(11 * scale, 7, 16));
+        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            12 * scale,
+            11 * scale,
+            null,
+            0.55d);
 
         var refreshSize = Math.Clamp(30 * scale, 20, 38);
         RefreshButton.Width = refreshSize;
@@ -342,44 +348,60 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         RefreshButton.CornerRadius = new CornerRadius(refreshSize / 2d);
         RefreshIcon.FontSize = Math.Clamp(14 * scale, 10, 20);
 
-        var contentWidth = Math.Max(80, totalWidth - CardBorder.Padding.Left - CardBorder.Padding.Right);
+        var contentWidth = Math.Max(
+            80,
+            totalWidth - RootBorder.Padding.Left - RootBorder.Padding.Right - CardBorder.Padding.Left - CardBorder.Padding.Right);
         var wordWidth = Math.Max(48, contentWidth - refreshSize - Math.Clamp(6 * scale, 4, 10));
         WordTextBlock.MaxWidth = wordWidth;
 
-        var contentHeight = Math.Max(52, totalHeight - CardBorder.Padding.Top - CardBorder.Padding.Bottom);
+        var contentHeight = Math.Max(
+            52,
+            totalHeight - RootBorder.Padding.Top - RootBorder.Padding.Bottom - CardBorder.Padding.Top - CardBorder.Padding.Bottom);
         var wordHeightBudget = Math.Max(18, contentHeight * 0.34);
         var detailHeightBudget = Math.Max(18, contentHeight - wordHeightBudget - Math.Clamp(8 * scale, 4, 14));
 
-        WordTextBlock.FontSize = FitFontSize(
+        var wordLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             WordTextBlock.Text,
             wordWidth,
             wordHeightBudget,
-            maxLines: 1,
-            minFontSize: Math.Clamp(18 * scale, 12, 22),
-            maxFontSize: Math.Clamp(38 * scale, 20, 50),
-            weight: FontWeight.Bold,
-            lineHeightFactor: 1.02);
-        WordTextBlock.LineHeight = WordTextBlock.FontSize * 1.02;
+            1,
+            1,
+            Math.Clamp(18 * scale, 12, 22),
+            Math.Clamp(38 * scale, 20, 50),
+            [FontWeight.Bold],
+            1.02,
+            MiSansFontFamily);
+        WordTextBlock.FontSize = wordLayout.FontSize;
+        WordTextBlock.FontWeight = wordLayout.Weight;
+        WordTextBlock.MaxLines = wordLayout.MaxLines;
+        WordTextBlock.TextWrapping = TextWrapping.NoWrap;
+        WordTextBlock.LineHeight = wordLayout.LineHeight;
 
-        var detailFont = FitFontSize(
+        var detailLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             MeaningTextBlock.IsVisible ? MeaningTextBlock.Text : HiddenHintTextBlock.Text,
             contentWidth,
             detailHeightBudget,
-            maxLines: MeaningTextBlock.IsVisible ? 5 : 4,
-            minFontSize: Math.Clamp(12 * scale, 9, 14),
-            maxFontSize: Math.Clamp(18 * scale, 12, 22),
-            weight: FontWeight.SemiBold,
-            lineHeightFactor: 1.10);
+            1,
+            MeaningTextBlock.IsVisible ? 5 : 4,
+            Math.Clamp(12 * scale, 9, 14),
+            Math.Clamp(18 * scale, 12, 22),
+            [FontWeight.SemiBold, FontWeight.Medium],
+            1.10,
+            MiSansFontFamily);
 
         MeaningTextBlock.MaxWidth = contentWidth;
-        MeaningTextBlock.FontSize = detailFont;
-        MeaningTextBlock.LineHeight = detailFont * 1.10;
-        MeaningTextBlock.MaxLines = totalHeight < _currentCellSize * 1.8 ? 4 : 5;
+        MeaningTextBlock.FontSize = detailLayout.FontSize;
+        MeaningTextBlock.FontWeight = detailLayout.Weight;
+        MeaningTextBlock.LineHeight = detailLayout.LineHeight;
+        MeaningTextBlock.MaxLines = Math.Min(detailLayout.MaxLines, totalHeight < _currentCellSize * 1.8 ? 4 : 5);
+        MeaningTextBlock.TextWrapping = MeaningTextBlock.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
 
         HiddenHintTextBlock.MaxWidth = contentWidth;
-        HiddenHintTextBlock.FontSize = detailFont;
-        HiddenHintTextBlock.LineHeight = detailFont * 1.10;
-        HiddenHintTextBlock.MaxLines = totalHeight < _currentCellSize * 1.8 ? 3 : 4;
+        HiddenHintTextBlock.FontSize = detailLayout.FontSize;
+        HiddenHintTextBlock.FontWeight = detailLayout.Weight;
+        HiddenHintTextBlock.LineHeight = detailLayout.LineHeight;
+        HiddenHintTextBlock.MaxLines = Math.Min(detailLayout.MaxLines, totalHeight < _currentCellSize * 1.8 ? 3 : 4);
+        HiddenHintTextBlock.TextWrapping = HiddenHintTextBlock.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
 
         StatusTextBlock.FontSize = Math.Clamp(14 * scale, 9, 18);
     }
@@ -509,58 +531,4 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
-
-    private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontFamily = MiSansFontFamily,
-            FontSize = fontSize,
-            FontWeight = weight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
-    }
 }

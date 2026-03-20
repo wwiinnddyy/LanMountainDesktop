@@ -65,7 +65,11 @@ public partial class RecordingWidget : UserControl, IDesktopComponentWidget, IDe
 
         var rootRadius = ComponentChromeCornerRadiusHelper.Scale(34 * chromeScale, 16, 56);
         RootBorder.CornerRadius = rootRadius;
-        RootBorder.Padding = new Thickness(0);
+        RootBorder.Padding = new Thickness(
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * contentScale, 10, 22),
+            ComponentChromeCornerRadiusHelper.SafeValue(12 * contentScale, 8, 18),
+            ComponentChromeCornerRadiusHelper.SafeValue(14 * contentScale, 10, 22),
+            ComponentChromeCornerRadiusHelper.SafeValue(12 * contentScale, 8, 18));
         RecorderCardBorder.CornerRadius = rootRadius;
         RecorderContentGrid.Margin = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(24 * contentScale, 14, 26),

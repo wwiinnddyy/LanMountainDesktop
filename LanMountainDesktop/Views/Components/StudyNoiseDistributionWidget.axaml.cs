@@ -325,8 +325,8 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.44, 12, 34);
         RootBorder.Padding = new Thickness(
-            Math.Clamp(12 * scale * compactMultiplier, 6, 18),
-            Math.Clamp(9 * scale * compactMultiplier, 5, 16));
+            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale * compactMultiplier, 6, 18),
+            ComponentChromeCornerRadiusHelper.SafeValue(9 * scale * compactMultiplier, 5, 16));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 5)

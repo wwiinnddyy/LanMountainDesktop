@@ -231,8 +231,8 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         var compactMultiplier = _isUltraCompactMode ? 0.76 : _isCompactMode ? 0.88 : 1.0;
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(_currentCellSize * 0.46, 12, 34);
         RootBorder.Padding = new Thickness(
-            Math.Clamp(12 * scale * compactMultiplier, 6, 18),
-            Math.Clamp(10 * scale * compactMultiplier, 5, 16));
+            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale * compactMultiplier, 6, 18),
+            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale * compactMultiplier, 5, 16));
 
         ContentRootGrid.RowSpacing = _isUltraCompactMode
             ? Math.Clamp(4 * scale, 2, 6)
@@ -271,8 +271,8 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         ModeBadgeBorder.CornerRadius = new CornerRadius(Math.Clamp(8 * scale, 4, 12));
 
         var rowPadding = new Thickness(
-            Math.Clamp(10 * scale * compactMultiplier, 5, 14),
-            Math.Clamp(7 * scale * compactMultiplier, 3, 10));
+            ComponentChromeCornerRadiusHelper.SafeValue(10 * scale * compactMultiplier, 5, 14),
+            ComponentChromeCornerRadiusHelper.SafeValue(7 * scale * compactMultiplier, 3, 10));
         SustainedRowBorder.Padding = rowPadding;
         TimeRowBorder.Padding = rowPadding;
         SegmentRowBorder.Padding = rowPadding;

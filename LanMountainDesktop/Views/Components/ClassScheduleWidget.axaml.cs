@@ -500,10 +500,10 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var secondarySize = Math.Clamp(29 * scale, 10, 28);
         var lineSpacing = Math.Clamp(4 * scale, 1.5, 8);
         var itemPadding = new Thickness(
-            Math.Clamp(6 * scale, 3, 10),
-            Math.Clamp(4 * scale, 2, 8),
-            Math.Clamp(4 * scale, 2, 8),
-            Math.Clamp(4 * scale, 2, 8));
+            ComponentChromeCornerRadiusHelper.SafeValue(6 * scale, 3, 10),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8),
+            ComponentChromeCornerRadiusHelper.SafeValue(4 * scale, 2, 8));
         var maxVisibleItems = ResolveMaxVisibleItems(scale);
 
         var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");

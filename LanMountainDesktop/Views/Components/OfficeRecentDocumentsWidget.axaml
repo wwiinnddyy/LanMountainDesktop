@@ -9,37 +9,62 @@
              d:DesignHeight="320"
              x:Class="LanMountainDesktop.Views.Components.OfficeRecentDocumentsWidget">
 
+    <UserControl.Resources>
+        <CornerRadius x:Key="OfficeRecentDocumentsRootCornerRadius">34</CornerRadius>
+        <Thickness x:Key="OfficeRecentDocumentsRootPadding">12,10,12,10</Thickness>
+        <Thickness x:Key="OfficeRecentDocumentsContentMargin">16,14,16,14</Thickness>
+        <Thickness x:Key="OfficeRecentDocumentsScrollMargin">0,4,0,0</Thickness>
+        <Thickness x:Key="OfficeRecentDocumentsCardPadding">10</Thickness>
+        <CornerRadius x:Key="OfficeRecentDocumentsCardCornerRadius">12</CornerRadius>
+        <CornerRadius x:Key="OfficeRecentDocumentsRefreshCornerRadius">14</CornerRadius>
+        <CornerRadius x:Key="OfficeRecentDocumentsAccentCornerRadius">70</CornerRadius>
+        <x:Double x:Key="OfficeRecentDocumentsHeaderFontSize">18</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsStatusFontSize">14</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsRefreshIconFontSize">14</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsContentRowSpacing">8</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsRefreshButtonSize">28</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsAccentSize">140</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsDocumentCardWidth">130</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsDocumentCardHeight">90</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsDocumentTitleFontSize">12</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsDocumentTimeFontSize">10</x:Double>
+        <x:Double x:Key="OfficeRecentDocumentsDocumentSpacing">8</x:Double>
+    </UserControl.Resources>
+
     <Border x:Name="RootBorder"
-            CornerRadius="34"
+            CornerRadius="{DynamicResource OfficeRecentDocumentsRootCornerRadius}"
             Background="#2D5A8E"
             ClipToBounds="True"
             BorderThickness="0"
-            Padding="0">
+            Padding="{DynamicResource OfficeRecentDocumentsRootPadding}">
         <Grid>
             <Border x:Name="AccentCorner"
-                    Width="140"
-                    Height="140"
+                    Width="{DynamicResource OfficeRecentDocumentsAccentSize}"
+                    Height="{DynamicResource OfficeRecentDocumentsAccentSize}"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Margin="0,-40,-40,0"
-                    CornerRadius="70"
+                    CornerRadius="{DynamicResource OfficeRecentDocumentsAccentCornerRadius}"
                     Background="#4A90D9"
                     Opacity="0.3"
                     IsHitTestVisible="False" />
 
-            <Grid RowDefinitions="Auto,*" RowSpacing="8" Margin="16,14,16,14">
+            <Grid x:Name="ContentGrid"
+                  RowDefinitions="Auto,*"
+                  RowSpacing="{DynamicResource OfficeRecentDocumentsContentRowSpacing}"
+                  Margin="{DynamicResource OfficeRecentDocumentsContentMargin}">
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                     <TextBlock x:Name="HeaderTextBlock"
                                Text="最近文档"
                                Foreground="#D8FFFFFF"
-                               FontSize="18"
+                               FontSize="{DynamicResource OfficeRecentDocumentsHeaderFontSize}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
                     <Button x:Name="RefreshButton"
                             Grid.Column="1"
-                            Width="28"
-                            Height="28"
-                            CornerRadius="14"
+                            Width="{DynamicResource OfficeRecentDocumentsRefreshButtonSize}"
+                            Height="{DynamicResource OfficeRecentDocumentsRefreshButtonSize}"
+                            CornerRadius="{DynamicResource OfficeRecentDocumentsRefreshCornerRadius}"
                             Background="Transparent"
                             BorderBrush="Transparent"
                             BorderThickness="0"
@@ -47,7 +72,7 @@
                             Focusable="False"
                             PointerPressed="OnRefreshPointerPressed">
                         <fi:SymbolIcon Symbol="ArrowSync"
-                                       FontSize="14"
+                                       FontSize="{DynamicResource OfficeRecentDocumentsRefreshIconFontSize}"
                                        Foreground="#B8FFFFFF" />
                     </Button>
                 </Grid>
@@ -55,28 +80,29 @@
                 <ScrollViewer Grid.Row="1"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
-                              Margin="0,4,0,0">
+                              Margin="{DynamicResource OfficeRecentDocumentsScrollMargin}">
                     <ItemsControl x:Name="DocumentsItemsControl">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="{DynamicResource OfficeRecentDocumentsDocumentSpacing}" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:OfficeRecentDocumentViewModel">
                                 <Border x:Name="DocumentCard"
-                                        Width="130"
-                                        Height="90"
-                                        CornerRadius="10"
+                                        Width="{DynamicResource OfficeRecentDocumentsDocumentCardWidth}"
+                                        Height="{DynamicResource OfficeRecentDocumentsDocumentCardHeight}"
+                                        CornerRadius="{DynamicResource OfficeRecentDocumentsCardCornerRadius}"
                                         Background="#3AFFFFFF"
-                                        Padding="10"
+                                        Padding="{DynamicResource OfficeRecentDocumentsCardPadding}"
                                         Cursor="Hand"
                                         PointerPressed="OnDocumentCardPointerPressed">
                                     <Grid RowDefinitions="Auto,*,Auto">
                                         <TextBlock Grid.Row="0"
                                                    Text="{Binding FileName}"
                                                    Foreground="#D8FFFFFF"
-                                                   FontSize="12"
+                                                   FontSize="{DynamicResource OfficeRecentDocumentsDocumentTitleFontSize}"
                                                    FontWeight="Medium"
                                                    TextTrimming="CharacterEllipsis"
                                                    MaxLines="2"
@@ -85,7 +111,7 @@
                                         <TextBlock Grid.Row="2"
                                                    Text="{Binding TimeAgo}"
                                                    Foreground="#9AFFFFFF"
-                                                   FontSize="10"
+                                                   FontSize="{DynamicResource OfficeRecentDocumentsDocumentTimeFontSize}"
                                                    TextTrimming="CharacterEllipsis"
                                                    MaxLines="1" />
                                     </Grid>
@@ -100,7 +126,7 @@
                        IsVisible="False"
                        Text="暂无最近文档"
                        Foreground="#9AFFFFFF"
-                       FontSize="14"
+                       FontSize="{DynamicResource OfficeRecentDocumentsStatusFontSize}"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
         </Grid>

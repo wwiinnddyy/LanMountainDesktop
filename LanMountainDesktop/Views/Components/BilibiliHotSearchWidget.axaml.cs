@@ -387,15 +387,21 @@ public partial class BilibiliHotSearchWidget : UserControl, IDesktopComponentWid
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
-        RootBorder.Padding = new Thickness(0);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            10 * softScale,
+            8 * softScale,
+            null,
+            0.45d);
 
         var horizontalPadding = Math.Clamp(16 * softScale, 8, 24);
         var verticalPadding = Math.Clamp(14 * softScale, 7, 20);
         CardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * softScale, 16, 52);
-        CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(horizontalPadding, verticalPadding, null, 0.55d);
 
-        var innerWidth = Math.Max(120, totalWidth - (horizontalPadding * 2d));
-        var innerHeight = Math.Max(72, totalHeight - (verticalPadding * 2d));
+        var rootPadding = RootBorder.Padding;
+        var cardPadding = CardBorder.Padding;
+        var innerWidth = Math.Max(120, totalWidth - rootPadding.Left - rootPadding.Right - cardPadding.Left - cardPadding.Right);
+        var innerHeight = Math.Max(72, totalHeight - rootPadding.Top - rootPadding.Bottom - cardPadding.Top - cardPadding.Bottom);
         var rowSpacing = Math.Clamp(6 * softScale, 2, 9);
         ContentGrid.RowSpacing = rowSpacing;
         HeaderGrid.ColumnSpacing = Math.Clamp(10 * softScale, 6, 16);

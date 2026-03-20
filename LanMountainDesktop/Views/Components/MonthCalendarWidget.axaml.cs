@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -26,6 +27,7 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
     private double _calendarDayFontSize = 22;
     private FontWeight _calendarDayFontWeight = FontWeight.SemiBold;
     private double _calendarTodayDotSize = 44;
+    private int _calendarVisibleRows = 6;
 
     public MonthCalendarWidget()
     {
@@ -148,6 +150,36 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         var firstDayOfMonth = new DateTime(year, month, 1);
         var daysInMonth = DateTime.DaysInMonth(year, month);
         var startDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
+        var rowDensity = _calendarVisibleRows >= 6 ? 0.84 : 1.0;
+        var headerReserve = HeaderTextBlock.FontSize * 1.15;
+        var weekdayReserve = _weekdayFontSize * 1.12;
+        var gridReserve = LayoutRoot.RowSpacing * 2;
+        var availableCalendarHeight = Math.Max(
+            1,
+            LayoutRoot.Height
+            - RootBorder.Padding.Top
+            - RootBorder.Padding.Bottom
+            - headerReserve
+            - weekdayReserve
+            - gridReserve);
+        var calendarCellHeight = availableCalendarHeight / Math.Max(1, _calendarVisibleRows);
+        var todayBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
+            calendarCellHeight,
+            calendarCellHeight,
+            preferredSizeScale: 0.94d,
+            minSize: 15,
+            maxSize: 32,
+            insetScale: 0.14d);
+        var todayDotSize = Math.Min(todayBadge.Width, todayBadge.Height);
+        var todayGlyphBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+            todayDotSize,
+            todayDotSize,
+            preferredSizeScale: 0.74d,
+            minSize: 8,
+            maxSize: 20,
+            insetScale: 0.12d);
+        var todayGlyphSize = Math.Min(todayGlyphBox.Width, todayGlyphBox.Height);
+        var dayFontSize = Math.Clamp(Math.Min(_calendarDayFontSize * rowDensity, calendarCellHeight * 0.46), 8, 24);
 
         for (var day = 1; day <= daysInMonth; day++)
         {
@@ -163,7 +195,8 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
                 Text = day.ToString(CultureInfo.CurrentCulture),
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                FontSize = _calendarDayFontSize,
+                FontSize = dayFontSize,
+                LineHeight = dayFontSize * 1.04,
                 FontWeight = _calendarDayFontWeight,
                 Tag = "day"
             };
@@ -178,11 +211,15 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
                     : Brushes.White;
 
                 dayText.Foreground = onAccentBrush;
+                dayText.Width = todayGlyphBox.Width;
+                dayText.Height = todayGlyphBox.Height;
+                dayText.TextAlignment = TextAlignment.Center;
+                dayText.LineHeight = todayGlyphSize * 1.03;
                 var dot = new Border
                 {
-                    Width = _calendarTodayDotSize,
-                    Height = _calendarTodayDotSize,
-                    CornerRadius = new CornerRadius(_calendarTodayDotSize * 0.5),
+                    Width = todayDotSize,
+                    Height = todayDotSize,
+                    CornerRadius = new CornerRadius(todayDotSize * 0.5),
                     Background = accentBrush,
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
@@ -218,21 +255,21 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(28 * scale, 14, 40);
-        RootBorder.Padding = new Thickness(ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 22));
-        LayoutRoot.RowSpacing = Math.Clamp(10 * scale, 5, 16);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(15 * scale, 15 * scale, null, 0.55d);
+        LayoutRoot.RowSpacing = Math.Clamp(11 * scale, 5.5, 17);
         LayoutRoot.Width = Math.Clamp(280 * scale, 220, 420);
         LayoutRoot.Height = Math.Clamp(280 * scale, 220, 420);
 
         var isZh = CultureInfo.CurrentCulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase);
-        var headerTextLength = Math.Max(1, HeaderTextBlock.Text?.Length ?? (isZh ? 5 : 6));
+        var headerTextLength = Math.Max(1, ComponentTypographyLayoutService.CountTextDisplayUnits(HeaderTextBlock.Text));
         var headerCompression = headerTextLength >= 8 ? 0.90 : headerTextLength >= 6 ? 0.95 : 1.0;
         var densityBoost = scale <= 0.74 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.45 ? 1.05 : 1.0;
 
-        HeaderTextBlock.FontSize = Math.Clamp(42 * scale * headerCompression * densityBoost, 13, 62);
+        HeaderTextBlock.FontSize = Math.Clamp(42 * scale * headerCompression * densityBoost, 13, 58);
         HeaderTextBlock.FontWeight = ToVariableWeight(Lerp(560, 720, Math.Clamp((scale - 0.62) / 1.2, 0, 1)));
         HeaderTextBlock.LineHeight = HeaderTextBlock.FontSize * 1.05;
 
-        _weekdayFontSize = Math.Clamp(20 * scale * densityBoost, 7.5, 27);
+        _weekdayFontSize = Math.Clamp(20 * scale * densityBoost, 7.5, 24);
         _weekdayFontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
         foreach (var block in GetWeekdayHeaderBlocks())
         {
@@ -241,9 +278,9 @@ public partial class MonthCalendarWidget : UserControl, IDesktopComponentWidget,
             block.LineHeight = _weekdayFontSize * 1.06;
         }
 
-        _calendarDayFontSize = Math.Clamp(22 * scale * densityBoost, 8, 32);
+        _calendarDayFontSize = Math.Clamp(22 * scale * densityBoost, 8, 28);
         _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.3, 0, 1)));
-        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.95, 16, 62);
+        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.88, 16, 58);
     }
 
     private double ResolveScale()

@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -211,46 +212,81 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         var scale = ResolveScale(width, height);
         var isCompact = width < 170 || height < 170;
         var isUltraCompact = width < 130 || height < 130;
-        var titleUnits = GetDisplayUnits(TitleTextBlock.Text);
-        var dateUnits = GetDisplayUnits(DateTextBlock.Text);
+        var titleUnits = ComponentTypographyLayoutService.CountTextDisplayUnits(TitleTextBlock.Text);
+        var dateUnits = ComponentTypographyLayoutService.CountTextDisplayUnits(DateTextBlock.Text);
         var titleNeedsTwoLines = isUltraCompact || titleUnits >= (isCompact ? 13 : 17);
         var dateNeedsTwoLines = isUltraCompact || dateUnits >= (isCompact ? 15 : 20);
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(shortSide * 0.13, 10, 46);
-        var padding = ComponentChromeCornerRadiusHelper.SafeValue(shortSide * 0.05, 4.5, 21);
-        RootBorder.Padding = new Thickness(padding);
-        LayoutRoot.RowSpacing = Math.Clamp(shortSide * 0.028, 2.2, 12);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            shortSide * 0.055,
+            shortSide * 0.05,
+            null,
+            0.55d);
+        LayoutRoot.RowSpacing = Math.Clamp(shortSide * 0.034, 3.2, 14);
         var rowWeights = ApplyAdaptiveRowHeights(isCompact, isUltraCompact, titleNeedsTwoLines, dateNeedsTwoLines);
 
-        var innerWidth = Math.Max(1, width - padding * 2);
-        var innerHeight = Math.Max(1, height - padding * 2);
+        var rootPadding = RootBorder.Padding;
+        var innerWidth = Math.Max(1, width - rootPadding.Left - rootPadding.Right);
+        var innerHeight = Math.Max(1, height - rootPadding.Top - rootPadding.Bottom);
         var totalWeight = Math.Max(0.001, rowWeights[0] + rowWeights[1] + rowWeights[2] + rowWeights[3] + rowWeights[4]);
         var row0Height = innerHeight * (rowWeights[0] / totalWeight);
         var row1Height = innerHeight * (rowWeights[1] / totalWeight);
         var row3Height = innerHeight * (rowWeights[3] / totalWeight);
         var row4Height = innerHeight * (rowWeights[4] / totalWeight);
-        var horizontalMargin = Math.Clamp(8 * scale, 4, 14);
+        var horizontalMargin = Math.Clamp(9 * scale, 5, 16);
         var titleMaxWidth = Math.Max(24, innerWidth - horizontalMargin * 2);
         var dateMaxWidth = titleMaxWidth;
+        var titleContentBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+            titleMaxWidth,
+            row0Height,
+            preferredSizeScale: 0.84d,
+            minSize: 24,
+            maxSize: 170,
+            insetScale: 0.10d);
+        var countContentBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+            titleMaxWidth,
+            row1Height,
+            preferredSizeScale: 0.80d,
+            minSize: 28,
+            maxSize: 170,
+            insetScale: 0.08d);
+        var unitContentBox = ComponentTypographyLayoutService.ResolveBadgeBox(
+            titleMaxWidth,
+            row3Height,
+            preferredSizeScale: 0.42d,
+            minSize: 10,
+            maxSize: 72,
+            insetScale: 0.12d);
+        var dateContentBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+            dateMaxWidth,
+            row4Height,
+            preferredSizeScale: 0.78d,
+            minSize: 22,
+            maxSize: 92,
+            insetScale: 0.10d);
 
-        var titlePreferred = Math.Clamp(24 * scale, 8.8, 34);
+        var titlePreferred = Math.Clamp(24 * scale, 9.2, 34);
         var titleHeightCap = Math.Max(10, row0Height * 0.94);
         var titleLineCount = titleNeedsTwoLines ? 2 : 1;
-        TitleTextBlock.MaxLines = titleLineCount;
-        TitleTextBlock.TextWrapping = titleLineCount > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
         TitleTextBlock.Margin = new Thickness(horizontalMargin, 0, horizontalMargin, 0);
-        TitleTextBlock.FontSize = FitTextSize(
+        var titleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             TitleTextBlock.Text,
-            TitleTextBlock.FontWeight,
-            Math.Min(titlePreferred, Math.Max(8.8, row0Height * 0.62)),
-            8.6,
-            titleMaxWidth,
+            Math.Max(24, titleContentBox.Width),
             titleHeightCap,
+            1,
             titleLineCount,
-            lineHeightFactor: 1.10);
-        TitleTextBlock.LineHeight = TitleTextBlock.FontSize * 1.10;
+            8.6,
+            Math.Min(titlePreferred, Math.Max(8.8, row0Height * 0.62)),
+            [TitleTextBlock.FontWeight],
+            1.10);
+        TitleTextBlock.FontSize = titleLayout.FontSize;
+        TitleTextBlock.FontWeight = titleLayout.Weight;
+        TitleTextBlock.MaxLines = titleLayout.MaxLines;
+        TitleTextBlock.TextWrapping = titleLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        TitleTextBlock.LineHeight = titleLayout.LineHeight;
 
-        var digitCount = Math.Max(1, CountTextBlock.Text?.Trim().Length ?? 1);
+        var digitCount = Math.Max(1, ComponentTypographyLayoutService.CountTextDisplayUnits(CountTextBlock.Text));
         var digitCompression = digitCount switch
         {
             >= 5 => 0.68,
@@ -261,39 +297,60 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         var countCompactFactor = isUltraCompact ? 0.86 : isCompact ? 0.93 : 1.0;
         var countPreferred = Math.Clamp(132 * scale * digitCompression * countCompactFactor, 28, 170);
         var countHeightCap = Math.Max(30, row1Height * 0.96);
-        CountTextBlock.FontSize = FitTextSize(
+        var countLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             CountTextBlock.Text,
-            CountTextBlock.FontWeight,
-            Math.Min(countPreferred, Math.Max(28, row1Height * 0.9)),
-            24,
-            titleMaxWidth,
+            Math.Max(24, countContentBox.Width),
             countHeightCap,
-            maxLines: 1,
-            lineHeightFactor: 1.08);
-        CountTextBlock.LineHeight = CountTextBlock.FontSize * 1.08;
+            1,
+            1,
+            24,
+            Math.Min(countPreferred, Math.Max(28, row1Height * 0.9)),
+            [CountTextBlock.FontWeight],
+            1.08);
+        CountTextBlock.FontSize = countLayout.FontSize;
+        CountTextBlock.FontWeight = countLayout.Weight;
+        CountTextBlock.MaxLines = countLayout.MaxLines;
+        CountTextBlock.TextWrapping = TextWrapping.NoWrap;
+        CountTextBlock.LineHeight = countLayout.LineHeight;
 
         var unitCompactFactor = isUltraCompact ? 0.8 : isCompact ? 0.9 : 1.0;
-        DayUnitTextBlock.FontSize = Math.Clamp(52 * scale * unitCompactFactor, 10, 72);
-        DayUnitTextBlock.FontSize = Math.Min(DayUnitTextBlock.FontSize, Math.Max(10, row3Height * 0.64));
-        DayUnitTextBlock.LineHeight = DayUnitTextBlock.FontSize * 1.02;
+        var unitPreferred = Math.Min(Math.Clamp(52 * scale * unitCompactFactor, 10, 72), Math.Max(10, row3Height * 0.64));
+        var unitLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
+            DayUnitTextBlock.Text,
+            Math.Max(18, unitContentBox.Width),
+            Math.Max(10, row3Height * 0.64),
+            1,
+            1,
+            10,
+            unitPreferred,
+            [DayUnitTextBlock.FontWeight],
+            1.02);
+        DayUnitTextBlock.FontSize = unitLayout.FontSize;
+        DayUnitTextBlock.FontWeight = unitLayout.Weight;
+        DayUnitTextBlock.MaxLines = 1;
+        DayUnitTextBlock.TextWrapping = TextWrapping.NoWrap;
+        DayUnitTextBlock.LineHeight = unitLayout.LineHeight;
 
         var dateCompactFactor = isUltraCompact ? 0.84 : isCompact ? 0.92 : 1.0;
         var datePreferred = Math.Clamp(32 * scale * dateCompactFactor, 9, 46);
         var dateHeightCap = Math.Max(10, row4Height * 0.96);
         var dateLineCount = dateNeedsTwoLines ? 2 : 1;
-        DateTextBlock.MaxLines = dateLineCount;
-        DateTextBlock.TextWrapping = dateLineCount > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
         DateTextBlock.Margin = new Thickness(horizontalMargin, 0, horizontalMargin, 0);
-        DateTextBlock.FontSize = FitTextSize(
+        var dateLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             DateTextBlock.Text,
-            DateTextBlock.FontWeight,
-            Math.Min(datePreferred, Math.Max(9, row4Height * 0.58)),
-            8.5,
-            dateMaxWidth,
+            Math.Max(24, dateContentBox.Width),
             dateHeightCap,
+            1,
             dateLineCount,
-            lineHeightFactor: 1.12);
-        DateTextBlock.LineHeight = DateTextBlock.FontSize * 1.12;
+            8.5,
+            Math.Min(datePreferred, Math.Max(9, row4Height * 0.58)),
+            [DateTextBlock.FontWeight],
+            1.12);
+        DateTextBlock.FontSize = dateLayout.FontSize;
+        DateTextBlock.FontWeight = dateLayout.Weight;
+        DateTextBlock.MaxLines = dateLayout.MaxLines;
+        DateTextBlock.TextWrapping = dateLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        DateTextBlock.LineHeight = dateLayout.LineHeight;
     }
 
     private double[] ApplyAdaptiveRowHeights(
@@ -343,66 +400,6 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         return weights;
     }
 
-    private static int GetDisplayUnits(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return 0;
-        }
-
-        var units = 0;
-        foreach (var ch in text.Trim())
-        {
-            if (char.IsWhiteSpace(ch))
-            {
-                continue;
-            }
-
-            units += ch > 0x7F ? 2 : 1;
-        }
-
-        return units;
-    }
-
-    private static double FitTextSize(
-        string? text,
-        FontWeight fontWeight,
-        double preferredSize,
-        double minSize,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double lineHeightFactor)
-    {
-        var safeText = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var safeMaxWidth = Math.Max(1, maxWidth);
-        var safeMaxHeight = Math.Max(1, maxHeight);
-        var safeMaxLines = Math.Max(1, maxLines);
-
-        var probe = new TextBlock
-        {
-            Text = safeText,
-            FontWeight = fontWeight,
-            MaxLines = safeMaxLines,
-            TextWrapping = safeMaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap
-        };
-
-        for (var size = preferredSize; size >= minSize; size -= 0.5)
-        {
-            probe.FontSize = size;
-            probe.LineHeight = size * lineHeightFactor;
-            probe.Measure(new Size(safeMaxWidth, double.PositiveInfinity));
-            var desired = probe.DesiredSize;
-            if (desired.Width <= safeMaxWidth + 0.6 &&
-                desired.Height <= safeMaxHeight + 0.6)
-            {
-                return size;
-            }
-        }
-
-        return minSize;
-    }
-
     private double ResolveScale(double width, double height)
     {
         var cellScale = Math.Clamp(_currentCellSize / 44d, 0.56, 2.0);
@@ -410,4 +407,5 @@ public partial class HolidayCalendarWidget : UserControl, IDesktopComponentWidge
         var heightScale = Math.Clamp(height / 220d, 0.5, 2.0);
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale) * 1.02), 0.5, 2.0);
     }
+
 }

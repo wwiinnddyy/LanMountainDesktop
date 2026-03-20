@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
@@ -300,14 +301,18 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
         var containerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
         RootBorder.CornerRadius = containerRadius;
-        RootBorder.Padding = new Thickness(0);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            10 * scale,
+            8 * scale,
+            null,
+            0.45d);
 
         CardBorder.CornerRadius = containerRadius;
-        CardBorder.Padding = new Thickness(
-            Math.Clamp(16 * scale, 8, 24),
-            Math.Clamp(14 * scale, 7, 22),
-            Math.Clamp(16 * scale, 8, 24),
-            Math.Clamp(14 * scale, 7, 22));
+        CardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            16 * scale,
+            14 * scale,
+            null,
+            0.55d);
 
         var refreshSize = Math.Clamp(38 * scale, 22, 48);
         RefreshButton.Width = refreshSize;
@@ -346,65 +351,90 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
             exampleHeightBudget += Math.Clamp(11 * scale, 5, 18);
         }
 
-        var wordBase = Math.Clamp(56 * scale, 18, 72);
-        WordTextBlock.FontSize = FitFontSize(
+        var wordLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             WordTextBlock.Text,
             wordWidth,
             wordHeightBudget,
-            maxLines: 1,
-            minFontSize: Math.Max(14, wordBase * 0.56),
-            maxFontSize: wordBase,
-            weight: FontWeight.Bold,
-            lineHeightFactor: 1.04);
-        WordTextBlock.LineHeight = WordTextBlock.FontSize * 1.04;
+            1,
+            1,
+            Math.Max(14, Math.Clamp(56 * scale, 18, 72) * 0.56),
+            Math.Clamp(56 * scale, 18, 72),
+            [FontWeight.Bold],
+            1.04,
+            MiSansFontFamily);
+        WordTextBlock.FontSize = wordLayout.FontSize;
+        WordTextBlock.FontWeight = wordLayout.Weight;
+        WordTextBlock.MaxLines = wordLayout.MaxLines;
+        WordTextBlock.TextWrapping = TextWrapping.NoWrap;
+        WordTextBlock.LineHeight = wordLayout.LineHeight;
 
-        var pronunciationBase = Math.Clamp(27 * scale, 10, 36);
-        PronunciationTextBlock.FontSize = FitFontSize(
+        var pronunciationLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             PronunciationTextBlock.Text,
             contentWidth,
             pronunciationHeightBudget,
-            maxLines: 1,
-            minFontSize: Math.Max(8.6, pronunciationBase * 0.62),
-            maxFontSize: pronunciationBase,
-            weight: FontWeight.SemiBold,
-            lineHeightFactor: 1.08);
-        PronunciationTextBlock.LineHeight = PronunciationTextBlock.FontSize * 1.08;
+            1,
+            1,
+            Math.Max(8.6, Math.Clamp(27 * scale, 10, 36) * 0.62),
+            Math.Clamp(27 * scale, 10, 36),
+            [FontWeight.SemiBold, FontWeight.Medium],
+            1.08,
+            MiSansFontFamily);
+        PronunciationTextBlock.FontSize = pronunciationLayout.FontSize;
+        PronunciationTextBlock.FontWeight = pronunciationLayout.Weight;
+        PronunciationTextBlock.MaxLines = pronunciationLayout.MaxLines;
+        PronunciationTextBlock.TextWrapping = TextWrapping.NoWrap;
+        PronunciationTextBlock.LineHeight = pronunciationLayout.LineHeight;
 
-        var meaningBase = Math.Clamp(25 * scale, 10, 34);
-        MeaningTextBlock.FontSize = FitFontSize(
+        var meaningLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             MeaningTextBlock.Text,
             contentWidth,
             meaningHeightBudget,
-            maxLines: Math.Max(1, MeaningTextBlock.MaxLines),
-            minFontSize: Math.Max(9.2, meaningBase * 0.60),
-            maxFontSize: meaningBase,
-            weight: FontWeight.SemiBold,
-            lineHeightFactor: 1.10);
-        MeaningTextBlock.LineHeight = MeaningTextBlock.FontSize * 1.10;
+            1,
+            Math.Max(1, MeaningTextBlock.MaxLines),
+            Math.Max(9.2, Math.Clamp(25 * scale, 10, 34) * 0.60),
+            Math.Clamp(25 * scale, 10, 34),
+            [FontWeight.SemiBold, FontWeight.Medium],
+            1.10,
+            MiSansFontFamily);
+        MeaningTextBlock.FontSize = meaningLayout.FontSize;
+        MeaningTextBlock.FontWeight = meaningLayout.Weight;
+        MeaningTextBlock.MaxLines = meaningLayout.MaxLines;
+        MeaningTextBlock.TextWrapping = meaningLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        MeaningTextBlock.LineHeight = meaningLayout.LineHeight;
 
-        var exampleBase = Math.Clamp(22 * scale, 9, 30);
-        ExampleTextBlock.FontSize = FitFontSize(
+        var exampleLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             ExampleTextBlock.Text,
             contentWidth,
             exampleHeightBudget,
-            maxLines: Math.Max(1, ExampleTextBlock.MaxLines),
-            minFontSize: Math.Max(8.8, exampleBase * 0.58),
-            maxFontSize: exampleBase,
-            weight: FontWeight.Medium,
-            lineHeightFactor: 1.08);
-        ExampleTextBlock.LineHeight = ExampleTextBlock.FontSize * 1.08;
+            1,
+            Math.Max(1, ExampleTextBlock.MaxLines),
+            Math.Max(8.8, Math.Clamp(22 * scale, 9, 30) * 0.58),
+            Math.Clamp(22 * scale, 9, 30),
+            [FontWeight.Medium, FontWeight.SemiBold],
+            1.08,
+            MiSansFontFamily);
+        ExampleTextBlock.FontSize = exampleLayout.FontSize;
+        ExampleTextBlock.FontWeight = exampleLayout.Weight;
+        ExampleTextBlock.MaxLines = exampleLayout.MaxLines;
+        ExampleTextBlock.TextWrapping = exampleLayout.MaxLines > 1 ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        ExampleTextBlock.LineHeight = exampleLayout.LineHeight;
 
-        var translationBase = Math.Clamp(20 * scale, 8, 28);
-        ExampleTranslationTextBlock.FontSize = FitFontSize(
+        var translationLayout = ComponentTypographyLayoutService.FitAdaptiveTextLayout(
             ExampleTranslationTextBlock.Text,
             contentWidth,
             Math.Max(10, exampleHeightBudget * 0.44),
-            maxLines: 1,
-            minFontSize: Math.Max(7.8, translationBase * 0.62),
-            maxFontSize: translationBase,
-            weight: FontWeight.Medium,
-            lineHeightFactor: 1.06);
-        ExampleTranslationTextBlock.LineHeight = ExampleTranslationTextBlock.FontSize * 1.06;
+            1,
+            1,
+            Math.Max(7.8, Math.Clamp(20 * scale, 8, 28) * 0.62),
+            Math.Clamp(20 * scale, 8, 28),
+            [FontWeight.Medium, FontWeight.Normal],
+            1.06,
+            MiSansFontFamily);
+        ExampleTranslationTextBlock.FontSize = translationLayout.FontSize;
+        ExampleTranslationTextBlock.FontWeight = translationLayout.Weight;
+        ExampleTranslationTextBlock.MaxLines = translationLayout.MaxLines;
+        ExampleTranslationTextBlock.TextWrapping = TextWrapping.NoWrap;
+        ExampleTranslationTextBlock.LineHeight = translationLayout.LineHeight;
 
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 9, 24);
     }
@@ -587,58 +617,4 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         return MultiWhitespaceRegex.Replace(text.Trim(), " ");
     }
 
-    private static double FitFontSize(
-        string? text,
-        double maxWidth,
-        double maxHeight,
-        int maxLines,
-        double minFontSize,
-        double maxFontSize,
-        FontWeight weight,
-        double lineHeightFactor)
-    {
-        var content = string.IsNullOrWhiteSpace(text) ? " " : text.Trim();
-        var min = Math.Max(6, minFontSize);
-        var max = Math.Max(min, maxFontSize);
-        var low = min;
-        var high = max;
-        var best = min;
-
-        for (var i = 0; i < 18; i++)
-        {
-            var candidate = (low + high) / 2d;
-            var lineHeight = candidate * lineHeightFactor;
-            var size = MeasureTextSize(content, candidate, weight, Math.Max(1, maxWidth), lineHeight);
-            var lineCount = Math.Max(1, (int)Math.Ceiling(size.Height / Math.Max(1, lineHeight)));
-            var fits = size.Height <= maxHeight + 0.6 && lineCount <= Math.Max(1, maxLines);
-
-            if (fits)
-            {
-                best = candidate;
-                low = candidate;
-            }
-            else
-            {
-                high = candidate;
-            }
-        }
-
-        return best;
-    }
-
-    private static Size MeasureTextSize(string text, double fontSize, FontWeight weight, double maxWidth, double lineHeight)
-    {
-        var probe = new TextBlock
-        {
-            Text = text,
-            FontFamily = MiSansFontFamily,
-            FontSize = fontSize,
-            FontWeight = weight,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = lineHeight
-        };
-
-        probe.Measure(new Size(Math.Max(1, maxWidth), double.PositiveInfinity));
-        return probe.DesiredSize;
-    }
 }

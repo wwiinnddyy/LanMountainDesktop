@@ -169,7 +169,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
 
         var horizontalPadding = Math.Clamp(10 * scale, 4, 26);
         var verticalPadding = Math.Clamp(8 * scale, 3, 22);
-        RootBorder.Padding = new Thickness(horizontalPadding, verticalPadding);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(horizontalPadding, verticalPadding, null, 0.55d);
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * scale, 10, 46);
 
         var usableWidth = Math.Max(48, totalWidth - horizontalPadding * 2);

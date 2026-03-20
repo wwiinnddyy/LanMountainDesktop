@@ -102,18 +102,23 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(34 * scale, 16, 52);
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            12 * scale,
+            10 * scale,
+            null,
+            0.45d);
 
-        InfoPanel.Padding = new Thickness(
-            Math.Clamp(18 * scale, 10, 28),
-            Math.Clamp(14 * scale, 8, 22),
-            Math.Clamp(18 * scale, 10, 28),
-            Math.Clamp(14 * scale, 8, 22));
+        InfoPanel.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(
+            18 * scale,
+            14 * scale,
+            null,
+            0.52d);
 
         DateInfoStack.Margin = new Thickness(
-            Math.Clamp(18 * scale, 8, 30),
+            ComponentChromeCornerRadiusHelper.SafeValue(18 * scale, 8, 30),
             0,
             0,
-            Math.Clamp(16 * scale, 8, 26));
+            ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 8, 26));
         DateInfoStack.Spacing = Math.Clamp(4 * scale, 2, 10);
 
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 10, 24);
@@ -425,16 +430,18 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var scale = ResolveScale();
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
         var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
+        var rootPadding = RootBorder.Padding;
 
         var leftStar = totalWidth < _currentCellSize * 4.2 ? 2.0 : 2.08;
         MainLayoutGrid.ColumnDefinitions[0].Width = new GridLength(leftStar, GridUnitType.Star);
         MainLayoutGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
 
-        var rightPanelWidth = Math.Max(84, totalWidth / (leftStar + 1));
+        var availableWidth = Math.Max(84, totalWidth - rootPadding.Left - rootPadding.Right);
+        var rightPanelWidth = Math.Max(84, availableWidth / (leftStar + 1));
         var rightContentWidth = Math.Max(58, rightPanelWidth - InfoPanel.Padding.Left - InfoPanel.Padding.Right);
-        var leftPanelWidth = Math.Max(84, totalWidth - rightPanelWidth);
+        var leftPanelWidth = Math.Max(84, availableWidth - rightPanelWidth);
         var leftContentWidth = Math.Max(52, leftPanelWidth - DateInfoStack.Margin.Left - 10);
-        var leftContentHeight = Math.Max(30, totalHeight - DateInfoStack.Margin.Bottom - 10);
+        var leftContentHeight = Math.Max(30, totalHeight - rootPadding.Top - rootPadding.Bottom - DateInfoStack.Margin.Bottom - 10);
 
         var dateStackSpacing = Math.Clamp(4 * scale, 2, 10);
         DateInfoStack.Spacing = dateStackSpacing;
@@ -464,7 +471,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
             lineHeightFactor: 1.10);
         WeekdayTextBlock.LineHeight = WeekdayTextBlock.FontSize * 1.10;
 
-        var rightContentHeight = Math.Max(42, totalHeight - InfoPanel.Padding.Top - InfoPanel.Padding.Bottom);
+        var rightContentHeight = Math.Max(42, totalHeight - rootPadding.Top - rootPadding.Bottom - InfoPanel.Padding.Top - InfoPanel.Padding.Bottom);
         var titleBottomMargin = Math.Clamp(8 * scale, 4, 14);
         var separatorBottomMargin = Math.Clamp(10 * scale, 4, 14);
         var bottomStackSpacing = Math.Clamp(3 * scale, 2, 8);

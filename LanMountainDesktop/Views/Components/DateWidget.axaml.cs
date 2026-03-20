@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.DesktopComponents.Runtime;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
@@ -253,8 +254,36 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
 
         // 4x2 widget has less vertical space than 2x2. Compress only on 6-row months.
         var rowDensity = _calendarVisibleRows >= 6 ? 0.84 : 1.0;
-        var dayFontSize = Math.Clamp(_calendarDayFontSize * rowDensity, 8, 24);
-        var todayDotSize = Math.Clamp(_calendarTodayDotSize * rowDensity, 13.5, 32);
+        var availableCalendarHeight = Math.Max(
+            1,
+            220
+            - RootBorder.Padding.Top
+            - RootBorder.Padding.Bottom
+            - (GregorianHeadlineTextBlock.FontSize * 1.16)
+            - LeftPanelGrid.RowSpacing
+            - (_weekdayFontSize * 1.10)
+            - WeekdayHeaderGrid.Margin.Top
+            - WeekdayHeaderGrid.Margin.Bottom
+            - CalendarGrid.Margin.Top
+            - CalendarGrid.Margin.Bottom);
+        var calendarCellHeight = availableCalendarHeight / Math.Max(1, _calendarVisibleRows);
+        var todayBadge = ComponentTypographyLayoutService.ResolveBadgeBox(
+            calendarCellHeight,
+            calendarCellHeight,
+            preferredSizeScale: 0.92d,
+            minSize: 14,
+            maxSize: 32,
+            insetScale: 0.14d);
+        var todayDotSize = Math.Min(todayBadge.Width, todayBadge.Height);
+        var todayGlyphBox = ComponentTypographyLayoutService.ResolveGlyphBox(
+            todayDotSize,
+            todayDotSize,
+            preferredSizeScale: 0.74d,
+            minSize: 8,
+            maxSize: 20,
+            insetScale: 0.12d);
+        var todayGlyphSize = Math.Min(todayGlyphBox.Width, todayGlyphBox.Height);
+        var dayFontSize = Math.Clamp(Math.Min(_calendarDayFontSize * rowDensity, calendarCellHeight * 0.46), 8, 22);
 
         for (var day = 1; day <= daysInMonth; day++)
         {
@@ -286,6 +315,10 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
                     : Brushes.White;
 
                 dayText.Foreground = onAccentBrush;
+                dayText.Width = todayGlyphBox.Width;
+                dayText.Height = todayGlyphBox.Height;
+                dayText.TextAlignment = TextAlignment.Center;
+                dayText.LineHeight = todayGlyphSize * 1.03;
                 var dot = new Border
                 {
                     Width = todayDotSize,
@@ -326,28 +359,28 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
         var scale = ResolveScale();
 
         RootBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(28 * scale, 16, 40);
-        RootBorder.Padding = new Thickness(Math.Clamp(11 * scale, 7, 17));
+        RootBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(13 * scale, 8 * scale, null, 0.55d);
 
         LayoutRoot.ColumnSpacing = Math.Clamp(10 * scale, 6, 16);
-        LeftPanelGrid.RowSpacing = Math.Clamp(5.2 * scale, 2.5, 10);
+        LeftPanelGrid.RowSpacing = Math.Clamp(6.2 * scale, 3, 11);
         WeekdayHeaderGrid.Margin = new Thickness(
             0,
-            Math.Clamp(0.5 * scale, 0, 2),
+            Math.Clamp(0.8 * scale, 0, 2.5),
             0,
-            Math.Clamp(2.4 * scale, 1, 4));
-        CalendarGrid.Margin = new Thickness(0, 0, 0, Math.Clamp(0.8 * scale, 0, 2));
+            Math.Clamp(3.0 * scale, 1.5, 4.5));
+        CalendarGrid.Margin = new Thickness(0, 0, 0, Math.Clamp(1.2 * scale, 0.5, 2.5));
 
         LunarCardBorder.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(24 * scale, 14, 34);
-        LunarCardBorder.Padding = new Thickness(Math.Clamp(14 * scale, 8, 20));
-        RightPanelGrid.RowSpacing = Math.Clamp(7.5 * scale, 3.5, 11);
+        LunarCardBorder.Padding = ComponentChromeCornerRadiusHelper.SafeThickness(15 * scale, 9 * scale, null, 0.55d);
+        RightPanelGrid.RowSpacing = Math.Clamp(8.2 * scale, 4, 12);
         DividerBorder.Margin = new Thickness(0, Math.Clamp(1 * scale, 0, 2), 0, Math.Clamp(1 * scale, 0, 2));
 
         var isZh = CultureInfo.CurrentCulture.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase);
-        var headerTextLength = Math.Max(1, GregorianHeadlineTextBlock.Text?.Length ?? (isZh ? 5 : 6));
+        var headerTextLength = Math.Max(1, ComponentTypographyLayoutService.CountTextDisplayUnits(GregorianHeadlineTextBlock.Text));
         var headerCompression = headerTextLength >= 8 ? 0.90 : headerTextLength >= 6 ? 0.95 : 1.0;
         var densityBoost = scale <= 0.74 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.45 ? 1.05 : 1.0;
 
-        GregorianHeadlineTextBlock.FontSize = Math.Clamp(29 * scale * headerCompression * densityBoost, 12.5, 42);
+        GregorianHeadlineTextBlock.FontSize = Math.Clamp(29 * scale * headerCompression * densityBoost, 12.5, 40);
         GregorianHeadlineTextBlock.FontWeight = ToVariableWeight(Lerp(560, 720, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
         GregorianHeadlineTextBlock.LineHeight = GregorianHeadlineTextBlock.FontSize * 1.03;
 
@@ -360,9 +393,9 @@ public partial class DateWidget : UserControl, IDesktopComponentWidget, ITimeZon
             block.LineHeight = _weekdayFontSize * 1.02;
         }
 
-        _calendarDayFontSize = Math.Clamp(15.4 * scale * densityBoost, 8, 22);
+        _calendarDayFontSize = Math.Clamp(15.4 * scale * densityBoost, 8, 20);
         _calendarDayFontWeight = ToVariableWeight(Lerp(540, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
-        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.30, 13.5, 31);
+        _calendarTodayDotSize = Math.Clamp(_calendarDayFontSize * 1.42, 15, 30);
 
         var rightDensity = scale <= 0.72 ? 0.90 : scale <= 0.90 ? 0.95 : scale >= 1.38 ? 1.03 : 1.0;
         LunarDateTextBlock.FontSize = Math.Clamp(30 * scale * rightDensity, 14, 44);
