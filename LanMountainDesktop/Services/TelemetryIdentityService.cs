@@ -78,25 +78,6 @@ public sealed class TelemetryIdentityService
         }
     }
 
-    public string RefreshTelemetryId()
-    {
-        lock (_syncRoot)
-        {
-            EnsureInitialized();
-
-            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-            snapshot.TelemetryId = GenerateId();
-            _settingsFacade.Settings.SaveSnapshot(
-                SettingsScope.App,
-                snapshot,
-                changedKeys: [nameof(AppSettingsSnapshot.TelemetryId)]);
-
-            _telemetryId = snapshot.TelemetryId ?? GenerateId();
-            AppLogger.Info("TelemetryIdentity", $"Telemetry id refreshed. TelemetryId={_telemetryId}");
-            return _telemetryId;
-        }
-    }
-
     public bool MarkBaselineReported()
     {
         lock (_syncRoot)

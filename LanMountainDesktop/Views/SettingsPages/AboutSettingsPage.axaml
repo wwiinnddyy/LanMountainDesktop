@@ -62,15 +62,34 @@
                 </ui:InfoBar.IconSource>
             </ui:InfoBar>
 
-            <Border Classes="settings-section-card">
-                <StackPanel Spacing="12">
-                    <controls:IconText Icon="WindowConsole"
-                                       Text="{Binding RenderBackendLabel}" />
-                    <TextBlock Classes="settings-item-description"
-                               Text="{Binding RenderBackendText}"
-                               TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
+            <!-- 版权声明 - 放在渲染显示前面 -->
+            <ui:SettingsExpander Header="版权声明"
+                                 IsExpanded="True">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Document" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <ui:SettingsExpanderItem.Footer>
+                        <WrapPanel>
+                            <WrapPanel.Styles>
+                                <Style Selector="HyperlinkButton">
+                                    <Setter Property="Padding" Value="4" />
+                                    <Setter Property="Margin" Value="2" />
+                                </Style>
+                            </WrapPanel.Styles>
+                            <HyperlinkButton NavigateUri="https://github.com/Lincube/LanMountainDesktop">
+                                <TextBlock Text="GitHub 仓库" />
+                            </HyperlinkButton>
+                            <HyperlinkButton NavigateUri="https://github.com/Lincube/LanMountainDesktop/issues">
+                                <TextBlock Text="问题反馈" />
+                            </HyperlinkButton>
+                        </WrapPanel>
+                    </ui:SettingsExpanderItem.Footer>
+                    <TextBlock>
+                        <Run Text="Copyright (c) 2024-" /><Run Text="2025" /> Lincube
+                    </TextBlock>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

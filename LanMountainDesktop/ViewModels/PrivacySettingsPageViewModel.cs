@@ -59,9 +59,6 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
     private string _telemetryIdDescription = string.Empty;
 
     [ObservableProperty]
-    private string _refreshTelemetryIdText = string.Empty;
-
-    [ObservableProperty]
     private string _viewPrivacyPolicyText = string.Empty;
 
     [ObservableProperty]
@@ -73,27 +70,6 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
         UploadAnonymousCrashData = state.UploadAnonymousCrashData;
         UploadAnonymousUsageData = state.UploadAnonymousUsageData;
         TelemetryId = TelemetryServices.Identity?.TelemetryId ?? string.Empty;
-    }
-
-    [RelayCommand]
-    private void RefreshTelemetryId()
-    {
-        try
-        {
-            var identity = TelemetryServices.Identity;
-            if (identity is null)
-            {
-                AppLogger.Warn("PrivacySettings", "Telemetry identity service is unavailable.");
-                return;
-            }
-
-            TelemetryId = identity.RefreshTelemetryId();
-            AppLogger.Info("PrivacySettings", $"Telemetry ID refreshed: {TelemetryId}");
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("PrivacySettings", "Failed to refresh telemetry ID.", ex);
-        }
     }
 
     partial void OnUploadAnonymousCrashDataChanged(bool value)
@@ -137,8 +113,7 @@ public sealed partial class PrivacySettingsPageViewModel : ViewModelBase
         TelemetryIdHeader = L("settings.privacy.telemetry_id_title", "Telemetry ID");
         TelemetryIdDescription = L(
             "settings.privacy.telemetry_id_description",
-            "A refreshable anonymous identifier used for detailed telemetry sessions.");
-        RefreshTelemetryIdText = L("settings.privacy.refresh_telemetry_id", "Refresh");
+            "An anonymous identifier used for detailed telemetry sessions.");
         PrivacyPolicyHintPrefix = L("settings.privacy.policy_hint_prefix", "For more details, please ");
         ViewPrivacyPolicyText = L("settings.privacy.view_policy", "view our privacy policy");
     }

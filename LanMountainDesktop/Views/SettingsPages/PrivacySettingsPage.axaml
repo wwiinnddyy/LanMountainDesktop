@@ -51,14 +51,9 @@
                                  FontFamily="Consolas"
                                  FontSize="12"
                                  Focusable="False"
-                                 IsTabStop="False" />
+                                 IsTabStop="False"
+                                 HorizontalAlignment="Stretch" />
                     </StackPanel>
-                    <Button Grid.Column="1"
-                            Content="{Binding RefreshTelemetryIdText}"
-                            Command="{Binding RefreshTelemetryIdCommand}"
-                            VerticalAlignment="Center"
-                            Margin="16,0,0,0"
-                            Classes="accent-button" />
                 </Grid>
             </Border>
 

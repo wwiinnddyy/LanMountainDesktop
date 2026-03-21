@@ -337,6 +337,14 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 ["timestamp"] = timestamp.ToString("o"),
                 ["properties"] = new Dictionary<string, object?>
                 {
+                    ["install_id"] = installId,
+                    ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
+                    ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
+                    ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
+                    ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
+                    ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
+                    ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
+                    ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage(),
                     ["launch_time_utc"] = timestamp.ToString("o")
                 }
             };
