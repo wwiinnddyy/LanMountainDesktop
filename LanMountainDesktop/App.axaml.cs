@@ -101,6 +101,11 @@ public partial class App : Application
 
     public App()
     {
+        if (Design.IsDesignMode)
+        {
+            return;
+        }
+
         _settingsFacade.Settings.Changed += OnSettingsChanged;
         _appearanceThemeService.Changed += OnAppearanceThemeChanged;
     }
@@ -108,9 +113,16 @@ public partial class App : Application
     public override void Initialize()
     {
         AppLogger.Info("App", "Initializing application resources.");
+        AvaloniaXamlLoader.Load(this);
+
+        if (Design.IsDesignMode)
+        {
+            ApplyDesignTimeTheme();
+            return;
+        }
+
         ConfigureWebViewUserDataFolder();
         AvaloniaWebViewBuilder.Initialize(default);
-        AvaloniaXamlLoader.Load(this);
         ApplyThemeFromSettings();
         ApplyCurrentCultureFromSettings();
         EnsureSettingsWindowService();
@@ -119,12 +131,32 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (Design.IsDesignMode)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
         AppLogger.Info("App", "Framework initialization completed.");
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void ApplyDesignTimeTheme()
+    {
+        RequestedThemeVariant = ThemeVariant.Light;
+
+        try
+        {
+            ApplyAdaptiveThemeResources();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Previewer", "Failed to apply adaptive theme resources in design mode.", ex);
+        }
     }
 
     private void InitializeDesktopShell()

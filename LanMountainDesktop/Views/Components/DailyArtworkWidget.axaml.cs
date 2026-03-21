@@ -60,6 +60,7 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromHours(6)
     };
 
+    private readonly bool _isDesignModePreview = Design.IsDesignMode;
     private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
 
@@ -85,10 +86,17 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         ArtistTextBlock.FontFamily = MiSansFontFamily;
         YearTextBlock.FontFamily = MiSansFontFamily;
 
+        SizeChanged += OnSizeChanged;
+        if (_isDesignModePreview)
+        {
+            ApplyCellSize(_currentCellSize);
+            ApplyDesignTimePreview();
+            return;
+        }
+
         _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
-        SizeChanged += OnSizeChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -177,6 +185,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnArtworkPanelPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            return;
+        }
+
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             return;
@@ -188,6 +201,11 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnInfoPanelPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            return;
+        }
+
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             return;
@@ -417,6 +435,36 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         PaintingTitleTextBlock.Text = BuildQuotedTitle(L("artwork.widget.fallback_title", "Daily Artwork"));
         ArtistTextBlock.Text = L("artwork.widget.fallback_artist", "Recommendation service unavailable");
         YearTextBlock.Text = L("artwork.widget.fallback_year", "Try again later");
+        UpdateAdaptiveLayout();
+    }
+
+    private void ApplyDesignTimePreview()
+    {
+        DisposeArtworkBitmap();
+        _currentArtworkSourceUrl = null;
+        _currentArtworkImageUrl = null;
+
+        RootBorder.Background = new SolidColorBrush(Color.Parse("#C6B08B"));
+        ArtworkPanel.Background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Color.Parse("#AA8B69"), 0),
+                new GradientStop(Color.Parse("#5F4B3B"), 1)
+            }
+        };
+        InfoPanel.Background = new SolidColorBrush(Color.Parse("#15181D"));
+
+        DateTextBlock.Text = "03/22";
+        WeekdayTextBlock.Text = "Sunday";
+        PaintingTitleTextBlock.Text = BuildQuotedTitle("The Starry Night");
+        ArtistTextBlock.Text = NormalizeCompactText("Vincent van Gogh");
+        YearTextBlock.Text = "1889 | MoMA";
+        StatusTextBlock.IsVisible = false;
+        StatusTextBlock.Text = string.Empty;
+
         UpdateAdaptiveLayout();
     }
 

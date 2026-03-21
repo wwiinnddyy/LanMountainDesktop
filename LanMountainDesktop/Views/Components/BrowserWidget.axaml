@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fi="using:FluentIcons.Avalonia"
-             xmlns:webview="clr-namespace:AvaloniaWebView;assembly=Avalonia.WebView"
              mc:Ignorable="d"
              d:DesignWidth="480"
              d:DesignHeight="480"
@@ -24,20 +23,27 @@
                     BorderBrush="#22000000"
                     BorderThickness="1">
                 <Grid>
-                    <webview:WebView x:Name="BrowserWebView" />
+                    <Grid x:Name="WebViewPresenter" />
                     <Border x:Name="UnavailableOverlay"
                             IsVisible="False"
                             Background="#CC0F172A"
                             Padding="16">
-                        <TextBlock x:Name="UnavailableMessageTextBlock"
-                                   Foreground="#F8FAFC"
-                                   TextWrapping="Wrap"
-                                   TextAlignment="Center"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   MaxWidth="360"
-                                   FontSize="13"
-                                   Text="Browser runtime unavailable." />
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="10"
+                                    MaxWidth="360">
+                            <fi:SymbolIcon Symbol="Desktop"
+                                           FontSize="28"
+                                           HorizontalAlignment="Center"
+                                           Foreground="#F8FAFC" />
+                            <TextBlock x:Name="UnavailableMessageTextBlock"
+                                       Foreground="#F8FAFC"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       FontSize="13"
+                                       Text="Browser runtime unavailable." />
+                        </StackPanel>
                     </Border>
                 </Grid>
             </Border>

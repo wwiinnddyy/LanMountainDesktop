@@ -95,6 +95,7 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         Interval = FluttermotionToken.WeatherAnimationFrameInterval
     };
 
+    private readonly bool _isDesignModePreview = Design.IsDesignMode;
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
@@ -128,11 +129,19 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         InitializeComponent();
         InitializeMotionTransform();
 
+        SizeChanged += OnSizeChanged;
+        if (_isDesignModePreview)
+        {
+            InitializeParticleVisuals();
+            ApplyCellSize(_currentCellSize);
+            ApplyDesignTimePreview();
+            return;
+        }
+
         _refreshTimer.Tick += OnRefreshTimerTick;
         _backgroundAnimationTimer.Tick += OnBackgroundAnimationTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
-        SizeChanged += OnSizeChanged;
 
         InitializeParticleVisuals();
         ApplyVisualTheme(WeatherVisualKind.ClearDay);
@@ -510,6 +519,29 @@ public partial class WeatherWidget : UserControl, IDesktopComponentWidget, IDesk
         RangeTextBlock.Text = "--°/--°";
         ApplyAdaptiveTypography();
         _latestSnapshot = null;
+    }
+
+    private void ApplyDesignTimePreview()
+    {
+        const WeatherVisualKind previewVisualKind = WeatherVisualKind.PartlyCloudyDay;
+
+        _languageCode = "en-US";
+        _latestSnapshot = null;
+
+        ApplyVisualTheme(previewVisualKind);
+        SetWeatherIcon(
+            HyperOS3WeatherTheme.ResolveHeroIconAsset(HyperOS3WeatherVisualKind.PartlyCloudyDay),
+            previewVisualKind);
+        SetLoadingSkeleton(false);
+
+        CityTextBlock.Text = "Shenzhen Bay";
+        ConditionTextBlock.Text = "Partly cloudy";
+        TemperatureTextBlock.Text = "24°";
+        RangeTextBlock.Text = "28°/20°";
+
+        ResetAnimationState();
+        ResetParticles();
+        ApplyAdaptiveTypography();
     }
 
     private void ApplyVisualTheme(WeatherVisualKind kind)

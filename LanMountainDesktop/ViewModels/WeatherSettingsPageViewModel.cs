@@ -27,7 +27,8 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         ISettingsFacadeService settingsFacade,
         LocalizationService localizationService,
         ILocationService locationService,
-        WeatherLocationRefreshService weatherLocationRefreshService)
+        WeatherLocationRefreshService weatherLocationRefreshService,
+        bool enableStartupPreviewRefresh = true)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
@@ -52,7 +53,10 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             ? LocationReadyText
             : LocationUnsupportedText;
 
-        _ = RefreshPreviewAsync();
+        if (enableStartupPreviewRefresh)
+        {
+            _ = RefreshPreviewAsync();
+        }
     }
 
     public IReadOnlyList<SelectionOption> LocationModes { get; }
@@ -474,6 +478,65 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         {
             IsRefreshingPreview = false;
         }
+    }
+
+    internal void ApplyDesignTimePreview()
+    {
+        _isInitializing = true;
+
+        var previewLocation = new WeatherLocation(
+            "Shenzhen Nanshan",
+            "101280601",
+            22.5431,
+            114.0579,
+            "Guangdong, China");
+        var alternateLocation = new WeatherLocation(
+            "Shanghai Pudong",
+            "101020600",
+            31.2304,
+            121.4737,
+            "Shanghai, China");
+
+        SelectedLocationMode = LocationModes.FirstOrDefault(option =>
+                                   string.Equals(option.Value, "CitySearch", StringComparison.OrdinalIgnoreCase))
+                               ?? LocationModes[0];
+        SearchKeyword = "shenzhen";
+        SelectedSearchResult = previewLocation;
+
+        SearchResults.Clear();
+        SearchResults.Add(previewLocation);
+        SearchResults.Add(alternateLocation);
+
+        Latitude = previewLocation.Latitude;
+        Longitude = previewLocation.Longitude;
+        LocationKey = previewLocation.LocationKey;
+        LocationName = previewLocation.Name;
+        AutoRefreshLocation = true;
+        ExcludedAlerts = "Heat\nThunderstorm";
+        NoTlsRequests = false;
+        IsLocationSupported = true;
+        IsRefreshingLocation = false;
+        IsRefreshingPreview = false;
+
+        _isInitializing = false;
+
+        UpdateModeVisibility();
+        UpdateCurrentLocationSummary();
+
+        var preview = XiaomiWeatherVisualResolver.Resolve(
+            "Partly cloudy",
+            4,
+            isNight: false,
+            _languageCode);
+
+        SearchStatus = "2 sample locations are shown for design preview.";
+        LocationActionStatus = "Using mocked Windows location support in design mode.";
+        PreviewIcon = HyperOS3WeatherAssetLoader.LoadImage(preview.PrimaryIconAsset);
+        PreviewLocation = previewLocation.Name;
+        PreviewTemperature = "24 deg C";
+        PreviewCondition = preview.DisplayText;
+        PreviewUpdated = "Updated 09:42";
+        PreviewStatus = "Preview data is mocked for Avalonia design mode.";
     }
 
     private void RefreshLocalizedText()

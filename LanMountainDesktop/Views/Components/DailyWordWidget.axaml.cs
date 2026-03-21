@@ -31,6 +31,7 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         Interval = TimeSpan.FromHours(6)
     };
 
+    private readonly bool _isDesignModePreview = Design.IsDesignMode;
     private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
@@ -55,12 +56,19 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         ExampleTranslationTextBlock.FontFamily = MiSansFontFamily;
         StatusTextBlock.FontFamily = MiSansFontFamily;
 
+        SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        if (_isDesignModePreview)
+        {
+            ApplyCellSize(_currentCellSize);
+            ApplyDesignTimePreview();
+            return;
+        }
+
         _refreshTimer.Tick += OnRefreshTimerTick;
         RefreshButton.Click += OnRefreshButtonClick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
-        SizeChanged += OnSizeChanged;
-        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -175,6 +183,12 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (_isRefreshing)
         {
             return;
@@ -281,6 +295,26 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         ExampleTranslationTextBlock.Text = L("dailyword.widget.fallback_example_translation", "It will retry when network recovers.");
         StatusTextBlock.Text = L("dailyword.widget.fetch_failed", "Daily word fetch failed");
         StatusTextBlock.IsVisible = true;
+        UpdateAdaptiveLayout();
+    }
+
+    private void ApplyDesignTimePreview()
+    {
+        _isNightVisual = ResolveNightMode();
+        ApplyNightModeVisual();
+
+        WordTextBlock.Text = "serendipity";
+        PronunciationTextBlock.Text = "UK /,seren'dipiti/ | US /,seren'dipiti/";
+        MeaningTextBlock.Text = "n. finding something valuable by accident; a pleasant surprise.";
+        ExampleTextBlock.Text = "The widget preview became useful by pure serendipity.";
+        ExampleTranslationTextBlock.Text = "A mocked sample sentence shown only in design mode.";
+        StatusTextBlock.Text = string.Empty;
+        StatusTextBlock.IsVisible = false;
+
+        RefreshButton.IsEnabled = false;
+        RefreshButton.Opacity = 1.0;
+        RefreshIcon.Opacity = 0.82;
+
         UpdateAdaptiveLayout();
     }
 

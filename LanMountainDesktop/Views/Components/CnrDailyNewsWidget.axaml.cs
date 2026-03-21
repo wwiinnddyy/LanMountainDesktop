@@ -44,6 +44,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         Interval = TimeSpan.FromMinutes(30)
     };
 
+    private readonly bool _isDesignModePreview = Design.IsDesignMode;
     private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
@@ -102,12 +103,19 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         News2TitleTextBlock.FontFamily = MiSansFontFamily;
         StatusTextBlock.FontFamily = MiSansFontFamily;
 
+        SizeChanged += OnSizeChanged;
+        ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        if (_isDesignModePreview)
+        {
+            ApplyCellSize(_currentCellSize);
+            ApplyDesignTimePreview();
+            return;
+        }
+
         _refreshTimer.Tick += OnRefreshTimerTick;
         RefreshButton.Click += OnRefreshButtonClick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
-        SizeChanged += OnSizeChanged;
-        ActualThemeVariantChanged += OnActualThemeVariantChanged;
 
         ApplyCellSize(_currentCellSize);
         UpdateLanguageCode();
@@ -226,6 +234,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private async void OnRefreshButtonClick(object? sender, RoutedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (_isRefreshing)
         {
             return;
@@ -242,6 +256,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnNewsItem1PointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             return;
@@ -253,6 +273,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnNewsItem2PointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             return;
@@ -264,6 +290,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
     private void OnExtraNewsItemPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (_isDesignModePreview)
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ||
             sender is not Control control ||
             control.Tag is not int index)
@@ -405,6 +437,55 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         SetNewsBitmap(1, null);
         RenderExtraNewsRows([]);
         UpdateNewsInteractionState();
+        UpdateAdaptiveLayout();
+    }
+
+    private void ApplyDesignTimePreview()
+    {
+        _isNightVisual = ResolveNightMode();
+        _activeNewsItems =
+        [
+            new DailyNewsItemSnapshot(
+                "LanMountain preview mode now shows mocked widget content in Rider.",
+                null,
+                "https://example.com/news/preview-1",
+                null,
+                "09:30"),
+            new DailyNewsItemSnapshot(
+                "Weather, artwork, and plugin market cards render without live network calls.",
+                null,
+                "https://example.com/news/preview-2",
+                null,
+                "09:10"),
+            new DailyNewsItemSnapshot(
+                "Design-time mocks make isolated widget layout tuning much faster.",
+                null,
+                "https://example.com/news/preview-3",
+                null,
+                "08:55")
+        ];
+
+        _newsUrls.Clear();
+        foreach (var item in _activeNewsItems)
+        {
+            _newsUrls.Add(item.Url);
+        }
+
+        UpdateHotHeadlineText(_activeNewsItems[0].Title);
+        News2TitleTextBlock.Text = NormalizeCompactText(_activeNewsItems[1].Title);
+        StatusTextBlock.Text = string.Empty;
+        StatusTextBlock.IsVisible = false;
+
+        SetNewsBitmap(0, null);
+        SetNewsBitmap(1, null);
+        RenderExtraNewsRows(_activeNewsItems.Skip(2).ToArray());
+        UpdateNewsInteractionState();
+
+        RefreshButton.IsEnabled = false;
+        RefreshButton.Opacity = 1.0;
+        RefreshGlyphIcon.Opacity = 0.82;
+        RefreshLabelTextBlock.Opacity = 0.82;
+
         UpdateAdaptiveLayout();
     }
 

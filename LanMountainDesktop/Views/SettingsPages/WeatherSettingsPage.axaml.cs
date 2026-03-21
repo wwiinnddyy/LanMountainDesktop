@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -16,7 +17,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
 public partial class WeatherSettingsPage : SettingsPageBase
 {
     public WeatherSettingsPage()
-        : this(CreateDefaultViewModel())
+        : this(Design.IsDesignMode ? CreateDesignTimeViewModel() : CreateDefaultViewModel())
     {
     }
 
@@ -29,7 +30,7 @@ public partial class WeatherSettingsPage : SettingsPageBase
 
     public WeatherSettingsPageViewModel ViewModel { get; }
 
-    private static WeatherSettingsPageViewModel CreateDefaultViewModel()
+    private static WeatherSettingsPageViewModel CreateDefaultViewModel(bool enableStartupPreviewRefresh = true)
     {
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         var localizationService = new LocalizationService();
@@ -42,6 +43,14 @@ public partial class WeatherSettingsPage : SettingsPageBase
             settingsFacade,
             localizationService,
             locationService,
-            weatherLocationRefreshService);
+            weatherLocationRefreshService,
+            enableStartupPreviewRefresh);
+    }
+
+    private static WeatherSettingsPageViewModel CreateDesignTimeViewModel()
+    {
+        var viewModel = CreateDefaultViewModel(enableStartupPreviewRefresh: false);
+        viewModel.ApplyDesignTimePreview();
+        return viewModel;
     }
 }

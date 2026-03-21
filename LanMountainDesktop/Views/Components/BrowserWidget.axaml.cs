@@ -17,6 +17,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 {
     private static readonly Uri DefaultHomeUri = new("https://www.bing.com");
 
+    private readonly bool _isDesignModePreview = Design.IsDesignMode;
     private double _currentCellSize = 48;
     private string _componentId = BuiltInComponentIds.DesktopBrowser;
     private string _placementId = string.Empty;
@@ -27,6 +28,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
     private bool _isEditMode;
     private bool _isWebViewActive = true;
     private bool _isWebViewFaulted;
+    private WebView? _browserWebView;
     private readonly WebView2RuntimeAvailability _runtimeAvailability;
     private bool _isDisposed;
 
@@ -41,10 +43,15 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         ApplyCellSize(_currentCellSize);
         ApplyTheme(force: true);
 
-        _runtimeAvailability = WebView2RuntimeProbe.GetAvailability();
+        _runtimeAvailability = _isDesignModePreview
+            ? new WebView2RuntimeAvailability(
+                IsAvailable: false,
+                Version: null,
+                Message: "WebView preview is disabled in Avalonia design mode.")
+            : WebView2RuntimeProbe.GetAvailability();
         if (_runtimeAvailability.IsAvailable)
         {
-            BrowserWebView.NavigationStarting += OnBrowserWebViewNavigationStarting;
+            EnsureWebViewCreated();
         }
         else
         {
@@ -69,9 +76,9 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
 
-        if (_runtimeAvailability.IsAvailable)
+        if (_browserWebView is not null)
         {
-            BrowserWebView.NavigationStarting -= OnBrowserWebViewNavigationStarting;
+            _browserWebView.NavigationStarting -= OnBrowserWebViewNavigationStarting;
         }
     }
 
@@ -300,6 +307,13 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private void UpdateWebViewActiveState()
     {
+        if (_isDesignModePreview)
+        {
+            _isWebViewActive = false;
+            ApplyRuntimeUnavailableState();
+            return;
+        }
+
         if (!_runtimeAvailability.IsAvailable || _isWebViewFaulted)
         {
             _isWebViewActive = false;
@@ -325,14 +339,21 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private void ActivateWebView()
     {
+        EnsureWebViewCreated();
         if (_isWebViewFaulted || !_runtimeAvailability.IsAvailable)
         {
             ApplyRuntimeUnavailableState();
             return;
         }
 
-        BrowserWebView.IsVisible = true;
-        BrowserWebView.IsHitTestVisible = true;
+        if (_browserWebView is null)
+        {
+            ApplyRuntimeUnavailableState();
+            return;
+        }
+
+        _browserWebView.IsVisible = true;
+        _browserWebView.IsHitTestVisible = true;
         RefreshButton.IsEnabled = true;
         GoButton.IsEnabled = true;
         AddressTextBox.IsEnabled = true;
@@ -341,8 +362,11 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private void DeactivateWebView(bool clearUrl)
     {
-        BrowserWebView.IsHitTestVisible = false;
-        BrowserWebView.IsVisible = false;
+        if (_browserWebView is not null)
+        {
+            _browserWebView.IsHitTestVisible = false;
+            _browserWebView.IsVisible = false;
+        }
 
         if (clearUrl)
         {
@@ -352,9 +376,14 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private bool TryReloadWebView(string action)
     {
+        if (_browserWebView is null)
+        {
+            return false;
+        }
+
         try
         {
-            BrowserWebView.Reload();
+            _browserWebView.Reload();
             return true;
         }
         catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
@@ -366,9 +395,14 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private bool TryNavigate(Uri uri, string action)
     {
+        if (_browserWebView is null)
+        {
+            return false;
+        }
+
         try
         {
-            BrowserWebView.Url = uri;
+            _browserWebView.Url = uri;
             return true;
         }
         catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
@@ -380,9 +414,14 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private void TryClearWebViewUrl()
     {
+        if (_browserWebView is null)
+        {
+            return;
+        }
+
         try
         {
-            BrowserWebView.Url = null;
+            _browserWebView.Url = null;
         }
         catch
         {
@@ -392,14 +431,20 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
     private bool CanUseWebView()
     {
-        return _runtimeAvailability.IsAvailable && !_isWebViewFaulted && _isWebViewActive;
+        return _runtimeAvailability.IsAvailable &&
+               !_isWebViewFaulted &&
+               _isWebViewActive &&
+               _browserWebView is not null;
     }
 
     private void ApplyRuntimeUnavailableState()
     {
         _isWebViewActive = false;
-        BrowserWebView.IsVisible = false;
-        BrowserWebView.IsHitTestVisible = false;
+        if (_browserWebView is not null)
+        {
+            _browserWebView.IsVisible = false;
+            _browserWebView.IsHitTestVisible = false;
+        }
 
         RefreshButton.IsEnabled = false;
         GoButton.IsEnabled = false;
@@ -412,6 +457,22 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
                 ? "WebView runtime unavailable."
                 : _runtimeAvailability.Message;
         UnavailableOverlay.IsVisible = true;
+    }
+
+    private void EnsureWebViewCreated()
+    {
+        if (_browserWebView is not null || _isDesignModePreview || !_runtimeAvailability.IsAvailable)
+        {
+            return;
+        }
+
+        _browserWebView = new WebView
+        {
+            IsVisible = false,
+            IsHitTestVisible = false
+        };
+        _browserWebView.NavigationStarting += OnBrowserWebViewNavigationStarting;
+        WebViewPresenter.Children.Insert(0, _browserWebView);
     }
 
     private void EnterFaultedState(string action, Exception ex)

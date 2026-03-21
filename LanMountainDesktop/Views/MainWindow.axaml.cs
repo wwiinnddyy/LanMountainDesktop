@@ -160,7 +160,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
     public MainWindow()
     {
-        var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+        var pluginRuntimeService = Design.IsDesignMode
+            ? null
+            : (Application.Current as App)?.PluginRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
         _settingsService = _settingsFacade.Settings;
         _gridSettingsService = _settingsFacade.Grid;
@@ -173,7 +175,6 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
         InitializeComponent();
         Icon = _appLogoService.CreateWindowIcon();
-        InitializeTaskbarProfileFlyout();
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
             _componentRegistry,
             pluginRuntimeService,
@@ -183,6 +184,14 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             pluginRuntimeService);
         _componentLibraryService = new ComponentLibraryService(_componentRegistry, _componentRuntimeRegistry);
         _componentEditorWindowService = new ComponentEditorWindowService(_settingsFacade);
+
+        if (Design.IsDesignMode)
+        {
+            ApplyDesignTimePreview();
+            return;
+        }
+
+        InitializeTaskbarProfileFlyout();
         _fluentAvaloniaTheme = Application.Current?.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
         _settingsService.Changed += OnSettingsChanged;
         _appearanceThemeService.Changed += OnAppearanceThemeChanged;
@@ -194,6 +203,170 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             settingsWindowService.StateChanged += OnSettingsWindowStateChanged;
             _isSettingsOpen = settingsWindowService.IsOpen;
         }
+    }
+
+    private void ApplyDesignTimePreview()
+    {
+        Title = "LanMountainDesktop Preview";
+        ShowInTaskbar = false;
+        DesktopWallpaperLayer.Background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Color.Parse("#FFF6F8FB"), 0d),
+                new GradientStop(Color.Parse("#FFE9EEF7"), 0.55d),
+                new GradientStop(Color.Parse("#FFDCE5F3"), 1d)
+            }
+        };
+        DesktopWallpaperImageLayer.IsVisible = false;
+        LauncherPagePanel.IsVisible = false;
+        ComponentLibraryWindow.IsVisible = false;
+
+        BackToWindowsTextBlock.Text = "Back to Windows";
+        ComponentLibraryTitleTextBlock.Text = "Widgets";
+        ComponentLibraryBackTextBlock.Text = "Back";
+        TaskbarProfileDisplayNameTextBlock.Text = "Preview User";
+        TaskbarProfileSettingsActionTextBlock.Text = "Settings";
+        TaskbarProfileDesktopEditActionTextBlock.Text = "Edit Desktop";
+        TaskbarProfileAvatarFallbackText.Text = "P";
+        TaskbarProfileHeaderAvatarFallbackText.Text = "P";
+        TaskbarProfileButton.IsEnabled = false;
+        TaskbarProfilePopup.IsOpen = false;
+
+        ClockWidget.IsVisible = true;
+        ClockWidget.SetDisplayFormat(ClockDisplayFormat.HourMinute);
+        ClockWidget.SetTransparentBackground(false);
+
+        ConfigureDesignTimeDesktopGrid();
+        PopulateDesignTimeDesktopSurface();
+    }
+
+    private void ConfigureDesignTimeDesktopGrid()
+    {
+        const int previewRows = 7;
+        const int previewColumns = 12;
+
+        DesktopGrid.RowDefinitions.Clear();
+        DesktopGrid.ColumnDefinitions.Clear();
+
+        for (var row = 0; row < previewRows; row++)
+        {
+            DesktopGrid.RowDefinitions.Add(new RowDefinition(new GridLength(1, GridUnitType.Star)));
+        }
+
+        for (var column = 0; column < previewColumns; column++)
+        {
+            DesktopGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        }
+
+        DesktopGrid.Margin = new Thickness(28);
+        DesktopGrid.RowSpacing = 14;
+        DesktopGrid.ColumnSpacing = 14;
+        DesktopGrid.Width = double.NaN;
+        DesktopGrid.Height = double.NaN;
+
+        Grid.SetRow(TopStatusBarHost, 0);
+        Grid.SetColumn(TopStatusBarHost, 0);
+        Grid.SetRowSpan(TopStatusBarHost, 1);
+        Grid.SetColumnSpan(TopStatusBarHost, previewColumns);
+
+        Grid.SetRow(DesktopPagesViewport, 1);
+        Grid.SetColumn(DesktopPagesViewport, 0);
+        Grid.SetRowSpan(DesktopPagesViewport, previewRows - 2);
+        Grid.SetColumnSpan(DesktopPagesViewport, previewColumns);
+
+        Grid.SetRow(BottomTaskbarContainer, previewRows - 1);
+        Grid.SetColumn(BottomTaskbarContainer, 0);
+        Grid.SetRowSpan(BottomTaskbarContainer, 1);
+        Grid.SetColumnSpan(BottomTaskbarContainer, previewColumns);
+
+        DesktopPagesHost.ColumnDefinitions.Clear();
+        DesktopPagesHost.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+
+        ClockWidget.ApplyCellSize(72);
+    }
+
+    private void PopulateDesignTimeDesktopSurface()
+    {
+        DesktopPagesContainer.Children.Clear();
+        DesktopPagesContainer.Width = double.NaN;
+        DesktopPagesContainer.Height = double.NaN;
+
+        DesktopPagesContainer.Children.Add(CreateDesignTimePreviewCard(
+            "Focus Clock",
+            "Compact widget preview",
+            32,
+            32,
+            300,
+            170,
+            "#FFFFFFFF",
+            "#FFE8EEF8"));
+        DesktopPagesContainer.Children.Add(CreateDesignTimePreviewCard(
+            "Weather",
+            "26°C  Qingdao",
+            360,
+            86,
+            260,
+            132,
+            "#FFF8FBFF",
+            "#FFDDE8F6"));
+        DesktopPagesContainer.Children.Add(CreateDesignTimePreviewCard(
+            "Study Session",
+            "Deep work · 48 min",
+            210,
+            248,
+            340,
+            144,
+            "#FFFDFEFF",
+            "#FFE7EEF7"));
+    }
+
+    private static Border CreateDesignTimePreviewCard(
+        string title,
+        string subtitle,
+        double left,
+        double top,
+        double width,
+        double height,
+        string backgroundColor,
+        string borderColor)
+    {
+        return new Border
+        {
+            Width = width,
+            Height = height,
+            Margin = new Thickness(left, top, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = new SolidColorBrush(Color.Parse(backgroundColor)),
+            BorderBrush = new SolidColorBrush(Color.Parse(borderColor)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(28),
+            Child = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 8,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = title,
+                        FontSize = 20,
+                        FontWeight = FontWeight.SemiBold,
+                        Foreground = new SolidColorBrush(Color.Parse("#FF1E293B"))
+                    },
+                    new TextBlock
+                    {
+                        Text = subtitle,
+                        FontSize = 13,
+                        Foreground = new SolidColorBrush(Color.Parse("#FF64748B"))
+                    }
+                }
+            }
+        };
     }
 
     private void OnNightModeIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -231,6 +404,14 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+
+        if (Design.IsDesignMode)
+        {
+            ConfigureDesignTimeDesktopGrid();
+            PopulateDesignTimeDesktopSurface();
+            return;
+        }
+
         SyncSettingsWindowState();
 
         _suppressSettingsPersistence = true;
@@ -307,6 +488,12 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
     protected override void OnClosed(EventArgs e)
     {
+        if (Design.IsDesignMode)
+        {
+            base.OnClosed(e);
+            return;
+        }
+
         var wasVisible = IsVisible;
         var windowState = WindowState.ToString();
 

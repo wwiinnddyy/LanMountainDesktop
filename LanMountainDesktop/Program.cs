@@ -11,7 +11,7 @@ using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop;
 
-sealed class Program
+public sealed class Program
 {
     internal static string StartupRenderMode { get; private set; } = AppRenderingModeHelper.Default;
 
@@ -67,7 +67,12 @@ sealed class Program
         }
     }
 
-    public static AppBuilder BuildAvaloniaApp(string renderMode = AppRenderingModeHelper.Default)
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        return BuildAvaloniaApp(AppRenderingModeHelper.Default);
+    }
+
+    public static AppBuilder BuildAvaloniaApp(string renderMode)
     {
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
