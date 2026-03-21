@@ -104,16 +104,26 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
+        var wasOpen = ViewModel.IsDrawerOpen;
+        var previousTitle = ViewModel.DrawerTitle;
         DrawerContentHost.Content = content;
         ViewModel.DrawerTitle = title ?? ViewModel.DrawerFallbackTitle;
         ViewModel.IsDrawerOpen = true;
         SyncTitleText();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
+        if (!wasOpen || !string.Equals(previousTitle, ViewModel.DrawerTitle, StringComparison.Ordinal))
+        {
+            TelemetryServices.Usage?.TrackSettingsDrawerOpened(ViewModel.CurrentPageId, ViewModel.DrawerTitle);
+        }
     }
 
     public void CloseDrawer()
     {
+        var wasOpen = ViewModel.IsDrawerOpen || DrawerContentHost?.Content is not null;
+        var currentPageId = ViewModel.CurrentPageId;
+        var drawerTitle = ViewModel.DrawerTitle;
+
         if (DrawerContentHost is not null)
         {
             DrawerContentHost.Content = null;
@@ -124,6 +134,10 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         SyncTitleText();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
+        if (wasOpen)
+        {
+            TelemetryServices.Usage?.TrackSettingsDrawerClosed(currentPageId, drawerTitle);
+        }
     }
 
     public void RequestRestart(string? reason = null)
@@ -199,6 +213,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
     private void NavigateTo(string? pageId)
     {
+        var previousPageId = ViewModel.CurrentPageId;
         var descriptor = ResolveDescriptor(pageId);
         if (descriptor is null)
         {
@@ -226,6 +241,10 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         SyncTitleText();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
+        if (!string.Equals(previousPageId, descriptor.PageId, StringComparison.OrdinalIgnoreCase))
+        {
+            TelemetryServices.Usage?.TrackSettingsNavigation(previousPageId, descriptor.PageId, "navigation");
+        }
     }
 
     private SettingsPageDescriptor? ResolveDescriptor(string? pageId)
@@ -367,6 +386,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         UpdateChromeMetrics();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
+        TelemetryServices.Usage?.TrackSettingsWindowOpened("SettingsWindow.OnOpened", ViewModel.CurrentPageId);
     }
 
     private void OnWindowSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -461,6 +481,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
         Opened -= OnOpened;
         SizeChanged -= OnWindowSizeChanged;
+        TelemetryServices.Usage?.TrackSettingsWindowClosed("SettingsWindow.OnClosed", ViewModel.CurrentPageId);
     }
 
     private void OnWindowTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)

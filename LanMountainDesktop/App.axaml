@@ -71,4 +71,5 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </Application.Styles>
+
 </Application>

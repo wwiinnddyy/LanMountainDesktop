@@ -41,7 +41,7 @@ public sealed class PluginRuntimeService : IDisposable
 
     public PluginRuntimeService(ISettingsFacadeService? settingsFacade = null)
     {
-        PluginsDirectory = Path.Combine(AppContext.BaseDirectory, "Extensions", "Plugins");
+        PluginsDirectory = Path.Combine(GetUserDataRootDirectory(), "Extensions", "Plugins");
         _sharedContractManager = new PluginSharedContractManager(
             Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
         _packageManager = new PluginRuntimePackageManager(this);

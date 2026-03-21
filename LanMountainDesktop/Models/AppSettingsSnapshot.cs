@@ -71,9 +71,11 @@ public sealed class AppSettingsSnapshot
 
     public bool UploadAnonymousUsageData { get; set; }
 
-    public string? DeviceId { get; set; }
+    public string? TelemetryInstallId { get; set; }
 
-    public string? PersistentUserId { get; set; }
+    public string? TelemetryId { get; set; }
+
+    public bool HasReportedTelemetryBaseline { get; set; }
 
     public string UpdateChannel { get; set; } = "stable";
 

@@ -38,15 +38,15 @@
                     Margin="0,16,0,0">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="{Binding DeviceIdHeader}"
+                        <TextBlock Text="{Binding TelemetryIdHeader}"
                                    FontWeight="SemiBold"
                                    FontSize="14" />
-                        <TextBlock Text="{Binding DeviceIdDescription}"
+                        <TextBlock Text="{Binding TelemetryIdDescription}"
                                    FontSize="12"
                                    Opacity="0.7"
                                    Margin="0,4,0,8" />
-                        <TextBox x:Name="DeviceIdTextBox"
-                                 Text="{Binding DeviceId}"
+                        <TextBox x:Name="TelemetryIdTextBox"
+                                 Text="{Binding TelemetryId}"
                                  IsReadOnly="True"
                                  FontFamily="Consolas"
                                  FontSize="12"
@@ -54,8 +54,8 @@
                                  IsTabStop="False" />
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Content="{Binding RefreshDeviceIdText}"
-                            Command="{Binding RefreshDeviceIdCommand}"
+                            Content="{Binding RefreshTelemetryIdText}"
+                            Command="{Binding RefreshTelemetryIdCommand}"
                             VerticalAlignment="Center"
                             Margin="16,0,0,0"
                             Classes="accent-button" />

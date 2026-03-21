@@ -57,7 +57,12 @@ public partial class App : Application
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
 
-    private TrayIcons? _trayIcons;
+    private TrayIcon? _trayIcon;
+    private NativeMenuItem? _trayShowDesktopMenuItem;
+    private NativeMenuItem? _traySettingsMenuItem;
+    private NativeMenuItem? _trayComponentLibraryMenuItem;
+    private NativeMenuItem? _trayRestartMenuItem;
+    private NativeMenuItem? _trayExitMenuItem;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private bool _mainWindowClosed;
@@ -65,7 +70,6 @@ public partial class App : Application
     private DesktopShellHost? _desktopShellHost;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
-    internal static (UserBehaviorAnalyticsService?, CrashReportService?) AnalyticsServices { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
 
@@ -244,18 +248,43 @@ public partial class App : Application
     {
         try
         {
-            DisposeTrayIcon();
-
-            var trayIcon = new TrayIcon
+            if (_trayIcon is null)
             {
-                Icon = _appLogoService.CreateTrayIcon(),
-                ToolTipText = L("tray.tooltip", "LanMountainDesktop"),
-                Menu = BuildTrayMenu(),
-                IsVisible = true
-            };
+                _trayShowDesktopMenuItem = new NativeMenuItem();
+                _trayShowDesktopMenuItem.Click += OnTrayShowDesktopClick;
 
-            _trayIcons = [trayIcon];
-            TrayIcon.SetIcons(this, _trayIcons);
+                _traySettingsMenuItem = new NativeMenuItem();
+                _traySettingsMenuItem.Click += OnTraySettingsClick;
+
+                _trayComponentLibraryMenuItem = new NativeMenuItem();
+                _trayComponentLibraryMenuItem.Click += OnTrayComponentLibraryClick;
+
+                _trayRestartMenuItem = new NativeMenuItem();
+                _trayRestartMenuItem.Click += OnTrayRestartClick;
+
+                _trayExitMenuItem = new NativeMenuItem();
+                _trayExitMenuItem.Click += OnTrayExitClick;
+
+                var trayMenu = new NativeMenu();
+                trayMenu.Items.Add(_trayShowDesktopMenuItem);
+                trayMenu.Items.Add(_traySettingsMenuItem);
+                trayMenu.Items.Add(_trayComponentLibraryMenuItem);
+                trayMenu.Items.Add(new NativeMenuItemSeparator());
+                trayMenu.Items.Add(_trayRestartMenuItem);
+                trayMenu.Items.Add(new NativeMenuItemSeparator());
+                trayMenu.Items.Add(_trayExitMenuItem);
+
+                _trayIcon = new TrayIcon
+                {
+                    Icon = _appLogoService.CreateTrayIcon(),
+                    Menu = trayMenu,
+                    IsVisible = true
+                };
+
+                TrayIcon.SetIcons(this, [_trayIcon]);
+            }
+
+            RefreshTrayIconContent();
         }
         catch (Exception ex)
         {
@@ -263,51 +292,58 @@ public partial class App : Application
         }
     }
 
-    private NativeMenu BuildTrayMenu()
+    private void RefreshTrayIconContent()
     {
-        var menu = new NativeMenu();
+        if (_trayIcon is not null)
+        {
+            _trayIcon.IsVisible = true;
+            if (!OperatingSystem.IsLinux())
+            {
+                _trayIcon.ToolTipText = L("tray.tooltip", "LanMountainDesktop");
+            }
+        }
 
-        var showDesktopItem = new NativeMenuItem(L("tray.menu.show_desktop", "Open Desktop"));
-        showDesktopItem.Click += OnTrayShowDesktopClick;
-        menu.Items.Add(showDesktopItem);
+        if (_trayShowDesktopMenuItem is not null)
+        {
+            _trayShowDesktopMenuItem.Header = L("tray.menu.show_desktop", "Open Desktop");
+        }
 
-        var settingsItem = new NativeMenuItem(L("tray.menu.settings", "Settings"));
-        settingsItem.Click += OnTraySettingsClick;
-        menu.Items.Add(settingsItem);
+        if (_traySettingsMenuItem is not null)
+        {
+            _traySettingsMenuItem.Header = L("tray.menu.settings", "Settings");
+        }
 
-        var componentLibraryItem = new NativeMenuItem(L("tray.menu.component_library", "Component Library"));
-        componentLibraryItem.Click += OnTrayComponentLibraryClick;
-        menu.Items.Add(componentLibraryItem);
+        if (_trayComponentLibraryMenuItem is not null)
+        {
+            _trayComponentLibraryMenuItem.Header = L("tray.menu.component_library", "Component Library");
+        }
 
-        menu.Items.Add(new NativeMenuItemSeparator());
+        if (_trayRestartMenuItem is not null)
+        {
+            _trayRestartMenuItem.Header = L("tray.menu.restart", "Restart App");
+        }
 
-        var restartItem = new NativeMenuItem(L("tray.menu.restart", "Restart App"));
-        restartItem.Click += OnTrayRestartClick;
-        menu.Items.Add(restartItem);
-
-        menu.Items.Add(new NativeMenuItemSeparator());
-
-        var exitItem = new NativeMenuItem(L("tray.menu.exit", "Exit App"));
-        exitItem.Click += OnTrayExitClick;
-        menu.Items.Add(exitItem);
-
-        return menu;
+        if (_trayExitMenuItem is not null)
+        {
+            _trayExitMenuItem.Header = L("tray.menu.exit", "Exit App");
+        }
     }
 
     private void DisposeTrayIcon()
     {
-        if (_trayIcons is null)
+        if (_trayIcon is null)
         {
             return;
         }
 
-        TrayIcon.SetIcons(this, null);
-        foreach (var trayIcon in _trayIcons)
+        try
         {
-            trayIcon.Dispose();
+            _trayIcon.IsVisible = false;
         }
-
-        _trayIcons = null;
+        catch (Exception ex)
+        {
+            AppLogger.Warn("TrayIcon", "Failed to hide tray icon during cleanup.", ex);
+        }
     }
 
     private void EnsureSettingsWindowService()
@@ -520,10 +556,7 @@ public partial class App : Application
                 // 清除本地化缓存，强制重新加载语言文件
                 _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
-                if (_trayIcons is not null)
-                {
-                    InitializeTrayIcon();
-                }
+                RefreshTrayIconContent();
             }
         }, DispatcherPriority.Background);
     }
@@ -591,13 +624,13 @@ public partial class App : Application
 
         try
         {
-            var (analytics, crashReport) = App.AnalyticsServices;
-            analytics?.SendShutdownEvent();
-            crashReport?.SendShutdownEvent();
+            TelemetryServices.Usage?.Shutdown(
+                _shutdownIntent == ShutdownIntent.RestartRequested,
+                "App.PerformExitCleanup");
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("Analytics", "Failed to send shutdown events during exit cleanup.", ex);
+            AppLogger.Warn("Analytics", "Failed to shut down usage telemetry during exit cleanup.", ex);
         }
 
         try
@@ -631,6 +664,27 @@ public partial class App : Application
         AudioRecorderServiceFactory.DisposeSharedServices();
         StudyAnalyticsServiceFactory.DisposeSharedService();
         DisposeTrayIcon();
+
+        try
+        {
+            TelemetryServices.Crash?.CaptureShutdown(
+                _shutdownIntent == ShutdownIntent.RestartRequested,
+                "App.PerformExitCleanup");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Analytics", "Failed to capture crash shutdown telemetry during exit cleanup.", ex);
+        }
+
+        try
+        {
+            TelemetryServices.Crash?.Dispose();
+            TelemetryServices.Usage?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Analytics", "Failed to dispose telemetry services during exit cleanup.", ex);
+        }
     }
 
     private MainWindow CreateAndAssignMainWindow(

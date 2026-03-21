@@ -289,6 +289,10 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
         ApplyNightModeState(_isNightMode, refreshPalettes: true);
         ApplyLocalization();
+        TelemetryServices.Usage?.TrackMainWindowOpened(
+            "MainWindow.OnOpened",
+            IsVisible,
+            WindowState.ToString());
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         RebuildDesktopGrid();
         LoadLauncherEntriesAsync();
@@ -303,6 +307,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
     protected override void OnClosed(EventArgs e)
     {
+        var wasVisible = IsVisible;
+        var windowState = WindowState.ToString();
+
         PersistSettings();
         _componentEditorWindowService.Close();
         if (_detachedComponentLibraryWindow is not null)
@@ -329,6 +336,10 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         {
             settingsWindowService.StateChanged -= OnSettingsWindowStateChanged;
         }
+        TelemetryServices.Usage?.TrackMainWindowClosed(
+            "MainWindow.OnClosed",
+            wasVisible,
+            windowState);
         base.OnClosed(e);
     }
 

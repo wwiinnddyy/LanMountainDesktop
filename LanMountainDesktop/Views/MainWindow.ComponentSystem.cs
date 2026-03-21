@@ -634,6 +634,20 @@ public partial class MainWindow
         }
     }
 
+    private static DesktopComponentPlacementSnapshot ClonePlacementSnapshot(DesktopComponentPlacementSnapshot placement)
+    {
+        return new DesktopComponentPlacementSnapshot
+        {
+            PlacementId = placement.PlacementId,
+            PageIndex = placement.PageIndex,
+            ComponentId = placement.ComponentId,
+            Row = placement.Row,
+            Column = placement.Column,
+            WidthCells = placement.WidthCells,
+            HeightCells = placement.HeightCells
+        };
+    }
+
     private void OnSettingsWindowStateChanged(object? sender, EventArgs e)
     {
         _ = sender;
@@ -875,6 +889,8 @@ public partial class MainWindow
             return;
         }
 
+        var before = ClonePlacementSnapshot(placement);
+
         if (string.Equals(_componentEditorWindowService.CurrentPlacementId, placement.PlacementId, StringComparison.OrdinalIgnoreCase))
         {
             _componentEditorWindowService.Close();
@@ -896,6 +912,7 @@ public partial class MainWindow
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
 
         PersistSettings();
+        TelemetryServices.Usage?.TrackDesktopComponentDeleted(before, "component.delete");
     }
 
     private void OpenSelectedComponentEditor()
@@ -912,6 +929,8 @@ public partial class MainWindow
             ComponentId: placement.ComponentId,
             PlacementId: placement.PlacementId,
             RefreshAction: () => RefreshDesktopComponentPlacement(placement.PlacementId)));
+
+        TelemetryServices.Usage?.TrackDesktopComponentEditorOpened(ClonePlacementSnapshot(placement), "component.edit");
     }
 
     private bool TryGetSelectedDesktopPlacement(out DesktopComponentPlacementSnapshot placement)
@@ -1220,6 +1239,7 @@ public partial class MainWindow
         InvalidateDesktopPageAwareComponentContextCache();
         UpdateDesktopPageAwareComponentContext();
         PersistSettings();
+        TelemetryServices.Usage?.TrackDesktopComponentPlaced(ClonePlacementSnapshot(placement), "component.create");
 
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
     }
@@ -2350,6 +2370,8 @@ public partial class MainWindow
             return false;
         }
 
+        var before = ClonePlacementSnapshot(placement);
+
         var widthCells = Math.Max(1, _desktopComponentResize.CurrentWidthCells);
         var heightCells = Math.Max(1, _desktopComponentResize.CurrentHeightCells);
         var changed = placement.WidthCells != widthCells || placement.HeightCells != heightCells;
@@ -2360,6 +2382,7 @@ public partial class MainWindow
         if (changed)
         {
             PersistSettings();
+            TelemetryServices.Usage?.TrackDesktopComponentResized(before, ClonePlacementSnapshot(placement), "component.resize");
         }
 
         return true;
@@ -2569,6 +2592,8 @@ public partial class MainWindow
             return false;
         }
 
+        var before = ClonePlacementSnapshot(placement);
+
         placement.Row = Math.Max(0, row);
         placement.Column = Math.Max(0, column);
 
@@ -2578,6 +2603,7 @@ public partial class MainWindow
         _desktopComponentDrag.SourceHost.Opacity = 1;
         ApplyDesktopEditStateToHost(_desktopComponentDrag.SourceHost, _isComponentLibraryOpen);
         PersistSettings();
+        TelemetryServices.Usage?.TrackDesktopComponentMoved(before, ClonePlacementSnapshot(placement), "component.move");
         return true;
     }
 

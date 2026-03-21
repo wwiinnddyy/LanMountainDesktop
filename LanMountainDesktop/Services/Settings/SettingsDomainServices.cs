@@ -609,17 +609,32 @@ internal sealed class PrivacySettingsService : IPrivacySettingsService
     public void Save(PrivacySettingsState state)
     {
         var snapshot = _settingsService.Load();
-        snapshot.UploadAnonymousCrashData = state.UploadAnonymousCrashData;
-        snapshot.UploadAnonymousUsageData = state.UploadAnonymousUsageData;
-        AppLogger.Info("PrivacySettings", $"Saving: UploadAnonymousCrashData={state.UploadAnonymousCrashData}, UploadAnonymousUsageData={state.UploadAnonymousUsageData}");
+        var changedKeys = new List<string>();
+
+        if (snapshot.UploadAnonymousCrashData != state.UploadAnonymousCrashData)
+        {
+            snapshot.UploadAnonymousCrashData = state.UploadAnonymousCrashData;
+            changedKeys.Add(nameof(AppSettingsSnapshot.UploadAnonymousCrashData));
+        }
+
+        if (snapshot.UploadAnonymousUsageData != state.UploadAnonymousUsageData)
+        {
+            snapshot.UploadAnonymousUsageData = state.UploadAnonymousUsageData;
+            changedKeys.Add(nameof(AppSettingsSnapshot.UploadAnonymousUsageData));
+        }
+
+        if (changedKeys.Count == 0)
+        {
+            return;
+        }
+
+        AppLogger.Info(
+            "PrivacySettings",
+            $"Saving: UploadAnonymousCrashData={state.UploadAnonymousCrashData}, UploadAnonymousUsageData={state.UploadAnonymousUsageData}");
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
-            changedKeys:
-            [
-                nameof(AppSettingsSnapshot.UploadAnonymousCrashData),
-                nameof(AppSettingsSnapshot.UploadAnonymousUsageData)
-            ]);
+            changedKeys: changedKeys);
     }
 }
 
