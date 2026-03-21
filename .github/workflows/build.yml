@@ -113,3 +113,31 @@ jobs:
           path: |
             LanMountainDesktop/bin/Release/
           retention-days: 7
+
+  pack-plugin-packages:
+    runs-on: ubuntu-latest
+    name: Pack_Plugin_Packages
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Pack SDK and template packages
+        shell: pwsh
+        run: .\scripts\Pack-PluginPackages.ps1 -Configuration Release -OutputPath .\artifacts\nuget
+
+      - name: Upload plugin package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-packages
+          path: artifacts/nuget/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

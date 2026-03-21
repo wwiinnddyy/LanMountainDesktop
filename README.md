@@ -35,6 +35,14 @@ This repository does not own:
 - Appearance model: `IPluginAppearanceContext`, `PluginAppearanceSnapshot`, `PluginCornerRadiusTokens`, `PluginCornerRadiusPreset`
 - Component registration model: `AddPluginDesktopComponent<TControl>(PluginDesktopComponentOptions options)`
 
+## Plugin Package Surfaces
+
+- `LanMountainDesktop.PluginSdk`: official plugin SDK package (includes `buildTransitive` default `.laapp` packaging targets)
+- `LanMountainDesktop.Shared.Contracts`: shared contract package for host/plugin boundaries
+- `LanMountainDesktop.PluginTemplate`: official `dotnet new` template package (`shortName`: `lmd-plugin`)
+
+Use `scripts/Pack-PluginPackages.ps1` to generate local-feed packages for CI or workspace integration tests.
+
 ## Workspace Market Resolution
 
 For local market debugging, the host resolves workspace files from the sibling repository path (`..\\LanAirApp`) instead of reading the in-repo mirror folder.

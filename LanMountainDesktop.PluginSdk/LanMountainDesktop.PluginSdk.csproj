@@ -4,7 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>3.0.0</Version>
+    <Version>4.0.0</Version>
+    <PackageId>LanMountainDesktop.PluginSdk</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>Official plugin SDK for LanMountainDesktop, including plugin manifest contracts, runtime interfaces, and registration extensions.</Description>
+    <PackageTags>LanMountainDesktop;Plugin;SDK;Avalonia</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +21,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="buildTransitive\LanMountainDesktop.PluginSdk.props" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\LanMountainDesktop.PluginSdk.targets" Pack="true" PackagePath="buildTransitive\" />
   </ItemGroup>
 
 </Project>

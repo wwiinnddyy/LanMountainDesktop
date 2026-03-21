@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "LanMountainDesktop",
+  "classifications": [
+    "LanMountainDesktop",
+    "Plugin",
+    "Desktop"
+  ],
+  "name": "LanMountainDesktop Plugin",
+  "identity": "LanMountainDesktop.PluginTemplate.CSharp",
+  "shortName": "lmd-plugin",
+  "sourceName": "LanMountainDesktop.PluginTemplate",
+  "preferNameDirectory": true,
+  "tags": {
+    "type": "project",
+    "language": "C#"
+  },
+  "symbols": {
+    "pluginId": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "LanMountainDesktop.PluginTemplate",
+      "description": "Plugin manifest id.",
+      "replaces": "__PLUGIN_ID__"
+    },
+    "pluginAuthor": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Your Name",
+      "description": "Plugin author.",
+      "replaces": "__PLUGIN_AUTHOR__"
+    },
+    "pluginName": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "LanMountain Plugin Template",
+      "description": "Display name shown in plugin manifest.",
+      "replaces": "__PLUGIN_NAME__"
+    },
+    "pluginDescription": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "Plugin generated from the official LanMountainDesktop template.",
+      "description": "Plugin description shown in plugin manifest.",
+      "replaces": "__PLUGIN_DESCRIPTION__"
+    },
+    "pluginSdkVersion": {
+      "type": "parameter",
+      "datatype": "text",
+      "defaultValue": "4.0.0",
+      "description": "LanMountainDesktop.PluginSdk package version.",
+      "replaces": "__PLUGIN_SDK_VERSION__"
+    }
+  }
+}

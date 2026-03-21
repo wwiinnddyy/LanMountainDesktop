@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PackageId>LanMountainDesktop.PluginTemplate</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>Official dotnet new template package for LanMountainDesktop plugins.</Description>
+    <PackageTags>LanMountainDesktop;Plugin;Template;dotnet-new</PackageTags>
+    <PackageType>Template</PackageType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IsPackable>true</IsPackable>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="content\**\*.cs" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="content\**\*" Pack="true" PackagePath="content\" />
+  </ItemGroup>
+</Project>

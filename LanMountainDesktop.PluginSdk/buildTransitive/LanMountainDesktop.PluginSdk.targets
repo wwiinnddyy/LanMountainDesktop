@@ -1,0 +1,51 @@
+<Project>
+  <Target Name="ValidateLanMountainPluginManifest"
+          BeforeTargets="Build"
+          Condition="'$(LanMountainPluginEnablePackaging)' == 'true'">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\$(LanMountainPluginManifestFileName)')"
+           Text="LanMountain plugin packaging is enabled, but '$(LanMountainPluginManifestFileName)' was not found in '$(MSBuildProjectDirectory)'." />
+  </Target>
+
+  <Target Name="CreateLanMountainPluginPackage"
+          AfterTargets="Build"
+          Condition="'$(LanMountainPluginEnablePackaging)' == 'true'">
+    <PropertyGroup>
+      <_LanMountainPluginBuildOutputDirectory>$(LanMountainPluginBuildOutputDirectory)</_LanMountainPluginBuildOutputDirectory>
+      <_LanMountainPluginBuildOutputDirectory Condition="'$(_LanMountainPluginBuildOutputDirectory)' == ''">$(TargetDir)</_LanMountainPluginBuildOutputDirectory>
+      <_LanMountainPluginBuildOutputDirectory Condition="'$(_LanMountainPluginBuildOutputDirectory)' == ''">$(MSBuildProjectDirectory)\$(OutputPath)</_LanMountainPluginBuildOutputDirectory>
+      <_LanMountainPluginAssemblyName>$(LanMountainPluginAssemblyName)</_LanMountainPluginAssemblyName>
+      <_LanMountainPluginAssemblyName Condition="'$(_LanMountainPluginAssemblyName)' == '' and '$(AssemblyName)' != ''">$(AssemblyName)</_LanMountainPluginAssemblyName>
+      <_LanMountainPluginAssemblyName Condition="'$(_LanMountainPluginAssemblyName)' == ''">$(MSBuildProjectName)</_LanMountainPluginAssemblyName>
+      <_LanMountainPluginPackageVersion>$(LanMountainPluginPackageVersion)</_LanMountainPluginPackageVersion>
+      <_LanMountainPluginPackageVersion Condition="'$(_LanMountainPluginPackageVersion)' == '' and '$(Version)' != ''">$(Version)</_LanMountainPluginPackageVersion>
+      <_LanMountainPluginPackageVersion Condition="'$(_LanMountainPluginPackageVersion)' == ''">1.0.0</_LanMountainPluginPackageVersion>
+      <_LanMountainPluginPackageOutputDirectory>$(LanMountainPluginPackageOutputDirectory)</_LanMountainPluginPackageOutputDirectory>
+      <_LanMountainPluginPackageOutputDirectory Condition="'$(_LanMountainPluginPackageOutputDirectory)' == ''">$(MSBuildProjectDirectory)\</_LanMountainPluginPackageOutputDirectory>
+      <_LanMountainPluginPackageFileName>$(LanMountainPluginPackageFileName)</_LanMountainPluginPackageFileName>
+      <_LanMountainPluginPackageFileName Condition="'$(_LanMountainPluginPackageFileName)' == ''">$(_LanMountainPluginAssemblyName).$(_LanMountainPluginPackageVersion)$(LanMountainPluginPackageExtension)</_LanMountainPluginPackageFileName>
+      <_LanMountainPluginPackagePath>$(LanMountainPluginPackagePath)</_LanMountainPluginPackagePath>
+      <_LanMountainPluginPackagePath Condition="'$(_LanMountainPluginPackagePath)' == ''">$(_LanMountainPluginPackageOutputDirectory)$(_LanMountainPluginPackageFileName)</_LanMountainPluginPackagePath>
+      <_LanMountainPluginManifestOutputPath>$(_LanMountainPluginBuildOutputDirectory)$(LanMountainPluginManifestFileName)</_LanMountainPluginManifestOutputPath>
+      <_LanMountainPluginDepsPath>$(ProjectDepsFilePath)</_LanMountainPluginDepsPath>
+    </PropertyGroup>
+
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\$(LanMountainPluginManifestFileName)"
+          DestinationFiles="$(_LanMountainPluginManifestOutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(MSBuildProjectDirectory)\$(LanMountainPluginManifestFileName)')" />
+
+    <Error Condition="!Exists('$(_LanMountainPluginManifestOutputPath)')"
+           Text="Plugin manifest '$(_LanMountainPluginManifestOutputPath)' was not found in build output. Ensure '$(LanMountainPluginManifestFileName)' is copied to output." />
+    <Error Condition="!Exists('$(TargetPath)')"
+           Text="Plugin assembly '$(TargetPath)' was not found. Build output is incomplete." />
+    <Error Condition="'$(_LanMountainPluginDepsPath)' != '' and !Exists('$(_LanMountainPluginDepsPath)')"
+           Text="Plugin deps file '$(_LanMountainPluginDepsPath)' was not found. Plugin packages must include a .deps.json file." />
+
+    <MakeDir Directories="$(_LanMountainPluginPackageOutputDirectory)" />
+    <Delete Files="$(_LanMountainPluginPackagePath)" TreatErrorsAsWarnings="true" />
+    <ZipDirectory SourceDirectory="$(_LanMountainPluginBuildOutputDirectory)"
+                  DestinationFile="$(_LanMountainPluginPackagePath)" />
+    <Message Importance="High"
+             Text="LanMountain plugin package generated: $(_LanMountainPluginPackagePath)" />
+  </Target>
+</Project>

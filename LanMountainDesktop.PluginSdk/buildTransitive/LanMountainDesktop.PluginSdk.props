@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <LanMountainPluginManifestFileName Condition="'$(LanMountainPluginManifestFileName)' == ''">plugin.json</LanMountainPluginManifestFileName>
+    <LanMountainPluginPackageExtension Condition="'$(LanMountainPluginPackageExtension)' == ''">.laapp</LanMountainPluginPackageExtension>
+    <LanMountainPluginPackageOutputDirectory Condition="'$(LanMountainPluginPackageOutputDirectory)' == ''">$(MSBuildProjectDirectory)\</LanMountainPluginPackageOutputDirectory>
+
+    <LanMountainPluginEnablePackaging Condition="'$(LanMountainPluginEnablePackaging)' == '' and Exists('$(MSBuildProjectDirectory)\$(LanMountainPluginManifestFileName)')">true</LanMountainPluginEnablePackaging>
+    <LanMountainPluginEnablePackaging Condition="'$(LanMountainPluginEnablePackaging)' == ''">false</LanMountainPluginEnablePackaging>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\$(LanMountainPluginManifestFileName)')">
+    <None Update="$(LanMountainPluginManifestFileName)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

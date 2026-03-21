@@ -1,0 +1,10 @@
+{
+  "id": "__PLUGIN_ID__",
+  "name": "__PLUGIN_NAME__",
+  "description": "__PLUGIN_DESCRIPTION__",
+  "author": "__PLUGIN_AUTHOR__",
+  "version": "1.0.0",
+  "apiVersion": "4.0.0",
+  "entranceAssembly": "LanMountainDesktop.PluginTemplate.dll",
+  "sharedContracts": []
+}
