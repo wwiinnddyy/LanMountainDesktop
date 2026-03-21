@@ -29,6 +29,11 @@
                                 <!-- 纯色预览 -->
                                 <Border Background="{Binding SelectedColor}" 
                                         IsVisible="{Binding IsSolidColor}" />
+                                <!-- 系统壁纸预览 -->
+                                <Border Background="#FFF6F7F9"
+                                        IsVisible="{Binding IsSystemWallpaper}">
+                                    <Border Background="{Binding PreviewBrush}" />
+                                </Border>
                             </Panel>
                         </Border>
                     </Viewbox>
@@ -135,6 +140,19 @@
                         </Button>
                     </UniformGrid>
                 </StackPanel>
+
+                <!-- 右侧：系统壁纸状态 -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsSystemWallpaper}">
+                    <TextBlock Text="{Binding SystemWallpaperLabel}"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Opacity="0.8" />
+                    <TextBlock Text="{Binding SystemWallpaperStatus}"
+                               FontSize="12"
+                               Opacity="0.7"
+                               TextWrapping="Wrap"
+                               MaxWidth="280" />
+                </StackPanel>
             </Grid>
 
             <Separator Classes="settings-separator" Margin="0,0,0,24" />
@@ -183,10 +201,60 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
-            <!-- 填充方式 -->
+            <!-- 系统壁纸刷新设置 -->
+            <ui:SettingsExpander Header="{Binding RefreshIntervalLabel}"
+                                 IsVisible="{Binding IsSystemWallpaper}"
+                                 Margin="0,4,0,0">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Clock" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox Width="140"
+                                  ItemsSource="{Binding RefreshIntervals}"
+                                  SelectedItem="{Binding SelectedRefreshInterval}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Classes="settings-accent-button"
+                                Command="{Binding RefreshSystemWallpaperCommand}"
+                                ToolTip.Tip="{Binding RefreshButtonTooltip}"
+                                VerticalAlignment="Center"
+                                Padding="12,8">
+                            <fi:SymbolIcon Symbol="ArrowSync" IconVariant="Regular" />
+                        </Button>
+                    </StackPanel>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <!-- 填充方式（图片和系统壁纸都显示） -->
             <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
                                  Description="{Binding WallpaperPlacementDescription}"
-                                 IsVisible="{Binding IsImage}"
+                                 IsVisible="{Binding IsImageOrVideo}"
+                                 Margin="0,4,0,0">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Maximize" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ComboBox Width="200"
+                              ItemsSource="{Binding WallpaperPlacements}"
+                              SelectedItem="{Binding SelectedWallpaperPlacement}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <!-- 系统壁纸填充方式 -->
+            <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
+                                 Description="{Binding WallpaperPlacementDescription}"
+                                 IsVisible="{Binding IsSystemWallpaper}"
                                  Margin="0,4,0,0">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Maximize" />

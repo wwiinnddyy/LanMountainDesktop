@@ -253,7 +253,11 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var today = DateOnly.FromDateTime(now);
 
         var importedSchedulePath = ResolveImportedSchedulePath(componentSettings);
-        var readResult = _scheduleService.Load(importedSchedulePath);
+        var readResult = _scheduleService.Load(
+            importedSchedulePath,
+            profileFileName: null,
+            semesterStartDate: componentSettings.SemesterStartDate,
+            semesterWeekCycle: componentSettings.SemesterWeekCycle);
         if (!readResult.Success || readResult.Snapshot is null)
         {
             _courseItems = Array.Empty<CourseItemViewModel>();

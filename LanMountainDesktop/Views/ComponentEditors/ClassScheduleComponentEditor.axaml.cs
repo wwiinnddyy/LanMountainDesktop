@@ -76,6 +76,11 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
         FollowSystemColorSchemeItem.Content = L("component.color_scheme.follow_system", "Follow system color scheme");
         UseNativeColorSchemeItem.Content = L("component.color_scheme.native", "Use component custom color scheme");
 
+        SemesterSettingsHeaderTextBlock.Text = L("schedule.settings.semester.title", "Semester Settings");
+        SemesterStartDateLabel.Text = L("schedule.settings.semester.start_date", "Semester Start Date");
+        WeekCycleLabel.Text = L("schedule.settings.semester.week_cycle", "Week Cycle");
+        WeekCycleDescription.Text = L("schedule.settings.semester.week_cycle_desc", "Set the week rotation cycle for multi-week schedules (e.g., 2 for odd/even weeks).");
+
         AddScheduleButton.Content = L("schedule.settings.add", "Add Schedule");
         EmptyStateTextBlock.Text = L("schedule.settings.empty", "No imported schedules yet.");
 
@@ -85,7 +90,23 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             string.Equals(colorSchemeSource, ThemeAppearanceValues.ColorSchemeFollowSystem, StringComparison.OrdinalIgnoreCase)
                 ? FollowSystemColorSchemeItem
                 : UseNativeColorSchemeItem;
+
+        if (snapshot.SemesterStartDate.HasValue)
+        {
+            SemesterStartDatePicker.SelectedDate = snapshot.SemesterStartDate.Value.ToDateTime(TimeOnly.MinValue);
+        }
+
+        var weekCycle = Math.Clamp(snapshot.SemesterWeekCycle, 1, 7);
+        WeekCycleComboBox.SelectedIndex = weekCycle - 1;
+
+        UpdateWeekCycleDescription(weekCycle);
         _suppressEvents = false;
+    }
+
+    private void UpdateWeekCycleDescription(int weekCycle)
+    {
+        var format = L("schedule.settings.semester.week_cycle_format", "{0}-week rotation");
+        WeekCycleDescription.Text = string.Format(format, weekCycle);
     }
 
     private void OnColorSchemeSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -106,6 +127,39 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
         SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.ColorSchemeSource));
     }
 
+    private void OnSemesterStartDateChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressEvents)
+        {
+            return;
+        }
+
+        var snapshot = LoadSnapshot();
+        if (SemesterStartDatePicker.SelectedDate.HasValue)
+        {
+            snapshot.SemesterStartDate = DateOnly.FromDateTime(SemesterStartDatePicker.SelectedDate.Value);
+        }
+        else
+        {
+            snapshot.SemesterStartDate = null;
+        }
+        SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.SemesterStartDate));
+    }
+
+    private void OnWeekCycleSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressEvents)
+        {
+            return;
+        }
+
+        var weekCycle = WeekCycleComboBox.SelectedIndex + 1;
+        var snapshot = LoadSnapshot();
+        snapshot.SemesterWeekCycle = weekCycle;
+        SaveSnapshot(snapshot, nameof(ComponentSettingsSnapshot.SemesterWeekCycle));
+        UpdateWeekCycleDescription(weekCycle);
+    }
+
     private async void OnAddScheduleClick(object? sender, RoutedEventArgs e)
     {
         _ = sender;
@@ -122,7 +176,15 @@ public partial class ClassScheduleComponentEditor : ComponentEditorViewBase
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType(L("schedule.settings.picker_file_type", "ClassIsland CSES Schedule"))
+                new FilePickerFileType(L("schedule.settings.picker_file_type.all", "ClassIsland Schedule Files"))
+                {
+                    Patterns = ["*.json", "*.cses", "*.yaml", "*.yml"]
+                },
+                new FilePickerFileType(L("schedule.settings.picker_file_type.json", "ClassIsland Profile (JSON)"))
+                {
+                    Patterns = ["*.json"]
+                },
+                new FilePickerFileType(L("schedule.settings.picker_file_type.cses", "CSES Schedule (YAML)"))
                 {
                     Patterns = ["*.cses", "*.yaml", "*.yml"]
                 }

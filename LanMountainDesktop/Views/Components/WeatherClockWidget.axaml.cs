@@ -213,10 +213,17 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
             ContentGrid.ColumnDefinitions[1].Width = new GridLength(showDial ? dialSize : 0, GridUnitType.Pixel);
         }
 
-        var leftWidthFactor = Math.Clamp(leftContentWidth / 122d, 0.48, 1.35);
-        TimeTextBlock.FontSize = Math.Clamp((metrics.PrimaryTemperatureFont * 0.74) * scale * compactFactor * leftWidthFactor, 10, 62);
-        DateTextBlock.FontSize = Math.Clamp(metrics.SecondaryTextFont * scale * compactFactor * leftWidthFactor, 8, 30);
-        var weatherIconSize = Math.Clamp(metrics.IconFont * scale * compactFactor * leftWidthFactor, 9, 32);
+        var timeTextWidth = leftContentWidth * 0.92;
+        var timeCharCount = 5;
+        var maxTimeFontSize = timeTextWidth / (timeCharCount * 0.58);
+        var baseTimeFontSize = Math.Clamp(maxTimeFontSize, 12, 48);
+        var timeFontSize = Math.Clamp(baseTimeFontSize * scale * compactFactor, 10, 48);
+        TimeTextBlock.FontSize = timeFontSize;
+        
+        var dateFontSize = Math.Clamp(timeFontSize * 0.48, 8, 22);
+        DateTextBlock.FontSize = dateFontSize;
+        
+        var weatherIconSize = Math.Clamp(dateFontSize * 1.1, 10, 24);
         WeatherIconImage.Width = weatherIconSize;
         WeatherIconImage.Height = weatherIconSize;
 
@@ -226,11 +233,11 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
         LeftStack.Width = leftContentWidth;
         LeftStack.MaxWidth = leftContentWidth;
         DateWeatherStack.MaxWidth = leftContentWidth;
-        TimeTextBlock.MaxWidth = leftContentWidth;
+        TimeTextBlock.MaxWidth = timeTextWidth;
 
-        var showDateLine = leftContentWidth >= Math.Max(40, TimeTextBlock.FontSize * 1.72);
+        var showDateLine = leftContentWidth >= Math.Max(36, timeFontSize * 1.4) && contentHeight >= 38;
         DateWeatherStack.IsVisible = showDateLine;
-        WeatherIconImage.IsVisible = showDateLine && leftContentWidth >= Math.Max(56, DateTextBlock.FontSize * 2.4);
+        WeatherIconImage.IsVisible = showDateLine && leftContentWidth >= Math.Max(48, dateFontSize * 3.2);
 
         var dateReservedWidth = WeatherIconImage.IsVisible
             ? weatherIconSize + DateWeatherStack.Spacing
@@ -477,14 +484,22 @@ public partial class WeatherClockWidget : UserControl, IDesktopComponentWidget, 
             : CreateBrush("#F8FAFF");
         AnalogDialBorder.BorderBrush = CreateBrush(isNightMode ? "#34DDE7FF" : "#12000000");
 
-        TimeTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
-            isNightMode ? "#F8FBFF" : "#10131A",
-            backgroundSamples,
-            WeatherTypographyAccessibility.WcagLargeTextContrast);
-        DateTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
-            isNightMode ? "#BCC8DD" : "#7A7E87",
-            backgroundSamples,
-            WeatherTypographyAccessibility.WcagNormalTextContrast);
+        if (isNightMode)
+        {
+            TimeTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+                "#F8FBFF",
+                backgroundSamples,
+                WeatherTypographyAccessibility.WcagLargeTextContrast);
+            DateTextBlock.Foreground = WeatherTypographyAccessibility.CreateReadableBrush(
+                "#BCC8DD",
+                backgroundSamples,
+                WeatherTypographyAccessibility.WcagNormalTextContrast);
+        }
+        else
+        {
+            TimeTextBlock.Foreground = CreateBrush("#10131A");
+            DateTextBlock.Foreground = CreateBrush("#7A7E87");
+        }
 
         _hourHandLine.Stroke = CreateBrush(isNightMode ? "#F1F5FF" : "#232938");
         _minuteHandLine.Stroke = CreateBrush(isNightMode ? "#D6E0F2" : "#2F3749");

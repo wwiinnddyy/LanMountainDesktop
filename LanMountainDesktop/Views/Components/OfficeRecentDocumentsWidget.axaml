@@ -10,7 +10,7 @@
              x:Class="LanMountainDesktop.Views.Components.OfficeRecentDocumentsWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="{DynamicResource DesignCornerRadiusIsland}"
+            CornerRadius="{DynamicResource DesignCornerRadiusLg}"
             Background="#2D5A8E"
             ClipToBounds="True"
             BorderThickness="0"

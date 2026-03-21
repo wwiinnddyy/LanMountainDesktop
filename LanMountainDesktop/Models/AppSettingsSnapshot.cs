@@ -33,6 +33,8 @@ public sealed class AppSettingsSnapshot
 
     public string WallpaperPlacement { get; set; } = "Fill";
 
+    public int SystemWallpaperRefreshIntervalSeconds { get; set; } = 300;
+
     public int SettingsTabIndex { get; set; } = 0;
 
     public string? SettingsTabTag { get; set; }

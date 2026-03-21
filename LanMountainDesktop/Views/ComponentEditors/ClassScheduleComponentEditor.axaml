@@ -2,6 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:material="clr-namespace:Material.Styles;assembly=Material.Styles"
+             xmlns:materialAssists="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
              mc:Ignorable="d"
              x:Class="LanMountainDesktop.Views.ComponentEditors.ClassScheduleComponentEditor">
     <StackPanel Spacing="16">
@@ -33,6 +35,45 @@
                                   Classes="component-editor-select-item"
                                   Tag="native" />
                 </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="16">
+                <TextBlock x:Name="SemesterSettingsHeaderTextBlock"
+                           Classes="component-editor-section-title" />
+                
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="SemesterStartDateLabel"
+                                   Classes="component-editor-secondary-text" />
+                        <CalendarDatePicker x:Name="SemesterStartDatePicker"
+                                           HorizontalAlignment="Stretch"
+                                           SelectedDateChanged="OnSemesterStartDateChanged" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="8" Width="160">
+                        <TextBlock x:Name="WeekCycleLabel"
+                                   Classes="component-editor-secondary-text" />
+                        <ComboBox x:Name="WeekCycleComboBox"
+                                  Classes="component-editor-select"
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnWeekCycleSelectionChanged">
+                            <ComboBoxItem Content="1" Tag="1" />
+                            <ComboBoxItem Content="2" Tag="2" />
+                            <ComboBoxItem Content="3" Tag="3" />
+                            <ComboBoxItem Content="4" Tag="4" />
+                            <ComboBoxItem Content="5" Tag="5" />
+                            <ComboBoxItem Content="6" Tag="6" />
+                            <ComboBoxItem Content="7" Tag="7" />
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+                
+                <TextBlock x:Name="WeekCycleDescription"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap"
+                           Opacity="0.7" />
             </StackPanel>
         </Border>
 

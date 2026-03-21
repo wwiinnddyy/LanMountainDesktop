@@ -122,6 +122,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private Color? _wallpaperSolidColor;
     private string? _wallpaperPath;
     private string _wallpaperStatus = "Current background uses solid color.";
+    private int _systemWallpaperRefreshIntervalSeconds = 300;
+    private DispatcherTimer? _systemWallpaperRefreshTimer;
+    private readonly ISystemWallpaperProvider _systemWallpaperProvider = HostSystemWallpaperProvider.GetOrCreate();
     private IReadOnlyList<Color> _recommendedColors = Array.Empty<Color>();
     private IReadOnlyList<Color> _monetColors = Array.Empty<Color>();
     private Color _selectedThemeColor = Color.Parse("#FF3B82F6");

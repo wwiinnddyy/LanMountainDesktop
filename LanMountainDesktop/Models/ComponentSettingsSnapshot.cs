@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace LanMountainDesktop.Models;
@@ -11,6 +12,10 @@ public sealed class ComponentSettingsSnapshot
     public List<ImportedClassScheduleSnapshot> ImportedClassSchedules { get; set; } = [];
 
     public string ActiveImportedClassScheduleId { get; set; } = string.Empty;
+
+    public DateOnly? SemesterStartDate { get; set; }
+
+    public int SemesterWeekCycle { get; set; } = 1;
 
     public bool StudyEnvironmentShowDisplayDb { get; set; } = true;
 

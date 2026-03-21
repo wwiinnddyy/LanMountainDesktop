@@ -77,10 +77,10 @@
                                     <Setter Property="Margin" Value="2" />
                                 </Style>
                             </WrapPanel.Styles>
-                            <HyperlinkButton NavigateUri="https://github.com/Lincube/LanMountainDesktop">
+                            <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop">
                                 <TextBlock Text="GitHub 仓库" />
                             </HyperlinkButton>
-                            <HyperlinkButton NavigateUri="https://github.com/Lincube/LanMountainDesktop/issues">
+                            <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop/issues">
                                 <TextBlock Text="问题反馈" />
                             </HyperlinkButton>
                         </WrapPanel>

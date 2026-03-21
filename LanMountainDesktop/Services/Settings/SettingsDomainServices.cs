@@ -101,7 +101,9 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
                 : snapshot.WallpaperPath,
             normalizedType,
             snapshot.WallpaperColor,
-            snapshot.WallpaperPlacement);
+            snapshot.WallpaperPlacement,
+            CustomColor: null,
+            SystemWallpaperRefreshIntervalSeconds: NormalizeRefreshInterval(snapshot.SystemWallpaperRefreshIntervalSeconds));
     }
 
     public void Save(WallpaperSettingsState state)
@@ -128,6 +130,7 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
         snapshot.WallpaperPlacement = string.IsNullOrWhiteSpace(state.Placement)
             ? "Fill"
             : state.Placement.Trim();
+        snapshot.SystemWallpaperRefreshIntervalSeconds = NormalizeRefreshInterval(state.SystemWallpaperRefreshIntervalSeconds);
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
@@ -136,8 +139,20 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
                 nameof(AppSettingsSnapshot.WallpaperPath),
                 nameof(AppSettingsSnapshot.WallpaperType),
                 nameof(AppSettingsSnapshot.WallpaperColor),
-                nameof(AppSettingsSnapshot.WallpaperPlacement)
+                nameof(AppSettingsSnapshot.WallpaperPlacement),
+                nameof(AppSettingsSnapshot.SystemWallpaperRefreshIntervalSeconds)
             ]);
+    }
+
+    private static int NormalizeRefreshInterval(int seconds)
+    {
+        return seconds switch
+        {
+            <= 0 => 300,
+            < 30 => 30,
+            > 86400 => 86400,
+            _ => seconds
+        };
     }
 }
 

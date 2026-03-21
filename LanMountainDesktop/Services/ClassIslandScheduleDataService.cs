@@ -12,7 +12,7 @@ namespace LanMountainDesktop.Services;
 
 public interface IClassIslandScheduleDataService
 {
-    ClassIslandScheduleReadResult Load(string? inputPath = null, string? profileFileName = null);
+    ClassIslandScheduleReadResult Load(string? inputPath = null, string? profileFileName = null, DateOnly? semesterStartDate = null, int semesterWeekCycle = 1);
 
     bool TryResolveClassPlanForDate(
         ClassIslandScheduleSnapshot snapshot,
@@ -43,7 +43,7 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
         .IgnoreUnmatchedProperties()
         .Build();
 
-    public ClassIslandScheduleReadResult Load(string? inputPath = null, string? profileFileName = null)
+    public ClassIslandScheduleReadResult Load(string? inputPath = null, string? profileFileName = null, DateOnly? semesterStartDate = null, int semesterWeekCycle = 1)
     {
         var warnings = new List<string>();
         try
@@ -73,11 +73,11 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
             ClassIslandScheduleSnapshot snapshot;
             if (source.SourceKind == ScheduleSourceKind.Cses)
             {
-                snapshot = ParseCsesSnapshot(source);
+                snapshot = ParseCsesSnapshot(source, semesterStartDate, semesterWeekCycle);
             }
             else
             {
-                var cycleRule = ParseCycleRule(source.SettingsPath, warnings);
+                var cycleRule = ParseCycleRule(source.SettingsPath, warnings, semesterStartDate, semesterWeekCycle);
                 var profileJson = ReadJson(source.ProfilePath);
                 snapshot = ParseProfileSnapshot(profileJson.RootElement, source, cycleRule);
             }
@@ -412,22 +412,50 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
         return null;
     }
 
-    private static ClassIslandScheduleCycleRule ParseCycleRule(string? settingsPath, List<string> warnings)
+    private static ClassIslandScheduleCycleRule ParseCycleRule(
+        string? settingsPath, 
+        List<string> warnings,
+        DateOnly? semesterStartDate = null,
+        int semesterWeekCycle = 1)
     {
-        if (string.IsNullOrWhiteSpace(settingsPath) || !File.Exists(settingsPath))
+        DateOnly? singleWeekStartDate = semesterStartDate;
+        int maxCycle = semesterWeekCycle > 1 ? semesterWeekCycle : 4;
+        var offsetList = new List<int> { -1, -1, 0, 0, 0, 0, 0, 0 };
+
+        if (!string.IsNullOrWhiteSpace(settingsPath) && File.Exists(settingsPath))
         {
-            warnings.Add("ClassIsland Settings.json not found, using default cycle rule.");
-            return new ClassIslandScheduleCycleRule(null, 4, new List<int> { -1, -1, 0, 0, 0 });
+            using var json = ReadJson(settingsPath);
+            var root = json.RootElement;
+            
+            if (!singleWeekStartDate.HasValue)
+            {
+                singleWeekStartDate = TryReadDateOnly(root, "SingleWeekStartTime");
+            }
+            
+            if (semesterWeekCycle <= 1)
+            {
+                maxCycle = TryReadInt(root, "MultiWeekRotationMaxCycle", 4);
+            }
+            
+            var settingsOffsetList = ReadIntList(root, "MultiWeekRotationOffset");
+            if (settingsOffsetList.Count >= 2)
+            {
+                offsetList = settingsOffsetList;
+            }
+        }
+        else
+        {
+            warnings.Add("ClassIsland Settings.json not found, using semester settings from component.");
         }
 
-        using var json = ReadJson(settingsPath);
-        var root = json.RootElement;
-        var singleWeekStartDate = TryReadDateOnly(root, "SingleWeekStartTime");
-        var maxCycle = TryReadInt(root, "MultiWeekRotationMaxCycle", 4);
-        var offsetList = ReadIntList(root, "MultiWeekRotationOffset");
-        if (offsetList.Count < 2)
+        if (maxCycle < 2)
         {
-            offsetList = new List<int> { -1, -1, 0, 0, 0 };
+            maxCycle = 2;
+        }
+
+        while (offsetList.Count <= maxCycle)
+        {
+            offsetList.Add(0);
         }
 
         return new ClassIslandScheduleCycleRule(
@@ -469,7 +497,10 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
             ClassPlanGroups: groups);
     }
 
-    private static ClassIslandScheduleSnapshot ParseCsesSnapshot(ResolvedSource source)
+    private static ClassIslandScheduleSnapshot ParseCsesSnapshot(
+        ResolvedSource source,
+        DateOnly? semesterStartDate = null,
+        int semesterWeekCycle = 1)
     {
         var yaml = File.ReadAllText(source.ProfilePath);
         var csesProfile = CsesDeserializer.Deserialize<CsesProfileDto>(yaml) ?? new CsesProfileDto();
@@ -600,12 +631,19 @@ public sealed class ClassIslandScheduleDataService : IClassIslandScheduleDataSer
             [GlobalClassPlanGroupId] = new ClassIslandClassPlanGroup(GlobalClassPlanGroupId, "Global", IsGlobal: true)
         };
 
+        var maxCycle = semesterWeekCycle > 1 ? semesterWeekCycle : 4;
+        var offsetList = new List<int> { -1, -1, 0, 0, 0, 0, 0, 0 };
+        while (offsetList.Count <= maxCycle)
+        {
+            offsetList.Add(0);
+        }
+
         return new ClassIslandScheduleSnapshot(
             SourceRootPath: source.SourceRootPath,
             ProfilePath: source.ProfilePath,
             ProfileFileName: source.ProfileFileName,
             LoadedAt: DateTimeOffset.Now,
-            CycleRule: new ClassIslandScheduleCycleRule(null, 4, new List<int> { -1, -1, 0, 0, 0 }),
+            CycleRule: new ClassIslandScheduleCycleRule(semesterStartDate, Math.Clamp(maxCycle, 2, 32), offsetList),
             SelectedClassPlanGroupId: DefaultClassPlanGroupId,
             TempClassPlanGroupId: null,
             IsTempClassPlanGroupEnabled: false,

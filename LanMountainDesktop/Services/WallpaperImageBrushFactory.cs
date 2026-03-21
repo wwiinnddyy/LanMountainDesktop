@@ -5,13 +5,13 @@ using Avalonia.Media.Imaging;
 
 namespace LanMountainDesktop.Services;
 
-internal static class WallpaperImageBrushFactory
+public static class WallpaperImageBrushFactory
 {
-    internal const string Fill = "Fill";
-    internal const string Fit = "Fit";
-    internal const string StretchMode = "Stretch";
-    internal const string Center = "Center";
-    internal const string Tile = "Tile";
+    public const string Fill = "Fill";
+    public const string Fit = "Fit";
+    public const string StretchMode = "Stretch";
+    public const string Center = "Center";
+    public const string Tile = "Tile";
 
     public static string NormalizePlacement(string? placement)
     {

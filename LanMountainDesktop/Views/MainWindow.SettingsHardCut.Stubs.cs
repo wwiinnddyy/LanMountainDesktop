@@ -215,16 +215,20 @@ public partial class MainWindow
         string? savedWallpaperPath,
         string? type = null,
         string? color = null,
-        string? placement = null)
+        string? placement = null,
+        int systemWallpaperRefreshIntervalSeconds = 300)
     {
         _wallpaperPath = string.IsNullOrWhiteSpace(savedWallpaperPath) ? null : savedWallpaperPath;
         _wallpaperType = string.IsNullOrWhiteSpace(type) ? "Image" : type.Trim();
         _wallpaperPlacement = WallpaperImageBrushFactory.NormalizePlacement(placement);
         _wallpaperSolidColor = TryParseColor(color, out var parsedColor) ? parsedColor : null;
         _wallpaperDisplayState = WallpaperDisplayState.NoWallpaperConfigured;
+        _systemWallpaperRefreshIntervalSeconds = systemWallpaperRefreshIntervalSeconds;
 
         _wallpaperBitmap?.Dispose();
         _wallpaperBitmap = null;
+
+        StopSystemWallpaperTimer();
 
         if (string.Equals(_wallpaperType, "SolidColor", StringComparison.OrdinalIgnoreCase))
         {
@@ -232,6 +236,14 @@ public partial class MainWindow
             _wallpaperDisplayState = _wallpaperSolidColor.HasValue
                 ? WallpaperDisplayState.CurrentValidWallpaper
                 : WallpaperDisplayState.NoWallpaperConfigured;
+            return;
+        }
+
+        if (string.Equals(_wallpaperType, "SystemWallpaper", StringComparison.OrdinalIgnoreCase))
+        {
+            _wallpaperMediaType = WallpaperMediaType.Image;
+            LoadSystemWallpaper();
+            StartSystemWallpaperTimer();
             return;
         }
 
@@ -271,6 +283,69 @@ public partial class MainWindow
             _wallpaperBitmap?.Dispose();
             _wallpaperBitmap = null;
         }
+    }
+
+    private void LoadSystemWallpaper()
+    {
+        var systemPath = _systemWallpaperProvider.GetWallpaperPath();
+        if (string.IsNullOrWhiteSpace(systemPath) || !File.Exists(systemPath))
+        {
+            _wallpaperDisplayState = WallpaperDisplayState.TemporarilyUnavailable;
+            _wallpaperBitmap?.Dispose();
+            _wallpaperBitmap = null;
+            return;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(systemPath);
+            _wallpaperBitmap?.Dispose();
+            _wallpaperBitmap = new Bitmap(stream);
+            _wallpaperPath = systemPath;
+            _wallpaperDisplayState = WallpaperDisplayState.CurrentValidWallpaper;
+            CacheLastValidWallpaperBitmap(systemPath);
+        }
+        catch
+        {
+            _wallpaperDisplayState = WallpaperDisplayState.TemporarilyUnavailable;
+            _wallpaperBitmap?.Dispose();
+            _wallpaperBitmap = null;
+        }
+    }
+
+    private void StartSystemWallpaperTimer()
+    {
+        StopSystemWallpaperTimer();
+
+        var intervalSeconds = Math.Clamp(_systemWallpaperRefreshIntervalSeconds, 30, 86400);
+        _systemWallpaperRefreshTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(intervalSeconds)
+        };
+        _systemWallpaperRefreshTimer.Tick += OnSystemWallpaperRefreshTimerTick;
+        _systemWallpaperRefreshTimer.Start();
+    }
+
+    private void StopSystemWallpaperTimer()
+    {
+        if (_systemWallpaperRefreshTimer is not null)
+        {
+            _systemWallpaperRefreshTimer.Stop();
+            _systemWallpaperRefreshTimer.Tick -= OnSystemWallpaperRefreshTimerTick;
+            _systemWallpaperRefreshTimer = null;
+        }
+    }
+
+    private void OnSystemWallpaperRefreshTimerTick(object? sender, EventArgs e)
+    {
+        if (!string.Equals(_wallpaperType, "SystemWallpaper", StringComparison.OrdinalIgnoreCase))
+        {
+            StopSystemWallpaperTimer();
+            return;
+        }
+
+        LoadSystemWallpaper();
+        ApplyWallpaperBrush();
     }
 
     private void ApplyWallpaperBrush()
@@ -480,7 +555,8 @@ public partial class MainWindow
                 snapshot.WallpaperPath,
                 snapshot.WallpaperType,
                 snapshot.WallpaperColor,
-                snapshot.WallpaperPlacement);
+                snapshot.WallpaperPlacement,
+                snapshot.SystemWallpaperRefreshIntervalSeconds);
             if (!snapshot.IsNightMode.HasValue)
             {
                 _isNightMode = CalculateCurrentBackgroundLuminance() < LightBackgroundLuminanceThreshold;
@@ -523,6 +599,7 @@ public partial class MainWindow
                 ? latestWallpaperState.Color
                 : null,
             WallpaperPlacement = latestWallpaperState.Placement,
+            SystemWallpaperRefreshIntervalSeconds = latestWallpaperState.SystemWallpaperRefreshIntervalSeconds,
             LanguageCode = _languageCode,
             TimeZoneId = _timeZoneService.CurrentTimeZone.Id,
             WeatherLocationMode = latestWeatherState.LocationMode,
