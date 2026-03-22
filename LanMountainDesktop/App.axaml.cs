@@ -47,6 +47,7 @@ public partial class App : Application
     private readonly IAppearanceThemeService _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
     private readonly IAppLogoService _appLogoService = HostAppLogoProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
+    private readonly FontFamilyService _fontFamilyService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
@@ -448,6 +449,21 @@ public partial class App : Application
         CultureInfo.DefaultThreadCurrentUICulture = culture;
         Thread.CurrentThread.CurrentCulture = culture;
         Thread.CurrentThread.CurrentUICulture = culture;
+
+        ApplyLanguageSpecificFont(languageCode);
+    }
+
+    private void ApplyLanguageSpecificFont(string languageCode)
+    {
+        var fontFamily = _fontFamilyService.GetFontFamilyForLanguage(languageCode);
+        if (Resources.TryGetValue("AppFontFamily", out var currentFont) &&
+            currentFont is FontFamily currentFontFamily &&
+            currentFontFamily.Name == fontFamily.Name)
+        {
+            return;
+        }
+
+        Resources["AppFontFamily"] = fontFamily;
     }
 
     private void ActivateMainWindow()

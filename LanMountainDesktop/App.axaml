@@ -10,6 +10,8 @@
 
     <Application.Resources>
         <FontFamily x:Key="AppFontFamily">avares://LanMountainDesktop/Assets/Fonts#MiSans</FontFamily>
+        <FontFamily x:Key="AppFontFamilyJP">avares://LanMountainDesktop/Assets/Fonts#MiSans JP</FontFamily>
+        <FontFamily x:Key="AppFontFamilyKR">avares://LanMountainDesktop/Assets/Fonts#MiSans KR</FontFamily>
     </Application.Resources>
 
     <Application.DataTemplates>

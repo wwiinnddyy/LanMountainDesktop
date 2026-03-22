@@ -45,6 +45,7 @@ public sealed class LocalizationService
         {
             "en-us" or "en" => "en-US",
             "ja-jp" or "ja" => "ja-JP",
+            "ko-kr" or "ko" => "ko-KR",
             _ => "zh-CN"
         };
     }
