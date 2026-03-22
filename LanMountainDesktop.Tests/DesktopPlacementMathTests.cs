@@ -134,5 +134,40 @@ public sealed class DesktopPlacementMathTests
 
         Assert.False(DesktopPlacementMath.CanCommitPlacement(placementRect, occludingLibraryBounds));
         Assert.True(DesktopPlacementMath.CanCommitPlacement(placementRect, distantLibraryBounds));
+        Assert.True(DesktopPlacementMath.CanCommitPlacement(placementRect, componentLibraryBounds: null));
+    }
+
+    [Fact]
+    public void Session_AllowsCommitWhenComponentLibraryBoundsAreCleared()
+    {
+        var pendingSession = DesktopEditSession.CreatePendingNew(
+            componentId: "demo",
+            pageIndex: 0,
+            widthCells: 2,
+            heightCells: 2,
+            startPointerInViewport: new Point(80, 80),
+            pointerOffsetInViewport: new Point(60, 60),
+            componentLibraryBounds: null)
+            .WithCurrentPointer(new Point(200, 180));
+
+        Assert.True(pendingSession.HasExceededThreshold(DesktopPlacementMath.ComputeDragStartThreshold(80)));
+        Assert.False(pendingSession.IsPointerInsideComponentLibrary());
+        Assert.False(pendingSession.IsPreviewOccludedByComponentLibrary(new Rect(100, 100, 40, 40)));
+        Assert.False(pendingSession.CanCommit);
+
+        var resizeSession = DesktopEditSession.CreateResizingExisting(
+            componentId: "demo",
+            placementId: "placement-1",
+            pageIndex: 0,
+            widthCells: 2,
+            heightCells: 2,
+            startPointerInViewport: new Point(80, 80),
+            componentLibraryBounds: null)
+            .WithCurrentPointer(new Point(200, 180))
+            .WithTargetCell(row: 2, column: 3);
+
+        Assert.False(resizeSession.IsPointerInsideComponentLibrary());
+        Assert.False(resizeSession.IsPreviewOccludedByComponentLibrary(new Rect(100, 100, 40, 40)));
+        Assert.True(resizeSession.CanCommit);
     }
 }

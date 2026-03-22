@@ -453,6 +453,7 @@ public partial class MainWindow
         _isComponentLibraryOpen = true;
         UpdateDesktopComponentHostEditState();
         ShowComponentLibraryCategoryView();
+        RestoreComponentLibraryAfterDesktopEdit();
         ComponentLibraryWindow.IsVisible = true;
         ComponentLibraryWindow.Opacity = 0;
         ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
@@ -467,6 +468,7 @@ public partial class MainWindow
 
             BuildComponentLibraryCategoryPages();
             ComponentLibraryWindow.Opacity = 1;
+            SyncComponentLibraryCollapseExpandedState();
         }, DispatcherPriority.Background);
     }
 
@@ -477,6 +479,7 @@ public partial class MainWindow
             return;
         }
 
+        RestoreComponentLibraryAfterDesktopEdit();
         _isComponentLibraryOpen = false;
         CancelDesktopComponentDrag();
         CancelDesktopComponentResize(restoreOriginalSpan: true);
@@ -2056,13 +2059,14 @@ public partial class MainWindow
             pointerOffset,
             GetComponentLibraryBoundsInViewport());
 
+        CollapseComponentLibraryForDesktopEdit(ResolveDesktopEditTitle(placement.ComponentId));
         SetDesktopEditSourceHost(sourceHost, 0.22);
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, widthCells, heightCells, L("component.move", "Move"));
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);
-        _desktopEditOverlayPresenter?.Show();
+        _desktopEditOverlayPresenter?.Show(DesktopEditGhostVisualStyle.StandardLift);
         UpdateDesktopEditSession(pointerInViewport);
 
         e.Pointer.Capture(this);
@@ -2208,13 +2212,14 @@ public partial class MainWindow
             TargetColumn = placement.Column
         };
 
+        CollapseComponentLibraryForDesktopEdit(ResolveDesktopEditTitle(placement.ComponentId));
         SetDesktopEditSourceHost(sourceHost, 0.22);
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, startSpan.WidthCells, startSpan.HeightCells, L("component.resize", "Resize"));
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);
-        _desktopEditOverlayPresenter?.Show();
+        _desktopEditOverlayPresenter?.Show(DesktopEditGhostVisualStyle.StandardLift);
         UpdateDesktopEditSession(pointerInViewport);
         e.Pointer.Capture(this);
     }
@@ -2883,7 +2888,7 @@ public partial class MainWindow
     
     private void OnComponentLibraryWindowPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (ComponentLibraryWindow is null || !_isComponentLibraryOpen)
+        if (ComponentLibraryWindow is null || !_isComponentLibraryOpen || IsComponentLibraryTemporarilyCollapsedForDesktopEdit())
         {
             return;
         }
@@ -2904,6 +2909,17 @@ public partial class MainWindow
 
     private void OnComponentLibraryWindowPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (IsComponentLibraryTemporarilyCollapsedForDesktopEdit())
+        {
+            if (_isComponentLibraryWindowDragging)
+            {
+                _isComponentLibraryWindowDragging = false;
+                e.Pointer.Capture(null);
+            }
+
+            return;
+        }
+
         if (!_isComponentLibraryWindowDragging || ComponentLibraryWindow is null)
         {
             return;
@@ -2920,11 +2936,23 @@ public partial class MainWindow
         );
         
         ComponentLibraryWindow.Margin = newMargin;
+        SyncComponentLibraryCollapseExpandedState();
         e.Handled = true;
     }
 
     private void OnComponentLibraryWindowPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        if (IsComponentLibraryTemporarilyCollapsedForDesktopEdit())
+        {
+            if (_isComponentLibraryWindowDragging)
+            {
+                _isComponentLibraryWindowDragging = false;
+                e.Pointer.Capture(null);
+            }
+
+            return;
+        }
+
         if (!_isComponentLibraryWindowDragging)
         {
             return;
@@ -3111,6 +3139,7 @@ public partial class MainWindow
         var margin = ComponentLibraryWindow.Margin;
         _savedComponentLibraryMargin = margin;
         _isComponentLibraryWindowPositionCustomized = true;
+        SyncComponentLibraryCollapseExpandedState();
     }
 
     private void RestoreComponentLibraryWindowPosition()
@@ -3121,6 +3150,7 @@ public partial class MainWindow
         }
 
         ComponentLibraryWindow.Margin = _savedComponentLibraryMargin;
+        SyncComponentLibraryCollapseExpandedState();
     }
 
     private Thickness _savedComponentLibraryMargin = new Thickness(24, 24, 24, 100);

@@ -9,6 +9,12 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.DesktopEditing;
 
+internal enum DesktopEditGhostVisualStyle
+{
+    StandardLift = 0,
+    ElevatedFromLibrary
+}
+
 internal sealed class DesktopEditOverlayPresenter
 {
     private static readonly TimeSpan FastDuration = FluttermotionToken.Fast;
@@ -133,14 +139,16 @@ internal sealed class DesktopEditOverlayPresenter
         UpdateCandidateAppearance();
     }
 
-    public void Show()
+    public void Show(DesktopEditGhostVisualStyle visualStyle = DesktopEditGhostVisualStyle.StandardLift)
     {
         _dismissVersion++;
         _isVisible = true;
         _root.IsVisible = true;
         _root.Opacity = 0;
         _ghostView.Opacity = 0;
-        _ghostView.SetRestingScale(0.96);
+        var initialGhostScale = visualStyle == DesktopEditGhostVisualStyle.ElevatedFromLibrary ? 1.02 : 0.985;
+        var targetGhostScale = visualStyle == DesktopEditGhostVisualStyle.ElevatedFromLibrary ? 1.06 : 1;
+        _ghostView.SetRestingScale(initialGhostScale);
         _candidateOutline.Opacity = 0;
         _candidateScale.ScaleX = 0.96;
         _candidateScale.ScaleY = 0.96;
@@ -154,7 +162,7 @@ internal sealed class DesktopEditOverlayPresenter
 
             _root.Opacity = 1;
             _ghostView.Opacity = 1;
-            _ghostView.SetRestingScale(1);
+            _ghostView.SetRestingScale(targetGhostScale);
             if (_candidateRect.HasValue)
             {
                 _candidateOutline.Opacity = 1;

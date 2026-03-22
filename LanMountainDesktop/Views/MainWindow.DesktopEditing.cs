@@ -32,6 +32,7 @@ public partial class MainWindow
     private int _desktopEditOverlayVersion;
     private int _desktopEditCommitVersion;
     private bool _isDesktopEditCommitPending;
+    private ComponentLibraryCollapsePresenter? _componentLibraryCollapsePresenter;
 
     private bool HasActiveDesktopEditSession => _desktopEditSession.IsActive || _isDesktopEditCommitPending;
 
@@ -79,6 +80,89 @@ public partial class MainWindow
         _desktopEditOverlayPresenter.SetViewportSize(new Size(width, height));
     }
 
+    private void EnsureComponentLibraryCollapsePresenter()
+    {
+        if (_componentLibraryCollapsePresenter is not null || ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        var collapsedChipHost = this.FindControl<Border>("ComponentLibraryCollapsedChipHost");
+        var collapsedChipTextBlock = this.FindControl<TextBlock>("ComponentLibraryCollapsedChipTextBlock");
+        var collapsedChipIcon = this.FindControl<Control>("ComponentLibraryCollapsedChipIcon");
+        if (collapsedChipHost is null || collapsedChipTextBlock is null)
+        {
+            return;
+        }
+
+        _componentLibraryCollapsePresenter = new ComponentLibraryCollapsePresenter(
+            ComponentLibraryWindow,
+            collapsedChipHost,
+            collapsedChipTextBlock,
+            collapsedChipIcon);
+    }
+
+    private bool IsComponentLibraryTemporarilyCollapsedForDesktopEdit()
+    {
+        EnsureComponentLibraryCollapsePresenter();
+        return _componentLibraryCollapsePresenter is not null &&
+               _componentLibraryCollapsePresenter.VisualState != ComponentLibraryCollapseVisualState.Expanded;
+    }
+
+    private void SyncComponentLibraryCollapseExpandedState()
+    {
+        if (!_isComponentLibraryOpen || ComponentLibraryWindow is null)
+        {
+            return;
+        }
+
+        EnsureComponentLibraryCollapsePresenter();
+        if (_componentLibraryCollapsePresenter is null)
+        {
+            return;
+        }
+
+        _componentLibraryCollapsePresenter.SyncExpandedState(ComponentLibraryWindow.Margin, ComponentLibraryWindow.Opacity);
+    }
+
+    private void CollapseComponentLibraryForDesktopEdit(string? title)
+    {
+        if (!_isComponentLibraryOpen)
+        {
+            return;
+        }
+
+        EnsureComponentLibraryCollapsePresenter();
+        if (_componentLibraryCollapsePresenter is null)
+        {
+            return;
+        }
+
+        SyncComponentLibraryCollapseExpandedState();
+        _componentLibraryCollapsePresenter.Collapse(ResolveComponentLibraryCollapsedChipTitle());
+    }
+
+    private string ResolveComponentLibraryCollapsedChipTitle()
+    {
+        if (!string.IsNullOrWhiteSpace(ComponentLibraryTitleTextBlock?.Text))
+        {
+            return ComponentLibraryTitleTextBlock.Text;
+        }
+
+        return L("button.component_library", "Widgets");
+    }
+
+    private void RestoreComponentLibraryAfterDesktopEdit()
+    {
+        EnsureComponentLibraryCollapsePresenter();
+        if (_componentLibraryCollapsePresenter is null)
+        {
+            return;
+        }
+
+        _componentLibraryCollapsePresenter.Restore();
+    }
+
     private bool TryGetCurrentDesktopGridGeometry(out DesktopGridGeometry geometry)
     {
         geometry = default;
@@ -109,6 +193,7 @@ public partial class MainWindow
     private Rect? GetComponentLibraryBoundsInViewport()
     {
         if (!_isComponentLibraryOpen ||
+            IsComponentLibraryTemporarilyCollapsedForDesktopEdit() ||
             ComponentLibraryWindow is null ||
             DesktopPagesViewport is null ||
             !ComponentLibraryWindow.IsVisible ||
@@ -214,6 +299,8 @@ public partial class MainWindow
 
     private void CancelDesktopEditSession(bool animate)
     {
+        RestoreComponentLibraryAfterDesktopEdit();
+
         if (_isDesktopEditCommitPending)
         {
             _desktopEditCommitVersion++;
@@ -273,11 +360,13 @@ public partial class MainWindow
 
                 if (!CanCommitDesktopEditAtRect(finalRect))
                 {
+                    RestoreComponentLibraryAfterDesktopEdit();
                     ResetDesktopEditState();
                     return;
                 }
 
                 commitAction();
+                RestoreComponentLibraryAfterDesktopEdit();
                 ResetDesktopEditState();
             },
             DesktopEditOverlayAnimationDuration);
@@ -319,8 +408,10 @@ public partial class MainWindow
         }
 
         _desktopEditSession = _desktopEditSession.PromoteToDraggingNew();
+        CollapseComponentLibraryForDesktopEdit(ResolveDesktopEditTitle(_desktopEditSession.ComponentId ?? string.Empty));
+        _desktopEditSession = _desktopEditSession.WithComponentLibraryBounds(GetComponentLibraryBoundsInViewport());
         EnsureDesktopEditOverlayPresenter();
-        _desktopEditOverlayPresenter?.Show();
+        _desktopEditOverlayPresenter?.Show(DesktopEditGhostVisualStyle.ElevatedFromLibrary);
         UpdateActiveDesktopDragPreview();
     }
 

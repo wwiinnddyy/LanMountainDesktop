@@ -588,6 +588,44 @@
                 </Border>
             </Grid>
         </Border>
+
+        <Border x:Name="ComponentLibraryCollapsedChipHost"
+                IsVisible="False"
+                IsHitTestVisible="False"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,88"
+                Padding="14,10"
+                CornerRadius="999"
+                Classes="surface-translucent-strong"
+                BorderBrush="{DynamicResource AdaptiveDockGlassBorderBrush}"
+                BorderThickness="1"
+                Opacity="0">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                </Transitions>
+            </Border.Transitions>
+
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="10">
+                <fi:FluentIcon x:Name="ComponentLibraryCollapsedChipIcon"
+                               Grid.Column="0"
+                               Icon="Apps"
+                               IconVariant="Regular"
+                               Width="18"
+                               Height="18"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                <TextBlock x:Name="ComponentLibraryCollapsedChipTextBlock"
+                           Grid.Column="1"
+                           VerticalAlignment="Center"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           Text="Widgets" />
+            </Grid>
+        </Border>
     </Grid>
 
 </Window>
