@@ -271,6 +271,7 @@
     "settings.region.language_label":  "语言",
     "settings.region.language_zh":  "中文",
     "settings.region.language_en":  "英文",
+    "settings.region.language_ja":  "日文",
     "settings.region.timezone_header":  "时区",
     "settings.region.timezone_desc":  "选择时区。时钟与日历组件会使用该时区。",
     "settings.region.applied_format":  "语言已切换为：{0}",

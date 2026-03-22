@@ -36,9 +36,17 @@ public sealed class LocalizationService
 
     public string NormalizeLanguageCode(string? languageCode)
     {
-        return string.Equals(languageCode, "en-US", StringComparison.OrdinalIgnoreCase)
-            ? "en-US"
-            : "zh-CN";
+        if (string.IsNullOrWhiteSpace(languageCode))
+        {
+            return "zh-CN";
+        }
+
+        return languageCode.ToLowerInvariant() switch
+        {
+            "en-us" or "en" => "en-US",
+            "ja-jp" or "ja" => "ja-JP",
+            _ => "zh-CN"
+        };
     }
 
     public string GetString(string languageCode, string key, string fallback)

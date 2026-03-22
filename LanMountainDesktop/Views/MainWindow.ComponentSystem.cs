@@ -13,6 +13,7 @@ using Avalonia.VisualTree;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -34,12 +35,6 @@ public partial class MainWindow
     private const string DesktopComponentContentHostTag = "desktop-component-content-host";
     private const string DesktopComponentResizeHandleTag = "desktop-component-resize-handle";
 
-    private bool _isDesktopComponentDragActive;
-    private DesktopComponentDragState? _desktopComponentDrag;
-    private Border? _desktopComponentDragGhost;
-    private bool _isDesktopComponentResizeActive;
-    private DesktopComponentResizeState? _desktopComponentResize;
-
     private string? _componentLibraryActiveCategoryId;
     private int _componentLibraryCategoryIndex;
     private int _componentLibraryComponentIndex;
@@ -57,43 +52,6 @@ public partial class MainWindow
     private Point _componentLibraryComponentGestureStartPoint;
     private Point _componentLibraryComponentGestureCurrentPoint;
     private double _componentLibraryComponentGestureBaseOffset;
-
-    private enum DesktopComponentDragKind
-    {
-        None,
-        NewFromLibrary,
-        MoveExisting
-    }
-
-    private sealed class DesktopComponentDragState
-    {
-        public DesktopComponentDragKind Kind { get; init; }
-        public string ComponentId { get; init; } = string.Empty;
-        public string PlacementId { get; init; } = string.Empty;
-        public int PageIndex { get; init; }
-        public int WidthCells { get; init; }
-        public int HeightCells { get; init; }
-        public Point PointerOffset { get; init; }
-        public Border? SourceHost { get; init; }
-        public int TargetRow { get; set; }
-        public int TargetColumn { get; set; }
-    }
-
-    private sealed class DesktopComponentResizeState
-    {
-        public string PlacementId { get; init; } = string.Empty;
-        public string ComponentId { get; init; } = string.Empty;
-        public Border SourceHost { get; init; } = null!;
-        public int StartWidthCells { get; init; }
-        public int StartHeightCells { get; init; }
-        public int MinWidthCells { get; init; }
-        public int MinHeightCells { get; init; }
-        public int MaxWidthCells { get; init; }
-        public int MaxHeightCells { get; init; }
-        public Point StartPointerInViewport { get; init; }
-        public int CurrentWidthCells { get; set; }
-        public int CurrentHeightCells { get; set; }
-    }
 
     private sealed record ComponentLibraryCategory(
         string Id,
@@ -1971,7 +1929,7 @@ public partial class MainWindow
 
     private void OnDesktopComponentHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_isComponentLibraryOpen || _isDesktopComponentDragActive || _isDesktopComponentResizeActive)
+        if (!_isComponentLibraryOpen || HasActiveDesktopEditSession)
         {
             return;
         }
@@ -2003,7 +1961,7 @@ public partial class MainWindow
         if (IsPointerOnSelectedFrameBorder(host, pointerInHost))
         {
             BeginDesktopComponentResizeDrag(host, placement, e);
-            if (_isDesktopComponentResizeActive)
+            if (IsDesktopEditResizeMode)
             {
                 e.Handled = true;
             }
@@ -2065,10 +2023,9 @@ public partial class MainWindow
 
     private void BeginDesktopComponentMoveDrag(Border sourceHost, DesktopComponentPlacementSnapshot placement, PointerPressedEventArgs e)
     {
-        if (_isDesktopComponentResizeActive ||
-            DesktopEditDragLayer is null ||
+        if (HasActiveDesktopEditSession ||
             DesktopPagesViewport is null ||
-            _currentDesktopCellSize <= 0 ||
+            !TryGetCurrentDesktopGridGeometry(out var grid) ||
             !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor))
         {
             return;
@@ -2082,27 +2039,31 @@ public partial class MainWindow
                 placement.HeightCells));
 
         var pointerInViewport = e.GetPosition(DesktopPagesViewport);
-        var pitch = CurrentDesktopPitch;
-        var topLeft = new Point(placement.Column * pitch, placement.Row * pitch);
-        var pointerOffset = pointerInViewport - topLeft;
+        _desktopEditOriginalRect = DesktopPlacementMath.GetCellRect(grid, placement.Column, placement.Row, widthCells, heightCells);
+        _desktopEditStartRow = placement.Row;
+        _desktopEditStartColumn = placement.Column;
+        var pointerOffset = DesktopPlacementMath.Subtract(
+            pointerInViewport,
+            new Point(_desktopEditOriginalRect.X, _desktopEditOriginalRect.Y));
 
-        sourceHost.Opacity = 0.35;
+        _desktopEditSession = DesktopEditSession.CreateDraggingExisting(
+            placement.ComponentId,
+            placement.PlacementId,
+            placement.PageIndex,
+            widthCells,
+            heightCells,
+            pointerInViewport,
+            pointerOffset,
+            GetComponentLibraryBoundsInViewport());
 
-        _desktopComponentDrag = new DesktopComponentDragState
-        {
-            Kind = DesktopComponentDragKind.MoveExisting,
-            ComponentId = placement.ComponentId,
-            PlacementId = placement.PlacementId,
-            PageIndex = placement.PageIndex,
-            WidthCells = widthCells,
-            HeightCells = heightCells,
-            PointerOffset = pointerOffset,
-            SourceHost = sourceHost
-        };
-        _isDesktopComponentDragActive = true;
-
-        EnsureDesktopComponentDragGhost(placement.ComponentId, widthCells, heightCells);
-        UpdateDesktopComponentDragVisual(pointerInViewport);
+        SetDesktopEditSourceHost(sourceHost, 0.22);
+        EnsureDesktopEditOverlayPresenter();
+        UpdateDesktopEditOverlayMetadata(placement.ComponentId, widthCells, heightCells, L("component.move", "Move"));
+        _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
+        _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
+        _desktopEditOverlayPresenter?.SetInvalid(false);
+        _desktopEditOverlayPresenter?.Show();
+        UpdateDesktopEditSession(pointerInViewport);
 
         e.Pointer.Capture(this);
     }
@@ -2110,9 +2071,7 @@ public partial class MainWindow
     private void BeginDesktopComponentNewDrag(string componentId, PointerPressedEventArgs e)
     {
         if (!_isComponentLibraryOpen ||
-            _isDesktopComponentDragActive ||
-            _isDesktopComponentResizeActive ||
-            DesktopEditDragLayer is null ||
+            HasActiveDesktopEditSession ||
             DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
             !_componentRuntimeRegistry.TryGetDescriptor(componentId, out var runtimeDescriptor) ||
@@ -2128,74 +2087,35 @@ public partial class MainWindow
                 runtimeDescriptor.Definition.MinWidthCells,
                 runtimeDescriptor.Definition.MinHeightCells));
 
-        // Center the component under the pointer while dragging from the library.
-        var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize + Math.Max(0, widthCells - 1) * _currentDesktopCellGap);
-        var ghostHeight = Math.Max(1, heightCells * _currentDesktopCellSize + Math.Max(0, heightCells - 1) * _currentDesktopCellGap);
-        var pointerOffset = new Point(
-            ghostWidth * 0.5,
-            ghostHeight * 0.5);
-
-        _desktopComponentDrag = new DesktopComponentDragState
-        {
-            Kind = DesktopComponentDragKind.NewFromLibrary,
-            ComponentId = componentId,
-            PageIndex = _currentDesktopSurfaceIndex,
-            WidthCells = widthCells,
-            HeightCells = heightCells,
-            PointerOffset = pointerOffset
-        };
-        _isDesktopComponentDragActive = true;
-
-        EnsureDesktopComponentDragGhost(componentId, widthCells, heightCells);
         var pointerInViewport = e.GetPosition(DesktopPagesViewport);
-        UpdateDesktopComponentDragVisual(pointerInViewport);
+        var previewSize = GetComponentPixelSize(widthCells, heightCells, _currentDesktopCellSize, _currentDesktopCellGap);
+        var pointerOffset = new Point(previewSize.Width * 0.5, previewSize.Height * 0.5);
+
+        _desktopEditOriginalRect = new Rect(
+            DesktopPlacementMath.Subtract(pointerInViewport, pointerOffset),
+            previewSize);
+        _desktopEditSession = DesktopEditSession.CreatePendingNew(
+            componentId,
+            _currentDesktopSurfaceIndex,
+            widthCells,
+            heightCells,
+            pointerInViewport,
+            pointerOffset,
+            GetComponentLibraryBoundsInViewport());
+
+        EnsureDesktopEditOverlayPresenter();
+        UpdateDesktopEditOverlayMetadata(componentId, widthCells, heightCells, L("component_library.drag_hint", "Drag to place"));
+        _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
+        _desktopEditOverlayPresenter?.SetCandidateRect(null);
+        _desktopEditOverlayPresenter?.SetInvalid(false);
 
         e.Pointer.Capture(this);
-    }
-
-    private void EnsureDesktopComponentDragGhost(string componentId, int widthCells, int heightCells)
-    {
-        if (DesktopEditDragLayer is null)
-        {
-            return;
-        }
-
-        DesktopEditDragLayer.Children.Clear();
-
-        var ghostWidth = Math.Max(1, widthCells * _currentDesktopCellSize + Math.Max(0, widthCells - 1) * _currentDesktopCellGap);
-        var ghostHeight = Math.Max(1, heightCells * _currentDesktopCellSize + Math.Max(0, heightCells - 1) * _currentDesktopCellGap);
-
-        var ghostContent = CreateDesktopComponentControl(componentId);
-        if (ghostContent is not null)
-        {
-            ghostContent.IsHitTestVisible = false;
-        }
-
-        var visualInset = GetDesktopComponentVisualInset(widthCells, heightCells);
-
-        _desktopComponentDragGhost = new Border
-        {
-            Width = ghostWidth,
-            Height = ghostHeight,
-            CornerRadius = new CornerRadius(Math.Clamp(_currentDesktopCellSize * 0.45, 16, 36)),
-            Background = new SolidColorBrush(Color.Parse("#331E40AF")),
-            BorderBrush = GetThemeBrush("AdaptiveAccentBrush"),
-            BorderThickness = new Thickness(Math.Clamp(_currentDesktopCellSize * 0.04, 1, 3)),
-            Padding = visualInset,
-            ClipToBounds = true,
-            Child = ghostContent,
-            Opacity = 0.92,
-            IsHitTestVisible = false
-        };
-
-        DesktopEditDragLayer.Children.Add(_desktopComponentDragGhost);
     }
 
     private void OnDesktopComponentResizeHandlePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!_isComponentLibraryOpen ||
-            _isDesktopComponentDragActive ||
-            _isDesktopComponentResizeActive ||
+            HasActiveDesktopEditSession ||
             DesktopPagesViewport is null ||
             sender is not Border handle ||
             !e.GetCurrentPoint(handle).Properties.IsLeftButtonPressed)
@@ -2218,7 +2138,7 @@ public partial class MainWindow
 
         SetSelectedDesktopComponent(host);
         BeginDesktopComponentResizeDrag(host, placement, e);
-        if (_isDesktopComponentResizeActive)
+        if (IsDesktopEditResizeMode)
         {
             e.Handled = true;
         }
@@ -2229,10 +2149,12 @@ public partial class MainWindow
         DesktopComponentPlacementSnapshot placement,
         PointerPressedEventArgs e)
     {
-        if (DesktopPagesViewport is null ||
+        if (HasActiveDesktopEditSession ||
+            DesktopPagesViewport is null ||
             _currentDesktopCellSize <= 0 ||
             !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var runtimeDescriptor) ||
-            !_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
+            !_desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid) ||
+            !TryGetCurrentDesktopGridGeometry(out var grid))
         {
             return;
         }
@@ -2259,152 +2181,58 @@ public partial class MainWindow
         }
 
         var pointerInViewport = e.GetPosition(DesktopPagesViewport);
-        _desktopComponentResize = new DesktopComponentResizeState
+        _desktopEditOriginalRect = DesktopPlacementMath.GetCellRect(
+            grid,
+            placement.Column,
+            placement.Row,
+            startSpan.WidthCells,
+            startSpan.HeightCells);
+        _desktopEditStartWidthCells = startSpan.WidthCells;
+        _desktopEditStartHeightCells = startSpan.HeightCells;
+        _desktopEditMinWidthCells = Math.Max(1, Math.Min(minSpan.WidthCells, maxWidthCells));
+        _desktopEditMinHeightCells = Math.Max(1, Math.Min(minSpan.HeightCells, maxHeightCells));
+        _desktopEditMaxWidthCells = maxWidthCells;
+        _desktopEditMaxHeightCells = maxHeightCells;
+        _desktopEditResizeMode = runtimeDescriptor.Definition.ResizeMode;
+
+        _desktopEditSession = DesktopEditSession.CreateResizingExisting(
+            placement.ComponentId,
+            placement.PlacementId,
+            placement.PageIndex,
+            startSpan.WidthCells,
+            startSpan.HeightCells,
+            pointerInViewport,
+            GetComponentLibraryBoundsInViewport()) with
         {
-            PlacementId = placement.PlacementId,
-            ComponentId = placement.ComponentId,
-            SourceHost = sourceHost,
-            StartWidthCells = startSpan.WidthCells,
-            StartHeightCells = startSpan.HeightCells,
-            MinWidthCells = Math.Max(1, Math.Min(minSpan.WidthCells, maxWidthCells)),
-            MinHeightCells = Math.Max(1, Math.Min(minSpan.HeightCells, maxHeightCells)),
-            MaxWidthCells = maxWidthCells,
-            MaxHeightCells = maxHeightCells,
-            StartPointerInViewport = pointerInViewport,
-            CurrentWidthCells = startSpan.WidthCells,
-            CurrentHeightCells = startSpan.HeightCells
+            TargetRow = placement.Row,
+            TargetColumn = placement.Column
         };
 
-        _isDesktopComponentResizeActive = true;
-        sourceHost.Opacity = 0.96;
+        SetDesktopEditSourceHost(sourceHost, 0.22);
+        EnsureDesktopEditOverlayPresenter();
+        UpdateDesktopEditOverlayMetadata(placement.ComponentId, startSpan.WidthCells, startSpan.HeightCells, L("component.resize", "Resize"));
+        _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
+        _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
+        _desktopEditOverlayPresenter?.SetInvalid(false);
+        _desktopEditOverlayPresenter?.Show();
+        UpdateDesktopEditSession(pointerInViewport);
         e.Pointer.Capture(this);
-    }
-
-    private void UpdateDesktopComponentResizeVisual(Point pointerInViewport)
-    {
-        if (_desktopComponentResize is null)
-        {
-            return;
-        }
-
-        var pitch = CurrentDesktopPitch;
-        if (pitch <= 0 ||
-            _desktopComponentResize.StartWidthCells <= 0 ||
-            _desktopComponentResize.StartHeightCells <= 0)
-        {
-            return;
-        }
-
-        var deltaX = pointerInViewport.X - _desktopComponentResize.StartPointerInViewport.X;
-        var deltaY = pointerInViewport.Y - _desktopComponentResize.StartPointerInViewport.Y;
-        int widthCells;
-        int heightCells;
-        if (GetComponentResizeMode(_desktopComponentResize.ComponentId) == DesktopComponentResizeMode.Free)
-        {
-            widthCells = Math.Clamp(
-                (int)Math.Round(_desktopComponentResize.StartWidthCells + deltaX / pitch),
-                _desktopComponentResize.MinWidthCells,
-                _desktopComponentResize.MaxWidthCells);
-            heightCells = Math.Clamp(
-                (int)Math.Round(_desktopComponentResize.StartHeightCells + deltaY / pitch),
-                _desktopComponentResize.MinHeightCells,
-                _desktopComponentResize.MaxHeightCells);
-        }
-        else
-        {
-            var widthScale = (_desktopComponentResize.StartWidthCells + deltaX / pitch) / _desktopComponentResize.StartWidthCells;
-            var heightScale = (_desktopComponentResize.StartHeightCells + deltaY / pitch) / _desktopComponentResize.StartHeightCells;
-
-            var proposedScale = Math.Max(widthScale, heightScale);
-            var minScale = Math.Max(
-                (double)_desktopComponentResize.MinWidthCells / _desktopComponentResize.StartWidthCells,
-                (double)_desktopComponentResize.MinHeightCells / _desktopComponentResize.StartHeightCells);
-            var maxScale = Math.Min(
-                (double)_desktopComponentResize.MaxWidthCells / _desktopComponentResize.StartWidthCells,
-                (double)_desktopComponentResize.MaxHeightCells / _desktopComponentResize.StartHeightCells);
-
-            if (double.IsNaN(proposedScale) || double.IsInfinity(proposedScale))
-            {
-                proposedScale = minScale;
-            }
-
-            if (maxScale < minScale)
-            {
-                maxScale = minScale;
-            }
-
-            var scale = Math.Clamp(proposedScale, minScale, maxScale);
-            widthCells = Math.Clamp(
-                (int)Math.Round(_desktopComponentResize.StartWidthCells * scale),
-                _desktopComponentResize.MinWidthCells,
-                _desktopComponentResize.MaxWidthCells);
-            heightCells = Math.Clamp(
-                (int)Math.Round(_desktopComponentResize.StartHeightCells * scale),
-                _desktopComponentResize.MinHeightCells,
-                _desktopComponentResize.MaxHeightCells);
-        }
-
-        var normalized = NormalizeComponentCellSpan(_desktopComponentResize.ComponentId, (widthCells, heightCells));
-        widthCells = Math.Clamp(normalized.WidthCells, _desktopComponentResize.MinWidthCells, _desktopComponentResize.MaxWidthCells);
-        heightCells = Math.Clamp(normalized.HeightCells, _desktopComponentResize.MinHeightCells, _desktopComponentResize.MaxHeightCells);
-
-        _desktopComponentResize.CurrentWidthCells = widthCells;
-        _desktopComponentResize.CurrentHeightCells = heightCells;
-        Grid.SetColumnSpan(_desktopComponentResize.SourceHost, widthCells);
-        Grid.SetRowSpan(_desktopComponentResize.SourceHost, heightCells);
-    }
-
-    private bool TryCompleteDesktopComponentResize(Point pointerInViewport)
-    {
-        if (_desktopComponentResize is null)
-        {
-            return false;
-        }
-
-        UpdateDesktopComponentResizeVisual(pointerInViewport);
-
-        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
-            string.Equals(p.PlacementId, _desktopComponentResize.PlacementId, StringComparison.OrdinalIgnoreCase));
-        if (placement is null)
-        {
-            return false;
-        }
-
-        var before = ClonePlacementSnapshot(placement);
-
-        var widthCells = Math.Max(1, _desktopComponentResize.CurrentWidthCells);
-        var heightCells = Math.Max(1, _desktopComponentResize.CurrentHeightCells);
-        var changed = placement.WidthCells != widthCells || placement.HeightCells != heightCells;
-        placement.WidthCells = widthCells;
-        placement.HeightCells = heightCells;
-
-        ApplyDesktopEditStateToHost(_desktopComponentResize.SourceHost, _isComponentLibraryOpen);
-        if (changed)
-        {
-            PersistSettings();
-            TelemetryServices.Usage?.TrackDesktopComponentResized(before, ClonePlacementSnapshot(placement), "component.resize");
-        }
-
-        return true;
     }
 
     private void CancelDesktopComponentResize(bool restoreOriginalSpan)
     {
-        if (!_isDesktopComponentResizeActive || _desktopComponentResize is null)
+        if (!IsDesktopEditResizeMode && !_isDesktopEditCommitPending)
         {
             return;
         }
 
-        if (restoreOriginalSpan)
+        if (restoreOriginalSpan && _desktopEditSourceHost is not null)
         {
-            Grid.SetColumnSpan(_desktopComponentResize.SourceHost, _desktopComponentResize.StartWidthCells);
-            Grid.SetRowSpan(_desktopComponentResize.SourceHost, _desktopComponentResize.StartHeightCells);
+            Grid.SetColumnSpan(_desktopEditSourceHost, Math.Max(1, _desktopEditStartWidthCells));
+            Grid.SetRowSpan(_desktopEditSourceHost, Math.Max(1, _desktopEditStartHeightCells));
         }
 
-        _desktopComponentResize.SourceHost.Opacity = 1;
-        ApplyDesktopEditStateToHost(_desktopComponentResize.SourceHost, _isComponentLibraryOpen);
-        _desktopComponentResize = null;
-        _isDesktopComponentResizeActive = false;
+        CancelDesktopEditSession(animate: false);
     }
 
     private void OnDesktopComponentDragPointerMoved(object? sender, PointerEventArgs e)
@@ -2414,18 +2242,12 @@ public partial class MainWindow
             return;
         }
 
-        if (_isDesktopComponentResizeActive && _desktopComponentResize is not null)
-        {
-            UpdateDesktopComponentResizeVisual(e.GetPosition(DesktopPagesViewport));
-            return;
-        }
-
-        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null)
+        if (!HasActiveDesktopEditSession || _isDesktopEditCommitPending)
         {
             return;
         }
 
-        UpdateDesktopComponentDragVisual(e.GetPosition(DesktopPagesViewport));
+        UpdateDesktopEditSession(e.GetPosition(DesktopPagesViewport));
     }
 
     private void OnDesktopComponentDragPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -2435,28 +2257,18 @@ public partial class MainWindow
             return;
         }
 
-        if (_isDesktopComponentResizeActive && _desktopComponentResize is not null)
-        {
-            var resizePointerInViewport = e.GetPosition(DesktopPagesViewport);
-            var resizeSuccess = TryCompleteDesktopComponentResize(resizePointerInViewport);
-            CancelDesktopComponentResize(restoreOriginalSpan: !resizeSuccess);
-            e.Pointer.Capture(null);
-            if (resizeSuccess)
-            {
-                e.Handled = true;
-            }
-
-            return;
-        }
-
-        if (!_isDesktopComponentDragActive || _desktopComponentDrag is null)
+        if (!HasActiveDesktopEditSession)
         {
             return;
         }
 
         var pointerInViewport = e.GetPosition(DesktopPagesViewport);
-        var success = TryCompleteDesktopComponentDrag(pointerInViewport);
-        CancelDesktopComponentDrag();
+        var success = CompleteDesktopEditSession(pointerInViewport);
+        if (!success)
+        {
+            CancelDesktopEditSession(animate: !_desktopEditSession.IsPendingNew);
+        }
+
         e.Pointer.Capture(null);
         if (success)
         {
@@ -2466,142 +2278,56 @@ public partial class MainWindow
 
     private void OnDesktopComponentDragPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        if (_isDesktopComponentResizeActive)
-        {
-            CancelDesktopComponentResize(restoreOriginalSpan: true);
-            return;
-        }
-
-        if (!_isDesktopComponentDragActive)
+        if (_isDesktopEditCommitPending)
         {
             return;
         }
 
-        CancelDesktopComponentDrag();
-    }
-
-    private void UpdateDesktopComponentDragVisual(Point pointerInViewport)
-    {
-        if (_desktopComponentDragGhost is null || _desktopComponentDrag is null || DesktopPagesViewport is null)
+        if (!HasActiveDesktopEditSession)
         {
             return;
         }
 
-        var withinViewport =
-            pointerInViewport.X >= 0 &&
-            pointerInViewport.Y >= 0 &&
-            pointerInViewport.X <= DesktopPagesViewport.Bounds.Width &&
-            pointerInViewport.Y <= DesktopPagesViewport.Bounds.Height;
-
-        if (!withinViewport ||
-            !TryGetDesktopComponentDropCell(pointerInViewport, _desktopComponentDrag, out var row, out var column))
-        {
-            _desktopComponentDragGhost.IsVisible = false;
-            return;
-        }
-
-        _desktopComponentDragGhost.IsVisible = true;
-        _desktopComponentDrag.TargetRow = row;
-        _desktopComponentDrag.TargetColumn = column;
-        var pitch = CurrentDesktopPitch;
-        Canvas.SetLeft(_desktopComponentDragGhost, column * pitch);
-        Canvas.SetTop(_desktopComponentDragGhost, row * pitch);
-    }
-
-    private bool TryGetDesktopComponentDropCell(
-        Point pointerInViewport,
-        DesktopComponentDragState state,
-        out int row,
-        out int column)
-    {
-        row = 0;
-        column = 0;
-
-        if (_currentDesktopCellSize <= 0 ||
-            _currentDesktopSurfaceIndex < 0 ||
-            _currentDesktopSurfaceIndex >= _desktopPageCount ||
-            !_desktopPageComponentGrids.TryGetValue(_currentDesktopSurfaceIndex, out var pageGrid))
-        {
-            return false;
-        }
-
-        var maxColumns = pageGrid.ColumnDefinitions.Count;
-        var maxRows = pageGrid.RowDefinitions.Count;
-        if (maxColumns <= 0 || maxRows <= 0)
-        {
-            return false;
-        }
-
-        var pitch = CurrentDesktopPitch;
-        if (pitch <= 0)
-        {
-            return false;
-        }
-
-        var x = pointerInViewport.X - state.PointerOffset.X;
-        var y = pointerInViewport.Y - state.PointerOffset.Y;
-
-        column = (int)Math.Floor(x / pitch);
-        row = (int)Math.Floor(y / pitch);
-
-        column = Math.Clamp(column, 0, Math.Max(0, maxColumns - state.WidthCells));
-        row = Math.Clamp(row, 0, Math.Max(0, maxRows - state.HeightCells));
-        return true;
-    }
-
-    private bool TryCompleteDesktopComponentDrag(Point pointerInViewport)
-    {
-        if (_desktopComponentDrag is null ||
-            _currentDesktopCellSize <= 0 ||
-            _currentDesktopSurfaceIndex < 0 ||
-            _currentDesktopSurfaceIndex >= _desktopPageCount)
-        {
-            return false;
-        }
-
-        if (!TryGetDesktopComponentDropCell(pointerInViewport, _desktopComponentDrag, out var row, out var column))
-        {
-            return false;
-        }
-
-        switch (_desktopComponentDrag.Kind)
-        {
-            case DesktopComponentDragKind.NewFromLibrary:
-                PlaceDesktopComponentOnPage(_desktopComponentDrag.ComponentId, _currentDesktopSurfaceIndex, row, column);
-                return true;
-            case DesktopComponentDragKind.MoveExisting:
-                return TryMoveExistingDesktopComponent(_desktopComponentDrag.PlacementId, row, column);
-            default:
-                return false;
-        }
+        CancelDesktopEditSession(animate: !_desktopEditSession.IsPendingNew);
     }
 
     private bool TryMoveExistingDesktopComponent(string placementId, int row, int column)
     {
-        if (string.IsNullOrWhiteSpace(placementId) ||
-            _desktopComponentDrag?.SourceHost is null ||
-            _desktopComponentDrag.Kind != DesktopComponentDragKind.MoveExisting)
+        if (string.IsNullOrWhiteSpace(placementId))
         {
             return false;
         }
 
-        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
-            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
-        if (placement is null)
+        if (!TryGetDesktopPlacementById(placementId, out var placement))
         {
             return false;
         }
 
         var before = ClonePlacementSnapshot(placement);
+        if (!DesktopPlacementMath.HasCellPositionChanged(placement.Row, placement.Column, row, column))
+        {
+            return false;
+        }
+
+        var host = _desktopEditSourceHost;
+        if (host is null &&
+            _desktopPageComponentGrids.TryGetValue(placement.PageIndex, out var pageGrid))
+        {
+            host = pageGrid.Children
+                .OfType<Border>()
+                .FirstOrDefault(candidate => string.Equals(candidate.Tag as string, placementId, StringComparison.OrdinalIgnoreCase));
+        }
 
         placement.Row = Math.Max(0, row);
         placement.Column = Math.Max(0, column);
 
-        Grid.SetRow(_desktopComponentDrag.SourceHost, placement.Row);
-        Grid.SetColumn(_desktopComponentDrag.SourceHost, placement.Column);
+        if (host is not null)
+        {
+            Grid.SetRow(host, placement.Row);
+            Grid.SetColumn(host, placement.Column);
+            ApplyDesktopEditStateToHost(host, _isComponentLibraryOpen);
+        }
 
-        _desktopComponentDrag.SourceHost.Opacity = 1;
-        ApplyDesktopEditStateToHost(_desktopComponentDrag.SourceHost, _isComponentLibraryOpen);
         PersistSettings();
         TelemetryServices.Usage?.TrackDesktopComponentMoved(before, ClonePlacementSnapshot(placement), "component.move");
         return true;
@@ -2609,26 +2335,12 @@ public partial class MainWindow
 
     private void CancelDesktopComponentDrag()
     {
-        if (!_isDesktopComponentDragActive)
+        if (!IsDesktopEditDragMode && !_isDesktopEditCommitPending)
         {
             return;
         }
 
-        if (_desktopComponentDrag?.SourceHost is not null)
-        {
-            _desktopComponentDrag.SourceHost.Opacity = 1;
-            ApplyDesktopEditStateToHost(_desktopComponentDrag.SourceHost, _isComponentLibraryOpen);
-        }
-
-        _desktopComponentDrag = null;
-        _isDesktopComponentDragActive = false;
-
-        if (DesktopEditDragLayer is not null)
-        {
-            DesktopEditDragLayer.Children.Clear();
-        }
-
-        _desktopComponentDragGhost = null;
+        CancelDesktopEditSession(animate: false);
     }
 
     private void ShowComponentLibraryCategoryView()
@@ -3158,7 +2870,7 @@ public partial class MainWindow
         }
 
         BeginDesktopComponentNewDrag(componentId, e);
-        if (_isDesktopComponentDragActive)
+        if (HasActiveDesktopEditSession)
         {
             e.Handled = true;
         }

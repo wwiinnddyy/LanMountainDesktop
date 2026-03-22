@@ -276,6 +276,7 @@
     "settings.region.language_label":  "Language",
     "settings.region.language_zh":  "Chinese",
     "settings.region.language_en":  "English",
+    "settings.region.language_ja":  "Japanese",
     "settings.region.timezone_header":  "Time Zone",
     "settings.region.timezone_desc":  "Select a time zone. Clock and calendar widgets will follow this zone.",
     "settings.region.applied_format":  "Language switched to: {0}",

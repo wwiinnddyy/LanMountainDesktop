@@ -326,7 +326,8 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase
         return
         [
             new SelectionOption("zh-CN", L("settings.region.language_zh", "中文")),
-            new SelectionOption("en-US", L("settings.region.language_en", "English"))
+            new SelectionOption("en-US", L("settings.region.language_en", "English")),
+            new SelectionOption("ja-JP", L("settings.region.language_ja", "日本語"))
         ];
     }
 

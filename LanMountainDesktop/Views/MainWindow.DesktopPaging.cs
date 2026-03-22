@@ -200,6 +200,7 @@ public partial class MainWindow
         {
             DesktopEditDragLayer.Width = pageWidth;
             DesktopEditDragLayer.Height = pageHeight;
+            UpdateDesktopEditOverlayViewportSize();
         }
 
         DesktopPagesHost.RowDefinitions.Clear();
@@ -486,8 +487,7 @@ public partial class MainWindow
     {
         return !_isSettingsOpen &&
                !_isComponentLibraryOpen &&
-               !_isDesktopComponentDragActive &&
-               !_isDesktopComponentResizeActive &&
+               !HasActiveDesktopEditSession &&
                _desktopSurfacePageWidth > 1;
     }
 
