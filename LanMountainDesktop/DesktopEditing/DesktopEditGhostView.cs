@@ -13,6 +13,9 @@ internal sealed class DesktopEditGhostView : Border
     private static readonly TimeSpan FastDuration = TimeSpan.FromMilliseconds(120);
     private static readonly Easing StandardEasing = new CubicEaseOut();
 
+    private readonly Image _previewImage;
+    private readonly Border _previewOverlay;
+    private readonly Border _fallbackCard;
     private readonly Border _accentDot;
     private readonly TextBlock _titleTextBlock;
     private readonly TextBlock _detailTextBlock;
@@ -33,6 +36,9 @@ internal sealed class DesktopEditGhostView : Border
     private readonly SolidColorBrush _invalidBadgeBackgroundBrush = new(Color.Parse("#33FF4D4D"));
     private readonly SolidColorBrush _invalidBadgeBorderBrush = new(Color.Parse("#88FF7676"));
 
+    private bool _hasPreviewImage;
+    private bool _isInvalid;
+
     public DesktopEditGhostView()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -47,27 +53,12 @@ internal sealed class DesktopEditGhostView : Border
         RenderTransform = _scaleTransform;
         Transitions = new Transitions
         {
-            new DoubleTransition
-            {
-                Property = Visual.OpacityProperty,
-                Duration = FastDuration,
-                Easing = StandardEasing
-            }
+            CreateOpacityTransition(FastDuration)
         };
         _scaleTransform.Transitions = new Transitions
         {
-            new DoubleTransition
-            {
-                Property = ScaleTransform.ScaleXProperty,
-                Duration = FastDuration,
-                Easing = StandardEasing
-            },
-            new DoubleTransition
-            {
-                Property = ScaleTransform.ScaleYProperty,
-                Duration = FastDuration,
-                Easing = StandardEasing
-            }
+            CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
+            CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
         };
 
         _accentDot = new Border
@@ -119,6 +110,18 @@ internal sealed class DesktopEditGhostView : Border
             Child = _badgeTextBlock
         };
 
+        _previewImage = new Image
+        {
+            Stretch = Stretch.UniformToFill,
+            IsVisible = false
+        };
+
+        _previewOverlay = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#1A000000")),
+            IsVisible = false
+        };
+
         var headerPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -140,7 +143,7 @@ internal sealed class DesktopEditGhostView : Border
             }
         };
 
-        var rootGrid = new Grid
+        var fallbackGrid = new Grid
         {
             RowDefinitions = new RowDefinitions
             {
@@ -149,16 +152,31 @@ internal sealed class DesktopEditGhostView : Border
             },
             RowSpacing = 8
         };
-        rootGrid.Children.Add(contentPanel);
-        rootGrid.Children.Add(_badgeBorder);
+        fallbackGrid.Children.Add(contentPanel);
+        fallbackGrid.Children.Add(_badgeBorder);
         Grid.SetRow(contentPanel, 0);
         Grid.SetRow(_badgeBorder, 1);
         _badgeBorder.Margin = new Thickness(0, 2, 0, 0);
 
-        Child = rootGrid;
+        _fallbackCard = new Border
+        {
+            Background = Brushes.Transparent,
+            Child = fallbackGrid
+        };
+
+        Child = new Grid
+        {
+            Children =
+            {
+                _previewImage,
+                _previewOverlay,
+                _fallbackCard
+            }
+        };
 
         UpdatePreviewMetrics(180, 120);
         UpdateContent(null, null, null);
+        ApplyShellChrome();
     }
 
     public void UpdateContent(string? title, string? detail, string? badgeText)
@@ -170,18 +188,36 @@ internal sealed class DesktopEditGhostView : Border
         _badgeBorder.IsVisible = !string.IsNullOrWhiteSpace(badgeText);
     }
 
+    public void SetPreviewImage(IImage? image)
+    {
+        _previewImage.Source = image;
+        _hasPreviewImage = image is not null;
+        _previewImage.IsVisible = _hasPreviewImage;
+        _previewOverlay.IsVisible = false;
+        _fallbackCard.IsVisible = !_hasPreviewImage;
+        ApplyShellChrome();
+    }
+
     public void UpdatePreviewMetrics(double width, double height)
     {
         var normalizedWidth = Math.Max(1, width);
         var normalizedHeight = Math.Max(1, height);
         var minSide = Math.Max(1, Math.Min(normalizedWidth, normalizedHeight));
 
-        CornerRadius = new CornerRadius(Math.Clamp(minSide * 0.16, 16, 28));
-        Padding = new Thickness(
-            Math.Clamp(minSide * 0.10, 10, 18),
-            Math.Clamp(minSide * 0.10, 10, 18),
-            Math.Clamp(minSide * 0.10, 10, 18),
-            Math.Clamp(minSide * 0.09, 10, 16));
+        CornerRadius = _hasPreviewImage
+            ? new CornerRadius(Math.Clamp(minSide * 0.14, 14, 24))
+            : new CornerRadius(Math.Clamp(minSide * 0.16, 16, 28));
+        Padding = _hasPreviewImage
+            ? new Thickness(
+                Math.Clamp(minSide * 0.02, 1, 4),
+                Math.Clamp(minSide * 0.02, 1, 4),
+                Math.Clamp(minSide * 0.02, 1, 4),
+                Math.Clamp(minSide * 0.02, 1, 4))
+            : new Thickness(
+                Math.Clamp(minSide * 0.10, 10, 18),
+                Math.Clamp(minSide * 0.10, 10, 18),
+                Math.Clamp(minSide * 0.10, 10, 18),
+                Math.Clamp(minSide * 0.09, 10, 16));
 
         var titleFontSize = Math.Clamp(minSide * 0.12, 12, 18);
         var detailFontSize = Math.Clamp(minSide * 0.085, 10, 13);
@@ -200,29 +236,47 @@ internal sealed class DesktopEditGhostView : Border
 
     public void SetInvalid(bool isInvalid)
     {
+        _isInvalid = isInvalid;
+
         if (isInvalid)
         {
-            Background = _invalidBackgroundBrush;
-            BorderBrush = _invalidBorderBrush;
             _accentDot.Background = _invalidAccentBrush;
             _badgeBorder.Background = _invalidBadgeBackgroundBrush;
             _badgeBorder.BorderBrush = _invalidBadgeBorderBrush;
             _titleTextBlock.Foreground = _invalidBorderBrush;
             _detailTextBlock.Foreground = _invalidBorderBrush;
             _badgeTextBlock.Foreground = _invalidBorderBrush;
-            Opacity = 0.9;
+            if (!_hasPreviewImage)
+            {
+                Background = _invalidBackgroundBrush;
+                BorderBrush = _invalidBorderBrush;
+                BorderThickness = new Thickness(1);
+                Opacity = 0.9;
+            }
+            else
+            {
+                ApplyShellChrome();
+            }
             return;
         }
 
-        Background = _normalBackgroundBrush;
-        BorderBrush = _normalBorderBrush;
         _accentDot.Background = _normalAccentBrush;
         _badgeBorder.Background = _normalBadgeBackgroundBrush;
         _badgeBorder.BorderBrush = _normalBadgeBorderBrush;
         _titleTextBlock.Foreground = _normalTextBrush;
         _detailTextBlock.Foreground = _normalMutedTextBrush;
         _badgeTextBlock.Foreground = _normalTextBrush;
-        Opacity = 1.0;
+        if (!_hasPreviewImage)
+        {
+            Background = _normalBackgroundBrush;
+            BorderBrush = _normalBorderBrush;
+            BorderThickness = new Thickness(1);
+            Opacity = 1.0;
+        }
+        else
+        {
+            ApplyShellChrome();
+        }
     }
 
     public void SetRestingScale(double scale)
@@ -238,4 +292,67 @@ internal sealed class DesktopEditGhostView : Border
         _scaleTransform.ScaleX = clampedScale;
         _scaleTransform.ScaleY = clampedScale;
     }
+
+    internal bool HasPreviewImage => _hasPreviewImage;
+
+    internal void SetScaleTransitionDuration(TimeSpan duration)
+    {
+        _scaleTransform.Transitions = new Transitions
+        {
+            CreateScaleTransition(ScaleTransform.ScaleXProperty, duration),
+            CreateScaleTransition(ScaleTransform.ScaleYProperty, duration)
+        };
+    }
+
+    internal void SetOpacityTransitionDuration(TimeSpan duration)
+    {
+        Transitions = new Transitions
+        {
+            CreateOpacityTransition(duration)
+        };
+    }
+
+    private void ApplyShellChrome()
+    {
+        if (_hasPreviewImage)
+        {
+            Background = Brushes.Transparent;
+            BorderBrush = Brushes.Transparent;
+            BorderThickness = new Thickness(0);
+            BoxShadow = BoxShadows.Parse("0 14 32 #1A000000");
+            Opacity = 1.0;
+            return;
+        }
+
+        BoxShadow = default;
+        if (_isInvalid)
+        {
+            Background = _invalidBackgroundBrush;
+            BorderBrush = _invalidBorderBrush;
+            BorderThickness = new Thickness(1);
+            Opacity = 0.9;
+            return;
+        }
+
+        Background = _normalBackgroundBrush;
+        BorderBrush = _normalBorderBrush;
+        BorderThickness = new Thickness(1);
+        Opacity = 1.0;
+    }
+
+    private static DoubleTransition CreateScaleTransition(AvaloniaProperty property, TimeSpan duration) =>
+        new()
+        {
+            Property = property,
+            Duration = duration,
+            Easing = StandardEasing
+        };
+
+    private static DoubleTransition CreateOpacityTransition(TimeSpan duration) =>
+        new()
+        {
+            Property = Visual.OpacityProperty,
+            Duration = duration,
+            Easing = StandardEasing
+        };
 }

@@ -243,6 +243,15 @@
 
                                 <Canvas x:Name="DesktopEditDragLayer"
                                         IsHitTestVisible="False" />
+
+                                <Canvas x:Name="ComponentPreviewStagingHost"
+                                        Width="1"
+                                        Height="1"
+                                        Opacity="0"
+                                        ClipToBounds="True"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        IsHitTestVisible="False" />
                             </Grid>
                         </Border>
 

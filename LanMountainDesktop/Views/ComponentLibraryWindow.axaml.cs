@@ -14,6 +14,10 @@ public partial class ComponentLibraryWindow : Window
     private IComponentLibraryService? _componentLibraryService;
     private Func<double, ComponentLibraryCreateContext>? _createContextFactory;
     private Func<string, string, string>? _localize;
+    private Func<ComponentLibraryComponentEntry, ComponentPreviewKey>? _previewKeyResolver;
+    private Func<ComponentPreviewKey, ComponentPreviewImageEntry?>? _previewEntryResolver;
+    private Action<ComponentPreviewKey>? _warmPreviewRequested;
+    private Action<ComponentPreviewKey>? _renderPreviewRequested;
     private readonly ComponentLibraryWindowViewModel _viewModel = new();
 
     public ComponentLibraryWindow()
@@ -25,12 +29,20 @@ public partial class ComponentLibraryWindow : Window
     public ComponentLibraryWindow(
         IComponentLibraryService componentLibraryService,
         Func<double, ComponentLibraryCreateContext> createContextFactory,
-        Func<string, string, string> localize)
+        Func<string, string, string> localize,
+        Func<ComponentLibraryComponentEntry, ComponentPreviewKey>? previewKeyResolver = null,
+        Func<ComponentPreviewKey, ComponentPreviewImageEntry?>? previewEntryResolver = null,
+        Action<ComponentPreviewKey>? warmPreviewRequested = null,
+        Action<ComponentPreviewKey>? renderPreviewRequested = null)
         : this()
     {
         _componentLibraryService = componentLibraryService ?? throw new ArgumentNullException(nameof(componentLibraryService));
         _createContextFactory = createContextFactory ?? throw new ArgumentNullException(nameof(createContextFactory));
         _localize = localize ?? throw new ArgumentNullException(nameof(localize));
+        _previewKeyResolver = previewKeyResolver;
+        _previewEntryResolver = previewEntryResolver;
+        _warmPreviewRequested = warmPreviewRequested;
+        _renderPreviewRequested = renderPreviewRequested;
         Reload();
     }
 
@@ -38,9 +50,7 @@ public partial class ComponentLibraryWindow : Window
 
     public void Reload()
     {
-        if (_componentLibraryService is null ||
-            _createContextFactory is null ||
-            _localize is null)
+        if (_componentLibraryService is null || _localize is null)
         {
             return;
         }
@@ -75,32 +85,26 @@ public partial class ComponentLibraryWindow : Window
 
     private ComponentLibraryItemViewModel CreateComponentItem(ComponentLibraryComponentEntry entry)
     {
-        if (_componentLibraryService is null ||
-            _createContextFactory is null ||
-            _localize is null)
+        var displayName = string.IsNullOrWhiteSpace(entry.DisplayNameLocalizationKey)
+            ? entry.DisplayName
+            : _localize?.Invoke(entry.DisplayNameLocalizationKey, entry.DisplayName) ?? entry.DisplayName;
+        var previewKey = ResolvePreviewKey(entry);
+        var previewEntry = _previewEntryResolver?.Invoke(previewKey);
+        var item = new ComponentLibraryItemViewModel(
+            entry.ComponentId,
+            displayName,
+            previewKey,
+            _localize?.Invoke("component_library.preview.loading", "Loading preview...") ?? "Loading preview...",
+            _localize?.Invoke("component_library.preview.unavailable", "Preview unavailable") ?? "Preview unavailable",
+            previewEntry);
+
+        if (previewEntry is null || previewEntry.State == ComponentPreviewImageState.Pending)
         {
-            return new ComponentLibraryItemViewModel(entry.ComponentId, entry.DisplayName, previewControl: null);
+            _warmPreviewRequested?.Invoke(previewKey);
+            _renderPreviewRequested?.Invoke(previewKey);
         }
 
-        Control? previewControl = null;
-        _componentLibraryService.TryCreateControl(
-            entry.ComponentId,
-            _createContextFactory(42),
-            out previewControl,
-            out _);
-
-        if (previewControl is not null)
-        {
-            previewControl.IsHitTestVisible = false;
-            previewControl.Focusable = false;
-        }
-
-        return new ComponentLibraryItemViewModel(
-            entry.ComponentId,
-            string.IsNullOrWhiteSpace(entry.DisplayNameLocalizationKey)
-                ? entry.DisplayName
-                : _localize(entry.DisplayNameLocalizationKey, entry.DisplayName),
-            previewControl);
+        return item;
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -118,6 +122,8 @@ public partial class ComponentLibraryWindow : Window
         {
             _viewModel.Components.Add(component);
         }
+
+        RequestPreviewWarmup(selectedCategory.Components);
     }
 
     private void OnAddComponentClick(object? sender, RoutedEventArgs e)
@@ -138,6 +144,51 @@ public partial class ComponentLibraryWindow : Window
         _ = sender;
         _ = e;
         Hide();
+    }
+
+    public void UpdatePreviewImage(ComponentPreviewImageEntry previewImageEntry)
+    {
+        ArgumentNullException.ThrowIfNull(previewImageEntry);
+
+        foreach (var category in _viewModel.Categories)
+        {
+            foreach (var component in category.Components)
+            {
+                if (component.PreviewKey.Equals(previewImageEntry.Key))
+                {
+                    component.UpdatePreviewImageEntry(previewImageEntry);
+                }
+            }
+        }
+    }
+
+    private ComponentPreviewKey ResolvePreviewKey(ComponentLibraryComponentEntry entry)
+    {
+        if (_previewKeyResolver is not null)
+        {
+            return _previewKeyResolver(entry);
+        }
+
+        return ComponentPreviewKey.ForComponentType(entry.ComponentId, entry.MinWidthCells, entry.MinHeightCells);
+    }
+
+    private void RequestPreviewWarmup(IEnumerable<ComponentLibraryItemViewModel> components)
+    {
+        if (_warmPreviewRequested is null && _renderPreviewRequested is null)
+        {
+            return;
+        }
+
+        foreach (var component in components)
+        {
+            if (!component.IsPreviewPending)
+            {
+                continue;
+            }
+
+            _warmPreviewRequested?.Invoke(component.PreviewKey);
+            _renderPreviewRequested?.Invoke(component.PreviewKey);
+        }
     }
 
     private Symbol ResolveCategoryIcon(string categoryId)

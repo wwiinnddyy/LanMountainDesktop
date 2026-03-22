@@ -14,7 +14,8 @@ namespace LanMountainDesktop.Views;
 
 public partial class MainWindow
 {
-    private static readonly TimeSpan DesktopEditOverlayAnimationDuration = FluttermotionToken.Fast;
+    private static readonly TimeSpan DesktopEditCommitAnimationDuration = FluttermotionToken.Standard;
+    private static readonly TimeSpan DesktopEditCancelAnimationDuration = FluttermotionToken.Fast;
 
     private DesktopEditSession _desktopEditSession;
     private DesktopEditOverlayPresenter? _desktopEditOverlayPresenter;
@@ -328,7 +329,7 @@ public partial class MainWindow
 
                     ResetDesktopEditState();
                 },
-                DesktopEditOverlayAnimationDuration);
+                DesktopEditCancelAnimationDuration);
             return;
         }
 
@@ -369,7 +370,7 @@ public partial class MainWindow
                 RestoreComponentLibraryAfterDesktopEdit();
                 ResetDesktopEditState();
             },
-            DesktopEditOverlayAnimationDuration);
+            DesktopEditCommitAnimationDuration);
     }
 
     private void UpdateDesktopEditSession(Point pointerInViewport)
@@ -707,6 +708,7 @@ public partial class MainWindow
             return;
         }
 
+        QueuePlacementPreviewRefresh(placement);
         PersistSettings();
         TelemetryServices.Usage?.TrackDesktopComponentResized(before, ClonePlacementSnapshot(placement), "component.resize");
     }

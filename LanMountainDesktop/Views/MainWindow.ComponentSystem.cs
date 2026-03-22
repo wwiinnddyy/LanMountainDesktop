@@ -555,7 +555,11 @@ public partial class MainWindow
                     _calculatorDataService,
                     _settingsFacade);
             },
-            L);
+            L,
+            previewKeyResolver: ResolveDetachedLibraryPreviewKey,
+            previewEntryResolver: ResolveDetachedLibraryPreviewEntry,
+            warmPreviewRequested: RequestDetachedLibraryPreviewWarm,
+            renderPreviewRequested: RequestDetachedLibraryPreviewRender);
         window.AddComponentRequested += OnDetachedComponentLibraryAddComponentRequested;
         window.Closed += OnDetachedComponentLibraryClosed;
         return window;
@@ -867,6 +871,7 @@ public partial class MainWindow
 
         _desktopComponentPlacements.Remove(placement);
         _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
+        RemovePlacementPreviewImage(placement.PlacementId);
 
         ClearDesktopComponentSelection();
 
@@ -935,6 +940,7 @@ public partial class MainWindow
         {
             RestoreDesktopPageComponents(placement.PageIndex);
             ApplyTaskbarActionVisibility(GetCurrentTaskbarContext());
+            QueuePlacementPreviewRefresh(placement);
             return;
         }
 
@@ -961,6 +967,8 @@ public partial class MainWindow
         {
             ApplySelectionStateToHost(host, true);
         }
+
+        QueuePlacementPreviewRefresh(placement);
     }
 
     private static void DisposeComponentIfNeeded(Border host)
@@ -1017,6 +1025,7 @@ public partial class MainWindow
             _desktopComponentPlacements.Remove(placement);
             _componentSettingsStore.DeleteForComponent(placement.ComponentId, placement.PlacementId);
         }
+        RemovePlacementPreviewImages(placementsToRemove);
 
         _desktopPageCount = Math.Clamp(_desktopPageCount - 1, MinDesktopPageCount, MaxDesktopPageCount);
         
@@ -1197,6 +1206,7 @@ public partial class MainWindow
         pageGrid.Children.Add(host);
 
         _desktopComponentPlacements.Add(placement);
+        QueuePlacementPreviewRefresh(placement);
         InvalidateDesktopPageAwareComponentContextCache();
         UpdateDesktopPageAwareComponentContext();
         PersistSettings();
@@ -2063,6 +2073,13 @@ public partial class MainWindow
         SetDesktopEditSourceHost(sourceHost, 0.22);
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, widthCells, heightCells, L("component.move", "Move"));
+        ApplyDesktopEditOverlayPreviewImage(placement.ComponentId, placement.PlacementId, widthCells, heightCells);
+        PrimeDesktopEditPreviewImage(
+            placement.ComponentId,
+            placement.PlacementId,
+            placement.PageIndex,
+            widthCells,
+            heightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);
@@ -2109,6 +2126,13 @@ public partial class MainWindow
 
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(componentId, widthCells, heightCells, L("component_library.drag_hint", "Drag to place"));
+        ApplyDesktopEditOverlayPreviewImage(componentId, placementId: null, widthCells, heightCells);
+        PrimeDesktopEditPreviewImage(
+            componentId,
+            placementId: null,
+            _currentDesktopSurfaceIndex,
+            widthCells,
+            heightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(null);
         _desktopEditOverlayPresenter?.SetInvalid(false);
@@ -2216,6 +2240,13 @@ public partial class MainWindow
         SetDesktopEditSourceHost(sourceHost, 0.22);
         EnsureDesktopEditOverlayPresenter();
         UpdateDesktopEditOverlayMetadata(placement.ComponentId, startSpan.WidthCells, startSpan.HeightCells, L("component.resize", "Resize"));
+        ApplyDesktopEditOverlayPreviewImage(placement.ComponentId, placement.PlacementId, startSpan.WidthCells, startSpan.HeightCells);
+        PrimeDesktopEditPreviewImage(
+            placement.ComponentId,
+            placement.PlacementId,
+            placement.PageIndex,
+            startSpan.WidthCells,
+            startSpan.HeightCells);
         _desktopEditOverlayPresenter?.SetPreviewRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetCandidateRect(_desktopEditOriginalRect);
         _desktopEditOverlayPresenter?.SetInvalid(false);
@@ -2484,6 +2515,8 @@ public partial class MainWindow
         {
             ComponentLibraryBackTextBlock.Text = L("common.back", "Back");
         }
+
+        EnsureComponentLibraryPreviewWarmup();
     }
 
     private IReadOnlyList<ComponentLibraryCategory> GetComponentLibraryCategories()
@@ -2659,6 +2692,7 @@ public partial class MainWindow
         var category = _componentLibraryCategories[_componentLibraryCategoryIndex];
         _componentLibraryActiveCategoryId = category.Id;
         _componentLibraryComponentIndex = 0;
+        _ = WarmComponentLibraryCategoryPreviewsAsync(category);
         BuildComponentLibraryComponentPages(category);
         ShowComponentLibraryComponentsView();
     }
@@ -2679,6 +2713,7 @@ public partial class MainWindow
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
+        ClearComponentLibraryPreviewVisualTargets();
         if (componentCount == 0)
         {
             _componentLibraryComponentIndex = 0;
@@ -2752,37 +2787,49 @@ public partial class MainWindow
 
             var previewWidth = previewSpan.WidthCells * previewCellSize;
             var previewHeight = previewSpan.HeightCells * previewCellSize;
-            var renderCellSize = Math.Clamp(previewCellSize * 1.15, 26, 110);
+            var previewKey = CreateComponentTypePreviewKey(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
+            var cachedPreviewImage = ResolveComponentTypePreviewImage(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
 
-            var previewControl = CreateDesktopComponentControl(
-                component.ComponentId,
-                renderCellSize,
-                placementId: null,
-                pageIndex: null,
-                action: "ComponentLibraryPreview");
-            if (previewControl is null)
-            {
-                continue;
-            }
-            // Component library previews must stay non-interactive so drag gesture is reliable.
-            previewControl.IsHitTestVisible = false;
-            previewControl.Focusable = false;
-
-            var previewSurface = new Border
-            {
-                Width = previewSpan.WidthCells * renderCellSize,
-                Height = previewSpan.HeightCells * renderCellSize,
-                Background = Brushes.Transparent,
-                IsHitTestVisible = false,
-                Child = previewControl
-            };
-
-            var previewViewbox = new Viewbox
+            var previewImage = new Image
             {
                 Width = previewWidth,
                 Height = previewHeight,
                 Stretch = Stretch.Uniform,
-                Child = previewSurface
+                Source = cachedPreviewImage,
+                IsVisible = cachedPreviewImage is not null,
+                IsHitTestVisible = false
+            };
+
+            var previewFallback = new Border
+            {
+                Width = previewWidth,
+                Height = previewHeight,
+                Background = GetThemeBrush("AdaptiveCardBackgroundBrush"),
+                BorderBrush = GetThemeBrush("AdaptiveButtonBorderBrush"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(Math.Clamp(Math.Min(previewWidth, previewHeight) * 0.18, 12, 28)),
+                IsVisible = cachedPreviewImage is null,
+                Child = new TextBlock
+                {
+                    Text = L("component_library.preview_loading", "Preparing preview"),
+                    FontSize = 11,
+                    Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            RegisterComponentLibraryPreviewVisual(previewKey, previewImage, previewFallback);
+
+            var previewSurface = new Grid
+            {
+                Width = previewWidth,
+                Height = previewHeight,
+                IsHitTestVisible = false,
+                Children =
+                {
+                    previewImage,
+                    previewFallback
+                }
             };
 
             var previewBorder = new Border
@@ -2792,7 +2839,7 @@ public partial class MainWindow
                 ClipToBounds = false,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Child = previewViewbox,
+                Child = previewSurface,
                 Tag = component.ComponentId
             };
             previewBorder.PointerPressed += OnComponentLibraryComponentPreviewPointerPressed;
@@ -2832,6 +2879,15 @@ public partial class MainWindow
             Grid.SetRow(page, 0);
             Grid.SetColumn(page, i);
             ComponentLibraryComponentPagesContainer.Children.Add(page);
+
+            if (cachedPreviewImage is null)
+            {
+                _ = EnsureComponentTypePreviewImageAsync(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
+            }
+            else
+            {
+                ApplyPreviewEntryToEmbeddedVisuals(previewKey);
+            }
         }
 
         _componentLibraryComponentHostTransform = ComponentLibraryComponentPagesHost.RenderTransform as TranslateTransform;
@@ -2856,6 +2912,7 @@ public partial class MainWindow
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
+        ClearComponentLibraryPreviewVisualTargets();
     }
 
     private string GetLocalizedComponentDisplayName(ComponentLibraryComponentEntry component)
