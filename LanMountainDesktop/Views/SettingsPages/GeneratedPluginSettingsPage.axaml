@@ -4,7 +4,7 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.GeneratedPluginSettingsPage"
              x:DataType="vm:PluginGeneratedSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
             <TextBlock Classes="settings-section-title"
                        Text="{Binding Title}" />
             <TextBlock x:Name="DescriptionTextBlock"

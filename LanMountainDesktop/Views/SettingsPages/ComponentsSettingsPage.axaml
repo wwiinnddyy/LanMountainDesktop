@@ -7,7 +7,7 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.ComponentsSettingsPage"
              x:DataType="vm:ComponentsSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
             <controls:IconText Icon="Apps"
                                Text="{Binding ComponentsHeader}"
                                Margin="0,0,0,4" />

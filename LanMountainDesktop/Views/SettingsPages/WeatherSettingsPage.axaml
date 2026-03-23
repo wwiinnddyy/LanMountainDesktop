@@ -8,7 +8,7 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.WeatherSettingsPage"
              x:DataType="vm:WeatherSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
 
             <Border Classes="settings-section-card">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="18">

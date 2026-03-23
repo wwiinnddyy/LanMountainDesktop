@@ -563,10 +563,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         {
             return;
         }
-
-        TogglePaneButtonIcon.Icon = RootNavigationView.IsPaneOpen
-            ? FluentIcons.Common.Icon.PanelLeftContract
-            : FluentIcons.Common.Icon.PanelLeftExpand;
     }
 
     private void UpdateChromeMetrics()

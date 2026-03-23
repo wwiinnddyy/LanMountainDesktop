@@ -25,6 +25,7 @@
         <StyleInclude Source="avares://LanMountainDesktop/Styles/GlassModule.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsAnimations.axaml" />
         <StyleInclude Source="avares://LanMountainDesktop/Styles/SettingsCardStyles.axaml" />
+        <StyleInclude Source="avares://LanMountainDesktop/Styles/NavigationStyles.axaml" />
 
         <Style Selector="Window">
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />

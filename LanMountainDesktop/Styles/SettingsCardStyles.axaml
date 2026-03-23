@@ -1,12 +1,41 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
-        xmlns:fi="using:FluentIcons.Avalonia.Fluent">
+        xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+        xmlns:behaviors="using:LanMountainDesktop.Behaviors">
 
     <Style Selector="StackPanel.settings-page-container">
         <Setter Property="Spacing" Value="0" />
         <Setter Property="Margin" Value="0,12,0,24" />
         <Setter Property="MaxWidth" Value="{DynamicResource SettingsContainerMaxWidth}" />
+    </Style>
+
+    <Style Selector="StackPanel.settings-page-animated">
+        <Setter Property="behaviors:PanelIntroAnimationBehavior.IsEnabled" Value="True" />
+        <Style Selector="^ > :is(Control)[(behaviors|PanelIntroAnimationBehavior.CanPlayAnimation)=True]">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="20" />
+                </Setter.Value>
+            </Setter>
+            <Style Selector="^[(behaviors|PanelIntroAnimationBehavior.IsAnimationPlayed)=True]">
+                <Style.Animations>
+                    <Animation Duration="0:0:0.55"
+                               FillMode="Both"
+                               Easing="0.05, 0.75, 0.10, 1.00">
+                        <KeyFrame Cue="0%">
+                            <Setter Property="Opacity" Value="0" />
+                            <Setter Property="TranslateTransform.Y" Value="20" />
+                        </KeyFrame>
+                        <KeyFrame Cue="100%">
+                            <Setter Property="Opacity" Value="1" />
+                            <Setter Property="TranslateTransform.Y" Value="0" />
+                        </KeyFrame>
+                    </Animation>
+                </Style.Animations>
+            </Style>
+        </Style>
     </Style>
 
     <Style Selector="TextBlock.settings-section-title">
@@ -39,10 +68,10 @@
             <Transitions>
                 <BrushTransition Property="Background"
                                  Duration="{StaticResource FluttermotionToken.Duration.Standard}"
-                                 Easing="0.22,1,0.36,1" />
+                                 Easing="0.05,0.75,0.10,1.00" />
                 <BoxShadowsTransition Property="BoxShadow"
                                       Duration="{StaticResource FluttermotionToken.Duration.Fast}"
-                                      Easing="0.22,1,0.36,1" />
+                                      Easing="0.05,0.75,0.10,1.00" />
             </Transitions>
         </Setter>
     </Style>

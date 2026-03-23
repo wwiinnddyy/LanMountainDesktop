@@ -1,4 +1,4 @@
-﻿<Styles xmlns="https://github.com/avaloniaui"
+<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="using:LanMountainDesktop.Behaviors">
 
@@ -16,17 +16,17 @@
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransform">
                 <Setter.Value>
-                    <TranslateTransform Y="14" />
+                    <TranslateTransform Y="24" />
                 </Setter.Value>
             </Setter>
             <Style Selector="^[(behaviors|PanelIntroAnimationBehavior.IsAnimationPlayed)=True]">
                 <Style.Animations>
-                    <Animation Duration="{StaticResource FluttermotionToken.Duration.Intro}"
+                    <Animation Duration="0:0:0.65"
                                FillMode="Both"
-                               Easing="0.22,1,0.36,1">
+                               Easing="0.05, 0.75, 0.10, 1.00">
                         <KeyFrame Cue="0%">
                             <Setter Property="Opacity" Value="0" />
-                            <Setter Property="TranslateTransform.Y" Value="14" />
+                            <Setter Property="TranslateTransform.Y" Value="24" />
                         </KeyFrame>
                         <KeyFrame Cue="100%">
                             <Setter Property="Opacity" Value="1" />
@@ -53,9 +53,9 @@
         <Setter Property="MinHeight" Value="34" />
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
-                <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
+                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
+                <BrushTransition Property="BorderBrush" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
             </Transitions>
         </Setter>
     </Style>
@@ -74,8 +74,8 @@
     <Style Selector=".settings-scope ComboBox">
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.22,1,0.36,1" />
+                <BrushTransition Property="Background" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.05,0.75,0.10,1.00" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Fast}" Easing="0.05,0.75,0.10,1.00" />
             </Transitions>
         </Setter>
     </Style>
@@ -87,8 +87,8 @@
     <Style Selector=".settings-scope ToggleSwitch">
         <Setter Property="Transitions">
             <Transitions>
-                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.22,1,0.36,1" />
+                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource FluttermotionToken.Duration.Standard}" Easing="0.05,0.75,0.10,1.00" />
             </Transitions>
         </Setter>
     </Style>

@@ -7,7 +7,7 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.GeneralSettingsPage"
              x:DataType="vm:GeneralSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
 
             <!-- 区域设置分组 -->
             <controls:IconText Icon="Globe"

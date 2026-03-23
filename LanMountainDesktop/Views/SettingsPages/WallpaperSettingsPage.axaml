@@ -7,7 +7,7 @@
              x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage"
              x:DataType="vm:WallpaperSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
 
             <!-- 预览与颜色选择区域 -->
             <Grid ColumnDefinitions="*,*" ColumnSpacing="32" Margin="0,0,0,32">

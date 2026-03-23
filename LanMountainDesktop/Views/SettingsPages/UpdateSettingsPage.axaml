@@ -36,7 +36,7 @@
     </UserControl.Styles>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="settings-page-container">
+        <StackPanel Classes="settings-page-container settings-page-animated">
             <TextBlock Classes="settings-section-title"
                        Text="{Binding PageTitle}" />
             <TextBlock Classes="settings-section-description"
