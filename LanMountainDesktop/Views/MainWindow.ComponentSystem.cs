@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
@@ -10,6 +11,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using FluentAvalonia.UI.Controls;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
@@ -22,6 +24,8 @@ using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 using PathShape = Avalonia.Controls.Shapes.Path;
+using Symbol = FluentIcons.Common.Symbol;
+using SymbolIcon = FluentIcons.Avalonia.SymbolIcon;
 
 namespace LanMountainDesktop.Views;
 
@@ -826,7 +830,7 @@ public partial class MainWindow
                 AddDesktopPage();
                 break;
             case "desktop.delete_page":
-                DeleteCurrentDesktopPage();
+                ConfirmAndDeleteCurrentDesktopPage();
                 break;
             case "component.delete":
                 DeleteSelectedComponent();
@@ -837,6 +841,29 @@ public partial class MainWindow
             case "launcher.hide":
                 HideSelectedLauncherEntry();
                 break;
+        }
+    }
+
+    private async void ConfirmAndDeleteCurrentDesktopPage()
+    {
+        if (_desktopPageCount <= MinDesktopPageCount)
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = L("desktop.delete_page_confirm.title", "确认删除页面"),
+            Content = L("desktop.delete_page_confirm.message", "确定要删除当前页面吗？\n\n此操作将删除当前页面上的所有组件，且无法撤销。"),
+            PrimaryButtonText = L("desktop.delete_page_confirm.close", "取消"),
+            SecondaryButtonText = L("desktop.delete_page_confirm.primary", "删除"),
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        var result = await dialog.ShowAsync(this);
+        if (result == ContentDialogResult.Secondary)
+        {
+            DeleteCurrentDesktopPage();
         }
     }
 
