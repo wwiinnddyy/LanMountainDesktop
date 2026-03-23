@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -552,7 +552,6 @@ public partial class MainWindow
         {
             if (node is Control control)
             {
-                // Avoid swiping pages when interacting with desktop components/widgets.
                 if (control.Classes.Contains("desktop-component") ||
                     control.Classes.Contains("desktop-component-host"))
                 {
@@ -560,7 +559,31 @@ public partial class MainWindow
                 }
             }
 
-            if (node is Button or TextBox or ComboBox or ListBoxItem or Slider or ToggleSwitch)
+            if (node is Button button && IsLauncherTileButton(button))
+            {
+                continue;
+            }
+
+            if (node is TextBox or ComboBox or ListBoxItem or Slider or ToggleSwitch)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsLauncherTileButton(Button? button)
+    {
+        if (button is null)
+        {
+            return false;
+        }
+
+        foreach (var node in button.GetSelfAndVisualAncestors())
+        {
+            if (node is WrapPanel panel &&
+                (panel.Name == "LauncherRootTilePanel" || panel.Name == "LauncherFolderTilePanel"))
             {
                 return true;
             }
@@ -611,7 +634,17 @@ public partial class MainWindow
 
     private static bool IsDesktopSwipeBlockingNode(object node)
     {
-        if (node is Button or TextBox or ComboBox or Slider or ToggleSwitch or ListBoxItem or ScrollViewer)
+        if (node is ScrollViewer scrollViewer && IsLauncherScrollViewer(scrollViewer))
+        {
+            return false;
+        }
+
+        if (node is Button button && IsLauncherTileButton(button))
+        {
+            return false;
+        }
+
+        if (node is TextBox or ComboBox or Slider or ToggleSwitch or ListBoxItem)
         {
             return true;
         }
@@ -625,11 +658,21 @@ public partial class MainWindow
         }
 
         var typeName = node.GetType().Name;
-        return typeName.Contains("Button", StringComparison.OrdinalIgnoreCase) ||
-               typeName.Contains("WebView", StringComparison.OrdinalIgnoreCase) ||
+        return typeName.Contains("WebView", StringComparison.OrdinalIgnoreCase) ||
                typeName.Contains("ScrollBar", StringComparison.OrdinalIgnoreCase) ||
                typeName.Contains("NumericUpDown", StringComparison.OrdinalIgnoreCase) ||
                typeName.Contains("TextPresenter", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLauncherScrollViewer(ScrollViewer? scrollViewer)
+    {
+        if (scrollViewer is null)
+        {
+            return false;
+        }
+
+        return scrollViewer.Name == "LauncherRootScrollViewer" ||
+               scrollViewer.Name == "LauncherFolderScrollViewer";
     }
 
     private bool TryGetPointerPositionInDesktopViewport(PointerEventArgs e, out Point point)
