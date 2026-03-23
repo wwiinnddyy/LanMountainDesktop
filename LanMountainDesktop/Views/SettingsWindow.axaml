@@ -36,7 +36,8 @@
         </Style>
     </Window.Styles>
 
-    <Grid Classes="settings-scope"
+    <Grid x:Name="RootGrid"
+          Classes="settings-scope"
           Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
           RowDefinitions="Auto,*">
         <Border x:Name="WindowTitleBarHost"

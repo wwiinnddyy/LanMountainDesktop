@@ -32,7 +32,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly IAppLogoService _appLogoService = HostAppLogoProvider.GetOrCreate();
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
-    private readonly bool _useSystemChrome;
+    private bool _useSystemChrome;
     private bool _isResponsiveRefreshPending;
     private bool _isRestartPromptVisible;
 
@@ -152,12 +152,19 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
     public void ApplyChromeMode(bool useSystemChrome)
     {
-        if (useSystemChrome || OperatingSystem.IsMacOS())
+        _useSystemChrome = useSystemChrome || OperatingSystem.IsMacOS();
+
+        if (_useSystemChrome)
         {
             ExtendClientAreaToDecorationsHint = true;
             ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.PreferSystemChrome;
             ExtendClientAreaTitleBarHeightHint = -1;
             SystemDecorations = SystemDecorations.Full;
+
+            if (WindowTitleBarHost is { })
+            {
+                WindowTitleBarHost.IsVisible = false;
+            }
             return;
         }
 
@@ -165,6 +172,11 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         ExtendClientAreaToDecorationsHint = true;
         ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
         ExtendClientAreaTitleBarHeightHint = 48;
+
+        if (WindowTitleBarHost is { })
+        {
+            WindowTitleBarHost.IsVisible = true;
+        }
     }
 
     public void RefreshShellText()
