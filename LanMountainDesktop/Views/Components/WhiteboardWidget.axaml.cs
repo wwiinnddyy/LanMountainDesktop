@@ -40,6 +40,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
     private bool? _isNightModeApplied;
     private SKColor _selectedInkColor = SKColors.Black;
+    private float _selectedInkThickness = 2.5f;
     private string _componentId = BuiltInComponentIds.DesktopWhiteboard;
     private string _placementId = string.Empty;
     private int _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
@@ -81,6 +82,11 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
                 _selectedInkColor.Green,
                 _selectedInkColor.Blue);
         }
+
+        if (InkThicknessSlider is not null)
+        {
+            InkThicknessSlider.Value = _selectedInkThickness;
+        }
     }
 
     public int NoteRetentionDays => _noteRetentionDays;
@@ -111,7 +117,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         InkCanvas.EditingMode = InkCanvasEditingMode.Ink;
         var settings = InkCanvas.AvaloniaSkiaInkCanvas.Settings;
         settings.IgnorePressure = true;
-        settings.InkThickness = 2.5f;
+        settings.InkThickness = _selectedInkThickness;
         settings.EraserSize = new Size(20, 20);
         settings.IsBitmapCacheEnabled = true;
         settings.MaxBitmapCacheSize = 2048;
@@ -149,7 +155,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
 
         var settings = InkCanvas.AvaloniaSkiaInkCanvas.Settings;
-        settings.InkThickness = (float)Math.Clamp(_currentCellSize * 0.06, 2.0, 6.0);
         var eraserSize = Math.Clamp(_currentCellSize * 0.42, 12, 44);
         settings.EraserSize = new Size(eraserSize, eraserSize);
     }
@@ -351,6 +356,15 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         RefreshToolButtonVisuals();
     }
 
+    private void SetInkThickness(float thickness)
+    {
+        _selectedInkThickness = Math.Clamp(thickness, 1.0f, 8.0f);
+        if (_toolMode == WhiteboardToolMode.Pen)
+        {
+            InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkThickness = _selectedInkThickness;
+        }
+    }
+
     private void RefreshToolButtonVisuals()
     {
         var isNightMode = _isNightModeApplied ?? ResolveIsNightMode();
@@ -416,6 +430,11 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     {
         var color = e.NewColor;
         SetInkColor(new SKColor(color.R, color.G, color.B, color.A));
+    }
+
+    private void OnInkThicknessSliderValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    {
+        SetInkThickness((float)e.NewValue);
     }
 
     private void OnEraserButtonClick(object? sender, RoutedEventArgs e)

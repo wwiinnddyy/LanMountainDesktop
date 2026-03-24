@@ -98,17 +98,34 @@
                PlacementTarget="{Binding #PenButton}"
                IsLightDismissEnabled="True"
                WindowManagerAddShadowHint="False">
-            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+            <Border Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="12">
-                <ColorView x:Name="InkColorPicker"
-                           IsAlphaEnabled="False"
-                           IsColorSpectrumVisible="True"
-                           IsColorPaletteVisible="True"
-                           IsHexInputVisible="True"
-                           ColorChanged="OnColorPickerColorChanged" />
+                <StackPanel Spacing="12">
+                    <ColorView x:Name="InkColorPicker"
+                               IsAlphaEnabled="False"
+                               IsColorSpectrumVisible="True"
+                               IsColorPaletteVisible="True"
+                               IsHexInputVisible="True"
+                               ColorChanged="OnColorPickerColorChanged" />
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   Text="粗细"
+                                   VerticalAlignment="Center"
+                                   FontSize="12" />
+                        <Slider x:Name="InkThicknessSlider"
+                                Grid.Column="1"
+                                Minimum="1"
+                                Maximum="8"
+                                Value="2.5"
+                                SmallChange="0.5"
+                                LargeChange="1"
+                                ValueChanged="OnInkThicknessSliderValueChanged" />
+                    </Grid>
+                </StackPanel>
             </Border>
         </Popup>
     </Grid>
