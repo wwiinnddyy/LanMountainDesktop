@@ -429,6 +429,10 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.ifeng_news",
                     () => new IfengNewsWidget()),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopJuyaNews,
+                    "component.juya_news",
+                    () => new JuyaNewsWidget()),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBilibiliHotSearch,
                     "component.bilibili_hot_search",
                     () => new BilibiliHotSearchWidget()),

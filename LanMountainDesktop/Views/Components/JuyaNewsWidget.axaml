@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="640"
+             d:DesignHeight="640"
+             x:Class="LanMountainDesktop.Views.Components.JuyaNewsWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="24"
+            Background="Transparent"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Padding="0">
+        <Grid>
+            <Border x:Name="CardBorder"
+                    Background="#fefefe"
+                    CornerRadius="24"
+                    BorderBrush="Transparent"
+                    BorderThickness="0"
+                    Padding="16,14,16,14">
+                <Grid x:Name="ContentGrid"
+                      RowDefinitions="Auto,*">
+                    
+                    <!-- Header -->
+                    <Grid x:Name="HeaderGrid"
+                          Grid.Row="0"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10"
+                          Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                            <Border x:Name="AvatarBorder"
+                                    Width="36"
+                                    Height="36"
+                                    CornerRadius="18"
+                                    ClipToBounds="True"
+                                    Background="#f8f5ec">
+                                <Image x:Name="AvatarImage"
+                                       Source="avares://LanMountainDesktop/Assets/juya_avatar.jpg"
+                                       Stretch="UniformToFill"/>
+                            </Border>
+                            <TextBlock x:Name="BrandTextBlock"
+                                       Text="橘鸦Juya"
+                                       Foreground="#bb5649"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <Button x:Name="RefreshButton"
+                                Grid.Column="1"
+                                Padding="8,4"
+                                CornerRadius="8"
+                                Background="Transparent"
+                                BorderBrush="#bb5649"
+                                BorderThickness="1"
+                                Foreground="#bb5649"
+                                Focusable="False"
+                                ToolTip.Tip="刷新新闻"
+                                Click="OnRefreshButtonClick">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <fi:SymbolIcon Symbol="ArrowSync"
+                                               IconVariant="Regular"
+                                               FontSize="14"
+                                               Foreground="#bb5649" />
+                                <TextBlock Text="刷新"
+                                           FontSize="13"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- 滚动内容区 -->
+                    <ScrollViewer x:Name="ContentScrollViewer"
+                                  Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  ScrollChanged="OnScrollChanged">
+                        <StackPanel x:Name="NewsStackPanel" Spacing="16">
+                            
+                            <!-- 加载提示 -->
+                            <TextBlock x:Name="LoadingTextBlock"
+                                       Text="正在加载..."
+                                       Foreground="#757575"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       IsVisible="False" />
+                            
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusTextBlock"
+                       IsVisible="False"
+                       Text="Loading"
+                       Foreground="#757575"
+                       FontSize="16"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

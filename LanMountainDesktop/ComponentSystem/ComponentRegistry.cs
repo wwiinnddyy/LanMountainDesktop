@@ -262,6 +262,16 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopJuyaNews,
+                "橘鸦早报",
+                "News",
+                "Info",
+                MinWidthCells: 4,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopBilibiliHotSearch,
                 "Bilibili Hot Search",
                 "News",

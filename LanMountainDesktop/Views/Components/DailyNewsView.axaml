@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.Components.DailyNewsView">
+    
+    <UserControl.Styles>
+        <Style Selector="Button.link-button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Styles>
+    
+    <StackPanel x:Name="RootStackPanel" Spacing="16">
+        <Border x:Name="CoverImageBorder"
+                CornerRadius="12"
+                ClipToBounds="True"
+                Background="#f8f5ec"
+                PointerPressed="OnCoverImagePointerPressed"
+                Cursor="Hand">
+            <Image x:Name="CoverImage"
+                   Stretch="UniformToFill"/>
+        </Border>
+        
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="DateTextBlock"
+                       Grid.Column="0"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="#bb5649"
+                       VerticalAlignment="Center"/>
+            
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center">
+                <Button x:Name="BilibiliButton"
+                        Classes="link-button"
+                        Width="32"
+                        Height="32"
+                        Padding="0"
+                        CornerRadius="16"
+                        Background="#FB7299"
+                        Cursor="Hand"
+                        Click="OnBilibiliButtonClick"
+                        ToolTip.Tip="观看视频版">
+                    <Path Stretch="Uniform"
+                          Width="18"
+                          Height="18"
+                          Fill="White"
+                          Data="M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v7.36c-.036 1.51-.556 2.769-1.56 3.773s-2.262 1.524-3.773 1.56H5.333c-1.51-.036-2.769-.556-3.773-1.56S.036 18.858 0 17.347v-7.36c.036-1.511.556-2.765 1.56-3.76 1.004-.996 2.262-1.52 3.773-1.574h.774l-1.174-1.12a1.234 1.234 0 0 1-.373-.906c0-.356.124-.658.373-.907l.027-.027c.267-.249.573-.373.92-.373.347 0 .653.124.92.373L9.653 4.44c.071.071.134.142.187.213h4.267a.836.836 0 0 1 .16-.213l2.853-2.747c.267-.249.573-.373.92-.373.347 0 .662.151.929.4.267.249.391.551.391.907 0 .355-.124.657-.373.906zM5.333 7.24c-.746.018-1.373.276-1.88.773-.506.498-.769 1.13-.786 1.894v7.52c.017.764.28 1.395.786 1.893.507.498 1.134.756 1.88.773h13.334c.746-.017 1.373-.275 1.88-.773.506-.498.769-1.129.786-1.893v-7.52c-.017-.765-.28-1.396-.786-1.894-.507-.497-1.134-.755-1.88-.773zM8 11.107c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c0-.373.129-.689.386-.947.258-.257.574-.386.947-.386zm8 0c.373 0 .684.124.933.373.25.249.383.569.4.96v1.173c-.017.391-.15.711-.4.96-.249.25-.56.374-.933.374s-.684-.125-.933-.374c-.25-.249-.383-.569-.4-.96V12.44c.017-.391.15-.711.4-.96.249-.249.56-.373.933-.373Z"/>
+                </Button>
+                
+                <Button x:Name="WechatButton"
+                        Classes="link-button"
+                        Width="32"
+                        Height="32"
+                        Padding="0"
+                        CornerRadius="16"
+                        Background="#07C160"
+                        Cursor="Hand"
+                        Click="OnWechatButtonClick"
+                        ToolTip.Tip="阅读原文">
+                    <Path Stretch="Uniform"
+                          Width="18"
+                          Height="18"
+                          Fill="White"
+                          Data="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+        
+        <Border x:Name="OverviewBorder"
+                Background="#f8f5ec"
+                CornerRadius="8"
+                Padding="12"
+                Margin="0,0,0,8">
+            <StackPanel x:Name="OverviewStackPanel" Spacing="12"/>
+        </Border>
+        
+        <Button x:Name="ShowMoreButton"
+                Content="展开更多新闻 ▼"
+                FontSize="14"
+                Padding="16,8"
+                CornerRadius="8"
+                Background="Transparent"
+                BorderBrush="#bb5649"
+                BorderThickness="1"
+                Foreground="#bb5649"
+                Cursor="Hand"
+                Click="OnShowMoreButtonClick"/>
+        
+        <StackPanel x:Name="DetailedNewsStackPanel"
+                    Spacing="16"
+                    IsVisible="False"/>
+        
+        <Border x:Name="DateSeparatorBorder"
+                Height="1"
+                Background="#e6e6e6"
+                Margin="0,8,0,0"/>
+    </StackPanel>
+</UserControl>
