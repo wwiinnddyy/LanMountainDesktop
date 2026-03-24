@@ -625,17 +625,18 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     {
         var scale = ResolveScale();
         var totalWidth = Bounds.Width > 1 ? Bounds.Width : _currentCellSize * BaseWidthCells;
+        var totalHeight = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * BaseHeightCells;
 
         var unifiedMainRectangle = ResolveUnifiedMainRectangle();
         RootBorder.CornerRadius = unifiedMainRectangle;
         RootBorder.Padding = new Thickness(0);
 
+        var horizontalPadding = Math.Clamp(16 * scale, 8, 24);
+        var verticalPadding = Math.Clamp(14 * scale, 7, 22);
         CardBorder.CornerRadius = unifiedMainRectangle;
-        CardBorder.Padding = new Thickness(
-            Math.Clamp(16 * scale, 8, 24),
-            Math.Clamp(14 * scale, 7, 22),
-            Math.Clamp(16 * scale, 8, 24),
-            Math.Clamp(14 * scale, 7, 22));
+        CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+
+        var innerWidth = Math.Max(100, totalWidth - horizontalPadding * 2);
 
         var headlineFont = Math.Clamp(24 * scale, 12, 34);
         BrandPrimaryTextBlock.FontSize = headlineFont;
@@ -649,7 +650,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         RefreshGlyphIcon.FontSize = Math.Clamp(19 * scale, 11, 24);
         RefreshLabelTextBlock.FontSize = Math.Clamp(22 * scale, 11, 29);
 
-        var imageWidth = Math.Clamp(totalWidth * 0.20, 60, 170);
+        var imageWidth = Math.Clamp(innerWidth * 0.22, 60, 170);
         var imageHeight = Math.Clamp(imageWidth * 0.56, 38, 94);
         News1ImageHost.Width = imageWidth;
         News1ImageHost.Height = imageHeight;
@@ -657,6 +658,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         News2ImageHost.Height = imageHeight;
         News1ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
         News2ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
+        News1ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
+        News2ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
 
         var columnGap = Math.Clamp(12 * scale, 6, 18);
         NewsItem1Grid.ColumnSpacing = columnGap;
@@ -664,24 +667,28 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         NewsItem1Grid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
         NewsItem2Grid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
 
-        var availableTextWidth = Math.Max(
-            84,
-            totalWidth - imageWidth - columnGap - Math.Clamp(20 * scale, 10, 32));
+        var availableTextWidth = Math.Max(80, innerWidth - imageWidth - columnGap);
         News1TitleTextBlock.MaxWidth = availableTextWidth;
         News2TitleTextBlock.MaxWidth = availableTextWidth;
 
         var newsFont = Math.Clamp(21 * scale, 10.5, 28);
         News1TitleTextBlock.FontSize = newsFont;
         News2TitleTextBlock.FontSize = newsFont;
-        var mainNewsLineHeight = newsFont * 1.14;
+        var mainNewsLineHeight = newsFont * 1.2;
         News1TitleTextBlock.LineHeight = mainNewsLineHeight;
         News2TitleTextBlock.LineHeight = mainNewsLineHeight;
-        var mainNewsMinHeight = mainNewsLineHeight * 2;
+        var mainNewsMinHeight = mainNewsLineHeight * 2.2;
         News1TitleTextBlock.MinHeight = mainNewsMinHeight;
         News2TitleTextBlock.MinHeight = mainNewsMinHeight;
         StatusTextBlock.FontSize = Math.Clamp(16 * scale, 9, 24);
         News1TitleTextBlock.MaxLines = 2;
         News2TitleTextBlock.MaxLines = 2;
+
+        var rowSpacing = Math.Clamp(8 * scale, 4, 14);
+        if (ContentGrid is Grid contentGrid && contentGrid.RowDefinitions.Count >= 4)
+        {
+            contentGrid.RowSpacing = rowSpacing;
+        }
 
         foreach (var row in _extraNewsRows)
         {
@@ -694,11 +701,12 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             row.ImageHost.Width = imageWidth;
             row.ImageHost.Height = imageHeight;
             row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
+            row.ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
 
             row.TitleTextBlock.MaxWidth = availableTextWidth;
             row.TitleTextBlock.FontSize = Math.Clamp(19 * scale, 10, 25);
-            row.TitleTextBlock.LineHeight = row.TitleTextBlock.FontSize * 1.12;
-            row.TitleTextBlock.MinHeight = row.TitleTextBlock.LineHeight * 2;
+            row.TitleTextBlock.LineHeight = row.TitleTextBlock.FontSize * 1.2;
+            row.TitleTextBlock.MinHeight = row.TitleTextBlock.LineHeight * 2.2;
             row.TitleTextBlock.MaxLines = 2;
         }
 

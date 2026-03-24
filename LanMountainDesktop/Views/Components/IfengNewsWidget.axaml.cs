@@ -36,7 +36,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private const double BaseCellSize = 48d;
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 4;
-    private const int MaxDisplayItemCount = 4;
+    private const int MaxDisplayItemCount = 12;
     private static readonly IReadOnlyList<int> SupportedAutoRefreshIntervalsMinutes = RefreshIntervalCatalog.SupportedIntervalsMinutes;
 
     private readonly DispatcherTimer _refreshTimer = new()
@@ -47,9 +47,9 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
-    private readonly List<DailyNewsItemSnapshot> _activeItems = [];
-    private readonly List<NewsItemVisual> _itemVisuals = [];
-    private readonly Bitmap?[] _newsBitmaps = new Bitmap?[MaxDisplayItemCount];
+    private readonly Dictionary<string, DailyNewsItemSnapshot> _newsByUrl = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<NewsItemControl> _itemControls = [];
+    private readonly Dictionary<string, Bitmap> _imageCache = new();
 
     private IRecommendationInfoService _recommendationService = DefaultRecommendationService;
     private CancellationTokenSource? _refreshCts;
@@ -61,28 +61,13 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     private bool _autoRefreshEnabled = true;
     private bool _isNightVisual = true;
 
-    private sealed record NewsItemVisual(
-        Border Host,
-        Grid RowGrid,
-        TextBlock TitleTextBlock,
-        Border ImageHost,
-        Image ImageControl);
-
     public IfengNewsWidget()
     {
         InitializeComponent();
 
         BrandTextBlock.FontFamily = MiSansFontFamily;
-        NewsItem1TextBlock.FontFamily = MiSansFontFamily;
-        NewsItem2TextBlock.FontFamily = MiSansFontFamily;
-        NewsItem3TextBlock.FontFamily = MiSansFontFamily;
-        NewsItem4TextBlock.FontFamily = MiSansFontFamily;
         StatusTextBlock.FontFamily = MiSansFontFamily;
-
-        _itemVisuals.Add(new NewsItemVisual(NewsItem1Host, NewsItem1Grid, NewsItem1TextBlock, NewsItem1ImageHost, NewsItem1Image));
-        _itemVisuals.Add(new NewsItemVisual(NewsItem2Host, NewsItem2Grid, NewsItem2TextBlock, NewsItem2ImageHost, NewsItem2Image));
-        _itemVisuals.Add(new NewsItemVisual(NewsItem3Host, NewsItem3Grid, NewsItem3TextBlock, NewsItem3ImageHost, NewsItem3Image));
-        _itemVisuals.Add(new NewsItemVisual(NewsItem4Host, NewsItem4Grid, NewsItem4TextBlock, NewsItem4ImageHost, NewsItem4Image));
+        LoadingTextBlock.FontFamily = MiSansFontFamily;
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -135,7 +120,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         _isAttached = false;
         _refreshTimer.Stop();
         CancelRefreshRequest();
-        DisposeNewsBitmaps();
+        DisposeImageCache();
         UpdateRefreshButtonState();
     }
 
@@ -191,18 +176,19 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         CardBorder.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#1B2129") : Color.Parse("#FCFCFD"));
         RootBorder.BorderBrush = new SolidColorBrush(_isNightVisual ? Color.Parse("#33FFFFFF") : Color.Parse("#00000000"));
 
-        BrandTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+        BrandTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B5A") : Color.Parse("#E24B2D"));
+        NewsBadge.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#FF6B5A") : Color.Parse("#E24B2D"));
 
         RefreshButton.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#EFF1F5"));
         RefreshGlyphIcon.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#A8B1C2") : Color.Parse("#5E6671"));
 
-        foreach (var visual in _itemVisuals)
-        {
-            visual.Host.Background = Brushes.Transparent;
-            visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
-        }
-
         StatusTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+        LoadingTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#8B95A5") : Color.Parse("#6A6F77"));
+
+        foreach (var control in _itemControls)
+        {
+            control.ApplyNightMode(_isNightVisual);
+        }
     }
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
@@ -214,22 +200,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     {
         _ = sender;
         await RefreshNewsAsync(forceRefresh: true);
-        e.Handled = true;
-    }
-
-    private void OnNewsItemPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed ||
-            sender is not Border host ||
-            host.Tag is null ||
-            !int.TryParse(host.Tag.ToString(), out var index) ||
-            index < 0 ||
-            index >= _activeItems.Count)
-        {
-            return;
-        }
-
-        TryOpenUrl(_activeItems[index].Url);
         e.Handled = true;
     }
 
@@ -272,7 +242,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         }
         catch (OperationCanceledException)
         {
-            // Ignore canceled requests.
         }
         catch
         {
@@ -296,100 +265,90 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
     private async Task ApplySnapshotAsync(DailyNewsSnapshot snapshot, CancellationToken cancellationToken)
     {
-        BrandTextBlock.Text = L("ifeng.widget.brand", "凤凰网新闻");
         ToolTip.SetTip(RefreshButton, L("ifeng.widget.refresh_tooltip", "刷新"));
 
-        _activeItems.Clear();
-        foreach (var item in snapshot.Items)
+        var newItems = snapshot.Items
+            .Where(item => !string.IsNullOrWhiteSpace(item.Url) && !_newsByUrl.ContainsKey(item.Url))
+            .ToList();
+
+        if (newItems.Count == 0 && _itemControls.Count == 0)
         {
-            if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Url))
-            {
-                continue;
-            }
-
-            _activeItems.Add(item);
-            if (_activeItems.Count >= MaxDisplayItemCount)
-            {
-                break;
-            }
-        }
-
-        var fallbackText = L("ifeng.widget.fallback_item", "暂无新闻");
-        for (var i = 0; i < _itemVisuals.Count; i++)
-        {
-            var visual = _itemVisuals[i];
-            visual.Host.IsVisible = true;
-            visual.TitleTextBlock.Text = i < _activeItems.Count
-                ? NormalizeCompactText(_activeItems[i].Title)
-                : fallbackText;
-            SetNewsBitmap(i, null);
-        }
-
-        StatusTextBlock.IsVisible = false;
-        UpdateInteractionState();
-        UpdateAdaptiveLayout();
-
-        var tasks = Enumerable.Range(0, MaxDisplayItemCount)
-            .Select(index => TryDownloadBitmapAsync(
-                index < _activeItems.Count ? _activeItems[index].ImageUrl : null,
-                cancellationToken))
-            .ToArray();
-        var bitmaps = await Task.WhenAll(tasks);
-        if (cancellationToken.IsCancellationRequested || !_isAttached)
-        {
-            foreach (var bitmap in bitmaps)
-            {
-                bitmap?.Dispose();
-            }
-
+            ApplyEmptyState();
             return;
         }
 
-        for (var i = 0; i < bitmaps.Length; i++)
+        foreach (var item in newItems)
         {
-            SetNewsBitmap(i, bitmaps[i]);
+            _newsByUrl[item.Url] = item;
         }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!_isAttached) return;
+
+            LoadingTextBlock.IsVisible = false;
+            StatusTextBlock.IsVisible = false;
+
+            foreach (var item in newItems)
+            {
+                var control = new NewsItemControl(item, _isNightVisual);
+                control.Clicked += (s, url) => TryOpenUrl(url);
+                NewsStackPanel.Children.Insert(NewsStackPanel.Children.Count - 1, control);
+                _itemControls.Add(control);
+            }
+
+            UpdateAdaptiveLayout();
+        });
+
+        var imageTasks = newItems.Select(async item =>
+        {
+            var bitmap = await TryDownloadBitmapAsync(item.ImageUrl, cancellationToken);
+            if (bitmap != null && !cancellationToken.IsCancellationRequested)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (_imageCache.TryGetValue(item.Url, out var oldBitmap))
+                    {
+                        oldBitmap.Dispose();
+                    }
+                    _imageCache[item.Url] = bitmap;
+                    
+                    var control = _itemControls.FirstOrDefault(c => c.NewsUrl == item.Url);
+                    control?.SetImage(bitmap);
+                });
+            }
+        });
+
+        await Task.WhenAll(imageTasks);
     }
 
     private void ApplyLoadingState()
     {
-        BrandTextBlock.Text = L("ifeng.widget.brand", "凤凰网新闻");
         ToolTip.SetTip(RefreshButton, L("ifeng.widget.refresh_tooltip", "刷新"));
 
-        _activeItems.Clear();
-        var loadingText = L("ifeng.widget.loading_item", "加载中...");
-        for (var i = 0; i < _itemVisuals.Count; i++)
-        {
-            var visual = _itemVisuals[i];
-            visual.Host.IsVisible = true;
-            visual.TitleTextBlock.Text = loadingText;
-            SetNewsBitmap(i, null);
-        }
-
-        StatusTextBlock.Text = L("ifeng.widget.loading", "加载中...");
-        StatusTextBlock.IsVisible = true;
-        UpdateInteractionState();
+        LoadingTextBlock.Text = L("ifeng.widget.loading", "加载中...");
+        LoadingTextBlock.IsVisible = true;
+        StatusTextBlock.IsVisible = false;
         UpdateAdaptiveLayout();
     }
 
     private void ApplyFailedState()
     {
-        BrandTextBlock.Text = L("ifeng.widget.brand", "凤凰网新闻");
         ToolTip.SetTip(RefreshButton, L("ifeng.widget.refresh_tooltip", "刷新"));
 
-        _activeItems.Clear();
-        var fallbackText = L("ifeng.widget.fallback_item", "暂无新闻");
-        for (var i = 0; i < _itemVisuals.Count; i++)
-        {
-            var visual = _itemVisuals[i];
-            visual.Host.IsVisible = true;
-            visual.TitleTextBlock.Text = fallbackText;
-            SetNewsBitmap(i, null);
-        }
-
+        LoadingTextBlock.IsVisible = false;
         StatusTextBlock.Text = L("ifeng.widget.fetch_failed", "新闻获取失败");
         StatusTextBlock.IsVisible = true;
-        UpdateInteractionState();
+        UpdateAdaptiveLayout();
+    }
+
+    private void ApplyEmptyState()
+    {
+        ToolTip.SetTip(RefreshButton, L("ifeng.widget.refresh_tooltip", "刷新"));
+
+        LoadingTextBlock.IsVisible = false;
+        StatusTextBlock.Text = L("ifeng.widget.fallback_item", "暂无新闻");
+        StatusTextBlock.IsVisible = true;
         UpdateAdaptiveLayout();
     }
 
@@ -408,26 +367,13 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         var verticalPadding = Math.Clamp(14 * softScale, 8, 20);
         CardBorder.Padding = new Thickness(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
 
-        var rowSpacing = Math.Clamp(8 * softScale, 4, 12);
-        ContentGrid.RowSpacing = rowSpacing;
-        HeaderGrid.ColumnSpacing = Math.Clamp(10 * softScale, 6, 16);
+        var headerHeight = Math.Clamp(totalHeight * 0.10, 28, 54);
+        HeaderGrid.Height = headerHeight;
+        HeaderGrid.Margin = new Thickness(0, 0, 0, Math.Clamp(8 * softScale, 4, 12));
 
-        var innerWidth = Math.Max(150, totalWidth - horizontalPadding * 2d);
-        var innerHeight = Math.Max(160, totalHeight - verticalPadding * 2d);
-        var availableRowsHeight = Math.Max(120, innerHeight - rowSpacing * 4d);
-        var headerHeight = Math.Clamp(availableRowsHeight * 0.16, 24, 54);
-        var itemHeight = Math.Max(32, (availableRowsHeight - headerHeight) / 4d);
-
-        if (ContentGrid.RowDefinitions.Count >= 5)
-        {
-            ContentGrid.RowDefinitions[0].Height = new GridLength(headerHeight);
-            for (var i = 1; i <= 4; i++)
-            {
-                ContentGrid.RowDefinitions[i].Height = new GridLength(itemHeight);
-            }
-        }
-
-        BrandTextBlock.FontSize = Math.Clamp(headerHeight * 0.62, 14, 30);
+        var brandFontSize = Math.Clamp(headerHeight * 0.62, 14, 30);
+        BrandTextBlock.FontSize = brandFontSize;
+        NewsBadgeText.FontSize = brandFontSize;
 
         var refreshSize = Math.Clamp(headerHeight * 0.84, 22, 44);
         RefreshButton.Width = refreshSize;
@@ -435,49 +381,23 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         RefreshButton.CornerRadius = new CornerRadius(refreshSize / 2d);
         RefreshGlyphIcon.FontSize = Math.Clamp(refreshSize * 0.44, 10, 20);
 
+        var innerWidth = Math.Max(150, totalWidth - horizontalPadding * 2d);
         var imageWidth = Math.Clamp(innerWidth * 0.27, 82, 176);
         var imageHeight = Math.Clamp(imageWidth * 0.56, 46, 98);
-        var columnGap = Math.Clamp(itemHeight * 0.20, 6, 14);
-        var rowPadding = Math.Clamp(itemHeight * 0.08, 1, 5);
-        var textWidth = Math.Max(84, innerWidth - imageWidth - columnGap);
-        var titleFont = Math.Clamp(itemHeight * 0.32, 12, 24);
+        
+        var baseTitleFont = 14;
+        var areaFactor = (totalWidth * totalHeight) / (BaseWidthCells * BaseCellSize * BaseHeightCells * BaseCellSize);
+        var adaptiveTitleFont = baseTitleFont * Math.Sqrt(Math.Clamp(areaFactor, 0.6, 2.5));
+        var titleFont = Math.Clamp(adaptiveTitleFont, 11, 26);
 
-        foreach (var visual in _itemVisuals)
+        foreach (var control in _itemControls)
         {
-            visual.Host.Padding = new Thickness(0, rowPadding, 0, rowPadding);
-            visual.RowGrid.ColumnSpacing = columnGap;
-            if (visual.RowGrid.ColumnDefinitions.Count > 1)
-            {
-                visual.RowGrid.ColumnDefinitions[1].Width = new GridLength(imageWidth);
-            }
-
-            visual.ImageHost.Width = imageWidth;
-            visual.ImageHost.Height = imageHeight;
-            visual.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(imageHeight * 0.15, 8, 16);
-
-            visual.TitleTextBlock.MaxWidth = textWidth;
-            visual.TitleTextBlock.FontSize = titleFont;
-            visual.TitleTextBlock.LineHeight = titleFont * 1.12;
-            visual.TitleTextBlock.MinHeight = visual.TitleTextBlock.LineHeight * 2;
-            visual.TitleTextBlock.MaxLines = 2;
+            control.UpdateLayout(softScale, innerWidth, imageWidth, imageHeight, titleFont);
         }
 
-        StatusTextBlock.FontSize = Math.Clamp(titleFont, 10, 20);
+        StatusTextBlock.FontSize = Math.Clamp(titleFont, 10, 24);
+        LoadingTextBlock.FontSize = Math.Clamp(titleFont, 10, 24);
         ApplyNightModeVisual();
-    }
-
-    private void UpdateInteractionState()
-    {
-        for (var i = 0; i < _itemVisuals.Count; i++)
-        {
-            var visual = _itemVisuals[i];
-            var enabled = i < _activeItems.Count && !string.IsNullOrWhiteSpace(_activeItems[i].Url);
-            visual.Host.IsHitTestVisible = enabled;
-            visual.Host.Opacity = enabled ? 1.0 : 0.68;
-            visual.Host.Cursor = enabled
-                ? new Cursor(StandardCursorType.Hand)
-                : new Cursor(StandardCursorType.Arrow);
-        }
     }
 
     private void UpdateRefreshButtonState()
@@ -515,7 +435,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         }
         catch
         {
-            // Keep fallback defaults.
         }
 
         _autoRefreshEnabled = enabled;
@@ -614,7 +533,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         }
         catch
         {
-            // Ignore malformed URLs or shell launch failures.
         }
     }
 
@@ -640,32 +558,13 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
         return uri.ToString();
     }
 
-    private void SetNewsBitmap(int index, Bitmap? bitmap)
+    private void DisposeImageCache()
     {
-        if (index < 0 || index >= _newsBitmaps.Length)
+        foreach (var bitmap in _imageCache.Values)
         {
-            bitmap?.Dispose();
-            return;
+            bitmap.Dispose();
         }
-
-        var visual = _itemVisuals[index];
-        var oldBitmap = _newsBitmaps[index];
-        if (ReferenceEquals(visual.ImageControl.Source, oldBitmap))
-        {
-            visual.ImageControl.Source = null;
-        }
-
-        oldBitmap?.Dispose();
-        _newsBitmaps[index] = bitmap;
-        visual.ImageControl.Source = bitmap;
-    }
-
-    private void DisposeNewsBitmaps()
-    {
-        for (var i = 0; i < _newsBitmaps.Length; i++)
-        {
-            SetNewsBitmap(i, null);
-        }
+        _imageCache.Clear();
     }
 
     private double ResolveScale()
@@ -714,5 +613,143 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         cts.Cancel();
         cts.Dispose();
+    }
+
+    private sealed class NewsItemControl : Border
+    {
+        private readonly DailyNewsItemSnapshot _item;
+        private readonly Grid _grid;
+        private readonly TextBlock _titleTextBlock;
+        private readonly Border _imageHost;
+        private readonly Image _imageControl;
+        private bool _isNightVisual;
+        private Point _pointerPressedPosition;
+        private bool _isPointerPressed;
+
+        public string NewsUrl => _item.Url;
+
+        public NewsItemControl(DailyNewsItemSnapshot item, bool isNightVisual)
+        {
+            _item = item;
+            _isNightVisual = isNightVisual;
+
+            Padding = new Thickness(0, 4);
+            Background = Brushes.Transparent;
+            Cursor = new Cursor(StandardCursorType.Hand);
+
+            PointerPressed += OnPointerPressed;
+            PointerReleased += OnPointerReleased;
+            PointerCaptureLost += OnPointerCaptureLost;
+
+            _titleTextBlock = new TextBlock
+            {
+                Text = NormalizeCompactText(item.Title),
+                Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
+                FontFamily = MiSansFontFamily,
+                FontWeight = FontWeight.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxLines = 2,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            };
+
+            _imageControl = new Image
+            {
+                Stretch = Stretch.UniformToFill
+            };
+
+            _imageHost = new Border
+            {
+                Width = 148,
+                Height = 84,
+                CornerRadius = new CornerRadius(12),
+                ClipToBounds = true,
+                Background = new SolidColorBrush(isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E8EC")),
+                Child = _imageControl
+            };
+
+            _grid = new Grid
+            {
+                ColumnDefinitions = ColumnDefinitions.Parse("*,Auto"),
+                ColumnSpacing = 10
+            };
+
+            Grid.SetColumn(_imageHost, 1);
+            _grid.Children.Add(_titleTextBlock);
+            _grid.Children.Add(_imageHost);
+
+            Child = _grid;
+        }
+
+        private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+        {
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            {
+                _isPointerPressed = true;
+                _pointerPressedPosition = e.GetPosition(this);
+                e.Handled = true;
+            }
+        }
+
+        private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+        {
+            if (!_isPointerPressed)
+            {
+                return;
+            }
+
+            _isPointerPressed = false;
+            var releasePosition = e.GetPosition(this);
+            var distance = Math.Sqrt(
+                Math.Pow(releasePosition.X - _pointerPressedPosition.X, 2) +
+                Math.Pow(releasePosition.Y - _pointerPressedPosition.Y, 2));
+
+            if (distance < 5)
+            {
+                Clicked?.Invoke(this, _item.Url);
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+        {
+            _isPointerPressed = false;
+        }
+
+        public void ApplyNightMode(bool isNightVisual)
+        {
+            _isNightVisual = isNightVisual;
+            _titleTextBlock.Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
+            _imageHost.Background = new SolidColorBrush(isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E8EC"));
+        }
+
+        public void UpdateLayout(double scale, double innerWidth, double imageWidth, double imageHeight, double titleFont)
+        {
+            var columnGap = Math.Clamp(imageHeight * 0.20, 6, 14);
+            _grid.ColumnSpacing = columnGap;
+
+            if (_grid.ColumnDefinitions.Count > 1)
+            {
+                _grid.ColumnDefinitions[1] = new ColumnDefinition(new GridLength(imageWidth));
+            }
+
+            _imageHost.Width = imageWidth;
+            _imageHost.Height = imageHeight;
+            _imageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(imageHeight * 0.15, 8, 16);
+
+            var textWidth = Math.Max(84, innerWidth - imageWidth - columnGap);
+            _titleTextBlock.MaxWidth = textWidth;
+            _titleTextBlock.FontSize = titleFont;
+            _titleTextBlock.LineHeight = titleFont * 1.12;
+            _titleTextBlock.MinHeight = _titleTextBlock.LineHeight * 2;
+        }
+
+        public void SetImage(Bitmap bitmap)
+        {
+            _imageControl.Source = bitmap;
+        }
+
+        public event EventHandler<string>? Clicked;
     }
 }
