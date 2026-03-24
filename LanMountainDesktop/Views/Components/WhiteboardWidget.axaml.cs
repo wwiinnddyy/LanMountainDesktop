@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -38,7 +39,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private double _currentCellSize = 48;
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
     private bool? _isNightModeApplied;
-    private SKColor _currentInkColor = SKColors.Black;
+    private SKColor _selectedInkColor = SKColors.Black;
     private string _componentId = BuiltInComponentIds.DesktopWhiteboard;
     private string _placementId = string.Empty;
     private int _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
@@ -66,7 +67,20 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ApplyCellSize(_currentCellSize);
         RefreshFromSettings();
         ApplyThemeVisual(force: true);
+        InitializeColorPicker();
         SetToolMode(WhiteboardToolMode.Pen);
+    }
+
+    private void InitializeColorPicker()
+    {
+        if (InkColorPicker is not null)
+        {
+            InkColorPicker.Color = new Color(
+                _selectedInkColor.Alpha,
+                _selectedInkColor.Red,
+                _selectedInkColor.Green,
+                _selectedInkColor.Blue);
+        }
     }
 
     public int NoteRetentionDays => _noteRetentionDays;
@@ -149,7 +163,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
 
         _isNightModeApplied = isNightMode;
-        _currentInkColor = isNightMode ? SKColors.White : SKColors.Black;
 
         RootBorder.Background = new SolidColorBrush(isNightMode ? Color.Parse("#FF181B22") : Color.Parse("#FFF1F4F9"));
         CanvasBorder.Background = new SolidColorBrush(isNightMode ? Color.Parse("#FF000000") : Color.Parse("#FFFFFFFF"));
@@ -157,8 +170,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ToolbarBorder.Background = new SolidColorBrush(isNightMode ? Color.Parse("#1AFFFFFF") : Color.Parse("#E6FFFFFF"));
         ToolbarBorder.BorderBrush = new SolidColorBrush(isNightMode ? Color.Parse("#26FFFFFF") : Color.Parse("#16000000"));
 
-        InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _currentInkColor;
-        RecolorAllStrokes(_currentInkColor);
         RefreshToolButtonVisuals();
     }
 
@@ -201,6 +212,30 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         catch
         {
             _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
+        }
+    }
+
+    public void ForceSaveNote()
+    {
+        if (_disposed || !HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        if (!_noteDirty)
+        {
+            return;
+        }
+
+        _noteDirty = false;
+        _noteSaveTimer.Stop();
+        var noteSnapshot = BuildNoteSnapshot();
+        try
+        {
+            _notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays);
+        }
+        catch
+        {
         }
     }
 
@@ -300,9 +335,19 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
         if (mode == WhiteboardToolMode.Pen)
         {
-            InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _currentInkColor;
+            InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
         }
 
+        RefreshToolButtonVisuals();
+    }
+
+    private void SetInkColor(SKColor color)
+    {
+        _selectedInkColor = color;
+        if (_toolMode == WhiteboardToolMode.Pen)
+        {
+            InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
+        }
         RefreshToolButtonVisuals();
     }
 
@@ -350,7 +395,27 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void OnPenButtonClick(object? sender, RoutedEventArgs e)
     {
-        SetToolMode(WhiteboardToolMode.Pen);
+        if (_toolMode == WhiteboardToolMode.Pen && ColorPickerPopup is not null)
+        {
+            if (ColorPickerPopup.IsOpen)
+            {
+                ColorPickerPopup.Close();
+            }
+            else
+            {
+                ColorPickerPopup.Open();
+            }
+        }
+        else
+        {
+            SetToolMode(WhiteboardToolMode.Pen);
+        }
+    }
+
+    private void OnColorPickerColorChanged(object? sender, ColorChangedEventArgs e)
+    {
+        var color = e.NewColor;
+        SetInkColor(new SKColor(color.R, color.G, color.B, color.A));
     }
 
     private void OnEraserButtonClick(object? sender, RoutedEventArgs e)
@@ -509,14 +574,13 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         _noteDirty = false;
         _noteSaveTimer.Stop();
         var noteSnapshot = BuildNoteSnapshot();
-        var componentId = _componentId;
-        var placementId = _placementId;
-        var retentionDays = _noteRetentionDays;
-        _ = Task.Run(() => _notePersistenceService.SaveNote(
-            componentId,
-            placementId,
-            noteSnapshot,
-            retentionDays));
+        try
+        {
+            _notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays);
+        }
+        catch
+        {
+        }
     }
 
     private async void SchedulePersistedNoteLoad()
@@ -553,7 +617,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
                 {
                     ClearAllStrokes();
                     ApplyNoteSnapshot(noteSnapshot);
-                    RecolorAllStrokes(_currentInkColor);
                 }
                 finally
                 {

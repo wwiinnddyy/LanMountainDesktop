@@ -58,14 +58,16 @@
                                 BorderThickness="1"
                                 Foreground="#bb5649"
                                 Focusable="False"
-                                ToolTip.Tip="刷新新闻"
+                                ToolTip.Tip="刷新今日新闻"
                                 Click="OnRefreshButtonClick">
                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                <fi:SymbolIcon Symbol="ArrowSync"
+                                <fi:SymbolIcon x:Name="RefreshIcon"
+                                               Symbol="ArrowSync"
                                                IconVariant="Regular"
                                                FontSize="14"
                                                Foreground="#bb5649" />
-                                <TextBlock Text="刷新"
+                                <TextBlock x:Name="RefreshButtonText"
+                                           Text="刷新"
                                            FontSize="13"
                                            VerticalAlignment="Center" />
                             </StackPanel>

@@ -1,0 +1,10 @@
+{
+  "id": "com.voicehub.landesktop",
+  "name": "VoiceHub 广播站排期",
+  "description": "展示 VoiceHub 广播站当日排期歌曲，按播放顺序显示歌曲信息",
+  "author": "VoiceHub",
+  "version": "1.0.0",
+  "apiVersion": "4.0.0",
+  "entranceAssembly": "VoiceHubLanDesktop.dll",
+  "sharedContracts": []
+}

@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,86 +9,107 @@
              d:DesignHeight="480"
              x:Class="LanMountainDesktop.Views.Components.WhiteboardWidget">
 
-    <Border x:Name="RootBorder"
-            Background="#F1F4F9"
-            CornerRadius="20"
-            ClipToBounds="True"
-            Padding="8">
-        <Grid RowDefinitions="*,Auto"
-              RowSpacing="8">
-            <Border x:Name="CanvasBorder"
-                    Grid.Row="0"
-                    Background="#FFFFFF"
-                    BorderBrush="#24000000"
-                    BorderThickness="1"
-                    CornerRadius="14"
-                    ClipToBounds="True">
-                <inking:InkCanvas x:Name="InkCanvas" />
-            </Border>
+    <Grid>
+        <Border x:Name="RootBorder"
+                Background="#F1F4F9"
+                CornerRadius="20"
+                ClipToBounds="True"
+                Padding="8">
+            <Grid RowDefinitions="*,Auto"
+                  RowSpacing="8">
+                <Border x:Name="CanvasBorder"
+                        Grid.Row="0"
+                        Background="#FFFFFF"
+                        BorderBrush="#24000000"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        ClipToBounds="True">
+                    <inking:InkCanvas x:Name="InkCanvas" />
+                </Border>
 
-            <Border x:Name="ToolbarBorder"
-                    Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    Background="#E6FFFFFF"
-                    BorderBrush="#16000000"
+                <Border x:Name="ToolbarBorder"
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        Background="#E6FFFFFF"
+                        BorderBrush="#16000000"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="8,6">
+                    <StackPanel x:Name="ToolbarButtonsPanel"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <Button x:Name="PenButton"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                ToolTip.Tip="Pen"
+                                Click="OnPenButtonClick">
+                            <fi:SymbolIcon x:Name="PenIcon"
+                                           Symbol="Pen"
+                                           IconVariant="Regular"
+                                           FontSize="14" />
+                        </Button>
+                        <Button x:Name="EraserButton"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                ToolTip.Tip="Eraser"
+                                Click="OnEraserButtonClick">
+                            <fi:SymbolIcon x:Name="EraserIcon"
+                                           Symbol="EraserTool"
+                                           IconVariant="Regular"
+                                           FontSize="14" />
+                        </Button>
+                        <Button x:Name="ClearButton"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                ToolTip.Tip="Clear"
+                                Click="OnClearButtonClick">
+                            <fi:SymbolIcon x:Name="ClearIcon"
+                                           Symbol="Delete"
+                                           IconVariant="Regular"
+                                           FontSize="14" />
+                        </Button>
+                        <Button x:Name="ExportButton"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                ToolTip.Tip="Export SVG"
+                                Click="OnExportButtonClick">
+                            <fi:SymbolIcon x:Name="ExportIcon"
+                                           Symbol="ArrowExport"
+                                           IconVariant="Regular"
+                                           FontSize="14" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Popup x:Name="ColorPickerPopup"
+               Placement="Top"
+               PlacementTarget="{Binding #PenButton}"
+               IsLightDismissEnabled="True"
+               WindowManagerAddShadowHint="False">
+            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="1"
-                    CornerRadius="14"
-                    Padding="8,6">
-                <StackPanel x:Name="ToolbarButtonsPanel"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="8">
-                    <Button x:Name="PenButton"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            CornerRadius="15"
-                            ToolTip.Tip="Pen"
-                            Click="OnPenButtonClick">
-                        <fi:SymbolIcon x:Name="PenIcon"
-                                       Symbol="Pen"
-                                       IconVariant="Regular"
-                                       FontSize="14" />
-                    </Button>
-                    <Button x:Name="EraserButton"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            CornerRadius="15"
-                            ToolTip.Tip="Eraser"
-                            Click="OnEraserButtonClick">
-                        <fi:SymbolIcon x:Name="EraserIcon"
-                                       Symbol="EraserTool"
-                                       IconVariant="Regular"
-                                       FontSize="14" />
-                    </Button>
-                    <Button x:Name="ClearButton"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            CornerRadius="15"
-                            ToolTip.Tip="Clear"
-                            Click="OnClearButtonClick">
-                        <fi:SymbolIcon x:Name="ClearIcon"
-                                       Symbol="Delete"
-                                       IconVariant="Regular"
-                                       FontSize="14" />
-                    </Button>
-                    <Button x:Name="ExportButton"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            CornerRadius="15"
-                            ToolTip.Tip="Export SVG"
-                            Click="OnExportButtonClick">
-                        <fi:SymbolIcon x:Name="ExportIcon"
-                                       Symbol="ArrowExport"
-                                       IconVariant="Regular"
-                                       FontSize="14" />
-                    </Button>
-                </StackPanel>
+                    CornerRadius="8"
+                    Padding="12">
+                <ColorView x:Name="InkColorPicker"
+                           IsAlphaEnabled="False"
+                           IsColorSpectrumVisible="True"
+                           IsColorPaletteVisible="True"
+                           IsHexInputVisible="True"
+                           ColorChanged="OnColorPickerColorChanged" />
             </Border>
-        </Grid>
-    </Border>
+        </Popup>
+    </Grid>
 </UserControl>

@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
+             x:Class="VoiceHubLanDesktop.Views.VoiceHubScheduleControl"
+             x:DataType="VoiceHubLanDesktop.Views.VoiceHubScheduleControl">
+
+    <Design.DataContext>
+        <VoiceHubLanDesktop.Views.VoiceHubScheduleControl/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- 标题栏 -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                Padding="12,8"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#xE7D1;"
+                          FontFamily="Segoe MDL2 Assets"
+                          FontSize="16"
+                          VerticalAlignment="Center"
+                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                <TextBlock Text="{Binding TitleText}"
+                          FontWeight="SemiBold"
+                          FontSize="14"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DateText}"
+                          FontSize="12"
+                          VerticalAlignment="Center"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                          Margin="8,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 内容区域 -->
+        <Grid Grid.Row="1">
+            <!-- 加载状态 -->
+            <StackPanel x:Name="LoadingPanel"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12"
+                        IsVisible="{Binding IsLoading}">
+                <ProgressBar IsIndeterminate="True"
+                            Width="100"
+                            Height="4"/>
+                <TextBlock Text="正在加载排期..."
+                          FontSize="13"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+            </StackPanel>
+
+            <!-- 排期列表 -->
+            <ScrollViewer x:Name="SchedulePanel"
+                         IsVisible="{Binding IsNormal}"
+                         Padding="8,8,8,8">
+                <ItemsControl ItemsSource="{Binding Songs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                                   CornerRadius="8"
+                                   Padding="12,10"
+                                   Margin="0,0,0,8">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <!-- 序号 -->
+                                    <Border Grid.Column="0"
+                                           Background="{DynamicResource SystemAccentColor}"
+                                           CornerRadius="12"
+                                           Width="24"
+                                           Height="24"
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Sequence}"
+                                                  FontSize="11"
+                                                  FontWeight="Bold"
+                                                  Foreground="White"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- 歌曲信息 -->
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="{Binding Song.Title}"
+                                                  FontSize="14"
+                                                  FontWeight="Medium"
+                                                  TextTrimming="CharacterEllipsis"
+                                                  MaxLines="1"/>
+                                        <TextBlock FontSize="12"
+                                                  Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                  TextTrimming="CharacterEllipsis"
+                                                  MaxLines="1">
+                                            <Run Text="{Binding Song.Artist}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 空状态 -->
+            <StackPanel x:Name="EmptyPanel"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        IsVisible="{Binding IsEmpty}">
+                <TextBlock Text="&#xE7E5;"
+                          FontFamily="Segoe MDL2 Assets"
+                          FontSize="48"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+                <TextBlock Text="{Binding EmptyMessage}"
+                          FontSize="14"
+                          Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+            </StackPanel>
+
+            <!-- 错误状态 -->
+            <StackPanel x:Name="ErrorPanel"
+                        Orientation="Vertical"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        IsVisible="{Binding IsError}">
+                <TextBlock Text="&#xE783;"
+                          FontFamily="Segoe MDL2 Assets"
+                          FontSize="48"
+                          Foreground="#FFB00020"/>
+                <TextBlock Text="{Binding ErrorMessage}"
+                          FontSize="14"
+                          Foreground="#FFB00020"
+                          TextWrapping="Wrap"
+                          MaxWidth="200"
+                          TextAlignment="Center"/>
+                <Button Content="重试"
+                       Command="{Binding RetryCommand}"
+                       Margin="0,8,0,0"
+                       HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,18 @@
+{
+  "widget.display_name": "Radio Station Schedule",
+  "widget.category": "Info",
+  "widget.loading": "Loading schedule...",
+  "widget.retry": "Retry",
+  "widget.no_schedule": "No schedule data",
+  "widget.network_error": "Network error",
+  "settings.title": "VoiceHub Settings",
+  "settings.description": "Configure radio station schedule data source and display options",
+  "settings.apiUrl.title": "API URL",
+  "settings.apiUrl.description": "VoiceHub backend API URL for fetching schedule data",
+  "settings.showRequester.title": "Show Requester",
+  "settings.showRequester.description": "Display requester information in the schedule list",
+  "settings.showVoteCount.title": "Show Vote Count",
+  "settings.showVoteCount.description": "Display song vote count in the schedule list",
+  "settings.refreshInterval.title": "Refresh Interval",
+  "settings.refreshInterval.description": "Time interval for automatic schedule data refresh"
+}

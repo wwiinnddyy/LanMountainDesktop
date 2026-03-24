@@ -3276,4 +3276,19 @@ public partial class MainWindow
         _isComponentLibraryComponentGestureActive = false;
         ApplyComponentLibraryComponentOffset();
     }
+
+    internal void SaveAllWhiteboardNotes()
+    {
+        foreach (var pageGrid in _desktopPageComponentGrids.Values)
+        {
+            foreach (var host in pageGrid.Children.OfType<Border>())
+            {
+                var contentHost = TryGetContentHost(host);
+                if (contentHost?.Child is WhiteboardWidget whiteboard)
+                {
+                    whiteboard.ForceSaveNote();
+                }
+            }
+        }
+    }
 }

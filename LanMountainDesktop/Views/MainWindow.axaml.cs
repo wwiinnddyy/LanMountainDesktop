@@ -500,6 +500,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         var wasVisible = IsVisible;
         var windowState = WindowState.ToString();
 
+        SaveAllWhiteboardNotes();
         PersistSettings();
         _componentEditorWindowService.Close();
         if (_detachedComponentLibraryWindow is not null)

@@ -625,13 +625,84 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
             return;
         }
 
-        _cachedNews.Clear();
-        _loadedDates.Clear();
-        _dailyViews.Clear();
-        NewsStackPanel.Children.Clear();
-        _earliestLoadedDate = DateTime.Today;
+        _isLoading = true;
+        RefreshButtonText.Text = "刷新中...";
+        RefreshIcon.IsEnabled = false;
 
-        await LoadInitialNewsAsync();
+        try
+        {
+            var allNews = await FetchJuyaNewsAsync();
+            
+            if (!_isAttached)
+            {
+                return;
+            }
+
+            var today = DateTime.Today;
+            var todayNews = allNews.FirstOrDefault(n => n.Date.Date == today);
+            
+            if (todayNews != null)
+            {
+                _cachedNews[today] = todayNews;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!_isAttached) return;
+
+                    var existingIndex = _loadedDates.IndexOf(today);
+                    if (existingIndex >= 0 && _dailyViews.Count > existingIndex)
+                    {
+                        var oldView = _dailyViews[existingIndex];
+                        var insertIndex = NewsStackPanel.Children.IndexOf(oldView);
+                        
+                        if (insertIndex >= 0)
+                        {
+                            NewsStackPanel.Children.RemoveAt(insertIndex);
+                            _dailyViews.RemoveAt(existingIndex);
+                            
+                            var newView = new DailyNewsView(todayNews, _isNightVisual);
+                            newView.CoverImageClicked += (s, e) => TryOpenUrl(todayNews.IssueUrl);
+                            
+                            NewsStackPanel.Children.Insert(insertIndex, newView);
+                            _dailyViews.Insert(existingIndex, newView);
+                        }
+                    }
+                    else
+                    {
+                        var newView = new DailyNewsView(todayNews, _isNightVisual);
+                        newView.CoverImageClicked += (s, e) => TryOpenUrl(todayNews.IssueUrl);
+                        
+                        NewsStackPanel.Children.Insert(0, newView);
+                        _dailyViews.Insert(0, newView);
+                        _loadedDates.Insert(0, today);
+                    }
+
+                    RefreshButtonText.Text = "刷新";
+                    RefreshIcon.IsEnabled = true;
+                    UpdateAdaptiveLayout();
+                });
+            }
+            else
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    RefreshButtonText.Text = "刷新";
+                    RefreshIcon.IsEnabled = true;
+                });
+            }
+        }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                RefreshButtonText.Text = "刷新";
+                RefreshIcon.IsEnabled = true;
+            });
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private void TryOpenUrl(string? url)
