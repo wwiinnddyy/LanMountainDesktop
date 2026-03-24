@@ -22,14 +22,46 @@ internal sealed class AirAppMarketReleaseResolverService
     {
         ArgumentNullException.ThrowIfNull(plugin);
 
-        if (!plugin.HasReleaseDownloadMetadata)
+        var firstSource = plugin.GetPackageSourcesInInstallOrder().FirstOrDefault();
+        if (firstSource is null)
         {
             return plugin.DownloadUrl;
         }
 
+        return await ResolveDownloadUrlAsync(plugin, firstSource, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<string> ResolveDownloadUrlAsync(
+        AirAppMarketPluginEntry plugin,
+        AirAppMarketPluginPackageSourceEntry source,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+        ArgumentNullException.ThrowIfNull(source);
+
+        return source.SourceKind switch
+        {
+            PluginPackageSourceKind.ReleaseAsset => await ResolveReleaseAssetDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false),
+            PluginPackageSourceKind.RawFallback => source.Url,
+            PluginPackageSourceKind.WorkspaceLocal => source.Url,
+            _ => source.Url
+        };
+    }
+
+    private async Task<string> ResolveReleaseAssetDownloadUrlAsync(
+        AirAppMarketPluginEntry plugin,
+        AirAppMarketPluginPackageSourceEntry source,
+        CancellationToken cancellationToken)
+    {
+        var sourceUrl = source.Url;
+        if (!plugin.HasReleaseDownloadMetadata)
+        {
+            return sourceUrl;
+        }
+
         if (!TryGetRepositoryIdentity(plugin, out var owner, out var repositoryName))
         {
-            return plugin.DownloadUrl;
+            return sourceUrl;
         }
 
         var releaseDownloadUrl = AirAppMarketDefaults.BuildGitHubReleaseDownloadUrl(
@@ -46,15 +78,15 @@ internal sealed class AirAppMarketReleaseResolverService
         try
         {
             using var updateService = new GitHubReleaseUpdateService(owner, repositoryName, _httpClient);
-            var release = await updateService.GetReleaseByTagAsync(plugin.ReleaseTag, cancellationToken);
+            var release = await updateService.GetReleaseByTagAsync(plugin.ReleaseTag, cancellationToken).ConfigureAwait(false);
             var asset = release?.Assets.FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, plugin.ReleaseAssetName, StringComparison.OrdinalIgnoreCase));
 
-            return asset?.BrowserDownloadUrl ?? plugin.DownloadUrl;
+            return asset?.BrowserDownloadUrl ?? releaseDownloadUrl;
         }
         catch
         {
-            return plugin.DownloadUrl;
+            return releaseDownloadUrl;
         }
     }
 

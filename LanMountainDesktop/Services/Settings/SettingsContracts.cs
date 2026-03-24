@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.PluginMarket;
 using LanMountainDesktop.Settings.Core;
 
-namespace LanMountainDesktop.Services.Settings;
+namespace LanMountainDesktop.Services.Settings
+{
 
 public enum WallpaperMediaType
 {
@@ -66,10 +69,272 @@ public sealed record UpdateSettingsState(
     long? PendingUpdatePublishedAtUtcMs,
     long? LastUpdateCheckUtcMs);
 public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
+public enum PluginPackageSourceKind
+{
+    ReleaseAsset = 0,
+    RawFallback = 1,
+    WorkspaceLocal = 2
+}
+
+public sealed record PluginCatalogSourceInfo(
+    string Id,
+    string Name,
+    string? Description,
+    string? SourceUrl,
+    string? CachePath,
+    bool IsOfficial,
+    int Priority);
+
+public sealed record PluginCatalogSharedContractInfo(
+    string Id,
+    string Version,
+    string AssemblyName);
+
+public sealed record PluginCapabilityInfo(
+    string Id,
+    string? Version,
+    string? AssemblyName);
+
+public sealed record PluginPackageSourceInfo(
+    PluginPackageSourceKind Kind,
+    string Url,
+    string Sha256,
+    long PackageSizeBytes);
+
+public sealed record PluginCatalogManifestInfo(
+    string Id,
+    string Name,
+    string Description,
+    string Author,
+    string Version,
+    string ApiVersion,
+    string EntranceAssembly,
+    IReadOnlyList<PluginCatalogSharedContractInfo> SharedContracts);
+
+public sealed record PluginCatalogCompatibilityInfo(
+    string MinHostVersion,
+    string ApiVersion);
+
+public sealed record PluginCatalogRepositoryInfo(
+    string IconUrl,
+    string ProjectUrl,
+    string ReadmeUrl,
+    string HomepageUrl,
+    string RepositoryUrl,
+    IReadOnlyList<string> Tags,
+    string ReleaseNotes);
+
+public sealed record PluginCatalogPublicationInfo(
+    string ReleaseTag,
+    string ReleaseAssetName,
+    DateTimeOffset PublishedAt,
+    DateTimeOffset UpdatedAt,
+    long PackageSizeBytes,
+    string Sha256,
+    string? Md5);
+
+public sealed record PluginCatalogItemInfo(
+    PluginCatalogManifestInfo Manifest,
+    PluginCatalogCompatibilityInfo Compatibility,
+    PluginCatalogRepositoryInfo Repository,
+    PluginCatalogPublicationInfo Publication,
+    IReadOnlyList<PluginPackageSourceInfo> PackageSources,
+    IReadOnlyList<PluginCapabilityInfo> Capabilities)
+{
+    public string Id => Manifest.Id;
+
+    public string Name => Manifest.Name;
+
+    public string Description => Manifest.Description;
+
+    public string Author => Manifest.Author;
+
+    public string Version => Manifest.Version;
+
+    public string ApiVersion => Manifest.ApiVersion;
+
+    public string MinHostVersion => Compatibility.MinHostVersion;
+
+    public string DownloadUrl => PackageSources.FirstOrDefault()?.Url ?? string.Empty;
+
+    public string Sha256 => Publication.Sha256;
+
+    public long PackageSizeBytes => Publication.PackageSizeBytes;
+
+    public string IconUrl => Repository.IconUrl;
+
+    public string ProjectUrl => Repository.ProjectUrl;
+
+    public string ReadmeUrl => Repository.ReadmeUrl;
+
+    public string HomepageUrl => Repository.HomepageUrl;
+
+    public string RepositoryUrl => Repository.RepositoryUrl;
+
+    public IReadOnlyList<string> Tags => Repository.Tags;
+
+    public IReadOnlyList<PluginCatalogSharedContractInfo> SharedContracts => Manifest.SharedContracts;
+
+    public IReadOnlyList<PluginCatalogDependencyInfo> Dependencies =>
+        Manifest.SharedContracts
+            .Select(contract => new PluginCatalogDependencyInfo(
+                contract.Id,
+                contract.Version,
+                contract.AssemblyName))
+            .ToArray();
+
+    public DateTimeOffset PublishedAt => Publication.PublishedAt;
+
+    public DateTimeOffset UpdatedAt => Publication.UpdatedAt;
+
+    public string ReleaseTag => Publication.ReleaseTag;
+
+    public string ReleaseAssetName => Publication.ReleaseAssetName;
+
+    public string ReleaseNotes => Repository.ReleaseNotes;
+
+    public static implicit operator PluginMarketPluginInfo(PluginCatalogItemInfo item)
+    {
+        return new PluginMarketPluginInfo(
+            item.Id,
+            item.Name,
+            item.Description,
+            item.Author,
+            item.Version,
+            item.ApiVersion,
+            item.MinHostVersion,
+            item.DownloadUrl,
+            item.ReleaseTag,
+            item.ReleaseAssetName,
+            item.IconUrl,
+            item.ReadmeUrl,
+            item.HomepageUrl,
+            item.RepositoryUrl,
+            item.Tags.ToArray(),
+            item.Dependencies.Select(dependency => new PluginMarketDependencyInfo(
+                dependency.Id,
+                dependency.Version,
+                dependency.AssemblyName)).ToArray(),
+            item.PublishedAt,
+            item.UpdatedAt);
+    }
+
+    public static implicit operator PluginCatalogItemInfo(PluginMarketPluginInfo plugin)
+    {
+        return new PluginCatalogItemInfo(
+            new PluginCatalogManifestInfo(
+                plugin.Id,
+                plugin.Name,
+                plugin.Description,
+                plugin.Author,
+                plugin.Version,
+                plugin.ApiVersion,
+                string.Empty,
+                plugin.Dependencies
+                    .Select(dependency => new PluginCatalogSharedContractInfo(
+                        dependency.Id,
+                        dependency.Version,
+                        dependency.AssemblyName))
+                    .ToArray()),
+            new PluginCatalogCompatibilityInfo(
+                plugin.MinHostVersion,
+                plugin.ApiVersion),
+            new PluginCatalogRepositoryInfo(
+                plugin.IconUrl,
+                plugin.RepositoryUrl,
+                plugin.ReadmeUrl,
+                plugin.HomepageUrl,
+                plugin.RepositoryUrl,
+                plugin.Tags,
+                string.Empty),
+            new PluginCatalogPublicationInfo(
+                plugin.ReleaseTag,
+                plugin.ReleaseAssetName,
+                plugin.PublishedAt,
+                plugin.UpdatedAt,
+                0,
+                string.Empty,
+                null),
+            string.IsNullOrWhiteSpace(plugin.DownloadUrl)
+                ? []
+                : [
+                    new PluginPackageSourceInfo(
+                        string.IsNullOrWhiteSpace(plugin.ReleaseTag)
+                            ? PluginPackageSourceKind.RawFallback
+                            : PluginPackageSourceKind.ReleaseAsset,
+                        plugin.DownloadUrl,
+                        string.Empty,
+                        0)
+                ],
+            []);
+    }
+}
+
+public sealed record PluginCatalogIndexResult(
+    bool Success,
+    IReadOnlyList<PluginCatalogItemInfo> Plugins,
+    IReadOnlyList<PluginCatalogSourceInfo> Sources,
+    string? Source,
+    string? SourceLocation,
+    string? WarningMessage,
+    string? ErrorMessage)
+{
+    public static implicit operator PluginMarketIndexResult(PluginCatalogIndexResult result)
+    {
+        return new PluginMarketIndexResult(
+            result.Success,
+            result.Plugins.Select(plugin => (PluginMarketPluginInfo)plugin).ToArray(),
+            result.Source,
+            result.SourceLocation,
+            result.WarningMessage,
+            result.ErrorMessage);
+    }
+}
+
+public sealed record PluginInstallDiagnostic(
+    string Code,
+    string Message,
+    string? Details = null);
+
+public sealed record PluginCatalogInstallResult(
+    bool Success,
+    string? PluginId,
+    string? PluginName,
+    PluginManifest? InstalledManifest,
+    IReadOnlyList<PluginInstallDiagnostic> Diagnostics,
+    string? ErrorMessage)
+{
+    public static implicit operator PluginMarketInstallResult(PluginCatalogInstallResult result)
+    {
+        return new PluginMarketInstallResult(
+            result.Success,
+            result.PluginId,
+            result.PluginName,
+            result.ErrorMessage);
+    }
+}
+
+public sealed record PluginCatalogDependencyInfo(
+    string Id,
+    string Version,
+    string AssemblyName)
+{
+    public static implicit operator PluginMarketDependencyInfo(PluginCatalogDependencyInfo dependency)
+    {
+        return new PluginMarketDependencyInfo(
+            dependency.Id,
+            dependency.Version,
+            dependency.AssemblyName);
+    }
+}
+
+[Obsolete("Use PluginCatalogSharedContractInfo and PluginCatalogItemInfo instead.")]
 public sealed record PluginMarketDependencyInfo(
     string Id,
     string Version,
     string AssemblyName);
+
+[Obsolete("Use PluginCatalogItemInfo instead.")]
 public sealed record PluginMarketPluginInfo(
     string Id,
     string Name,
@@ -89,6 +354,8 @@ public sealed record PluginMarketPluginInfo(
     IReadOnlyList<PluginMarketDependencyInfo> Dependencies,
     DateTimeOffset PublishedAt,
     DateTimeOffset UpdatedAt);
+
+[Obsolete("Use PluginCatalogIndexResult instead.")]
 public sealed record PluginMarketIndexResult(
     bool Success,
     IReadOnlyList<PluginMarketPluginInfo> Plugins,
@@ -96,11 +363,38 @@ public sealed record PluginMarketIndexResult(
     string? SourceLocation,
     string? WarningMessage,
     string? ErrorMessage);
+
+[Obsolete("Use PluginCatalogInstallResult instead.")]
 public sealed record PluginMarketInstallResult(
     bool Success,
     string? PluginId,
     string? PluginName,
     string? ErrorMessage);
+
+public interface IPluginCatalogSourceProvider
+{
+    Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IPluginCatalogService : IPluginCatalogSourceProvider
+{
+    Task<PluginCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+}
+
+public interface IPackageSourceResolver
+{
+    IReadOnlyList<PluginPackageSourceInfo> ResolveSources(PluginCatalogItemInfo item);
+}
+
+public interface IPluginCompatibilityEvaluator
+{
+    PluginInstallDiagnostic? Evaluate(PluginCatalogItemInfo item, Version? hostVersion);
+}
+
+public interface IPluginInstallOrchestrator
+{
+    Task<PluginCatalogInstallResult> InstallAsync(PluginCatalogItemInfo item, CancellationToken cancellationToken = default);
+}
 
 public interface IGridSettingsService
 {
@@ -223,10 +517,17 @@ public interface IPluginManagementSettingsService
     bool DeleteInstalledPlugin(string pluginId);
 }
 
-public interface IPluginMarketSettingsService
+public interface IPluginCatalogSettingsService : IPluginCatalogSourceProvider
+{
+    new Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default);
+    Task<PluginCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+}
+
+[Obsolete("Use IPluginCatalogSettingsService instead.")]
+public interface IPluginMarketSettingsService : IPluginCatalogSettingsService
 {
     Task<PluginMarketIndexResult> LoadIndexAsync(CancellationToken cancellationToken = default);
-    Task<PluginMarketInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
+    new Task<PluginMarketInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
 }
 
 public interface IApplicationInfoService
@@ -252,6 +553,20 @@ public interface ISettingsFacadeService
     ILauncherCatalogService LauncherCatalog { get; }
     ILauncherPolicyService LauncherPolicy { get; }
     IPluginManagementSettingsService PluginManagement { get; }
+    IPluginCatalogSettingsService PluginCatalog { get; }
+    [Obsolete("Use PluginCatalog instead.")]
     IPluginMarketSettingsService PluginMarket { get; }
     IApplicationInfoService ApplicationInfo { get; }
+}
+
+}
+
+namespace LanMountainDesktop.Services.PluginMarket
+{
+    internal enum PluginPackageSourceKind
+    {
+        ReleaseAsset = 0,
+        RawFallback = 1,
+        WorkspaceLocal = 2
+    }
 }

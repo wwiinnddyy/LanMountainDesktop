@@ -870,14 +870,41 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
         _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
     }
 
-    public async Task<PluginMarketIndexResult> LoadIndexAsync(CancellationToken cancellationToken = default)
+    public Task<PluginCatalogIndexResult> LoadCatalogAsync(CancellationToken cancellationToken = default)
     {
-        var result = await _indexService.LoadAsync(cancellationToken);
+        return LoadCatalogCoreAsync(cancellationToken);
+    }
+
+    async Task<PluginMarketIndexResult> IPluginMarketSettingsService.LoadIndexAsync(CancellationToken cancellationToken)
+    {
+        return await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<PluginCatalogInstallResult> InstallAsync(
+        string pluginId,
+        CancellationToken cancellationToken = default)
+    {
+        return InstallCatalogCoreAsync(pluginId, cancellationToken);
+    }
+
+    async Task<PluginMarketInstallResult> IPluginMarketSettingsService.InstallAsync(
+        string pluginId,
+        CancellationToken cancellationToken)
+    {
+        return await InstallCatalogCoreAsync(pluginId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<PluginCatalogIndexResult> LoadCatalogCoreAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _indexService.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var sources = BuildCatalogSources(result.Source?.ToString(), result.SourceLocation, result.WarningMessage);
         if (!result.Success || result.Document is null)
         {
-            return new PluginMarketIndexResult(
+            _cachedPlugins.Clear();
+            return new PluginCatalogIndexResult(
                 false,
                 [],
+                sources,
                 result.Source?.ToString(),
                 result.SourceLocation,
                 result.WarningMessage,
@@ -889,81 +916,189 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
             .Select(entry =>
             {
                 _cachedPlugins[entry.Id] = entry;
-                return new PluginMarketPluginInfo(
-                    entry.Id,
-                    entry.Name,
-                    entry.Description,
-                    entry.Author,
-                    entry.Version,
-                    entry.ApiVersion,
-                    entry.MinHostVersion,
-                    entry.DownloadUrl,
-                    entry.ReleaseTag,
-                    entry.ReleaseAssetName,
-                    entry.IconUrl,
-                    entry.ReadmeUrl,
-                    entry.HomepageUrl,
-                    entry.RepositoryUrl,
-                    entry.Tags,
-                    entry.SharedContracts
-                        .Select(contract => new PluginMarketDependencyInfo(
-                            contract.Id,
-                            contract.Version,
-                            contract.AssemblyName))
-                        .ToArray(),
-                    entry.PublishedAt,
-                    entry.UpdatedAt);
+                return MapCatalogItem(entry);
             })
             .ToArray();
 
-        return new PluginMarketIndexResult(
+        return new PluginCatalogIndexResult(
             true,
             plugins,
+            sources,
             result.Source?.ToString(),
             result.SourceLocation,
             result.WarningMessage,
             null);
     }
 
-    public async Task<PluginMarketInstallResult> InstallAsync(
+    private async Task<PluginCatalogInstallResult> InstallCatalogCoreAsync(
         string pluginId,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(pluginId))
         {
-            return new PluginMarketInstallResult(false, null, null, "Plugin id is required.");
+            return new PluginCatalogInstallResult(
+                false,
+                null,
+                null,
+                null,
+                [new PluginInstallDiagnostic("invalid_request", "Plugin id is required.")],
+                "Plugin id is required.");
         }
 
         if (_installService is null || _pluginRuntimeService is null)
         {
-            return new PluginMarketInstallResult(
+            return new PluginCatalogInstallResult(
                 false,
                 pluginId,
                 null,
+                null,
+                [new PluginInstallDiagnostic("runtime_unavailable", "Plugin runtime is unavailable.")],
                 "Plugin runtime is unavailable.");
         }
 
         if (!_cachedPlugins.TryGetValue(pluginId, out var entry))
         {
-            var load = await LoadIndexAsync(cancellationToken);
+            var load = await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
             if (!load.Success)
             {
-                return new PluginMarketInstallResult(false, pluginId, null, load.ErrorMessage);
+                return new PluginCatalogInstallResult(
+                    false,
+                    pluginId,
+                    null,
+                    null,
+                    [new PluginInstallDiagnostic("catalog_load_failed", load.ErrorMessage ?? "Failed to load the plugin catalog.")],
+                    load.ErrorMessage);
             }
 
             if (!_cachedPlugins.TryGetValue(pluginId, out entry))
             {
-                return new PluginMarketInstallResult(false, pluginId, null, "Plugin was not found in market index.");
+                return new PluginCatalogInstallResult(
+                    false,
+                    pluginId,
+                    null,
+                    null,
+                    [new PluginInstallDiagnostic("not_found", "Plugin was not found in the official catalog.")],
+                    "Plugin was not found in the official catalog.");
             }
         }
 
-        var result = await _installService.InstallAsync(entry, cancellationToken);
+        var result = await _installService.InstallAsync(entry, cancellationToken).ConfigureAwait(false);
         if (!result.Success)
         {
-            return new PluginMarketInstallResult(false, entry.Id, entry.Name, result.ErrorMessage);
+            return new PluginCatalogInstallResult(
+                false,
+                entry.Id,
+                entry.Name,
+                null,
+                [new PluginInstallDiagnostic("install_failed", result.ErrorMessage ?? "Plugin install failed.")],
+                result.ErrorMessage);
         }
 
-        return new PluginMarketInstallResult(true, result.Manifest?.Id ?? entry.Id, result.Manifest?.Name ?? entry.Name, null);
+        return new PluginCatalogInstallResult(
+            true,
+            result.Manifest?.Id ?? entry.Id,
+            result.Manifest?.Name ?? entry.Name,
+            result.Manifest,
+            [],
+            null);
+    }
+
+    private static PluginCatalogItemInfo MapCatalogItem(AirAppMarketPluginEntry entry)
+    {
+        var manifest = new PluginCatalogManifestInfo(
+            entry.Id,
+            entry.Name,
+            entry.Description,
+            entry.Author,
+            entry.Version,
+            entry.ApiVersion,
+            string.Empty,
+            entry.SharedContracts
+                .Select(contract => new PluginCatalogSharedContractInfo(
+                    contract.Id,
+                    contract.Version,
+                    contract.AssemblyName))
+                .ToArray());
+
+        var compatibility = new PluginCatalogCompatibilityInfo(
+            entry.MinHostVersion,
+            entry.ApiVersion);
+
+        var repository = new PluginCatalogRepositoryInfo(
+            entry.IconUrl,
+            entry.ProjectUrl,
+            entry.ReadmeUrl,
+            entry.HomepageUrl,
+            entry.RepositoryUrl,
+            entry.Tags.ToArray(),
+            entry.ReleaseNotes);
+
+        var publication = new PluginCatalogPublicationInfo(
+            entry.ReleaseTag,
+            entry.ReleaseAssetName,
+            entry.PublishedAt,
+            entry.UpdatedAt,
+            entry.PackageSizeBytes,
+            entry.Sha256,
+            null);
+
+        var sources = BuildPackageSources(entry);
+
+        return new PluginCatalogItemInfo(
+            manifest,
+            compatibility,
+            repository,
+            publication,
+            sources,
+            []);
+    }
+
+    private static IReadOnlyList<PluginPackageSourceInfo> BuildPackageSources(AirAppMarketPluginEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.DownloadUrl))
+        {
+            return [];
+        }
+
+        var sourceKind = entry.HasReleaseDownloadMetadata
+            ? PluginPackageSourceKind.ReleaseAsset
+            : PluginPackageSourceKind.RawFallback;
+
+        return
+        [
+            new PluginPackageSourceInfo(
+                sourceKind,
+                entry.DownloadUrl,
+                entry.Sha256,
+                entry.PackageSizeBytes)
+        ];
+    }
+
+    private static IReadOnlyList<PluginCatalogSourceInfo> BuildCatalogSources(
+        string? sourceId,
+        string? sourceLocation,
+        string? warningMessage)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId) && string.IsNullOrWhiteSpace(sourceLocation))
+        {
+            return [];
+        }
+
+        var normalizedSourceId = string.IsNullOrWhiteSpace(sourceId)
+            ? "plugin-catalog"
+            : sourceId.Trim();
+
+        return
+        [
+            new PluginCatalogSourceInfo(
+                normalizedSourceId,
+                normalizedSourceId,
+                string.IsNullOrWhiteSpace(warningMessage) ? null : warningMessage.Trim(),
+                string.IsNullOrWhiteSpace(sourceLocation) ? null : sourceLocation.Trim(),
+                null,
+                true,
+                0)
+        ];
     }
 
     public void Dispose()
@@ -1054,6 +1189,7 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         _pluginManagementSettingsService = new PluginManagementSettingsService(Settings, pluginRuntimeService);
         PluginManagement = _pluginManagementSettingsService;
         _pluginMarketSettingsService = new PluginMarketSettingsService(pluginRuntimeService);
+        PluginCatalog = _pluginMarketSettingsService;
         PluginMarket = _pluginMarketSettingsService;
         ApplicationInfo = new ApplicationInfoService();
     }
@@ -1085,6 +1221,8 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
     public ILauncherPolicyService LauncherPolicy { get; }
 
     public IPluginManagementSettingsService PluginManagement { get; }
+
+    public IPluginCatalogSettingsService PluginCatalog { get; }
 
     public IPluginMarketSettingsService PluginMarket { get; }
 

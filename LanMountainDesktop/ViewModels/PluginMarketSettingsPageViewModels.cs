@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -31,7 +31,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
     private bool _isLoadingIcon;
 
     public PluginMarketItemViewModel(
-        PluginMarketPluginInfo plugin,
+        PluginCatalogItemInfo plugin,
         LocalizationService localizationService,
         string languageCode)
     {
@@ -46,7 +46,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
         ActionTooltip = L("market.button.install", "Install");
     }
 
-    public PluginMarketPluginInfo Info { get; }
+    public PluginCatalogItemInfo Info { get; }
 
     public string PluginId => Info.Id;
 
@@ -64,7 +64,11 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
     public string ReadmeUrl => Info.ReadmeUrl;
 
-    public IReadOnlyList<PluginMarketDependencyInfo> Dependencies => Info.Dependencies;
+    public IReadOnlyList<PluginCatalogSharedContractInfo> Dependencies => Info.SharedContracts;
+
+    public IReadOnlyList<PluginPackageSourceInfo> PackageSources => Info.PackageSources;
+
+    public IReadOnlyList<PluginCapabilityInfo> Capabilities => Info.Capabilities;
 
     public string IconFallbackText { get; }
 
@@ -259,7 +263,7 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
         _readmeService = readmeService;
         _primaryActionAsync = primaryActionAsync;
 
-        Dependencies = new ObservableCollection<PluginMarketDependencyInfo>(item.Dependencies);
+        Dependencies = new ObservableCollection<PluginCatalogSharedContractInfo>(item.Dependencies);
         VersionLabel = L("market.detail.version", "Version");
         PublisherLabel = L("market.detail.author", "Author");
         ApiVersionLabel = L("market.detail.api_version", "API Version");
@@ -271,7 +275,7 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
 
     public PluginMarketItemViewModel Item { get; }
 
-    public ObservableCollection<PluginMarketDependencyInfo> Dependencies { get; }
+    public ObservableCollection<PluginCatalogSharedContractInfo> Dependencies { get; }
 
     public string DrawerTitle => Item.Name;
 
@@ -305,6 +309,10 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
     public bool HasReadmeError => !string.IsNullOrWhiteSpace(ReadmeError);
 
     public bool HasReadmeContent => !IsReadmeLoading && !HasReadmeError && !string.IsNullOrWhiteSpace(ReadmeMarkdown);
+
+    public IReadOnlyList<PluginPackageSourceInfo> PackageSources => Item.PackageSources;
+
+    public IReadOnlyList<PluginCapabilityInfo> Capabilities => Item.Capabilities;
 
     public async Task InitializeAsync()
     {
@@ -370,6 +378,7 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
 public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly IPluginCatalogSettingsService _pluginCatalog;
     private readonly LocalizationService _localizationService;
     private readonly AirAppMarketIconService _iconService;
     private readonly AirAppMarketReadmeService _readmeService;
@@ -386,6 +395,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
         AirAppMarketReadmeService readmeService)
     {
         _settingsFacade = settingsFacade;
+        _pluginCatalog = _settingsFacade.PluginCatalog;
         _localizationService = localizationService;
         _iconService = iconService;
         _readmeService = readmeService;
@@ -468,7 +478,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
             StatusMessage = L("market.status.loading", "Loading the official plugin market...");
             RefreshInstalledSnapshot();
 
-            var result = await _settingsFacade.PluginMarket.LoadIndexAsync();
+            var result = await _pluginCatalog.LoadCatalogAsync();
             if (!result.Success)
             {
                 _hasLoadedMarket = false;
@@ -559,7 +569,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
                 L("market.status.installing_format", "Downloading and staging plugin '{0}'..."),
                 item.Name);
 
-            var result = await _settingsFacade.PluginMarket.InstallAsync(item.PluginId);
+            var result = await _pluginCatalog.InstallAsync(item.PluginId);
             if (result.Success)
             {
                 RefreshInstalledSnapshot();

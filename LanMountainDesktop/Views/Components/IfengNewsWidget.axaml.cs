@@ -198,7 +198,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
         foreach (var visual in _itemVisuals)
         {
-            visual.Host.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#2D3440") : Color.Parse("#F7F8FA"));
+            visual.Host.Background = Brushes.Transparent;
             visual.TitleTextBlock.Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327"));
         }
 
