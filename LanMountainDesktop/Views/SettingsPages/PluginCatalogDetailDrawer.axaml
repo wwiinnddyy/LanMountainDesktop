@@ -4,8 +4,8 @@
              xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
              xmlns:helpers="using:LanMountainDesktop.Helpers"
              xmlns:fi="using:FluentIcons.Avalonia.Fluent"
-             x:Class="LanMountainDesktop.Views.SettingsPages.PluginMarketDetailDrawer"
-             x:DataType="vm:PluginMarketDetailViewModel">
+             x:Class="LanMountainDesktop.Views.SettingsPages.PluginCatalogDetailDrawer"
+             x:DataType="vm:PluginCatalogDetailViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container"
                     Margin="0,0,0,8">
@@ -41,7 +41,7 @@
                     </StackPanel>
 
                     <Button Grid.Column="2"
-                            Classes="plugin-market-icon-button"
+                            Classes="plugin-catalog-icon-button"
                             VerticalAlignment="Center"
                             Command="{Binding PerformPrimaryActionCommand}"
                             IsEnabled="{Binding Item.IsActionEnabled}"
@@ -103,7 +103,7 @@
                                TextWrapping="Wrap" />
                     <mdxaml:MarkdownScrollViewer IsVisible="{Binding HasReadmeContent}"
                                                  Markdown="{Binding ReadmeMarkdown}"
-                                                 Engine="{x:Static helpers:PluginMarketMarkdownHelper.Engine}" />
+                                                 Engine="{x:Static helpers:PluginCatalogMarkdownHelper.Engine}" />
                 </StackPanel>
             </Border>
 

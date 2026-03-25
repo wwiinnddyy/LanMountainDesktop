@@ -678,7 +678,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             snapshot.PendingUpdateInstallerPath,
             snapshot.PendingUpdateVersion,
             snapshot.PendingUpdatePublishedAtUtcMs,
-            snapshot.LastUpdateCheckUtcMs);
+            snapshot.LastUpdateCheckUtcMs,
+            snapshot.PendingUpdateSha256);
     }
 
     public void Save(UpdateSettingsState state)
@@ -707,6 +708,9 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         snapshot.LastUpdateCheckUtcMs = state.LastUpdateCheckUtcMs is > 0
             ? state.LastUpdateCheckUtcMs
             : null;
+        snapshot.PendingUpdateSha256 = string.IsNullOrWhiteSpace(state.PendingUpdateSha256)
+            ? null
+            : state.PendingUpdateSha256.Trim().ToLowerInvariant();
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
@@ -721,7 +725,8 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 nameof(AppSettingsSnapshot.PendingUpdateInstallerPath),
                 nameof(AppSettingsSnapshot.PendingUpdateVersion),
                 nameof(AppSettingsSnapshot.PendingUpdatePublishedAtUtcMs),
-                nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs)
+                nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs),
+                nameof(AppSettingsSnapshot.PendingUpdateSha256)
             ]);
     }
 
@@ -733,6 +738,14 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         return _releaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
     }
 
+    public Task<UpdateCheckResult> ForceCheckForUpdatesAsync(
+        Version currentVersion,
+        bool includePrerelease,
+        CancellationToken cancellationToken = default)
+    {
+        return _releaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+    }
+
     public Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
@@ -742,6 +755,23 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         CancellationToken cancellationToken = default)
     {
         return _releaseUpdateService.DownloadAssetAsync(
+            asset,
+            destinationFilePath,
+            downloadSource,
+            maxParallelSegments,
+            progress,
+            cancellationToken);
+    }
+
+    public Task<UpdateDownloadResult> RedownloadAssetAsync(
+        GitHubReleaseAsset asset,
+        string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        return _releaseUpdateService.RedownloadAssetAsync(
             asset,
             destinationFilePath,
             downloadSource,
@@ -829,14 +859,14 @@ internal sealed class PluginManagementSettingsService : IPluginManagementSetting
     }
 }
 
-internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService, IDisposable
+internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsService, IDisposable
 {
     private PluginRuntimeService? _pluginRuntimeService;
     private AirAppMarketIndexService _indexService;
     private AirAppMarketInstallService? _installService;
     private readonly Dictionary<string, AirAppMarketPluginEntry> _cachedPlugins = new(StringComparer.OrdinalIgnoreCase);
 
-    public PluginMarketSettingsService(PluginRuntimeService? pluginRuntimeService)
+    public PluginCatalogSettingsService(PluginRuntimeService? pluginRuntimeService)
     {
         _pluginRuntimeService = pluginRuntimeService;
 
@@ -875,23 +905,11 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
         return LoadCatalogCoreAsync(cancellationToken);
     }
 
-    async Task<PluginMarketIndexResult> IPluginMarketSettingsService.LoadIndexAsync(CancellationToken cancellationToken)
-    {
-        return await LoadCatalogCoreAsync(cancellationToken).ConfigureAwait(false);
-    }
-
     public Task<PluginCatalogInstallResult> InstallAsync(
         string pluginId,
         CancellationToken cancellationToken = default)
     {
         return InstallCatalogCoreAsync(pluginId, cancellationToken);
-    }
-
-    async Task<PluginMarketInstallResult> IPluginMarketSettingsService.InstallAsync(
-        string pluginId,
-        CancellationToken cancellationToken)
-    {
-        return await InstallCatalogCoreAsync(pluginId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<PluginCatalogIndexResult> LoadCatalogCoreAsync(CancellationToken cancellationToken = default)
@@ -1055,23 +1073,25 @@ internal sealed class PluginMarketSettingsService : IPluginMarketSettingsService
 
     private static IReadOnlyList<PluginPackageSourceInfo> BuildPackageSources(AirAppMarketPluginEntry entry)
     {
-        if (string.IsNullOrWhiteSpace(entry.DownloadUrl))
+        var sources = entry.GetPackageSourcesInInstallOrder();
+        if (sources.Count == 0)
         {
             return [];
         }
 
-        var sourceKind = entry.HasReleaseDownloadMetadata
-            ? PluginPackageSourceKind.ReleaseAsset
-            : PluginPackageSourceKind.RawFallback;
-
-        return
-        [
-            new PluginPackageSourceInfo(
-                sourceKind,
-                entry.DownloadUrl,
+        return sources
+            .Select(source => new PluginPackageSourceInfo(
+                source.SourceKind switch
+                {
+                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.ReleaseAsset => PluginPackageSourceKind.ReleaseAsset,
+                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.RawFallback => PluginPackageSourceKind.RawFallback,
+                    LanMountainDesktop.Services.PluginMarket.PluginPackageSourceKind.WorkspaceLocal => PluginPackageSourceKind.WorkspaceLocal,
+                    _ => PluginPackageSourceKind.RawFallback
+                },
+                source.Url,
                 entry.Sha256,
-                entry.PackageSizeBytes)
-        ];
+                entry.PackageSizeBytes))
+            .ToArray();
     }
 
     private static IReadOnlyList<PluginCatalogSourceInfo> BuildCatalogSources(
@@ -1165,7 +1185,7 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposable
 {
     private readonly UpdateSettingsService _updateSettingsService;
-    private readonly PluginMarketSettingsService _pluginMarketSettingsService;
+    private readonly PluginCatalogSettingsService _pluginCatalogSettingsService;
     private readonly PluginManagementSettingsService _pluginManagementSettingsService;
     private readonly WeatherSettingsService _weatherSettingsService;
 
@@ -1188,9 +1208,8 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         LauncherPolicy = new LauncherPolicyService();
         _pluginManagementSettingsService = new PluginManagementSettingsService(Settings, pluginRuntimeService);
         PluginManagement = _pluginManagementSettingsService;
-        _pluginMarketSettingsService = new PluginMarketSettingsService(pluginRuntimeService);
-        PluginCatalog = _pluginMarketSettingsService;
-        PluginMarket = _pluginMarketSettingsService;
+        _pluginCatalogSettingsService = new PluginCatalogSettingsService(pluginRuntimeService);
+        PluginCatalog = _pluginCatalogSettingsService;
         ApplicationInfo = new ApplicationInfoService();
     }
 
@@ -1224,20 +1243,18 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
 
     public IPluginCatalogSettingsService PluginCatalog { get; }
 
-    public IPluginMarketSettingsService PluginMarket { get; }
-
     public IApplicationInfoService ApplicationInfo { get; }
 
     public void BindPluginRuntime(PluginRuntimeService? pluginRuntimeService)
     {
         _pluginManagementSettingsService.SetPluginRuntime(pluginRuntimeService);
-        _pluginMarketSettingsService.SetPluginRuntime(pluginRuntimeService);
+        _pluginCatalogSettingsService.SetPluginRuntime(pluginRuntimeService);
     }
 
     public void Dispose()
     {
         _weatherSettingsService.Dispose();
         _updateSettingsService.Dispose();
-        _pluginMarketSettingsService.Dispose();
+        _pluginCatalogSettingsService.Dispose();
     }
 }

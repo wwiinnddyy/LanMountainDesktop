@@ -473,6 +473,11 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         _dialogSessionId = null;
         _dialogSessionLabel = string.Empty;
         DialogRenameTextBox.Text = string.Empty;
+        DialogOverlayBorder.IsVisible = false;
+        if (_currentSnapshot is not null)
+        {
+            RenderSnapshot(_currentSnapshot);
+        }
     }
 
     private void OnDialogRenameTextBoxKeyDown(object? sender, KeyEventArgs e)

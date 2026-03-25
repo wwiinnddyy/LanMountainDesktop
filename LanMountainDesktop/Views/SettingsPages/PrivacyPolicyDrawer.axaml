@@ -47,7 +47,7 @@
                     
                     <mdxaml:MarkdownScrollViewer IsVisible="{Binding HasContent}"
                                                  Markdown="{Binding MarkdownContent}"
-                                                 Engine="{x:Static helpers:PluginMarketMarkdownHelper.Engine}" />
+                                                 Engine="{x:Static helpers:PluginCatalogMarkdownHelper.Engine}" />
                 </StackPanel>
             </Border>
         </StackPanel>

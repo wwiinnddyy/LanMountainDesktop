@@ -9,21 +9,21 @@ using LanMountainDesktop.ViewModels;
 namespace LanMountainDesktop.Views.SettingsPages;
 
 [SettingsPageInfo(
-    "plugin-market",
-    "Plugin Market",
-    SettingsPageCategory.PluginMarket,
+    "plugin-catalog",
+    "Plugin Catalog",
+    SettingsPageCategory.PluginCatalog,
     IconKey = "ShoppingBag",
     SortOrder = 35,
-    TitleLocalizationKey = "settings.plugin_market.title",
-    DescriptionLocalizationKey = "settings.plugin_market.subtitle")]
-public partial class PluginMarketSettingsPage : SettingsPageBase
+    TitleLocalizationKey = "settings.plugin_catalog.title",
+    DescriptionLocalizationKey = "settings.plugin_catalog.subtitle")]
+public partial class PluginCatalogSettingsPage : SettingsPageBase
 {
-    public PluginMarketSettingsPage()
+    public PluginCatalogSettingsPage()
         : this(Design.IsDesignMode ? CreateDesignTimeViewModel() : CreateDefaultViewModel())
     {
     }
 
-    public PluginMarketSettingsPage(PluginMarketSettingsPageViewModel viewModel)
+    public PluginCatalogSettingsPage(PluginCatalogSettingsPageViewModel viewModel)
     {
         ViewModel = viewModel;
         ViewModel.RestartRequested += OnRestartRequested;
@@ -32,7 +32,7 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
         InitializeComponent();
     }
 
-    public PluginMarketSettingsPageViewModel ViewModel { get; }
+    public PluginCatalogSettingsPageViewModel ViewModel { get; }
 
     public override async void OnNavigatedTo(object? parameter)
     {
@@ -44,22 +44,22 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
         await ViewModel.InitializeAsync();
     }
 
-    private static PluginMarketSettingsPageViewModel CreateDefaultViewModel()
+    private static PluginCatalogSettingsPageViewModel CreateDefaultViewModel()
     {
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         var localizationService = new LocalizationService();
-        return new PluginMarketSettingsPageViewModel(
+        return new PluginCatalogSettingsPageViewModel(
             settingsFacade,
             localizationService,
             new AirAppMarketIconService(),
             new AirAppMarketReadmeService());
     }
 
-    private static PluginMarketSettingsPageViewModel CreateDesignTimeViewModel()
+    private static PluginCatalogSettingsPageViewModel CreateDesignTimeViewModel()
     {
         var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
         var localizationService = new LocalizationService();
-        var viewModel = new PluginMarketSettingsPageViewModel(
+        var viewModel = new PluginCatalogSettingsPageViewModel(
             settingsFacade,
             localizationService,
             new AirAppMarketIconService(),
@@ -68,8 +68,8 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
         var previewHostVersion = new Version(1, 2, 0);
         var items = new[]
         {
-            CreateMarketItem(
-                new PluginMarketPluginInfo(
+            CreateCatalogItemViewModel(
+                CreateCatalogItem(
                     "news-tiles",
                     "News Tiles",
                     "Brings editorial news cards and ticker rows to the desktop.",
@@ -91,8 +91,8 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
                 localizationService,
                 installedPlugin: null,
                 previewHostVersion),
-            CreateMarketItem(
-                new PluginMarketPluginInfo(
+            CreateCatalogItemViewModel(
+                CreateCatalogItem(
                     "workspace-pulse",
                     "Workspace Pulse",
                     "Tracks active projects and shows a compact productivity summary.",
@@ -125,8 +125,8 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
                     true,
                     null),
                 previewHostVersion),
-            CreateMarketItem(
-                new PluginMarketPluginInfo(
+            CreateCatalogItemViewModel(
+                CreateCatalogItem(
                     "glass-panels",
                     "Glass Panels",
                     "Adds experimental acrylic surfaces for plugin-powered widgets.",
@@ -152,7 +152,7 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
 
         foreach (var item in items)
         {
-            viewModel.MarketPlugins.Add(item);
+            viewModel.CatalogPlugins.Add(item);
             viewModel.FilteredPlugins.Add(item);
         }
 
@@ -167,24 +167,87 @@ public partial class PluginMarketSettingsPage : SettingsPageBase
         RequestRestart(reason ?? ViewModel.RestartRequiredMessage);
     }
 
-    private async void OnDetailsRequested(PluginMarketItemViewModel item)
+    private async void OnDetailsRequested(PluginCatalogItemViewModel item)
     {
         var detailViewModel = ViewModel.CreateDetailViewModel(item);
-        var drawer = new PluginMarketDetailDrawer(detailViewModel);
+        var drawer = new PluginCatalogDetailDrawer(detailViewModel);
         OpenDrawer(drawer, detailViewModel.DrawerTitle);
         await detailViewModel.InitializeAsync();
     }
 
-    private static PluginMarketItemViewModel CreateMarketItem(
-        PluginMarketPluginInfo plugin,
+    private static PluginCatalogItemViewModel CreateCatalogItemViewModel(
+        PluginCatalogItemInfo plugin,
         LocalizationService localizationService,
         InstalledPluginInfo? installedPlugin,
         Version hostVersion)
     {
         var languageCode = localizationService.NormalizeLanguageCode(
             HostSettingsFacadeProvider.GetOrCreate().Region.Get().LanguageCode);
-        var item = new PluginMarketItemViewModel(plugin, localizationService, languageCode);
+        var item = new PluginCatalogItemViewModel(plugin, localizationService, languageCode);
         item.ApplyInstallState(installedPlugin, hostVersion);
         return item;
+    }
+
+    private static PluginCatalogItemInfo CreateCatalogItem(
+        string id,
+        string name,
+        string description,
+        string author,
+        string version,
+        string apiVersion,
+        string minHostVersion,
+        string downloadUrl,
+        string releaseTag,
+        string releaseAssetName,
+        string iconUrl,
+        string readmeUrl,
+        string homepageUrl,
+        string repositoryUrl,
+        string[] tags,
+        PluginCatalogSharedContractInfo[] sharedContracts,
+        DateTimeOffset publishedAt,
+        DateTimeOffset updatedAt)
+    {
+        return new PluginCatalogItemInfo(
+            new PluginCatalogManifestInfo(
+                id,
+                name,
+                description,
+                author,
+                version,
+                apiVersion,
+                string.Empty,
+                sharedContracts),
+            new PluginCatalogCompatibilityInfo(
+                minHostVersion,
+                apiVersion),
+            new PluginCatalogRepositoryInfo(
+                iconUrl,
+                homepageUrl,
+                readmeUrl,
+                homepageUrl,
+                repositoryUrl,
+                tags,
+                string.Empty),
+            new PluginCatalogPublicationInfo(
+                releaseTag,
+                releaseAssetName,
+                publishedAt,
+                updatedAt,
+                0,
+                string.Empty,
+                null),
+            string.IsNullOrWhiteSpace(downloadUrl)
+                ? []
+                : [
+                    new PluginPackageSourceInfo(
+                        string.IsNullOrWhiteSpace(releaseTag)
+                            ? LanMountainDesktop.Services.Settings.PluginPackageSourceKind.RawFallback
+                            : LanMountainDesktop.Services.Settings.PluginPackageSourceKind.ReleaseAsset,
+                        downloadUrl,
+                        string.Empty,
+                        0)
+                ],
+            []);
     }
 }

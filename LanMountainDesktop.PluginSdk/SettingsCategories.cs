@@ -6,7 +6,9 @@ public static class SettingsCategories
     public const string Appearance = "Appearance";
     public const string Components = "Components";
     public const string Plugins = "Plugins";
-    public const string PluginMarket = "PluginMarket";
+    public const string PluginCatalog = "PluginCatalog";
+    [Obsolete("Use PluginCatalog instead.")]
+    public const string PluginMarket = PluginCatalog;
     public const string Update = "Update";
     public const string About = "About";
     public const string Advanced = "Advanced";

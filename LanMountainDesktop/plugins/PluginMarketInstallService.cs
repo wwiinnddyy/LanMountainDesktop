@@ -188,7 +188,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             var localCopyResult = await _downloadService.DownloadAsync(
                 localPackagePath,
                 attemptPath,
-                new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes),
+                new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes > 0 ? plugin.PackageSizeBytes : null),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!localCopyResult.Success)
             {
@@ -208,7 +208,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
         var downloadResult = await _downloadService.DownloadAsync(
             resolvedDownloadUrl,
             attemptPath,
-            new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes),
+            new DownloadOptions(ExpectedSizeBytes: plugin.PackageSizeBytes > 0 ? plugin.PackageSizeBytes : null),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!downloadResult.Success)
         {
@@ -231,14 +231,25 @@ internal sealed class AirAppMarketInstallService : IDisposable
             actualHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
         }
 
-        if (actualSize != plugin.PackageSizeBytes || !string.Equals(actualHash, plugin.Sha256, StringComparison.OrdinalIgnoreCase))
+        if (plugin.PackageSizeBytes > 0 && actualSize != plugin.PackageSizeBytes)
         {
             AppLogger.Error(
                 "PluginMarket",
-                $"Package verification failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{attemptPath}'; ExpectedHash='{plugin.Sha256}'; ActualHash='{actualHash}'; ExpectedSize='{plugin.PackageSizeBytes}'; ActualSize='{actualSize}'.");
+                $"Package verification failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{attemptPath}'; ExpectedSize='{plugin.PackageSizeBytes}'; ActualSize='{actualSize}'.");
             return new AirAppMarketVerificationResult(
                 false,
-                $"Package verification failed. Expected SHA-256 {plugin.Sha256}, actual {actualHash}. Expected size {plugin.PackageSizeBytes}, actual size {actualSize}.");
+                $"Package verification failed. Expected size {plugin.PackageSizeBytes}, actual size {actualSize}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(plugin.Sha256) &&
+            !string.Equals(actualHash, plugin.Sha256, StringComparison.OrdinalIgnoreCase))
+        {
+            AppLogger.Error(
+                "PluginMarket",
+                $"Package hash verification failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; DownloadPath='{attemptPath}'; ExpectedHash='{plugin.Sha256}'; ActualHash='{actualHash}'.");
+            return new AirAppMarketVerificationResult(
+                false,
+                $"Package verification failed. Expected SHA-256 {plugin.Sha256}, actual {actualHash}.");
         }
 
         return new AirAppMarketVerificationResult(true, null);

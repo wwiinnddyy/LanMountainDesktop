@@ -141,6 +141,9 @@
                         <Button Command="{Binding DownloadLatestReleaseCommand}"
                                 Content="{Binding DownloadButtonText}"
                                 IsVisible="{Binding IsDownloadButtonVisible}" />
+                        <Button Command="{Binding RedownloadUpdateCommand}"
+                                Content="{Binding RedownloadButtonText}"
+                                IsVisible="{Binding IsRedownloadButtonVisible}" />
                         <Button Classes="settings-accent-button"
                                 Command="{Binding InstallPendingUpdateCommand}"
                                 Content="{Binding InstallNowButtonText}"
@@ -172,6 +175,14 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                 </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem Content="{Binding ForceCheckUpdateLabel}"
+                                         Description="{Binding ForceCheckUpdateDescription}"
+                                         IsClickEnabled="True"
+                                         Command="{Binding ForceCheckUpdateCommand}">
+                    <ui:SettingsExpanderItem.IconSource>
+                        <fi:SymbolIconSource Symbol="ArrowSync" />
+                    </ui:SettingsExpanderItem.IconSource>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
             <ui:SettingsExpander Classes="settings-expander-card"

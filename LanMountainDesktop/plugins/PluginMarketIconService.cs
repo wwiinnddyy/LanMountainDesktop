@@ -41,7 +41,7 @@ public sealed class AirAppMarketIconService : IDisposable
     }
 
     public async Task<Bitmap> LoadAsync(
-        LanMountainDesktop.Services.Settings.PluginMarketPluginInfo plugin,
+        LanMountainDesktop.Services.Settings.PluginCatalogItemInfo plugin,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plugin);

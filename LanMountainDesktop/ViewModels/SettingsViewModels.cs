@@ -1518,6 +1518,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _installNowButtonText = string.Empty;
 
     [ObservableProperty]
+    private string _redownloadButtonText = string.Empty;
+
+    [ObservableProperty]
     private string _latestVersionText = string.Empty;
 
     [ObservableProperty]
@@ -1555,6 +1558,12 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _downloadThreadsDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _forceCheckUpdateLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _forceCheckUpdateDescription = string.Empty;
 
     [ObservableProperty]
     private string _stableChannelText = string.Empty;
@@ -1618,6 +1627,8 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         _lastCheckResult is { Success: true, IsUpdateAvailable: true, PreferredAsset: not null };
 
     public bool IsInstallButtonVisible => HasPendingInstaller;
+
+    public bool IsRedownloadButtonVisible => HasPendingInstaller && !IsDownloading;
 
     public string DownloadThreadsValueText =>
         UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
@@ -1839,15 +1850,30 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
     private async Task CheckForUpdatesAsync()
     {
+        await CheckForUpdatesCoreAsync(isForce: false);
+    }
+
+    private bool CanForceCheckUpdate() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanForceCheckUpdate))]
+    private async Task ForceCheckUpdateAsync()
+    {
+        await CheckForUpdatesCoreAsync(isForce: true);
+    }
+
+    private async Task CheckForUpdatesCoreAsync(bool isForce)
+    {
         try
         {
             IsCheckingForUpdates = true;
             IsDownloadProgressVisible = false;
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_checking", "Checking GitHub releases...");
+            UpdateStatus = isForce
+                ? L("settings.update.status_force_checking", "Force checking GitHub releases...")
+                : L("settings.update.status_checking", "Checking GitHub releases...");
 
-            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion);
+            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce);
             _lastCheckResult = result.Success ? result : null;
             RefreshLastCheckedFromSettings();
 
@@ -1863,16 +1889,16 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             }
 
             ApplyCheckResultDisplay(result);
-            if (!result.IsUpdateAvailable)
+            if (!result.IsUpdateAvailable && !isForce)
             {
                 return;
             }
 
             if (result.PreferredAsset is null)
             {
-                UpdateStatus = L(
-                    "settings.update.status_asset_missing",
-                    "A new release is available, but no compatible installer was found.");
+                UpdateStatus = isForce
+                    ? L("settings.update.status_force_no_asset", "Release found but no compatible installer available.")
+                    : L("settings.update.status_asset_missing", "A new release is available, but no compatible installer was found.");
                 return;
             }
 
@@ -1884,7 +1910,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
             UpdateStatus = string.Format(
                 CultureInfo.CurrentCulture,
-                L("settings.update.status_available_format", "New version {0} is available. Click Download & Install."),
+                isForce
+                    ? L("settings.update.status_force_available_format", "Release {0} is available. Click Download & Install.")
+                    : L("settings.update.status_available_format", "New version {0} is available. Click Download & Install."),
                 result.LatestVersionText);
         }
         finally
@@ -1926,6 +1954,59 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                 result.ErrorMessage ?? L("settings.update.status_installer_missing", "Installer file was not found after download."));
     }
 
+    private bool CanRedownloadUpdate() => !IsBusy && HasPendingInstaller && _lastCheckResult is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRedownloadUpdate))]
+    private async Task RedownloadUpdateAsync()
+    {
+        if (_lastCheckResult is null || !_lastCheckResult.Success || !_lastCheckResult.IsUpdateAvailable || _lastCheckResult.PreferredAsset is null)
+        {
+            UpdateStatus = L("settings.update.status_redownload_no_check", "Please check for updates first before redownloading.");
+            return;
+        }
+
+        try
+        {
+            IsDownloading = true;
+            IsDownloadProgressVisible = true;
+            DownloadProgressValue = 0;
+            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdateStatus = L("settings.update.status_redownloading", "Redownloading installer...");
+
+            var progress = new Progress<double>(value =>
+            {
+                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
+                DownloadProgressText = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
+                    DownloadProgressValue);
+            });
+
+            var downloadResult = await _updateWorkflowService.RedownloadReleaseAsync(_lastCheckResult, progress);
+            if (!downloadResult.Success)
+            {
+                UpdateStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.status_redownload_failed_format", "Redownload failed: {0}"),
+                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
+                return;
+            }
+
+            ApplyPendingState(_settingsFacade.Update.Get());
+            UpdateStatus = downloadResult.HashVerified
+                ? BuildPendingReadyStatus()
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.status_downloaded_no_hash_format", "Update downloaded. Hash: {0}"),
+                    downloadResult.ActualHash ?? "N/A");
+        }
+        finally
+        {
+            IsDownloading = false;
+            IsDownloadProgressVisible = false;
+        }
+    }
+
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.update.title", "Update");
@@ -1939,9 +2020,12 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         UpdateModeLabel = L("settings.update.mode_label", "Update Mode");
         DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
         DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
+        ForceCheckUpdateLabel = L("settings.update.force_check_label", "Force Check Update");
+        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates from GitHub, ignoring version comparison.");
         CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
         DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
         InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
+        RedownloadButtonText = L("settings.update.redownload_button", "Redownload");
         CurrentVersionLabel = L("settings.update.current_version_label", "Current Version");
         LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
         PublishedAtLabel = L("settings.update.published_at_label", "Published At");
@@ -2147,7 +2231,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(IsDownloadButtonVisible));
         OnPropertyChanged(nameof(IsInstallButtonVisible));
+        OnPropertyChanged(nameof(IsRedownloadButtonVisible));
         OnPropertyChanged(nameof(DownloadThreadsValueText));
+        RedownloadUpdateCommand.NotifyCanExecuteChanged();
     }
 
     private IReadOnlyList<SelectionOption> CreateUpdateChannelOptions()

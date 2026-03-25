@@ -36,7 +36,7 @@ public sealed class AirAppMarketReadmeService : IDisposable
     }
 
     public async Task<string> LoadAsync(
-        LanMountainDesktop.Services.Settings.PluginMarketPluginInfo plugin,
+        LanMountainDesktop.Services.Settings.PluginCatalogItemInfo plugin,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plugin);

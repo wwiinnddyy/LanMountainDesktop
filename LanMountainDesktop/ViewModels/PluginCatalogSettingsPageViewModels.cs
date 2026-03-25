@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -15,7 +15,7 @@ using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.ViewModels;
 
-public enum PluginMarketPrimaryActionState
+public enum PluginCatalogPrimaryActionState
 {
     Install,
     Update,
@@ -24,13 +24,13 @@ public enum PluginMarketPrimaryActionState
     Incompatible
 }
 
-public sealed partial class PluginMarketItemViewModel : ViewModelBase
+public sealed partial class PluginCatalogItemViewModel : ViewModelBase
 {
     private readonly LocalizationService _localizationService;
     private readonly string _languageCode;
     private bool _isLoadingIcon;
 
-    public PluginMarketItemViewModel(
+    public PluginCatalogItemViewModel(
         PluginCatalogItemInfo plugin,
         LocalizationService localizationService,
         string languageCode)
@@ -104,7 +104,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
     public bool HasIcon => IconBitmap is not null;
 
-    public PluginMarketPrimaryActionState ActionState { get; private set; }
+    public PluginCatalogPrimaryActionState ActionState { get; private set; }
 
     partial void OnIconBitmapChanged(Bitmap? value)
     {
@@ -164,7 +164,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
     {
         if (IsInstalling)
         {
-            ActionState = IsUpdateAvailable ? PluginMarketPrimaryActionState.Update : PluginMarketPrimaryActionState.Install;
+            ActionState = IsUpdateAvailable ? PluginCatalogPrimaryActionState.Update : PluginCatalogPrimaryActionState.Install;
             ActionSymbol = Symbol.ArrowClockwise;
             ActionTooltip = L("market.button.installing", "Installing...");
             IsActionEnabled = false;
@@ -173,7 +173,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
         if (!IsCompatibleWithHost)
         {
-            ActionState = PluginMarketPrimaryActionState.Incompatible;
+            ActionState = PluginCatalogPrimaryActionState.Incompatible;
             ActionSymbol = Symbol.Warning;
             ActionTooltip = string.Format(
                 CultureInfo.CurrentCulture,
@@ -185,7 +185,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
         if (RequiresRestart)
         {
-            ActionState = PluginMarketPrimaryActionState.RestartRequired;
+            ActionState = PluginCatalogPrimaryActionState.RestartRequired;
             ActionSymbol = Symbol.ArrowClockwise;
             ActionTooltip = L("market.button.restart", "Restart to apply");
             IsActionEnabled = true;
@@ -194,7 +194,7 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
         if (IsUpdateAvailable)
         {
-            ActionState = PluginMarketPrimaryActionState.Update;
+            ActionState = PluginCatalogPrimaryActionState.Update;
             ActionSymbol = Symbol.ArrowSync;
             ActionTooltip = L("market.button.update", "Update");
             IsActionEnabled = true;
@@ -203,14 +203,14 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
 
         if (IsInstalled)
         {
-            ActionState = PluginMarketPrimaryActionState.Installed;
+            ActionState = PluginCatalogPrimaryActionState.Installed;
             ActionSymbol = Symbol.CheckmarkCircle;
             ActionTooltip = L("market.button.installed", "Installed");
             IsActionEnabled = false;
             return;
         }
 
-        ActionState = PluginMarketPrimaryActionState.Install;
+        ActionState = PluginCatalogPrimaryActionState.Install;
         ActionSymbol = Symbol.ArrowDownload;
         ActionTooltip = L("market.button.install", "Install");
         IsActionEnabled = true;
@@ -242,20 +242,20 @@ public sealed partial class PluginMarketItemViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
-public sealed partial class PluginMarketDetailViewModel : ViewModelBase
+public sealed partial class PluginCatalogDetailViewModel : ViewModelBase
 {
     private readonly LocalizationService _localizationService;
     private readonly string _languageCode;
     private readonly AirAppMarketReadmeService _readmeService;
-    private readonly Func<PluginMarketItemViewModel, Task> _primaryActionAsync;
+    private readonly Func<PluginCatalogItemViewModel, Task> _primaryActionAsync;
     private bool _isInitialized;
 
-    public PluginMarketDetailViewModel(
-        PluginMarketItemViewModel item,
+    public PluginCatalogDetailViewModel(
+        PluginCatalogItemViewModel item,
         LocalizationService localizationService,
         string languageCode,
         AirAppMarketReadmeService readmeService,
-        Func<PluginMarketItemViewModel, Task> primaryActionAsync)
+        Func<PluginCatalogItemViewModel, Task> primaryActionAsync)
     {
         Item = item;
         _localizationService = localizationService;
@@ -273,7 +273,7 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
         EmptyDependenciesText = L("market.detail.dependencies_empty", "No dependencies were declared by this plugin.");
     }
 
-    public PluginMarketItemViewModel Item { get; }
+    public PluginCatalogItemViewModel Item { get; }
 
     public ObservableCollection<PluginCatalogSharedContractInfo> Dependencies { get; }
 
@@ -375,7 +375,7 @@ public sealed partial class PluginMarketDetailViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
-public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
+public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly IPluginCatalogSettingsService _pluginCatalog;
@@ -386,9 +386,9 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
     private readonly Dictionary<string, InstalledPluginInfo> _installedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly Version? _hostVersion;
     private bool _isInitialized;
-    private bool _hasLoadedMarket;
+    private bool _hasLoadedCatalog;
 
-    public PluginMarketSettingsPageViewModel(
+    public PluginCatalogSettingsPageViewModel(
         ISettingsFacadeService settingsFacade,
         LocalizationService localizationService,
         AirAppMarketIconService iconService,
@@ -402,16 +402,16 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         Version.TryParse(_settingsFacade.ApplicationInfo.GetAppVersionText(), out _hostVersion);
         RefreshLocalizedText();
-        StatusMessage = L("market.status.loading", "Loading the official plugin market...");
+        StatusMessage = L("market.status.loading", "Loading the official plugin catalog...");
     }
 
     public event Action<string?>? RestartRequested;
 
-    public event Action<PluginMarketItemViewModel>? DetailsRequested;
+    public event Action<PluginCatalogItemViewModel>? DetailsRequested;
 
-    public ObservableCollection<PluginMarketItemViewModel> MarketPlugins { get; } = [];
+    public ObservableCollection<PluginCatalogItemViewModel> CatalogPlugins { get; } = [];
 
-    public ObservableCollection<PluginMarketItemViewModel> FilteredPlugins { get; } = [];
+    public ObservableCollection<PluginCatalogItemViewModel> FilteredPlugins { get; } = [];
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -454,9 +454,9 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
         await RefreshAsync();
     }
 
-    public PluginMarketDetailViewModel CreateDetailViewModel(PluginMarketItemViewModel item)
+    public PluginCatalogDetailViewModel CreateDetailViewModel(PluginCatalogItemViewModel item)
     {
-        return new PluginMarketDetailViewModel(
+        return new PluginCatalogDetailViewModel(
             item,
             _localizationService,
             _languageCode,
@@ -475,35 +475,35 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
         try
         {
             IsBusy = true;
-            StatusMessage = L("market.status.loading", "Loading the official plugin market...");
+            StatusMessage = L("market.status.loading", "Loading the official plugin catalog...");
             RefreshInstalledSnapshot();
 
             var result = await _pluginCatalog.LoadCatalogAsync();
             if (!result.Success)
             {
-                _hasLoadedMarket = false;
-                MarketPlugins.Clear();
+                _hasLoadedCatalog = false;
+                CatalogPlugins.Clear();
                 FilteredPlugins.Clear();
                 ShowEmptyState = true;
                 EmptyStateText = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? L("market.list.empty", "The plugin market has not been loaded yet.")
+                    ? L("market.list.empty", "The plugin catalog has not been loaded yet.")
                     : result.ErrorMessage;
                 StatusMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? L("market.status.load_failed_format", "Failed to load the plugin market: Unknown")
+                    ? L("market.status.load_failed_format", "Failed to load the plugin catalog: Unknown")
                     : string.Format(
                         CultureInfo.CurrentCulture,
-                        L("market.status.load_failed_format", "Failed to load the plugin market: {0}"),
+                        L("market.status.load_failed_format", "Failed to load the plugin catalog: {0}"),
                         result.ErrorMessage);
                 return;
             }
 
-            _hasLoadedMarket = true;
-            MarketPlugins.Clear();
+            _hasLoadedCatalog = true;
+            CatalogPlugins.Clear();
             foreach (var plugin in result.Plugins)
             {
-                var item = new PluginMarketItemViewModel(plugin, _localizationService, _languageCode);
+                var item = new PluginCatalogItemViewModel(plugin, _localizationService, _languageCode);
                 item.ApplyInstallState(ResolveInstalledPlugin(plugin.Id), _hostVersion);
-                MarketPlugins.Add(item);
+                CatalogPlugins.Add(item);
                 _ = item.EnsureIconLoadedAsync(_iconService);
             }
 
@@ -513,12 +513,12 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
                 ? string.Format(
                     CultureInfo.CurrentCulture,
                     L("market.status.loaded_cache_format", "Official source unavailable. Loaded {0} plugin(s) from cache. Reason: {1}"),
-                    MarketPlugins.Count,
+                    CatalogPlugins.Count,
                     result.WarningMessage ?? L("market.detail.unknown", "Unknown"))
                 : string.Format(
                     CultureInfo.CurrentCulture,
                     L("market.status.loaded_network_format", "Loaded {0} plugin(s) from the official source."),
-                    MarketPlugins.Count);
+                    CatalogPlugins.Count);
         }
         finally
         {
@@ -527,7 +527,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void OpenDetails(PluginMarketItemViewModel? item)
+    private void OpenDetails(PluginCatalogItemViewModel? item)
     {
         if (item is null)
         {
@@ -538,19 +538,19 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private Task ExecutePrimaryActionAsync(PluginMarketItemViewModel? item)
+    private Task ExecutePrimaryActionAsync(PluginCatalogItemViewModel? item)
     {
         return item is null ? Task.CompletedTask : ExecutePrimaryActionCoreAsync(item);
     }
 
-    private async Task ExecutePrimaryActionCoreAsync(PluginMarketItemViewModel item)
+    private async Task ExecutePrimaryActionCoreAsync(PluginCatalogItemViewModel item)
     {
         if (item.IsInstalling)
         {
             return;
         }
 
-        if (item.ActionState == PluginMarketPrimaryActionState.RestartRequired)
+        if (item.ActionState == PluginCatalogPrimaryActionState.RestartRequired)
         {
             RestartRequested?.Invoke(RestartRequiredMessage);
             return;
@@ -614,7 +614,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
 
     private void RefreshItemStates()
     {
-        foreach (var item in MarketPlugins)
+        foreach (var item in CatalogPlugins)
         {
             item.ApplyInstallState(ResolveInstalledPlugin(item.PluginId), _hostVersion);
         }
@@ -642,7 +642,7 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
     {
         FilteredPlugins.Clear();
 
-        IEnumerable<PluginMarketItemViewModel> filtered = MarketPlugins;
+        IEnumerable<PluginCatalogItemViewModel> filtered = CatalogPlugins;
         var query = SearchText?.Trim();
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -660,8 +660,8 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
         }
 
         ShowEmptyState = FilteredPlugins.Count == 0;
-        EmptyStateText = !_hasLoadedMarket
-            ? L("market.list.empty", "The plugin market has not been loaded yet.")
+        EmptyStateText = !_hasLoadedCatalog
+            ? L("market.list.empty", "The plugin catalog has not been loaded yet.")
             : string.IsNullOrWhiteSpace(query)
                 ? L("settings.plugins.marketplace_empty", "No marketplace plugins are available right now.")
                 : L("market.list.no_results", "No plugins match the current search.");
@@ -669,12 +669,12 @@ public sealed partial class PluginMarketSettingsPageViewModel : ViewModelBase
 
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.plugin_market.title", "Plugin Market");
-        PageDescription = L("settings.plugin_market.subtitle", "Browse plugins from the official LanAirApp source and stage installs.");
+        PageTitle = L("settings.plugin_catalog.title", "Plugin Catalog");
+        PageDescription = L("settings.plugin_catalog.subtitle", "Browse plugins from the official LanAirApp source and stage installs.");
         SearchPlaceholder = L("market.toolbar.search_placeholder", "Search plugins");
         RefreshButtonText = L("market.toolbar.refresh", "Refresh");
         RestartRequiredMessage = L("settings.plugins.restart_required", "Plugin changes take effect after restart.");
-        EmptyStateText = L("market.list.empty", "The plugin market has not been loaded yet.");
+        EmptyStateText = L("market.list.empty", "The plugin catalog has not been loaded yet.");
     }
 
     private string L(string key, string fallback)

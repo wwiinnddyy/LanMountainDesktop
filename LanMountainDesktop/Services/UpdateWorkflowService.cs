@@ -13,7 +13,15 @@ namespace LanMountainDesktop.Services;
 public sealed record UpdatePendingInfo(
     string InstallerPath,
     string VersionText,
-    DateTimeOffset? PublishedAt);
+    DateTimeOffset? PublishedAt,
+    string? Sha256 = null);
+
+public sealed record UpdateVerifyResult(
+    bool Success,
+    bool HashMatched,
+    string? ExpectedHash,
+    string? ActualHash,
+    string? ErrorMessage);
 
 public sealed record UpdateInstallerLaunchResult(
     bool Success,
@@ -56,6 +64,7 @@ public sealed class UpdateWorkflowService
 
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(
         Version currentVersion,
+        bool isForce = false,
         CancellationToken cancellationToken = default)
     {
         var state = _settingsFacade.Update.Get();
@@ -64,10 +73,15 @@ public sealed class UpdateWorkflowService
             UpdateSettingsValues.ChannelPreview,
             StringComparison.OrdinalIgnoreCase);
 
-        var result = await _settingsFacade.Update.CheckForUpdatesAsync(
-            currentVersion,
-            includePrerelease,
-            cancellationToken);
+        var result = isForce
+            ? await _settingsFacade.Update.ForceCheckForUpdatesAsync(
+                currentVersion,
+                includePrerelease,
+                cancellationToken)
+            : await _settingsFacade.Update.CheckForUpdatesAsync(
+                currentVersion,
+                includePrerelease,
+                cancellationToken);
 
         SaveState(state with
         {
@@ -75,6 +89,13 @@ public sealed class UpdateWorkflowService
         });
 
         return result;
+    }
+
+    public async Task<UpdateCheckResult> ForceCheckForUpdatesAsync(
+        Version currentVersion,
+        CancellationToken cancellationToken = default)
+    {
+        return await CheckForUpdatesAsync(currentVersion, true, cancellationToken);
     }
 
     public async Task<UpdateDownloadResult> DownloadReleaseAsync(
@@ -95,7 +116,13 @@ public sealed class UpdateWorkflowService
             string.Equals(existingPending.VersionText, checkResult.LatestVersionText, StringComparison.OrdinalIgnoreCase) &&
             File.Exists(existingPending.InstallerPath))
         {
-            return new UpdateDownloadResult(true, existingPending.InstallerPath, null);
+            var verifyResult = await VerifyPendingUpdateAsync();
+            if (verifyResult.Success)
+            {
+                return new UpdateDownloadResult(true, existingPending.InstallerPath, null, verifyResult.HashMatched, verifyResult.ExpectedHash, verifyResult.ActualHash);
+            }
+
+            AppLogger.Warn("UpdateWorkflow", $"Existing installer hash verification failed, will redownload. Expected: {verifyResult.ExpectedHash}, Actual: {verifyResult.ActualHash}");
         }
 
         Directory.CreateDirectory(_updatesDirectory);
@@ -119,11 +146,109 @@ public sealed class UpdateWorkflowService
                 PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
                     ? null
                     : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
-                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                PendingUpdateSha256 = result.ActualHash
             });
         }
 
         return result;
+    }
+
+    public async Task<UpdateDownloadResult> RedownloadReleaseAsync(
+        UpdateCheckResult checkResult,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkResult);
+
+        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
+        {
+            return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
+        }
+
+        var state = _settingsFacade.Update.Get();
+        var existingPending = GetPendingUpdate(state);
+
+        if (existingPending is not null && File.Exists(existingPending.InstallerPath))
+        {
+            try
+            {
+                File.Delete(existingPending.InstallerPath);
+                AppLogger.Info("UpdateWorkflow", $"Deleted existing installer for redownload: {existingPending.InstallerPath}");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("UpdateWorkflow", $"Failed to delete existing installer: {existingPending.InstallerPath}", ex);
+            }
+        }
+
+        ClearPendingUpdate();
+
+        Directory.CreateDirectory(_updatesDirectory);
+        var fileName = SanitizeFileName(checkResult.PreferredAsset.Name);
+        var destinationPath = Path.Combine(_updatesDirectory, fileName);
+
+        state = _settingsFacade.Update.Get();
+
+        var result = await _settingsFacade.Update.DownloadAssetAsync(
+            checkResult.PreferredAsset,
+            destinationPath,
+            state.UpdateDownloadSource,
+            state.UpdateDownloadThreads,
+            progress,
+            cancellationToken);
+
+        if (result.Success)
+        {
+            SaveState(state with
+            {
+                PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
+                PendingUpdateVersion = checkResult.LatestVersionText,
+                PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
+                    ? null
+                    : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                PendingUpdateSha256 = result.ActualHash
+            });
+        }
+
+        return result;
+    }
+
+    public async Task<UpdateVerifyResult> VerifyPendingUpdateAsync()
+    {
+        var state = _settingsFacade.Update.Get();
+        var pending = GetPendingUpdate(state);
+
+        if (pending is null)
+        {
+            return new UpdateVerifyResult(false, false, null, null, "No pending update available.");
+        }
+
+        if (!File.Exists(pending.InstallerPath))
+        {
+            return new UpdateVerifyResult(false, false, null, null, "Installer file does not exist.");
+        }
+
+        var expectedHash = pending.Sha256;
+        var actualHash = await GitHubReleaseUpdateService.ComputeFileSha256Async(pending.InstallerPath);
+
+        if (string.IsNullOrEmpty(expectedHash))
+        {
+            return new UpdateVerifyResult(true, true, null, actualHash, null);
+        }
+
+        var hashMatched = string.Equals(
+            expectedHash?.Trim().ToLowerInvariant(),
+            actualHash?.Trim().ToLowerInvariant(),
+            StringComparison.OrdinalIgnoreCase);
+
+        return new UpdateVerifyResult(
+            hashMatched,
+            hashMatched,
+            expectedHash,
+            actualHash,
+            hashMatched ? null : $"Hash mismatch. Expected: {expectedHash}, Actual: {actualHash}");
     }
 
     public async Task AutoCheckIfEnabledAsync(
@@ -135,7 +260,7 @@ public sealed class UpdateWorkflowService
         try
         {
             // Always check for updates on startup (removed AutoCheckUpdates check)
-            var result = await CheckForUpdatesAsync(currentVersion, cancellationToken);
+            var result = await CheckForUpdatesAsync(currentVersion, isForce: false, cancellationToken);
             if (!result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
             {
                 return;
@@ -193,7 +318,8 @@ public sealed class UpdateWorkflowService
         {
             PendingUpdateInstallerPath = null,
             PendingUpdateVersion = null,
-            PendingUpdatePublishedAtUtcMs = null
+            PendingUpdatePublishedAtUtcMs = null,
+            PendingUpdateSha256 = null
         });
     }
 
@@ -262,7 +388,8 @@ public sealed class UpdateWorkflowService
         return new UpdatePendingInfo(
             installerPath,
             string.IsNullOrWhiteSpace(state.PendingUpdateVersion) ? Path.GetFileNameWithoutExtension(installerPath) : state.PendingUpdateVersion,
-            publishedAt);
+            publishedAt,
+            state.PendingUpdateSha256);
     }
 
     private void SaveState(UpdateSettingsState state)

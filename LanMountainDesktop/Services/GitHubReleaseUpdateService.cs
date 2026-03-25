@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,8 @@ namespace LanMountainDesktop.Services;
 public sealed record GitHubReleaseAsset(
     string Name,
     string BrowserDownloadUrl,
-    long SizeBytes);
+    long SizeBytes,
+    string? Sha256 = null);
 
 public sealed record GitHubReleaseInfo(
     string TagName,
@@ -31,12 +33,16 @@ public sealed record UpdateCheckResult(
     string LatestVersionText,
     GitHubReleaseInfo? Release,
     GitHubReleaseAsset? PreferredAsset,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    bool ForceMode = false);
 
 public sealed record UpdateDownloadResult(
     bool Success,
     string? FilePath,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    bool HashVerified = false,
+    string? ExpectedHash = null,
+    string? ActualHash = null);
 
 public sealed class GitHubReleaseUpdateService : IDisposable
 {
@@ -169,6 +175,80 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         }
     }
 
+    public async Task<UpdateCheckResult> ForceCheckForUpdatesAsync(
+        Version currentVersion,
+        bool includePrerelease,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedCurrentVersionText = NormalizeVersion(currentVersion).ToString(3);
+
+        if (string.IsNullOrWhiteSpace(_owner) || string.IsNullOrWhiteSpace(_repo))
+        {
+            return new UpdateCheckResult(
+                Success: false,
+                IsUpdateAvailable: false,
+                CurrentVersionText: normalizedCurrentVersionText,
+                LatestVersionText: "-",
+                Release: null,
+                PreferredAsset: null,
+                ErrorMessage: "Repository information is not configured.",
+                ForceMode: true);
+        }
+
+        try
+        {
+            var release = includePrerelease
+                ? await GetLatestReleaseIncludingPrereleaseAsync(cancellationToken)
+                : await GetLatestStableReleaseAsync(cancellationToken);
+
+            if (release is null)
+            {
+                return new UpdateCheckResult(
+                    Success: false,
+                    IsUpdateAvailable: false,
+                    CurrentVersionText: normalizedCurrentVersionText,
+                    LatestVersionText: "-",
+                    Release: null,
+                    PreferredAsset: null,
+                    ErrorMessage: "No release data was returned from GitHub.",
+                    ForceMode: true);
+            }
+
+            var hasParsedTagVersion = TryParseVersion(release.TagName, out var parsedTagVersion);
+            var latestVersionText = hasParsedTagVersion && parsedTagVersion is not null
+                ? parsedTagVersion.ToString(3)
+                : release.TagName;
+
+            var preferredAsset = SelectPreferredInstallerAsset(release.Assets);
+
+            return new UpdateCheckResult(
+                Success: true,
+                IsUpdateAvailable: true,
+                CurrentVersionText: normalizedCurrentVersionText,
+                LatestVersionText: latestVersionText,
+                Release: release,
+                PreferredAsset: preferredAsset,
+                ErrorMessage: null,
+                ForceMode: true);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new UpdateCheckResult(
+                Success: false,
+                IsUpdateAvailable: false,
+                CurrentVersionText: normalizedCurrentVersionText,
+                LatestVersionText: "-",
+                Release: null,
+                PreferredAsset: null,
+                ErrorMessage: ex.Message,
+                ForceMode: true);
+        }
+    }
+
     public async Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
@@ -206,9 +286,128 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             progressAdapter,
             cancellationToken);
 
-        return result.Success
-            ? new UpdateDownloadResult(true, result.FilePath ?? destinationFilePath, null)
-            : new UpdateDownloadResult(false, null, result.ErrorMessage);
+        if (!result.Success)
+        {
+            return new UpdateDownloadResult(false, null, result.ErrorMessage);
+        }
+
+        var filePath = result.FilePath ?? destinationFilePath;
+        var (hashVerified, actualHash) = await VerifyFileHashAsync(filePath, asset.Sha256, cancellationToken);
+
+        if (!string.IsNullOrEmpty(asset.Sha256) && !hashVerified)
+        {
+            return new UpdateDownloadResult(
+                false,
+                filePath,
+                $"Hash verification failed. Expected: {asset.Sha256}, Actual: {actualHash}",
+                false,
+                asset.Sha256,
+                actualHash);
+        }
+
+        return new UpdateDownloadResult(true, filePath, null, hashVerified, asset.Sha256, actualHash);
+    }
+
+    public async Task<UpdateDownloadResult> RedownloadAssetAsync(
+        GitHubReleaseAsset asset,
+        string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (File.Exists(destinationFilePath))
+        {
+            try
+            {
+                File.Delete(destinationFilePath);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Update", $"Failed to delete existing file for redownload: {destinationFilePath}", ex);
+            }
+        }
+
+        var partFile = destinationFilePath + ".part";
+        if (File.Exists(partFile))
+        {
+            try
+            {
+                File.Delete(partFile);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Update", $"Failed to delete part file for redownload: {partFile}", ex);
+            }
+        }
+
+        var packageFile = destinationFilePath + ".download";
+        if (File.Exists(packageFile))
+        {
+            try
+            {
+                File.Delete(packageFile);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Update", $"Failed to delete package file for redownload: {packageFile}", ex);
+            }
+        }
+
+        return await DownloadAssetAsync(asset, destinationFilePath, downloadSource, maxParallelSegments, progress, cancellationToken);
+    }
+
+    public static async Task<(bool Success, string? Hash)> VerifyFileHashAsync(
+        string filePath,
+        string? expectedHash,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(filePath))
+        {
+            return (false, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(expectedHash))
+        {
+            var computedHash = await ComputeFileSha256Async(filePath, cancellationToken);
+            return (true, computedHash);
+        }
+
+        var actualHash = await ComputeFileSha256Async(filePath, cancellationToken);
+        var verified = string.Equals(
+            expectedHash?.Trim().ToLowerInvariant(),
+            actualHash?.Trim().ToLowerInvariant(),
+            StringComparison.OrdinalIgnoreCase);
+
+        return (verified, actualHash);
+    }
+
+    public static async Task<string?> ComputeFileSha256Async(string filePath, CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                81920,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+            using var sha256 = SHA256.Create();
+            var hashBytes = await sha256.ComputeHashAsync(stream, cancellationToken);
+            return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Update", $"Failed to compute SHA256 for file: {filePath}", ex);
+            return null;
+        }
     }
 
     public async Task<GitHubReleaseInfo?> GetReleaseByTagAsync(
@@ -343,11 +542,100 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                     continue;
                 }
 
-                assets.Add(new GitHubReleaseAsset(assetName, browserDownloadUrl, sizeBytes));
+                assets.Add(new GitHubReleaseAsset(assetName, browserDownloadUrl, sizeBytes, null));
             }
         }
 
+        var sha256Map = BuildSha256MapFromAssets(assets, element);
+
+        if (sha256Map.Count > 0)
+        {
+            assets = assets.Select(a =>
+                sha256Map.TryGetValue(a.Name, out var hash)
+                    ? a with { Sha256 = hash }
+                    : a).ToList();
+        }
+
         return new GitHubReleaseInfo(tagName, name, isPrerelease, isDraft, publishedAt, assets);
+    }
+
+    private static Dictionary<string, string> BuildSha256MapFromAssets(List<GitHubReleaseAsset> assets, JsonElement releaseElement)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var asset in assets)
+        {
+            if (asset.Name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase) ||
+                asset.Name.EndsWith(".sha256sum", StringComparison.OrdinalIgnoreCase))
+            {
+                var baseName = asset.Name[..asset.Name.LastIndexOf('.')];
+                var targetAsset = assets.FirstOrDefault(a =>
+                    a.Name.Equals(baseName, StringComparison.OrdinalIgnoreCase) ||
+                    a.Name.StartsWith(baseName + ".", StringComparison.OrdinalIgnoreCase));
+
+                if (targetAsset is not null && !map.ContainsKey(targetAsset.Name))
+                {
+                    map[targetAsset.Name] = asset.BrowserDownloadUrl;
+                }
+            }
+        }
+
+        if (releaseElement.TryGetProperty("body", out var bodyNode) &&
+            bodyNode.ValueKind == JsonValueKind.String)
+        {
+            var body = bodyNode.GetString() ?? string.Empty;
+            ParseSha256FromBody(body, assets, map);
+        }
+
+        return map;
+    }
+
+    private static void ParseSha256FromBody(string body, List<GitHubReleaseAsset> assets, Dictionary<string, string> map)
+    {
+        var lines = body.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
+            {
+                continue;
+            }
+
+            var parts = trimmedLine.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                var hash = parts[0];
+                var fileName = parts[1];
+
+                if (hash.Length == 64 && IsHexString(hash))
+                {
+                    foreach (var asset in assets)
+                    {
+                        if (asset.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase) ||
+                            fileName.Equals("*" + asset.Name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!map.ContainsKey(asset.Name))
+                            {
+                                map[asset.Name] = hash.ToLowerInvariant();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static bool IsHexString(string value)
+    {
+        foreach (var c in value)
+        {
+            if (!Uri.IsHexDigit(c))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static GitHubReleaseAsset? SelectPreferredInstallerAsset(IReadOnlyList<GitHubReleaseAsset> assets)

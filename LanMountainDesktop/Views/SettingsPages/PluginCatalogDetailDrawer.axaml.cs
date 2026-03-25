@@ -3,14 +3,14 @@ using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
-public partial class PluginMarketDetailDrawer : UserControl
+public partial class PluginCatalogDetailDrawer : UserControl
 {
-    public PluginMarketDetailDrawer()
+    public PluginCatalogDetailDrawer()
     {
         InitializeComponent();
     }
 
-    public PluginMarketDetailDrawer(PluginMarketDetailViewModel viewModel)
+    public PluginCatalogDetailDrawer(PluginCatalogDetailViewModel viewModel)
     {
         DataContext = viewModel;
         InitializeComponent();

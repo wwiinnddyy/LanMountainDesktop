@@ -67,7 +67,8 @@ public sealed record UpdateSettingsState(
     string? PendingUpdateInstallerPath,
     string? PendingUpdateVersion,
     long? PendingUpdatePublishedAtUtcMs,
-    long? LastUpdateCheckUtcMs);
+    long? LastUpdateCheckUtcMs,
+    string? PendingUpdateSha256);
 public sealed record PluginManagementSettingsState(IReadOnlyList<string> DisabledPluginIds);
 public enum PluginPackageSourceKind
 {
@@ -175,14 +176,6 @@ public sealed record PluginCatalogItemInfo(
 
     public IReadOnlyList<PluginCatalogSharedContractInfo> SharedContracts => Manifest.SharedContracts;
 
-    public IReadOnlyList<PluginCatalogDependencyInfo> Dependencies =>
-        Manifest.SharedContracts
-            .Select(contract => new PluginCatalogDependencyInfo(
-                contract.Id,
-                contract.Version,
-                contract.AssemblyName))
-            .ToArray();
-
     public DateTimeOffset PublishedAt => Publication.PublishedAt;
 
     public DateTimeOffset UpdatedAt => Publication.UpdatedAt;
@@ -192,82 +185,6 @@ public sealed record PluginCatalogItemInfo(
     public string ReleaseAssetName => Publication.ReleaseAssetName;
 
     public string ReleaseNotes => Repository.ReleaseNotes;
-
-    public static implicit operator PluginMarketPluginInfo(PluginCatalogItemInfo item)
-    {
-        return new PluginMarketPluginInfo(
-            item.Id,
-            item.Name,
-            item.Description,
-            item.Author,
-            item.Version,
-            item.ApiVersion,
-            item.MinHostVersion,
-            item.DownloadUrl,
-            item.ReleaseTag,
-            item.ReleaseAssetName,
-            item.IconUrl,
-            item.ReadmeUrl,
-            item.HomepageUrl,
-            item.RepositoryUrl,
-            item.Tags.ToArray(),
-            item.Dependencies.Select(dependency => new PluginMarketDependencyInfo(
-                dependency.Id,
-                dependency.Version,
-                dependency.AssemblyName)).ToArray(),
-            item.PublishedAt,
-            item.UpdatedAt);
-    }
-
-    public static implicit operator PluginCatalogItemInfo(PluginMarketPluginInfo plugin)
-    {
-        return new PluginCatalogItemInfo(
-            new PluginCatalogManifestInfo(
-                plugin.Id,
-                plugin.Name,
-                plugin.Description,
-                plugin.Author,
-                plugin.Version,
-                plugin.ApiVersion,
-                string.Empty,
-                plugin.Dependencies
-                    .Select(dependency => new PluginCatalogSharedContractInfo(
-                        dependency.Id,
-                        dependency.Version,
-                        dependency.AssemblyName))
-                    .ToArray()),
-            new PluginCatalogCompatibilityInfo(
-                plugin.MinHostVersion,
-                plugin.ApiVersion),
-            new PluginCatalogRepositoryInfo(
-                plugin.IconUrl,
-                plugin.RepositoryUrl,
-                plugin.ReadmeUrl,
-                plugin.HomepageUrl,
-                plugin.RepositoryUrl,
-                plugin.Tags,
-                string.Empty),
-            new PluginCatalogPublicationInfo(
-                plugin.ReleaseTag,
-                plugin.ReleaseAssetName,
-                plugin.PublishedAt,
-                plugin.UpdatedAt,
-                0,
-                string.Empty,
-                null),
-            string.IsNullOrWhiteSpace(plugin.DownloadUrl)
-                ? []
-                : [
-                    new PluginPackageSourceInfo(
-                        string.IsNullOrWhiteSpace(plugin.ReleaseTag)
-                            ? PluginPackageSourceKind.RawFallback
-                            : PluginPackageSourceKind.ReleaseAsset,
-                        plugin.DownloadUrl,
-                        string.Empty,
-                        0)
-                ],
-            []);
-    }
 }
 
 public sealed record PluginCatalogIndexResult(
@@ -277,19 +194,7 @@ public sealed record PluginCatalogIndexResult(
     string? Source,
     string? SourceLocation,
     string? WarningMessage,
-    string? ErrorMessage)
-{
-    public static implicit operator PluginMarketIndexResult(PluginCatalogIndexResult result)
-    {
-        return new PluginMarketIndexResult(
-            result.Success,
-            result.Plugins.Select(plugin => (PluginMarketPluginInfo)plugin).ToArray(),
-            result.Source,
-            result.SourceLocation,
-            result.WarningMessage,
-            result.ErrorMessage);
-    }
-}
+    string? ErrorMessage);
 
 public sealed record PluginInstallDiagnostic(
     string Code,
@@ -302,73 +207,6 @@ public sealed record PluginCatalogInstallResult(
     string? PluginName,
     PluginManifest? InstalledManifest,
     IReadOnlyList<PluginInstallDiagnostic> Diagnostics,
-    string? ErrorMessage)
-{
-    public static implicit operator PluginMarketInstallResult(PluginCatalogInstallResult result)
-    {
-        return new PluginMarketInstallResult(
-            result.Success,
-            result.PluginId,
-            result.PluginName,
-            result.ErrorMessage);
-    }
-}
-
-public sealed record PluginCatalogDependencyInfo(
-    string Id,
-    string Version,
-    string AssemblyName)
-{
-    public static implicit operator PluginMarketDependencyInfo(PluginCatalogDependencyInfo dependency)
-    {
-        return new PluginMarketDependencyInfo(
-            dependency.Id,
-            dependency.Version,
-            dependency.AssemblyName);
-    }
-}
-
-[Obsolete("Use PluginCatalogSharedContractInfo and PluginCatalogItemInfo instead.")]
-public sealed record PluginMarketDependencyInfo(
-    string Id,
-    string Version,
-    string AssemblyName);
-
-[Obsolete("Use PluginCatalogItemInfo instead.")]
-public sealed record PluginMarketPluginInfo(
-    string Id,
-    string Name,
-    string Description,
-    string Author,
-    string Version,
-    string ApiVersion,
-    string MinHostVersion,
-    string DownloadUrl,
-    string ReleaseTag,
-    string ReleaseAssetName,
-    string IconUrl,
-    string ReadmeUrl,
-    string HomepageUrl,
-    string RepositoryUrl,
-    IReadOnlyList<string> Tags,
-    IReadOnlyList<PluginMarketDependencyInfo> Dependencies,
-    DateTimeOffset PublishedAt,
-    DateTimeOffset UpdatedAt);
-
-[Obsolete("Use PluginCatalogIndexResult instead.")]
-public sealed record PluginMarketIndexResult(
-    bool Success,
-    IReadOnlyList<PluginMarketPluginInfo> Plugins,
-    string? Source,
-    string? SourceLocation,
-    string? WarningMessage,
-    string? ErrorMessage);
-
-[Obsolete("Use PluginCatalogInstallResult instead.")]
-public sealed record PluginMarketInstallResult(
-    bool Success,
-    string? PluginId,
-    string? PluginName,
     string? ErrorMessage);
 
 public interface IPluginCatalogSourceProvider
@@ -488,7 +326,15 @@ public interface IUpdateSettingsService
     UpdateSettingsState Get();
     void Save(UpdateSettingsState state);
     Task<UpdateCheckResult> CheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
+    Task<UpdateCheckResult> ForceCheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
     Task<UpdateDownloadResult> DownloadAssetAsync(
+        GitHubReleaseAsset asset,
+        string destinationFilePath,
+        string downloadSource,
+        int maxParallelSegments,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default);
+    Task<UpdateDownloadResult> RedownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,
         string downloadSource,
@@ -523,13 +369,6 @@ public interface IPluginCatalogSettingsService : IPluginCatalogSourceProvider
     Task<PluginCatalogInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
 }
 
-[Obsolete("Use IPluginCatalogSettingsService instead.")]
-public interface IPluginMarketSettingsService : IPluginCatalogSettingsService
-{
-    Task<PluginMarketIndexResult> LoadIndexAsync(CancellationToken cancellationToken = default);
-    new Task<PluginMarketInstallResult> InstallAsync(string pluginId, CancellationToken cancellationToken = default);
-}
-
 public interface IApplicationInfoService
 {
     string GetAppVersionText();
@@ -554,8 +393,6 @@ public interface ISettingsFacadeService
     ILauncherPolicyService LauncherPolicy { get; }
     IPluginManagementSettingsService PluginManagement { get; }
     IPluginCatalogSettingsService PluginCatalog { get; }
-    [Obsolete("Use PluginCatalog instead.")]
-    IPluginMarketSettingsService PluginMarket { get; }
     IApplicationInfoService ApplicationInfo { get; }
 }
 

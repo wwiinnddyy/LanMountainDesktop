@@ -95,6 +95,8 @@ public sealed class AppSettingsSnapshot
 
     public long? LastUpdateCheckUtcMs { get; set; }
 
+    public string? PendingUpdateSha256 { get; set; }
+
     public List<string> TopStatusComponentIds { get; set; } = [];
 
     public List<string> PinnedTaskbarActions { get; set; } =

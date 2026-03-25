@@ -6,7 +6,7 @@ using Markdown.Avalonia;
 
 namespace LanMountainDesktop.Helpers;
 
-public static class PluginMarketMarkdownHelper
+public static class PluginCatalogMarkdownHelper
 {
     private static Markdown.Avalonia.Markdown? _engine;
 

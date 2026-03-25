@@ -678,29 +678,38 @@ internal sealed class AirAppMarketPluginRepositoryEntry
 
     public AirAppMarketPluginRepositoryEntry ValidateAndNormalize(string sourceName)
     {
-        var normalizedIconUrl = AirAppMarketIndexDocument.NormalizeValue(IconUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.iconUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(normalizedIconUrl, nameof(IconUrl), sourceName);
-
-        var normalizedProjectUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
-            AirAppMarketIndexDocument.NormalizeValue(ProjectUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.projectUrl."),
-            nameof(ProjectUrl),
-            sourceName);
-
-        var normalizedReadmeUrl = AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.readmeUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(normalizedReadmeUrl, nameof(ReadmeUrl), sourceName);
-
-        var normalizedHomepageUrl = AirAppMarketIndexDocument.NormalizeValue(HomepageUrl)
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.homepageUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(normalizedHomepageUrl, nameof(HomepageUrl), sourceName);
-
         var normalizedRepositoryUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
             AirAppMarketIndexDocument.NormalizeValue(RepositoryUrl)
             ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.repositoryUrl."),
             nameof(RepositoryUrl),
             sourceName);
+
+        var normalizedIconUrl = AirAppMarketIndexDocument.NormalizeValue(IconUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedIconUrl))
+        {
+            AirAppMarketIndexDocument.EnsureUrl(normalizedIconUrl, nameof(IconUrl), sourceName);
+        }
+
+        var normalizedProjectUrl = AirAppMarketIndexDocument.NormalizeValue(ProjectUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedProjectUrl))
+        {
+            AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
+                normalizedProjectUrl,
+                nameof(ProjectUrl),
+                sourceName);
+        }
+
+        var normalizedReadmeUrl = AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedReadmeUrl))
+        {
+            AirAppMarketIndexDocument.EnsureUrl(normalizedReadmeUrl, nameof(ReadmeUrl), sourceName);
+        }
+
+        var normalizedHomepageUrl = AirAppMarketIndexDocument.NormalizeValue(HomepageUrl) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedHomepageUrl))
+        {
+            AirAppMarketIndexDocument.EnsureUrl(normalizedHomepageUrl, nameof(HomepageUrl), sourceName);
+        }
 
         var normalizedTags = (Tags ?? [])
             .Select(AirAppMarketIndexDocument.NormalizeValue)
@@ -718,8 +727,7 @@ internal sealed class AirAppMarketPluginRepositoryEntry
             HomepageUrl = normalizedHomepageUrl,
             RepositoryUrl = normalizedRepositoryUrl,
             Tags = normalizedTags,
-            ReleaseNotes = AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes)
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing repository.releaseNotes.")
+            ReleaseNotes = AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes) ?? string.Empty
         };
     }
 }
@@ -808,30 +816,20 @@ internal sealed class AirAppMarketPluginPublicationEntry
 
     public AirAppMarketPluginPublicationEntry ValidateAndNormalize(string sourceName, string pluginId)
     {
-        var normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeReleaseTag(
-            ReleaseTag,
-            nameof(ReleaseTag),
-            sourceName);
-        var normalizedReleaseAssetName = AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName)
-            ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing publication.releaseAssetName for plugin '{pluginId}'.");
-
-        if (PublishedAt == default || UpdatedAt == default)
+        var normalizedPackageSources = NormalizePackageSources(PackageSources, sourceName, pluginId);
+        var normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeValue(ReleaseTag) ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedReleaseTag))
         {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing valid publication timestamps for plugin '{pluginId}'.");
+            normalizedReleaseTag = AirAppMarketIndexDocument.NormalizeReleaseTag(
+                normalizedReleaseTag,
+                nameof(ReleaseTag),
+                sourceName);
         }
 
-        if (PackageSizeBytes <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid packageSizeBytes '{PackageSizeBytes}' for plugin '{pluginId}'.");
-        }
-
-        var normalizedSha256 = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant()
-            ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing publication.sha256 for plugin '{pluginId}'.");
-        if (normalizedSha256.Length != 64 || normalizedSha256.Any(ch => !Uri.IsHexDigit(ch)))
+        var normalizedReleaseAssetName = AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName) ?? string.Empty;
+        var normalizedSha256 = AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(normalizedSha256) &&
+            (normalizedSha256.Length != 64 || normalizedSha256.Any(ch => !Uri.IsHexDigit(ch))))
         {
             throw new InvalidOperationException(
                 $"Market index '{sourceName}' declares invalid SHA-256 '{normalizedSha256}' for plugin '{pluginId}'.");
@@ -844,8 +842,6 @@ internal sealed class AirAppMarketPluginPublicationEntry
             throw new InvalidOperationException(
                 $"Market index '{sourceName}' declares invalid MD5 '{normalizedMd5}' for plugin '{pluginId}'.");
         }
-
-        var normalizedPackageSources = NormalizePackageSources(PackageSources, sourceName, pluginId);
 
         return new AirAppMarketPluginPublicationEntry
         {
@@ -1039,120 +1035,10 @@ internal sealed class AirAppMarketPluginEntry
             ? Publication!.ValidateAndNormalize(sourceName, resolvedPluginId)
             : null;
 
-        var resolvedName = FirstNonEmpty(
-            normalizedManifest?.Name,
-            AirAppMarketIndexDocument.NormalizeValue(Name))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin name.");
-        var resolvedDescription = FirstNonEmpty(
-            normalizedManifest?.Description,
-            AirAppMarketIndexDocument.NormalizeValue(Description))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin description.");
-        var resolvedAuthor = FirstNonEmpty(
-            normalizedManifest?.Author,
-            AirAppMarketIndexDocument.NormalizeValue(Author))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin author.");
-        var resolvedVersion = AirAppMarketIndexDocument.NormalizeVersion(
-            FirstNonEmpty(normalizedManifest?.Version, Version),
-            nameof(Version),
-            sourceName);
-        var resolvedApiVersion = AirAppMarketIndexDocument.NormalizeVersion(
-            FirstNonEmpty(
-                normalizedCompatibility?.PluginApiVersion,
-                normalizedManifest?.ApiVersion,
-                ApiVersion),
-            nameof(ApiVersion),
-            sourceName);
-        var resolvedMinHostVersion = AirAppMarketIndexDocument.NormalizeVersion(
-            FirstNonEmpty(normalizedCompatibility?.MinHostVersion, MinHostVersion),
-            nameof(MinHostVersion),
-            sourceName);
-
-        var resolvedIconUrl = FirstNonEmpty(
-            normalizedRepository?.IconUrl,
-            AirAppMarketIndexDocument.NormalizeValue(IconUrl))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin iconUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(resolvedIconUrl, nameof(IconUrl), sourceName);
-        var resolvedProjectUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
-            FirstNonEmpty(
-                normalizedRepository?.ProjectUrl,
-                AirAppMarketIndexDocument.NormalizeValue(ProjectUrl))
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin projectUrl."),
-            nameof(ProjectUrl),
-            sourceName);
-        var resolvedReadmeUrl = FirstNonEmpty(
-            normalizedRepository?.ReadmeUrl,
-            AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin readmeUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(resolvedReadmeUrl, nameof(ReadmeUrl), sourceName);
-        var resolvedHomepageUrl = FirstNonEmpty(
-            normalizedRepository?.HomepageUrl,
-            AirAppMarketIndexDocument.NormalizeValue(HomepageUrl))
-            ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin homepageUrl.");
-        AirAppMarketIndexDocument.EnsureUrl(resolvedHomepageUrl, nameof(HomepageUrl), sourceName);
-        var resolvedRepositoryUrl = AirAppMarketIndexDocument.NormalizeGitHubRepositoryUrl(
-            FirstNonEmpty(
-                normalizedRepository?.RepositoryUrl,
-                AirAppMarketIndexDocument.NormalizeValue(RepositoryUrl))
-                ?? throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin repositoryUrl."),
-            nameof(RepositoryUrl),
-            sourceName);
-
-        var resolvedReleaseTag = FirstNonEmpty(
-            normalizedPublication?.ReleaseTag,
-            AirAppMarketIndexDocument.NormalizeValue(ReleaseTag));
-        var resolvedReleaseAssetName = FirstNonEmpty(
-            normalizedPublication?.ReleaseAssetName,
-            AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName));
-        if (string.IsNullOrWhiteSpace(resolvedReleaseTag) != string.IsNullOrWhiteSpace(resolvedReleaseAssetName))
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' must declare both '{nameof(ReleaseTag)}' and '{nameof(ReleaseAssetName)}' together for plugin '{resolvedPluginId}'.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(resolvedReleaseTag))
-        {
-            resolvedReleaseTag = AirAppMarketIndexDocument.NormalizeReleaseTag(
-                resolvedReleaseTag,
-                nameof(ReleaseTag),
-                sourceName);
-        }
-
-        var resolvedPackageSize = normalizedPublication?.PackageSizeBytes ?? PackageSizeBytes;
-        if (resolvedPackageSize <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid packageSizeBytes '{resolvedPackageSize}' for plugin '{resolvedPluginId}'.");
-        }
-
-        var resolvedSha256 = FirstNonEmpty(
-            normalizedPublication?.Sha256,
-            AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant())
-            ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing SHA-256 for plugin '{resolvedPluginId}'.");
-        if (resolvedSha256.Length != 64 || resolvedSha256.Any(ch => !Uri.IsHexDigit(ch)))
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid SHA-256 '{resolvedSha256}' for plugin '{resolvedPluginId}'.");
-        }
-
-        var resolvedMd5 = FirstNonEmpty(
-            normalizedPublication?.Md5,
-            AirAppMarketIndexDocument.NormalizeValue(Md5)?.ToLowerInvariant())
-            ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(resolvedMd5) &&
-            (resolvedMd5.Length != 32 || resolvedMd5.Any(ch => !Uri.IsHexDigit(ch))))
-        {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' declares invalid MD5 '{resolvedMd5}' for plugin '{resolvedPluginId}'.");
-        }
-
         var resolvedPackageSources = NormalizePackageSources(
-            normalizedPublication?.PackageSources,
+            normalizedPublication?.PackageSources ?? PackageSources,
             sourceName,
             resolvedPluginId,
-            resolvedReleaseTag,
-            resolvedReleaseAssetName,
-            resolvedRepositoryUrl,
             AirAppMarketIndexDocument.NormalizeValue(DownloadUrl));
         if (resolvedPackageSources.Count == 0)
         {
@@ -1160,19 +1046,84 @@ internal sealed class AirAppMarketPluginEntry
                 $"Market index '{sourceName}' is missing package sources for plugin '{resolvedPluginId}'.");
         }
 
-        var resolvedDownloadUrl = resolvedPackageSources[0].Url;
-        var resolvedPublishedAt = normalizedPublication?.PublishedAt ?? PublishedAt;
-        var resolvedUpdatedAt = normalizedPublication?.UpdatedAt ?? UpdatedAt;
-        if (resolvedPublishedAt == default || resolvedUpdatedAt == default)
+        var resolvedRepositoryUrl = FirstNonEmpty(
+            normalizedRepository?.RepositoryUrl,
+            AirAppMarketIndexDocument.NormalizeValue(RepositoryUrl));
+        if (string.IsNullOrWhiteSpace(resolvedRepositoryUrl))
         {
-            throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing valid publish timestamps for plugin '{resolvedPluginId}'.");
+            throw new InvalidOperationException($"Market index '{sourceName}' is missing plugin repositoryUrl.");
         }
 
+        var resolvedDownloadUrl = FirstNonEmpty(
+            resolvedPackageSources.FirstOrDefault()?.Url,
+            AirAppMarketIndexDocument.NormalizeValue(DownloadUrl))
+            ?? string.Empty;
+
+        var resolvedName = FirstNonEmpty(
+            normalizedManifest?.Name,
+            AirAppMarketIndexDocument.NormalizeValue(Name))
+            ?? string.Empty;
+        var resolvedDescription = FirstNonEmpty(
+            normalizedManifest?.Description,
+            AirAppMarketIndexDocument.NormalizeValue(Description))
+            ?? string.Empty;
+        var resolvedAuthor = FirstNonEmpty(
+            normalizedManifest?.Author,
+            AirAppMarketIndexDocument.NormalizeValue(Author))
+            ?? string.Empty;
+        var resolvedVersion = FirstNonEmpty(
+            normalizedManifest?.Version,
+            AirAppMarketIndexDocument.NormalizeValue(Version))
+            ?? string.Empty;
+        var resolvedApiVersion = FirstNonEmpty(
+            normalizedCompatibility?.PluginApiVersion,
+            normalizedManifest?.ApiVersion,
+            AirAppMarketIndexDocument.NormalizeValue(ApiVersion))
+            ?? string.Empty;
+        var resolvedMinHostVersion = FirstNonEmpty(
+            normalizedCompatibility?.MinHostVersion,
+            AirAppMarketIndexDocument.NormalizeValue(MinHostVersion))
+            ?? string.Empty;
+
+        var resolvedIconUrl = FirstNonEmpty(
+            normalizedRepository?.IconUrl,
+            AirAppMarketIndexDocument.NormalizeValue(IconUrl))
+            ?? string.Empty;
+        var resolvedProjectUrl = FirstNonEmpty(
+            normalizedRepository?.ProjectUrl,
+            AirAppMarketIndexDocument.NormalizeValue(ProjectUrl))
+            ?? string.Empty;
+        var resolvedReadmeUrl = FirstNonEmpty(
+            normalizedRepository?.ReadmeUrl,
+            AirAppMarketIndexDocument.NormalizeValue(ReadmeUrl))
+            ?? string.Empty;
+        var resolvedHomepageUrl = FirstNonEmpty(
+            normalizedRepository?.HomepageUrl,
+            AirAppMarketIndexDocument.NormalizeValue(HomepageUrl))
+            ?? string.Empty;
+
+        var resolvedReleaseTag = FirstNonEmpty(
+            normalizedPublication?.ReleaseTag,
+            AirAppMarketIndexDocument.NormalizeValue(ReleaseTag))
+            ?? string.Empty;
+        var resolvedReleaseAssetName = FirstNonEmpty(
+            normalizedPublication?.ReleaseAssetName,
+            AirAppMarketIndexDocument.NormalizeValue(ReleaseAssetName))
+            ?? string.Empty;
+        var resolvedPackageSize = normalizedPublication?.PackageSizeBytes ?? PackageSizeBytes;
+        var resolvedSha256 = FirstNonEmpty(
+            normalizedPublication?.Sha256,
+            AirAppMarketIndexDocument.NormalizeValue(Sha256)?.ToLowerInvariant())
+            ?? string.Empty;
+        var resolvedMd5 = FirstNonEmpty(
+            normalizedPublication?.Md5,
+            AirAppMarketIndexDocument.NormalizeValue(Md5)?.ToLowerInvariant())
+            ?? string.Empty;
+        var resolvedPublishedAt = normalizedPublication?.PublishedAt ?? PublishedAt;
+        var resolvedUpdatedAt = normalizedPublication?.UpdatedAt ?? UpdatedAt;
+
         var resolvedDependencies = NormalizeDependencies(
-            normalizedManifest?.SharedContracts,
-            normalizedCapabilities?.SharedContracts,
-            SharedContracts,
+            normalizedManifest?.SharedContracts ?? SharedContracts,
             sourceName,
             resolvedPluginId);
         var resolvedTags = (normalizedRepository?.Tags ?? Tags ?? [])
@@ -1185,8 +1136,7 @@ internal sealed class AirAppMarketPluginEntry
         var resolvedReleaseNotes = FirstNonEmpty(
             normalizedRepository?.ReleaseNotes,
             AirAppMarketIndexDocument.NormalizeValue(ReleaseNotes))
-            ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing release notes for plugin '{resolvedPluginId}'.");
+            ?? string.Empty;
 
         return new AirAppMarketPluginEntry
         {
@@ -1225,6 +1175,13 @@ internal sealed class AirAppMarketPluginEntry
 
     public string GetVersionSummary()
     {
+        if (string.IsNullOrWhiteSpace(Version) &&
+            string.IsNullOrWhiteSpace(ApiVersion) &&
+            string.IsNullOrWhiteSpace(MinHostVersion))
+        {
+            return "Unknown";
+        }
+
         return string.Format(
             CultureInfo.InvariantCulture,
             "v{0} | API {1} | Host >= {2}",
@@ -1309,21 +1266,13 @@ internal sealed class AirAppMarketPluginEntry
     }
 
     private static List<AirAppMarketPluginDependencyEntry> NormalizeDependencies(
-        IReadOnlyList<AirAppMarketPluginDependencyEntry>? manifestDependencies,
-        IReadOnlyList<AirAppMarketPluginDependencyEntry>? capabilityDependencies,
-        IReadOnlyList<AirAppMarketPluginDependencyEntry>? legacyDependencies,
+        IReadOnlyList<AirAppMarketPluginDependencyEntry>? dependencies,
         string sourceName,
         string pluginId)
     {
-        IReadOnlyList<AirAppMarketPluginDependencyEntry> dependencies = manifestDependencies is { Count: > 0 }
-            ? manifestDependencies
-            : capabilityDependencies is { Count: > 0 }
-                ? capabilityDependencies
-                : legacyDependencies ?? [];
-
-        var normalizedDependencies = new List<AirAppMarketPluginDependencyEntry>(dependencies.Count);
+        var normalizedDependencies = new List<AirAppMarketPluginDependencyEntry>((dependencies ?? []).Count);
         var seenDependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dependency in dependencies)
+        foreach (var dependency in dependencies ?? [])
         {
             var normalizedDependency = dependency.ValidateAndNormalize(sourceName);
             var dependencyKey = $"{normalizedDependency.Id}@{normalizedDependency.Version}";
@@ -1343,9 +1292,6 @@ internal sealed class AirAppMarketPluginEntry
         IReadOnlyList<AirAppMarketPluginPackageSourceEntry>? packageSources,
         string sourceName,
         string pluginId,
-        string? releaseTag,
-        string? releaseAssetName,
-        string repositoryUrl,
         string? legacyDownloadUrl)
     {
         var normalizedSources = new List<AirAppMarketPluginPackageSourceEntry>((packageSources ?? []).Count + 1);
@@ -1364,40 +1310,14 @@ internal sealed class AirAppMarketPluginEntry
         var normalizedLegacyDownloadUrl = AirAppMarketIndexDocument.NormalizeValue(legacyDownloadUrl);
         if (!string.IsNullOrWhiteSpace(normalizedLegacyDownloadUrl))
         {
-            var legacyKind = !string.IsNullOrWhiteSpace(releaseTag) && !string.IsNullOrWhiteSpace(releaseAssetName)
-                ? PluginPackageSourceKind.ReleaseAsset
-                : PluginPackageSourceKind.RawFallback;
             var legacySource = new AirAppMarketPluginPackageSourceEntry
             {
-                Kind = legacyKind switch
-                {
-                    PluginPackageSourceKind.ReleaseAsset => "releaseAsset",
-                    PluginPackageSourceKind.RawFallback => "rawFallback",
-                    PluginPackageSourceKind.WorkspaceLocal => "workspaceLocal",
-                    _ => "rawFallback"
-                },
+                Kind = "rawFallback",
                 Url = normalizedLegacyDownloadUrl,
-                SourceKind = legacyKind
+                SourceKind = PluginPackageSourceKind.RawFallback
             };
             normalizedSources.Add(legacySource.ValidateAndNormalize(sourceName, pluginId));
             return normalizedSources;
-        }
-
-        if (!string.IsNullOrWhiteSpace(releaseTag) &&
-            !string.IsNullOrWhiteSpace(releaseAssetName) &&
-            AirAppMarketDefaults.TryParseGitHubRepositoryUrl(repositoryUrl, out var owner, out var repositoryName))
-        {
-            var releaseUrl = AirAppMarketDefaults.BuildGitHubReleaseDownloadUrl(
-                owner,
-                repositoryName,
-                releaseTag,
-                releaseAssetName);
-            normalizedSources.Add(new AirAppMarketPluginPackageSourceEntry
-            {
-                Kind = "releaseAsset",
-                Url = releaseUrl,
-                SourceKind = PluginPackageSourceKind.ReleaseAsset
-            }.ValidateAndNormalize(sourceName, pluginId));
         }
 
         return normalizedSources;
