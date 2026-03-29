@@ -8,7 +8,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
     "status-bar",
     "Status Bar",
     SettingsPageCategory.Components,
-    IconKey = "Apps",
+    IconKey = "MatchAppLayout",
     SortOrder = 15,
     TitleLocalizationKey = "settings.status_bar.title",
     DescriptionLocalizationKey = "settings.status_bar.description")]

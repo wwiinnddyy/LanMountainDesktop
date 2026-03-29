@@ -230,7 +230,7 @@ public partial class ComponentLibraryWindow : Window
 
         if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
         {
-            return Symbol.Apps;
+            return Symbol.Hourglass;
         }
 
         return Symbol.Apps;

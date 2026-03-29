@@ -2322,6 +2322,527 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         => _localizationService.GetString(_languageCode, key, fallback);
 }
 
+public sealed partial class StudySettingsPageViewModel : ViewModelBase
+{
+    private readonly ISettingsFacadeService _settingsFacade;
+    private readonly LocalizationService _localizationService = new();
+    private readonly string _languageCode;
+    private bool _isInitializing;
+    private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+
+    public StudySettingsPageViewModel(ISettingsFacadeService settingsFacade)
+    {
+        _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
+        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
+
+        RefreshLocalizedText();
+
+        _isInitializing = true;
+        LoadSettings();
+        _isInitializing = false;
+    }
+
+    #region Properties - Noise Monitoring
+
+    [ObservableProperty]
+    private string _noiseMonitoringHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _noiseMonitoringDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _samplingRateLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _samplingRateDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _samplingRateMs = 50;
+
+    [ObservableProperty]
+    private string _samplingRateValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _noiseSensitivityLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _noiseSensitivityDescription = string.Empty;
+
+    [ObservableProperty]
+    private double _noiseSensitivityDbfs = -50;
+
+    [ObservableProperty]
+    private string _noiseSensitivityValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _currentThresholdText = string.Empty;
+
+    partial void OnNoiseSensitivityDbfsChanged(double value)
+    {
+        UpdateSensitivityText();
+        UpdateThresholdText();
+        if (!_isInitializing)
+        {
+            SaveNoiseSettings();
+        }
+    }
+
+    partial void OnSamplingRateMsChanged(int value)
+    {
+        UpdateSamplingRateText();
+        if (!_isInitializing)
+        {
+            SaveNoiseSettings();
+        }
+    }
+
+    private void UpdateSamplingRateText()
+    {
+        SamplingRateValueText = $"{SamplingRateMs}ms";
+    }
+
+    private void UpdateSensitivityText()
+    {
+        NoiseSensitivityValueText = $"{NoiseSensitivityDbfs:F0} dBFS";
+    }
+
+    #endregion
+
+    #region Properties - Focus Timer
+
+    [ObservableProperty]
+    private string _focusTimerHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _focusTimerDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _focusDurationLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _focusDurationDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _focusDurationMinutes = 25;
+
+    [ObservableProperty]
+    private string _focusDurationValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _breakDurationLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _breakDurationDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _breakDurationMinutes = 5;
+
+    [ObservableProperty]
+    private string _breakDurationValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _longBreakDurationLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _longBreakDurationDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _longBreakDurationMinutes = 15;
+
+    [ObservableProperty]
+    private string _longBreakDurationValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _sessionsBeforeLongBreakLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _sessionsBeforeLongBreakDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _sessionsBeforeLongBreak = 4;
+
+    [ObservableProperty]
+    private string _sessionsBeforeLongBreakValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _autoStartBreakLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _autoStartBreakDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _autoStartBreak;
+
+    [ObservableProperty]
+    private string _autoStartFocusLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _autoStartFocusDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _autoStartFocus;
+
+    partial void OnFocusDurationMinutesChanged(int value)
+    {
+        UpdateFocusDurationText();
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    partial void OnBreakDurationMinutesChanged(int value)
+    {
+        UpdateBreakDurationText();
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    partial void OnLongBreakDurationMinutesChanged(int value)
+    {
+        UpdateLongBreakDurationText();
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    partial void OnSessionsBeforeLongBreakChanged(int value)
+    {
+        UpdateSessionsBeforeLongBreakText();
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    partial void OnAutoStartBreakChanged(bool value)
+    {
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    partial void OnAutoStartFocusChanged(bool value)
+    {
+        if (!_isInitializing)
+        {
+            SaveTimerSettings();
+        }
+    }
+
+    private void UpdateFocusDurationText()
+    {
+        FocusDurationValueText = $"{FocusDurationMinutes} 分钟";
+    }
+
+    private void UpdateBreakDurationText()
+    {
+        BreakDurationValueText = $"{BreakDurationMinutes} 分钟";
+    }
+
+    private void UpdateLongBreakDurationText()
+    {
+        LongBreakDurationValueText = $"{LongBreakDurationMinutes} 分钟";
+    }
+
+    private void UpdateSessionsBeforeLongBreakText()
+    {
+        SessionsBeforeLongBreakValueText = $"{SessionsBeforeLongBreak} 次";
+    }
+
+    #endregion
+
+    #region Properties - Alert
+
+    [ObservableProperty]
+    private string _alertHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _alertDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _noiseAlertEnabledLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _noiseAlertEnabledDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _noiseAlertEnabled;
+
+    [ObservableProperty]
+    private string _maxInterruptsPerMinuteLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _maxInterruptsPerMinuteDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _maxInterruptsPerMinute = 6;
+
+    partial void OnNoiseAlertEnabledChanged(bool value)
+    {
+        if (!_isInitializing)
+        {
+            SaveAlertSettings();
+        }
+    }
+
+    partial void OnMaxInterruptsPerMinuteChanged(int value)
+    {
+        if (!_isInitializing)
+        {
+            SaveAlertSettings();
+        }
+    }
+
+    #endregion
+
+    #region Properties - Display
+
+    [ObservableProperty]
+    private string _displayHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _displayDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _showRealtimeDbLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _showRealtimeDbDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _showRealtimeDb = true;
+
+    [ObservableProperty]
+    private string _baselineDbLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _baselineDbDescription = string.Empty;
+
+    [ObservableProperty]
+    private double _baselineDb = 45;
+
+    [ObservableProperty]
+    private string _baselineDbValueText = string.Empty;
+
+    [ObservableProperty]
+    private string _avgWindowSecLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _avgWindowSecDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _avgWindowSec = 1;
+
+    [ObservableProperty]
+    private string _avgWindowSecValueText = string.Empty;
+
+    partial void OnShowRealtimeDbChanged(bool value)
+    {
+        if (!_isInitializing)
+        {
+            SaveDisplaySettings();
+        }
+    }
+
+    partial void OnBaselineDbChanged(double value)
+    {
+        UpdateBaselineDbText();
+        if (!_isInitializing)
+        {
+            SaveDisplaySettings();
+        }
+    }
+
+    partial void OnAvgWindowSecChanged(int value)
+    {
+        UpdateAvgWindowSecText();
+        if (!_isInitializing)
+        {
+            SaveDisplaySettings();
+        }
+    }
+
+    #endregion
+
+    [ObservableProperty]
+    private string _footerHint = string.Empty;
+
+    private void UpdateBaselineDbText()
+    {
+        BaselineDbValueText = $"{BaselineDb:F0} dB";
+    }
+
+    private void UpdateAvgWindowSecText()
+    {
+        AvgWindowSecValueText = $"{AvgWindowSec} 秒";
+    }
+
+    private void LoadSettings()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+
+        // Noise settings
+        SamplingRateMs = appSnapshot.StudyFrameMs is > 0 ? appSnapshot.StudyFrameMs.Value : 50;
+        NoiseSensitivityDbfs = appSnapshot.StudyScoreThresholdDbfs ?? -50;
+
+        // Timer settings
+        FocusDurationMinutes = appSnapshot.StudyFocusDurationMinutes is > 0 ? appSnapshot.StudyFocusDurationMinutes.Value : 25;
+        BreakDurationMinutes = appSnapshot.StudyBreakDurationMinutes is > 0 ? appSnapshot.StudyBreakDurationMinutes.Value : 5;
+        LongBreakDurationMinutes = appSnapshot.StudyLongBreakDurationMinutes is > 0 ? appSnapshot.StudyLongBreakDurationMinutes.Value : 15;
+        SessionsBeforeLongBreak = appSnapshot.StudySessionsBeforeLongBreak is > 0 ? appSnapshot.StudySessionsBeforeLongBreak.Value : 4;
+        AutoStartBreak = appSnapshot.StudyAutoStartBreak ?? false;
+        AutoStartFocus = appSnapshot.StudyAutoStartFocus ?? false;
+
+        // Alert settings
+        NoiseAlertEnabled = appSnapshot.StudyNoiseAlertEnabled ?? false;
+        MaxInterruptsPerMinute = appSnapshot.StudyMaxInterruptsPerMinute is > 0 ? appSnapshot.StudyMaxInterruptsPerMinute.Value : 6;
+
+        // Display settings
+        ShowRealtimeDb = appSnapshot.StudyShowRealtimeDb ?? true;
+        BaselineDb = appSnapshot.StudyBaselineDb ?? 45;
+        AvgWindowSec = appSnapshot.StudyAvgWindowSec ?? 1;
+
+        UpdateSamplingRateText();
+        UpdateSensitivityText();
+        UpdateThresholdText();
+        UpdateFocusDurationText();
+        UpdateBreakDurationText();
+        UpdateLongBreakDurationText();
+        UpdateSessionsBeforeLongBreakText();
+        UpdateBaselineDbText();
+        UpdateAvgWindowSecText();
+    }
+
+    private void SaveNoiseSettings()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.StudyFrameMs = SamplingRateMs;
+        appSnapshot.StudyScoreThresholdDbfs = NoiseSensitivityDbfs;
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.StudyFrameMs), nameof(AppSettingsSnapshot.StudyScoreThresholdDbfs)]);
+        UpdateThresholdText();
+        UpdateStudyAnalyticsConfig();
+    }
+
+    private void SaveTimerSettings()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.StudyFocusDurationMinutes = FocusDurationMinutes;
+        appSnapshot.StudyBreakDurationMinutes = BreakDurationMinutes;
+        appSnapshot.StudyLongBreakDurationMinutes = LongBreakDurationMinutes;
+        appSnapshot.StudySessionsBeforeLongBreak = SessionsBeforeLongBreak;
+        appSnapshot.StudyAutoStartBreak = AutoStartBreak;
+        appSnapshot.StudyAutoStartFocus = AutoStartFocus;
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            changedKeys: [
+                nameof(AppSettingsSnapshot.StudyFocusDurationMinutes),
+                nameof(AppSettingsSnapshot.StudyBreakDurationMinutes),
+                nameof(AppSettingsSnapshot.StudyLongBreakDurationMinutes),
+                nameof(AppSettingsSnapshot.StudySessionsBeforeLongBreak),
+                nameof(AppSettingsSnapshot.StudyAutoStartBreak),
+                nameof(AppSettingsSnapshot.StudyAutoStartFocus)
+            ]);
+    }
+
+    private void SaveAlertSettings()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.StudyNoiseAlertEnabled = NoiseAlertEnabled;
+        appSnapshot.StudyMaxInterruptsPerMinute = MaxInterruptsPerMinute;
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.StudyNoiseAlertEnabled), nameof(AppSettingsSnapshot.StudyMaxInterruptsPerMinute)]);
+        UpdateStudyAnalyticsConfig();
+    }
+
+    private void SaveDisplaySettings()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.StudyShowRealtimeDb = ShowRealtimeDb;
+        appSnapshot.StudyBaselineDb = BaselineDb;
+        appSnapshot.StudyAvgWindowSec = AvgWindowSec;
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.StudyShowRealtimeDb), nameof(AppSettingsSnapshot.StudyBaselineDb), nameof(AppSettingsSnapshot.StudyAvgWindowSec)]);
+        UpdateStudyAnalyticsConfig();
+    }
+
+    private void UpdateStudyAnalyticsConfig()
+    {
+        var currentConfig = _studyAnalyticsService.GetConfig();
+        var newConfig = currentConfig with
+        {
+            FrameMs = SamplingRateMs,
+            ScoreThresholdDbfs = NoiseSensitivityDbfs,
+            BaselineDb = BaselineDb,
+            AvgWindowSec = AvgWindowSec,
+            ShowRelativeDb = ShowRealtimeDb,
+            MaxSegmentsPerMin = MaxInterruptsPerMinute,
+            AlertSoundEnabled = NoiseAlertEnabled
+        };
+        _studyAnalyticsService.UpdateConfig(newConfig);
+    }
+
+    private void UpdateThresholdText()
+    {
+        CurrentThresholdText = string.Format(
+            CultureInfo.CurrentCulture,
+            L("settings.study.current_threshold_format", "当前评分阈值: {0} dBFS"),
+            NoiseSensitivityDbfs);
+    }
+
+    private void RefreshLocalizedText()
+    {
+        NoiseMonitoringHeader = L("settings.study.noise_header", "噪音监测");
+        NoiseMonitoringDescription = L("settings.study.noise_description", "配置麦克风采集频率和噪音评分敏感度。");
+        SamplingRateLabel = L("settings.study.sampling_rate_label", "采集频率");
+        SamplingRateDescription = L("settings.study.sampling_rate_desc", "麦克风采集音频的时间间隔。更高的频率会更准确地捕捉噪音变化，但会增加电量消耗。");
+        NoiseSensitivityLabel = L("settings.study.sensitivity_label", "噪音敏感度");
+        NoiseSensitivityDescription = L("settings.study.sensitivity_desc", "评分阈值决定了什么级别的噪音会被认为是干扰。阈值越严格，越容易检测到轻微噪音。");
+
+        FocusTimerHeader = L("settings.study.timer_header", "专注计时");
+        FocusTimerDescription = L("settings.study.timer_description", "配置专注时段和休息时段的时长。");
+        FocusDurationLabel = L("settings.study.focus_duration_label", "专注时长");
+        FocusDurationDescription = L("settings.study.focus_duration_desc", "单次专注时段的持续时间（分钟）。");
+        BreakDurationLabel = L("settings.study.break_duration_label", "休息时长");
+        BreakDurationDescription = L("settings.study.break_duration_desc", "短休息时段的持续时间（分钟）。");
+        LongBreakDurationLabel = L("settings.study.long_break_duration_label", "长休息时长");
+        LongBreakDurationDescription = L("settings.study.long_break_duration_desc", "长休息时段的持续时间（分钟）。");
+        SessionsBeforeLongBreakLabel = L("settings.study.sessions_before_long_break_label", "长休息间隔");
+        SessionsBeforeLongBreakDescription = L("settings.study.sessions_before_long_break_desc", "经过几个专注时段后触发长休息。");
+        AutoStartBreakLabel = L("settings.study.auto_start_break_label", "自动开始休息");
+        AutoStartBreakDescription = L("settings.study.auto_start_break_desc", "专注时段结束后自动开始休息计时。");
+        AutoStartFocusLabel = L("settings.study.auto_start_focus_label", "自动开始专注");
+        AutoStartFocusDescription = L("settings.study.auto_start_focus_desc", "休息时段结束后自动开始专注计时。");
+
+        AlertHeader = L("settings.study.alert_header", "提醒设置");
+        AlertDescription = L("settings.study.alert_description", "配置噪音干扰提醒。");
+        NoiseAlertEnabledLabel = L("settings.study.noise_alert_enabled_label", "启用噪音提醒");
+        NoiseAlertEnabledDescription = L("settings.study.noise_alert_enabled_desc", "当检测到超过容忍阈值的噪音干扰时显示提醒。");
+        MaxInterruptsPerMinuteLabel = L("settings.study.max_interrupts_label", "最大容忍打断次数");
+        MaxInterruptsPerMinuteDescription = L("settings.study.max_interrupts_desc", "每分钟最多允许多少次噪音干扰事件，超过此值将触发提醒。");
+
+        DisplayHeader = L("settings.study.display_header", "显示设置");
+        DisplayDescription = L("settings.study.display_description", "配置噪音数据的显示方式。");
+        ShowRealtimeDbLabel = L("settings.study.show_realtime_db_label", "显示实时分贝");
+        ShowRealtimeDbDescription = L("settings.study.show_realtime_db_desc", "在组件中实时显示分贝值。");
+        BaselineDbLabel = L("settings.study.baseline_db_label", "基准显示分贝");
+        BaselineDbDescription = L("settings.study.baseline_db_desc", "校准后的显示分贝基准值，用于将 dBFS 转换为用户可读的 dB 值。");
+        AvgWindowSecLabel = L("settings.study.avg_window_label", "平均时间窗");
+        AvgWindowSecDescription = L("settings.study.avg_window_desc", "噪音平滑显示的时间窗口，较大的值会使显示更稳定但响应更慢。");
+
+        FooterHint = L("settings.study.footer_hint", "这些设置将影响自习环境监测组件的行为。");
+
+        UpdateThresholdText();
+    }
+
+    private string L(string key, string fallback)
+        => _localizationService.GetString(_languageCode, key, fallback);
+}
+
 public sealed class PluginGeneratedSettingsPageViewModel
 {
     public PluginGeneratedSettingsPageViewModel(

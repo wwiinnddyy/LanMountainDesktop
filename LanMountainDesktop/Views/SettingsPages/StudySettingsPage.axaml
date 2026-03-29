@@ -1,0 +1,334 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.StudySettingsPage"
+             x:DataType="vm:StudySettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container settings-page-animated">
+
+            <!-- 噪音监测设置 -->
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding NoiseMonitoringHeader}"
+                                 Description="{Binding NoiseMonitoringDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Mic" />
+                </ui:SettingsExpander.IconSource>
+
+                <!-- 采集频率 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding SamplingRateLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding SamplingRateDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding SamplingRateValueText}" />
+                        </Grid>
+                        <Slider Minimum="20"
+                                Maximum="200"
+                                Value="{Binding SamplingRateMs}"
+                                SmallChange="10"
+                                LargeChange="20"
+                                TickFrequency="20"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 噪音敏感度 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding NoiseSensitivityLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding NoiseSensitivityDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding NoiseSensitivityValueText}" />
+                        </Grid>
+                        <Slider Minimum="-70"
+                                Maximum="-35"
+                                Value="{Binding NoiseSensitivityDbfs}"
+                                SmallChange="1"
+                                LargeChange="5"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 评分阈值显示 -->
+                <ui:SettingsExpanderItem>
+                    <TextBlock Classes="settings-item-description"
+                               Text="{Binding CurrentThresholdText}"
+                               TextWrapping="Wrap" />
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <!-- 专注计时设置 -->
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding FocusTimerHeader}"
+                                 Description="{Binding FocusTimerDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Timer" />
+                </ui:SettingsExpander.IconSource>
+
+                <!-- 专注时长 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding FocusDurationLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding FocusDurationDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding FocusDurationValueText}" />
+                        </Grid>
+                        <Slider Minimum="5"
+                                Maximum="90"
+                                Value="{Binding FocusDurationMinutes}"
+                                SmallChange="1"
+                                LargeChange="5"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 休息时长 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding BreakDurationLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding BreakDurationDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding BreakDurationValueText}" />
+                        </Grid>
+                        <Slider Minimum="1"
+                                Maximum="30"
+                                Value="{Binding BreakDurationMinutes}"
+                                SmallChange="1"
+                                LargeChange="5"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 长休息时长 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding LongBreakDurationLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding LongBreakDurationDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding LongBreakDurationValueText}" />
+                        </Grid>
+                        <Slider Minimum="5"
+                                Maximum="60"
+                                Value="{Binding LongBreakDurationMinutes}"
+                                SmallChange="1"
+                                LargeChange="5"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 长休息间隔 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding SessionsBeforeLongBreakLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding SessionsBeforeLongBreakDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding SessionsBeforeLongBreakValueText}" />
+                        </Grid>
+                        <Slider Minimum="2"
+                                Maximum="8"
+                                Value="{Binding SessionsBeforeLongBreak}"
+                                SmallChange="1"
+                                LargeChange="1"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 自动开始休息 -->
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding AutoStartBreakLabel}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding AutoStartBreakDescription}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding AutoStartBreak}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+
+                <!-- 自动开始专注 -->
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding AutoStartFocusLabel}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding AutoStartFocusDescription}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding AutoStartFocus}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <!-- 提醒设置 -->
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding AlertHeader}"
+                                 Description="{Binding AlertDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Alert" />
+                </ui:SettingsExpander.IconSource>
+
+                <!-- 噪音打断提醒 -->
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding NoiseAlertEnabledLabel}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding NoiseAlertEnabledDescription}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding NoiseAlertEnabled}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+
+                <!-- 每分钟最大容忍打断次数 -->
+                <ui:SettingsExpanderItem IsVisible="{Binding NoiseAlertEnabled}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding MaxInterruptsPerMinuteLabel}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding MaxInterruptsPerMinuteDescription}" />
+                        </StackPanel>
+                        <NumericUpDown Grid.Column="1"
+                                       Width="120"
+                                       Minimum="3"
+                                       Maximum="20"
+                                       Increment="1"
+                                       Value="{Binding MaxInterruptsPerMinute}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <!-- 显示设置 -->
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding DisplayHeader}"
+                                 Description="{Binding DisplayDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Eye" />
+                </ui:SettingsExpander.IconSource>
+
+                <!-- 显示实时分贝 -->
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Classes="settings-item">
+                            <TextBlock Classes="settings-item-label"
+                                       Text="{Binding ShowRealtimeDbLabel}" />
+                            <TextBlock Classes="settings-item-description"
+                                       Text="{Binding ShowRealtimeDbDescription}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding ShowRealtimeDb}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+
+                <!-- 基准显示分贝 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding BaselineDbLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding BaselineDbDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding BaselineDbValueText}" />
+                        </Grid>
+                        <Slider Minimum="20"
+                                Maximum="90"
+                                Value="{Binding BaselineDb}"
+                                SmallChange="1"
+                                LargeChange="5"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+
+                <!-- 平均时间窗 -->
+                <ui:SettingsExpanderItem>
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Classes="settings-item">
+                                <TextBlock Classes="settings-item-label"
+                                           Text="{Binding AvgWindowSecLabel}" />
+                                <TextBlock Classes="settings-item-description"
+                                           Text="{Binding AvgWindowSecDescription}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding AvgWindowSecValueText}" />
+                        </Grid>
+                        <Slider Minimum="1"
+                                Maximum="8"
+                                Value="{Binding AvgWindowSec}"
+                                SmallChange="1"
+                                LargeChange="1"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True" />
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <TextBlock Classes="settings-item-description"
+                       Margin="0,8,0,0"
+                       Text="{Binding FooterHint}"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

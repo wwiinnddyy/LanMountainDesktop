@@ -68,6 +68,19 @@ public sealed record ZhiJiaoHubSnapshot(
     int CurrentIndex,
     string Source);
 
+public sealed record ZhiJiaoHubHybridImageItem(
+    string Name,
+    string RemoteUrl,
+    string? LocalPath,
+    int Index,
+    bool IsCached);
+
+public sealed record ZhiJiaoHubHybridSnapshot(
+    IReadOnlyList<ZhiJiaoHubHybridImageItem> Images,
+    string Source,
+    int CachedCount,
+    int TotalCount);
+
 public sealed record RecommendationQueryResult<T>(
     bool Success,
     T? Data,
@@ -351,6 +364,24 @@ public interface IRecommendationInfoService
 
     Task<RecommendationQueryResult<ZhiJiaoHubSnapshot>> GetZhiJiaoHubImagesAsync(
         ZhiJiaoHubQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<ZhiJiaoHubHybridSnapshot>> GetZhiJiaoHubHybridImagesAsync(
+        string source,
+        string mirrorSource,
+        CancellationToken cancellationToken = default);
+
+    Task<string?> DownloadAndCacheImageAsync(
+        string source,
+        ZhiJiaoHubImageItem image,
+        string mirrorSource,
+        CancellationToken cancellationToken = default);
+
+    Task StartBackgroundDownloadAsync(
+        string source,
+        IReadOnlyList<ZhiJiaoHubHybridImageItem> images,
+        string mirrorSource,
+        Action<int, int, string>? onProgress = null,
         CancellationToken cancellationToken = default);
 
     Task<ZhiJiaoHubSyncResult> SyncZhiJiaoHubImagesAsync(

@@ -44,7 +44,16 @@ public partial class MainWindow
             if (changedKeys.All(key =>
                 string.Equals(key, nameof(AppSettingsSnapshot.ThemeColorMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparison.OrdinalIgnoreCase)))
+                string.Equals(key, nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.PendingUpdateInstallerPath), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.PendingUpdateVersion), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.PendingUpdatePublishedAtUtcMs), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.IncludePrereleaseUpdates), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.UpdateChannel), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.UpdateMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadSource), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
             }
@@ -584,6 +593,7 @@ public partial class MainWindow
         var latestUpdateState = _updateSettingsService.Get();
         var latestThemeState = _themeSettingsService.Get();
         var latestPrivacyState = _settingsFacade.Privacy.Get();
+        var existingSnapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         return new AppSettingsSnapshot
         {
             GridShortSideCells = _targetShortSideCells,
@@ -635,7 +645,21 @@ public partial class MainWindow
             ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
             StatusBarClockTransparentBackground = _statusBarClockTransparentBackground,
             StatusBarSpacingMode = _statusBarSpacingMode,
-            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent
+            StatusBarCustomSpacingPercent = _statusBarCustomSpacingPercent,
+            DisabledPluginIds = existingSnapshot.DisabledPluginIds,
+            StudyFrameMs = existingSnapshot.StudyFrameMs,
+            StudyScoreThresholdDbfs = existingSnapshot.StudyScoreThresholdDbfs,
+            StudyFocusDurationMinutes = existingSnapshot.StudyFocusDurationMinutes,
+            StudyBreakDurationMinutes = existingSnapshot.StudyBreakDurationMinutes,
+            StudyLongBreakDurationMinutes = existingSnapshot.StudyLongBreakDurationMinutes,
+            StudySessionsBeforeLongBreak = existingSnapshot.StudySessionsBeforeLongBreak,
+            StudyAutoStartBreak = existingSnapshot.StudyAutoStartBreak,
+            StudyAutoStartFocus = existingSnapshot.StudyAutoStartFocus,
+            StudyNoiseAlertEnabled = existingSnapshot.StudyNoiseAlertEnabled,
+            StudyMaxInterruptsPerMinute = existingSnapshot.StudyMaxInterruptsPerMinute,
+            StudyShowRealtimeDb = existingSnapshot.StudyShowRealtimeDb,
+            StudyBaselineDb = existingSnapshot.StudyBaselineDb,
+            StudyAvgWindowSec = existingSnapshot.StudyAvgWindowSec
         };
     }
 

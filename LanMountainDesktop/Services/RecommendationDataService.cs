@@ -3456,4 +3456,118 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var normalizedSource = ZhiJiaoHubSources.Normalize(source);
         return _zhiJiaoHubCacheService.HasLocalCache(normalizedSource);
     }
+
+    public async Task<RecommendationQueryResult<ZhiJiaoHubHybridSnapshot>> GetZhiJiaoHubHybridImagesAsync(
+        string source,
+        string mirrorSource,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        var normalizedMirror = ZhiJiaoHubMirrorSources.Normalize(mirrorSource);
+
+        var localPathMap = _zhiJiaoHubCacheService.LoadLocalPathMap(normalizedSource);
+
+        try
+        {
+            var query = new ZhiJiaoHubQuery(normalizedSource, ForceRefresh: true, MirrorSource: normalizedMirror);
+            var result = await GetZhiJiaoHubImagesAsync(query, cancellationToken);
+
+            if (!result.Success || result.Data == null)
+            {
+                return RecommendationQueryResult<ZhiJiaoHubHybridSnapshot>.Fail(
+                    result.ErrorCode ?? "upstream_error",
+                    result.ErrorMessage ?? "Failed to fetch image list");
+            }
+
+            var hybridImages = result.Data.Images.Select((img, idx) =>
+            {
+                var hasLocal = localPathMap.TryGetValue(img.Url, out var localPath);
+                return new ZhiJiaoHubHybridImageItem(
+                    img.Name,
+                    img.Url,
+                    hasLocal ? localPath : null,
+                    idx,
+                    hasLocal);
+            }).ToList();
+
+            var snapshot = new ZhiJiaoHubHybridSnapshot(
+                hybridImages,
+                normalizedSource,
+                hybridImages.Count(i => i.IsCached),
+                hybridImages.Count);
+
+            return RecommendationQueryResult<ZhiJiaoHubHybridSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<ZhiJiaoHubHybridSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+    }
+
+    public async Task<string?> DownloadAndCacheImageAsync(
+        string source,
+        ZhiJiaoHubImageItem image,
+        string mirrorSource,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        var normalizedMirror = ZhiJiaoHubMirrorSources.Normalize(mirrorSource);
+
+        return await _zhiJiaoHubCacheService.DownloadAndSaveImageAsync(
+            normalizedSource,
+            image.Name,
+            image.Url,
+            normalizedMirror,
+            cancellationToken);
+    }
+
+    public Task StartBackgroundDownloadAsync(
+        string source,
+        IReadOnlyList<ZhiJiaoHubHybridImageItem> images,
+        string mirrorSource,
+        Action<int, int, string>? onProgress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        var normalizedMirror = ZhiJiaoHubMirrorSources.Normalize(mirrorSource);
+
+        return Task.Run(async () =>
+        {
+            var uncachedImages = images.Where(i => !i.IsCached).ToList();
+            var total = uncachedImages.Count;
+            var downloaded = 0;
+
+            foreach (var image in uncachedImages)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                try
+                {
+                    var localPath = await _zhiJiaoHubCacheService.DownloadAndSaveImageAsync(
+                        normalizedSource,
+                        image.Name,
+                        image.RemoteUrl,
+                        normalizedMirror,
+                        cancellationToken);
+
+                    if (localPath != null)
+                    {
+                        downloaded++;
+                    }
+
+                    onProgress?.Invoke(downloaded, total, image.Name);
+                }
+                catch
+                {
+                }
+            }
+        }, cancellationToken);
+    }
 }

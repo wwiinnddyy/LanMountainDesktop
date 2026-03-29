@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -29,11 +30,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private readonly DispatcherTimer _refreshTimer = new();
 
-    private IRecommendationInfoService _recommendationService;
+    private IRecommendationInfoService _recommendationService = new RecommendationDataService();
     private IComponentSettingsAccessor? _componentSettingsAccessor;
     private ISettingsService _appSettingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
 
     private CancellationTokenSource? _refreshCts;
+    private CancellationTokenSource? _backgroundDownloadCts;
 
     private string _source = ZhiJiaoHubSources.ClassIsland;
     private string _mirrorSource = ZhiJiaoHubMirrorSources.Direct;
@@ -41,11 +43,11 @@ public partial class ZhiJiaoHubWidget : UserControl,
     private string _placementId = string.Empty;
     private double _currentCellSize = BaseCellSize;
     private bool _isAttached;
-    private bool _isSyncing;
+    private bool _isInitializing;
     private bool _autoRefreshEnabled = true;
     private int _pendingImageIndex = 0;
 
-    private IReadOnlyList<ZhiJiaoHubLocalImageItem> _localImages = [];
+    private IReadOnlyList<ZhiJiaoHubHybridImageItem> _images = [];
     private int _currentImageIndex = 0;
 
     private readonly Dictionary<int, Bitmap> _imageCache = new();
@@ -56,6 +58,15 @@ public partial class ZhiJiaoHubWidget : UserControl,
     private Point _dragStartPoint;
     private double _dragOffset;
     private int _lastSwipeDirection = 0;
+    private bool _isInErrorState;
+
+    private static readonly HttpClient ImageHttpClient = new(new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+    })
+    {
+        Timeout = TimeSpan.FromSeconds(30)
+    };
 
     public ZhiJiaoHubWidget()
     {
@@ -66,8 +77,6 @@ public partial class ZhiJiaoHubWidget : UserControl,
             ApplyCellSize(_currentCellSize);
             return;
         }
-
-        _recommendationService = new RecommendationDataService();
 
         _refreshTimer.Tick += OnRefreshTimerTick;
 
@@ -84,7 +93,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
         _isAttached = true;
 
         LoadSettings();
-        _ = InitializeOrSyncAsync();
+        _ = InitializeAsync();
         UpdateTimers();
     }
 
@@ -93,6 +102,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
         _isAttached = false;
         _refreshTimer.Stop();
         _refreshCts?.Cancel();
+        _backgroundDownloadCts?.Cancel();
 
         lock (_cacheLock)
         {
@@ -141,7 +151,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
         if (_isAttached)
         {
-            _ = InitializeOrSyncAsync();
+            _ = InitializeAsync();
         }
     }
 
@@ -157,7 +167,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
         UpdateTimers();
         if (_isAttached)
         {
-            _ = InitializeOrSyncAsync();
+            _ = InitializeAsync();
         }
     }
 
@@ -208,80 +218,57 @@ public partial class ZhiJiaoHubWidget : UserControl,
         }
     }
 
-    private async Task InitializeOrSyncAsync()
+    private async Task InitializeAsync()
     {
-        if (_isSyncing)
+        if (_isInitializing)
         {
             return;
         }
 
-        _isSyncing = true;
+        _isInitializing = true;
         _refreshCts?.Cancel();
+        _backgroundDownloadCts?.Cancel();
         _refreshCts = new CancellationTokenSource();
         var ct = _refreshCts.Token;
 
         try
         {
-            var localSnapshot = _recommendationService.LoadZhiJiaoHubLocalSnapshot(_source);
-
-            if (localSnapshot != null && localSnapshot.Images.Count > 0)
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _localImages = localSnapshot.Images;
-                _currentImageIndex = Math.Clamp(_pendingImageIndex, 0, Math.Max(0, _localImages.Count - 1));
-                _pendingImageIndex = 0;
+                LoadingTextBlock.Text = "加载中...";
+                ApplyLoadingState();
+            });
 
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    UpdateIndicators();
-                    _ = LoadAndDisplayCurrentImageAsync();
-                });
+            var result = await _recommendationService.GetZhiJiaoHubHybridImagesAsync(_source, _mirrorSource, ct);
+
+            if (ct.IsCancellationRequested)
+            {
+                return;
             }
-            else
+
+            if (!result.Success || result.Data == null || result.Data.Images.Count == 0)
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    LoadingTextBlock.Text = "首次同步图片...";
-                    ApplyLoadingState();
+                    ApplyErrorState(result.ErrorMessage ?? "无法获取图片列表");
                 });
+                return;
+            }
 
-                var progress = new Progress<(int Current, int Total, string Status)>(p =>
-                {
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        LoadingTextBlock.Text = $"同步中 {p.Current}/{p.Total}";
-                    });
-                });
+            _images = result.Data.Images;
+            _currentImageIndex = Math.Clamp(_pendingImageIndex, 0, Math.Max(0, _images.Count - 1));
+            _pendingImageIndex = 0;
 
-                var syncResult = await _recommendationService.SyncZhiJiaoHubImagesAsync(
-                    _source,
-                    _mirrorSource,
-                    progress,
-                    ct);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                UpdateIndicators();
+            });
 
-                if (ct.IsCancellationRequested)
-                {
-                    return;
-                }
+            await LoadAndDisplayCurrentImageAsync();
 
-                if (syncResult.Success && syncResult.Snapshot != null)
-                {
-                    _localImages = syncResult.Snapshot.Images;
-                    _currentImageIndex = Math.Clamp(_pendingImageIndex, 0, Math.Max(0, _localImages.Count - 1));
-                    _pendingImageIndex = 0;
-
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        UpdateIndicators();
-                        _ = LoadAndDisplayCurrentImageAsync();
-                    });
-                }
-                else
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        ApplyErrorState(syncResult.ErrorMessage ?? "同步失败");
-                    });
-                }
+            if (result.Data.CachedCount < result.Data.TotalCount)
+            {
+                _ = StartBackgroundDownloadAsync();
             }
         }
         catch (OperationCanceledException)
@@ -296,70 +283,42 @@ public partial class ZhiJiaoHubWidget : UserControl,
         }
         finally
         {
-            _isSyncing = false;
+            _isInitializing = false;
         }
     }
 
-    private async Task CheckForUpdatesAsync()
+    private async Task StartBackgroundDownloadAsync()
     {
-        if (_isSyncing)
-        {
-            return;
-        }
+        _backgroundDownloadCts?.Cancel();
+        _backgroundDownloadCts = new CancellationTokenSource();
+        var ct = _backgroundDownloadCts.Token;
 
-        _isSyncing = true;
-
-        try
-        {
-            var progress = new Progress<(int Current, int Total, string Status)>(p =>
+        await _recommendationService.StartBackgroundDownloadAsync(
+            _source,
+            _images,
+            _mirrorSource,
+            (downloaded, total, name) =>
             {
-                Dispatcher.UIThread.Post(() =>
+                if (!ct.IsCancellationRequested)
                 {
-                    LoadingTextBlock.Text = $"更新中 {p.Current}/{p.Total}";
-                });
-            });
-
-            var syncResult = await _recommendationService.SyncZhiJiaoHubImagesAsync(
-                _source,
-                _mirrorSource,
-                progress,
-                CancellationToken.None);
-
-            if (syncResult.Success && syncResult.Snapshot != null && syncResult.DownloadedCount > 0)
-            {
-                _localImages = syncResult.Snapshot.Images;
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (_currentImageIndex >= _localImages.Count)
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        _currentImageIndex = 0;
-                        SaveCurrentImageIndex();
-                    }
-
-                    UpdateIndicators();
-                    _ = LoadAndDisplayCurrentImageAsync();
-                });
-            }
-        }
-        catch
-        {
-        }
-        finally
-        {
-            _isSyncing = false;
-        }
+                        LoadingTextBlock.Text = $"后台缓存 {downloaded}/{total}";
+                    });
+                }
+            },
+            ct);
     }
 
     private async Task LoadAndDisplayCurrentImageAsync(int direction = 0)
     {
-        if (_localImages.Count == 0)
+        if (_images.Count == 0)
         {
             ApplyErrorState("暂无图片");
             return;
         }
 
-        var imageItem = _localImages[_currentImageIndex];
+        var imageItem = _images[_currentImageIndex];
 
         try
         {
@@ -378,32 +337,14 @@ public partial class ZhiJiaoHubWidget : UserControl,
                 return;
             }
 
-            if (!File.Exists(imageItem.LocalPath))
+            if (imageItem.IsCached && !string.IsNullOrEmpty(imageItem.LocalPath) && File.Exists(imageItem.LocalPath))
             {
-                ApplyErrorState("图片文件不存在");
+                await LoadFromLocalPathAsync(imageItem.LocalPath, imageItem.Name);
+                _ = Task.Run(async () => await PreloadAdjacentImagesAsync(direction));
                 return;
             }
 
-            await using var fileStream = File.OpenRead(imageItem.LocalPath);
-            var bitmap = new Bitmap(fileStream);
-
-            lock (_cacheLock)
-            {
-                if (_imageCache.Count >= MaxCacheSize)
-                {
-                    CleanupFarthestCacheUnsafe();
-                }
-                _imageCache[_currentImageIndex] = bitmap;
-            }
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                CurrentImage.Source = bitmap;
-                ImageNameTextBlock.Text = imageItem.Name;
-                ApplyContentVisibleState();
-            });
-
-            _ = Task.Run(async () => await PreloadAdjacentImagesAsync(direction));
+            await LoadFromRemoteUrlAsync(imageItem, direction);
         }
         catch (Exception ex)
         {
@@ -414,9 +355,105 @@ public partial class ZhiJiaoHubWidget : UserControl,
         }
     }
 
+    private async Task LoadFromLocalPathAsync(string localPath, string name)
+    {
+        await using var fileStream = File.OpenRead(localPath);
+        var bitmap = new Bitmap(fileStream);
+
+        lock (_cacheLock)
+        {
+            if (_imageCache.Count >= MaxCacheSize)
+            {
+                CleanupFarthestCacheUnsafe();
+            }
+            _imageCache[_currentImageIndex] = bitmap;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            CurrentImage.Source = bitmap;
+            ImageNameTextBlock.Text = name;
+            ApplyContentVisibleState();
+        });
+    }
+
+    private async Task LoadFromRemoteUrlAsync(ZhiJiaoHubHybridImageItem imageItem, int direction)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            LoadingTextBlock.Text = "加载图片...";
+            ApplyLoadingState();
+        });
+
+        var imageUrl = imageItem.RemoteUrl;
+        if (string.Equals(_mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+        {
+            imageUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + imageItem.RemoteUrl;
+        }
+
+        using var response = await ImageHttpClient.GetAsync(imageUrl);
+        response.EnsureSuccessStatusCode();
+
+        var imageStream = await response.Content.ReadAsStreamAsync();
+
+        var bitmap = new Bitmap(imageStream);
+
+        lock (_cacheLock)
+        {
+            if (_imageCache.Count >= MaxCacheSize)
+            {
+                CleanupFarthestCacheUnsafe();
+            }
+            _imageCache[_currentImageIndex] = bitmap;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            CurrentImage.Source = bitmap;
+            ImageNameTextBlock.Text = imageItem.Name;
+            ApplyContentVisibleState();
+        });
+
+        _ = CacheImageInBackgroundAsync(imageItem);
+        _ = Task.Run(async () => await PreloadAdjacentImagesAsync(direction));
+    }
+
+    private async Task CacheImageInBackgroundAsync(ZhiJiaoHubHybridImageItem imageItem)
+    {
+        if (imageItem.IsCached)
+        {
+            return;
+        }
+
+        try
+        {
+            var image = new ZhiJiaoHubImageItem(imageItem.Name, imageItem.RemoteUrl, imageItem.Index);
+            var localPath = await _recommendationService.DownloadAndCacheImageAsync(_source, image, _mirrorSource);
+
+            if (!string.IsNullOrEmpty(localPath))
+            {
+                var index = imageItem.Index;
+                if (index >= 0 && index < _images.Count)
+                {
+                    var updatedImage = _images[index] with
+                    {
+                        LocalPath = localPath,
+                        IsCached = true
+                    };
+                    var newImages = _images.ToList();
+                    newImages[index] = updatedImage;
+                    _images = newImages;
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
     private async Task PreloadAdjacentImagesAsync(int direction = 0)
     {
-        if (_localImages.Count <= 1)
+        if (_images.Count <= 1)
         {
             return;
         }
@@ -428,13 +465,13 @@ public partial class ZhiJiaoHubWidget : UserControl,
         {
             if (direction <= 0)
             {
-                var nextIndex = (currentIndex + 1) % _localImages.Count;
+                var nextIndex = (currentIndex + 1) % _images.Count;
                 if (!_imageCache.ContainsKey(nextIndex))
                 {
                     indicesToPreload.Add(nextIndex);
                 }
 
-                var nextNextIndex = (currentIndex + 2) % _localImages.Count;
+                var nextNextIndex = (currentIndex + 2) % _images.Count;
                 if (!_imageCache.ContainsKey(nextNextIndex) && indicesToPreload.Count < 3)
                 {
                     indicesToPreload.Add(nextNextIndex);
@@ -443,13 +480,13 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
             if (direction >= 0)
             {
-                var prevIndex = (currentIndex - 1 + _localImages.Count) % _localImages.Count;
+                var prevIndex = (currentIndex - 1 + _images.Count) % _images.Count;
                 if (!_imageCache.ContainsKey(prevIndex))
                 {
                     indicesToPreload.Add(prevIndex);
                 }
 
-                var prevPrevIndex = (currentIndex - 2 + _localImages.Count) % _localImages.Count;
+                var prevPrevIndex = (currentIndex - 2 + _images.Count) % _images.Count;
                 if (!_imageCache.ContainsKey(prevPrevIndex) && indicesToPreload.Count < 3)
                 {
                     indicesToPreload.Add(prevPrevIndex);
@@ -479,24 +516,43 @@ public partial class ZhiJiaoHubWidget : UserControl,
                     }
                 }
 
-                var imageItem = _localImages[index];
-                if (!File.Exists(imageItem.LocalPath))
+                var imageItem = _images[index];
+                Bitmap? bitmap = null;
+
+                if (imageItem.IsCached && !string.IsNullOrEmpty(imageItem.LocalPath) && File.Exists(imageItem.LocalPath))
                 {
-                    return;
+                    await using var fileStream = File.OpenRead(imageItem.LocalPath);
+                    bitmap = new Bitmap(fileStream);
+                }
+                else
+                {
+                    var imageUrl = imageItem.RemoteUrl;
+                    if (string.Equals(_mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+                    {
+                        imageUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + imageItem.RemoteUrl;
+                    }
+
+                    using var response = await ImageHttpClient.GetAsync(imageUrl);
+                    response.EnsureSuccessStatusCode();
+
+                    var imageStream = await response.Content.ReadAsStreamAsync();
+                    bitmap = new Bitmap(imageStream);
+
+                    _ = CacheImageInBackgroundAsync(imageItem);
                 }
 
-                await using var fileStream = File.OpenRead(imageItem.LocalPath);
-                var bitmap = new Bitmap(fileStream);
-
-                lock (_cacheLock)
+                if (bitmap != null)
                 {
-                    if (!_imageCache.ContainsKey(index))
+                    lock (_cacheLock)
                     {
-                        _imageCache[index] = bitmap;
-                    }
-                    else
-                    {
-                        bitmap.Dispose();
+                        if (!_imageCache.ContainsKey(index))
+                        {
+                            _imageCache[index] = bitmap;
+                        }
+                        else
+                        {
+                            bitmap.Dispose();
+                        }
                     }
                 }
             }
@@ -515,7 +571,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
         var farthestKey = -1;
         var maxDistance = -1;
         var currentIndex = _currentImageIndex;
-        var imageCount = _localImages.Count;
+        var imageCount = _images.Count;
 
         foreach (var key in _imageCache.Keys)
         {
@@ -544,7 +600,13 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_localImages.Count <= 1)
+        if (_isInErrorState)
+        {
+            _ = RefreshCurrentComponentAsync();
+            return;
+        }
+
+        if (_images.Count <= 1)
         {
             return;
         }
@@ -556,7 +618,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDragging || _localImages.Count <= 1)
+        if (!_isDragging || _images.Count <= 1)
         {
             return;
         }
@@ -591,7 +653,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (_localImages.Count <= 1)
+        if (_images.Count <= 1)
         {
             return;
         }
@@ -612,12 +674,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void SwitchToPrevImage()
     {
-        if (_localImages.Count <= 1)
+        if (_images.Count <= 1)
         {
             return;
         }
 
-        _currentImageIndex = (_currentImageIndex - 1 + _localImages.Count) % _localImages.Count;
+        _currentImageIndex = (_currentImageIndex - 1 + _images.Count) % _images.Count;
         SaveCurrentImageIndex();
         UpdateIndicators();
 
@@ -632,12 +694,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void SwitchToNextImage()
     {
-        if (_localImages.Count <= 1)
+        if (_images.Count <= 1)
         {
             return;
         }
 
-        _currentImageIndex = (_currentImageIndex + 1) % _localImages.Count;
+        _currentImageIndex = (_currentImageIndex + 1) % _images.Count;
         SaveCurrentImageIndex();
         UpdateIndicators();
 
@@ -652,7 +714,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private bool TryDisplayCachedImage(int index)
     {
-        if (_localImages.Count == 0 || index < 0 || index >= _localImages.Count)
+        if (_images.Count == 0 || index < 0 || index >= _images.Count)
         {
             return false;
         }
@@ -665,7 +727,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
         if (cachedBitmap != null)
         {
-            var imageItem = _localImages[index];
+            var imageItem = _images[index];
             CurrentImage.Source = cachedBitmap;
             ImageNameTextBlock.Text = imageItem.Name;
             ApplyContentVisibleState();
@@ -677,6 +739,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void ApplyLoadingState()
     {
+        _isInErrorState = false;
         CurrentImage.IsVisible = false;
         ImageNameTextBlock.IsVisible = false;
         GradientOverlay.IsVisible = false;
@@ -686,6 +749,7 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void ApplyContentVisibleState()
     {
+        _isInErrorState = false;
         LoadingPanel.IsVisible = false;
         ErrorTextBlock.IsVisible = false;
         CurrentImage.IsVisible = true;
@@ -695,11 +759,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     private void ApplyErrorState(string message)
     {
+        _isInErrorState = true;
         CurrentImage.IsVisible = false;
         ImageNameTextBlock.IsVisible = false;
         GradientOverlay.IsVisible = false;
         LoadingPanel.IsVisible = false;
-        ErrorTextBlock.Text = message;
+        ErrorTextBlock.Text = message + "\n点击任意区域重试";
         ErrorTextBlock.IsVisible = true;
     }
 
@@ -707,38 +772,76 @@ public partial class ZhiJiaoHubWidget : UserControl,
     {
         IndicatorPanel.Children.Clear();
 
-        if (_localImages.Count <= 1)
+        if (_images.Count <= 1)
         {
             return;
         }
 
-        var maxIndicators = Math.Min(_localImages.Count, 7);
-        for (int i = 0; i < maxIndicators; i++)
+        var maxIndicators = Math.Min(_images.Count, 7);
+        var startIndex = Math.Max(0, _currentImageIndex - maxIndicators / 2);
+        var endIndex = Math.Min(_images.Count, startIndex + maxIndicators);
+
+        if (endIndex - startIndex < maxIndicators)
         {
-            var isActive = i == _currentImageIndex % maxIndicators;
-            var indicator = new Border
+            startIndex = Math.Max(0, endIndex - maxIndicators);
+        }
+
+        for (var i = startIndex; i < endIndex; i++)
+        {
+            var dot = new Border
             {
-                Width = isActive ? 6 : 4,
-                Height = isActive ? 6 : 4,
+                Width = 6,
+                Height = 6,
                 CornerRadius = new CornerRadius(3),
-                Background = isActive
-                    ? new SolidColorBrush(Colors.White)
+                Margin = new Thickness(2, 0),
+                Background = i == _currentImageIndex
+                    ? Brushes.White
                     : new SolidColorBrush(Color.FromArgb(128, 255, 255, 255))
             };
-            IndicatorPanel.Children.Add(indicator);
-        }
-    }
 
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        ApplyCellSize(_currentCellSize);
+            IndicatorPanel.Children.Add(dot);
+        }
     }
 
     private void OnRefreshTimerTick(object? sender, EventArgs e)
     {
-        if (_isAttached && _autoRefreshEnabled)
+        if (_isInitializing)
         {
-            _ = CheckForUpdatesAsync();
+            return;
         }
+
+        _ = InitializeAsync();
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        var cellSize = Math.Min(e.NewSize.Width, e.NewSize.Height) / 2;
+        ApplyCellSize(cellSize);
+    }
+
+    private async Task RefreshCurrentComponentAsync()
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        _refreshCts?.Cancel();
+        _backgroundDownloadCts?.Cancel();
+        _refreshCts = new CancellationTokenSource();
+
+        lock (_cacheLock)
+        {
+            foreach (var bitmap in _imageCache.Values)
+            {
+                bitmap.Dispose();
+            }
+            _imageCache.Clear();
+        }
+
+        _images = [];
+        _currentImageIndex = 0;
+
+        await InitializeAsync();
     }
 }

@@ -7,6 +7,7 @@ using System.Security.Authentication;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LanMountainDesktop.Models;
 
 namespace LanMountainDesktop.Services;
 
@@ -139,6 +140,119 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
         }
     }
 
+    public Dictionary<string, string> LoadLocalPathMap(string source)
+    {
+        lock (_manifestLock)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!File.Exists(_manifestPath))
+            {
+                return result;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_manifestPath);
+                var manifest = JsonSerializer.Deserialize<CacheManifest>(json, JsonOptions);
+                if (manifest?.Entries?.TryGetValue(source, out var entry) != true)
+                {
+                    return result;
+                }
+
+                var sourceDir = GetSourceDirectory(source);
+                foreach (var img in entry.Images)
+                {
+                    var localPath = Path.Combine(sourceDir, img.LocalFileName);
+                    if (File.Exists(localPath))
+                    {
+                        result[img.OriginalUrl] = localPath;
+                    }
+                }
+
+                return result;
+            }
+            catch
+            {
+                return result;
+            }
+        }
+    }
+
+    public string? GetLocalPath(string source, string originalUrl)
+    {
+        lock (_manifestLock)
+        {
+            if (!File.Exists(_manifestPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(_manifestPath);
+                var manifest = JsonSerializer.Deserialize<CacheManifest>(json, JsonOptions);
+                if (manifest?.Entries?.TryGetValue(source, out var entry) != true)
+                {
+                    return null;
+                }
+
+                var img = entry.Images.FirstOrDefault(i =>
+                    string.Equals(i.OriginalUrl, originalUrl, StringComparison.OrdinalIgnoreCase));
+
+                if (img == null)
+                {
+                    return null;
+                }
+
+                var sourceDir = GetSourceDirectory(source);
+                var localPath = Path.Combine(sourceDir, img.LocalFileName);
+                return File.Exists(localPath) ? localPath : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    public async Task<string?> DownloadAndSaveImageAsync(
+        string source,
+        string name,
+        string remoteUrl,
+        string mirrorSource,
+        CancellationToken cancellationToken = default)
+    {
+        var sourceDir = GetSourceDirectory(source);
+        Directory.CreateDirectory(sourceDir);
+
+        var fileName = GetSafeFileName(name, remoteUrl);
+        var localPath = Path.Combine(sourceDir, fileName);
+
+        if (File.Exists(localPath))
+        {
+            AddToManifest(source, name, remoteUrl, fileName);
+            return localPath;
+        }
+
+        try
+        {
+            var downloadUrl = ResolveDownloadUrl(remoteUrl, mirrorSource);
+            using var response = await DownloadClient.GetAsync(downloadUrl, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using var fileStream = File.Create(localPath);
+            await response.Content.CopyToAsync(fileStream, cancellationToken);
+
+            AddToManifest(source, name, remoteUrl, fileName);
+            return localPath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<ZhiJiaoHubSyncResult> SyncImagesAsync(
         string source,
         IReadOnlyList<ZhiJiaoHubImageItem> remoteImages,
@@ -158,12 +272,6 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
         var skippedCount = 0;
         var failedCount = 0;
         var localImages = new List<CachedImageInfo>();
-
-        var existingFiles = new HashSet<string>(
-            Directory.Exists(sourceDir)
-                ? Directory.GetFiles(sourceDir, "*.jpg").Concat(Directory.GetFiles(sourceDir, "*.png")).Concat(Directory.GetFiles(sourceDir, "*.gif"))
-                : Array.Empty<string>(),
-            StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < remoteImages.Count; i++)
         {
@@ -289,6 +397,51 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
         }
 
         return originalUrl;
+    }
+
+    private void AddToManifest(string source, string name, string originalUrl, string localFileName)
+    {
+        lock (_manifestLock)
+        {
+            CacheManifest manifest;
+            if (File.Exists(_manifestPath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(_manifestPath);
+                    manifest = JsonSerializer.Deserialize<CacheManifest>(json, JsonOptions) ?? new CacheManifest();
+                }
+                catch
+                {
+                    manifest = new CacheManifest();
+                }
+            }
+            else
+            {
+                manifest = new CacheManifest();
+            }
+
+            if (!manifest.Entries.TryGetValue(source, out var entry))
+            {
+                entry = new CacheEntry(new List<CachedImageInfo>(), DateTimeOffset.UtcNow);
+                manifest.Entries[source] = entry;
+            }
+
+            var existingIndex = entry.Images.FindIndex(i =>
+                string.Equals(i.OriginalUrl, originalUrl, StringComparison.OrdinalIgnoreCase));
+
+            if (existingIndex >= 0)
+            {
+                entry.Images[existingIndex] = new CachedImageInfo(name, originalUrl, localFileName);
+            }
+            else
+            {
+                entry.Images.Add(new CachedImageInfo(name, originalUrl, localFileName));
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(_manifestPath)!);
+            File.WriteAllText(_manifestPath, JsonSerializer.Serialize(manifest, JsonOptions));
+        }
     }
 
     private void SaveManifest(string source, List<CachedImageInfo> images)

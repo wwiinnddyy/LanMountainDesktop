@@ -722,12 +722,18 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "Image" => Symbol.Image,
             "WeatherMoon" => Symbol.WeatherMoon,
             "Apps" => Symbol.Apps,
+            "AppFolder" => Symbol.AppFolder,
+            "AppsListDetail" => Symbol.AppsListDetail,
+            "MatchAppLayout" => Symbol.MatchAppLayout,
+            "Widget" => Symbol.GridDots,
+            "SwitchApps" => Symbol.ArrowSync,
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "ShoppingBag" => Symbol.ShoppingBag,
             "Shield" => Symbol.ShieldDismiss,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
+            "Hourglass" => Symbol.Hourglass,
             _ => Symbol.Settings
         };
     }

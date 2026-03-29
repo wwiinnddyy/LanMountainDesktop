@@ -8,7 +8,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
     "launcher",
     "App Launcher",
     SettingsPageCategory.Components,
-    IconKey = "Apps",
+    IconKey = "AppsListDetail",
     SortOrder = 10,
     Scope = SettingsScope.Launcher,
     TitleLocalizationKey = "settings.launcher.title",

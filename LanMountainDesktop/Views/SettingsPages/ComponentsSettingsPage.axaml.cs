@@ -8,7 +8,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
     "components",
     "Components",
     SettingsPageCategory.Components,
-    IconKey = "Apps",
+    IconKey = "AppFolder",
     SortOrder = 20,
     TitleLocalizationKey = "settings.components.title",
     DescriptionLocalizationKey = "settings.components.description")]

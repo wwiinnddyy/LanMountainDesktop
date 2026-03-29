@@ -118,6 +118,36 @@ public sealed class AppSettingsSnapshot
 
     public List<string> DisabledPluginIds { get; set; } = [];
 
+    #region Study Settings
+
+    public int? StudyFrameMs { get; set; }
+
+    public double? StudyScoreThresholdDbfs { get; set; }
+
+    public int? StudyFocusDurationMinutes { get; set; }
+
+    public int? StudyBreakDurationMinutes { get; set; }
+
+    public int? StudyLongBreakDurationMinutes { get; set; }
+
+    public int? StudySessionsBeforeLongBreak { get; set; }
+
+    public bool? StudyAutoStartBreak { get; set; }
+
+    public bool? StudyAutoStartFocus { get; set; }
+
+    public bool? StudyNoiseAlertEnabled { get; set; }
+
+    public int? StudyMaxInterruptsPerMinute { get; set; }
+
+    public bool? StudyShowRealtimeDb { get; set; }
+
+    public double? StudyBaselineDb { get; set; }
+
+    public int? StudyAvgWindowSec { get; set; }
+
+    #endregion
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();

@@ -2611,7 +2611,7 @@ public partial class MainWindow
 
         if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
         {
-            return Symbol.Apps;
+            return Symbol.Hourglass;
         }
 
         if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase))
