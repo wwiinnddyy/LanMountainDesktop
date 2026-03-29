@@ -262,7 +262,12 @@ public static class DesktopComponentEditorRegistryFactory
                             nameof(ComponentSettingsSnapshot.Stcn24ForumAutoRefreshIntervalMinutes),
                             nameof(ComponentSettingsSnapshot.Stcn24ForumSourceType)
                         ]
-                    }))
+                    })),
+            [BuiltInComponentIds.DesktopZhiJiaoHub] = new(
+                BuiltInComponentIds.DesktopZhiJiaoHub,
+                context => new ZhiJiaoHubComponentEditor(context),
+                preferredWidth: 480d,
+                preferredHeight: 520d)
         };
 
         foreach (var componentId in GetBuiltInDesktopComponentIds(componentRegistry))

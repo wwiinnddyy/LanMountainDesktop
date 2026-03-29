@@ -73,6 +73,17 @@ public sealed class ComponentSettingsSnapshot
 
     public List<string>? OfficeRecentDocumentsEnabledSources { get; set; }
 
+    // 智教Hub组件配置
+    public string ZhiJiaoHubSource { get; set; } = ZhiJiaoHubSources.ClassIsland;
+
+    public string ZhiJiaoHubMirrorSource { get; set; } = ZhiJiaoHubMirrorSources.Direct;
+
+    public bool ZhiJiaoHubAutoRefreshEnabled { get; set; } = true;
+
+    public int ZhiJiaoHubAutoRefreshIntervalMinutes { get; set; } = 30;
+
+    public int ZhiJiaoHubCurrentImageIndex { get; set; } = 0;
+
     public ComponentSettingsSnapshot Clone()
     {
         var clone = (ComponentSettingsSnapshot)MemberwiseClone();
@@ -105,5 +116,58 @@ public sealed class ComponentSettingsSnapshot
             : null;
 
         return clone;
+    }
+}
+
+// 智教Hub数据源常量
+public static class ZhiJiaoHubSources
+{
+    public const string ClassIsland = "classisland";
+    public const string Sectl = "sectl";
+
+    public static string Normalize(string? value)
+    {
+        return value?.ToLowerInvariant() switch
+        {
+            "sectl" => Sectl,
+            _ => ClassIsland
+        };
+    }
+}
+
+// 智教Hub镜像加速源常量
+public static class ZhiJiaoHubMirrorSources
+{
+    public const string Direct = "direct";
+    public const string GhProxy = "gh-proxy";
+
+    public const string GhProxyBaseUrl = "https://gh-proxy.com/";
+
+    public static string Normalize(string? value)
+    {
+        return string.Equals(value, GhProxy, StringComparison.OrdinalIgnoreCase)
+            ? GhProxy
+            : Direct;
+    }
+
+    public static string ApplyMirror(string url, string? mirrorSource)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+
+        if (!string.Equals(Normalize(mirrorSource), GhProxy, StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        if (url.StartsWith("https://raw.githubusercontent.com/", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase))
+        {
+            return GhProxyBaseUrl.TrimEnd('/') + "/" + url;
+        }
+
+        return url;
     }
 }

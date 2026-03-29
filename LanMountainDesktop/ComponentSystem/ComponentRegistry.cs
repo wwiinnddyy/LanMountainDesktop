@@ -390,7 +390,17 @@ public sealed class ComponentRegistry
                 MinWidthCells: 2,
                 MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
-                AllowDesktopPlacement: true)
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopZhiJiaoHub,
+                "智教Hub",
+                "Image",
+                "Info",
+                MinWidthCells: 2,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free)
         };
 
         return new ComponentRegistry(builtIn);

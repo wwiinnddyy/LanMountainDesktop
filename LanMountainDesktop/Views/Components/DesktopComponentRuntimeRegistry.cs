@@ -471,7 +471,11 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.HolidayCalendar,
                     "component.holiday_calendar",
-                    () => new HolidayCalendarWidget())
+                    () => new HolidayCalendarWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopZhiJiaoHub,
+                    "component.zhijiao_hub",
+                    () => new ZhiJiaoHubWidget())
         ];
     }
 

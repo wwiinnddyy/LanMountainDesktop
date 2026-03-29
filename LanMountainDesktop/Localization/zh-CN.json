@@ -971,5 +971,19 @@
     "single_instance.notice.description":  "应用已经运行，无需多次点击打开。",
     "single_instance.notice.button":  "确定",
     "market.status.install_success_restart_format":  "✓ 插件'{0}'安装成功！请重启应用以激活它。",
-    "market.dialog.restart_message_format":  "插件'{0}'已成功安装。\n\n要使用此插件，您需要立即重启应用。\n\n是否立即重启？"
-  }
+    "market.dialog.restart_message_format":  "插件'{0}'已成功安装。\n\n要使用此插件，您需要立即重启应用。\n\n是否立即重启？",
+    "zhijiaohub.settings.source":  "图片源",
+    "zhijiaohub.settings.classisland":  "ClassIsland 图库",
+    "zhijiaohub.settings.sectl":  "SECTL 图库",
+    "zhijiaohub.settings.source_desc":  "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容。",
+    "zhijiaohub.settings.mirror_source":  "镜像加速",
+    "zhijiaohub.settings.mirror_direct":  "直连（GitHub）",
+    "zhijiaohub.settings.mirror_ghproxy":  "镜像加速（推荐）",
+    "zhijiaohub.settings.mirror_source_desc":  "如果图片加载缓慢或失败，请尝试使用镜像加速。镜像加速通过第三方代理服务加速 GitHub 访问。",
+    "zhijiaohub.settings.refresh":  "刷新设置",
+    "zhijiaohub.settings.auto_refresh":  "自动刷新",
+    "zhijiaohub.settings.auto_refresh_desc":  "定期自动刷新图片列表。",
+    "zhijiaohub.settings.interval":  "刷新间隔（分钟）",
+    "zhijiaohub.settings.about":  "关于",
+    "zhijiaohub.settings.about_desc":  "智教Hub 展示来自教育技术社区的有趣图片。图片从 GitHub 仓库获取并缓存在本地。"
+}

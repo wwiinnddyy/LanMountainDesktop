@@ -977,5 +977,19 @@
     "single_instance.notice.description":  "The app is already running. There is no need to click multiple times to open it.",
     "single_instance.notice.button":  "OK",
     "market.status.install_success_restart_format":  "✓ Plugin '{0}' installed successfully! Please restart the application to activate it.",
-    "market.dialog.restart_message_format":  "Plugin '{0}' has been installed successfully.\n\nTo use this plugin, you need to restart the application now.\n\nWould you like to restart?"
+    "market.dialog.restart_message_format":  "Plugin '{0}' has been installed successfully.\n\nTo use this plugin, you need to restart the application now.\n\nWould you like to restart?",
+    "zhijiaohub.settings.source":  "Image Source",
+    "zhijiaohub.settings.classisland":  "ClassIsland Gallery",
+    "zhijiaohub.settings.sectl":  "SECTL Gallery",
+    "zhijiaohub.settings.source_desc":  "Select the image source. ClassIsland Gallery contains fun moments from the ClassIsland community, SECTL Gallery contains content from the SECTL community.",
+    "zhijiaohub.settings.mirror_source":  "Mirror Acceleration",
+    "zhijiaohub.settings.mirror_direct":  "Direct (GitHub)",
+    "zhijiaohub.settings.mirror_ghproxy":  "Mirror Acceleration (Recommended)",
+    "zhijiaohub.settings.mirror_source_desc":  "If images load slowly or fail, try using mirror acceleration. Mirror acceleration speeds up GitHub access through third-party proxy services.",
+    "zhijiaohub.settings.refresh":  "Refresh Settings",
+    "zhijiaohub.settings.auto_refresh":  "Auto Refresh",
+    "zhijiaohub.settings.auto_refresh_desc":  "Automatically refresh the image list periodically.",
+    "zhijiaohub.settings.interval":  "Refresh Interval (minutes)",
+    "zhijiaohub.settings.about":  "About",
+    "zhijiaohub.settings.about_desc":  "ZhiJiaoHub displays interesting images from the educational technology community. Images are fetched from GitHub repositories and cached locally."
   }

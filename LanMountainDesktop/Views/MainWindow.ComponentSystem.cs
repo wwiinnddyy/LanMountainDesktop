@@ -1481,6 +1481,15 @@ public partial class MainWindow
                 new ComponentScaleRule(WidthUnit: 1, HeightUnit: 1, MinScale: 4));
         }
 
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopZhiJiaoHub, StringComparison.OrdinalIgnoreCase))
+        {
+            // ZhiJiao Hub allows free resize but starts at 2x2
+            // Allow any aspect ratio, minimum 2x2
+            var width = Math.Max(2, span.WidthCells);
+            var height = Math.Max(2, span.HeightCells);
+            return (width, height);
+        }
+
         return span;
     }
 

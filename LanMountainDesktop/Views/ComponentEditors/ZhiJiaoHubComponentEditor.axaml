@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.ZhiJiaoHubComponentEditor">
+    <StackPanel Spacing="16">
+        <!-- 数据源选择 -->
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="SourceLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="SourceComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnSourceSelectionChanged">
+                    <ComboBoxItem x:Name="ClassIslandItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="classisland" />
+                    <ComboBoxItem x:Name="SectlItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="sectl" />
+                </ComboBox>
+                <TextBlock x:Name="SourceDescriptionTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- 镜像加速源选择 -->
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock x:Name="MirrorSourceLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <ComboBox x:Name="MirrorSourceComboBox"
+                          Classes="component-editor-select"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="OnMirrorSourceSelectionChanged">
+                    <ComboBoxItem x:Name="DirectMirrorItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="direct" />
+                    <ComboBoxItem x:Name="GhProxyMirrorItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="gh-proxy" />
+                </ComboBox>
+                <TextBlock x:Name="MirrorSourceDescriptionTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- 自动刷新设置 -->
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="16">
+                <TextBlock x:Name="RefreshSettingsLabelTextBlock"
+                           Classes="component-editor-section-title" />
+
+                <!-- 自动刷新开关 -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="AutoRefreshLabelTextBlock"
+                                   Classes="component-editor-primary-text" />
+                        <TextBlock x:Name="AutoRefreshDescriptionTextBlock"
+                                   Classes="component-editor-secondary-text"
+                                   FontSize="12" />
+                    </StackPanel>
+                    <ToggleSwitch x:Name="AutoRefreshToggle"
+                                  Grid.Column="1"
+                                  IsCheckedChanged="OnAutoRefreshChanged" />
+                </Grid>
+
+                <!-- 刷新间隔 -->
+                <StackPanel x:Name="IntervalPanel"
+                            Spacing="8">
+                    <TextBlock x:Name="IntervalLabelTextBlock"
+                               Classes="component-editor-primary-text" />
+                    <NumericUpDown x:Name="IntervalNumeric"
+                                   Classes="component-editor-numeric"
+                                   Minimum="5"
+                                   Maximum="1440"
+                                   Increment="5"
+                                   ValueChanged="OnIntervalValueChanged" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 说明信息 -->
+        <Border Classes="component-editor-card"
+                Padding="20">
+            <StackPanel Spacing="8">
+                <TextBlock x:Name="AboutLabelTextBlock"
+                           Classes="component-editor-section-title" />
+                <TextBlock x:Name="AboutDescriptionTextBlock"
+                           Classes="component-editor-secondary-text"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

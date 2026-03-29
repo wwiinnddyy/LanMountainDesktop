@@ -52,6 +52,22 @@ public sealed record ExchangeRateQuery(
     string? TargetCurrency = null,
     bool ForceRefresh = false);
 
+public sealed record ZhiJiaoHubQuery(
+    string? Source = null,
+    int? ImageIndex = null,
+    bool ForceRefresh = false,
+    string? MirrorSource = null);
+
+public sealed record ZhiJiaoHubImageItem(
+    string Name,
+    string Url,
+    int Index);
+
+public sealed record ZhiJiaoHubSnapshot(
+    IReadOnlyList<ZhiJiaoHubImageItem> Images,
+    int CurrentIndex,
+    string Source);
+
 public sealed record RecommendationQueryResult<T>(
     bool Success,
     T? Data,
@@ -285,6 +301,14 @@ public sealed record RecommendationApiOptions
     public int DefaultBaiduHotSearchCount { get; init; } = 4;
 
     public int DefaultStcn24ForumPostCount { get; init; } = 4;
+
+    public string ClassIslandHubApiUrl { get; init; } = "https://api.github.com/repos/ClassIsland/classisland-hub/contents/images";
+
+    public string SectlHubApiUrl { get; init; } = "https://api.github.com/repos/SECTL/SECTL-hub/contents/images";
+
+    public string ClassIslandHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/ClassIsland/classisland-hub/main/images/{0}";
+
+    public string SectlHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/SECTL/SECTL-hub/main/images/{0}";
 }
 
 public interface IRecommendationInfoService
@@ -324,6 +348,20 @@ public interface IRecommendationInfoService
     Task<RecommendationQueryResult<ExchangeRateSnapshot>> GetExchangeRateAsync(
         ExchangeRateQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<RecommendationQueryResult<ZhiJiaoHubSnapshot>> GetZhiJiaoHubImagesAsync(
+        ZhiJiaoHubQuery query,
+        CancellationToken cancellationToken = default);
+
+    Task<ZhiJiaoHubSyncResult> SyncZhiJiaoHubImagesAsync(
+        string source,
+        string mirrorSource,
+        IProgress<(int Current, int Total, string Status)>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    ZhiJiaoHubLocalSnapshot? LoadZhiJiaoHubLocalSnapshot(string source);
+
+    bool HasZhiJiaoHubLocalCache(string source);
 
     void ClearCache();
 }

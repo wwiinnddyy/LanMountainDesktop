@@ -443,10 +443,13 @@ public partial class MainWindow
             currentVersion = new Version(0, 0, 0);
         }
 
-        var normalizedVersion = new Version(
-            Math.Max(0, currentVersion.Major),
-            Math.Max(0, currentVersion.Minor),
-            Math.Max(0, currentVersion.Build));
+        var major = Math.Max(0, currentVersion.Major);
+        var minor = Math.Max(0, currentVersion.Minor);
+        var build = Math.Max(0, currentVersion.Build >= 0 ? currentVersion.Build : 0);
+        var revision = Math.Max(0, currentVersion.Revision >= 0 ? currentVersion.Revision : 0);
+        var normalizedVersion = revision > 0
+            ? new Version(major, minor, build, revision)
+            : new Version(major, minor, build);
 
         DispatcherTimer.RunOnce(
             async () =>

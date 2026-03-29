@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -53,6 +53,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         Dictionary<string, decimal> Rates,
         DateTimeOffset ExpireAt,
         DateTimeOffset FetchedAt);
+    private sealed record ZhiJiaoHubCacheEntry(ZhiJiaoHubSnapshot Snapshot, DateTimeOffset ExpireAt);
     private sealed record ArtworkCandidate(
         string Title,
         string? Artist,
@@ -80,6 +81,8 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ExchangeRateTableCacheEntry> _exchangeRateCacheByBaseCurrency =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ZhiJiaoHubCacheEntry> _zhiJiaoHubCacheBySource =
+        new(StringComparer.OrdinalIgnoreCase);
     private int _dailyNewsRotationCursor;
 
     static RecommendationDataService()
@@ -94,7 +97,15 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         _options = options ?? new RecommendationApiOptions();
         if (httpClient is null)
         {
-            _httpClient = new HttpClient
+            // 配置 HttpClientHandler 以支持所有 TLS 版本
+            var handler = new HttpClientHandler
+            {
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12 |
+                               System.Security.Authentication.SslProtocols.Tls13,
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+
+            _httpClient = new HttpClient(handler)
             {
                 Timeout = _options.RequestTimeout
             };
@@ -128,6 +139,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             _dailyWordCache = null;
             _stcn24ForumPostsCacheBySource.Clear();
             _exchangeRateCacheByBaseCurrency.Clear();
+            _zhiJiaoHubCacheBySource.Clear();
         }
     }
 
@@ -3193,5 +3205,255 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         return text.Length <= maxLength
             ? text
             : $"{text[..maxLength]}...";
+    }
+
+    // 智教Hub相关方法
+    public async Task<RecommendationQueryResult<ZhiJiaoHubSnapshot>> GetZhiJiaoHubImagesAsync(
+        ZhiJiaoHubQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query ?? new ZhiJiaoHubQuery();
+        var source = ZhiJiaoHubSources.Normalize(normalizedQuery.Source);
+        var mirrorSource = ZhiJiaoHubMirrorSources.Normalize(normalizedQuery.MirrorSource);
+        var cacheKey = $"{source}|{mirrorSource}";
+
+        if (!normalizedQuery.ForceRefresh && TryGetZhiJiaoHubFromCache(cacheKey, out var cached))
+        {
+            return RecommendationQueryResult<ZhiJiaoHubSnapshot>.Ok(cached);
+        }
+
+        try
+        {
+            var snapshot = await FetchZhiJiaoHubSnapshotAsync(source, mirrorSource, cancellationToken);
+            SetZhiJiaoHubCache(cacheKey, snapshot);
+            return RecommendationQueryResult<ZhiJiaoHubSnapshot>.Ok(snapshot);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return RecommendationQueryResult<ZhiJiaoHubSnapshot>.Fail("upstream_network_error", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return RecommendationQueryResult<ZhiJiaoHubSnapshot>.Fail("upstream_parse_error", ex.Message);
+        }
+    }
+
+    private async Task<ZhiJiaoHubSnapshot> FetchZhiJiaoHubSnapshotAsync(string source, string mirrorSource, CancellationToken cancellationToken)
+    {
+        var (owner, repo, path) = source switch
+        {
+            ZhiJiaoHubSources.Sectl => ("SECTL", "SECTL-hub", "docs/.vuepress/public/images"),
+            _ => ("ClassIsland", "classisland-hub", "images")
+        };
+
+        var contentsUrl = $"https://api.github.com/repos/{owner}/{repo}/contents/{path}";
+        
+        // 如果使用镜像加速，代理 GitHub API 请求
+        if (string.Equals(mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+        {
+            contentsUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + contentsUrl;
+        }
+
+        try
+        {
+            var images = await FetchImagesFromContentsApi(owner, repo, path, contentsUrl, mirrorSource, cancellationToken);
+
+            if (images.Count == 0)
+            {
+                throw new InvalidOperationException("未找到图片文件");
+            }
+
+            // 随机打乱图片顺序
+            var random = new Random();
+            var shuffled = images.OrderBy(_ => random.Next()).ToList();
+
+            // 重新设置索引
+            for (int i = 0; i < shuffled.Count; i++)
+            {
+                var item = shuffled[i];
+                shuffled[i] = item with { Index = i };
+            }
+
+            return new ZhiJiaoHubSnapshot(shuffled, 0, source);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("403") || ex.Message.Contains("rate limit"))
+        {
+            throw new HttpRequestException("GitHub API 速率限制，请稍后重试");
+        }
+        catch (Exception ex)
+        {
+            throw new HttpRequestException($"获取图片列表失败: {ex.Message}");
+        }
+    }
+
+    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromContentsApi(string owner, string repo, string path, string contentsUrl, string mirrorSource, CancellationToken cancellationToken)
+    {
+        var images = new List<ZhiJiaoHubImageItem>();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, contentsUrl);
+        request.Headers.TryAddWithoutValidation("User-Agent", "LanMountainDesktop/1.0");
+        request.Headers.TryAddWithoutValidation("Accept", "application/vnd.github+json");
+        request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorText = await response.Content.ReadAsStringAsync(cancellationToken);
+            if ((int)response.StatusCode == 403)
+            {
+                throw new HttpRequestException("GitHub API 速率限制，请稍后重试");
+            }
+            throw new HttpRequestException($"API 返回错误: {(int)response.StatusCode} - {Truncate(errorText, 200)}");
+        }
+
+        var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var document = JsonDocument.Parse(responseText);
+        var root = document.RootElement;
+
+        if (root.ValueKind != JsonValueKind.Array)
+        {
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("message", out var messageNode))
+            {
+                var errorMessage = messageNode.GetString();
+                throw new InvalidOperationException($"GitHub API 错误: {errorMessage}");
+            }
+            throw new InvalidOperationException("Invalid response format from GitHub API.");
+        }
+
+        int index = 0;
+        foreach (var item in root.EnumerateArray())
+        {
+            var type = ReadString(item, "type");
+            if (type != "file")
+            {
+                continue;
+            }
+
+            var name = ReadString(item, "name");
+            var downloadUrl = ReadString(item, "download_url");
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            // 只处理图片文件
+            var extension = Path.GetExtension(name).ToLowerInvariant();
+            if (extension != ".png" && extension != ".jpg" && extension != ".jpeg" && extension != ".gif" && extension != ".webp")
+            {
+                continue;
+            }
+
+            // 解码文件名
+            var decodedName = Uri.UnescapeDataString(name);
+            decodedName = Path.GetFileNameWithoutExtension(decodedName);
+
+            // 构造图片 URL
+            string imageUrl;
+            if (!string.IsNullOrWhiteSpace(downloadUrl))
+            {
+                imageUrl = downloadUrl;
+            }
+            else
+            {
+                imageUrl = $"https://raw.githubusercontent.com/{owner}/{repo}/main/{path}/{Uri.EscapeDataString(name)}";
+            }
+
+            // 应用镜像加速到图片 URL
+            imageUrl = ZhiJiaoHubMirrorSources.ApplyMirror(imageUrl, mirrorSource);
+
+            images.Add(new ZhiJiaoHubImageItem(decodedName, imageUrl, index));
+            index++;
+        }
+
+        return images;
+    }
+
+    private bool TryGetZhiJiaoHubFromCache(string cacheKey, out ZhiJiaoHubSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            if (_zhiJiaoHubCacheBySource.TryGetValue(cacheKey, out var cacheEntry) &&
+                cacheEntry.ExpireAt > DateTimeOffset.UtcNow)
+            {
+                snapshot = cacheEntry.Snapshot;
+                return true;
+            }
+        }
+
+        snapshot = null!;
+        return false;
+    }
+
+    private void SetZhiJiaoHubCache(string cacheKey, ZhiJiaoHubSnapshot snapshot)
+    {
+        lock (_cacheGate)
+        {
+            // 使用较长的缓存时间（1小时），因为图片列表不常变化
+            _zhiJiaoHubCacheBySource[cacheKey] = new ZhiJiaoHubCacheEntry(
+                snapshot,
+                DateTimeOffset.UtcNow.Add(TimeSpan.FromHours(1)));
+        }
+    }
+
+    private readonly ZhiJiaoHubCacheService _zhiJiaoHubCacheService = new();
+
+    public async Task<ZhiJiaoHubSyncResult> SyncZhiJiaoHubImagesAsync(
+        string source,
+        string mirrorSource,
+        IProgress<(int Current, int Total, string Status)>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        var normalizedMirror = ZhiJiaoHubMirrorSources.Normalize(mirrorSource);
+
+        try
+        {
+            var query = new ZhiJiaoHubQuery(normalizedSource, ForceRefresh: true, MirrorSource: normalizedMirror);
+            var result = await GetZhiJiaoHubImagesAsync(query, cancellationToken);
+
+            if (!result.Success || result.Data == null)
+            {
+                return new ZhiJiaoHubSyncResult(
+                    false,
+                    null,
+                    0,
+                    0,
+                    0,
+                    result.ErrorMessage ?? "Failed to fetch image list");
+            }
+
+            return await _zhiJiaoHubCacheService.SyncImagesAsync(
+                normalizedSource,
+                result.Data.Images,
+                normalizedMirror,
+                progress,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new ZhiJiaoHubSyncResult(false, null, 0, 0, 0, ex.Message);
+        }
+    }
+
+    public ZhiJiaoHubLocalSnapshot? LoadZhiJiaoHubLocalSnapshot(string source)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        return _zhiJiaoHubCacheService.LoadLocalSnapshot(normalizedSource);
+    }
+
+    public bool HasZhiJiaoHubLocalCache(string source)
+    {
+        var normalizedSource = ZhiJiaoHubSources.Normalize(source);
+        return _zhiJiaoHubCacheService.HasLocalCache(normalizedSource);
     }
 }

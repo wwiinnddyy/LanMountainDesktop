@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -537,11 +538,25 @@ public sealed class PluginLoader
     private string ExtractPackage(string packagePath, string pluginsRootDirectory)
     {
         var extractionDirectory = GetPackageExtractionDirectory(pluginsRootDirectory, packagePath);
+        
+        // 检查是否可以跳过解压（缓存有效）
+        if (ShouldSkipExtraction(packagePath, extractionDirectory))
+        {
+            AppLogger.Info(
+                "PluginLoader",
+                $"Skipping extraction for '{packagePath}'. Cache is up-to-date.");
+            return extractionDirectory;
+        }
+        
         AppLogger.Info(
             "PluginLoader",
             $"Extracting package '{packagePath}' to '{extractionDirectory}'.");
         RecreateDirectory(extractionDirectory);
         ZipFile.ExtractToDirectory(packagePath, extractionDirectory, overwriteFiles: true);
+        
+        // 保存解压元数据用于后续缓存检查
+        SaveExtractionMetadata(packagePath, extractionDirectory);
+        
         return extractionDirectory;
     }
 
@@ -606,6 +621,85 @@ public sealed class PluginLoader
         }
 
         return string.IsNullOrWhiteSpace(builder.ToString()) ? "_plugin" : builder.ToString().Trim();
+    }
+
+    private bool ShouldSkipExtraction(string packagePath, string extractionDirectory)
+    {
+        // 如果解压目录不存在，必须解压
+        if (!Directory.Exists(extractionDirectory))
+        {
+            return false;
+        }
+
+        // 检查元数据文件是否存在
+        var metadataPath = Path.Combine(extractionDirectory, ".extraction-metadata.json");
+        if (!File.Exists(metadataPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var packageInfo = new FileInfo(packagePath);
+            var metadata = ReadExtractionMetadata(metadataPath);
+
+            // 如果包文件修改时间晚于解压时间，需要重新解压
+            // 同时检查文件大小是否匹配
+            return packageInfo.Length == metadata.PackageSize &&
+                   packageInfo.LastWriteTimeUtc <= metadata.ExtractedAt;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn(
+                "PluginLoader",
+                $"Failed to read extraction metadata for '{packagePath}'. Will re-extract.",
+                ex);
+            return false;
+        }
+    }
+
+    private void SaveExtractionMetadata(string packagePath, string extractionDirectory)
+    {
+        try
+        {
+            var packageInfo = new FileInfo(packagePath);
+            var metadata = new ExtractionMetadata
+            {
+                PackagePath = Path.GetFullPath(packagePath),
+                ExtractedAt = DateTime.UtcNow,
+                PackageSize = packageInfo.Length,
+                PackageLastWriteTime = packageInfo.LastWriteTimeUtc
+            };
+
+            var metadataPath = Path.Combine(extractionDirectory, ".extraction-metadata.json");
+            var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            File.WriteAllText(metadataPath, json);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn(
+                "PluginLoader",
+                $"Failed to save extraction metadata for '{packagePath}'.",
+                ex);
+        }
+    }
+
+    private static ExtractionMetadata ReadExtractionMetadata(string metadataPath)
+    {
+        var json = File.ReadAllText(metadataPath);
+        return JsonSerializer.Deserialize<ExtractionMetadata>(json)
+            ?? throw new InvalidOperationException("Failed to deserialize extraction metadata.");
+    }
+
+    private sealed class ExtractionMetadata
+    {
+        public string PackagePath { get; set; } = string.Empty;
+        public DateTime ExtractedAt { get; set; }
+        public long PackageSize { get; set; }
+        public DateTime PackageLastWriteTime { get; set; }
     }
 
     private static ReadOnlyDictionary<string, object?> CreateReadOnlyProperties(

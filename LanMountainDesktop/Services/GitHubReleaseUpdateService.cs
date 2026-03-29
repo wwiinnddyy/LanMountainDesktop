@@ -107,7 +107,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         bool includePrerelease,
         CancellationToken cancellationToken = default)
     {
-        var normalizedCurrentVersionText = NormalizeVersion(currentVersion).ToString(3);
+        var normalizedCurrentVersion = NormalizeVersion(currentVersion);
+        var normalizedCurrentVersionText = FormatVersionText(normalizedCurrentVersion);
 
         if (string.IsNullOrWhiteSpace(_owner) || string.IsNullOrWhiteSpace(_repo))
         {
@@ -141,7 +142,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
 
             var hasParsedTagVersion = TryParseVersion(release.TagName, out var parsedTagVersion);
             var latestVersionText = hasParsedTagVersion && parsedTagVersion is not null
-                ? parsedTagVersion.ToString(3)
+                ? FormatVersionText(parsedTagVersion)
                 : release.TagName;
 
             var isUpdateAvailable = parsedTagVersion is not null && parsedTagVersion > currentVersion;
@@ -180,7 +181,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         bool includePrerelease,
         CancellationToken cancellationToken = default)
     {
-        var normalizedCurrentVersionText = NormalizeVersion(currentVersion).ToString(3);
+        var normalizedCurrentVersion = NormalizeVersion(currentVersion);
+        var normalizedCurrentVersionText = FormatVersionText(normalizedCurrentVersion);
 
         if (string.IsNullOrWhiteSpace(_owner) || string.IsNullOrWhiteSpace(_repo))
         {
@@ -216,7 +218,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
 
             var hasParsedTagVersion = TryParseVersion(release.TagName, out var parsedTagVersion);
             var latestVersionText = hasParsedTagVersion && parsedTagVersion is not null
-                ? parsedTagVersion.ToString(3)
+                ? FormatVersionText(parsedTagVersion)
                 : release.TagName;
 
             var preferredAsset = SelectPreferredInstallerAsset(release.Assets);
@@ -740,8 +742,18 @@ public sealed class GitHubReleaseUpdateService : IDisposable
     {
         var major = Math.Max(0, version.Major);
         var minor = Math.Max(0, version.Minor);
-        var build = Math.Max(0, version.Build);
-        return new Version(major, minor, build);
+        var build = Math.Max(0, version.Build >= 0 ? version.Build : 0);
+        var revision = Math.Max(0, version.Revision >= 0 ? version.Revision : 0);
+        return revision > 0
+            ? new Version(major, minor, build, revision)
+            : new Version(major, minor, build);
+    }
+
+    private static string FormatVersionText(Version version)
+    {
+        return version.Revision > 0
+            ? version.ToString(4)
+            : version.ToString(3);
     }
 
     private static string Truncate(string value, int maxLength)

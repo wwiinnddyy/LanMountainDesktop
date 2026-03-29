@@ -497,10 +497,13 @@ internal sealed class AirAppMarketIndexDocument
             return false;
         }
 
-        version = new Version(
-            Math.Max(0, parsed.Major),
-            Math.Max(0, parsed.Minor),
-            Math.Max(0, parsed.Build));
+        var major = Math.Max(0, parsed.Major);
+        var minor = Math.Max(0, parsed.Minor);
+        var build = Math.Max(0, parsed.Build >= 0 ? parsed.Build : 0);
+        var revision = Math.Max(0, parsed.Revision >= 0 ? parsed.Revision : 0);
+        version = revision > 0
+            ? new Version(major, minor, build, revision)
+            : new Version(major, minor, build);
         return true;
     }
 }

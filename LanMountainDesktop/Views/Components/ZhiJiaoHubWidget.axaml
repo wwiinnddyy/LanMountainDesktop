@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="96"
+             d:DesignHeight="96"
+             x:Class="LanMountainDesktop.Views.Components.ZhiJiaoHubWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="12"
+            ClipToBounds="True"
+            BorderThickness="0"
+            Background="#1A1A1A">
+        <Grid x:Name="MainGrid">
+            <!-- 图片显示 -->
+            <Image x:Name="CurrentImage"
+                   Stretch="UniformToFill"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+
+            <!-- 左下角渐变遮罩 -->
+            <Border x:Name="GradientOverlay"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Stretch"
+                    Height="60">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#00000000" />
+                        <GradientStop Offset="1" Color="#CC000000" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <!-- 图片名称 -->
+            <TextBlock x:Name="ImageNameTextBlock"
+                       Text=""
+                       Foreground="#FFFFFF"
+                       FontSize="11"
+                       FontWeight="Medium"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="1"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Bottom"
+                       Margin="10,0,10,8" />
+
+            <!-- 加载状态 -->
+            <StackPanel x:Name="LoadingPanel"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        IsVisible="False">
+                <TextBlock x:Name="LoadingTextBlock"
+                           Text="加载中..."
+                           Foreground="#AAAAAA"
+                           FontSize="12" />
+                <ProgressBar x:Name="LoadingProgressBar"
+                             IsIndeterminate="True"
+                             Width="60"
+                             Height="2"
+                             Foreground="#4A9EFF" />
+            </StackPanel>
+
+            <!-- 错误状态 -->
+            <TextBlock x:Name="ErrorTextBlock"
+                       Text=""
+                       Foreground="#FF6666"
+                       FontSize="10"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Margin="10"
+                       IsVisible="False" />
+
+            <!-- 指示器 -->
+            <Border x:Name="IndicatorBorder"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Margin="0,0,6,0"
+                    Background="Transparent">
+                <StackPanel x:Name="IndicatorPanel"
+                            Orientation="Vertical"
+                            Spacing="4">
+                </StackPanel>
+            </Border>
+
+            <!-- 触摸/鼠标捕获层 -->
+            <Border x:Name="InputCaptureBorder"
+                    Background="Transparent"
+                    PointerPressed="OnPointerPressed"
+                    PointerMoved="OnPointerMoved"
+                    PointerReleased="OnPointerReleased"
+                    PointerWheelChanged="OnPointerWheelChanged" />
+        </Grid>
+    </Border>
+</UserControl>
