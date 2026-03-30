@@ -57,6 +57,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private bool _isExpandedMode;
+    private bool _studyEnabled = true;
     private string _languageCode = "zh-CN";
     private IDisposable? _monitoringLease;
 
@@ -140,6 +141,13 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         var shouldMonitor = _isAttached && _isOnActivePage;
         if (shouldMonitor)
         {
@@ -153,11 +161,21 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void RefreshVisual()
     {
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         ApplyLocalizedLabels();
 
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
+
+        if (!_studyEnabled)
+        {
+            TitleTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
+            ModeTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            CurrentScoreTextBlock.Text = "--";
+            CurrentLabelTextBlock.Text = "";
+            return;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         var realtimeScore = ComputeRealtimeScore(snapshot);
         if (snapshot.DataMode == StudyDataMode.Realtime && realtimeScore is { } score)
@@ -676,6 +694,7 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private void ApplyVariableFontFamily()

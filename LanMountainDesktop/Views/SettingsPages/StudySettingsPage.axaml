@@ -8,10 +8,23 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
 
+            <!-- 总开关 -->
+            <ui:SettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding MasterSwitchHeader}"
+                                 Description="{Binding MasterSwitchDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="DataHistogram" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding StudyEnabled}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
             <!-- 噪音监测设置 -->
             <ui:SettingsExpander Classes="settings-expander-card"
                                  Header="{Binding NoiseMonitoringHeader}"
-                                 Description="{Binding NoiseMonitoringDescription}">
+                                 Description="{Binding NoiseMonitoringDescription}"
+                                 IsEnabled="{Binding StudyEnabled}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Mic" />
                 </ui:SettingsExpander.IconSource>
@@ -77,7 +90,8 @@
             <!-- 专注计时设置 -->
             <ui:SettingsExpander Classes="settings-expander-card"
                                  Header="{Binding FocusTimerHeader}"
-                                 Description="{Binding FocusTimerDescription}">
+                                 Description="{Binding FocusTimerDescription}"
+                                 IsEnabled="{Binding StudyEnabled}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Timer" />
                 </ui:SettingsExpander.IconSource>
@@ -214,7 +228,8 @@
             <!-- 提醒设置 -->
             <ui:SettingsExpander Classes="settings-expander-card"
                                  Header="{Binding AlertHeader}"
-                                 Description="{Binding AlertDescription}">
+                                 Description="{Binding AlertDescription}"
+                                 IsEnabled="{Binding StudyEnabled}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Alert" />
                 </ui:SettingsExpander.IconSource>
@@ -255,7 +270,8 @@
             <!-- 显示设置 -->
             <ui:SettingsExpander Classes="settings-expander-card"
                                  Header="{Binding DisplayHeader}"
-                                 Description="{Binding DisplayDescription}">
+                                 Description="{Binding DisplayDescription}"
+                                 IsEnabled="{Binding StudyEnabled}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Eye" />
                 </ui:SettingsExpander.IconSource>

@@ -53,6 +53,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     private bool _isOnActivePage = true;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _studyEnabled = true;
     private string _languageCode = "zh-CN";
 
     private readonly record struct DeductionMetrics(
@@ -98,7 +99,10 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     {
         _isAttached = true;
         ReloadLanguageCode();
-        _ = _studyAnalyticsService.StartOrResumeMonitoring();
+        if (_studyEnabled)
+        {
+            _ = _studyAnalyticsService.StartOrResumeMonitoring();
+        }
         UpdateTimerState();
         RefreshVisual();
     }
@@ -142,9 +146,19 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
 
     private void RefreshVisual()
     {
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
+
+        if (!_studyEnabled)
+        {
+            ModeTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            ApplyModeBadgeColor(panelColor, Color.Parse("#FF9AA0A6"));
+            ApplyLocalizedLabels();
+            ApplyUnavailableMetrics();
+            return;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
@@ -595,6 +609,7 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private void ApplyVariableFontFamily()

@@ -56,6 +56,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _studyEnabled = true;
     private IDisposable? _monitoringLease;
 
     private readonly record struct DistributionStats(
@@ -157,6 +158,13 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         if (_isAttached)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
@@ -169,12 +177,22 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void RefreshVisual()
     {
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
 
         TitleTextBlock.Text = L("study.noise_distribution.title", "Noise Level Distribution");
         ApplyLocalizedAxisLabels();
+
+        if (!_studyEnabled)
+        {
+            ModeTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            ApplyModeBadgeColor(panelColor, Color.Parse("#FF9AA0A6"));
+            ChartControl.UpdateSeries([], 45);
+            SummaryTextBlock.Text = "--";
+            return;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
@@ -570,6 +588,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private void ApplyVariableFontFamily()

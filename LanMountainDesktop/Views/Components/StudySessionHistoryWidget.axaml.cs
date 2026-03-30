@@ -58,6 +58,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _studyEnabled = true;
     private string? _loadingSessionId;
     private HistoryDialogMode _dialogMode;
     private string? _dialogSessionId;
@@ -178,6 +179,19 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         var panelSamples = BuildPanelBackgroundSamples(panelColor);
         TitleTextBlock.Text = L("study.session_history.title", "Session History");
         TitleTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, PrimaryColorCandidates, MinTextContrast);
+
+        if (!_studyEnabled)
+        {
+            if (_dialogMode != HistoryDialogMode.None)
+            {
+                CloseDialog();
+            }
+
+            SessionListPanel.Children.Clear();
+            StatusTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            StatusTextBlock.Foreground = CreateAdaptiveBrush(panelSamples, SecondaryColorCandidates, MinTextContrast);
+            return;
+        }
 
         if (_transientStatus is not null && DateTimeOffset.UtcNow > _transientStatusExpireAt)
         {
@@ -581,6 +595,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private void UpdateAdaptiveLayout()

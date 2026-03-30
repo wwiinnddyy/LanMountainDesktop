@@ -53,6 +53,7 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
     private bool _isOnActivePage = true;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _studyEnabled = true;
     private string _languageCode = "zh-CN";
     private IDisposable? _monitoringLease;
 
@@ -151,6 +152,13 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         var shouldMonitor = _isAttached && _isOnActivePage;
         if (shouldMonitor)
         {
@@ -164,10 +172,20 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
 
     private void RefreshVisual()
     {
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
         ApplyLocalizedLabels();
+
+        if (!_studyEnabled)
+        {
+            ModeTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            ApplyModeBadgeColor(panelColor, Color.Parse("#FF9AA0A6"));
+            DensityValueTextBlock.Text = "--";
+            DensityUnitTextBlock.Text = "";
+            return;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
@@ -528,6 +546,7 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private void ApplyVariableFontFamily()

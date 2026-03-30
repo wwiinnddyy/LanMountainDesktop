@@ -30,6 +30,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isDisposed;
+    private bool _studyEnabled = true;
     private IDisposable? _monitoringLease;
 
     public StudyEnvironmentWidget()
@@ -132,6 +133,13 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         if (_isAttached)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
@@ -147,6 +155,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         var appSnapshot = _appSettingsService.Load();
         var componentSnapshot = _componentSettingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(appSnapshot.LanguageCode);
+        _studyEnabled = appSnapshot.StudyEnabled;
         _showDisplayDb = componentSnapshot.StudyEnvironmentShowDisplayDb;
         _showDbfs = componentSnapshot.StudyEnvironmentShowDbfs;
         _componentColorScheme = componentSnapshot.ColorSchemeSource;
@@ -158,6 +167,17 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void RefreshVisual()
     {
+        if (!_studyEnabled)
+        {
+            StatusTitleTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
+            StatusValueTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            StatusValueTextBlock.Foreground = TryResolveThemeBrush("AdaptiveTextSecondaryBrush", "#FF9AA0A6");
+            NoiseValueTextBlock.Text = "--";
+            NoiseSubValueTextBlock.IsVisible = false;
+            UpdateAdaptiveLayout();
+            return;
+        }
+
         var snapshot = _studyAnalyticsService.GetSnapshot();
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
 

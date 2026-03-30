@@ -2342,6 +2342,27 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         _isInitializing = false;
     }
 
+    #region Properties - Master Switch
+
+    [ObservableProperty]
+    private string _masterSwitchHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _masterSwitchDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _studyEnabled = true;
+
+    partial void OnStudyEnabledChanged(bool value)
+    {
+        if (!_isInitializing)
+        {
+            SaveMasterSwitch();
+        }
+    }
+
+    #endregion
+
     #region Properties - Noise Monitoring
 
     [ObservableProperty]
@@ -2686,6 +2707,9 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
 
+        // Master switch
+        StudyEnabled = appSnapshot.StudyEnabled;
+
         // Noise settings
         SamplingRateMs = appSnapshot.StudyFrameMs is > 0 ? appSnapshot.StudyFrameMs.Value : 50;
         NoiseSensitivityDbfs = appSnapshot.StudyScoreThresholdDbfs ?? -50;
@@ -2716,6 +2740,14 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateSessionsBeforeLongBreakText();
         UpdateBaselineDbText();
         UpdateAvgWindowSecText();
+    }
+
+    private void SaveMasterSwitch()
+    {
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.StudyEnabled = StudyEnabled;
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.StudyEnabled)]);
     }
 
     private void SaveNoiseSettings()
@@ -2796,6 +2828,9 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
 
     private void RefreshLocalizedText()
     {
+        MasterSwitchHeader = L("settings.study.master_switch_header", "自习功能");
+        MasterSwitchDescription = L("settings.study.master_switch_desc", "启用自习环境监测和专注计时功能。关闭后，相关组件将不会采集任何数据。");
+
         NoiseMonitoringHeader = L("settings.study.noise_header", "噪音监测");
         NoiseMonitoringDescription = L("settings.study.noise_description", "配置麦克风采集频率和噪音评分敏感度。");
         SamplingRateLabel = L("settings.study.sampling_rate_label", "采集频率");

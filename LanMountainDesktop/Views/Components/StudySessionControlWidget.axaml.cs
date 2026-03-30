@@ -64,6 +64,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
+    private bool _studyEnabled = true;
     private IDisposable? _monitoringLease;
     private string? _transientMessage;
     private DateTimeOffset _transientMessageExpireAt;
@@ -147,6 +148,13 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         var shouldMonitor = _isAttached && _isOnActivePage;
         if (shouldMonitor)
         {
@@ -193,10 +201,20 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
     private void RefreshVisual()
     {
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         var now = DateTimeOffset.UtcNow;
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
+
+        if (!_studyEnabled)
+        {
+            PrimaryTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
+            SecondaryTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            ActionIcon.Kind = MaterialIconKind.Settings;
+            ApplyActionBadgeStyle(panelColor, Color.Parse("#FF9AA0A6"));
+            return;
+        }
+
+        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         if (_transientMessage is not null && now > _transientMessageExpireAt)
         {
@@ -469,6 +487,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private string L(string key, string fallback)

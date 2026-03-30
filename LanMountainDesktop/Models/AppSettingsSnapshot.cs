@@ -120,6 +120,8 @@ public sealed class AppSettingsSnapshot
 
     #region Study Settings
 
+    public bool StudyEnabled { get; set; } = true;
+
     public int? StudyFrameMs { get; set; }
 
     public double? StudyScoreThresholdDbfs { get; set; }

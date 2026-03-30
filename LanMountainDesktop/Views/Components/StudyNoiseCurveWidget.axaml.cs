@@ -70,6 +70,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private bool _isOnActivePage = true;
     private bool _isSubscribed;
     private bool _isDisposed;
+    private bool _studyEnabled = true;
     private int _framesSinceCompaction;
     private IDisposable? _monitoringLease;
 
@@ -263,6 +264,13 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
     private void UpdateMonitoringLeaseState()
     {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
         if (_isAttached)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
@@ -277,6 +285,15 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     {
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
+
+        if (!_studyEnabled)
+        {
+            StatusTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
+            RealtimeValueTextBlock.Text = L("study.widget.disabled_hint", "请在设置中开启");
+            ApplyStatusBadgeStyle(StatusVisualKind.Default, panelColor);
+            ChartControl.UpdateSeries([]);
+            return;
+        }
 
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
         if (isSessionReport && snapshot.LastSessionReport is not null)
@@ -578,6 +595,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     {
         var snapshot = _settingsService.Load();
         _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
+        _studyEnabled = snapshot.StudyEnabled;
     }
 
     private string L(string key, string fallback)
