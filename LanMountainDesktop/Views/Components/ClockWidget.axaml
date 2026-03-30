@@ -10,7 +10,7 @@
     <Border x:Name="RootBorder"
             Classes="surface-translucent-panel"
             Padding="0"
-            CornerRadius="{DynamicResource DesignCornerRadiusXs}">
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}">
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">

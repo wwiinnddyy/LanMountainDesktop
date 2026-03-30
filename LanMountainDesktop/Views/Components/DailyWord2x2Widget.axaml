@@ -9,7 +9,7 @@
              x:Class="LanMountainDesktop.Views.Components.DailyWord2x2Widget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Background="Transparent"
             ClipToBounds="True"
             BorderThickness="0"
