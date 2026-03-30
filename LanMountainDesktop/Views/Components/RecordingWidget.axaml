@@ -23,7 +23,7 @@
                         Height="300"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        CornerRadius="34"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                         BorderBrush="#00000000"
                         BorderThickness="0"
                         Background="Transparent">
@@ -65,7 +65,7 @@
                                     Grid.Column="1"
                                     Width="2"
                                     Height="32"
-                                    CornerRadius="1"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
                                     Background="#F14A40"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
@@ -74,7 +74,7 @@
                                     Grid.Column="2"
                                     Margin="4,0,0,0"
                                     Height="2"
-                                    CornerRadius="1"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
                                     Background="#A3A8B3"
                                     Opacity="0.55"
                                     HorizontalAlignment="Stretch"

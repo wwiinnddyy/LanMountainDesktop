@@ -20,7 +20,7 @@
                   ColumnSpacing="8">
                 <Border x:Name="StatusBadgeBorder"
                         Padding="8,3"
-                        CornerRadius="8"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         Background="#7A0E2235"
                         BorderBrush="#88FFFFFF"
                         BorderThickness="1"

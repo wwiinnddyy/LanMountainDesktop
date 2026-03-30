@@ -87,7 +87,7 @@
                         Grid.Column="1"
                         Background="{DynamicResource AdaptiveLayer2Brush}"
                         BorderThickness="1"
-                        CornerRadius="24"
+                        CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                         BoxShadow="0 8 18 #1A000000"
                         Padding="14">
                     <Grid x:Name="RightPanelGrid"

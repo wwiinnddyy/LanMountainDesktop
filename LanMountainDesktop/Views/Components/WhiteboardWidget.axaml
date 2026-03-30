@@ -24,7 +24,7 @@
                         Background="#FFFFFF"
                         BorderBrush="#24000000"
                         BorderThickness="1"
-                        CornerRadius="14"
+                        CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                         ClipToBounds="True">
                     <inking:InkCanvas x:Name="InkCanvas" />
                 </Border>
@@ -35,7 +35,7 @@
                         Background="#E6FFFFFF"
                         BorderBrush="#16000000"
                         BorderThickness="1"
-                        CornerRadius="14"
+                        CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                         Padding="8,6">
                     <StackPanel x:Name="ToolbarButtonsPanel"
                                 Orientation="Horizontal"
@@ -103,7 +103,7 @@
             <Border Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                     Padding="12">
                 <StackPanel Spacing="12">
                     <ColorView x:Name="InkColorPicker"

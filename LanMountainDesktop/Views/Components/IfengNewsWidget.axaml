@@ -40,7 +40,7 @@
                                        VerticalAlignment="Center" />
                             <Border x:Name="NewsBadge"
                                     Background="#E24B2D"
-                                    CornerRadius="4"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
                                     Padding="6,2"
                                     Margin="4,0,0,0"
                                     VerticalAlignment="Center">

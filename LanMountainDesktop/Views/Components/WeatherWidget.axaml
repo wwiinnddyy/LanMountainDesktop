@@ -32,12 +32,12 @@
             </Border>
 
             <Border x:Name="BackgroundTintLayer"
-                    CornerRadius="30"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     ClipToBounds="True"
                     Opacity="0.16" />
 
             <Border x:Name="BackgroundLightLayer"
-                    CornerRadius="30"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     ClipToBounds="True"
                     Opacity="0.62">
                 <Border.Background>
@@ -54,7 +54,7 @@
             </Border>
 
             <Border x:Name="BackgroundShadeLayer"
-                    CornerRadius="30"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     ClipToBounds="True"
                     Opacity="0.74">
                 <Border.Background>

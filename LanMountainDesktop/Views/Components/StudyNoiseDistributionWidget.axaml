@@ -39,7 +39,7 @@
                 <Border x:Name="ModeBadgeBorder"
                         Grid.Column="2"
                         Padding="8,3"
-                        CornerRadius="8"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         BorderThickness="1"
                         BorderBrush="#88FFFFFF"
                         Background="#553B82F6"

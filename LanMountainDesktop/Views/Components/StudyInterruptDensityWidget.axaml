@@ -29,7 +29,7 @@
                 <Border x:Name="ModeBadgeBorder"
                         Grid.Column="1"
                         Padding="8,3"
-                        CornerRadius="8"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         BorderThickness="1"
                         BorderBrush="#88FFFFFF"
                         Background="#553B82F6"
@@ -79,7 +79,7 @@
                             Spacing="6"
                             VerticalAlignment="Center">
                     <Border x:Name="CountCardBorder"
-                            CornerRadius="10"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="#2CFFFFFF"
                             BorderBrush="#33FFFFFF"
                             BorderThickness="1"
@@ -102,7 +102,7 @@
                     </Border>
 
                     <Border x:Name="DurationCardBorder"
-                            CornerRadius="10"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="#2CFFFFFF"
                             BorderBrush="#33FFFFFF"
                             BorderThickness="1"

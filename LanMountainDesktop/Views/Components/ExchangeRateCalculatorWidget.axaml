@@ -9,7 +9,7 @@
 
     <UserControl.Styles>
         <Style Selector="Button">
-            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
             <Setter Property="Background" Value="#F8F9FB" />
             <Setter Property="BorderBrush" Value="#00000000" />
             <Setter Property="BorderThickness" Value="0" />
@@ -40,7 +40,7 @@
                     <Border x:Name="FromCurrencyRowBorder"
                             Grid.Row="0"
                             Grid.Column="0"
-                            CornerRadius="16"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="#F8F9FB"
                             Padding="12,8"
                             PointerPressed="OnFromCurrencyRowPointerPressed">
@@ -81,7 +81,7 @@
                     <Border x:Name="ToCurrencyRowBorder"
                             Grid.Row="1"
                             Grid.Column="0"
-                            CornerRadius="16"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="#F8F9FB"
                             Padding="12,8"
                             PointerPressed="OnToCurrencyRowPointerPressed">
@@ -123,7 +123,7 @@
                             Grid.Row="0"
                             Grid.RowSpan="2"
                             Grid.Column="1"
-                            CornerRadius="16"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             Background="#F8F9FB"
                             BorderBrush="#00000000"
                             BorderThickness="0"

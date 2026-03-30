@@ -31,7 +31,7 @@
                 <Border x:Name="ModeBadgeBorder"
                         Grid.Column="1"
                         Padding="8,3"
-                        CornerRadius="8"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         BorderThickness="1"
                         BorderBrush="#88FFFFFF"
                         Background="#553B82F6"
@@ -71,7 +71,7 @@
                   ColumnDefinitions="*,*,*"
                   ColumnSpacing="10">
                 <Border x:Name="AverageCardBorder"
-                        CornerRadius="12"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         Background="#24FFFFFF"
                         BorderBrush="#2EFFFFFF"
                         BorderThickness="1"
@@ -96,7 +96,7 @@
 
                 <Border x:Name="MinimumCardBorder"
                         Grid.Column="1"
-                        CornerRadius="12"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         Background="#24FFFFFF"
                         BorderBrush="#2EFFFFFF"
                         BorderThickness="1"
@@ -121,7 +121,7 @@
 
                 <Border x:Name="MaximumCardBorder"
                         Grid.Column="2"
-                        CornerRadius="12"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         Background="#24FFFFFF"
                         BorderBrush="#2EFFFFFF"
                         BorderThickness="1"

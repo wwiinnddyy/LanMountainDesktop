@@ -52,7 +52,7 @@
                         <Button x:Name="RefreshButton"
                                 Grid.Column="1"
                                 Padding="8,4"
-                                CornerRadius="8"
+                                CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                                 Background="Transparent"
                                 BorderBrush="#bb5649"
                                 BorderThickness="1"

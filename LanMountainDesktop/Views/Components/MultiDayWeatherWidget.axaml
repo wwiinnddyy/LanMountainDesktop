@@ -28,9 +28,9 @@
                 </Border.RenderTransform>
             </Border>
 
-            <Border x:Name="BackgroundTintLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.12" />
+            <Border x:Name="BackgroundTintLayer" CornerRadius="{DynamicResource DesignCornerRadiusComponent}" ClipToBounds="True" Opacity="0.12" />
 
-            <Border x:Name="BackgroundLightLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.52">
+            <Border x:Name="BackgroundLightLayer" CornerRadius="{DynamicResource DesignCornerRadiusComponent}" ClipToBounds="True" Opacity="0.52">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                         <GradientStop Color="#45FFFFFF" Offset="0" />
@@ -40,7 +40,7 @@
                 </Border.Background>
             </Border>
 
-            <Border x:Name="BackgroundShadeLayer" CornerRadius="28" ClipToBounds="True" Opacity="0.68">
+            <Border x:Name="BackgroundShadeLayer" CornerRadius="{DynamicResource DesignCornerRadiusComponent}" ClipToBounds="True" Opacity="0.68">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#00000000" Offset="0.42" />

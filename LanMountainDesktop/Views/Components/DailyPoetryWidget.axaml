@@ -75,7 +75,7 @@
                         Height="26"
                         VerticalAlignment="Center"
                         Margin="0,0,8,0"
-                        CornerRadius="3"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
                         Background="#6BF2A497" />
 
                 <TextBlock x:Name="AuthorTextBlock"

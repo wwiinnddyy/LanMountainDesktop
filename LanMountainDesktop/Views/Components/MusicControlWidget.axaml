@@ -91,10 +91,10 @@
                     </Image>
                 </Border>
                 <Border x:Name="DynamicGradientOverlay"
-                        CornerRadius="30"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                         ClipToBounds="True" />
                 <Border x:Name="DynamicSoftLightOverlay"
-                        CornerRadius="30"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                         ClipToBounds="True" />
             </Grid>
 
@@ -111,7 +111,7 @@
                         <Border x:Name="CoverBorder"
                                 Width="56"
                                 Height="56"
-                                CornerRadius="12"
+                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                 ClipToBounds="True"
                                 BorderThickness="1"
                                 BorderBrush="#77FFFFFF"

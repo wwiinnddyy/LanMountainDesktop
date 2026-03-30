@@ -19,7 +19,7 @@
               RowSpacing="8">
             <Border x:Name="WebViewHostBorder"
                     Grid.Row="0"
-                    CornerRadius="16"
+                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                     ClipToBounds="True"
                     Background="#FFFFFFFF"
                     BorderBrush="#22000000"
@@ -52,7 +52,7 @@
 
             <Border x:Name="AddressBarBorder"
                     Grid.Row="1"
-                    CornerRadius="14"
+                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                     Background="#ECF2FA"
                     BorderBrush="#22000000"
                     BorderThickness="1"

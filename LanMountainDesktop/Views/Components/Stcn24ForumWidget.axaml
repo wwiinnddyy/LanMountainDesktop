@@ -69,12 +69,12 @@
                     </Grid>
 
                     <Border x:Name="PostItem1Host"
-                            Grid.Row="1"
-                            Tag="0"
-                            Background="#F7F8FA"
-                            CornerRadius="10"
-                            Padding="8,6"
-                            PointerPressed="OnPostItemPointerPressed">
+                                    Grid.Row="1"
+                                    Tag="0"
+                                    Background="#F7F8FA"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                    Padding="8,6"
+                                    PointerPressed="OnPostItemPointerPressed">
                         <Grid x:Name="PostItem1Grid"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="8">

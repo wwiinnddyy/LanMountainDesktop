@@ -16,7 +16,7 @@
     
     <StackPanel x:Name="RootStackPanel" Spacing="16">
         <Border x:Name="CoverImageBorder"
-                CornerRadius="12"
+                CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 ClipToBounds="True"
                 Background="#f8f5ec"
                 PointerPressed="OnCoverImagePointerPressed"
@@ -75,7 +75,7 @@
         
         <Border x:Name="OverviewBorder"
                 Background="#f8f5ec"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 Padding="12"
                 Margin="0,0,0,8">
             <StackPanel x:Name="OverviewStackPanel" Spacing="12"/>
@@ -85,7 +85,7 @@
                 Content="展开更多新闻 ▼"
                 FontSize="14"
                 Padding="16,8"
-                CornerRadius="8"
+                CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                 Background="Transparent"
                 BorderBrush="#bb5649"
                 BorderThickness="1"

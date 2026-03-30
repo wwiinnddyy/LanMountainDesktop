@@ -29,7 +29,7 @@
                 <Border x:Name="ModeBadgeBorder"
                         Grid.Column="1"
                         Padding="8,3"
-                        CornerRadius="8"
+                        CornerRadius="{DynamicResource DesignCornerRadiusXs}"
                         BorderThickness="1"
                         BorderBrush="#88FFFFFF"
                         Background="#553B82F6"
@@ -47,7 +47,7 @@
                         Grid.Row="1"
                         Spacing="6">
                 <Border x:Name="SustainedRowBorder"
-                        CornerRadius="10"
+                        CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                         Background="#2CFFFFFF"
                         BorderBrush="#33FFFFFF"
                         BorderThickness="1"
@@ -76,7 +76,7 @@
                 </Border>
 
                 <Border x:Name="TimeRowBorder"
-                        CornerRadius="10"
+                        CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                         Background="#2CFFFFFF"
                         BorderBrush="#33FFFFFF"
                         BorderThickness="1"
@@ -105,7 +105,7 @@
                 </Border>
 
                 <Border x:Name="SegmentRowBorder"
-                        CornerRadius="10"
+                        CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                         Background="#2CFFFFFF"
                         BorderBrush="#33FFFFFF"
                         BorderThickness="1"
