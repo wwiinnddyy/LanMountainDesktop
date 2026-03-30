@@ -19,7 +19,7 @@ public sealed class BuiltInDesktopHostCornerRadiusBaselineTests
         var registry = new DesktopComponentRuntimeRegistry(
             ComponentRegistry.CreateDefault(),
             DesktopComponentRuntimeRegistry.GetDefaultRegistrations());
-        var expected = AppearanceCornerRadiusTokenFactory.Create(globalScale).Lg.TopLeft;
+        var expected = AppearanceCornerRadiusTokenFactory.Create(globalScale).Component.TopLeft;
 
         foreach (var descriptor in registry.GetDesktopComponents())
         {

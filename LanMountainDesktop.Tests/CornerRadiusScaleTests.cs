@@ -45,7 +45,8 @@ public sealed class CornerRadiusScaleTests
                 new CornerRadius(20),
                 new CornerRadius(28),
                 new CornerRadius(32),
-                new CornerRadius(36))),
+                new CornerRadius(36),
+                new CornerRadius(8))),
             ThemeVariant: "Unknown"));
 
         var context = new PluginDesktopComponentContext(
@@ -76,7 +77,8 @@ public sealed class CornerRadiusScaleTests
                 Md: 36d,
                 Lg: 48d,
                 Xl: 60d,
-                Island: 72d),
+                Island: 72d,
+                Component: 16d),
             ThemeVariant: "Light"));
 
         Assert.Equal(36d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md), 3);

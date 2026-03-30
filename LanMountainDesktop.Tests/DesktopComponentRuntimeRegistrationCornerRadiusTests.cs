@@ -53,6 +53,7 @@ public sealed class DesktopComponentRuntimeRegistrationCornerRadiusTests
                 new CornerRadius(20),
                 new CornerRadius(28),
                 new CornerRadius(32),
-                new CornerRadius(36)));
+                new CornerRadius(36),
+                new CornerRadius(8)));
     }
 }
