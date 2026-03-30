@@ -8,8 +8,10 @@
              d:DesignHeight="150"
              x:Class="LanMountainDesktop.Views.Components.StudySessionControlWidget">
     <Border x:Name="RootBorder"
-            Classes="surface-translucent-strong"
-            CornerRadius="18"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Padding="14,10"
             ClipToBounds="True">
         <Grid x:Name="LayoutGrid"

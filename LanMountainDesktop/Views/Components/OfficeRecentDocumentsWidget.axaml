@@ -10,11 +10,11 @@
              x:Class="LanMountainDesktop.Views.Components.OfficeRecentDocumentsWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="{DynamicResource DesignCornerRadiusLg}"
-            Background="#2D5A8E"
-            ClipToBounds="True"
-            BorderThickness="0"
-            Padding="0">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Grid>
             <Border x:Name="AccentCorner"
                     Width="140"

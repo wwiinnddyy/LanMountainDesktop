@@ -10,7 +10,7 @@
             Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
             BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
             BorderThickness="1"
-            CornerRadius="18"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Padding="14,10">
         <Grid x:Name="LayoutGrid"
               ColumnDefinitions="*,Auto"

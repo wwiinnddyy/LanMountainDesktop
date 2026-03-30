@@ -2,9 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="LanMountainDesktop.Views.Components.ClassScheduleWidget">
     <Border x:Name="RootBorder"
-            ClipToBounds="True"
-            CornerRadius="28"
-            BorderThickness="1">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Grid x:Name="LayoutGrid"
               RowDefinitions="Auto,*">
             <Grid x:Name="HeaderGrid"

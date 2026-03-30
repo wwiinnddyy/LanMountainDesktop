@@ -476,6 +476,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         resources["DesignCornerRadiusLg"] = snapshot.CornerRadiusTokens.Lg;
         resources["DesignCornerRadiusXl"] = snapshot.CornerRadiusTokens.Xl;
         resources["DesignCornerRadiusIsland"] = snapshot.CornerRadiusTokens.Island;
+        resources["DesignCornerRadiusComponent"] = snapshot.CornerRadiusTokens.Component;
     }
 
     public AppearanceMaterialSurface GetMaterialSurface(MaterialSurfaceRole role)

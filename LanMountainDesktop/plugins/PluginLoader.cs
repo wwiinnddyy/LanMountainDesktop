@@ -340,7 +340,7 @@ public sealed class PluginLoader
     {
         var defaultSnapshot = new PluginAppearanceSnapshot(
             GlobalCornerRadiusScale: 1d,
-            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 10, 14, 18, 24, 30, 36),
+            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 18),
             ThemeVariant: "Unknown");
 
         if (hostServices?.GetService(typeof(IAppearanceThemeService)) is not IAppearanceThemeService appearanceThemeService)

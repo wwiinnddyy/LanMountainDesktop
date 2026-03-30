@@ -8,10 +8,11 @@
              d:DesignHeight="320"
              x:Class="LanMountainDesktop.Views.Components.StudyNoiseDistributionWidget">
     <Border x:Name="RootBorder"
-            Classes="surface-translucent-strong"
-            CornerRadius="24"
-            Padding="14,10"
-            ClipToBounds="True">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Grid x:Name="ContentRootGrid"
               RowDefinitions="Auto,*"
               RowSpacing="8">

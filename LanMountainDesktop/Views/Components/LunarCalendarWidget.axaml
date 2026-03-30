@@ -8,10 +8,11 @@
              x:Class="LanMountainDesktop.Views.Components.LunarCalendarWidget">
 
     <Border x:Name="RootBorder"
-            Background="#EFE6D9"
-            CornerRadius="30"
-            ClipToBounds="True"
-            Padding="16">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Viewbox Stretch="Uniform">
             <Grid x:Name="LayoutRoot"
                   Width="300"

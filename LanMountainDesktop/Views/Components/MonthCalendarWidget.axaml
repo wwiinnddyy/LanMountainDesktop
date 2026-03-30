@@ -11,9 +11,8 @@
             Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
             BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
             BorderThickness="1"
-            CornerRadius="28"
-            ClipToBounds="True"
-            Padding="14">
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Viewbox Stretch="Uniform">
             <Grid x:Name="LayoutRoot"
                   Width="280"

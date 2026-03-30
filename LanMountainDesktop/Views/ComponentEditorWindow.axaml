@@ -53,7 +53,7 @@
         
         <!-- MD3 Button Styles -->
         <Style Selector="Button.component-editor-footer-button">
-            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusComponent}" />
             <Setter Property="Background" Value="{DynamicResource EditorPrimaryBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource EditorOnPrimaryBrush}" />
             <Setter Property="Height" Value="40" />
@@ -99,37 +99,43 @@
             </Grid>
         </Border>
 
-        <Panel Grid.Row="1">
-            <ScrollViewer Classes="component-editor-scroll-host"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <ContentControl x:Name="EditorContentHost"
-                                Margin="24,0,24,100"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch" />
-            </ScrollViewer>
+        <Border Grid.Row="1"
+                Background="{DynamicResource EditorSurfaceContainerBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                Margin="16,0,16,16"
+                ClipToBounds="True">
+            <Panel>
+                <ScrollViewer Classes="component-editor-scroll-host"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <ContentControl x:Name="EditorContentHost"
+                                    Margin="24,0,24,100"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch" />
+                </ScrollViewer>
 
-            <!-- Floating Save Button (MD3 Style) -->
-            <Button x:Name="SaveFAB"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom"
-                    Margin="28"
-                    Width="64"
-                    Height="64"
-                    Background="{DynamicResource EditorPrimaryBrush}"
-                    Foreground="{DynamicResource EditorOnPrimaryBrush}"
-                    CornerRadius="{DynamicResource DesignCornerRadiusMd}"
-                    Classes="accent"
-                    Click="OnCloseClick">
-                <Button.Styles>
-                    <Style Selector="Button:pointerover">
-                        <Setter Property="RenderTransform" Value="scale(1.05)" />
-                    </Style>
-                </Button.Styles>
-                <mi:MaterialIcon Kind="Check"
-                                 Width="32"
-                                 Height="32" />
-            </Button>
-        </Panel>
+                <!-- Floating Save Button (MD3 Style) -->
+                <Button x:Name="SaveFAB"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="28"
+                        Width="64"
+                        Height="64"
+                        Background="{DynamicResource EditorPrimaryBrush}"
+                        Foreground="{DynamicResource EditorOnPrimaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                        Classes="accent"
+                        Click="OnCloseClick">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="RenderTransform" Value="scale(1.05)" />
+                        </Style>
+                    </Button.Styles>
+                    <mi:MaterialIcon Kind="Check"
+                                     Width="32"
+                                     Height="32" />
+                </Button>
+            </Panel>
+        </Border>
     </Grid>
 </Window>

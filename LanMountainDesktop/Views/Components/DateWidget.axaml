@@ -8,10 +8,11 @@
              x:Class="LanMountainDesktop.Views.Components.DateWidget">
 
     <Border x:Name="RootBorder"
-            Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
-            CornerRadius="28"
-            ClipToBounds="True"
-            Padding="12">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Viewbox Stretch="Uniform">
             <Grid x:Name="LayoutRoot"
                   Width="460"

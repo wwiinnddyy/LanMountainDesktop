@@ -8,12 +8,12 @@
              x:Class="LanMountainDesktop.Views.Components.WeatherClockWidget">
 
     <Border x:Name="RootBorder"
-            Background="#FFFFFF"
-            BorderBrush="#14000000"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
             BorderThickness="1"
-            CornerRadius="22"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True"
-            Padding="12,8">
+            Padding="14,12">
         <Grid x:Name="ContentGrid"
               ColumnDefinitions="*,Auto"
               ColumnSpacing="10">

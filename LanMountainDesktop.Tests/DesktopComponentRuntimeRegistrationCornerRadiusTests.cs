@@ -48,11 +48,11 @@ public sealed class DesktopComponentRuntimeRegistrationCornerRadiusTests
             GlobalCornerRadiusScale: globalScale,
             CornerRadiusTokens: new AppearanceCornerRadiusTokens(
                 new CornerRadius(6),
-                new CornerRadius(10),
+                new CornerRadius(12),
                 new CornerRadius(14),
-                new CornerRadius(18),
-                new CornerRadius(24),
-                new CornerRadius(30),
+                new CornerRadius(20),
+                new CornerRadius(28),
+                new CornerRadius(32),
                 new CornerRadius(36)));
     }
 }

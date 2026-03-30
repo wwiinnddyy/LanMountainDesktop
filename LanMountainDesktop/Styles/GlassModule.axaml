@@ -11,6 +11,7 @@
         <CornerRadius x:Key="DesignCornerRadiusSm">14</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusXs">12</CornerRadius>
         <CornerRadius x:Key="DesignCornerRadiusIsland">36</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusComponent">18</CornerRadius>
     </Styles.Resources>
 
     <Style Selector="TextBlock">

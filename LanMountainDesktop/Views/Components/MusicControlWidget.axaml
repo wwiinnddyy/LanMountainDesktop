@@ -66,7 +66,7 @@
     </UserControl.Styles>
 
     <Border x:Name="RootBorder"
-            CornerRadius="30"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True"
             BorderThickness="1"
             BorderBrush="#52FFFFFF"
@@ -75,11 +75,11 @@
         <Grid>
             <Grid IsHitTestVisible="False">
                 <Border x:Name="DynamicBackgroundBase"
-                        CornerRadius="30"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                         ClipToBounds="True"
                         Background="#B89E7B" />
                 <Border x:Name="BackdropCoverHost"
-                        CornerRadius="30"
+                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                         ClipToBounds="True">
                     <Image x:Name="BackdropCoverImage"
                            IsVisible="False"

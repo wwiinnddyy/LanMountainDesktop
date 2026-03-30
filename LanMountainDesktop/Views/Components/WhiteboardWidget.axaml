@@ -11,10 +11,12 @@
 
     <Grid>
         <Border x:Name="RootBorder"
-                Background="#F1F4F9"
-                CornerRadius="20"
+                Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                 ClipToBounds="True"
-                Padding="8">
+                Padding="12">
             <Grid RowDefinitions="*,Auto"
                   RowSpacing="8">
                 <Border x:Name="CanvasBorder"

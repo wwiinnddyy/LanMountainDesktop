@@ -9,15 +9,15 @@
              x:Class="LanMountainDesktop.Views.Components.DailyWord2x2Widget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="30"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Background="Transparent"
             ClipToBounds="True"
             BorderThickness="0"
             Padding="0">
         <Grid>
             <Border x:Name="CardBorder"
-                    Background="#FCFBFA"
-                    CornerRadius="30"
+                    Background="#FCFCFD"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     BorderBrush="Transparent"
                     BorderThickness="0"
                     Padding="12,11,12,11"

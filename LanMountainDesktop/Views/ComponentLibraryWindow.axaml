@@ -87,14 +87,14 @@
                                 <Border Width="240"
                                         Height="220"
                                         Margin="6"
-                                        CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                                        CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                                         Padding="10"
                                         Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                                         BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
                                         BorderThickness="1">
                                     <Grid RowDefinitions="*,Auto,Auto"
                                           RowSpacing="8">
-                                        <Border CornerRadius="{DynamicResource DesignCornerRadiusXs}"
+                                        <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                                 Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
                                                 BorderThickness="1"
                                                 BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"

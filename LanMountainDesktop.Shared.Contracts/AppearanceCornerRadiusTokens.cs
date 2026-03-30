@@ -9,4 +9,5 @@ public sealed record AppearanceCornerRadiusTokens(
     CornerRadius Md,
     CornerRadius Lg,
     CornerRadius Xl,
-    CornerRadius Island);
+    CornerRadius Island,
+    CornerRadius Component);

@@ -9,7 +9,7 @@
              x:Class="LanMountainDesktop.Views.Components.RecordingWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="34"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Padding="0"
             ClipToBounds="True"
             Background="#ECEFF3"

@@ -9,9 +9,11 @@
              x:Class="LanMountainDesktop.Views.Components.RemovableStorageWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="28"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
             BorderThickness="1"
-            Padding="16"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12"
             ClipToBounds="True">
         <Grid>
             <Border x:Name="AccentOrb"

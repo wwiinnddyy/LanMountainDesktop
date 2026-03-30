@@ -21,10 +21,11 @@
     </UserControl.Styles>
 
     <Border x:Name="RootBorder"
-            CornerRadius="34"
-            ClipToBounds="True"
-            Padding="12"
-            Background="#ECEDEF">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Viewbox Stretch="Uniform">
             <Grid x:Name="LayoutRoot"
                   Width="304"

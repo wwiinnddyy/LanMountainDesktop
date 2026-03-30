@@ -9,10 +9,12 @@
              x:Class="LanMountainDesktop.Views.Components.BrowserWidget">
 
     <Border x:Name="RootBorder"
-            Background="#F4F7FC"
-            CornerRadius="24"
-            ClipToBounds="True"
-            Padding="10">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="0"
+            ClipToBounds="True">
         <Grid RowDefinitions="*,Auto"
               RowSpacing="8">
             <Border x:Name="WebViewHostBorder"

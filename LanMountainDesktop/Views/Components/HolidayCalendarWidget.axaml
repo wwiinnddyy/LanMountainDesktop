@@ -8,10 +8,11 @@
              x:Class="LanMountainDesktop.Views.Components.HolidayCalendarWidget">
 
     <Border x:Name="RootBorder"
-            Background="#DCE7FA"
-            CornerRadius="34"
-            ClipToBounds="True"
-            Padding="14">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Grid x:Name="LayoutRoot"
               RowDefinitions="1.1*,2.3*,0.62*,0.78*,0.95*"
               RowSpacing="8">

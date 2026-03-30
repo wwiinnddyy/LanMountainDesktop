@@ -515,9 +515,31 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Background = isSelected ? SelectedSurfaceBrush : SurfaceBrush,
             BorderBrush = isSelected ? SelectedBorderBrush : CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusMd", 18),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 18),
             Padding = new Thickness(14),
             Child = layoutGrid
+        };
+    }
+
+    private Control CreateDetailInfoRow(Control icon, Control infoStack)
+    {
+        return new Border
+        {
+            Background = SurfaceBrush,
+            BorderBrush = CardBorderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 16),
+            Padding = new Thickness(14, 12),
+            Child = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+                ColumnSpacing = 12,
+                Children =
+                {
+                    icon,
+                    infoStack
+                }
+            }
         };
     }
 
@@ -617,7 +639,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusMd", 16),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 16),
             Padding = new Thickness(16),
             Child = new TextBlock
             {
@@ -1011,7 +1033,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         return new Border
         {
             Background = SurfaceBrush,
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusMd", 18),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 18),
             Padding = new Thickness(padding)
         };
     }
@@ -1021,7 +1043,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         return new Border
         {
             Background = SurfaceBrush,
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusMd", 16),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 16),
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(18),
@@ -1124,7 +1146,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusSm", 14),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 14),
             Padding = new Thickness(14),
             Child = new StackPanel
             {
@@ -1154,7 +1176,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Background = SurfaceBrush,
             BorderBrush = CardBorderBrush,
             BorderThickness = new Thickness(1),
-            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusSm", 14),
+            CornerRadius = ResolveCornerRadiusResource("DesignCornerRadiusComponent", 14),
             Padding = new Thickness(14),
             Child = new StackPanel
             {

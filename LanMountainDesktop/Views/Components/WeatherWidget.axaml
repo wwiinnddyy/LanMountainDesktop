@@ -9,16 +9,16 @@
              x:Class="LanMountainDesktop.Views.Components.WeatherWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="30"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True"
-            Background="#68A9EC">
+            Background="#6B7B8F">
         <Grid>
             <Border x:Name="BackgroundImageLayer"
-                    CornerRadius="30"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     ClipToBounds="True" />
 
             <Border x:Name="BackgroundMotionLayer"
-                    CornerRadius="30"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     ClipToBounds="True"
                     Opacity="0.20"
                     RenderTransformOrigin="0.5,0.5">

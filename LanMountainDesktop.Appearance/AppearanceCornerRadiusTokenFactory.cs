@@ -11,12 +11,13 @@ public static class AppearanceCornerRadiusTokenFactory
         var normalizedScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(scale);
         return new AppearanceCornerRadiusTokens(
             Radius(6, normalizedScale),
-            Radius(10, normalizedScale),
+            Radius(12, normalizedScale),
             Radius(14, normalizedScale),
-            Radius(18, normalizedScale),
-            Radius(24, normalizedScale),
-            Radius(30, normalizedScale),
-            Radius(36, normalizedScale));
+            Radius(20, normalizedScale),
+            Radius(28, normalizedScale),
+            Radius(32, normalizedScale),
+            Radius(36, normalizedScale),
+            Radius(18, normalizedScale));
     }
 
     private static CornerRadius Radius(double value, double scale)

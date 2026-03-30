@@ -10,6 +10,7 @@
 - Level 2：16px，小型色块和紧凑控件
 - Level 3：20px，普通按钮
 - Level 4：24px，输入面板和小型容器
+- Component：18px，桌面组件的标准圆角（默认值）
 - Level 5：28px，普通玻璃面板
 - Level 6：32px，强化容器
 - Level 7：36px，大容器、窗口、任务栏

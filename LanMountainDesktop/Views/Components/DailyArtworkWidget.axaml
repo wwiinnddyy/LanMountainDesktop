@@ -9,7 +9,7 @@
              x:Class="LanMountainDesktop.Views.Components.DailyArtworkWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="34"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True"
             BorderThickness="0"
             Background="#D5D5D5">

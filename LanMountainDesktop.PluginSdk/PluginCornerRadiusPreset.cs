@@ -9,5 +9,6 @@ public enum PluginCornerRadiusPreset
     Md = 4,
     Lg = 5,
     Xl = 6,
-    Island = 7
+    Island = 7,
+    Component = 8
 }

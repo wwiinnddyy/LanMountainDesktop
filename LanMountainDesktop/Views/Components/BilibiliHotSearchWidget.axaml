@@ -9,7 +9,7 @@
              x:Class="LanMountainDesktop.Views.Components.BilibiliHotSearchWidget">
 
     <Border x:Name="RootBorder"
-            CornerRadius="34"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             Background="Transparent"
             ClipToBounds="True"
             BorderThickness="0"
@@ -17,7 +17,7 @@
         <Grid>
             <Border x:Name="CardBorder"
                     Background="#FCFCFD"
-                    CornerRadius="34"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     BorderBrush="Transparent"
                     BorderThickness="0"
                     Padding="16,14,16,14">

@@ -7,10 +7,11 @@
              d:DesignHeight="220"
              x:Class="LanMountainDesktop.Views.Components.StudyDeductionReasonsWidget">
     <Border x:Name="RootBorder"
-            Classes="surface-translucent-strong"
-            CornerRadius="22"
-            Padding="12,10"
-            ClipToBounds="True">
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Padding="14,12">
         <Grid x:Name="ContentRootGrid"
               RowDefinitions="Auto,*,Auto"
               RowSpacing="8">

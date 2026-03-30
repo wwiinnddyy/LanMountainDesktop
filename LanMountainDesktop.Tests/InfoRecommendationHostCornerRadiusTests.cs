@@ -53,8 +53,8 @@ public sealed class InfoRecommendationHostCornerRadiusTests
         var max = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, 2.5d));
 
         Assert.Equal(0d, zero, 3);
-        Assert.Equal(24d, unit, 3);
-        Assert.Equal(60d, max, 3);
+        Assert.Equal(28d, unit, 3);
+        Assert.Equal(70d, max, 3);
         Assert.True(zero <= unit && unit <= max);
     }
 

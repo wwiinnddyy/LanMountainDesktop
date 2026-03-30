@@ -10,13 +10,14 @@ public sealed record PluginCornerRadiusTokens(
     double Md,
     double Lg,
     double Xl,
-    double Island)
+    double Island,
+    double Component)
 {
     public double Get(PluginCornerRadiusPreset preset)
     {
         return preset switch
         {
-            PluginCornerRadiusPreset.Default => Md,
+            PluginCornerRadiusPreset.Default => Component,
             PluginCornerRadiusPreset.Micro => Micro,
             PluginCornerRadiusPreset.Xs => Xs,
             PluginCornerRadiusPreset.Sm => Sm,
@@ -24,7 +25,8 @@ public sealed record PluginCornerRadiusTokens(
             PluginCornerRadiusPreset.Lg => Lg,
             PluginCornerRadiusPreset.Xl => Xl,
             PluginCornerRadiusPreset.Island => Island,
-            _ => Md
+            PluginCornerRadiusPreset.Component => Component,
+            _ => Component
         };
     }
 
@@ -44,6 +46,7 @@ public sealed record PluginCornerRadiusTokens(
             tokens.Md.TopLeft,
             tokens.Lg.TopLeft,
             tokens.Xl.TopLeft,
-            tokens.Island.TopLeft);
+            tokens.Island.TopLeft,
+            tokens.Component.TopLeft);
     }
 }
