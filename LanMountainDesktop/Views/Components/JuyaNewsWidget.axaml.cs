@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +23,6 @@ namespace LanMountainDesktop.Views.Components;
 
 public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
 {
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly HttpClient HttpClient = new()
     {
         Timeout = TimeSpan.FromSeconds(15)
@@ -50,10 +49,6 @@ public partial class JuyaNewsWidget : UserControl, IDesktopComponentWidget
     public JuyaNewsWidget()
     {
         InitializeComponent();
-
-        BrandTextBlock.FontFamily = MiSansFontFamily;
-        LoadingTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;

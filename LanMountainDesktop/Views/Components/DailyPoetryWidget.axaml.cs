@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -38,8 +38,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         '\u00B7'
     ];
     private static readonly HashSet<char> NaturalBreakCharSet = new(NaturalBreakChars);
-
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private const double BaseCellSize = 48d;
@@ -71,9 +69,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
     public DailyPoetryWidget()
     {
         InitializeComponent();
-
-        PoetryContentTextBlock.FontFamily = MiSansFontFamily;
-        AuthorTextBlock.FontFamily = MiSansFontFamily;
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         RefreshButton.Click += OnRefreshButtonClick;
@@ -972,7 +967,6 @@ public partial class DailyPoetryWidget : UserControl, IDesktopComponentWidget, I
         var probe = new TextBlock
         {
             Text = text,
-            FontFamily = MiSansFontFamily,
             FontSize = fontSize,
             FontWeight = fontWeight,
             TextWrapping = TextWrapping.Wrap,

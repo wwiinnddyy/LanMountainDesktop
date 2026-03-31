@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -38,7 +38,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
-    private static readonly FontFamily MiSansVariableFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
@@ -70,8 +69,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
-
-        ApplyVariableFontFamily();
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         RefreshVisual();
@@ -699,16 +696,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void ApplyVariableFontFamily()
     {
-        TitleTextBlock.FontFamily = MiSansVariableFontFamily;
-        ModeTextBlock.FontFamily = MiSansVariableFontFamily;
-        CurrentLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        CurrentScoreTextBlock.FontFamily = MiSansVariableFontFamily;
-        AverageLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        AverageValueTextBlock.FontFamily = MiSansVariableFontFamily;
-        MinimumLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        MinimumValueTextBlock.FontFamily = MiSansVariableFontFamily;
-        MaximumLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        MaximumValueTextBlock.FontFamily = MiSansVariableFontFamily;
     }
 
     private void ApplyVariableWeights(double scale)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -404,7 +404,6 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         var cityTextBlock = new TextBlock
         {
             Text = string.Empty,
-            FontFamily = MiSansFontFamily,
             FontSize = 13,
             FontWeight = FontWeight.SemiBold,
             Foreground = CreateBrush("#20232A"),
@@ -417,7 +416,6 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         var dayTextBlock = new TextBlock
         {
             Text = string.Empty,
-            FontFamily = MiSansFontFamily,
             FontSize = 10.5,
             FontWeight = FontWeight.Medium,
             Foreground = CreateBrush("#646C79"),
@@ -430,7 +428,6 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         var offsetTextBlock = new TextBlock
         {
             Text = string.Empty,
-            FontFamily = MiSansFontFamily,
             FontSize = 10.5,
             FontWeight = FontWeight.Medium,
             Foreground = CreateBrush("#7A7F89"),
@@ -522,7 +519,6 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
                 Text = text,
                 Width = width,
                 Height = height,
-                FontFamily = MiSansFontFamily,
                 FontSize = 9,
                 FontWeight = FontWeight.SemiBold,
                 Foreground = CreateBrush(numberColor),

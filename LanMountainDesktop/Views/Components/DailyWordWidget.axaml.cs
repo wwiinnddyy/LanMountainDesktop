@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -18,7 +18,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private const double BaseCellSize = 48d;
@@ -48,13 +47,6 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
     public DailyWordWidget()
     {
         InitializeComponent();
-
-        WordTextBlock.FontFamily = MiSansFontFamily;
-        PronunciationTextBlock.FontFamily = MiSansFontFamily;
-        MeaningTextBlock.FontFamily = MiSansFontFamily;
-        ExampleTextBlock.FontFamily = MiSansFontFamily;
-        ExampleTranslationTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
@@ -670,7 +662,6 @@ public partial class DailyWordWidget : UserControl, IDesktopComponentWidget, IRe
         var probe = new TextBlock
         {
             Text = text,
-            FontFamily = MiSansFontFamily,
             FontSize = fontSize,
             FontWeight = weight,
             TextWrapping = TextWrapping.Wrap,

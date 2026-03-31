@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -85,7 +85,6 @@
                                    Text="7°"
                                    FontSize="64"
                                    FontWeight="Light"
-                                   FontFeatures="tnum"
                                    VerticalAlignment="Center"
                                    Margin="0,-2,0,0"
                                    TextTrimming="None"
@@ -138,7 +137,6 @@
                                                Text="11°/4°"
                                                FontSize="20"
                                                FontWeight="SemiBold"
-                                               FontFeatures="tnum"
                                                TextAlignment="Left"
                                                TextTrimming="CharacterEllipsis"
                                                MaxLines="1"
@@ -167,17 +165,17 @@
                               ColumnDefinitions="*,*,*,*,*,*"
                               ColumnSpacing="4">
                             <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock x:Name="HourlyTemp0" Text="7°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="HourlyTemp0" Text="7°" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <Image x:Name="HourlyIcon0" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
                                 <TextBlock x:Name="HourlyTime0" Text="15:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock x:Name="HourlyTemp1" Text="7°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="HourlyTemp1" Text="7°" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <Image x:Name="HourlyIcon1" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
                                 <TextBlock x:Name="HourlyTime1" Text="16:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock x:Name="HourlyTemp2" Text="7°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="HourlyTemp2" Text="7°" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <Image x:Name="HourlyIcon2" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
                                 <TextBlock x:Name="HourlyTime2" Text="17:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
@@ -187,12 +185,12 @@
                                 <TextBlock x:Name="HourlyTime3" Text="18:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
                             <StackPanel Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock x:Name="HourlyTemp4" Text="7°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="HourlyTemp4" Text="7°" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <Image x:Name="HourlyIcon4" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
                                 <TextBlock x:Name="HourlyTime4" Text="19:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
                             <StackPanel Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock x:Name="HourlyTemp5" Text="7°" FontSize="16" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="HourlyTemp5" Text="7°" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                 <Image x:Name="HourlyIcon5" Width="26" Height="26" HorizontalAlignment="Center" Stretch="Uniform" />
                                 <TextBlock x:Name="HourlyTime5" Text="20:00" FontSize="12" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                             </StackPanel>
@@ -213,36 +211,36 @@
                         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <Image x:Name="DailyIcon0" Width="24" Height="24" VerticalAlignment="Center" Stretch="Uniform" />
                             <TextBlock x:Name="DailyLabel0" Grid.Column="1" Text="明天·阴" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyHigh0" Grid.Column="2" Text="10" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyLow0" Grid.Column="3" Text="5" FontSize="17" FontWeight="Medium" FontFeatures="tnum" VerticalAlignment="Center" Opacity="0.70" />
+                            <TextBlock x:Name="DailyHigh0" Grid.Column="2" Text="10" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow0" Grid.Column="3" Text="5" FontSize="17" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.70" />
                         </Grid>
 
                         <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <Image x:Name="DailyIcon1" Width="24" Height="24" VerticalAlignment="Center" Stretch="Uniform" />
                             <TextBlock x:Name="DailyLabel1" Grid.Column="1" Text="周四·多云" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyHigh1" Grid.Column="2" Text="13" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyLow1" Grid.Column="3" Text="4" FontSize="17" FontWeight="Medium" FontFeatures="tnum" VerticalAlignment="Center" Opacity="0.70" />
+                            <TextBlock x:Name="DailyHigh1" Grid.Column="2" Text="13" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow1" Grid.Column="3" Text="4" FontSize="17" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.70" />
                         </Grid>
 
                         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <Image x:Name="DailyIcon2" Width="24" Height="24" VerticalAlignment="Center" Stretch="Uniform" />
                             <TextBlock x:Name="DailyLabel2" Grid.Column="1" Text="周五·阴" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyHigh2" Grid.Column="2" Text="12" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyLow2" Grid.Column="3" Text="3" FontSize="17" FontWeight="Medium" FontFeatures="tnum" VerticalAlignment="Center" Opacity="0.70" />
+                            <TextBlock x:Name="DailyHigh2" Grid.Column="2" Text="12" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow2" Grid.Column="3" Text="3" FontSize="17" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.70" />
                         </Grid>
 
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <Image x:Name="DailyIcon3" Width="24" Height="24" VerticalAlignment="Center" Stretch="Uniform" />
                             <TextBlock x:Name="DailyLabel3" Grid.Column="1" Text="周六·多云" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyHigh3" Grid.Column="2" Text="10" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyLow3" Grid.Column="3" Text="2" FontSize="17" FontWeight="Medium" FontFeatures="tnum" VerticalAlignment="Center" Opacity="0.70" />
+                            <TextBlock x:Name="DailyHigh3" Grid.Column="2" Text="10" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow3" Grid.Column="3" Text="2" FontSize="17" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.70" />
                         </Grid>
 
                         <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                             <Image x:Name="DailyIcon4" Width="24" Height="24" VerticalAlignment="Center" Stretch="Uniform" />
                             <TextBlock x:Name="DailyLabel4" Grid.Column="1" Text="周日·阴" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyHigh4" Grid.Column="2" Text="11" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" />
-                            <TextBlock x:Name="DailyLow4" Grid.Column="3" Text="3" FontSize="17" FontWeight="Medium" FontFeatures="tnum" VerticalAlignment="Center" Opacity="0.70" />
+                            <TextBlock x:Name="DailyHigh4" Grid.Column="2" Text="11" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock x:Name="DailyLow4" Grid.Column="3" Text="3" FontSize="17" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.70" />
                         </Grid>
                     </Grid>
                 </Grid>

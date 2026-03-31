@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
@@ -34,8 +34,6 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         Color.Parse("#FFEAF3FA"),
         Color.Parse("#FF1A2C40")
     };
-
-    private static readonly FontFamily MiSansVariableFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
@@ -81,8 +79,6 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
-
-        ApplyVariableFontFamily();
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         RefreshVisual();
@@ -551,16 +547,6 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
 
     private void ApplyVariableFontFamily()
     {
-        TitleTextBlock.FontFamily = MiSansVariableFontFamily;
-        ModeTextBlock.FontFamily = MiSansVariableFontFamily;
-        DensityValueTextBlock.FontFamily = MiSansVariableFontFamily;
-        DensityUnitTextBlock.FontFamily = MiSansVariableFontFamily;
-        DensityLevelTextBlock.FontFamily = MiSansVariableFontFamily;
-        CountLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        CountValueTextBlock.FontFamily = MiSansVariableFontFamily;
-        DurationLabelTextBlock.FontFamily = MiSansVariableFontFamily;
-        DurationValueTextBlock.FontFamily = MiSansVariableFontFamily;
-        ThresholdTextBlock.FontFamily = MiSansVariableFontFamily;
     }
 
     private void ApplyVariableWeights(double scale)

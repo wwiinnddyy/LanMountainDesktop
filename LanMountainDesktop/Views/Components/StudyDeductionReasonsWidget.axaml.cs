@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -35,8 +35,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         Color.Parse("#FFEAF3FA"),
         Color.Parse("#FF1A2C40")
     };
-
-    private static readonly FontFamily MiSansVariableFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
@@ -75,8 +73,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
-
-        ApplyVariableFontFamily();
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         RefreshVisual();
@@ -614,23 +610,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
 
     private void ApplyVariableFontFamily()
     {
-        TitleTextBlock.FontFamily = MiSansVariableFontFamily;
-        ModeTextBlock.FontFamily = MiSansVariableFontFamily;
-
-        SustainedReasonTextBlock.FontFamily = MiSansVariableFontFamily;
-        SustainedMetricTextBlock.FontFamily = MiSansVariableFontFamily;
-        SustainedLossTextBlock.FontFamily = MiSansVariableFontFamily;
-
-        TimeReasonTextBlock.FontFamily = MiSansVariableFontFamily;
-        TimeMetricTextBlock.FontFamily = MiSansVariableFontFamily;
-        TimeLossTextBlock.FontFamily = MiSansVariableFontFamily;
-
-        SegmentReasonTextBlock.FontFamily = MiSansVariableFontFamily;
-        SegmentMetricTextBlock.FontFamily = MiSansVariableFontFamily;
-        SegmentLossTextBlock.FontFamily = MiSansVariableFontFamily;
-
-        TotalLossTextBlock.FontFamily = MiSansVariableFontFamily;
-        ScoreTextBlock.FontFamily = MiSansVariableFontFamily;
     }
 
     private void ApplyVariableWeights(double scale)

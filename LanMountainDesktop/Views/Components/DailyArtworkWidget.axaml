@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -32,18 +32,17 @@
                         <TextBlock x:Name="DateTextBlock"
                                    Text="03/03"
                                    Foreground="#F9F9F9"
-                                   FontSize="44"
+                                   FontSize="32"
                                    FontWeight="Bold"
-                                   FontFeatures="tnum"
                                    TextTrimming="CharacterEllipsis"
-                                   LineHeight="46" />
+                                   LineHeight="40" />
                         <TextBlock x:Name="WeekdayTextBlock"
                                    Text="星期二"
                                    Foreground="#F9F9F9"
-                                   FontSize="44"
+                                   FontSize="32"
                                    FontWeight="Bold"
                                    TextTrimming="CharacterEllipsis"
-                                   LineHeight="46" />
+                                   LineHeight="40" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -75,10 +74,10 @@
 
                     <Grid RowDefinitions="Auto,*,Auto,Auto">
                         <TextBlock x:Name="PaintingTitleTextBlock"
-                                   Text="“拉波特夫人”"
+                                   Text=""拉波特夫人""
                                    Foreground="#F8F8F8"
-                                   FontSize="44"
-                                   FontWeight="Bold"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"
                                    MaxLines="4"
@@ -108,7 +107,6 @@
                                        Foreground="#D7DCE3"
                                        FontSize="22"
                                        FontWeight="Medium"
-                                       FontFeatures="tnum"
                                        TextWrapping="Wrap"
                                        TextTrimming="CharacterEllipsis"
                                        MaxLines="2" />

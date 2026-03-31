@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +23,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient ImageHttpClient = new()
     {
@@ -64,10 +63,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
     public IfengNewsWidget()
     {
         InitializeComponent();
-
-        BrandTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
-        LoadingTextBlock.FontFamily = MiSansFontFamily;
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -645,7 +640,6 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
             {
                 Text = NormalizeCompactText(item.Title),
                 Foreground = new SolidColorBrush(isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
-                FontFamily = MiSansFontFamily,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -23,9 +23,8 @@
                         Spacing="2">
                 <TextBlock x:Name="TimeTextBlock"
                            Text="15:07"
-                           FontSize="36"
+                           FontSize="24"
                            FontWeight="Bold"
-                           FontFeatures="tnum"
                            Foreground="#10131A"
                            MaxLines="1"
                            TextWrapping="NoWrap"
@@ -37,8 +36,8 @@
                             VerticalAlignment="Center">
                     <TextBlock x:Name="DateTextBlock"
                                Text="8&#x6708;14&#x65E5;"
-                               FontSize="18"
-                               FontWeight="SemiBold"
+                               FontSize="14"
+                               FontWeight="Regular"
                                Foreground="#7A7E87"
                                VerticalAlignment="Center"
                                MaxLines="1"

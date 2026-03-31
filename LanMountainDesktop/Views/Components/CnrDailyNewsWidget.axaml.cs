@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,7 +24,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient ImageHttpClient = new()
     {
@@ -95,13 +94,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
     public CnrDailyNewsWidget()
     {
         InitializeComponent();
-
-        BrandPrimaryTextBlock.FontFamily = MiSansFontFamily;
-        BrandSecondaryTextBlock.FontFamily = MiSansFontFamily;
-        RefreshLabelTextBlock.FontFamily = MiSansFontFamily;
-        News1TitleTextBlock.FontFamily = MiSansFontFamily;
-        News2TitleTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
@@ -548,7 +540,6 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             {
                 Text = NormalizeCompactText(item.Title),
                 Foreground = new SolidColorBrush(_isNightVisual ? Color.Parse("#E8EAED") : Color.Parse("#202327")),
-                FontFamily = MiSansFontFamily,
                 FontWeight = FontWeight.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
                 TextTrimming = TextTrimming.CharacterEllipsis,

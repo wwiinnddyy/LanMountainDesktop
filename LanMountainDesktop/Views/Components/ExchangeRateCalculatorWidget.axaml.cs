@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -16,8 +16,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget, ICalculatorInfoAwareComponentWidget
 {
     private sealed record CurrencyItem(string Code, string ZhName, string EnName);
-
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly CurrencyItem[] CurrencyItems =
     [
         new("USD", "美元", "US Dollar"),
@@ -54,15 +52,6 @@ public partial class ExchangeRateCalculatorWidget : UserControl, IDesktopCompone
     public ExchangeRateCalculatorWidget()
     {
         InitializeComponent();
-
-        FromCurrencyCodeTextBlock.FontFamily = MiSansFontFamily;
-        FromCurrencyNameTextBlock.FontFamily = MiSansFontFamily;
-        ToCurrencyCodeTextBlock.FontFamily = MiSansFontFamily;
-        ToCurrencyNameTextBlock.FontFamily = MiSansFontFamily;
-        InputAmountTextBlock.FontFamily = MiSansFontFamily;
-        ConvertedAmountTextBlock.FontFamily = MiSansFontFamily;
-        RateTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;

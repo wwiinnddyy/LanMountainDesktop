@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -20,7 +20,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private const double BaseCellSize = 48d;
@@ -51,11 +50,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
     public DailyWord2x2Widget()
     {
         InitializeComponent();
-
-        WordTextBlock.FontFamily = MiSansFontFamily;
-        MeaningTextBlock.FontFamily = MiSansFontFamily;
-        HiddenHintTextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         _refreshTimer.Tick += OnRefreshTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -559,7 +553,6 @@ public partial class DailyWord2x2Widget : UserControl, IDesktopComponentWidget, 
         var probe = new TextBlock
         {
             Text = text,
-            FontFamily = MiSansFontFamily,
             FontSize = fontSize,
             FontWeight = weight,
             TextWrapping = TextWrapping.Wrap,

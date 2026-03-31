@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -60,7 +60,6 @@
                                        Text="7°"
                                        FontSize="54"
                                        FontWeight="Light"
-                                       FontFeatures="tnum"
                                        VerticalAlignment="Center"
                                        Margin="0,-2,0,0"
                                        TextTrimming="None"
@@ -114,7 +113,6 @@
                                                    Text="11°/4°"
                                                    FontSize="20"
                                                    FontWeight="SemiBold"
-                                                   FontFeatures="tnum"
                                                    TextTrimming="CharacterEllipsis"
                                                    MaxLines="1"
                                                    Opacity="0.92" />
@@ -140,17 +138,17 @@
                                 VerticalAlignment="Top">
                             <Grid x:Name="HourlyGrid" ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="4">
                                 <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock x:Name="HourlyTemp0" Text="7°" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HourlyTemp0" Text="7°" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                     <Image x:Name="HourlyIcon0" Width="28" Height="28" HorizontalAlignment="Center" Stretch="Uniform" />
                                     <TextBlock x:Name="HourlyTime0" Text="15:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock x:Name="HourlyTemp1" Text="7°" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HourlyTemp1" Text="7°" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                     <Image x:Name="HourlyIcon1" Width="28" Height="28" HorizontalAlignment="Center" Stretch="Uniform" />
                                     <TextBlock x:Name="HourlyTime1" Text="16:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock x:Name="HourlyTemp2" Text="7°" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HourlyTemp2" Text="7°" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                     <Image x:Name="HourlyIcon2" Width="28" Height="28" HorizontalAlignment="Center" Stretch="Uniform" />
                                     <TextBlock x:Name="HourlyTime2" Text="17:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>
@@ -160,12 +158,12 @@
                                     <TextBlock x:Name="HourlyTime3" Text="18:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="4" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock x:Name="HourlyTemp4" Text="7°" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HourlyTemp4" Text="7°" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                     <Image x:Name="HourlyIcon4" Width="28" Height="28" HorizontalAlignment="Center" Stretch="Uniform" />
                                     <TextBlock x:Name="HourlyTime4" Text="19:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="5" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock x:Name="HourlyTemp5" Text="7°" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Center" />
+                                    <TextBlock x:Name="HourlyTemp5" Text="7°" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                     <Image x:Name="HourlyIcon5" Width="28" Height="28" HorizontalAlignment="Center" Stretch="Uniform" />
                                     <TextBlock x:Name="HourlyTime5" Text="20:00" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Opacity="0.82" />
                                 </StackPanel>

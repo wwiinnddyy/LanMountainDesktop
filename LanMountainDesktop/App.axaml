@@ -9,7 +9,7 @@
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
-        <FontFamily x:Key="AppFontFamily">avares://LanMountainDesktop/Assets/Fonts#MiSans</FontFamily>
+        <FontFamily x:Key="AppFontFamily">MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans, avares://LanMountainDesktop/Assets/Fonts#MiSans VF</FontFamily>
         <FontFamily x:Key="AppFontFamilyJP">avares://LanMountainDesktop/Assets/Fonts#MiSans JP</FontFamily>
         <FontFamily x:Key="AppFontFamilyKR">avares://LanMountainDesktop/Assets/Fonts#MiSans KR</FontFamily>
     </Application.Resources>
@@ -33,6 +33,16 @@
 
         <Style Selector="UserControl">
             <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        </Style>
+
+        <!-- Global TextBlock Tabular Nums (等宽数字) and default variable weight fix -->
+        <Style Selector="TextBlock">
+            <Setter Property="FontFeatures" Value="tnum" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontFeatures" Value="tnum" />
+            <Setter Property="FontWeight" Value="Normal" />
         </Style>
 
         <!-- Mitigation for Avalonia ScrollContentPresenter offset recursion during gesture inertia -->

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,7 +22,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
 
     private const double BaseCellSize = 48d;
@@ -62,17 +61,6 @@ public partial class BaiduHotSearchWidget : UserControl, IDesktopComponentWidget
     public BaiduHotSearchWidget()
     {
         InitializeComponent();
-
-        BrandTextBlock.FontFamily = MiSansFontFamily;
-        HotItem1IndexTextBlock.FontFamily = MiSansFontFamily;
-        HotItem2IndexTextBlock.FontFamily = MiSansFontFamily;
-        HotItem3IndexTextBlock.FontFamily = MiSansFontFamily;
-        HotItem4IndexTextBlock.FontFamily = MiSansFontFamily;
-        HotItem1TextBlock.FontFamily = MiSansFontFamily;
-        HotItem2TextBlock.FontFamily = MiSansFontFamily;
-        HotItem3TextBlock.FontFamily = MiSansFontFamily;
-        HotItem4TextBlock.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         _hotItemVisuals.Add(new HotItemVisual(HotItem1Host, HotItem1Grid, HotItem1IndexTextBlock, HotItem1TextBlock));
         _hotItemVisuals.Add(new HotItemVisual(HotItem2Host, HotItem2Grid, HotItem2IndexTextBlock, HotItem2TextBlock));

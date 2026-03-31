@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +23,6 @@ namespace LanMountainDesktop.Views.Components;
 public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, IRecommendationInfoAwareComponentWidget
 {
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly IRecommendationInfoService DefaultRecommendationService = new RecommendationDataService();
     private static readonly HttpClient AvatarHttpClient = new()
     {
@@ -74,25 +73,6 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
     public Stcn24ForumWidget()
     {
         InitializeComponent();
-
-        HeaderTitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem1TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem2TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem3TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem4TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem5TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem6TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem7TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem8TitleTextBlock.FontFamily = MiSansFontFamily;
-        PostItem1AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem2AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem3AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem4AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem5AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem6AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem7AvatarFallbackText.FontFamily = MiSansFontFamily;
-        PostItem8AvatarFallbackText.FontFamily = MiSansFontFamily;
-        StatusTextBlock.FontFamily = MiSansFontFamily;
 
         _itemVisuals.Add(new ForumItemVisual(
             PostItem1Host,

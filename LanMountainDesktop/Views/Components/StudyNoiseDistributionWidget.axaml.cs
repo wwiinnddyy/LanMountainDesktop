@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -38,7 +38,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
-    private static readonly FontFamily MiSansVariableFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
@@ -77,8 +76,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
-
-        ApplyVariableFontFamily();
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
         ApplyDefaultXAxisLabels();
@@ -593,16 +590,6 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void ApplyVariableFontFamily()
     {
-        TitleTextBlock.FontFamily = MiSansVariableFontFamily;
-        SummaryTextBlock.FontFamily = MiSansVariableFontFamily;
-        ModeTextBlock.FontFamily = MiSansVariableFontFamily;
-        YExtremeTextBlock.FontFamily = MiSansVariableFontFamily;
-        YNoisyTextBlock.FontFamily = MiSansVariableFontFamily;
-        YNormalTextBlock.FontFamily = MiSansVariableFontFamily;
-        YQuietTextBlock.FontFamily = MiSansVariableFontFamily;
-        XLeftTextBlock.FontFamily = MiSansVariableFontFamily;
-        XCenterTextBlock.FontFamily = MiSansVariableFontFamily;
-        XRightTextBlock.FontFamily = MiSansVariableFontFamily;
     }
 
     private void ApplyVariableWeights(double scale)

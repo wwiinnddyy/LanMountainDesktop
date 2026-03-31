@@ -36,7 +36,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         };
 
     private static readonly Regex MultiWhitespaceRegex = new(@"\s+", RegexOptions.Compiled);
-    private static readonly FontFamily MiSansFontFamily = new("MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans");
     private static readonly FontWeight[] TitleWeightCandidates = new[] { FontWeight.Bold, FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
     private static readonly FontWeight[] ArtistWeightCandidates = new[] { FontWeight.SemiBold, FontWeight.Medium, FontWeight.Normal };
     private static readonly FontWeight[] SecondaryWeightCandidates = new[] { FontWeight.Medium, FontWeight.Normal, FontWeight.Light };
@@ -79,12 +78,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
     public DailyArtworkWidget()
     {
         InitializeComponent();
-
-        DateTextBlock.FontFamily = MiSansFontFamily;
-        WeekdayTextBlock.FontFamily = MiSansFontFamily;
-        PaintingTitleTextBlock.FontFamily = MiSansFontFamily;
-        ArtistTextBlock.FontFamily = MiSansFontFamily;
-        YearTextBlock.FontFamily = MiSansFontFamily;
 
         SizeChanged += OnSizeChanged;
         if (_isDesignModePreview)
@@ -1025,7 +1018,6 @@ public partial class DailyArtworkWidget : UserControl, IDesktopComponentWidget, 
         var probe = new TextBlock
         {
             Text = text,
-            FontFamily = MiSansFontFamily,
             FontSize = fontSize,
             FontWeight = weight,
             TextWrapping = TextWrapping.Wrap,
