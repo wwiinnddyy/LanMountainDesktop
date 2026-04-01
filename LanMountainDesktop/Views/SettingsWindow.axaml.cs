@@ -734,7 +734,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             "Hourglass" => Symbol.Hourglass,
-            "Savings" => Symbol.Savings,
             _ => Symbol.Settings
         };
     }
