@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -373,6 +373,18 @@ public partial class MainWindow
         }
 
         UpdateDesktopPageAwareComponentContext();
+    }
+
+    public void ForceDesktopPageToFirst()
+    {
+        if (_currentDesktopSurfaceIndex == 0)
+        {
+            return;
+        }
+
+        _currentDesktopSurfaceIndex = 0;
+        ApplyDesktopSurfaceOffset();
+        SchedulePersistSettings(delayMs: 120);
     }
 
     private void SetDesktopPagesHostSnapAnimationEnabled(bool enabled)

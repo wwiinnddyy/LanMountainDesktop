@@ -47,6 +47,10 @@ public partial class ZhiJiaoHubWidget : UserControl,
     private bool _autoRefreshEnabled = true;
     private int _pendingImageIndex = 0;
 
+    private string _lastLoadedSource = string.Empty;
+    private bool _lastLoadedAutoRefreshEnabled = true;
+    private int _lastLoadedRefreshIntervalMinutes = 30;
+
     private IReadOnlyList<ZhiJiaoHubHybridImageItem> _images = [];
     private int _currentImageIndex = 0;
 
@@ -147,11 +151,39 @@ public partial class ZhiJiaoHubWidget : UserControl,
         _placementId = context.PlacementId ?? string.Empty;
         _componentSettingsAccessor = context.ComponentSettingsAccessor;
 
-        LoadSettings();
-
-        if (_isAttached)
+        try
         {
-            _ = InitializeAsync();
+            var snapshot = _componentSettingsAccessor?.LoadSnapshot<ComponentSettingsSnapshot>();
+            LoadSettings();
+
+            if (_isAttached)
+            {
+                if (snapshot is not null && NeedsReinitialization(snapshot))
+                {
+                    _ = InitializeAsync();
+                }
+                else if (_images.Count > 0)
+                {
+                    _pendingImageIndex = snapshot?.ZhiJiaoHubCurrentImageIndex ?? 0;
+                    _currentImageIndex = Math.Clamp(_pendingImageIndex, 0, Math.Max(0, _images.Count - 1));
+                    _pendingImageIndex = 0;
+                    if (TryDisplayCachedImage(_currentImageIndex))
+                    {
+                        UpdateIndicators();
+                    }
+                }
+                else
+                {
+                    _ = InitializeAsync();
+                }
+            }
+        }
+        catch
+        {
+            if (_isAttached)
+            {
+                _ = InitializeAsync();
+            }
         }
     }
 
@@ -163,11 +195,28 @@ public partial class ZhiJiaoHubWidget : UserControl,
 
     public void RefreshFromSettings()
     {
-        LoadSettings();
-        UpdateTimers();
-        if (_isAttached)
+        try
         {
-            _ = InitializeAsync();
+            var snapshot = _componentSettingsAccessor?.LoadSnapshot<ComponentSettingsSnapshot>();
+            if (snapshot is null)
+            {
+                return;
+            }
+
+            LoadSettings();
+            UpdateTimers();
+
+            if (_isAttached && NeedsReinitialization(snapshot))
+            {
+                _ = InitializeAsync();
+            }
+            else
+            {
+                _pendingImageIndex = snapshot.ZhiJiaoHubCurrentImageIndex;
+            }
+        }
+        catch
+        {
         }
     }
 
@@ -190,6 +239,24 @@ public partial class ZhiJiaoHubWidget : UserControl,
         catch
         {
         }
+    }
+
+    private bool NeedsReinitialization(ComponentSettingsSnapshot snapshot)
+    {
+        var newSource = ZhiJiaoHubSources.Normalize(snapshot.ZhiJiaoHubSource);
+        var newAutoRefreshEnabled = snapshot.ZhiJiaoHubAutoRefreshEnabled;
+        var newRefreshIntervalMinutes = Math.Clamp(snapshot.ZhiJiaoHubAutoRefreshIntervalMinutes, 5, 1440);
+
+        return newSource != _lastLoadedSource ||
+               newAutoRefreshEnabled != _lastLoadedAutoRefreshEnabled ||
+               newRefreshIntervalMinutes != _lastLoadedRefreshIntervalMinutes;
+    }
+
+    private void UpdateLastLoadedSettings(ComponentSettingsSnapshot snapshot)
+    {
+        _lastLoadedSource = ZhiJiaoHubSources.Normalize(snapshot.ZhiJiaoHubSource);
+        _lastLoadedAutoRefreshEnabled = snapshot.ZhiJiaoHubAutoRefreshEnabled;
+        _lastLoadedRefreshIntervalMinutes = Math.Clamp(snapshot.ZhiJiaoHubAutoRefreshIntervalMinutes, 5, 1440);
     }
 
     private void SaveCurrentImageIndex()
@@ -258,6 +325,12 @@ public partial class ZhiJiaoHubWidget : UserControl,
             _images = result.Data.Images;
             _currentImageIndex = Math.Clamp(_pendingImageIndex, 0, Math.Max(0, _images.Count - 1));
             _pendingImageIndex = 0;
+
+            var snapshot = _componentSettingsAccessor?.LoadSnapshot<ComponentSettingsSnapshot>();
+            if (snapshot is not null)
+            {
+                UpdateLastLoadedSettings(snapshot);
+            }
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {

@@ -481,9 +481,9 @@ public partial class App : Application
         RestoreOrCreateMainWindow(showSingleInstanceNotice: true, source: "SingleInstance");
     }
 
-    private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
+    private async void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(async () =>
         {
             if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -498,6 +498,13 @@ public partial class App : Application
                 if (!mainWindow.IsVisible)
                 {
                     mainWindow.Show();
+                    if (mainWindow._isFirstLaunchAfterOpen)
+                    {
+                        mainWindow._isFirstLaunchAfterOpen = false;
+                        mainWindow.ForceDesktopPageToFirst();
+                    }
+
+                    await mainWindow.SlideInAsync();
                 }
 
                 if (mainWindow.WindowState == WindowState.Minimized)
@@ -879,10 +886,11 @@ public partial class App : Application
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, "MainWindowRestored");
     }
 
-    private void HideMainWindowToTray(MainWindow mainWindow, string source)
+    private async void HideMainWindowToTray(MainWindow mainWindow, string source)
     {
         try
         {
+            await mainWindow.SlideOutAsync();
             mainWindow.ShowInTaskbar = false;
             mainWindow.Hide();
             SetDesktopShellState(DesktopShellState.TrayOnly, source);

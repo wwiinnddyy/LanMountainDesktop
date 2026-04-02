@@ -38,6 +38,12 @@ public partial class MainWindow
             return;
         }
 
+        // 组件实例范围的设置变更不应触发整个桌面重新加载（比如翻页保存图片索引）
+        if (e.Scope == SettingsScope.ComponentInstance)
+        {
+            return;
+        }
+
         if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
