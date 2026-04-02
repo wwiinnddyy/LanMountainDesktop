@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LanMountainDesktop.Views.TransparentOverlayWindow"
+        WindowState="FullScreen"
+        SystemDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        Background="Transparent"
+        Title="LanMountainDesktop Fused Desktop">
+    <!--
+        融合桌面（负一屏）- 在系统桌面上显示组件
+        
+        特性：
+        - 窗口置底（在桌面图标层显示）
+        - 区域级穿透（组件区域可交互，其他区域穿透）
+        - 组件可自由拖拽摆放
+        - 三指/右键左滑回到阗山桌面第一页
+    -->
+    <Canvas x:Name="ComponentCanvas">
+        <!-- 组件将动态添加到这里 -->
+    </Canvas>
+</Window>

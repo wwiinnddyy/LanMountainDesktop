@@ -320,9 +320,17 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
                 return false;
             }
 
+            // 如果找不到报告，尝试重新从数据库加载
             if (!TryFindSessionReportLocked(sessionId, out var report))
             {
-                return false;
+                // 重新加载历史数据
+                RestoreSessionHistoryFromDatabaseLocked();
+                
+                // 再次尝试查找
+                if (!TryFindSessionReportLocked(sessionId, out report))
+                {
+                    return false;
+                }
             }
 
             _selectedSessionReportId = report.SessionId;
@@ -356,9 +364,17 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
         {
             ThrowIfDisposedLocked();
             var index = FindSessionReportIndexLocked(sessionId);
+            
+            // 如果找不到报告，尝试重新从数据库加载
             if (index < 0)
             {
-                return false;
+                RestoreSessionHistoryFromDatabaseLocked();
+                index = FindSessionReportIndexLocked(sessionId);
+                
+                if (index < 0)
+                {
+                    return false;
+                }
             }
 
             var updated = _sessionHistory[index] with { Label = normalizedLabel };
@@ -389,9 +405,17 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
         {
             ThrowIfDisposedLocked();
             var index = FindSessionReportIndexLocked(sessionId);
+            
+            // 如果找不到报告，尝试重新从数据库加载
             if (index < 0)
             {
-                return false;
+                RestoreSessionHistoryFromDatabaseLocked();
+                index = FindSessionReportIndexLocked(sessionId);
+                
+                if (index < 0)
+                {
+                    return false;
+                }
             }
 
             var removed = _sessionHistory[index];

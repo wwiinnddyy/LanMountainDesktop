@@ -17,10 +17,17 @@ public sealed class StudyDataStore
     };
 
     private readonly AppDatabaseService _databaseService;
+    private readonly Action<string>? _logger;
 
-    public StudyDataStore(AppDatabaseService? databaseService = null)
+    public StudyDataStore(AppDatabaseService? databaseService = null, Action<string>? logger = null)
     {
         _databaseService = databaseService ?? AppDatabaseServiceFactory.CreateDefault();
+        _logger = logger;
+    }
+
+    private void Log(string message)
+    {
+        _logger?.Invoke($"[StudyDataStore] {message}");
     }
 
     public IReadOnlyList<StudySessionReport> LoadSessionReports(int limit = 120)
@@ -61,17 +68,25 @@ public sealed class StudyDataStore
                     continue;
                 }
 
-                var report = JsonSerializer.Deserialize<StudySessionReport>(json, JsonOptions);
-                if (report is not null)
+                try
                 {
-                    reports.Add(report);
+                    var report = JsonSerializer.Deserialize<StudySessionReport>(json, JsonOptions);
+                    if (report is not null)
+                    {
+                        reports.Add(report);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Log($"Failed to deserialize session report: {ex.Message}");
                 }
             }
 
             return reports;
         }
-        catch
+        catch (Exception ex)
         {
+            Log($"Failed to load session reports: {ex.Message}");
             return Array.Empty<StudySessionReport>();
         }
     }
@@ -99,20 +114,28 @@ public sealed class StudyDataStore
             var json = command.ExecuteScalar() as string;
             if (string.IsNullOrWhiteSpace(json))
             {
+                Log($"Session report not found for id: {sessionId}");
                 return false;
             }
 
             var parsed = JsonSerializer.Deserialize<StudySessionReport>(json, JsonOptions);
             if (parsed is null)
             {
+                Log($"Failed to deserialize session report for id: {sessionId}");
                 return false;
             }
 
             report = parsed;
             return true;
         }
-        catch
+        catch (JsonException ex)
         {
+            Log($"JSON deserialization error for session {sessionId}: {ex.Message}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to get session report {sessionId}: {ex.Message}");
             return false;
         }
     }
@@ -138,9 +161,9 @@ public sealed class StudyDataStore
 
             transaction.Commit();
         }
-        catch
+        catch (Exception ex)
         {
-            // Keep runtime resilient when persistence is unavailable.
+            Log($"Failed to replace session reports: {ex.Message}");
         }
     }
 
@@ -162,8 +185,9 @@ public sealed class StudyDataStore
                 ? null
                 : value.Trim();
         }
-        catch
+        catch (Exception ex)
         {
+            Log($"Failed to get selected session report id: {ex.Message}");
             return null;
         }
     }
@@ -192,9 +216,9 @@ public sealed class StudyDataStore
             upsertCommand.Parameters.AddWithValue("$value", sessionId.Trim());
             upsertCommand.ExecuteNonQuery();
         }
-        catch
+        catch (Exception ex)
         {
-            // Keep runtime resilient when persistence is unavailable.
+            Log($"Failed to set selected session report id: {ex.Message}");
         }
     }
 
@@ -271,9 +295,9 @@ public sealed class StudyDataStore
 
             transaction.Commit();
         }
-        catch
+        catch (Exception ex)
         {
-            // Keep runtime resilient when persistence is unavailable.
+            Log($"Failed to append noise slice: {ex.Message}");
         }
     }
 
@@ -365,8 +389,9 @@ public sealed class StudyDataStore
 
             return entries;
         }
-        catch
+        catch (Exception ex)
         {
+            Log($"Failed to load noise slice timeline: {ex.Message}");
             return Array.Empty<NoiseSliceTimelineEntry>();
         }
     }
@@ -389,9 +414,9 @@ public sealed class StudyDataStore
 
             command.ExecuteNonQuery();
         }
-        catch
+        catch (Exception ex)
         {
-            // Keep runtime resilient when persistence is unavailable.
+            Log($"Failed to clear noise slice timeline: {ex.Message}");
         }
     }
 

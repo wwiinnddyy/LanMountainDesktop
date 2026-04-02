@@ -18,7 +18,6 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.Styling;
-using LanMountainDesktop.Behaviors;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -109,9 +108,6 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private bool _suppressWeatherLocationEvents;
     private bool _suppressSettingsPersistence;
     private bool _isComponentLibraryOpen;
-    private bool _isSlideAnimating;
-    private int _slideAnimationGuard;
-    internal bool _isFirstLaunchAfterOpen = true;
     private Border? _selectedDesktopComponentHost;
     private bool _reopenSettingsAfterComponentLibraryClose;
     private TranslateTransform? _settingsContentPanelTransform;
@@ -789,60 +785,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         _ = cellSize;
     }
 
-    private async void OnMinimizeClick(object? sender, RoutedEventArgs e)
+    private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
-        if (_isSlideAnimating)
-        {
-            return;
-        }
-
-        await SlideOutAsync();
-    }
-
-    public async Task SlideInAsync()
-    {
-        if (_isSlideAnimating || DesktopHost is null)
-        {
-            return;
-        }
-
-        var guard = System.Threading.Interlocked.Increment(ref _slideAnimationGuard);
-        _isSlideAnimating = true;
-
-        try
-        {
-            await WindowSlideAnimationBehavior.SlideInAsync(this, DesktopHost);
-        }
-        finally
-        {
-            _isSlideAnimating = false;
-            System.Threading.Interlocked.Decrement(ref _slideAnimationGuard);
-        }
-    }
-
-    public async Task SlideOutAsync()
-    {
-        if (_isSlideAnimating || DesktopHost is null)
-        {
-            return;
-        }
-
-        var guard = System.Threading.Interlocked.Increment(ref _slideAnimationGuard);
-        _isSlideAnimating = true;
-
-        try
-        {
-            await WindowSlideAnimationBehavior.SlideOutAsync(this, DesktopHost, () =>
-            {
-                WindowState = WindowState.Minimized;
-                WindowSlideAnimationBehavior.ResetSlidePosition(DesktopHost!);
-            });
-        }
-        finally
-        {
-            _isSlideAnimating = false;
-            System.Threading.Interlocked.Decrement(ref _slideAnimationGuard);
-        }
+        WindowState = WindowState.Minimized;
     }
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)

@@ -187,12 +187,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
             return;
         }
 
-        if (snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null)
-        {
-            ApplySessionReportMode(snapshot, panelColor);
-            return;
-        }
-
         ApplyRealtimeMode(snapshot, realtimeScore, panelColor);
     }
 

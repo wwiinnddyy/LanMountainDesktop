@@ -164,14 +164,18 @@ public sealed class TimeZoneOption
     public string Label { get; }
 }
 
-public sealed partial class GeneralSettingsPageViewModel : ViewModelBase
-{
-    private readonly ISettingsFacadeService _settingsFacade;
-    private readonly TimeZoneService _timeZoneService;
-    private readonly LocalizationService _localizationService = new();
-    private readonly string _startupRenderMode;
-    private string _languageCode;
-    private bool _isInitializing;
+public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDisposable
+    {
+        private readonly ISettingsFacadeService _settingsFacade;
+        private readonly TimeZoneService _timeZoneService;
+        private readonly LocalizationService _localizationService = new();
+        private readonly string _startupRenderMode;
+        private string _languageCode;
+        private bool _isInitializing;
+        private bool _disposed;
+
+        [ObservableProperty]
+        private bool _enableThreeFingerSwipe;
 
     public GeneralSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
@@ -200,9 +204,65 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
+        EnableThreeFingerSwipe = appSnapshot.EnableThreeFingerSwipe;
         _isInitializing = false;
 
         RefreshPreview();
+        
+        // 监听设置变更，防止被意外重置
+        _settingsFacade.Settings.Changed += OnSettingsChanged;
+    }
+    
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+        
+        _settingsFacade.Settings.Changed -= OnSettingsChanged;
+        _disposed = true;
+    }
+    
+    private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
+    {
+        if (e.Scope != SettingsScope.App)
+        {
+            return;
+        }
+        
+        var changedKeys = e.ChangedKeys?.ToArray();
+        if (changedKeys is null || changedKeys.Length == 0)
+        {
+            return;
+        }
+        
+        // 如果是其他设置变更，重新加载我们的设置
+        _isInitializing = true;
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            EnableThreeFingerSwipe = appSnapshot.EnableThreeFingerSwipe;
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
+    }
+
+    partial void OnEnableThreeFingerSwipeChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        appSnapshot.EnableThreeFingerSwipe = value;
+        _settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.App,
+            appSnapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.EnableThreeFingerSwipe)]);
     }
 
     public event Action? RestartRequested;
@@ -2330,45 +2390,17 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     private bool _isInitializing;
     private readonly IStudyAnalyticsService _studyAnalyticsService;
 
-    // 防抖计时器
-    private System.Timers.Timer? _noiseSettingsDebounceTimer;
-    private System.Timers.Timer? _timerSettingsDebounceTimer;
-    private System.Timers.Timer? _alertSettingsDebounceTimer;
-    private System.Timers.Timer? _displaySettingsDebounceTimer;
-    private bool _hasPendingNoiseSave;
-    private bool _hasPendingTimerSave;
-    private bool _hasPendingAlertSave;
-    private bool _hasPendingDisplaySave;
-
     public StudySettingsPageViewModel(ISettingsFacadeService settingsFacade, IStudyAnalyticsService? studyAnalyticsService = null)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _studyAnalyticsService = studyAnalyticsService ?? StudyAnalyticsServiceFactory.CreateDefault();
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
 
-        // 初始化防抖计时器
-        InitializeDebounceTimers();
-
         RefreshLocalizedText();
 
         _isInitializing = true;
         LoadSettings();
         _isInitializing = false;
-    }
-
-    private void InitializeDebounceTimers()
-    {
-        _noiseSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        _noiseSettingsDebounceTimer.Elapsed += async (s, e) => await SaveNoiseSettingsDebounced();
-
-        _timerSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        _timerSettingsDebounceTimer.Elapsed += async (s, e) => await SaveTimerSettingsDebounced();
-
-        _alertSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        _alertSettingsDebounceTimer.Elapsed += async (s, e) => await SaveAlertSettingsDebounced();
-
-        _displaySettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
-        _displaySettingsDebounceTimer.Elapsed += async (s, e) => await SaveDisplaySettingsDebounced();
     }
 
     #region Properties - Master Switch
@@ -2455,7 +2487,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateThresholdText();
         if (!_isInitializing)
         {
-            DebounceNoiseSettingsSave();
+            SaveNoiseSettings();
         }
     }
 
@@ -2471,7 +2503,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateSamplingRateText();
         if (!_isInitializing)
         {
-            DebounceNoiseSettingsSave();
+            SaveNoiseSettings();
         }
     }
 
@@ -2485,18 +2517,8 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         NoiseSensitivityValueText = $"{NoiseSensitivityDbfs:F0} dBFS";
     }
 
-    private void DebounceNoiseSettingsSave()
+    private void SaveNoiseSettings()
     {
-        _hasPendingNoiseSave = true;
-        _noiseSettingsDebounceTimer?.Stop();
-        _noiseSettingsDebounceTimer?.Start();
-    }
-
-    private async Task SaveNoiseSettingsDebounced()
-    {
-        if (!_hasPendingNoiseSave) return;
-        _hasPendingNoiseSave = false;
-
         try
         {
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -2601,7 +2623,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateFocusDurationText();
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2617,7 +2639,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateBreakDurationText();
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2633,7 +2655,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateLongBreakDurationText();
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2649,7 +2671,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateSessionsBeforeLongBreakText();
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2657,7 +2679,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2665,7 +2687,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            DebounceTimerSettingsSave();
+            SaveTimerSettings();
         }
     }
 
@@ -2693,18 +2715,8 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         SessionsBeforeLongBreakValueText = $"{SessionsBeforeLongBreak} {unit}";
     }
 
-    private void DebounceTimerSettingsSave()
+    private void SaveTimerSettings()
     {
-        _hasPendingTimerSave = true;
-        _timerSettingsDebounceTimer?.Stop();
-        _timerSettingsDebounceTimer?.Start();
-    }
-
-    private async Task SaveTimerSettingsDebounced()
-    {
-        if (!_hasPendingTimerSave) return;
-        _hasPendingTimerSave = false;
-
         try
         {
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -2762,7 +2774,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            DebounceAlertSettingsSave();
+            SaveAlertSettings();
         }
     }
 
@@ -2777,22 +2789,12 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
 
         if (!_isInitializing)
         {
-            DebounceAlertSettingsSave();
+            SaveAlertSettings();
         }
     }
 
-    private void DebounceAlertSettingsSave()
+    private void SaveAlertSettings()
     {
-        _hasPendingAlertSave = true;
-        _alertSettingsDebounceTimer?.Stop();
-        _alertSettingsDebounceTimer?.Start();
-    }
-
-    private async Task SaveAlertSettingsDebounced()
-    {
-        if (!_hasPendingAlertSave) return;
-        _hasPendingAlertSave = false;
-
         try
         {
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -2855,7 +2857,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            DebounceDisplaySettingsSave();
+            SaveDisplaySettings();
         }
     }
 
@@ -2871,7 +2873,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateBaselineDbText();
         if (!_isInitializing)
         {
-            DebounceDisplaySettingsSave();
+            SaveDisplaySettings();
         }
     }
 
@@ -2887,7 +2889,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         UpdateAvgWindowSecText();
         if (!_isInitializing)
         {
-            DebounceDisplaySettingsSave();
+            SaveDisplaySettings();
         }
     }
 
@@ -2907,18 +2909,8 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         AvgWindowSecValueText = $"{AvgWindowSec} {unit}";
     }
 
-    private void DebounceDisplaySettingsSave()
+    private void SaveDisplaySettings()
     {
-        _hasPendingDisplaySave = true;
-        _displaySettingsDebounceTimer?.Stop();
-        _displaySettingsDebounceTimer?.Start();
-    }
-
-    private async Task SaveDisplaySettingsDebounced()
-    {
-        if (!_hasPendingDisplaySave) return;
-        _hasPendingDisplaySave = false;
-
         try
         {
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);

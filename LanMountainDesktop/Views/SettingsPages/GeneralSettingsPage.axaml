@@ -14,6 +14,13 @@
                                Text="{Binding BasicHeader}"
                                Margin="0,0,0,4" />
 
+            <ui:SettingsExpander Header="启用三指滑动"
+                                 Description="使用三根手指或鼠标右键拖动自由滑动页面，在第一页向右滑动可回到 Windows 桌面">
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding EnableThreeFingerSwipe}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
             <ui:SettingsExpander Header="{Binding LanguageHeader}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Settings" />

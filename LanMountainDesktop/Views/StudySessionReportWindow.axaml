@@ -1,0 +1,148 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        x:Class="LanMountainDesktop.Views.StudySessionReportWindow"
+        x:CompileBindings="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        Width="800"
+        Height="600"
+        TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        WindowStartupLocation="CenterOwner">
+
+    <Border x:Name="RootBorder"
+            Background="#E8EAED"
+            CornerRadius="20"
+            Padding="0">
+        <Grid RowDefinitions="Auto,*">
+            <!-- Header -->
+            <Border Grid.Row="0"
+                    Background="#F5F5F5"
+                    CornerRadius="20,20,0,0"
+                    Padding="24,16"
+                    BorderBrush="#DDDDDD"
+                    BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <fi:SymbolIcon Grid.Column="0"
+                                   Symbol="Hourglass"
+                                   FontSize="24"
+                                   Foreground="#333333"
+                                   Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock x:Name="TitleTextBlock"
+                                  FontSize="18"
+                                  FontWeight="SemiBold"
+                                  Foreground="#333333" />
+                        <TextBlock x:Name="SubtitleTextBlock"
+                                  FontSize="13"
+                                  Foreground="#666666" />
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            x:Name="CloseButton"
+                            Width="32"
+                            Height="32"
+                            CornerRadius="16"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0"
+                            Padding="0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                        <fi:SymbolIcon Symbol="Dismiss"
+                                       FontSize="16"
+                                       Foreground="#666666" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1"
+                         Background="#FAFAFA"
+                         Padding="24,20"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="20">
+                    <!-- Summary Cards -->
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                        <Border x:Name="AvgScoreCard"
+                                Background="White"
+                                CornerRadius="12"
+                                Padding="16"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="平均分数" FontSize="12" Foreground="#888888" />
+                                <TextBlock x:Name="AvgScoreTextBlock" FontSize="24" FontWeight="Bold" Foreground="#333333" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1"
+                                Background="White"
+                                CornerRadius="12"
+                                Padding="16"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="最高分数" FontSize="12" Foreground="#888888" />
+                                <TextBlock x:Name="MaxScoreTextBlock" FontSize="24" FontWeight="Bold" Foreground="#333333" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2"
+                                Background="White"
+                                CornerRadius="12"
+                                Padding="16"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="最低分数" FontSize="12" Foreground="#888888" />
+                                <TextBlock x:Name="MinScoreTextBlock" FontSize="24" FontWeight="Bold" Foreground="#333333" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3"
+                                Background="White"
+                                CornerRadius="12"
+                                Padding="16"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="打断次数" FontSize="12" Foreground="#888888" />
+                                <TextBlock x:Name="InterruptCountTextBlock" FontSize="24" FontWeight="Bold" Foreground="#333333" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Detail Data Table -->
+                    <Border Background="White"
+                            CornerRadius="12"
+                            Padding="16"
+                            BorderBrush="#E0E0E0"
+                            BorderThickness="1">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="详细数据" FontSize="16" FontWeight="SemiBold" Foreground="#333333" />
+                            <DataGrid x:Name="DetailDataGrid"
+                                     AutoGenerateColumns="False"
+                                     IsReadOnly="True"
+                                     GridLinesVisibility="All"
+                                     BorderThickness="1"
+                                     BorderBrush="#E0E0E0"
+                                     CornerRadius="8"
+                                     MaxHeight="400">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="时间段" Width="*" Binding="{Binding TimeRange, Mode=OneWay}" />
+                                    <DataGridTextColumn Header="平均分贝" Width="Auto" Binding="{Binding AvgDb, Mode=OneWay, StringFormat={}{0:F1}}" />
+                                    <DataGridTextColumn Header="分数" Width="Auto" Binding="{Binding Score, Mode=OneWay, StringFormat={}{0:F1}}" />
+                                    <DataGridTextColumn Header="打断次数" Width="Auto" Binding="{Binding SegmentCount, Mode=OneWay}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</Window>

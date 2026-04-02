@@ -67,6 +67,7 @@ public partial class App : Application
     private NativeMenuItem? _trayExitMenuItem;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
+    private TransparentOverlayWindow? _transparentOverlayWindow;
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
@@ -218,12 +219,37 @@ public partial class App : Application
     {
         _ = sender;
         _ = e;
-        if (_mainWindow is null)
+        
+        // 仅在 Windows 上支持融合桌面功能
+        if (!OperatingSystem.IsWindows())
         {
+            AppLogger.Warn("FusedDesktop", "Fused desktop is only supported on Windows.");
             return;
         }
-
-        _detachedComponentLibraryWindowService.Open(_mainWindow);
+        
+        // 确保透明覆盖层窗口存在
+        EnsureTransparentOverlayWindow();
+        
+        // 打开融合桌面组件库窗口
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                var window = new FusedDesktopComponentLibraryWindow();
+                
+                if (_transparentOverlayWindow is not null)
+                {
+                    window.SetOverlayWindow(_transparentOverlayWindow);
+                }
+                
+                window.Show();
+                window.Activate();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
+            }
+        }, DispatcherPriority.Send);
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -481,9 +507,9 @@ public partial class App : Application
         RestoreOrCreateMainWindow(showSingleInstanceNotice: true, source: "SingleInstance");
     }
 
-    private async void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
+    private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
     {
-        Dispatcher.UIThread.Post(async () =>
+        Dispatcher.UIThread.Post(() =>
         {
             if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -492,19 +518,18 @@ public partial class App : Application
 
             try
             {
+                // 先隐藏透明覆盖层窗口
+                if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
+                {
+                    _transparentOverlayWindow.Hide();
+                }
+                
                 var mainWindow = GetOrCreateMainWindow(desktop, source);
                 mainWindow.ShowInTaskbar = true;
 
                 if (!mainWindow.IsVisible)
                 {
                     mainWindow.Show();
-                    if (mainWindow._isFirstLaunchAfterOpen)
-                    {
-                        mainWindow._isFirstLaunchAfterOpen = false;
-                        mainWindow.ForceDesktopPageToFirst();
-                    }
-
-                    await mainWindow.SlideInAsync();
                 }
 
                 if (mainWindow.WindowState == WindowState.Minimized)
@@ -535,6 +560,18 @@ public partial class App : Application
                 AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
             }
         }, DispatcherPriority.Send);
+    }
+    
+    private void EnsureTransparentOverlayWindow()
+    {
+        if (_transparentOverlayWindow is null)
+        {
+            _transparentOverlayWindow = new TransparentOverlayWindow();
+            _transparentOverlayWindow.RestoreMainWindowRequested += (s, e) =>
+            {
+                RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TransparentOverlay");
+            };
+        }
     }
 
     internal void PrepareForShutdown(bool isRestart, string source)
@@ -886,17 +923,25 @@ public partial class App : Application
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, "MainWindowRestored");
     }
 
-    private async void HideMainWindowToTray(MainWindow mainWindow, string source)
+    internal void HideMainWindowToTray(MainWindow mainWindow, string source)
     {
         try
         {
-            await mainWindow.SlideOutAsync();
             mainWindow.ShowInTaskbar = false;
             mainWindow.Hide();
             SetDesktopShellState(DesktopShellState.TrayOnly, source);
             AppLogger.Info(
                 "DesktopShell",
                 $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
+            
+            // 检查三指滑动功能是否启用
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            if (appSnapshot.EnableThreeFingerSwipe)
+            {
+                // 显示透明覆盖层窗口
+                EnsureTransparentOverlayWindow();
+                _transparentOverlayWindow?.Show();
+            }
         }
         catch (Exception ex)
         {

@@ -169,15 +169,6 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private void OnActionButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         var snapshot = _studyAnalyticsService.GetSnapshot();
-        var isReportViewing = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
-        if (isReportViewing)
-        {
-            _studyAnalyticsService.ClearLastSessionReport();
-            _transientMessage = null;
-            RefreshVisual();
-            return;
-        }
-
         var isRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
 
         var success = isRunning
@@ -219,17 +210,6 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         if (_transientMessage is not null && now > _transientMessageExpireAt)
         {
             _transientMessage = null;
-        }
-
-        var isReportViewing = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
-        if (isReportViewing)
-        {
-            PrimaryTextBlock.Text = L("study.session_control.report_preview", "Preview Report");
-            SecondaryTextBlock.Text = _transientMessage ?? L("study.session_control.report_confirm_hint", "Tap right button to confirm");
-            ActionIcon.Kind = MaterialIconKind.Check;
-            ApplyActionBadgeStyle(panelColor, Color.Parse("#FF34D399"));
-            ApplyTransientWarningTintIfNeeded(panelColor);
-            return;
         }
 
         var isRunning = snapshot.Session.State == StudySessionRuntimeState.Running;

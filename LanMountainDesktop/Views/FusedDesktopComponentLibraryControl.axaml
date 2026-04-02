@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl"
+             Width="400" Height="500">
+    <!--
+        融合桌面组件库 - 专门用于添加组件到系统桌面（负一屏）
+        注意：此窗口只能添加组件到融合桌面，不能添加到阑山桌面
+    -->
+    <Grid RowDefinitions="Auto,*">
+        <!-- 标题栏 -->
+        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Padding="16,12">
+            <StackPanel>
+                <TextBlock Text="融合桌面组件"
+                           FontWeight="SemiBold"
+                           FontSize="16" />
+                <TextBlock Text="选择组件添加到系统桌面"
+                           Opacity="0.7"
+                           FontSize="12"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+        
+        <!-- 组件列表 -->
+        <ScrollViewer Grid.Row="1"
+                      Padding="12">
+            <WrapPanel x:Name="ComponentPanel" Orientation="Horizontal" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

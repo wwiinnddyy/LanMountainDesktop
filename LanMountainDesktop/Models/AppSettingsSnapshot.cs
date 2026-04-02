@@ -116,6 +116,8 @@ public sealed class AppSettingsSnapshot
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;
 
+    public bool EnableThreeFingerSwipe { get; set; } = false;
+
     public List<string> DisabledPluginIds { get; set; } = [];
 
     #region Study Settings

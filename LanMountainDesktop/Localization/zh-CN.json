@@ -3,7 +3,7 @@
     "tray.tooltip":  "LanMountainDesktop",
     "tray.menu.show_desktop":  "打开桌面",
     "tray.menu.settings":  "设置",
-    "tray.menu.component_library":  "独立组件库",
+    "tray.menu.component_library":  "融合桌面设置",
     "tray.menu.restart":  "重启应用",
     "tray.menu.exit":  "退出应用",
     "button.back_to_windows":  "回到Windows",

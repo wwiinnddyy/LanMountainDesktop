@@ -16,6 +16,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 
@@ -72,6 +73,10 @@ public partial class MainWindow
     private int? _desktopPageContextSettlingSourceIndex;
     private int? _desktopPageContextSettlingTargetIndex;
     private int _desktopPageContextSettleRevision;
+
+    // 三指滑动/右键拖动相关
+    private bool _isThreeFingerOrRightDragSwipeActive;
+    private readonly HashSet<int> _activePointerIds = [];
 
     private int LauncherSurfaceIndex => Math.Max(MinDesktopPageCount, _desktopPageCount);
 
@@ -375,18 +380,6 @@ public partial class MainWindow
         UpdateDesktopPageAwareComponentContext();
     }
 
-    public void ForceDesktopPageToFirst()
-    {
-        if (_currentDesktopSurfaceIndex == 0)
-        {
-            return;
-        }
-
-        _currentDesktopSurfaceIndex = 0;
-        ApplyDesktopSurfaceOffset();
-        SchedulePersistSettings(delayMs: 120);
-    }
-
     private void SetDesktopPagesHostSnapAnimationEnabled(bool enabled)
     {
         if (_desktopPagesHostTransform is null)
@@ -527,6 +520,49 @@ public partial class MainWindow
             return;
         }
 
+        // 检查三指滑动功能是否启用
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var isThreeFingerSwipeEnabled = appSnapshot.EnableThreeFingerSwipe;
+
+        var currentPoint = e.GetCurrentPoint(DesktopPagesViewport);
+        var pointerId = e.Pointer?.Id ?? 0;
+        var isRightButtonPressed = currentPoint.Properties.IsRightButtonPressed;
+        var isLeftButtonPressed = currentPoint.Properties.IsLeftButtonPressed;
+
+        // 处理三指滑动/右键拖动模式
+        if (isThreeFingerSwipeEnabled)
+        {
+            // 跟踪活跃指针
+            if (isLeftButtonPressed || isRightButtonPressed)
+            {
+                _activePointerIds.Add(pointerId);
+            }
+
+            // 判断是否是三指滑动或右键拖动
+            var isThreeFinger = _activePointerIds.Count >= 3;
+            var isRightDrag = isRightButtonPressed;
+
+            if (isThreeFinger || isRightDrag)
+            {
+                // 三指/右键拖动模式：跳过所有组件交互检查，直接开始滑动
+                ClearDesktopPageContextSettle(refreshContext: false);
+                _isThreeFingerOrRightDragSwipeActive = true;
+                _isDesktopSwipeActive = true;
+                _isDesktopSwipeDirectionLocked = false;
+                _desktopSwipeStartPoint = pointerInViewport;
+                _desktopSwipeCurrentPoint = _desktopSwipeStartPoint;
+                _desktopSwipeLastPoint = _desktopSwipeStartPoint;
+                _desktopSwipeVelocityX = 0;
+                _desktopSwipeLastTimestamp = Stopwatch.GetTimestamp();
+                _desktopSwipeBaseOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
+                
+                // 标记事件已处理，防止组件响应
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // 原有单指滑动逻辑
         if (IsInteractivePointerSource(e.Source))
         {
             return;
@@ -537,7 +573,7 @@ public partial class MainWindow
             return;
         }
 
-        if (!e.GetCurrentPoint(DesktopPagesViewport).Properties.IsLeftButtonPressed)
+        if (!isLeftButtonPressed)
         {
             return;
         }
@@ -788,6 +824,10 @@ public partial class MainWindow
 
     private void OnDesktopPagesPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        // 清理活跃指针
+        var pointerId = e.Pointer?.Id ?? 0;
+        _activePointerIds.Remove(pointerId);
+        
         if (EndDesktopSwipeInteraction(e.Pointer))
         {
             e.Handled = true;
@@ -796,6 +836,10 @@ public partial class MainWindow
 
     private void OnDesktopPagesPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        // 清理活跃指针
+        var pointerId = e.Pointer?.Id ?? 0;
+        _activePointerIds.Remove(pointerId);
+        
         EndDesktopSwipeInteraction(e.Pointer);
     }
 
@@ -814,6 +858,8 @@ public partial class MainWindow
 
         _isDesktopSwipeActive = false;
         _isDesktopSwipeDirectionLocked = false;
+        _isThreeFingerOrRightDragSwipeActive = false;
+        _activePointerIds.Clear();
         _desktopSwipeVelocityX = 0;
         _desktopSwipeLastTimestamp = 0;
         if (wasDirectionLocked)
@@ -831,8 +877,12 @@ public partial class MainWindow
         }
 
         var wasDirectionLocked = _isDesktopSwipeDirectionLocked;
+        var wasThreeFingerOrRightDrag = _isThreeFingerOrRightDragSwipeActive;
         _isDesktopSwipeActive = false;
         _isDesktopSwipeDirectionLocked = false;
+        _isThreeFingerOrRightDragSwipeActive = false;
+        _activePointerIds.Clear();
+        
         if (pointer?.Captured == DesktopPagesViewport)
         {
             pointer.Capture(null);
@@ -860,6 +910,23 @@ public partial class MainWindow
 
         var hasDistanceIntent = absDeltaX >= distanceThreshold && absDeltaX > absDeltaY * 1.05;
         var hasVelocityIntent = Math.Abs(_desktopSwipeVelocityX) >= velocityThreshold;
+
+        // 检查：三指/右键拖动 && 在第一页 && 向右滑动
+        if (wasThreeFingerOrRightDrag && 
+            _currentDesktopSurfaceIndex == 0 && 
+            deltaX > 0 && // 向右滑动
+            (hasDistanceIntent || hasVelocityIntent))
+        {
+            // 最小化到 Windows 桌面
+            if (Application.Current is App app)
+            {
+                app.HideMainWindowToTray(this, "ThreeFingerOrRightDragSwipe");
+            }
+            
+            ApplyDesktopSurfaceOffset();
+            _desktopSwipeVelocityX = 0;
+            return true;
+        }
 
         if (projectedTargetIndex == _currentDesktopSurfaceIndex && (hasDistanceIntent || hasVelocityIntent))
         {

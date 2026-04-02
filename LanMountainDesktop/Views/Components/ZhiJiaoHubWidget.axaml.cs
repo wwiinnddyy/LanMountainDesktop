@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -63,6 +64,8 @@ public partial class ZhiJiaoHubWidget : UserControl,
     private double _dragOffset;
     private int _lastSwipeDirection = 0;
     private bool _isInErrorState;
+    private DateTime _lastClickTime = DateTime.MinValue;
+    private const int DoubleClickThresholdMs = 300;
 
     private static readonly HttpClient ImageHttpClient = new(new HttpClientHandler
     {
@@ -679,6 +682,19 @@ public partial class ZhiJiaoHubWidget : UserControl,
             return;
         }
 
+        var currentTime = DateTime.Now;
+        var timeSinceLastClick = (currentTime - _lastClickTime).TotalMilliseconds;
+
+        if (timeSinceLastClick < DoubleClickThresholdMs)
+        {
+            _lastClickTime = DateTime.MinValue;
+            _ = OpenCurrentImageAsync();
+            e.Handled = true;
+            return;
+        }
+
+        _lastClickTime = currentTime;
+
         if (_images.Count <= 1)
         {
             return;
@@ -687,6 +703,81 @@ public partial class ZhiJiaoHubWidget : UserControl,
         _isDragging = true;
         _dragStartPoint = e.GetPosition(this);
         _dragOffset = 0;
+    }
+
+    private async Task OpenCurrentImageAsync()
+    {
+        if (_images.Count == 0 || _currentImageIndex < 0 || _currentImageIndex >= _images.Count)
+        {
+            return;
+        }
+
+        var imageItem = _images[_currentImageIndex];
+
+        try
+        {
+            string? filePath = null;
+
+            if (imageItem.IsCached && !string.IsNullOrEmpty(imageItem.LocalPath) && File.Exists(imageItem.LocalPath))
+            {
+                filePath = imageItem.LocalPath;
+            }
+            else
+            {
+                filePath = await DownloadImageToTempAsync(imageItem);
+            }
+
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                try
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true
+                    };
+                    Process.Start(startInfo);
+                }
+                catch
+                {
+                }
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task<string?> DownloadImageToTempAsync(ZhiJiaoHubHybridImageItem imageItem)
+    {
+        try
+        {
+            var imageUrl = imageItem.RemoteUrl;
+            if (string.Equals(_mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+            {
+                imageUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + imageItem.RemoteUrl;
+            }
+
+            using var response = await ImageHttpClient.GetAsync(imageUrl);
+            response.EnsureSuccessStatusCode();
+
+            var fileExtension = Path.GetExtension(new Uri(imageUrl).AbsolutePath);
+            if (string.IsNullOrEmpty(fileExtension))
+            {
+                fileExtension = ".jpg";
+            }
+
+            var tempPath = Path.Combine(Path.GetTempPath(), $"LanMountain_ZhiJiaoHub_{Guid.NewGuid():N}{fileExtension}");
+            await using var fileStream = File.OpenWrite(tempPath);
+            var contentStream = await response.Content.ReadAsStreamAsync();
+            await contentStream.CopyToAsync(fileStream);
+
+            return tempPath;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)

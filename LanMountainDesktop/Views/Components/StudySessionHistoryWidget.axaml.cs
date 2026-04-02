@@ -386,24 +386,39 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     {
         CloseDialog();
 
-        _loadingSessionId = sessionId;
-        SetTransientStatus(L("study.session_history.loading", "Loading data..."), 4);
-        if (_currentSnapshot is not null)
+        // 直接从服务获取报告数据
+        var snapshot = _studyAnalyticsService.GetSnapshot();
+        var entry = FindHistoryEntry(snapshot.SessionHistory, sessionId);
+        
+        if (entry is null)
         {
-            RenderSnapshot(_currentSnapshot);
-        }
-
-        if (_studyAnalyticsService.SelectSessionReport(sessionId))
-        {
+            SetTransientStatus(L("study.session_history.select_failed", "Unable to find session"));
             return;
         }
 
-        _loadingSessionId = null;
-        SetTransientStatus(L("study.session_history.select_failed", "Unable to switch session"));
-        if (_currentSnapshot is not null)
+        // 加载完整的报告数据
+        if (!_studyAnalyticsService.SelectSessionReport(sessionId))
         {
-            RenderSnapshot(_currentSnapshot);
+            SetTransientStatus(L("study.session_history.select_failed", "Unable to load session"));
+            return;
         }
+
+        // 获取完整报告
+        snapshot = _studyAnalyticsService.GetSnapshot();
+        var report = snapshot.LastSessionReport;
+        
+        if (report is null)
+        {
+            SetTransientStatus(L("study.session_history.select_failed", "Unable to load session data"));
+            return;
+        }
+
+        // 打开报告详情窗口
+        var window = new StudySessionReportWindow(report);
+        window.Show();
+        
+        // 清除选中状态，不保持联动模式
+        _studyAnalyticsService.ClearLastSessionReport();
     }
 
     private void ShowRenameDialog(string sessionId, string label)
