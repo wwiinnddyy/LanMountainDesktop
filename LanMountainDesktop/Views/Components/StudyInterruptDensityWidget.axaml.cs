@@ -55,6 +55,11 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
     private string _languageCode = "zh-CN";
     private IDisposable? _monitoringLease;
 
+    // 通知相关字段
+    private DateTime _lastAlertTime = DateTime.MinValue;
+    private readonly TimeSpan _alertCooldown = TimeSpan.FromMinutes(2); // 2分钟冷却时间
+    private DensityLevelKind _lastLevelKind = DensityLevelKind.Calm;
+
     private enum DensityLevelKind
     {
         Calm = 0,
@@ -227,6 +232,9 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
             CultureInfo.InvariantCulture,
             L("study.interrupt_density.threshold_format", "Threshold {0:F1}/min"),
             m.ThresholdPerMin);
+
+        // 检查并发送通知
+        CheckAndSendAlert(m, snapshot.Config);
     }
 
     private void ApplyLocalizedLabels()
@@ -686,5 +694,76 @@ public partial class StudyInterruptDensityWidget : UserControl, IDesktopComponen
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    private void CheckAndSendAlert(InterruptDensityMetrics metrics, StudyAnalyticsConfig config)
+    {
+        // 检查提醒开关是否启用
+        if (!config.AlertSoundEnabled)
+        {
+            _lastLevelKind = metrics.LevelKind;
+            return;
+        }
+
+        // 只在级别变化时发送通知
+        if (metrics.LevelKind == _lastLevelKind)
+        {
+            return;
+        }
+
+        // 检查冷却时间
+        if (DateTime.Now - _lastAlertTime < _alertCooldown)
+        {
+            _lastLevelKind = metrics.LevelKind;
+            return;
+        }
+
+        // 只在严重级别时发送通知
+        if (metrics.LevelKind != DensityLevelKind.Severe)
+        {
+            _lastLevelKind = metrics.LevelKind;
+            return;
+        }
+
+        _lastAlertTime = DateTime.Now;
+        _lastLevelKind = metrics.LevelKind;
+
+        // 发送通知
+        try
+        {
+            var densityStr = metrics.DensityPerMin.ToString("F1");
+            var thresholdStr = metrics.ThresholdPerMin.ToString("F1");
+
+            // 判断是否需要显示在正中央（过于吵闹）
+            var isSevere = metrics.DensityPerMin > metrics.ThresholdPerMin * 1.5;
+
+            if (isSevere)
+            {
+                // 严重干扰：显示在正中央
+                var title = L("study.alert.severe_interrupt_title", "严重噪音干扰");
+                var message = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("study.alert.severe_interrupt_message", "环境噪音过于嘈杂，严重影响学习效率\n当前打断密度: {0}次/分钟\n建议：寻找更安静的学习环境"),
+                    densityStr);
+
+                App.CurrentNotificationService?.ShowWarning(title, message, NotificationPosition.Center);
+            }
+            else
+            {
+                // 一般提醒：显示在右上角
+                var title = L("study.alert.noise_interrupt_title", "噪音打断提醒");
+                var message = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("study.alert.noise_interrupt_message", "当前打断密度: {0}次/分钟\n已超过阈值: {1}次/分钟"),
+                    densityStr,
+                    thresholdStr);
+
+                App.CurrentNotificationService?.ShowWarning(title, message, NotificationPosition.TopRight);
+            }
+        }
+        catch
+        {
+            // 静默处理通知发送失败
+        }
     }
 }

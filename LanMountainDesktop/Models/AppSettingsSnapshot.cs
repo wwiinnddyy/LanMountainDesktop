@@ -150,6 +150,22 @@ public sealed class AppSettingsSnapshot
 
     #endregion
 
+    #region Notification Settings
+
+    public bool NotificationEnabled { get; set; } = true;
+
+    public string NotificationDefaultPosition { get; set; } = "TopRight";
+
+    public int NotificationDurationSeconds { get; set; } = 4;
+
+    public bool NotificationHoverPauseEnabled { get; set; } = true;
+
+    public bool NotificationClickCloseEnabled { get; set; } = true;
+
+    public int NotificationMaxPerPosition { get; set; } = 5;
+
+    #endregion
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();

@@ -54,6 +54,7 @@ public partial class App : Application
     private ISettingsPageRegistry? _settingsPageRegistry;
     private ISettingsWindowService? _settingsWindowService;
     private WeatherLocationRefreshService? _weatherLocationRefreshService;
+    private INotificationService? _notificationService;
     private bool _exitCleanupCompleted;
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
@@ -73,6 +74,8 @@ public partial class App : Application
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
+    internal static INotificationService? CurrentNotificationService =>
+        (Current as App)?._notificationService;
 
     // 隐私政策查看事件
     public static event Action? CurrentPrivacyPolicyViewRequested;
@@ -87,6 +90,7 @@ public partial class App : Application
     public ISettingsFacadeService SettingsFacade => _settingsFacade;
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
+    internal INotificationService? NotificationService => _notificationService;
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
     {
@@ -128,6 +132,7 @@ public partial class App : Application
         ApplyCurrentCultureFromSettings();
         EnsureSettingsWindowService();
         EnsureWeatherLocationRefreshService();
+        EnsureNotificationService();
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -398,6 +403,11 @@ public partial class App : Application
             _settingsFacade,
             _locationService,
             _localizationService);
+    }
+
+    private void EnsureNotificationService()
+    {
+        _notificationService ??= new NotificationService(_appearanceThemeService);
     }
 
     private void StartWeatherLocationRefreshIfNeeded()

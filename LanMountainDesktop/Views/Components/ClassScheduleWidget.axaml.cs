@@ -44,11 +44,17 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     private TimeZoneService? _timeZoneService;
     private double _currentCellSize = 48;
     private IReadOnlyList<CourseItemViewModel> _courseItems = Array.Empty<CourseItemViewModel>();
+    private IReadOnlyList<CourseItemViewModel> _lastRenderedItems = Array.Empty<CourseItemViewModel>();
     private bool _isNightVisual = true;
     private string _languageCode = "zh-CN";
     private string _componentId = BuiltInComponentIds.DesktopClassSchedule;
     private string _placementId = string.Empty;
     private string? _componentColorScheme;
+
+    private ClassIslandScheduleReadResult? _cachedScheduleResult;
+    private string? _lastLoadedSchedulePath;
+    private DateTime _lastScheduleLoadTime = DateTime.MinValue;
+    private static readonly TimeSpan ScheduleCacheDuration = TimeSpan.FromMinutes(5);
 
     public ClassScheduleWidget()
     {
@@ -118,6 +124,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private void OnTimeZoneChanged(object? sender, EventArgs e)
     {
+        InvalidateScheduleCache();
         RefreshSchedule();
     }
 
@@ -156,14 +163,21 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     {
         var now = _timeZoneService?.GetCurrentTime() ?? DateTime.Now;
         var currentDate = DateOnly.FromDateTime(now);
-        
+
         var previousCourseIndex = _lastCurrentCourseIndex;
-        
-        RefreshSchedule();
-        
+
+        if (ShouldRefreshOnTimerTick(now, currentDate))
+        {
+            RefreshSchedule();
+        }
+        else
+        {
+            UpdateCurrentCourseState(now);
+        }
+
         var newCurrentCourseIndex = FindCurrentCourseIndex();
         _lastCurrentCourseIndex = newCurrentCourseIndex;
-        
+
         if (previousCourseIndex != newCurrentCourseIndex && newCurrentCourseIndex >= 0)
         {
             if (_isUserScrolling)
@@ -172,10 +186,65 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             }
             ScrollToCurrentCourse(newCurrentCourseIndex);
         }
-        
+
         if (_lastRefreshDate != currentDate && currentDate > _lastRefreshDate)
         {
             _lastRefreshDate = currentDate;
+        }
+    }
+
+    private bool ShouldRefreshOnTimerTick(DateTime now, DateOnly currentDate)
+    {
+        if (_lastRefreshDate != currentDate)
+        {
+            return true;
+        }
+
+        if (_courseItems.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var item in _courseItems)
+        {
+            if (item.IsCurrent)
+            {
+                var currentTime = now.TimeOfDay;
+                if (currentTime.TotalSeconds < 30 || currentTime.TotalSeconds > 86970)
+                {
+                    return true;
+                }
+                break;
+            }
+        }
+
+        return false;
+    }
+
+    private void UpdateCurrentCourseState(DateTime now)
+    {
+        bool needsRender = false;
+        for (var i = 0; i < _courseItems.Count; i++)
+        {
+            var item = _courseItems[i];
+            var timeParts = item.TimeRange.Split('-');
+            if (timeParts.Length != 2) continue;
+
+            if (TimeSpan.TryParse(timeParts[0].Trim(), out var startTime) &&
+                TimeSpan.TryParse(timeParts[1].Trim(), out var endTime))
+            {
+                var shouldBeCurrent = now.TimeOfDay >= startTime && now.TimeOfDay <= endTime;
+                if (shouldBeCurrent != item.IsCurrent)
+                {
+                    needsRender = true;
+                    break;
+                }
+            }
+        }
+
+        if (needsRender)
+        {
+            RefreshSchedule();
         }
     }
 
@@ -198,7 +267,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             return;
         }
 
-        // 确保在UI线程执行
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (courseIndex >= CourseListPanel.Children.Count)
@@ -215,19 +283,18 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var bounds = targetChild.Bounds;
             var scrollViewerHeight = ContentScrollViewer.Bounds.Height;
             var contentHeight = CourseListPanel.Bounds.Height;
-            
-            // 计算滚动位置，使当前课程居中显示
+
             var targetOffset = bounds.Position.Y - (scrollViewerHeight / 2) + (bounds.Height / 2);
-            
-            // 确保不超出边界
+
             targetOffset = Math.Max(0, Math.Min(targetOffset, contentHeight - scrollViewerHeight));
-            
+
             ContentScrollViewer.Offset = new Vector(0, targetOffset);
         }, Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
     public void RefreshFromSettings()
     {
+        InvalidateScheduleCache();
         RefreshSchedule();
     }
 
@@ -237,7 +304,44 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             ? BuiltInComponentIds.DesktopClassSchedule
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
+        InvalidateScheduleCache();
         RefreshSchedule();
+    }
+
+    private void InvalidateScheduleCache()
+    {
+        _cachedScheduleResult = null;
+        _lastLoadedSchedulePath = null;
+        _lastScheduleLoadTime = DateTime.MinValue;
+    }
+
+    private ClassIslandScheduleReadResult LoadScheduleWithCache(
+        string? path,
+        DateOnly? semesterStartDate,
+        int semesterWeekCycle)
+    {
+        if (!string.IsNullOrEmpty(path) &&
+            _cachedScheduleResult != null &&
+            _lastLoadedSchedulePath == path &&
+            (DateTime.Now - _lastScheduleLoadTime) < ScheduleCacheDuration)
+        {
+            return _cachedScheduleResult;
+        }
+
+        var result = _scheduleService.Load(
+            path,
+            profileFileName: null,
+            semesterStartDate: semesterStartDate,
+            semesterWeekCycle: semesterWeekCycle);
+
+        if (result.Success)
+        {
+            _cachedScheduleResult = result;
+            _lastLoadedSchedulePath = path;
+            _lastScheduleLoadTime = DateTime.Now;
+        }
+
+        return result;
     }
 
     private void RefreshSchedule()
@@ -253,22 +357,26 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var today = DateOnly.FromDateTime(now);
 
         var importedSchedulePath = ResolveImportedSchedulePath(componentSettings);
-        var readResult = _scheduleService.Load(
+        var readResult = LoadScheduleWithCache(
             importedSchedulePath,
-            profileFileName: null,
-            semesterStartDate: componentSettings.SemesterStartDate,
-            semesterWeekCycle: componentSettings.SemesterWeekCycle);
+            componentSettings.SemesterStartDate,
+            componentSettings.SemesterWeekCycle);
+
         if (!readResult.Success || readResult.Snapshot is null)
         {
-            _courseItems = Array.Empty<CourseItemViewModel>();
-            UpdateHeader(now);
-            ShowStatus(L("schedule.widget.no_source", "未读取到 ClassIsland 课表"));
-            RenderScheduleItems();
+            var newItems = Array.Empty<CourseItemViewModel>();
+            if (!IsDataEqual(_courseItems, newItems))
+            {
+                _courseItems = newItems;
+                UpdateHeader(now);
+                ShowStatus(L("schedule.widget.no_source", "未读取到 ClassIsland 课表"));
+                RenderScheduleItems();
+            }
             return;
         }
 
         var snapshot = readResult.Snapshot;
-        
+
         if (!_scheduleService.TryResolveClassPlanForDate(snapshot, today, out var resolvedClassPlan))
         {
             var nextDay = today.AddDays(1);
@@ -279,27 +387,35 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             }
             else
             {
-                _courseItems = Array.Empty<CourseItemViewModel>();
-                UpdateHeader(now);
-                ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
-                RenderScheduleItems();
+                var newItems = Array.Empty<CourseItemViewModel>();
+                if (!IsDataEqual(_courseItems, newItems))
+                {
+                    _courseItems = newItems;
+                    UpdateHeader(now);
+                    ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
+                    RenderScheduleItems();
+                }
                 return;
             }
         }
 
         if (!snapshot.TimeLayouts.TryGetValue(resolvedClassPlan.ClassPlan.TimeLayoutId, out var layout))
         {
-            _courseItems = Array.Empty<CourseItemViewModel>();
-            UpdateHeader(now);
-            ShowStatus(L("schedule.widget.layout_missing", "课表时间布局缺失"));
-            RenderScheduleItems();
+            var newItems = Array.Empty<CourseItemViewModel>();
+            if (!IsDataEqual(_courseItems, newItems))
+            {
+                _courseItems = newItems;
+                UpdateHeader(now);
+                ShowStatus(L("schedule.widget.layout_missing", "课表时间布局缺失"));
+                RenderScheduleItems();
+            }
             return;
         }
 
         var adjustedNow = today == DateOnly.FromDateTime(now) ? now : DateTime.Today.AddHours(8);
-        _courseItems = BuildCourseItemViewModels(snapshot, resolvedClassPlan.ClassPlan, layout, adjustedNow);
-        
-        if (_courseItems.Count == 0)
+        var newCourseItems = BuildCourseItemViewModels(snapshot, resolvedClassPlan.ClassPlan, layout, adjustedNow);
+
+        if (newCourseItems.Count == 0)
         {
             var nextDay = today.AddDays(1);
             if (_scheduleService.TryResolveClassPlanForDate(snapshot, nextDay, out var nextDayClassPlan) &&
@@ -307,33 +423,75 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             {
                 today = nextDay;
                 adjustedNow = DateTime.Today.AddHours(8);
-                _courseItems = BuildCourseItemViewModels(snapshot, nextDayClassPlan.ClassPlan, nextLayout, adjustedNow);
+                newCourseItems = BuildCourseItemViewModels(snapshot, nextDayClassPlan.ClassPlan, nextLayout, adjustedNow);
             }
         }
 
         UpdateHeader(today.ToDateTime(TimeOnly.MinValue));
-        
-        if (_courseItems.Count == 0)
+
+        if (newCourseItems.Count == 0)
         {
-            ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
+            if (!IsDataEqual(_courseItems, newCourseItems))
+            {
+                _courseItems = newCourseItems;
+                ShowStatus(L("schedule.widget.no_class_today", "今天没有课程"));
+                RenderScheduleItems();
+            }
         }
         else
         {
-            var currentIndex = FindCurrentCourseIndex();
-            _lastCurrentCourseIndex = currentIndex;
-            HideStatus();
-            
-            // 初始化时自动跳转到当前课程
-            if (currentIndex >= 0)
+            var dataChanged = !IsDataEqual(_courseItems, newCourseItems);
+            if (dataChanged)
             {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                _courseItems = newCourseItems;
+                var currentIndex = FindCurrentCourseIndex();
+                _lastCurrentCourseIndex = currentIndex;
+                HideStatus();
+
+                if (currentIndex >= 0)
                 {
-                    ScrollToCurrentCourse(currentIndex);
-                }, Avalonia.Threading.DispatcherPriority.Loaded);
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        ScrollToCurrentCourse(currentIndex);
+                    }, Avalonia.Threading.DispatcherPriority.Loaded);
+                }
+
+                RenderScheduleItems();
+            }
+            else
+            {
+                var currentIndex = FindCurrentCourseIndex();
+                if (currentIndex != _lastCurrentCourseIndex)
+                {
+                    _lastCurrentCourseIndex = currentIndex;
+                    IncrementalUpdateCurrentCourseHighlight(currentIndex);
+                }
+            }
+        }
+    }
+
+    private static bool IsDataEqual(IReadOnlyList<CourseItemViewModel> oldItems, IReadOnlyList<CourseItemViewModel> newItems)
+    {
+        if (oldItems.Count != newItems.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < oldItems.Count; i++)
+        {
+            var oldItem = oldItems[i];
+            var newItem = newItems[i];
+
+            if (oldItem.Name != newItem.Name ||
+                oldItem.TimeRange != newItem.TimeRange ||
+                oldItem.Detail != newItem.Detail ||
+                oldItem.IsCurrent != newItem.IsCurrent)
+            {
+                return false;
             }
         }
 
-        RenderScheduleItems();
+        return true;
     }
 
     private IReadOnlyList<CourseItemViewModel> BuildCourseItemViewModels(
@@ -487,12 +645,34 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
 
     private void RenderScheduleItems()
     {
-        CourseListPanel.Children.Clear();
         ClassCountTextBlock.Text = FormatClassCount(_courseItems.Count);
+
         if (_courseItems.Count == 0)
         {
+            if (CourseListPanel.Children.Count > 0)
+            {
+                CourseListPanel.Children.Clear();
+            }
             return;
         }
+
+        var needsFullRebuild = CourseListPanel.Children.Count != _courseItems.Count;
+
+        if (needsFullRebuild)
+        {
+            RebuildAllItems();
+        }
+        else
+        {
+            IncrementalUpdateItems();
+        }
+
+        _lastRenderedItems = _courseItems.ToList();
+    }
+
+    private void RebuildAllItems()
+    {
+        CourseListPanel.Children.Clear();
 
         var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
             _componentColorScheme,
@@ -508,7 +688,6 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             Math.Clamp(4 * scale, 2, 8),
             Math.Clamp(4 * scale, 2, 8),
             Math.Clamp(4 * scale, 2, 8));
-        var maxVisibleItems = ResolveMaxVisibleItems(scale);
 
         var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
         var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
@@ -520,72 +699,171 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         for (var i = 0; i < _courseItems.Count; i++)
         {
             var item = _courseItems[i];
-            var bulletBrush = item.IsCurrent ? currentBrush : normalBulletBrush;
+            var itemControls = CreateSingleItemControl(
+                item,
+                scale,
+                bulletSize,
+                courseNameSize,
+                secondarySize,
+                lineSpacing,
+                itemPadding,
+                primaryBrush,
+                secondaryBrush,
+                item.IsCurrent ? currentBrush : normalBulletBrush);
 
-            var bullet = new Border
-            {
-                Width = bulletSize,
-                Height = bulletSize,
-                CornerRadius = new CornerRadius(bulletSize * 0.5),
-                Background = bulletBrush,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-                Margin = new Thickness(0, Math.Clamp(8 * scale, 2, 12), 0, 0)
-            };
-
-            var titleText = new TextBlock
-            {
-                Text = item.Name,
-                FontSize = courseNameSize,
-                FontWeight = ToVariableWeight(Lerp(620, 780, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
-                Foreground = primaryBrush,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                TextWrapping = TextWrapping.NoWrap
-            };
-
-            var timeText = new TextBlock
-            {
-                Text = item.TimeRange,
-                FontSize = secondarySize,
-                FontWeight = ToVariableWeight(Lerp(520, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
-                Foreground = secondaryBrush,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                TextWrapping = TextWrapping.NoWrap
-            };
-
-            var detailText = new TextBlock
-            {
-                Text = item.Detail,
-                FontSize = secondarySize,
-                FontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
-                Foreground = secondaryBrush,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                TextWrapping = TextWrapping.NoWrap
-            };
-
-            var textStack = new StackPanel
-            {
-                Spacing = lineSpacing,
-                Children = { titleText, timeText, detailText }
-            };
-
-            var itemGrid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-                ColumnSpacing = Math.Clamp(10 * scale, 4, 14)
-            };
-            itemGrid.Children.Add(bullet);
-            itemGrid.Children.Add(textStack);
-            Grid.SetColumn(textStack, 1);
-
-            var itemBorder = new Border
-            {
-                Padding = itemPadding,
-                Background = Brushes.Transparent,
-                Child = itemGrid
-            };
-
-            CourseListPanel.Children.Add(itemBorder);
+            CourseListPanel.Children.Add(itemControls);
         }
+    }
+
+    private void IncrementalUpdateItems()
+    {
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme,
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
+        var currentBrush = useMonetColor
+            ? CreateBrush("#FF4FC3F7")
+            : CreateBrush("#FF4D5A");
+        var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
+
+        for (var i = 0; i < _courseItems.Count && i < CourseListPanel.Children.Count; i++)
+        {
+            var item = _courseItems[i];
+            var existingBorder = CourseListPanel.Children[i] as Border;
+            if (existingBorder == null) continue;
+
+            var existingGrid = existingBorder.Child as Grid;
+            if (existingGrid == null || existingGrid.Children.Count < 2) continue;
+
+            var bulletBorder = existingGrid.Children[0] as Border;
+            var textStack = existingGrid.Children[1] as StackPanel;
+            if (bulletBorder == null || textStack == null || textStack.Children.Count < 3) continue;
+
+            var newBulletBrush = item.IsCurrent ? currentBrush : normalBulletBrush;
+            bulletBorder.Background = newBulletBrush;
+
+            var titleText = textStack.Children[0] as TextBlock;
+            var timeText = textStack.Children[1] as TextBlock;
+            var detailText = textStack.Children[2] as TextBlock;
+
+            if (titleText != null && titleText.Text != item.Name)
+            {
+                titleText.Text = item.Name;
+            }
+
+            if (timeText != null && timeText.Text != item.TimeRange)
+            {
+                timeText.Text = item.TimeRange;
+            }
+
+            if (detailText != null && detailText.Text != item.Detail)
+            {
+                detailText.Text = item.Detail;
+            }
+        }
+    }
+
+    private void IncrementalUpdateCurrentCourseHighlight(int currentCourseIndex)
+    {
+        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
+            _componentColorScheme,
+            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
+
+        var currentBrush = useMonetColor
+            ? CreateBrush("#FF4FC3F7")
+            : CreateBrush("#FF4D5A");
+        var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
+
+        for (var i = 0; i < CourseListPanel.Children.Count; i++)
+        {
+            var border = CourseListPanel.Children[i] as Border;
+            if (border == null) continue;
+
+            var grid = border.Child as Grid;
+            if (grid == null || grid.Children.Count < 2) continue;
+
+            var bulletBorder = grid.Children[0] as Border;
+            if (bulletBorder == null) continue;
+
+            bulletBorder.Background = i == currentCourseIndex ? currentBrush : normalBulletBrush;
+        }
+    }
+
+    private Border CreateSingleItemControl(
+        CourseItemViewModel item,
+        double scale,
+        double bulletSize,
+        double courseNameSize,
+        double secondarySize,
+        double lineSpacing,
+        Thickness itemPadding,
+        IBrush primaryBrush,
+        IBrush secondaryBrush,
+        IBrush bulletBrush)
+    {
+        var bullet = new Border
+        {
+            Width = bulletSize,
+            Height = bulletSize,
+            CornerRadius = new CornerRadius(bulletSize * 0.5),
+            Background = bulletBrush,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            Margin = new Thickness(0, Math.Clamp(8 * scale, 2, 12), 0, 0)
+        };
+
+        var titleText = new TextBlock
+        {
+            Text = item.Name,
+            FontSize = courseNameSize,
+            FontWeight = ToVariableWeight(Lerp(620, 780, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            Foreground = primaryBrush,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.NoWrap
+        };
+
+        var timeText = new TextBlock
+        {
+            Text = item.TimeRange,
+            FontSize = secondarySize,
+            FontWeight = ToVariableWeight(Lerp(520, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            Foreground = secondaryBrush,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.NoWrap
+        };
+
+        var detailText = new TextBlock
+        {
+            Text = item.Detail,
+            FontSize = secondarySize,
+            FontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            Foreground = secondaryBrush,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.NoWrap
+        };
+
+        var textStack = new StackPanel
+        {
+            Spacing = lineSpacing,
+            Children = { titleText, timeText, detailText }
+        };
+
+        var itemGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = Math.Clamp(10 * scale, 4, 14)
+        };
+        itemGrid.Children.Add(bullet);
+        itemGrid.Children.Add(textStack);
+        Grid.SetColumn(textStack, 1);
+
+        var itemBorder = new Border
+        {
+            Padding = itemPadding,
+            Background = Brushes.Transparent,
+            Child = itemGrid
+        };
+
+        return itemBorder;
     }
 
     private int ResolveMaxVisibleItems(double scale)
@@ -702,7 +980,7 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var r = ToLinear(color.R / 255d);
         var g = ToLinear(color.G / 255d);
         var b = ToLinear(color.B / 255d);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return 0.2126 * r + 0.7155 * g + 0.0722 * b;
     }
 
     private static FontWeight ToVariableWeight(double value)

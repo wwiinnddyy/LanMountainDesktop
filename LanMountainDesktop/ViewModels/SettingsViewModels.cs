@@ -2328,18 +2328,47 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _isInitializing;
-    private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+    private readonly IStudyAnalyticsService _studyAnalyticsService;
 
-    public StudySettingsPageViewModel(ISettingsFacadeService settingsFacade)
+    // 防抖计时器
+    private System.Timers.Timer? _noiseSettingsDebounceTimer;
+    private System.Timers.Timer? _timerSettingsDebounceTimer;
+    private System.Timers.Timer? _alertSettingsDebounceTimer;
+    private System.Timers.Timer? _displaySettingsDebounceTimer;
+    private bool _hasPendingNoiseSave;
+    private bool _hasPendingTimerSave;
+    private bool _hasPendingAlertSave;
+    private bool _hasPendingDisplaySave;
+
+    public StudySettingsPageViewModel(ISettingsFacadeService settingsFacade, IStudyAnalyticsService? studyAnalyticsService = null)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
+        _studyAnalyticsService = studyAnalyticsService ?? StudyAnalyticsServiceFactory.CreateDefault();
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
+
+        // 初始化防抖计时器
+        InitializeDebounceTimers();
 
         RefreshLocalizedText();
 
         _isInitializing = true;
         LoadSettings();
         _isInitializing = false;
+    }
+
+    private void InitializeDebounceTimers()
+    {
+        _noiseSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+        _noiseSettingsDebounceTimer.Elapsed += async (s, e) => await SaveNoiseSettingsDebounced();
+
+        _timerSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+        _timerSettingsDebounceTimer.Elapsed += async (s, e) => await SaveTimerSettingsDebounced();
+
+        _alertSettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+        _alertSettingsDebounceTimer.Elapsed += async (s, e) => await SaveAlertSettingsDebounced();
+
+        _displaySettingsDebounceTimer = new System.Timers.Timer(500) { AutoReset = false };
+        _displaySettingsDebounceTimer.Elapsed += async (s, e) => await SaveDisplaySettingsDebounced();
     }
 
     #region Properties - Master Switch
@@ -2358,6 +2387,21 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
         if (!_isInitializing)
         {
             SaveMasterSwitch();
+        }
+    }
+
+    private void SaveMasterSwitch()
+    {
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            appSnapshot.StudyEnabled = StudyEnabled;
+            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+                changedKeys: [nameof(AppSettingsSnapshot.StudyEnabled)]);
+        }
+        catch (Exception)
+        {
+            // 静默处理错误，避免影响用户体验
         }
     }
 
@@ -2400,20 +2444,34 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
 
     partial void OnNoiseSensitivityDbfsChanged(double value)
     {
+        // 输入验证：限制在合理范围内
+        if (value < -70 || value > -35)
+        {
+            NoiseSensitivityDbfs = Math.Clamp(value, -70, -35);
+            return;
+        }
+
         UpdateSensitivityText();
         UpdateThresholdText();
         if (!_isInitializing)
         {
-            SaveNoiseSettings();
+            DebounceNoiseSettingsSave();
         }
     }
 
     partial void OnSamplingRateMsChanged(int value)
     {
+        // 输入验证：限制在合理范围内
+        if (value < 20 || value > 200)
+        {
+            SamplingRateMs = Math.Clamp(value, 20, 200);
+            return;
+        }
+
         UpdateSamplingRateText();
         if (!_isInitializing)
         {
-            SaveNoiseSettings();
+            DebounceNoiseSettingsSave();
         }
     }
 
@@ -2425,6 +2483,34 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     private void UpdateSensitivityText()
     {
         NoiseSensitivityValueText = $"{NoiseSensitivityDbfs:F0} dBFS";
+    }
+
+    private void DebounceNoiseSettingsSave()
+    {
+        _hasPendingNoiseSave = true;
+        _noiseSettingsDebounceTimer?.Stop();
+        _noiseSettingsDebounceTimer?.Start();
+    }
+
+    private async Task SaveNoiseSettingsDebounced()
+    {
+        if (!_hasPendingNoiseSave) return;
+        _hasPendingNoiseSave = false;
+
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            appSnapshot.StudyFrameMs = SamplingRateMs;
+            appSnapshot.StudyScoreThresholdDbfs = NoiseSensitivityDbfs;
+            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+                changedKeys: [nameof(AppSettingsSnapshot.StudyFrameMs), nameof(AppSettingsSnapshot.StudyScoreThresholdDbfs)]);
+            UpdateThresholdText();
+            UpdateStudyAnalyticsConfig();
+        }
+        catch (Exception)
+        {
+            // 静默处理错误
+        }
     }
 
     #endregion
@@ -2505,37 +2591,65 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
 
     partial void OnFocusDurationMinutesChanged(int value)
     {
+        // 输入验证
+        if (value < 5 || value > 90)
+        {
+            FocusDurationMinutes = Math.Clamp(value, 5, 90);
+            return;
+        }
+
         UpdateFocusDurationText();
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
     partial void OnBreakDurationMinutesChanged(int value)
     {
+        // 输入验证
+        if (value < 1 || value > 30)
+        {
+            BreakDurationMinutes = Math.Clamp(value, 1, 30);
+            return;
+        }
+
         UpdateBreakDurationText();
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
     partial void OnLongBreakDurationMinutesChanged(int value)
     {
+        // 输入验证
+        if (value < 5 || value > 60)
+        {
+            LongBreakDurationMinutes = Math.Clamp(value, 5, 60);
+            return;
+        }
+
         UpdateLongBreakDurationText();
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
     partial void OnSessionsBeforeLongBreakChanged(int value)
     {
+        // 输入验证
+        if (value < 2 || value > 8)
+        {
+            SessionsBeforeLongBreak = Math.Clamp(value, 2, 8);
+            return;
+        }
+
         UpdateSessionsBeforeLongBreakText();
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
@@ -2543,7 +2657,7 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
@@ -2551,28 +2665,69 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            SaveTimerSettings();
+            DebounceTimerSettingsSave();
         }
     }
 
     private void UpdateFocusDurationText()
     {
-        FocusDurationValueText = $"{FocusDurationMinutes} 分钟";
+        var unit = L("common.unit.minutes", "分钟");
+        FocusDurationValueText = $"{FocusDurationMinutes} {unit}";
     }
 
     private void UpdateBreakDurationText()
     {
-        BreakDurationValueText = $"{BreakDurationMinutes} 分钟";
+        var unit = L("common.unit.minutes", "分钟");
+        BreakDurationValueText = $"{BreakDurationMinutes} {unit}";
     }
 
     private void UpdateLongBreakDurationText()
     {
-        LongBreakDurationValueText = $"{LongBreakDurationMinutes} 分钟";
+        var unit = L("common.unit.minutes", "分钟");
+        LongBreakDurationValueText = $"{LongBreakDurationMinutes} {unit}";
     }
 
     private void UpdateSessionsBeforeLongBreakText()
     {
-        SessionsBeforeLongBreakValueText = $"{SessionsBeforeLongBreak} 次";
+        var unit = L("common.unit.times", "次");
+        SessionsBeforeLongBreakValueText = $"{SessionsBeforeLongBreak} {unit}";
+    }
+
+    private void DebounceTimerSettingsSave()
+    {
+        _hasPendingTimerSave = true;
+        _timerSettingsDebounceTimer?.Stop();
+        _timerSettingsDebounceTimer?.Start();
+    }
+
+    private async Task SaveTimerSettingsDebounced()
+    {
+        if (!_hasPendingTimerSave) return;
+        _hasPendingTimerSave = false;
+
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            appSnapshot.StudyFocusDurationMinutes = FocusDurationMinutes;
+            appSnapshot.StudyBreakDurationMinutes = BreakDurationMinutes;
+            appSnapshot.StudyLongBreakDurationMinutes = LongBreakDurationMinutes;
+            appSnapshot.StudySessionsBeforeLongBreak = SessionsBeforeLongBreak;
+            appSnapshot.StudyAutoStartBreak = AutoStartBreak;
+            appSnapshot.StudyAutoStartFocus = AutoStartFocus;
+            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+                changedKeys: [
+                    nameof(AppSettingsSnapshot.StudyFocusDurationMinutes),
+                    nameof(AppSettingsSnapshot.StudyBreakDurationMinutes),
+                    nameof(AppSettingsSnapshot.StudyLongBreakDurationMinutes),
+                    nameof(AppSettingsSnapshot.StudySessionsBeforeLongBreak),
+                    nameof(AppSettingsSnapshot.StudyAutoStartBreak),
+                    nameof(AppSettingsSnapshot.StudyAutoStartFocus)
+                ]);
+        }
+        catch (Exception)
+        {
+            // 静默处理错误
+        }
     }
 
     #endregion
@@ -2607,15 +2762,49 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            SaveAlertSettings();
+            DebounceAlertSettingsSave();
         }
     }
 
     partial void OnMaxInterruptsPerMinuteChanged(int value)
     {
+        // 输入验证
+        if (value < 3 || value > 20)
+        {
+            MaxInterruptsPerMinute = Math.Clamp(value, 3, 20);
+            return;
+        }
+
         if (!_isInitializing)
         {
-            SaveAlertSettings();
+            DebounceAlertSettingsSave();
+        }
+    }
+
+    private void DebounceAlertSettingsSave()
+    {
+        _hasPendingAlertSave = true;
+        _alertSettingsDebounceTimer?.Stop();
+        _alertSettingsDebounceTimer?.Start();
+    }
+
+    private async Task SaveAlertSettingsDebounced()
+    {
+        if (!_hasPendingAlertSave) return;
+        _hasPendingAlertSave = false;
+
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            appSnapshot.StudyNoiseAlertEnabled = NoiseAlertEnabled;
+            appSnapshot.StudyMaxInterruptsPerMinute = MaxInterruptsPerMinute;
+            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+                changedKeys: [nameof(AppSettingsSnapshot.StudyNoiseAlertEnabled), nameof(AppSettingsSnapshot.StudyMaxInterruptsPerMinute)]);
+            UpdateStudyAnalyticsConfig();
+        }
+        catch (Exception)
+        {
+            // 静默处理错误
         }
     }
 
@@ -2666,25 +2855,39 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
     {
         if (!_isInitializing)
         {
-            SaveDisplaySettings();
+            DebounceDisplaySettingsSave();
         }
     }
 
     partial void OnBaselineDbChanged(double value)
     {
+        // 输入验证
+        if (value < 20 || value > 90)
+        {
+            BaselineDb = Math.Clamp(value, 20, 90);
+            return;
+        }
+
         UpdateBaselineDbText();
         if (!_isInitializing)
         {
-            SaveDisplaySettings();
+            DebounceDisplaySettingsSave();
         }
     }
 
     partial void OnAvgWindowSecChanged(int value)
     {
+        // 输入验证
+        if (value < 1 || value > 8)
+        {
+            AvgWindowSec = Math.Clamp(value, 1, 8);
+            return;
+        }
+
         UpdateAvgWindowSecText();
         if (!_isInitializing)
         {
-            SaveDisplaySettings();
+            DebounceDisplaySettingsSave();
         }
     }
 
@@ -2700,106 +2903,96 @@ public sealed partial class StudySettingsPageViewModel : ViewModelBase
 
     private void UpdateAvgWindowSecText()
     {
-        AvgWindowSecValueText = $"{AvgWindowSec} 秒";
+        var unit = L("common.unit.seconds", "秒");
+        AvgWindowSecValueText = $"{AvgWindowSec} {unit}";
+    }
+
+    private void DebounceDisplaySettingsSave()
+    {
+        _hasPendingDisplaySave = true;
+        _displaySettingsDebounceTimer?.Stop();
+        _displaySettingsDebounceTimer?.Start();
+    }
+
+    private async Task SaveDisplaySettingsDebounced()
+    {
+        if (!_hasPendingDisplaySave) return;
+        _hasPendingDisplaySave = false;
+
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            appSnapshot.StudyShowRealtimeDb = ShowRealtimeDb;
+            appSnapshot.StudyBaselineDb = BaselineDb;
+            appSnapshot.StudyAvgWindowSec = AvgWindowSec;
+            _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
+                changedKeys: [nameof(AppSettingsSnapshot.StudyShowRealtimeDb), nameof(AppSettingsSnapshot.StudyBaselineDb), nameof(AppSettingsSnapshot.StudyAvgWindowSec)]);
+            UpdateStudyAnalyticsConfig();
+        }
+        catch (Exception)
+        {
+            // 静默处理错误
+        }
     }
 
     private void LoadSettings()
     {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        try
+        {
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
 
-        // Master switch
-        StudyEnabled = appSnapshot.StudyEnabled;
+            // Master switch - 确保正确加载保存的值
+            StudyEnabled = appSnapshot.StudyEnabled;
 
-        // Noise settings
-        SamplingRateMs = appSnapshot.StudyFrameMs is > 0 ? appSnapshot.StudyFrameMs.Value : 50;
-        NoiseSensitivityDbfs = appSnapshot.StudyScoreThresholdDbfs ?? -50;
+            // Noise settings
+            SamplingRateMs = appSnapshot.StudyFrameMs is > 0 ? appSnapshot.StudyFrameMs.Value : 50;
+            NoiseSensitivityDbfs = appSnapshot.StudyScoreThresholdDbfs ?? -50;
 
-        // Timer settings
-        FocusDurationMinutes = appSnapshot.StudyFocusDurationMinutes is > 0 ? appSnapshot.StudyFocusDurationMinutes.Value : 25;
-        BreakDurationMinutes = appSnapshot.StudyBreakDurationMinutes is > 0 ? appSnapshot.StudyBreakDurationMinutes.Value : 5;
-        LongBreakDurationMinutes = appSnapshot.StudyLongBreakDurationMinutes is > 0 ? appSnapshot.StudyLongBreakDurationMinutes.Value : 15;
-        SessionsBeforeLongBreak = appSnapshot.StudySessionsBeforeLongBreak is > 0 ? appSnapshot.StudySessionsBeforeLongBreak.Value : 4;
-        AutoStartBreak = appSnapshot.StudyAutoStartBreak ?? false;
-        AutoStartFocus = appSnapshot.StudyAutoStartFocus ?? false;
+            // Timer settings
+            FocusDurationMinutes = appSnapshot.StudyFocusDurationMinutes is > 0 ? appSnapshot.StudyFocusDurationMinutes.Value : 25;
+            BreakDurationMinutes = appSnapshot.StudyBreakDurationMinutes is > 0 ? appSnapshot.StudyBreakDurationMinutes.Value : 5;
+            LongBreakDurationMinutes = appSnapshot.StudyLongBreakDurationMinutes is > 0 ? appSnapshot.StudyLongBreakDurationMinutes.Value : 15;
+            SessionsBeforeLongBreak = appSnapshot.StudySessionsBeforeLongBreak is > 0 ? appSnapshot.StudySessionsBeforeLongBreak.Value : 4;
+            AutoStartBreak = appSnapshot.StudyAutoStartBreak ?? false;
+            AutoStartFocus = appSnapshot.StudyAutoStartFocus ?? false;
 
-        // Alert settings
-        NoiseAlertEnabled = appSnapshot.StudyNoiseAlertEnabled ?? false;
-        MaxInterruptsPerMinute = appSnapshot.StudyMaxInterruptsPerMinute is > 0 ? appSnapshot.StudyMaxInterruptsPerMinute.Value : 6;
+            // Alert settings
+            NoiseAlertEnabled = appSnapshot.StudyNoiseAlertEnabled ?? false;
+            MaxInterruptsPerMinute = appSnapshot.StudyMaxInterruptsPerMinute is > 0 ? appSnapshot.StudyMaxInterruptsPerMinute.Value : 6;
 
-        // Display settings
-        ShowRealtimeDb = appSnapshot.StudyShowRealtimeDb ?? true;
-        BaselineDb = appSnapshot.StudyBaselineDb ?? 45;
-        AvgWindowSec = appSnapshot.StudyAvgWindowSec ?? 1;
+            // Display settings
+            ShowRealtimeDb = appSnapshot.StudyShowRealtimeDb ?? true;
+            BaselineDb = appSnapshot.StudyBaselineDb ?? 45;
+            AvgWindowSec = appSnapshot.StudyAvgWindowSec ?? 1;
 
-        UpdateSamplingRateText();
-        UpdateSensitivityText();
-        UpdateThresholdText();
-        UpdateFocusDurationText();
-        UpdateBreakDurationText();
-        UpdateLongBreakDurationText();
-        UpdateSessionsBeforeLongBreakText();
-        UpdateBaselineDbText();
-        UpdateAvgWindowSecText();
-    }
-
-    private void SaveMasterSwitch()
-    {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.StudyEnabled = StudyEnabled;
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.StudyEnabled)]);
-    }
-
-    private void SaveNoiseSettings()
-    {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.StudyFrameMs = SamplingRateMs;
-        appSnapshot.StudyScoreThresholdDbfs = NoiseSensitivityDbfs;
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.StudyFrameMs), nameof(AppSettingsSnapshot.StudyScoreThresholdDbfs)]);
-        UpdateThresholdText();
-        UpdateStudyAnalyticsConfig();
-    }
-
-    private void SaveTimerSettings()
-    {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.StudyFocusDurationMinutes = FocusDurationMinutes;
-        appSnapshot.StudyBreakDurationMinutes = BreakDurationMinutes;
-        appSnapshot.StudyLongBreakDurationMinutes = LongBreakDurationMinutes;
-        appSnapshot.StudySessionsBeforeLongBreak = SessionsBeforeLongBreak;
-        appSnapshot.StudyAutoStartBreak = AutoStartBreak;
-        appSnapshot.StudyAutoStartFocus = AutoStartFocus;
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
-            changedKeys: [
-                nameof(AppSettingsSnapshot.StudyFocusDurationMinutes),
-                nameof(AppSettingsSnapshot.StudyBreakDurationMinutes),
-                nameof(AppSettingsSnapshot.StudyLongBreakDurationMinutes),
-                nameof(AppSettingsSnapshot.StudySessionsBeforeLongBreak),
-                nameof(AppSettingsSnapshot.StudyAutoStartBreak),
-                nameof(AppSettingsSnapshot.StudyAutoStartFocus)
-            ]);
-    }
-
-    private void SaveAlertSettings()
-    {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.StudyNoiseAlertEnabled = NoiseAlertEnabled;
-        appSnapshot.StudyMaxInterruptsPerMinute = MaxInterruptsPerMinute;
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.StudyNoiseAlertEnabled), nameof(AppSettingsSnapshot.StudyMaxInterruptsPerMinute)]);
-        UpdateStudyAnalyticsConfig();
-    }
-
-    private void SaveDisplaySettings()
-    {
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.StudyShowRealtimeDb = ShowRealtimeDb;
-        appSnapshot.StudyBaselineDb = BaselineDb;
-        appSnapshot.StudyAvgWindowSec = AvgWindowSec;
-        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, appSnapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.StudyShowRealtimeDb), nameof(AppSettingsSnapshot.StudyBaselineDb), nameof(AppSettingsSnapshot.StudyAvgWindowSec)]);
-        UpdateStudyAnalyticsConfig();
+            UpdateSamplingRateText();
+            UpdateSensitivityText();
+            UpdateThresholdText();
+            UpdateFocusDurationText();
+            UpdateBreakDurationText();
+            UpdateLongBreakDurationText();
+            UpdateSessionsBeforeLongBreakText();
+            UpdateBaselineDbText();
+            UpdateAvgWindowSecText();
+        }
+        catch (Exception)
+        {
+            // 加载失败时使用默认值
+            StudyEnabled = true;
+            SamplingRateMs = 50;
+            NoiseSensitivityDbfs = -50;
+            FocusDurationMinutes = 25;
+            BreakDurationMinutes = 5;
+            LongBreakDurationMinutes = 15;
+            SessionsBeforeLongBreak = 4;
+            AutoStartBreak = false;
+            AutoStartFocus = false;
+            NoiseAlertEnabled = false;
+            MaxInterruptsPerMinute = 6;
+            ShowRealtimeDb = true;
+            BaselineDb = 45;
+            AvgWindowSec = 1;
+        }
     }
 
     private void UpdateStudyAnalyticsConfig()

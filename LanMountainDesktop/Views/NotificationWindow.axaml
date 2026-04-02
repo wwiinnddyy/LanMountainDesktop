@@ -1,0 +1,96 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LanMountainDesktop.ViewModels"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:controls="using:LanMountainDesktop.Controls"
+        x:Class="LanMountainDesktop.Views.NotificationWindow"
+        x:DataType="vm:NotificationViewModel"
+        SystemDecorations="None"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Window.Styles>
+        <Style Selector="Border.notification-card">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,12" />
+        </Style>
+
+        <Style Selector="TextBlock.notification-title">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style Selector="TextBlock.notification-message">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Regular" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="MaxWidth" Value="260" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+
+        <Style Selector="Border.notification-severity-indicator">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Margin" Value="0,4,12,4" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </Window.Styles>
+
+    <Border Margin="12"
+            Classes="notification-card"
+            x:Name="CardBorder"
+            PointerPressed="OnCardPointerPressed"
+            PointerEntered="OnCardPointerEntered"
+            PointerExited="OnCardPointerExited"
+            Cursor="Hand">
+        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="0">
+            <Border Grid.Column="0"
+                    Classes="notification-severity-indicator"
+                    x:Name="SeverityIndicator"
+                    Background="#FF3B82F6" />
+
+            <Border Grid.Column="1"
+                    Width="40"
+                    Height="40"
+                    VerticalAlignment="Center"
+                    x:Name="IconContainer">
+                <Panel>
+                    <Image x:Name="IconImage"
+                           Stretch="Uniform"
+                           Source="{Binding Icon}"
+                           IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <fi:SymbolIcon x:Name="DefaultIcon"
+                                   FontSize="28"
+                                   Symbol="Info"
+                                   IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                </Panel>
+            </Border>
+
+            <StackPanel Grid.Column="2"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                <TextBlock Text="{Binding Title}"
+                           Classes="notification-title" />
+                <TextBlock Text="{Binding Message}"
+                           Classes="notification-message"
+                           IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
+

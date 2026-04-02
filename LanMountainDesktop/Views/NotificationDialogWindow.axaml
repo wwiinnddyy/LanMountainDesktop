@@ -1,0 +1,74 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:vm="using:LanMountainDesktop.Views"
+        x:Class="LanMountainDesktop.Views.NotificationDialogWindow"
+        x:DataType="vm:NotificationDialogViewModel"
+        SystemDecorations="None"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Border x:Name="DialogCard"
+            Background="#E8EAED"
+            CornerRadius="28"
+            Padding="24,20"
+            MinWidth="320"
+            MaxWidth="480">
+        <StackPanel Spacing="16">
+            <!-- Header with icon and title -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Border Grid.Column="0"
+                        Width="40"
+                        Height="40"
+                        CornerRadius="20"
+                        Background="{Binding SeverityBackground}"
+                        VerticalAlignment="Center">
+                    <fi:SymbolIcon Symbol="{Binding SeverityIcon}"
+                                   FontSize="20"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Grid.Column="1"
+                          Text="{Binding Title}"
+                          FontSize="18"
+                          FontWeight="SemiBold"
+                          TextWrapping="Wrap"
+                          VerticalAlignment="Center"
+                          Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            </Grid>
+
+            <!-- Message content -->
+            <TextBlock Text="{Binding Message}"
+                      FontSize="14"
+                      TextWrapping="Wrap"
+                      Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                      IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- Action buttons -->
+            <StackPanel Orientation="Horizontal"
+                       Spacing="8"
+                       HorizontalAlignment="Right"
+                       IsVisible="{Binding HasButtons}">
+                <Button Content="{Binding SecondaryButtonText}"
+                       Command="{Binding SecondaryCommand}"
+                       CornerRadius="20"
+                       Padding="20,10"
+                       IsVisible="{Binding SecondaryButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <Button Content="{Binding PrimaryButtonText}"
+                       Command="{Binding PrimaryCommand}"
+                       Classes="accent"
+                       CornerRadius="20"
+                       Padding="20,10"
+                       IsVisible="{Binding PrimaryButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

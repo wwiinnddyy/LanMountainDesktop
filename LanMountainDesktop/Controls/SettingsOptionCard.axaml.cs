@@ -107,6 +107,8 @@ public partial class SettingsOptionCard : UserControl
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
+            "Alert" => Symbol.Alert,
+            "Bell" => Symbol.Alert,  // Bell也映射到Alert图标
             _ => Symbol.Settings
         };
     }

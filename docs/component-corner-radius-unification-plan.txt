@@ -1,0 +1,304 @@
+LanMountainDesktop 组件圆角统一方案
+
+一、我对项目的理解
+- 这是一个基于 .NET 10 + Avalonia UI 的跨平台桌面宿主项目。
+- 核心形态是“组件化桌面信息看板”：组件可放置到桌面，可编辑、可缩放，既支持自由缩放，也支持等比例缩放。
+- 当前圆角体系本身并不是空白：项目已经有统一 token 和全局圆角倍率。
+  - 圆角 token 生成：LanMountainDesktop.Appearance/AppearanceCornerRadiusTokenFactory.cs
+  - 动态注入资源：LanMountainDesktop/Services/AppearanceThemeService.cs
+  - 基础 token 资源：LanMountainDesktop/Styles/GlassModule.axaml
+  - 宿主组件圆角助手：LanMountainDesktop/Views/Components/ComponentChromeCornerRadiusHelper.cs
+  - 插件圆角上下文：LanMountainDesktop.PluginSdk/PluginAppearanceContext.cs
+
+二、为什么现在“设置里同样是 1.0，但每个组件看起来不一样”
+根因不是一个，而是几层逻辑叠加造成的。
+
+1. 内置组件和插件组件默认算法不同
+- 内置组件宿主默认走 Component token：18 * GlobalCornerRadiusScale。
+  - 入口：LanMountainDesktop/Views/Components/DesktopComponentRuntimeRegistry.cs
+  - 默认 resolver：ComponentChromeCornerRadiusHelper.ResolveMainRectangleRadiusValue(...)
+- 插件组件默认走基于 cellSize 的动态算法：
+  - LanMountainDesktop.PluginSdk/PluginDesktopComponentRegistration.cs
+  - 当前默认逻辑约等于：Math.Clamp(cellSize * 0.22, 8, 18) * scale
+- 这意味着：同样设置为 1.0，内置组件趋向固定圆角，插件组件趋向“随格子大小变化”。
+- 结果：用户感知到“同样设置值，但不同组件圆角不一样”。
+
+2. 可见外壳并没有真正统一由宿主接管
+- MainWindow.ComponentSystem.cs 里宿主会给 host/contentHost 设置圆角。
+- 但大量组件内部还有自己的 RootBorder / CardBorder / 内层卡片，并且也各自设置圆角。
+- 一旦“宿主外壳 + 组件根层 + 组件内部卡片”同时存在，用户最终看到的是最内层那个可见边界，而不一定是宿主设的边界。
+- 典型现象：
+  - 某些组件外层 Border 是透明的，真正可见的是里面第二层 CardBorder。
+  - 某些组件直接在代码里写死 new CornerRadius(...)。
+
+3. 组件内部仍有硬编码圆角
+- 例如：
+  - DailyNewsView.axaml.cs 有 new CornerRadius(4)
+  - CnrDailyNewsWidget.axaml 有 CornerRadius="21"
+  - DesktopComponentFailureView.cs 有 12 / 18 / 999 等固定值
+- 这些值本身不一定错，但如果它们承担的是“组件主外轮廓”，就会破坏统一性。
+
+4. 等比例缩放组件大量使用 Viewbox，视觉边界和内容边界不是一回事
+- 例如 LunarCalendarWidget.axaml、DateWidget.axaml、MonthCalendarWidget.axaml、AnalogClockWidget.axaml 等都使用 Viewbox Stretch="Uniform"。
+- 这类组件通常是：外层 Border 固定圆角，内部设计稿按 300x300 或类似基准缩放。
+- 如果另一些组件是自由布局、自由撑开、非 Viewbox 驱动，那么即便外层半径数值相同，视觉上也会显得不一样。
+- 原因是：内容密度、留白、边缘贴合程度不同，会显著影响人眼对圆角大小的判断。
+
+5. 宿主的 visualInset 也在影响观感
+- MainWindow.ComponentSystem.cs 里的 GetDesktopComponentVisualInset(...) 会根据组件宽高格子数改变内缩量。
+- 宿主目前是“命中范围/编辑范围一套，实际可见内容再缩进去一层”。
+- 当不同尺寸组件有不同 inset，而组件自己又有独立圆角时，视觉上就更容易出现“同 18 看起来不像同 18”的问题。
+
+三、统一方案的核心原则
+原则只有一句：
+“组件主外轮廓的圆角，只能有一个最终权威来源。”
+
+建议把圆角分成三层：
+1. 组件外壳圆角（主轮廓）
+2. 组件内部区域圆角（二级卡片）
+3. 微元素圆角（按钮、标签、图片卡片、chip）
+
+其中，只有第 1 层决定“这个组件作为桌面卡片整体看起来有多圆”。
+
+四、推荐的统一规则
+
+A. 统一“组件主外壳圆角”
+推荐规则：
+- 所有桌面组件，不区分内置/插件，不区分自由缩放/等比缩放，默认主外壳统一使用：
+  OuterRadius = CornerRadiusTokens.Component
+- 也就是当前 token 体系里的 Component 档。
+- 在 1.0 设置下，就是 18。
+- 这个值只受全局圆角倍率影响，不再受 cellSize 直接影响。
+
+推荐最终规则：
+- 标准情况：
+  OuterRadius = tokens.Component
+- 极小组件兜底（仅防止尺寸过小导致圆角挤爆）:
+  OuterRadius = Min(tokens.Component, Min(actualWidth, actualHeight) * 0.18)
+- 但这个“极小兜底”只在组件物理尺寸不够时触发；正常组件应保持完全一致。
+
+这条规则的意义：
+- 用户调到 1.0，所有组件都会首先落在同一个视觉档位。
+- 只有非常小的组件才会被动缩小圆角，避免失真。
+- 这样既统一，又不会在边缘尺寸下破版。
+
+B. 插件默认算法必须改成和宿主一致
+当前插件默认算法是按 cellSize 算的，这是造成不一致的最直接原因之一。
+
+建议修改：
+- 把 PluginDesktopComponentRegistration.cs 里的默认逻辑，从：
+  appearance.ResolveScaledCornerRadius(Math.Clamp(cellSize * 0.22, 8, 18), 8, 18)
+- 改为：
+  appearance.ResolveCornerRadius(PluginCornerRadiusPreset.Component)
+
+含义：
+- 插件如果没有特别声明，就跟内置组件一样，默认使用 Component 档主外壳圆角。
+- 只有插件作者明确声明特殊需求时，才允许自定义 resolver。
+
+C. 宿主要成为“唯一外壳提供者”
+这是最重要的一条。
+
+建议新增统一壳层，例如：
+- DesktopComponentShell
+或
+- DesktopComponentChrome
+
+职责：
+- 负责组件真正可见的最外层背景、边框、裁剪、主圆角
+- 负责统一 padding / glass / border / shadow
+- 负责选中态、拖拽态、编辑态的视觉装饰
+- 组件内容只负责“内容”，不再负责“卡片主轮廓”
+
+理想结构：
+- Host Border / Shell = 真正的可见外轮廓
+- Component Root = 尽量透明，不再自己承担主卡片圆角
+- Inner Sections = 使用 Sm / Xs / Micro 等 token
+
+也就是说：
+- 主外轮廓只在壳层定义一次
+- 组件内部不再重复定义一个同等级 RootBorder 当作主卡片
+
+D. 统一内部层级，不要所有层都用 Component
+建议把当前 token 真正分层使用：
+- Component：桌面组件主外壳
+- Sm：内部小卡片、图片区、内容区块
+- Xs：按钮、输入框、chip、小容器
+- Micro：极小 badge / 标签
+- Island / Xl / Lg：只给岛状栏位、大面板、设置窗口，不用于普通桌面组件
+
+落地约束：
+- 桌面组件主根层禁止再写 DesignCornerRadiusLg / Xl / Island
+- 组件主根层禁止使用硬编码 21 / 16 / 24 / 30 之类值
+- 子卡片允许用 Sm / Xs，但不能与主壳争夺“主轮廓”角色
+
+E. 等比例缩放与自由缩放分别处理，但外圆角规则相同
+1）等比例缩放组件（Viewbox）
+- 外壳圆角固定由宿主提供，不参与 Viewbox 缩放。
+- Viewbox 只缩放内部设计稿。
+- 外壳与内部设计稿之间保留统一“安全留白”。
+
+建议：
+- SafeInset = Max(8, OuterRadius * 0.45)
+- 对所有 Viewbox 类组件，外层容器 padding 使用统一公式，而不是每个组件自己猜。
+
+2）自由缩放组件
+- 外壳圆角仍固定由宿主提供。
+- 自由缩放只影响内容布局、字号、图表密度、行数和间距，不影响主外壳半径。
+- 内容内部若要变化，优先变化：padding、gap、字号、图标尺寸，而不是外圆角。
+
+这样做的结果：
+- 缩放方式不同，但最外层的“卡片家族感”一致。
+- 用户调的是“整体风格圆角”，不是“每个组件自己的数学公式”。
+
+F. 把 visualInset 从“影响圆角观感”变成“只影响编辑/命中逻辑”
+当前 GetDesktopComponentVisualInset(...) 会让不同大小组件看起来边界不同。
+
+建议二选一：
+1. 更推荐：
+- 让宿主 shell 成为真实可见边界
+- visualInset 只服务拖拽/选中/吸附逻辑，不再改变真实可见主卡片的边界层次
+
+2. 如果暂时不重构：
+- 把 visualInset 改成固定档位，而不是随 widthCells / heightCells 持续变化
+- 例如统一为 6 或 8 的 token 化 inset
+
+目标：
+- 组件整体轮廓不要再因为跨度不同而“看起来圆角不同”
+
+五、具体改造建议（按代码位置）
+
+1. 插件默认圆角统一
+文件：LanMountainDesktop.PluginSdk/PluginDesktopComponentRegistration.cs
+建议：
+- 默认从“基于 cellSize 动态计算”改成“直接取 Component preset”。
+
+2. 宿主外壳统一
+文件：LanMountainDesktop/Views/MainWindow.ComponentSystem.cs
+重点方法：
+- CreateDesktopComponentHost(...)
+- GetComponentCornerRadius(...)
+- GetDesktopComponentVisualInset(...)
+
+建议：
+- 让 contentHost 或新建 shell 成为真实可见主边界
+- 背景、边框、裁剪、圆角统一放在 shell
+- host 仅保留命中、拖拽、选中装饰
+- visualInset 不再影响真实主卡片外观，最多影响编辑态附加层
+
+3. 统一运行时默认 resolver
+文件：LanMountainDesktop/Views/Components/DesktopComponentRuntimeRegistry.cs
+建议：
+- 保留 DefaultCornerRadiusResolver 走 Component token
+- 新增统一 chrome metrics 输出，供组件内部使用：
+  - OuterRadius
+  - InnerRadiusSm
+  - InnerRadiusXs
+  - SafeInset
+  - GlobalCornerRadiusScale
+
+4. 扩展 chrome 上下文
+文件：
+- LanMountainDesktop.Host.Abstractions/ComponentChromeContext.cs
+- LanMountainDesktop/Services/IComponentLibraryService.cs
+- LanMountainDesktop.PluginSdk/PluginAppearanceSnapshot.cs（如需要）
+
+建议新增字段：
+- ResolvedOuterCornerRadius
+- SafeInset
+- ChromePadding
+- VisualDensity 或 SizeClass（可选）
+
+目的：
+- 组件不要自己猜“我应该用多少主圆角”
+- 它只消费宿主已算好的结果
+
+5. 清理组件内部主轮廓重复定义
+重点检查目录：
+- LanMountainDesktop/Views/Components/
+
+优先整改对象：
+- CnrDailyNewsWidget.axaml（RootBorder + CardBorder 双层主轮廓）
+- BrowserWidget.axaml.cs（内部多层主卡片都取主圆角）
+- DailyNewsView.axaml / .cs（有硬编码子元素圆角）
+- DesktopComponentFailureView.cs（硬编码 12 / 18 / 999）
+- 使用 Viewbox 的日期、月历、农历、计时器、录音等组件
+
+整改原则：
+- 组件根层如果已经处于宿主 shell 内，应尽量透明化
+- 只保留内部结构性圆角，不再重复承担主卡片角色
+
+六、我建议采用的“统一视觉规范”
+
+1. 桌面组件主外壳
+- 统一：Component = 18 * scale
+- 默认 1.0 时全部按 18 展示
+- 仅极小尺寸时做 min(actualShortSide * 0.18) 兜底
+
+2. 内部板块
+- 统一：Sm = 14 * scale
+- 用于图片区、内嵌卡片、列表块、概览块
+
+3. 交互控件
+- 统一：Xs = 12 * scale
+- 用于普通按钮、输入框、小标签
+
+4. 胶囊按钮 / 圆按钮
+- 不走主卡片规则
+- 仍允许 half-height（例如 32 高就 16 半径）
+- 这是合法特例，因为它们不是“桌面组件主外轮廓”
+
+5. 大面板 / 岛 / 设置窗口
+- 保持 Lg / Xl / Island
+- 不要向桌面普通组件借用这些档位
+
+七、建议的落地步骤
+
+第一阶段：统一规则，不大改组件
+- 修改插件默认圆角算法，使插件先与内置组件对齐
+- 明确“主外壳 = Component token”这个规范
+- 先把所有失败态、默认态、插件兜底视图改成统一档位
+- 清理明显硬编码的主轮廓圆角
+
+第二阶段：建立统一 shell
+- 抽出 DesktopComponentShell / DesktopComponentChrome
+- 宿主统一负责外壳、背景、裁剪、边框、选中态
+- 组件内部改成内容优先，外轮廓透明化
+
+第三阶段：分批迁移内置组件
+推荐顺序：
+- 新闻资讯类
+- 日期/日历/时钟类
+- 天气类
+- 浏览器/复杂卡片类
+- 失败态/占位态/插件样例
+
+第四阶段：插件规范升级
+- 在 SDK 文档里新增说明：
+  - 插件主外壳不要自行写死圆角
+  - 默认使用宿主 Component preset
+  - 若必须特殊化，说明理由并走显式 CornerRadiusResolver
+
+八、验收标准
+
+改完之后，至少要满足这 5 条：
+1. 设置里圆角倍率调成 1.0 时，所有组件主外轮廓处于同一视觉档位。
+2. 内置组件与插件组件默认情况下看起来是一套语言。
+3. 等比例缩放与自由缩放组件虽然内容布局不同，但卡片外壳风格一致。
+4. 组件内部还可以有小圆角层级，但不会再和主外壳打架。
+5. 用户只需要理解“全局圆角倍率”，不需要理解不同组件背后的不同公式。
+
+九、我对你这个项目最推荐的最终结论
+最推荐的方案不是“继续微调每个组件自己的圆角公式”，而是：
+
+- 用宿主统一接管组件主外壳
+- 插件默认改成和宿主同一算法
+- 把圆角分成 主外壳 / 内部区块 / 微元素 三层
+- 让缩放影响内容，不再影响主外壳圆角
+
+一句话总结：
+“统一的不是每个 Border 的数字，而是组件最外层轮廓的控制权。”
+
+十、如果你要我继续往下做，最值得优先做的 3 件事
+1. 我先帮你列一份“当前所有组件圆角不统一点位清单（按文件逐个标出来）”
+2. 我再给你出一版“可直接改代码的重构方案”，包括新增 DesktopComponentShell 的接口设计
+3. 如果你愿意，我可以直接开始改第一批基础代码，把内置组件和插件默认圆角先统一起来
