@@ -3247,6 +3247,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         var (owner, repo, path) = source switch
         {
             ZhiJiaoHubSources.Sectl => ("SECTL", "SECTL-hub", "docs/.vuepress/public/images"),
+            ZhiJiaoHubSources.RinLit => ("RinLit-233-shiroko", "Rin-sHub", "images"),
             _ => ("ClassIsland", "classisland-hub", "images")
         };
 

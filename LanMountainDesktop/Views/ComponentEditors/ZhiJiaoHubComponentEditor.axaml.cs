@@ -29,10 +29,11 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         SourceLabelTextBlock.Text = L("zhijiaohub.settings.source", "图片源");
         ClassIslandItem.Content = L("zhijiaohub.settings.classisland", "ClassIsland 图库");
         SectlItem.Content = L("zhijiaohub.settings.sectl", "SECTL 图库");
+        RinLitItem.Content = L("zhijiaohub.settings.rinlit", "Rin's 图库");
 
         // 数据源描述
         SourceDescriptionTextBlock.Text = L("zhijiaohub.settings.source_desc",
-            "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容。");
+            "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容，Rin's 图库包含 Rin's 社区的内容。");
 
         // 镜像加速源
         MirrorSourceLabelTextBlock.Text = L("zhijiaohub.settings.mirror_source", "镜像加速");
@@ -65,6 +66,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         SourceComboBox.SelectedItem = source switch
         {
             ZhiJiaoHubSources.Sectl => SectlItem,
+            ZhiJiaoHubSources.RinLit => RinLitItem,
             _ => ClassIslandItem
         };
 

@@ -1,41 +1,57 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:LanMountainDesktop.Views"
+        xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryWindow"
-        Width="420" Height="560"
-        MinWidth="380" MinHeight="400"
+        Width="860" Height="620"
+        MinWidth="600" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        CanResize="True"
-        Title="融合桌面组件">
-    <Grid RowDefinitions="Auto,*">
-        <!-- 标题栏 -->
-        <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                BorderThickness="0,0,0,1"
-                Padding="16,12">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
-                    <TextBlock Text="融合桌面设置"
-                               FontWeight="SemiBold"
-                               FontSize="18" />
-                    <TextBlock Text="选择组件添加到系统桌面（负一屏）"
-                               Opacity="0.7"
-                               FontSize="12"
-                               Margin="0,4,0,0" />
-                </StackPanel>
-                <Button Grid.Column="1"
-                        VerticalAlignment="Center"
-                        CornerRadius="20"
-                        Padding="8"
-                        Click="OnCloseClick">
-                    <TextBlock Text="✕"
-                               FontSize="16" />
-                </Button>
-            </Grid>
-        </Border>
+        SystemDecorations="Full"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Background="Transparent"
+        TransparencyLevelHint="Mica"
+        Title="融合桌面组件库">
+    
+    <Panel>
+        <!-- 背景磨砂效果 -->
+        <Border Background="{DynamicResource AdaptiveSurfaceLowBrush}"
+                Opacity="0.85" />
         
-        <!-- 组件库控件 -->
-        <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
-                                                      Grid.Row="1" />
-    </Grid>
+        <Grid RowDefinitions="Auto,*">
+            <!-- 自定义标题栏 -->
+            <Border Background="Transparent"
+                    IsHitTestVisible="True"
+                    Padding="20,16">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="6" VerticalAlignment="Center">
+                        <TextBlock Text="融合桌面组件库"
+                                   FontWeight="SemiBold"
+                                   FontSize="20"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                        <TextBlock Text="将精美组件放置在您的系统桌面上（负一屏）"
+                                   Opacity="0.6"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
+                    </StackPanel>
+                    
+                    <Button Grid.Column="1"
+                            Classes="accent"
+                            Width="36" Height="36"
+                            Padding="0"
+                            CornerRadius="18"
+                            BorderThickness="0"
+                            Background="{DynamicResource AdaptiveButtonHoverBackgroundBrush}"
+                            Click="OnCloseClick">
+                        <fi:SymbolIcon Symbol="Dismiss" FontSize="18" />
+                    </Button>
+                </Grid>
+            </Border>
+            
+            <!-- 组件库控件 -->
+            <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
+                                                          Grid.Row="1" />
+        </Grid>
+    </Panel>
 </Window>

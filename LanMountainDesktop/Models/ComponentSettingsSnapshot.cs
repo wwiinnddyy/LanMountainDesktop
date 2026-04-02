@@ -124,12 +124,14 @@ public static class ZhiJiaoHubSources
 {
     public const string ClassIsland = "classisland";
     public const string Sectl = "sectl";
+    public const string RinLit = "rinlit";
 
     public static string Normalize(string? value)
     {
         return value?.ToLowerInvariant() switch
         {
             "sectl" => Sectl,
+            "rinlit" => RinLit,
             _ => ClassIsland
         };
     }

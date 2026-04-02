@@ -100,6 +100,9 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     private static readonly Dictionary<IntPtr, bool> _bottomMostWindows = new();
     private static readonly Dictionary<IntPtr, IntPtr> _originalWndProcs = new();
     private static readonly Dictionary<IntPtr, List<Rect>> _interactiveRegions = new();
+    
+    // 记录每个窗口的屏幕原点（窗口左上角的屏幕坐标），用于将 WM_NCHITTEST 屏幕坐标转成窗口相对坐标
+    private static readonly Dictionary<IntPtr, Point> _windowScreenOrigins = new();
     private static readonly object _staticLock = new();
     
     public bool IsBottomMostSupported => true;
@@ -121,11 +124,12 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
             // 设置为桌面子窗口
             SetAsDesktopChild(handle);
             
-            // 注册置底状态
+            // 注册置底状态 & 记录窗口屏幕原点
             lock (_staticLock)
             {
                 _bottomMostWindows[handle] = true;
                 _interactiveRegions[handle] = [];
+                UpdateWindowScreenOrigin(handle);
             }
             
             // 注入消息钩子
@@ -147,6 +151,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
                     _bottomMostWindows.Remove(handle);
                     _originalWndProcs.Remove(handle);
                     _interactiveRegions.Remove(handle);
+                    _windowScreenOrigins.Remove(handle);
                 }
             }
         };
@@ -220,15 +225,20 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         // 处理 WM_NCHITTEST - 区域级穿透
         if (msg == WM_NCHITTEST)
         {
-            // 从 lParam 解析坐标（低字为 X，高字为 Y）
-            var x = (short)(wParam.ToInt32() & 0xFFFF);
-            var y = (short)((wParam.ToInt32() >> 16) & 0xFFFF);
-            var point = new Point(x, y);
+            // WM_NCHITTEST 的鼠标坐标在 lParam（低16位=X，高16位=Y），且为屏幕坐标
+            var screenX = (short)(lParam.ToInt64() & 0xFFFF);
+            var screenY = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
             
             lock (_staticLock)
             {
-                if (_interactiveRegions.TryGetValue(hWnd, out var regions))
+                if (_interactiveRegions.TryGetValue(hWnd, out var regions) && regions.Count > 0)
                 {
+                    // 将屏幕坐标转为窗口相对坐标（_interactiveRegions 存的是窗口内坐标）
+                    _windowScreenOrigins.TryGetValue(hWnd, out var origin);
+                    var clientX = screenX - origin.X;
+                    var clientY = screenY - origin.Y;
+                    var point = new Point(clientX, clientY);
+                    
                     foreach (var region in regions)
                     {
                         if (region.Contains(point))
@@ -265,8 +275,27 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         lock (_staticLock)
         {
             _interactiveRegions[handle] = regions;
+            // 同步刷新屏幕原点（DPI 缩放可能影响坐标，每次更新区域时一并刷新）
+            UpdateWindowScreenOrigin(handle);
         }
     }
+    
+    /// <summary>
+    /// 更新指定窗口的屏幕左上角坐标缓存（用于将 WM_NCHITTEST 屏幕坐标转为窗口相对坐标）
+    /// </summary>
+    private static void UpdateWindowScreenOrigin(IntPtr handle)
+    {
+        if (GetWindowRect(handle, out var rect))
+        {
+            _windowScreenOrigins[handle] = new Point(rect.Left, rect.Top);
+        }
+    }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+    
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     

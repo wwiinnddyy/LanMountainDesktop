@@ -1,7 +1,9 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views;
 
@@ -13,7 +15,11 @@ namespace LanMountainDesktop.Views;
 public partial class FusedDesktopComponentLibraryWindow : Window
 {
     private readonly IFusedDesktopLayoutService _layoutService = FusedDesktopLayoutServiceProvider.GetOrCreate();
+    private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
     private TransparentOverlayWindow? _overlayWindow;
+    
+    // 与 TransparentOverlayWindow 保持一致的默认 cellSize
+    private const double DefaultCellSize = 100;
     
     public FusedDesktopComponentLibraryWindow()
     {
@@ -31,7 +37,7 @@ public partial class FusedDesktopComponentLibraryWindow : Window
     }
     
     /// <summary>
-    /// 添加组件请求处理
+    /// 添加组件请求处理 - 将组件放置在屏幕（覆盖层画布）中央
     /// </summary>
     private void OnAddComponentRequested(object? sender, string componentId)
     {
@@ -41,17 +47,50 @@ public partial class FusedDesktopComponentLibraryWindow : Window
             return;
         }
         
-        // 在屏幕中央添加组件
-        var screenBounds = _overlayWindow.Bounds;
-        var x = screenBounds.Width / 2 - 100; // 居中
-        var y = screenBounds.Height / 2 - 100;
+        // 计算组件的像素尺寸
+        var (componentWidth, componentHeight) = ResolveComponentSize(componentId);
         
-        _overlayWindow.AddComponent(componentId, x, y, 200, 200);
+        // 取覆盖层画布的中心点，减去组件半尺寸，使组件出现在屏幕正中央
+        var overlayBounds = _overlayWindow.Bounds;
+        var centerX = overlayBounds.Width / 2.0 - componentWidth / 2.0;
+        var centerY = overlayBounds.Height / 2.0 - componentHeight / 2.0;
         
-        AppLogger.Info("FusedDesktopLibrary", $"Added component {componentId} to fused desktop.");
+        // 边界保护：确保组件不超出屏幕边界
+        centerX = Math.Max(0, Math.Min(centerX, overlayBounds.Width - componentWidth));
+        centerY = Math.Max(0, Math.Min(centerY, overlayBounds.Height - componentHeight));
+        
+        _overlayWindow.AddComponent(componentId, centerX, centerY, componentWidth, componentHeight);
+        
+        AppLogger.Info("FusedDesktopLibrary",
+            $"Added component '{componentId}' at center ({centerX:F0}, {centerY:F0}) size ({componentWidth}x{componentHeight}).");
         
         // 关闭窗口
         Close();
+    }
+    
+    /// <summary>
+    /// 解析组件的默认像素尺寸（基于组件定义的 MinCells * DefaultCellSize）
+    /// </summary>
+    private (double Width, double Height) ResolveComponentSize(string componentId)
+    {
+        try
+        {
+            var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+            var registry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
+            if (registry.TryGetDefinition(componentId, out var definition))
+            {
+                var w = Math.Max(1, definition.MinWidthCells) * DefaultCellSize;
+                var h = Math.Max(1, definition.MinHeightCells) * DefaultCellSize;
+                return (w, h);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktopLibrary", $"Failed to resolve component size for '{componentId}'.", ex);
+        }
+        
+        // 回退为 2×2 格子的默认尺寸
+        return (DefaultCellSize * 2, DefaultCellSize * 2);
     }
     
     private void OnCloseClick(object? sender, RoutedEventArgs e)

@@ -227,7 +227,7 @@ public partial class App : Application
             return;
         }
         
-        // 确保透明覆盖层窗口存在
+        // 确保透明覆盖层窗口存在并显示
         EnsureTransparentOverlayWindow();
         
         // 打开融合桌面组件库窗口
@@ -235,6 +235,12 @@ public partial class App : Application
         {
             try
             {
+                // 确保覆盖层窗口已显示（组件要渲染在上面，必须先 Show）
+                if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
+                {
+                    _transparentOverlayWindow.Show();
+                }
+                
                 var window = new FusedDesktopComponentLibraryWindow();
                 
                 if (_transparentOverlayWindow is not null)

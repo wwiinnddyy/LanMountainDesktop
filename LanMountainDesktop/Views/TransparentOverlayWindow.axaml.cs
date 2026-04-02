@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -10,6 +11,8 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.ComponentSystem;
+using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
@@ -41,6 +44,17 @@ public partial class TransparentOverlayWindow : Window
     private readonly Dictionary<string, Border> _componentHosts = [];
     private readonly List<Rect> _interactiveRegions = [];
     private FusedDesktopLayoutSnapshot _layout = new();
+    private ComponentRegistry? _componentRegistry;
+    private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
+    
+    // 基础服务
+    private readonly IWeatherInfoService _weatherDataService;
+    private readonly TimeZoneService _timeZoneService;
+    private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
+    private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
+    
+    // 渲染参数
+    private const double DefaultCellSize = 100;
     
     // 拖拽状态
     private bool _isDragging;
@@ -53,6 +67,8 @@ public partial class TransparentOverlayWindow : Window
     public TransparentOverlayWindow()
     {
         InitializeComponent();
+        _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
+        _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
         
         // 仅在 Windows 上启用置底功能
         if (OperatingSystem.IsWindows())
@@ -70,12 +86,54 @@ public partial class TransparentOverlayWindow : Window
             _bottomMostService.SendToBottom(this);
         }
         
-        // 加载布局
+        // 确保注册表已初始化
+        EnsureRegistries();
+        
+        // 加载布局并渲染
         _layout = _layoutService.Load();
+        RenderAllComponents();
         
-        // TODO: 渲染组件（需要从 MainWindow 获取组件注册表）
+        AppLogger.Info("TransparentOverlay", $"Opened with {_layout.ComponentPlacements.Count} components.");
+    }
+    
+    /// <summary>
+    /// 确保组件运行时注册表已初始化
+    /// </summary>
+    private void EnsureRegistries()
+    {
+        if (_componentRuntimeRegistry is not null) return;
         
-        AppLogger.Info("TransparentOverlay", "Transparent overlay window opened.");
+        var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
+        _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
+        _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
+            _componentRegistry,
+            pluginRuntimeService,
+            _settingsFacade);
+    }
+    
+    /// <summary>
+    /// 渲染所有布局中的组件
+    /// </summary>
+    private void RenderAllComponents()
+    {
+        if (Content is not Canvas canvas) return;
+        
+        canvas.Children.Clear();
+        _componentHosts.Clear();
+        
+        foreach (var placement in _layout.ComponentPlacements)
+        {
+            try
+            {
+                RenderComponentInternal(placement);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("TransparentOverlay", $"Failed to render component {placement.ComponentId}", ex);
+            }
+        }
+        
+        UpdateInteractiveRegions();
     }
     
     protected override void OnClosed(EventArgs e)
@@ -112,8 +170,20 @@ public partial class TransparentOverlayWindow : Window
     /// <summary>
     /// 添加组件（供外部调用）
     /// </summary>
-    public void AddComponent(string componentId, double x, double y, double width = 200, double height = 200)
+    public void AddComponent(string componentId, double x, double y, double? width = null, double? height = null)
     {
+        EnsureRegistries();
+        
+        if (_componentRegistry == null || !_componentRegistry.TryGetDefinition(componentId, out var definition))
+        {
+            AppLogger.Warn("TransparentOverlay", $"Cannot add unknown component: {componentId}");
+            return;
+        }
+
+        // 解析尺寸：如果未提供，则使用组件定义的最小尺寸 * 100
+        var finalWidth = width ?? (definition.MinWidthCells * DefaultCellSize);
+        var finalHeight = height ?? (definition.MinHeightCells * DefaultCellSize);
+        
         var placementId = Guid.NewGuid().ToString("N");
         var placement = new FusedDesktopComponentPlacementSnapshot
         {
@@ -121,16 +191,49 @@ public partial class TransparentOverlayWindow : Window
             ComponentId = componentId,
             X = x,
             Y = y,
-            Width = width,
-            Height = height,
+            Width = finalWidth,
+            Height = finalHeight,
             ZIndex = _layout.ComponentPlacements.Count
         };
         
         _layout.ComponentPlacements.Add(placement);
-        UpdateInteractiveRegions();
-        SaveLayout();
         
-        AppLogger.Info("TransparentOverlay", $"Added component: {componentId} at ({x}, {y})");
+        // 立即渲染
+        try
+        {
+            RenderComponentInternal(placement);
+            UpdateInteractiveRegions();
+            SaveLayout();
+            AppLogger.Info("TransparentOverlay", $"Added component: {componentId} at ({x}, {y}) size ({finalWidth}x{finalHeight})");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("TransparentOverlay", $"Failed to add component {componentId}", ex);
+            _layout.ComponentPlacements.Remove(placement);
+        }
+    }
+    
+    /// <summary>
+    /// 内部渲染单个组件
+    /// </summary>
+    private void RenderComponentInternal(FusedDesktopComponentPlacementSnapshot placement)
+    {
+        if (_componentRuntimeRegistry is null || !_componentRuntimeRegistry.TryGetDescriptor(placement.ComponentId, out var descriptor))
+        {
+            AppLogger.Warn("TransparentOverlay", $"Unknown component: {placement.ComponentId}");
+            return;
+        }
+        
+        var control = descriptor.CreateControl(
+            DefaultCellSize,
+            _timeZoneService,
+            _weatherDataService,
+            _recommendationInfoService,
+            _calculatorDataService,
+            _settingsFacade,
+            placement.PlacementId);
+            
+        RenderComponent(placement.PlacementId, control, placement.X, placement.Y, placement.Width, placement.Height);
     }
     
     /// <summary>
@@ -176,6 +279,9 @@ public partial class TransparentOverlayWindow : Window
         host.PointerMoved += OnComponentPointerMoved;
         host.PointerReleased += OnComponentPointerReleased;
         
+        // 右键上下文菜单（删除组件）
+        host.ContextRequested += OnComponentContextRequested;
+        
         if (Content is Canvas canvas)
         {
             canvas.Children.Add(host);
@@ -183,6 +289,33 @@ public partial class TransparentOverlayWindow : Window
         
         _componentHosts[placementId] = host;
         UpdateInteractiveRegions();
+    }
+    
+    // 组件右键上下文菜单（删除）
+    private void OnComponentContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not Border host || host.Tag is not string placementId) return;
+        
+        // 构建上下文菜单
+        var deleteItem = new MenuItem
+        {
+            Header = "移除组件",
+            Icon = new Avalonia.Controls.TextBlock { Text = "🗑" }
+        };
+        deleteItem.Click += (_, _) =>
+        {
+            RemoveComponent(placementId);
+            AppLogger.Info("TransparentOverlay", $"Component removed via context menu: {placementId}");
+        };
+        
+        var menu = new ContextMenu
+        {
+            Items = { deleteItem }
+        };
+        
+        // 显示在当前控件上
+        menu.Open(host);
+        e.Handled = true;
     }
     
     // 组件拖拽处理

@@ -21,6 +21,9 @@
                     <ComboBoxItem x:Name="SectlItem"
                                   Classes="component-editor-select-item"
                                   Tag="sectl" />
+                    <ComboBoxItem x:Name="RinLitItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="rinlit" />
                 </ComboBox>
                 <TextBlock x:Name="SourceDescriptionTextBlock"
                            Classes="component-editor-secondary-text"
