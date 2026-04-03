@@ -3244,16 +3244,10 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
     private async Task<ZhiJiaoHubSnapshot> FetchZhiJiaoHubSnapshotAsync(string source, string mirrorSource, CancellationToken cancellationToken)
     {
-        var (owner, repo, path, rawUrlTemplate) = source switch
-        {
-            ZhiJiaoHubSources.Sectl =&gt; ("SECTL", "SECTL-hub", "docs/.vuepress/public/images", _options.SectlHubRawUrlTemplate),
-            ZhiJiaoHubSources.RinLit =&gt; ("RinLit-233-shiroko", "Rin-sHub", "images", _options.RinLitHubRawUrlTemplate),
-            _ =&gt; ("ClassIsland", "classisland-hub", "images", _options.ClassIslandHubRawUrlTemplate)
-        };
+        var config = ZhiJiaoHubSourceConfig.GetConfig(source);
 
-        var contentsUrl = $"https://api.github.com/repos/{owner}/{repo}/contents/{path}";
+        var contentsUrl = config.ApiUrl;
         
-        // 如果使用镜像加速，代理 GitHub API 请求
         if (string.Equals(mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
         {
             contentsUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + contentsUrl;
@@ -3261,18 +3255,16 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
         try
         {
-            var images = await FetchImagesFromContentsApi(owner, repo, path, rawUrlTemplate, contentsUrl, mirrorSource, cancellationToken);
+            var images = await FetchImagesFromContentsApi(config, contentsUrl, mirrorSource, cancellationToken);
 
             if (images.Count == 0)
             {
-                throw new InvalidOperationException("未找到图片文件");
+                throw new InvalidOperationException($"在 {config.DisplayName} 中未找到图片文件");
             }
 
-            // 随机打乱图片顺序
             var random = new Random();
             var shuffled = images.OrderBy(_ => random.Next()).ToList();
 
-            // 重新设置索引
             for (int i = 0; i < shuffled.Count; i++)
             {
                 var item = shuffled[i];
@@ -3287,11 +3279,15 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
         catch (Exception ex)
         {
-            throw new HttpRequestException($"获取图片列表失败: {ex.Message}");
+            throw new HttpRequestException($"从 {config.DisplayName} 获取图片列表失败: {ex.Message}");
         }
     }
 
-    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromContentsApi(string owner, string repo, string path, string rawUrlTemplate, string contentsUrl, string mirrorSource, CancellationToken cancellationToken)
+    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromContentsApi(
+        ZhiJiaoHubSourceConfig config, 
+        string contentsUrl, 
+        string mirrorSource, 
+        CancellationToken cancellationToken)
     {
         var images = new List<ZhiJiaoHubImageItem>();
 
@@ -3309,7 +3305,17 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             {
                 throw new HttpRequestException("GitHub API 速率限制，请稍后重试");
             }
-            throw new HttpRequestException($"API 返回错误: {(int)response.StatusCode} - {Truncate(errorText, 200)}");
+            
+            if ((int)response.StatusCode == 404)
+            {
+                throw new HttpRequestException(
+                    $"在 {config.DisplayName} 中找不到图片目录。请检查仓库结构和路径配置。\n" +
+                    $"仓库: {config.Owner}/{config.Repo}\n" +
+                    $"路径: {config.Path}");
+            }
+            
+            throw new HttpRequestException(
+                $"从 {config.DisplayName} 获取数据失败: {(int)response.StatusCode} - {Truncate(errorText, 200)}");
         }
 
         var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -3321,9 +3327,9 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("message", out var messageNode))
             {
                 var errorMessage = messageNode.GetString();
-                throw new InvalidOperationException($"GitHub API 错误: {errorMessage}");
+                throw new InvalidOperationException($"GitHub API 错误 ({config.DisplayName}): {errorMessage}");
             }
-            throw new InvalidOperationException("Invalid response format from GitHub API.");
+            throw new InvalidOperationException($"从 {config.DisplayName} 返回的数据格式无效");
         }
 
         int index = 0;
@@ -3343,18 +3349,15 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
                 continue;
             }
 
-            // 只处理图片文件
             var extension = Path.GetExtension(name).ToLowerInvariant();
             if (extension != ".png" && extension != ".jpg" && extension != ".jpeg" && extension != ".gif" && extension != ".webp")
             {
                 continue;
             }
 
-            // 解码文件名
             var decodedName = Uri.UnescapeDataString(name);
             decodedName = Path.GetFileNameWithoutExtension(decodedName);
 
-            // 构造图片 URL
             string imageUrl;
             if (!string.IsNullOrWhiteSpace(downloadUrl))
             {
@@ -3362,12 +3365,12 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             }
             else
             {
-                // 使用为每个数据源专门配置的 raw URL 模板
-                // 注意：模板已经包含了正确的路径，只需要传入文件名
-                imageUrl = string.Format(rawUrlTemplate, Uri.EscapeDataString(name));
+                imageUrl = string.Format(
+                    CultureInfo.InvariantCulture,
+                    config.RawUrlTemplate,
+                    Uri.EscapeDataString(name));
             }
 
-            // 应用镜像加速到图片 URL
             imageUrl = ZhiJiaoHubMirrorSources.ApplyMirror(imageUrl, mirrorSource);
 
             images.Add(new ZhiJiaoHubImageItem(decodedName, imageUrl, index));

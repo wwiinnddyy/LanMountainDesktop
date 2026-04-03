@@ -135,6 +135,55 @@ public static class ZhiJiaoHubSources
             _ => ClassIsland
         };
     }
+
+    public static string GetDisplayName(string source)
+    {
+        return source?.ToLowerInvariant() switch
+        {
+            Sectl => "SECTL 图库",
+            RinLit => "Rin's 图库",
+            _ => "ClassIsland 图库"
+        };
+    }
+}
+
+// 智教Hub数据源配置
+public sealed class ZhiJiaoHubSourceConfig
+{
+    public string Owner { get; init; } = string.Empty;
+    public string Repo { get; init; } = string.Empty;
+    public string Path { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+    public string ApiUrl => $"https://api.github.com/repos/{Owner}/{Repo}/contents/{Path}";
+    public string RawUrlTemplate => $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/{Path}/{{0}}";
+
+    public static ZhiJiaoHubSourceConfig GetConfig(string source)
+    {
+        return source?.ToLowerInvariant() switch
+        {
+            ZhiJiaoHubSources.Sectl => new ZhiJiaoHubSourceConfig
+            {
+                Owner = "SECTL",
+                Repo = "SECTL-hub",
+                Path = "docs/.vuepress/public/images",
+                DisplayName = "SECTL 图库"
+            },
+            ZhiJiaoHubSources.RinLit => new ZhiJiaoHubSourceConfig
+            {
+                Owner = "RinLit-233-shiroko",
+                Repo = "Rin-sHub",
+                Path = "assets/images",
+                DisplayName = "Rin's 图库"
+            },
+            _ => new ZhiJiaoHubSourceConfig
+            {
+                Owner = "ClassIsland",
+                Repo = "classisland-hub",
+                Path = "images",
+                DisplayName = "ClassIsland 图库"
+            }
+        };
+    }
 }
 
 // 智教Hub镜像加速源常量

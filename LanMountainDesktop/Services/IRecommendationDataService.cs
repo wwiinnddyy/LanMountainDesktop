@@ -319,6 +319,8 @@ public sealed record RecommendationApiOptions
 
     public string SectlHubApiUrl { get; init; } = "https://api.github.com/repos/SECTL/SECTL-hub/contents/docs/.vuepress/public/images";
 
+    public string RinLitHubApiUrl { get; init; } = "https://api.github.com/repos/RinLit-233-shiroko/Rin-sHub/contents/images";
+
     public string ClassIslandHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/ClassIsland/classisland-hub/main/images/{0}";
 
     public string SectlHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/SECTL/SECTL-hub/main/docs/.vuepress/public/images/{0}";
