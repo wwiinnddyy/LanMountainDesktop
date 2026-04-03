@@ -30,10 +30,11 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         ClassIslandItem.Content = L("zhijiaohub.settings.classisland", "ClassIsland 图库");
         SectlItem.Content = L("zhijiaohub.settings.sectl", "SECTL 图库");
         RinLitItem.Content = L("zhijiaohub.settings.rinlit", "Rin's 图库");
+        JiangtokotoItem.Content = L("zhijiaohub.settings.jiangtokoto", "Jiangtokoto 表情包");
 
         // 数据源描述
         SourceDescriptionTextBlock.Text = L("zhijiaohub.settings.source_desc",
-            "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容，Rin's 图库包含 Rin's 社区的内容。");
+            "选择图片来源。ClassIsland 图库包含 ClassIsland 社区的趣味瞬间，SECTL 图库包含 SECTL 社区的内容，Rin's 图库包含 Rin's 社区的内容，Jiangtokoto 表情包包含丰富的表情包资源。");
 
         // 镜像加速源
         MirrorSourceLabelTextBlock.Text = L("zhijiaohub.settings.mirror_source", "镜像加速");
@@ -67,6 +68,7 @@ public partial class ZhiJiaoHubComponentEditor : ComponentEditorViewBase
         {
             ZhiJiaoHubSources.Sectl => SectlItem,
             ZhiJiaoHubSources.RinLit => RinLitItem,
+            ZhiJiaoHubSources.Jiangtokoto => JiangtokotoItem,
             _ => ClassIslandItem
         };
 

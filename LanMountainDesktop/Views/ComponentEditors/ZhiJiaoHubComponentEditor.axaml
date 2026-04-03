@@ -24,6 +24,9 @@
                     <ComboBoxItem x:Name="RinLitItem"
                                   Classes="component-editor-select-item"
                                   Tag="rinlit" />
+                    <ComboBoxItem x:Name="JiangtokotoItem"
+                                  Classes="component-editor-select-item"
+                                  Tag="jiangtokoto" />
                 </ComboBox>
                 <TextBlock x:Name="SourceDescriptionTextBlock"
                            Classes="component-editor-secondary-text"

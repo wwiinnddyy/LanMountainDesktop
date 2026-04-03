@@ -125,6 +125,7 @@ public static class ZhiJiaoHubSources
     public const string ClassIsland = "classisland";
     public const string Sectl = "sectl";
     public const string RinLit = "rinlit";
+    public const string Jiangtokoto = "jiangtokoto";
 
     public static string Normalize(string? value)
     {
@@ -132,6 +133,7 @@ public static class ZhiJiaoHubSources
         {
             "sectl" => Sectl,
             "rinlit" => RinLit,
+            "jiangtokoto" => Jiangtokoto,
             _ => ClassIsland
         };
     }
@@ -142,6 +144,7 @@ public static class ZhiJiaoHubSources
         {
             Sectl => "SECTL 图库",
             RinLit => "Rin's 图库",
+            Jiangtokoto => "Jiangtokoto 表情包",
             _ => "ClassIsland 图库"
         };
     }
@@ -181,6 +184,13 @@ public sealed class ZhiJiaoHubSourceConfig
                 DisplayName = "Rin's 图库",
                 UseJsonIndex = true,
                 JsonIndexPath = "updates/images.json"
+            },
+            ZhiJiaoHubSources.Jiangtokoto => new ZhiJiaoHubSourceConfig
+            {
+                Owner = "unDefFtr",
+                Repo = "jiangtokoto-images",
+                Path = "images",
+                DisplayName = "Jiangtokoto 表情包"
             },
             _ => new ZhiJiaoHubSourceConfig
             {
