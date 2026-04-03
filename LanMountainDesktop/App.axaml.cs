@@ -149,6 +149,11 @@ public partial class App : Application
         LinuxDesktopEntryInstaller.EnsureInstalled();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
+        if (!Design.IsDesignMode && OperatingSystem.IsWindows())
+        {
+            FusedDesktopManagerServiceFactory.GetOrCreate().Initialize();
+        }
+
         base.OnFrameworkInitializationCompleted();
     }
 
@@ -226,6 +231,9 @@ public partial class App : Application
             AppLogger.Warn("FusedDesktop", "Fused desktop is only supported on Windows.");
             return;
         }
+
+        // 切换进入编辑模式，隐藏常态零散的小部件
+        FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
         
         // 确保透明覆盖层窗口存在并显示
         EnsureTransparentOverlayWindow();
@@ -248,6 +256,19 @@ public partial class App : Application
                     window.SetOverlayWindow(_transparentOverlayWindow);
                 }
                 
+                // 当组件库关闭时，退出编辑态
+                window.Closed += (s, ev) => 
+                {
+                    if (_transparentOverlayWindow is not null)
+                    {
+                        // 触发画布保存，并隐藏画布
+                        _transparentOverlayWindow.SaveLayoutAndHide();
+                    }
+                    
+                    // 让管理器根据已存储的最新快照重建生成所有实体小组件
+                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+                };
+
                 window.Show();
                 window.Activate();
             }

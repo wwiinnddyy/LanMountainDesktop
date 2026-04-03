@@ -22,9 +22,6 @@ namespace LanMountainDesktop.Views;
 /// </summary>
 public partial class TransparentOverlayWindow : Window
 {
-    private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
-    private readonly IWindowBottomMostService _bottomMostService = WindowBottomMostServiceFactory.GetOrCreate();
-    private readonly IRegionPassthroughService _regionPassthroughService = RegionPassthroughServiceFactory.GetOrCreate();
     private readonly IFusedDesktopLayoutService _layoutService = FusedDesktopLayoutServiceProvider.GetOrCreate();
     
     // 滑动状态
@@ -67,23 +64,45 @@ public partial class TransparentOverlayWindow : Window
     public TransparentOverlayWindow()
     {
         InitializeComponent();
-        _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
-        _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
+        var facade = HostSettingsFacadeProvider.GetOrCreate();
+        _weatherDataService = facade.Weather.GetWeatherInfoService();
+        _timeZoneService = facade.Region.GetTimeZoneService();
+        _settingsFacade = facade;
+    }
+    
+    private readonly ISettingsFacadeService _settingsFacade;
+
+    public void SaveLayoutAndHide()
+    {
+        SaveLayout();
+        Hide();
         
-        // 仅在 Windows 上启用置底功能
-        if (OperatingSystem.IsWindows())
+        // Remove all components so that next time we open it builds fresh from snapshot
+        if (Content is Canvas canvas)
         {
-            _bottomMostService.SetupBottomMost(this);
+            canvas.Children.Clear();
         }
+        _componentHosts.Clear();
     }
     
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         
-        if (OperatingSystem.IsWindows())
+        if (Screens.Primary is { } primaryScreen)
         {
-            _bottomMostService.SendToBottom(this);
+            // 避开系统任务栏
+            var workArea = primaryScreen.WorkingArea;
+            var scaling = primaryScreen.Scaling;
+            Position = new PixelPoint(workArea.X, workArea.Y);
+            Width = workArea.Width / scaling;
+            Height = workArea.Height / scaling;
+        }
+
+        if (Content is Canvas canvas)
+        {
+            // 保证透明区域也能被抓取事件
+            canvas.Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0));
         }
         
         // 确保注册表已初始化
@@ -147,16 +166,7 @@ public partial class TransparentOverlayWindow : Window
     /// </summary>
     private void UpdateInteractiveRegions()
     {
-        _interactiveRegions.Clear();
-        
-        foreach (var host in _componentHosts.Values)
-        {
-            var x = Canvas.GetLeft(host);
-            var y = Canvas.GetTop(host);
-            _interactiveRegions.Add(new Rect(x, y, host.Width, host.Height));
-        }
-        
-        _regionPassthroughService.SetInteractiveRegions(this, _interactiveRegions);
+        // 编辑模式下不再需要底层穿透功能计算，这里留空或移除
     }
     
     /// <summary>

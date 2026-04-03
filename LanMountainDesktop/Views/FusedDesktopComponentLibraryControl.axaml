@@ -1,15 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:fi="using:FluentIcons.Avalonia"
-             xmlns:local="using:LanMountainDesktop.Views"
-             x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl">
+             x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl"
+             x:DataType="vm:ComponentLibraryWindowViewModel">
     
-    <Grid ColumnDefinitions="220,*">
+    <Grid ColumnDefinitions="240,*"
+          ColumnSpacing="12"
+          Margin="0">
         <!-- 分类列表 (左侧) -->
-        <Border Grid.Column="0"
-                BorderBrush="{DynamicResource AdaptiveBorderBrush}"
-                BorderThickness="0,0,1,0"
-                Padding="12,0,12,12">
+        <Border Classes="surface-translucent-panel"
+                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                Padding="10">
             <Grid RowDefinitions="Auto,*">
                 <TextBox x:Name="SearchBox"
                          Watermark="搜索组件..."
@@ -27,87 +29,132 @@
                          Grid.Row="1"
                          Background="Transparent"
                          BorderThickness="0"
-                         SelectionChanged="OnCategorySelectionChanged">
-                    <ListBox.Styles>
-                        <Style Selector="ListBoxItem">
-                            <Setter Property="CornerRadius" Value="14" />
-                            <Setter Property="Margin" Value="0,2" />
-                            <Setter Property="Padding" Value="12,10" />
-                        </Style>
-                    </ListBox.Styles>
+                         SelectionChanged="OnCategorySelectionChanged"
+                         ItemsSource="{Binding Categories}">
                     <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="local:LibraryCategoryItem">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <fi:SymbolIcon Symbol="{Binding Icon}" FontSize="18" />
-                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                            </StackPanel>
+                        <DataTemplate x:DataType="vm:ComponentLibraryCategoryViewModel">
+                            <Border Padding="10"
+                                    Margin="0,0,0,6"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                    Background="{DynamicResource AdaptiveNavItemBackgroundBrush}">
+                                <Grid ColumnDefinitions="Auto,*"
+                                      ColumnSpacing="8">
+                                    <fi:SymbolIcon Symbol="{Binding Icon}"
+                                                   IconVariant="Regular"
+                                                   FontSize="16" />
+                                    <TextBlock Grid.Column="1"
+                                               VerticalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Text="{Binding Title}" />
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
             </Grid>
         </Border>
-        
+
         <!-- 组件网格 (右侧) -->
-        <ScrollViewer Grid.Column="1" Padding="20">
-            <ItemsControl x:Name="ComponentItemsControl">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="local:LibraryComponentItem">
-                        <Button Classes="unstyled-card"
-                                Width="260"
-                                Margin="0,0,16,16"
-                                Padding="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Click="OnAddComponentClick"
-                                Tag="{Binding Id}">
-                            <Border Classes="card"
-                                    Background="{DynamicResource AdaptiveSurfaceLowBrush}"
-                                    BorderBrush="{DynamicResource AdaptiveBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="24"
-                                    ClipToBounds="True">
-                                <Grid RowDefinitions="Auto,Auto">
-                                    <!-- 预览区域 (动态填充预览) -->
-                                    <Border x:Name="PreviewHost"
-                                            Height="150"
-                                            Background="{DynamicResource AdaptiveSurfaceNeutralBrush}"
-                                            Margin="8"
-                                            CornerRadius="16"
-                                            ClipToBounds="True">
-                                        <Panel>
-                                            <!-- 这里将显示组件的缩放预览 -->
-                                            <ContentPresenter Content="{Binding PreviewContent}" />
-                                            
-                                            <!-- 空状态或加载中图标 -->
-                                            <fi:SymbolIcon Symbol="Cube" 
-                                                           FontSize="32" 
-                                                           Opacity="0.1" 
-                                                           IsVisible="{Binding !HasPreview}" />
-                                        </Panel>
+        <Border Grid.Column="1"
+                Classes="surface-translucent-strong"
+                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl x:Name="ComponentItemsControl"
+                              ItemsSource="{Binding Components}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ComponentLibraryItemViewModel">
+                            <Border Width="240"
+                                    Height="220"
+                                    Margin="6"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                                    Padding="10"
+                                    Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                                    BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+                                    BorderThickness="1">
+                                <Grid RowDefinitions="*,Auto,Auto"
+                                      RowSpacing="8">
+                                    <!-- 预览区域 -->
+                                    <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                            Background="{DynamicResource AdaptiveGlassPanelBackgroundBrush}"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                            Padding="8">
+                                        <Grid>
+                                            <Image Source="{Binding PreviewBitmap}"
+                                                   Stretch="Uniform"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Stretch"
+                                                   RenderOptions.BitmapInterpolationMode="HighQuality"
+                                                   IsVisible="{Binding IsPreviewReady}" />
+
+                                            <!-- 加载中状态 -->
+                                            <Border IsVisible="{Binding IsPreviewPending}"
+                                                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+                                                <StackPanel HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="8">
+                                                    <ProgressBar Width="96"
+                                                                 IsIndeterminate="True" />
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               TextAlignment="Center"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               Text="{Binding PreviewStatusText}" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- 失败状态 -->
+                                            <Border IsVisible="{Binding IsPreviewFailed}"
+                                                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+                                                <StackPanel HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="8">
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               TextAlignment="Center"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                               Text="{Binding PreviewStatusText}" />
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               TextAlignment="Center"
+                                                               FontSize="12"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                               Text="{Binding PreviewErrorMessage}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
                                     </Border>
-                                    
-                                    <!-- 文字说明 -->
-                                    <StackPanel Grid.Row="1" Margin="16,8,16,16" Spacing="4">
-                                        <TextBlock Text="{Binding DisplayName}"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="15" />
-                                        <TextBlock Text="{Binding Description}"
-                                                   Opacity="0.6"
-                                                   FontSize="12"
-                                                   TextWrapping="Wrap"
-                                                   MaxLines="2" />
-                                    </StackPanel>
+
+                                    <!-- 组件名称 -->
+                                    <TextBlock Grid.Row="1"
+                                               HorizontalAlignment="Center"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                               Text="{Binding DisplayName}" />
+
+                                    <!-- 添加按钮 -->
+                                    <Button Grid.Row="2"
+                                            HorizontalAlignment="Center"
+                                            Padding="12,6"
+                                            Tag="{Binding ComponentId}"
+                                            Click="OnAddComponentClick">
+                                        <TextBlock Text="添加到桌面" />
+                                    </Button>
                                 </Grid>
                             </Border>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </UserControl>

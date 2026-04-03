@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="LanMountainDesktop.Views.DesktopWidgetWindow"
+        Title="Desktop Component"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        Topmost="False"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent"
+        RenderOptions.BitmapInterpolationMode="HighQuality"
+        CanResize="False">
+
+    <Border x:Name="ComponentContainer"
+            Background="Transparent"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <!-- Component control will be injected here -->
+    </Border>
+</Window>

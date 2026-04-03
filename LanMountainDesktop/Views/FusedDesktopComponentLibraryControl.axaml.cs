@@ -1,18 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
-using Avalonia.Media;
+using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views.Components;
-using LanMountainDesktop.Models;
 
 namespace LanMountainDesktop.Views;
 
@@ -20,10 +17,9 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 {
     public event EventHandler<string>? AddComponentRequested;
 
-    private readonly ObservableCollection<LibraryCategoryItem> _categories = new();
-    private readonly ObservableCollection<LibraryComponentItem> _components = new();
+    private readonly ComponentLibraryWindowViewModel _viewModel = new();
     private List<DesktopComponentDefinition> _allDefinitions = new();
-    
+
     private ComponentRegistry? _componentRegistry;
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
@@ -35,18 +31,17 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     public FusedDesktopComponentLibraryControl()
     {
         InitializeComponent();
+        DataContext = _viewModel;
+
         _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
         _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
-        
-        CategoryListBox.ItemsSource = _categories;
-        ComponentItemsControl.ItemsSource = _components;
-        
+
         LoadRegistry();
         LoadCategories();
         SearchBox.KeyUp += (s, e) => FilterComponents();
-        
+
         // 默认选择第一个分类
-        if (_categories.Count > 0)
+        if (_viewModel.Categories.Count > 0)
         {
             CategoryListBox.SelectedIndex = 0;
         }
@@ -60,7 +55,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             _componentRegistry,
             pluginRuntimeService,
             _settingsFacade);
-        
+
         _allDefinitions = _componentRegistry.GetAll()
             .Where(d => d.AllowDesktopPlacement)
             .ToList();
@@ -68,18 +63,27 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void LoadCategories()
     {
-        _categories.Clear();
-        _categories.Add(new LibraryCategoryItem("all", "全部组件", "Apps"));
-        
-        var categoryMap = new Dictionary<string, (string Display, string Icon)>
+        _viewModel.Categories.Clear();
+        _viewModel.Components.Clear();
+
+        // 添加"全部组件"分类
+        _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
+            "all",
+            "全部组件",
+            Symbol.Apps,
+            Array.Empty<ComponentLibraryItemViewModel>()));
+
+        var categoryMap = new Dictionary<string, (string Display, Symbol Icon)>
         {
-            { "clock", ("时钟", "Clock") },
-            { "date", ("日历", "Calendar") },
-            { "weather", ("天气", "WeatherCloudy") },
-            { "info", ("资讯", "News") },
-            { "calculator", ("工具", "Calculator") },
-            { "study", ("学习", "Book") },
-            { "file", ("文件", "Document") }
+            { "clock", ("时钟", Symbol.Clock) },
+            { "date", ("日历", Symbol.CalendarDate) },
+            { "weather", ("天气", Symbol.WeatherSunny) },
+            { "board", ("画板", Symbol.Edit) },
+            { "media", ("媒体", Symbol.Play) },
+            { "info", ("资讯", Symbol.News) },
+            { "calculator", ("工具", Symbol.Calculator) },
+            { "study", ("学习", Symbol.Hourglass) },
+            { "file", ("文件", Symbol.Folder) }
         };
 
         var usedCategories = _allDefinitions
@@ -91,13 +95,34 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         {
             if (categoryMap.TryGetValue(cat.ToLower(), out var info))
             {
-                _categories.Add(new LibraryCategoryItem(cat, info.Display, info.Icon));
-            }
-            else
-            {
-                _categories.Add(new LibraryCategoryItem(cat, cat, "Cube"));
+                var categoryComponents = _allDefinitions
+                    .Where(d => string.Equals(d.Category, cat, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(d => d.DisplayName)
+                    .Select(d => CreateComponentItem(d))
+                    .ToArray();
+
+                _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
+                    cat,
+                    info.Display,
+                    info.Icon,
+                    categoryComponents));
             }
         }
+    }
+
+    private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
+    {
+        var previewKey = ComponentPreviewKey.ForComponentType(
+            definition.Id,
+            definition.MinWidthCells,
+            definition.MinHeightCells);
+
+        return new ComponentLibraryItemViewModel(
+            definition.Id,
+            definition.DisplayName,
+            previewKey,
+            "正在加载预览...",
+            "预览不可用");
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -107,7 +132,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void FilterComponents()
     {
-        var selectedCategory = (CategoryListBox.SelectedItem as LibraryCategoryItem)?.Id;
+        var selectedCategory = (CategoryListBox.SelectedItem as ComponentLibraryCategoryViewModel)?.Id;
         var searchText = SearchBox.Text?.ToLower() ?? "";
 
         var filtered = _allDefinitions.Where(d =>
@@ -117,57 +142,10 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             return matchesCategory && matchesSearch;
         });
 
-        _components.Clear();
+        _viewModel.Components.Clear();
         foreach (var def in filtered)
         {
-            _components.Add(new LibraryComponentItem
-            {
-                Id = def.Id,
-                DisplayName = def.DisplayName,
-                Description = GetDescription(def.Id),
-                PreviewContent = CreatePreview(def.Id)
-            });
-        }
-    }
-
-    private string GetDescription(string id)
-    {
-        // 简单映射描述信息
-        return id.Contains("clock") ? "实时显示当前时间与日期。" :
-               id.Contains("weather") ? "为您提供精准的天气预报。" :
-               "多功能桌面组件，提升您的操作效率。";
-    }
-
-    private Control? CreatePreview(string id)
-    {
-        if (_componentRuntimeRegistry == null || !_componentRuntimeRegistry.TryGetDescriptor(id, out var descriptor))
-        {
-            return null;
-        }
-
-        try
-        {
-            var control = descriptor.CreateControl(
-                100, // Previews assume 100px base
-                _timeZoneService,
-                _weatherDataService,
-                _recommendationInfoService,
-                _calculatorDataService,
-                _settingsFacade,
-                "preview_" + id);
-
-            control.IsHitTestVisible = false;
-            
-            return new Viewbox
-            {
-                Child = control,
-                Stretch = Stretch.Uniform,
-                Margin = new Thickness(12)
-            };
-        }
-        catch (Exception ex)
-        {
-            return new TextBlock { Text = "无法预览", VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+            _viewModel.Components.Add(CreateComponentItem(def));
         }
     }
 
@@ -179,15 +157,3 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         }
     }
 }
-
-public record LibraryCategoryItem(string Id, string DisplayName, string Icon);
-
-public class LibraryComponentItem
-{
-    public string Id { get; set; } = "";
-    public string DisplayName { get; set; } = "";
-    public string Description { get; set; } = "";
-    public Control? PreviewContent { get; set; }
-    public bool HasPreview => PreviewContent != null;
-}
-

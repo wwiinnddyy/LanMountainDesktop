@@ -189,50 +189,21 @@
                                                             Classes="surface-solid-strong"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"
-                                                            Margin="52"
-                                                            MaxWidth="760"
-                                                            MaxHeight="520"
-                                                            CornerRadius="36"
-                                                            Padding="14">
-                                                        <Border.RenderTransform>
-                                                            <TranslateTransform Y="42" />
-                                                        </Border.RenderTransform>
-                                                        <Grid RowDefinitions="Auto,*"
-                                                              RowSpacing="10">
-                                                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                                                  ColumnSpacing="8">
-                                                                <Button x:Name="LauncherFolderBackButton"
-                                                                        Grid.Column="0"
-                                                                        Width="38"
-                                                                        Height="34"
-                                                                        Padding="0"
-                                                                        Click="OnLauncherFolderBackClick">
-                                                                    <fi:FluentIcon Icon="ArrowLeft"
-                                                                                   IconVariant="Regular" />
-                                                                </Button>
-                                                                <TextBlock x:Name="LauncherFolderTitleTextBlock"
-                                                                           Grid.Column="1"
-                                                                           HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center"
-                                                                           FontWeight="SemiBold" />
-                                                                <Button x:Name="LauncherFolderCloseButton"
-                                                                        Grid.Column="2"
-                                                                        Width="38"
-                                                                        Height="34"
-                                                                        Padding="0"
-                                                                        Click="OnLauncherFolderCloseClick">
-                                                                    <fi:FluentIcon Icon="Dismiss"
-                                                                                   IconVariant="Regular" />
-                                                                </Button>
-                                                            </Grid>
+                                                            Width="464"
+                                                            Height="384"
+                                                            CornerRadius="24"
+                                                            Padding="16,14,16,12">
+                                                        <Grid RowDefinitions="Auto,*">
+                                                            <TextBlock x:Name="LauncherFolderTitleTextBlock"
+                                                                       FontSize="15"
+                                                                       FontWeight="SemiBold"
+                                                                       HorizontalAlignment="Center"
+                                                                       Margin="0,0,0,10" />
 
-                                                            <ScrollViewer x:Name="LauncherFolderScrollViewer"
-                                                                          Grid.Row="1"
-                                                                          VerticalScrollBarVisibility="Auto"
-                                                                          HorizontalScrollBarVisibility="Disabled">
-                                                                <WrapPanel x:Name="LauncherFolderTilePanel"
-                                                                           Orientation="Horizontal" />
-                                                            </ScrollViewer>
+                                                            <Grid x:Name="LauncherFolderGridPanel"
+                                                                  Grid.Row="1"
+                                                                  ColumnDefinitions="*,*,*,*"
+                                                                  RowDefinitions="*,*,*" />
                                                         </Grid>
                                                     </Border>
                                                 </Grid>

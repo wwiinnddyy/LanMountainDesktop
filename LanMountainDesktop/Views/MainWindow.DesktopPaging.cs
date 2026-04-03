@@ -269,12 +269,6 @@ public partial class MainWindow
         LauncherPagePanel.MaxWidth = pageWidth - launcherMargin * 2;
         LauncherPagePanel.MaxHeight = pageHeight - launcherMargin * 2;
 
-        if (LauncherFolderPanel is not null)
-        {
-            LauncherFolderPanel.MaxWidth = Math.Max(320, pageWidth - 96);
-            LauncherFolderPanel.MaxHeight = Math.Max(220, pageHeight - 96);
-        }
-
         // 更新启动台图标布局
         UpdateLauncherTileLayout();
 
@@ -331,19 +325,6 @@ public partial class MainWindow
             }
         }
 
-        // 同样更新文件夹视图的图标尺寸
-        if (LauncherFolderTilePanel is not null)
-        {
-            LauncherFolderTilePanel.Width = availableWidth;
-            foreach (var child in LauncherFolderTilePanel.Children)
-            {
-                if (child is Button button)
-                {
-                    button.Width = tileWidth;
-                    button.Height = tileHeight;
-                }
-            }
-        }
     }
 
     private void ClampSurfaceIndex()
@@ -630,8 +611,12 @@ public partial class MainWindow
 
         foreach (var node in button.GetSelfAndVisualAncestors())
         {
-            if (node is WrapPanel panel &&
-                (panel.Name == "LauncherRootTilePanel" || panel.Name == "LauncherFolderTilePanel"))
+            if (node is WrapPanel panel && panel.Name == "LauncherRootTilePanel")
+            {
+                return true;
+            }
+
+            if (node is Grid grid && grid.Name == "LauncherFolderGridPanel")
             {
                 return true;
             }
@@ -719,8 +704,7 @@ public partial class MainWindow
             return false;
         }
 
-        return scrollViewer.Name == "LauncherRootScrollViewer" ||
-               scrollViewer.Name == "LauncherFolderScrollViewer";
+        return scrollViewer.Name == "LauncherRootScrollViewer";
     }
 
     private bool TryGetPointerPositionInDesktopViewport(PointerEventArgs e, out Point point)
@@ -1561,18 +1545,17 @@ public partial class MainWindow
             LauncherFolderOverlay.IsVisible = false;
         }
 
-        if (LauncherFolderTilePanel is not null)
+        if (LauncherFolderGridPanel is not null)
         {
-            LauncherFolderTilePanel.Children.Clear();
+            LauncherFolderGridPanel.Children.Clear();
         }
     }
 
     private void RenderLauncherFolderFromStack()
     {
         if (LauncherFolderOverlay is null ||
-            LauncherFolderTilePanel is null ||
-            LauncherFolderTitleTextBlock is null ||
-            LauncherFolderBackButton is null)
+            LauncherFolderGridPanel is null ||
+            LauncherFolderTitleTextBlock is null)
         {
             return;
         }
@@ -1587,38 +1570,230 @@ public partial class MainWindow
         var folder = _launcherFolderStack.Peek();
         LauncherFolderOverlay.IsVisible = true;
         LauncherFolderTitleTextBlock.Text = folder.Name;
-        LauncherFolderBackButton.IsVisible = _launcherFolderStack.Count > 1;
 
-        LauncherFolderTilePanel.Children.Clear();
-        foreach (var subFolder in folder.Folders)
+        LauncherFolderGridPanel.Children.Clear();
+
+        const int maxCols = 4;
+        const int maxRows = 3;
+        const int maxItems = maxCols * maxRows;
+
+        var visibleFolders = folder.Folders.Where(IsLauncherFolderVisible).ToList();
+        var visibleApps = folder.Apps.Where(IsLauncherAppVisible).ToList();
+
+        if (visibleFolders.Count == 0 && visibleApps.Count == 0)
         {
-            if (!IsLauncherFolderVisible(subFolder))
+            LauncherFolderGridPanel.Children.Add(CreateLauncherFolderGridHintCell(
+                L("launcher.empty_folder", "This folder is empty.")));
+            return;
+        }
+
+        var allItems = new List<(StartMenuFolderNode? Folder, StartMenuAppEntry? App)>();
+        foreach (var f in visibleFolders)
+        {
+            allItems.Add((f, null));
+        }
+        foreach (var a in visibleApps)
+        {
+            allItems.Add((null, a));
+        }
+
+        var displayCount = Math.Min(allItems.Count, maxItems);
+        for (var i = 0; i < displayCount; i++)
+        {
+            var col = i % maxCols;
+            var row = i / maxCols;
+            var (itemFolder, itemApp) = allItems[i];
+
+            Control cell;
+            if (itemFolder is not null)
+            {
+                var capturedFolder = itemFolder;
+                cell = CreateLauncherFolderGridTile(itemFolder.Name, GetLauncherFolderIconBitmap(), () => OpenLauncherFolder(capturedFolder));
+            }
+            else if (itemApp is not null)
+            {
+                var capturedApp = itemApp;
+                cell = CreateLauncherFolderGridTile(capturedApp, () => LaunchStartMenuEntry(capturedApp));
+            }
+            else
             {
                 continue;
             }
 
-            LauncherFolderTilePanel.Children.Add(CreateLauncherFolderTile(subFolder));
+            Grid.SetColumn(cell, col);
+            Grid.SetRow(cell, row);
+            LauncherFolderGridPanel.Children.Add(cell);
         }
+    }
 
-        foreach (var app in folder.Apps)
-        {
-            if (!IsLauncherAppVisible(app))
+    private Button CreateLauncherFolderGridTile(StartMenuAppEntry app, Action clickAction)
+    {
+        var iconBitmap = GetLauncherIconBitmap(app);
+        var monogram = BuildMonogram(app.DisplayName);
+
+        Control iconControl = iconBitmap is not null
+            ? new Image
             {
-                continue;
+                Source = iconBitmap,
+                Width = 32,
+                Height = 32,
+                Stretch = Stretch.Uniform
+            }
+            : new Border
+            {
+                Width = 32,
+                Height = 32,
+                CornerRadius = new CornerRadius(8),
+                Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = monogram,
+                    FontSize = 13,
+                    FontWeight = FontWeight.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+
+        var content = new StackPanel
+        {
+            Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        content.Children.Add(iconControl);
+        content.Children.Add(new TextBlock
+        {
+            Text = app.DisplayName,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxLines = 2,
+            TextAlignment = TextAlignment.Center,
+            FontSize = 11,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        });
+
+        var button = new Button
+        {
+            Classes = { "glass-panel" },
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(8, 8, 8, 6),
+            Content = content
+        };
+        button.Click += (_, _) =>
+        {
+            if (_isComponentLibraryOpen)
+            {
+                return;
             }
 
-            LauncherFolderTilePanel.Children.Add(CreateLauncherAppTile(app));
-        }
+            clickAction();
+        };
+        return button;
+    }
 
-        if (LauncherFolderTilePanel.Children.Count == 0)
+    private Button CreateLauncherFolderGridTile(string folderName, Bitmap? iconBitmap, Action clickAction)
+    {
+        var monogram = "DIR";
+
+        Control iconControl = iconBitmap is not null
+            ? new Image
+            {
+                Source = iconBitmap,
+                Width = 32,
+                Height = 32,
+                Stretch = Stretch.Uniform
+            }
+            : new Border
+            {
+                Width = 32,
+                Height = 32,
+                CornerRadius = new CornerRadius(8),
+                Background = GetThemeBrush("AdaptiveButtonBackgroundBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = monogram,
+                    FontSize = 11,
+                    FontWeight = FontWeight.Bold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+
+        var content = new StackPanel
         {
-            LauncherFolderTilePanel.Children.Add(CreateLauncherHintTile(
-                L("launcher.empty_folder", "This folder is empty."),
-                string.Empty));
-        }
+            Spacing = 6,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        content.Children.Add(iconControl);
+        content.Children.Add(new TextBlock
+        {
+            Text = folderName,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            MaxLines = 2,
+            TextAlignment = TextAlignment.Center,
+            FontSize = 11,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        });
 
-        // 在图标渲染完成后，应用布局计算
-        Dispatcher.UIThread.Post(() => UpdateLauncherTileLayout(), DispatcherPriority.Background);
+        var button = new Button
+        {
+            Classes = { "glass-panel" },
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(8, 8, 8, 6),
+            Content = content
+        };
+        button.Click += (_, _) =>
+        {
+            if (_isComponentLibraryOpen)
+            {
+                return;
+            }
+
+            clickAction();
+        };
+        return button;
+    }
+
+    private Control CreateLauncherFolderGridHintCell(string message)
+    {
+        return CreateLauncherFolderGridHintCell(message, 0, 0);
+    }
+
+    private Control CreateLauncherFolderGridHintCell(string message, int col, int row)
+    {
+        var textBlock = new TextBlock
+        {
+            Text = message,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0.6
+        };
+
+        var cell = new Border
+        {
+            Classes = { "glass-panel" },
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            CornerRadius = new CornerRadius(12),
+            Child = textBlock
+        };
+
+        Grid.SetColumn(cell, col);
+        Grid.SetRow(cell, row);
+        return cell;
     }
 
     private static string BuildMonogram(string text)
@@ -1689,18 +1864,6 @@ public partial class MainWindow
         }
     }
 
-    private void OnLauncherFolderBackClick(object? sender, RoutedEventArgs e)
-    {
-        if (_launcherFolderStack.Count <= 1)
-        {
-            CloseLauncherFolderOverlay();
-            return;
-        }
-
-        _launcherFolderStack.Pop();
-        RenderLauncherFolderFromStack();
-    }
-
     private void OnLauncherFolderOverlayPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (LauncherFolderPanel is null)
@@ -1719,11 +1882,6 @@ public partial class MainWindow
 
         CloseLauncherFolderOverlay();
         e.Handled = true;
-    }
-
-    private void OnLauncherFolderCloseClick(object? sender, RoutedEventArgs e)
-    {
-        CloseLauncherFolderOverlay();
     }
 
     private void DisposeLauncherResources()

@@ -220,7 +220,7 @@ public partial class ComponentLibraryWindow : Window
 
         if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
         {
-            return Symbol.Apps;
+            return Symbol.Info;
         }
 
         if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase))
