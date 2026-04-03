@@ -3246,16 +3246,27 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
     {
         var config = ZhiJiaoHubSourceConfig.GetConfig(source);
 
-        var contentsUrl = config.ApiUrl;
-        
-        if (string.Equals(mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
-        {
-            contentsUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + contentsUrl;
-        }
-
         try
         {
-            var images = await FetchImagesFromContentsApi(config, contentsUrl, mirrorSource, cancellationToken);
+            List<ZhiJiaoHubImageItem> images;
+
+            // 如果使用JSON索引模式（Rin's Hub）
+            if (config.UseJsonIndex && !string.IsNullOrEmpty(config.JsonIndexUrl))
+            {
+                images = await FetchImagesFromJsonIndex(config, mirrorSource, cancellationToken);
+            }
+            else
+            {
+                // 标准模式（ClassIsland/SECTL）
+                var contentsUrl = config.ApiUrl;
+
+                if (string.Equals(mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+                {
+                    contentsUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + contentsUrl;
+                }
+
+                images = await FetchImagesFromContentsApi(config, contentsUrl, mirrorSource, cancellationToken);
+            }
 
             if (images.Count == 0)
             {
@@ -3374,6 +3385,85 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             imageUrl = ZhiJiaoHubMirrorSources.ApplyMirror(imageUrl, mirrorSource);
 
             images.Add(new ZhiJiaoHubImageItem(decodedName, imageUrl, index));
+            index++;
+        }
+
+        return images;
+    }
+
+    /// <summary>
+    /// 从JSON索引文件获取图片列表（Rin's Hub专用）
+    /// </summary>
+    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromJsonIndex(
+        ZhiJiaoHubSourceConfig config,
+        string mirrorSource,
+        CancellationToken cancellationToken)
+    {
+        var images = new List<ZhiJiaoHubImageItem>();
+
+        // 下载JSON索引文件
+        var jsonUrl = config.JsonIndexUrl!;
+        if (string.Equals(mirrorSource, ZhiJiaoHubMirrorSources.GhProxy, StringComparison.OrdinalIgnoreCase))
+        {
+            jsonUrl = ZhiJiaoHubMirrorSources.GhProxyBaseUrl.TrimEnd('/') + "/" + jsonUrl;
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, jsonUrl);
+        request.Headers.TryAddWithoutValidation("User-Agent", "LanMountainDesktop/1.0");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var jsonText = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var document = JsonDocument.Parse(jsonText);
+        var root = document.RootElement;
+
+        // 解析 hub_items 数组
+        if (!root.TryGetProperty("hub_items", out var hubItems) || hubItems.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"JSON索引文件格式无效：缺少 hub_items 数组");
+        }
+
+        int index = 0;
+        foreach (var item in hubItems.EnumerateArray())
+        {
+            // 获取图片路径
+            if (!item.TryGetProperty("image", out var imageProp))
+            {
+                continue;
+            }
+
+            var imagePath = imageProp.GetString();
+            if (string.IsNullOrWhiteSpace(imagePath))
+            {
+                continue;
+            }
+
+            // 获取标题（用于显示名称）
+            string title = string.Empty;
+            if (item.TryGetProperty("title", out var titleProp))
+            {
+                title = titleProp.GetString() ?? string.Empty;
+            }
+
+            // 如果没有标题，使用文件名
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                title = Path.GetFileNameWithoutExtension(imagePath);
+            }
+
+            // 构建完整的图片URL
+            // imagePath 格式如: "Discord/姐姐好香.png"
+            // 需要拼接为: https://raw.githubusercontent.com/.../updates/images/Discord/姐姐好香.png
+            // 并对路径中的每个部分进行URL编码
+            var pathParts = imagePath.Split('/');
+            var encodedPath = string.Join("/", pathParts.Select(part => Uri.EscapeDataString(part)));
+            var imageUrl = $"https://raw.githubusercontent.com/{config.Owner}/{config.Repo}/main/{config.Path}/{encodedPath}";
+
+            // 应用镜像加速
+            imageUrl = ZhiJiaoHubMirrorSources.ApplyMirror(imageUrl, mirrorSource);
+
+            images.Add(new ZhiJiaoHubImageItem(title, imageUrl, index));
             index++;
         }
 

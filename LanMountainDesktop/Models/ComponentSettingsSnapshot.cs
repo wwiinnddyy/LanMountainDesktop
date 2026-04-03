@@ -154,8 +154,13 @@ public sealed class ZhiJiaoHubSourceConfig
     public string Repo { get; init; } = string.Empty;
     public string Path { get; init; } = string.Empty;
     public string DisplayName { get; init; } = string.Empty;
+    public bool UseJsonIndex { get; init; } = false;
+    public string? JsonIndexPath { get; init; } = null;
     public string ApiUrl => $"https://api.github.com/repos/{Owner}/{Repo}/contents/{Path}";
     public string RawUrlTemplate => $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/{Path}/{{0}}";
+    public string? JsonIndexUrl => JsonIndexPath != null
+        ? $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/{JsonIndexPath}"
+        : null;
 
     public static ZhiJiaoHubSourceConfig GetConfig(string source)
     {
@@ -172,8 +177,10 @@ public sealed class ZhiJiaoHubSourceConfig
             {
                 Owner = "RinLit-233-shiroko",
                 Repo = "Rin-sHub",
-                Path = "assets/images",
-                DisplayName = "Rin's 图库"
+                Path = "updates/images",
+                DisplayName = "Rin's 图库",
+                UseJsonIndex = true,
+                JsonIndexPath = "updates/images.json"
             },
             _ => new ZhiJiaoHubSourceConfig
             {
