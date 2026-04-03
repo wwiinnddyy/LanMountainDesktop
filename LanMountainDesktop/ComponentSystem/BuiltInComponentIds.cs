@@ -44,4 +44,5 @@ public static class BuiltInComponentIds
     public const string DesktopOfficeRecentDocuments = "DesktopOfficeRecentDocuments";
     public const string DesktopRemovableStorage = "DesktopRemovableStorage";
     public const string DesktopZhiJiaoHub = "DesktopZhiJiaoHub";
+    public const string DesktopFileManager = "DesktopFileManager";
 }

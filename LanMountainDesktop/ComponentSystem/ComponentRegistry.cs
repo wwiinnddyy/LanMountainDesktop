@@ -400,6 +400,16 @@ public sealed class ComponentRegistry
                 MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopFileManager,
+                "文件管理",
+                "Folder",
+                "File",
+                MinWidthCells: 4,
+                MinHeightCells: 4,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free)
         };
 

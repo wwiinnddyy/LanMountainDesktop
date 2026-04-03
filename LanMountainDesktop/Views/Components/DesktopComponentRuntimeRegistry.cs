@@ -475,7 +475,11 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopZhiJiaoHub,
                     "component.zhijiao_hub",
-                    () => new ZhiJiaoHubWidget())
+                    () => new ZhiJiaoHubWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopFileManager,
+                    "component.file_manager",
+                    () => new FileManagerWidget())
         ];
     }
 
