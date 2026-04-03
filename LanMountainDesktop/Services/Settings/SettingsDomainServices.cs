@@ -387,12 +387,23 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
             snapshot.ClockDisplayFormat,
             snapshot.StatusBarClockTransparentBackground,
             snapshot.ClockPosition,
+            snapshot.ClockFontSize,
             snapshot.ShowTextCapsule,
             snapshot.TextCapsuleContent,
             snapshot.TextCapsulePosition,
             snapshot.TextCapsuleTransparentBackground,
+            snapshot.TextCapsuleFontSize,
+            snapshot.ShowNetworkSpeed,
+            snapshot.NetworkSpeedPosition,
+            snapshot.NetworkSpeedDisplayMode,
+            snapshot.NetworkSpeedTransparentBackground,
+            snapshot.ShowNetworkTypeIcon,
+            snapshot.NetworkSpeedFontSize,
             snapshot.StatusBarSpacingMode,
-            snapshot.StatusBarCustomSpacingPercent);
+            snapshot.StatusBarCustomSpacingPercent,
+            snapshot.StatusBarShadowEnabled,
+            snapshot.StatusBarShadowColor,
+            snapshot.StatusBarShadowOpacity);
     }
 
     public void Save(StatusBarSettingsState state)
@@ -405,12 +416,23 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
         snapshot.ClockDisplayFormat = state.ClockDisplayFormat;
         snapshot.StatusBarClockTransparentBackground = state.ClockTransparentBackground;
         snapshot.ClockPosition = state.ClockPosition;
+        snapshot.ClockFontSize = state.ClockFontSize;
         snapshot.ShowTextCapsule = state.ShowTextCapsule;
         snapshot.TextCapsuleContent = state.TextCapsuleContent;
         snapshot.TextCapsulePosition = state.TextCapsulePosition;
         snapshot.TextCapsuleTransparentBackground = state.TextCapsuleTransparentBackground;
+        snapshot.TextCapsuleFontSize = state.TextCapsuleFontSize;
+        snapshot.ShowNetworkSpeed = state.ShowNetworkSpeed;
+        snapshot.NetworkSpeedPosition = state.NetworkSpeedPosition;
+        snapshot.NetworkSpeedDisplayMode = state.NetworkSpeedDisplayMode;
+        snapshot.NetworkSpeedTransparentBackground = state.NetworkSpeedTransparentBackground;
+        snapshot.ShowNetworkTypeIcon = state.ShowNetworkTypeIcon;
+        snapshot.NetworkSpeedFontSize = state.NetworkSpeedFontSize;
         snapshot.StatusBarSpacingMode = state.SpacingMode;
         snapshot.StatusBarCustomSpacingPercent = state.CustomSpacingPercent;
+        snapshot.StatusBarShadowEnabled = state.ShadowEnabled;
+        snapshot.StatusBarShadowColor = state.ShadowColor;
+        snapshot.StatusBarShadowOpacity = state.ShadowOpacity;
         _settingsService.SaveSnapshot(
             SettingsScope.App,
             snapshot,
@@ -423,12 +445,23 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
                 nameof(AppSettingsSnapshot.ClockDisplayFormat),
                 nameof(AppSettingsSnapshot.StatusBarClockTransparentBackground),
                 nameof(AppSettingsSnapshot.ClockPosition),
+                nameof(AppSettingsSnapshot.ClockFontSize),
                 nameof(AppSettingsSnapshot.ShowTextCapsule),
                 nameof(AppSettingsSnapshot.TextCapsuleContent),
                 nameof(AppSettingsSnapshot.TextCapsulePosition),
                 nameof(AppSettingsSnapshot.TextCapsuleTransparentBackground),
+                nameof(AppSettingsSnapshot.TextCapsuleFontSize),
+                nameof(AppSettingsSnapshot.ShowNetworkSpeed),
+                nameof(AppSettingsSnapshot.NetworkSpeedPosition),
+                nameof(AppSettingsSnapshot.NetworkSpeedDisplayMode),
+                nameof(AppSettingsSnapshot.NetworkSpeedTransparentBackground),
+                nameof(AppSettingsSnapshot.ShowNetworkTypeIcon),
+                nameof(AppSettingsSnapshot.NetworkSpeedFontSize),
                 nameof(AppSettingsSnapshot.StatusBarSpacingMode),
-                nameof(AppSettingsSnapshot.StatusBarCustomSpacingPercent)
+                nameof(AppSettingsSnapshot.StatusBarCustomSpacingPercent),
+                nameof(AppSettingsSnapshot.StatusBarShadowEnabled),
+                nameof(AppSettingsSnapshot.StatusBarShadowColor),
+                nameof(AppSettingsSnapshot.StatusBarShadowOpacity)
             ]);
     }
 }

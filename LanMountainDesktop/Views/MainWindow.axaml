@@ -226,13 +226,34 @@
                             </Grid>
                         </Border>
 
+                        <!-- 状态栏阴影层 - macOS 风格的完整阴影带 -->
+                        <Border x:Name="StatusBarOverlay"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="1"
+                                IsVisible="False"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Bottom"
+                                Height="24"
+                                ZIndex="0"
+                                Margin="0,0,0,-24">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="#CC000000" Offset="0.0" />
+                                    <GradientStop Color="#66000000" Offset="0.3" />
+                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
                         <Border x:Name="TopStatusBarHost"
                                 Grid.Row="0"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="1"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Padding="4">
+                                Padding="4"
+                                ZIndex="2">
                             <Grid ColumnDefinitions="*,Auto,*">
                                 <!-- 左侧状态栏组件 -->
                                 <StackPanel x:Name="TopStatusLeftPanel"
@@ -246,6 +267,9 @@
                                     <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetLeft"
                                                             IsVisible="False"
                                                             Margin="0" />
+                                    <comp:NetworkSpeedWidget x:Name="NetworkSpeedWidgetLeft"
+                                                             IsVisible="False"
+                                                             Margin="0" />
                                 </StackPanel>
                                 <!-- 中间状态栏组件 -->
                                 <StackPanel x:Name="TopStatusCenterPanel"
@@ -259,6 +283,9 @@
                                     <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetCenter"
                                                             IsVisible="False"
                                                             Margin="0" />
+                                    <comp:NetworkSpeedWidget x:Name="NetworkSpeedWidgetCenter"
+                                                             IsVisible="False"
+                                                             Margin="0" />
                                 </StackPanel>
                                 <!-- 右侧状态栏组件 -->
                                 <StackPanel x:Name="TopStatusRightPanel"
@@ -272,6 +299,9 @@
                                     <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetRight"
                                                             IsVisible="False"
                                                             Margin="0" />
+                                    <comp:NetworkSpeedWidget x:Name="NetworkSpeedWidgetRight"
+                                                             IsVisible="False"
+                                                             Margin="0" />
                                 </StackPanel>
                             </Grid>
                         </Border>

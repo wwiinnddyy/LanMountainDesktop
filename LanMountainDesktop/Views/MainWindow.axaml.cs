@@ -136,10 +136,21 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private int _statusBarCustomSpacingPercent = 12;
     private bool _statusBarClockTransparentBackground;
     private string _clockPosition = "Left"; // Left, Center, Right
+    private string _clockFontSize = "Medium"; // Small, Medium, Large
     private bool _showTextCapsule;
     private string _textCapsuleContent = "**Hello** World!";
     private string _textCapsulePosition = "Right"; // Left, Center, Right
     private bool _textCapsuleTransparentBackground;
+    private string _textCapsuleFontSize = "Medium"; // Small, Medium, Large
+    private bool _showNetworkSpeed;
+    private string _networkSpeedPosition = "Right"; // Left, Center, Right
+    private string _networkSpeedDisplayMode = "Both"; // Upload, Download, Both
+    private bool _networkSpeedTransparentBackground;
+    private bool _showNetworkTypeIcon;
+    private string _networkSpeedFontSize = "Medium"; // Small, Medium, Large
+    private bool _statusBarShadowEnabled;
+    private string _statusBarShadowColor = "#000000";
+    private double _statusBarShadowOpacity = 0.3;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
@@ -720,6 +731,13 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         TextCapsuleWidgetRight.Margin = new Thickness(0);
         TextCapsuleWidgetRight.ApplyCellSize(cellSize);
 
+        NetworkSpeedWidgetLeft.Margin = new Thickness(0);
+        NetworkSpeedWidgetLeft.ApplyCellSize(cellSize);
+        NetworkSpeedWidgetCenter.Margin = new Thickness(0);
+        NetworkSpeedWidgetCenter.ApplyCellSize(cellSize);
+        NetworkSpeedWidgetRight.Margin = new Thickness(0);
+        NetworkSpeedWidgetRight.ApplyCellSize(cellSize);
+
         var buttonMinWidth = Math.Clamp(taskbarCellHeight * 2.35, 100, 340);
 
         BackToWindowsButton.Margin = new Thickness(0);
@@ -763,6 +781,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             TextCapsuleWidgetLeft.ApplyCellSize(_currentDesktopCellSize);
             TextCapsuleWidgetCenter.ApplyCellSize(_currentDesktopCellSize);
             TextCapsuleWidgetRight.ApplyCellSize(_currentDesktopCellSize);
+            NetworkSpeedWidgetLeft.ApplyCellSize(_currentDesktopCellSize);
+            NetworkSpeedWidgetCenter.ApplyCellSize(_currentDesktopCellSize);
+            NetworkSpeedWidgetRight.ApplyCellSize(_currentDesktopCellSize);
         }
     }
 

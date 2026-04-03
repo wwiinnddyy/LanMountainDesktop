@@ -317,11 +317,11 @@ public sealed record RecommendationApiOptions
 
     public string ClassIslandHubApiUrl { get; init; } = "https://api.github.com/repos/ClassIsland/classisland-hub/contents/images";
 
-    public string SectlHubApiUrl { get; init; } = "https://api.github.com/repos/SECTL/SECTL-hub/contents/images";
+    public string SectlHubApiUrl { get; init; } = "https://api.github.com/repos/SECTL/SECTL-hub/contents/docs/.vuepress/public/images";
 
     public string ClassIslandHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/ClassIsland/classisland-hub/main/images/{0}";
 
-    public string SectlHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/SECTL/SECTL-hub/main/images/{0}";
+    public string SectlHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/SECTL/SECTL-hub/main/docs/.vuepress/public/images/{0}";
 
     public string RinLitHubRawUrlTemplate { get; init; } = "https://raw.githubusercontent.com/RinLit-233-shiroko/Rin-sHub/main/images/{0}";
 }

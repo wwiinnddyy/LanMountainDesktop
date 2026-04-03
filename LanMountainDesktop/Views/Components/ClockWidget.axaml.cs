@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -25,6 +25,7 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
     private ClockDisplayFormat _displayFormat = ClockDisplayFormat.HourMinuteSecond;
     private bool _transparentBackground;
     private double _lastAppliedCellSize = 100;
+    private string _fontSize = "Medium"; // Small, Medium, Large
 
     public ClockWidget()
     {
@@ -70,6 +71,21 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
     public void SetTransparentBackground(bool transparentBackground)
     {
         TransparentBackground = transparentBackground;
+    }
+
+    public string WidgetFontSize
+    {
+        get => _fontSize;
+        set
+        {
+            _fontSize = value;
+            ApplyCellSize(_lastAppliedCellSize);
+        }
+    }
+
+    public void SetFontSize(string fontSize)
+    {
+        WidgetFontSize = fontSize;
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
@@ -138,7 +154,14 @@ public partial class ClockWidget : UserControl, IDesktopComponentWidget, ITimeZo
         
         // 3. 核心：满盈字阶 (Filled Typography)
         // 使主时间文字占据容器高度的 ~68%，产生饱满的视觉张力
-        var mainFontSize = targetHeight * 0.68;
+        // 根据字体大小设置调整基础大小
+        var fontSizeMultiplier = _fontSize switch
+        {
+            "Small" => 0.55,
+            "Large" => 0.85,
+            _ => 0.68 // Medium (default)
+        };
+        var mainFontSize = targetHeight * fontSizeMultiplier;
         MainTimeTextBlock.FontSize = mainFontSize;
         MainTimeTextBlock.FontWeight = FontWeight.SemiBold;
         

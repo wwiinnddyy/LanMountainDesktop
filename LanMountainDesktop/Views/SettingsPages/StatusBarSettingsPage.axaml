@@ -70,6 +70,24 @@
                         </ComboBox>
                     </Grid>
                 </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding ClockFontSizeLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowClock}"
+                                  ItemsSource="{Binding ClockFontSizes}"
+                                  SelectedItem="{Binding SelectedClockFontSize}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
             <ui:SettingsExpander Header="{Binding TextCapsuleHeader}"
@@ -126,6 +144,92 @@
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
+            <ui:SettingsExpander Header="{Binding NetworkSpeedHeader}"
+                                 Description="{Binding NetworkSpeedDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ArrowBidirectionalUpDown" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ShowNetworkSpeed}" />
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding NetworkSpeedPositionLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowNetworkSpeed}"
+                                  ItemsSource="{Binding NetworkSpeedPositions}"
+                                  SelectedItem="{Binding SelectedNetworkSpeedPosition}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding NetworkSpeedDisplayModeLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowNetworkSpeed}"
+                                  ItemsSource="{Binding NetworkSpeedDisplayModes}"
+                                  SelectedItem="{Binding SelectedNetworkSpeedDisplayMode}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding NetworkSpeedTransparentBackgroundLabel}"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding NetworkSpeedTransparentBackground}"
+                                      IsEnabled="{Binding ShowNetworkSpeed}"
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding ShowNetworkTypeIconLabel}"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding ShowNetworkTypeIcon}"
+                                      IsEnabled="{Binding ShowNetworkSpeed}"
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding NetworkSpeedFontSizeLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowNetworkSpeed}"
+                                  ItemsSource="{Binding NetworkSpeedFontSizes}"
+                                  SelectedItem="{Binding SelectedNetworkSpeedFontSize}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
             <Separator Classes="settings-separator" />
 
             <controls:IconText Icon="Apps"
@@ -161,6 +265,55 @@
                                       LargeChange="4"
                                       SpinButtonPlacementMode="Inline"
                                       Value="{Binding CustomSpacingPercent}" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <Separator Classes="settings-separator" />
+
+            <controls:IconText Icon="Square"
+                               Text="{Binding StatusBarShadowHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:SettingsExpander Header="{Binding StatusBarShadowHeader}"
+                                 Description="{Binding StatusBarShadowDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Square" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding StatusBarShadowEnabled}" />
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding StatusBarShadowColorLabel}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                HorizontalAlignment="Right"
+                                IsEnabled="{Binding StatusBarShadowEnabled}">
+                            <Border Width="32"
+                                    Height="32"
+                                    CornerRadius="4"
+                                    Background="{Binding StatusBarShadowColorBrush}" />
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedRight">
+                                    <ColorPicker Color="{Binding StatusBarShadowColor}" />
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding StatusBarShadowOpacityLabel}"
+                                   VerticalAlignment="Center" />
+                        <Slider Grid.Column="1"
+                                Minimum="0"
+                                Maximum="100"
+                                TickFrequency="10"
+                                IsEnabled="{Binding StatusBarShadowEnabled}"
+                                Value="{Binding StatusBarShadowOpacity}" />
                     </Grid>
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>

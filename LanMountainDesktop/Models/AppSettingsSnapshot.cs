@@ -114,6 +114,8 @@ public sealed class AppSettingsSnapshot
 
     public string ClockPosition { get; set; } = "Left"; // Left, Center, Right
 
+    public string ClockFontSize { get; set; } = "Medium"; // Small, Medium, Large
+
     public bool ShowTextCapsule { get; set; } = false;
 
     public string TextCapsuleContent { get; set; } = "**Hello** World!";
@@ -122,7 +124,27 @@ public sealed class AppSettingsSnapshot
 
     public bool TextCapsuleTransparentBackground { get; set; } = false;
 
+    public string TextCapsuleFontSize { get; set; } = "Medium"; // Small, Medium, Large
+
+    public bool ShowNetworkSpeed { get; set; } = false;
+
+    public string NetworkSpeedPosition { get; set; } = "Right"; // Left, Center, Right
+
+    public string NetworkSpeedDisplayMode { get; set; } = "Both"; // Upload, Download, Both
+
+    public bool NetworkSpeedTransparentBackground { get; set; } = false;
+
+    public bool ShowNetworkTypeIcon { get; set; } = false;
+
+    public string NetworkSpeedFontSize { get; set; } = "Medium"; // Small, Medium, Large
+
     public string StatusBarSpacingMode { get; set; } = "Relaxed";
+
+    public bool StatusBarShadowEnabled { get; set; } = false;
+
+    public string StatusBarShadowColor { get; set; } = "#000000";
+
+    public double StatusBarShadowOpacity { get; set; } = 0.3;
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;
 

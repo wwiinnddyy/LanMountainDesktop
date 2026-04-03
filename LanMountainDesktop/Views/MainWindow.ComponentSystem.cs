@@ -365,14 +365,29 @@ public partial class MainWindow
             : ClockDisplayFormat.HourMinuteSecond;
         _statusBarClockTransparentBackground = snapshot.StatusBarClockTransparentBackground;
         _clockPosition = NormalizeClockPosition(snapshot.ClockPosition);
+        _clockFontSize = NormalizeFontSize(snapshot.ClockFontSize);
 
         _showTextCapsule = snapshot.ShowTextCapsule;
         _textCapsuleContent = snapshot.TextCapsuleContent ?? "**Hello** World!";
         _textCapsulePosition = NormalizeTextCapsulePosition(snapshot.TextCapsulePosition);
         _textCapsuleTransparentBackground = snapshot.TextCapsuleTransparentBackground;
+        _textCapsuleFontSize = NormalizeFontSize(snapshot.TextCapsuleFontSize);
+
+        _showNetworkSpeed = snapshot.ShowNetworkSpeed;
+        _networkSpeedPosition = NormalizeNetworkSpeedPosition(snapshot.NetworkSpeedPosition);
+        _networkSpeedDisplayMode = NormalizeNetworkSpeedDisplayMode(snapshot.NetworkSpeedDisplayMode);
+        _networkSpeedTransparentBackground = snapshot.NetworkSpeedTransparentBackground;
+        _showNetworkTypeIcon = snapshot.ShowNetworkTypeIcon;
+        _networkSpeedFontSize = NormalizeFontSize(snapshot.NetworkSpeedFontSize);
+
+        _statusBarShadowEnabled = snapshot.StatusBarShadowEnabled;
+        _statusBarShadowColor = snapshot.StatusBarShadowColor ?? "#000000";
+        _statusBarShadowOpacity = snapshot.StatusBarShadowOpacity;
 
         ApplyClockSettingsToAllWidgets();
         ApplyTextCapsuleSettingsToAllWidgets();
+        ApplyNetworkSpeedSettingsToAllWidgets();
+        ApplyStatusBarShadow();
     }
 
     private void ApplyClockSettingsToAllWidgets()
@@ -381,16 +396,19 @@ public partial class MainWindow
         {
             ClockWidgetLeft.SetDisplayFormat(_clockDisplayFormat);
             ClockWidgetLeft.SetTransparentBackground(_statusBarClockTransparentBackground);
+            ClockWidgetLeft.SetFontSize(_clockFontSize);
         }
         if (ClockWidgetCenter is not null)
         {
             ClockWidgetCenter.SetDisplayFormat(_clockDisplayFormat);
             ClockWidgetCenter.SetTransparentBackground(_statusBarClockTransparentBackground);
+            ClockWidgetCenter.SetFontSize(_clockFontSize);
         }
         if (ClockWidgetRight is not null)
         {
             ClockWidgetRight.SetDisplayFormat(_clockDisplayFormat);
             ClockWidgetRight.SetTransparentBackground(_statusBarClockTransparentBackground);
+            ClockWidgetRight.SetFontSize(_clockFontSize);
         }
     }
 
@@ -401,6 +419,16 @@ public partial class MainWindow
             _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
             _ when string.Equals(value, "Right", StringComparison.OrdinalIgnoreCase) => "Right",
             _ => "Left"
+        };
+    }
+
+    private static string NormalizeFontSize(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Small", StringComparison.OrdinalIgnoreCase) => "Small",
+            _ when string.Equals(value, "Large", StringComparison.OrdinalIgnoreCase) => "Large",
+            _ => "Medium"
         };
     }
 
@@ -431,6 +459,90 @@ public partial class MainWindow
             _ when string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase) => "Left",
             _ => "Right"
         };
+    }
+
+    private void ApplyNetworkSpeedSettingsToAllWidgets()
+    {
+        if (NetworkSpeedWidgetLeft is not null)
+        {
+            NetworkSpeedWidgetLeft.SetDisplayMode(_networkSpeedDisplayMode);
+            NetworkSpeedWidgetLeft.SetTransparentBackground(_networkSpeedTransparentBackground);
+            NetworkSpeedWidgetLeft.SetShowNetworkTypeIcon(_showNetworkTypeIcon);
+            NetworkSpeedWidgetLeft.SetFontSize(_networkSpeedFontSize);
+        }
+        if (NetworkSpeedWidgetCenter is not null)
+        {
+            NetworkSpeedWidgetCenter.SetDisplayMode(_networkSpeedDisplayMode);
+            NetworkSpeedWidgetCenter.SetTransparentBackground(_networkSpeedTransparentBackground);
+            NetworkSpeedWidgetCenter.SetShowNetworkTypeIcon(_showNetworkTypeIcon);
+            NetworkSpeedWidgetCenter.SetFontSize(_networkSpeedFontSize);
+        }
+        if (NetworkSpeedWidgetRight is not null)
+        {
+            NetworkSpeedWidgetRight.SetDisplayMode(_networkSpeedDisplayMode);
+            NetworkSpeedWidgetRight.SetTransparentBackground(_networkSpeedTransparentBackground);
+            NetworkSpeedWidgetRight.SetShowNetworkTypeIcon(_showNetworkTypeIcon);
+            NetworkSpeedWidgetRight.SetFontSize(_networkSpeedFontSize);
+        }
+    }
+
+    private static string NormalizeNetworkSpeedPosition(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase) => "Left",
+            _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
+            _ => "Right"
+        };
+    }
+
+    private static string NormalizeNetworkSpeedDisplayMode(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Upload", StringComparison.OrdinalIgnoreCase) => "Upload",
+            _ when string.Equals(value, "Download", StringComparison.OrdinalIgnoreCase) => "Download",
+            _ => "Both"
+        };
+    }
+
+    private void ApplyStatusBarShadow()
+    {
+        if (StatusBarOverlay is null)
+        {
+            return;
+        }
+
+        if (_statusBarShadowEnabled)
+        {
+            if (Color.TryParse(_statusBarShadowColor, out var shadowColor))
+            {
+                var opacity = Math.Clamp(_statusBarShadowOpacity, 0, 1);
+
+                StatusBarOverlay.IsVisible = true;
+
+                var gradientBrush = new LinearGradientBrush
+                {
+                    StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                    EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative)
+                };
+
+                var alpha1 = (byte)(shadowColor.A * opacity * 0.8);
+                var alpha2 = (byte)(shadowColor.A * opacity * 0.4);
+                var color1 = Color.FromArgb(alpha1, shadowColor.R, shadowColor.G, shadowColor.B);
+                var color2 = Color.FromArgb(alpha2, shadowColor.R, shadowColor.G, shadowColor.B);
+
+                gradientBrush.GradientStops.Add(new GradientStop(color1, 0.0));
+                gradientBrush.GradientStops.Add(new GradientStop(color2, 0.3));
+                gradientBrush.GradientStops.Add(new GradientStop(Colors.Transparent, 1.0));
+
+                StatusBarOverlay.Background = gradientBrush;
+            }
+        }
+        else
+        {
+            StatusBarOverlay.IsVisible = false;
+        }
     }
 
     /// <summary>
@@ -676,6 +788,14 @@ public partial class MainWindow
         if (TextCapsuleWidgetRight is not null)
             TextCapsuleWidgetRight.IsVisible = false;
 
+        // 先隐藏所有网速控件
+        if (NetworkSpeedWidgetLeft is not null)
+            NetworkSpeedWidgetLeft.IsVisible = false;
+        if (NetworkSpeedWidgetCenter is not null)
+            NetworkSpeedWidgetCenter.IsVisible = false;
+        if (NetworkSpeedWidgetRight is not null)
+            NetworkSpeedWidgetRight.IsVisible = false;
+
         // 根据位置设置显示对应的时钟控件（带碰撞检测）
         if (showClock)
         {
@@ -764,6 +884,53 @@ public partial class MainWindow
                         targetTextCapsule.IsVisible = true;
                         targetTextCapsule.SetTransparentBackground(_textCapsuleTransparentBackground);
                         targetTextCapsule.SetText(_textCapsuleContent);
+                        hasVisibleTopStatusComponent = true;
+                    }
+                }
+            }
+        }
+
+        // 根据位置设置显示对应的网速控件（带碰撞检测）
+        if (_showNetworkSpeed)
+        {
+            var targetPosition = _networkSpeedPosition;
+            var canAdd = CanAddComponentAtPosition(targetPosition);
+
+            if (canAdd)
+            {
+                var targetNetworkSpeed = targetPosition switch
+                {
+                    "Left" => NetworkSpeedWidgetLeft,
+                    "Center" => NetworkSpeedWidgetCenter,
+                    _ => NetworkSpeedWidgetRight
+                };
+
+                if (targetNetworkSpeed is not null)
+                {
+                    targetNetworkSpeed.IsVisible = true;
+                    targetNetworkSpeed.SetTransparentBackground(_networkSpeedTransparentBackground);
+                    targetNetworkSpeed.SetDisplayMode(_networkSpeedDisplayMode);
+                    hasVisibleTopStatusComponent = true;
+                }
+            }
+            else
+            {
+                // 如果目标位置无法添加，尝试其他位置
+                var alternativePosition = FindAlternativePosition(targetPosition);
+                if (alternativePosition is not null)
+                {
+                    var targetNetworkSpeed = alternativePosition switch
+                    {
+                        "Left" => NetworkSpeedWidgetLeft,
+                        "Center" => NetworkSpeedWidgetCenter,
+                        _ => NetworkSpeedWidgetRight
+                    };
+
+                    if (targetNetworkSpeed is not null)
+                    {
+                        targetNetworkSpeed.IsVisible = true;
+                        targetNetworkSpeed.SetTransparentBackground(_networkSpeedTransparentBackground);
+                        targetNetworkSpeed.SetDisplayMode(_networkSpeedDisplayMode);
                         hasVisibleTopStatusComponent = true;
                     }
                 }
@@ -869,6 +1036,82 @@ public partial class MainWindow
             else
             {
                 TextCapsuleWidgetCenter.IsVisible = false;
+            }
+        }
+
+        // 调整网速组件位置（优先级：时钟 > 文字胶囊 > 网速）
+        if (NetworkSpeedWidgetLeft?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将左侧网速移到中间
+            if (CanAddComponentAtPosition("Center"))
+            {
+                NetworkSpeedWidgetLeft.IsVisible = false;
+                NetworkSpeedWidgetCenter!.IsVisible = true;
+                NetworkSpeedWidgetCenter.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetCenter.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 或者移到右侧
+            else if (CanAddComponentAtPosition("Right"))
+            {
+                NetworkSpeedWidgetLeft.IsVisible = false;
+                NetworkSpeedWidgetRight!.IsVisible = true;
+                NetworkSpeedWidgetRight.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetRight.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 如果都无法添加，则隐藏网速
+            else
+            {
+                NetworkSpeedWidgetLeft.IsVisible = false;
+            }
+        }
+
+        if (NetworkSpeedWidgetRight?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将右侧网速移到中间
+            if (CanAddComponentAtPosition("Center"))
+            {
+                NetworkSpeedWidgetRight.IsVisible = false;
+                NetworkSpeedWidgetCenter!.IsVisible = true;
+                NetworkSpeedWidgetCenter.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetCenter.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 或者移到左侧
+            else if (CanAddComponentAtPosition("Left"))
+            {
+                NetworkSpeedWidgetRight.IsVisible = false;
+                NetworkSpeedWidgetLeft!.IsVisible = true;
+                NetworkSpeedWidgetLeft.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetLeft.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 如果都无法添加，则隐藏网速
+            else
+            {
+                NetworkSpeedWidgetRight.IsVisible = false;
+            }
+        }
+
+        if (NetworkSpeedWidgetCenter?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将中间网速移到左侧
+            if (CanAddComponentAtPosition("Left"))
+            {
+                NetworkSpeedWidgetCenter.IsVisible = false;
+                NetworkSpeedWidgetLeft!.IsVisible = true;
+                NetworkSpeedWidgetLeft.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetLeft.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 或者移到右侧
+            else if (CanAddComponentAtPosition("Right"))
+            {
+                NetworkSpeedWidgetCenter.IsVisible = false;
+                NetworkSpeedWidgetRight!.IsVisible = true;
+                NetworkSpeedWidgetRight.SetTransparentBackground(_networkSpeedTransparentBackground);
+                NetworkSpeedWidgetRight.SetDisplayMode(_networkSpeedDisplayMode);
+            }
+            // 如果都无法添加，则隐藏网速
+            else
+            {
+                NetworkSpeedWidgetCenter.IsVisible = false;
             }
         }
     }

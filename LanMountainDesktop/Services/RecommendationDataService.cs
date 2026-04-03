@@ -3244,11 +3244,11 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
     private async Task<ZhiJiaoHubSnapshot> FetchZhiJiaoHubSnapshotAsync(string source, string mirrorSource, CancellationToken cancellationToken)
     {
-        var (owner, repo, path) = source switch
+        var (owner, repo, path, rawUrlTemplate) = source switch
         {
-            ZhiJiaoHubSources.Sectl => ("SECTL", "SECTL-hub", "docs/.vuepress/public/images"),
-            ZhiJiaoHubSources.RinLit => ("RinLit-233-shiroko", "Rin-sHub", "images"),
-            _ => ("ClassIsland", "classisland-hub", "images")
+            ZhiJiaoHubSources.Sectl =&gt; ("SECTL", "SECTL-hub", "docs/.vuepress/public/images", _options.SectlHubRawUrlTemplate),
+            ZhiJiaoHubSources.RinLit =&gt; ("RinLit-233-shiroko", "Rin-sHub", "images", _options.RinLitHubRawUrlTemplate),
+            _ =&gt; ("ClassIsland", "classisland-hub", "images", _options.ClassIslandHubRawUrlTemplate)
         };
 
         var contentsUrl = $"https://api.github.com/repos/{owner}/{repo}/contents/{path}";
@@ -3261,7 +3261,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
 
         try
         {
-            var images = await FetchImagesFromContentsApi(owner, repo, path, contentsUrl, mirrorSource, cancellationToken);
+            var images = await FetchImagesFromContentsApi(owner, repo, path, rawUrlTemplate, contentsUrl, mirrorSource, cancellationToken);
 
             if (images.Count == 0)
             {
@@ -3291,7 +3291,7 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
         }
     }
 
-    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromContentsApi(string owner, string repo, string path, string contentsUrl, string mirrorSource, CancellationToken cancellationToken)
+    private async Task<List<ZhiJiaoHubImageItem>> FetchImagesFromContentsApi(string owner, string repo, string path, string rawUrlTemplate, string contentsUrl, string mirrorSource, CancellationToken cancellationToken)
     {
         var images = new List<ZhiJiaoHubImageItem>();
 
@@ -3362,7 +3362,9 @@ public sealed class RecommendationDataService : IRecommendationInfoService, IDis
             }
             else
             {
-                imageUrl = $"https://raw.githubusercontent.com/{owner}/{repo}/main/{path}/{Uri.EscapeDataString(name)}";
+                // 使用为每个数据源专门配置的 raw URL 模板
+                // 注意：模板已经包含了正确的路径，只需要传入文件名
+                imageUrl = string.Format(rawUrlTemplate, Uri.EscapeDataString(name));
             }
 
             // 应用镜像加速到图片 URL

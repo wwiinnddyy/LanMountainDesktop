@@ -42,12 +42,23 @@ public sealed record StatusBarSettingsState(
     string ClockDisplayFormat,
     bool ClockTransparentBackground,
     string ClockPosition,
+    string ClockFontSize,
     bool ShowTextCapsule,
     string TextCapsuleContent,
     string TextCapsulePosition,
     bool TextCapsuleTransparentBackground,
+    string TextCapsuleFontSize,
+    bool ShowNetworkSpeed,
+    string NetworkSpeedPosition,
+    string NetworkSpeedDisplayMode,
+    bool NetworkSpeedTransparentBackground,
+    bool ShowNetworkTypeIcon,
+    string NetworkSpeedFontSize,
     string SpacingMode,
-    int CustomSpacingPercent);
+    int CustomSpacingPercent,
+    bool ShadowEnabled,
+    string ShadowColor,
+    double ShadowOpacity);
 
 public sealed record TextCapsuleSettingsState(
     bool ShowTextCapsule,
