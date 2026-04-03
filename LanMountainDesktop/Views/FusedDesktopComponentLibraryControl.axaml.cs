@@ -10,6 +10,7 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views.Components;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace LanMountainDesktop.Views;
 
@@ -117,12 +118,42 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             definition.MinWidthCells,
             definition.MinHeightCells);
 
-        return new ComponentLibraryItemViewModel(
+        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+        ComponentPreviewImageEntry? previewEntry = null;
+
+        if (mainWindow is not null)
+        {
+            previewEntry = mainWindow.GetPreviewEntry(previewKey);
+        }
+
+        var item = new ComponentLibraryItemViewModel(
             definition.Id,
             definition.DisplayName,
             previewKey,
             "正在加载预览...",
-            "预览不可用");
+            "预览不可用",
+            previewEntry);
+            
+        if (mainWindow is not null && (previewEntry is null || previewEntry.State == ComponentPreviewImageState.Pending))
+        {
+            mainWindow.RequestDetachedLibraryPreview(previewKey);
+        }
+
+        return item;
+    }
+
+    public void UpdatePreviewImage(ComponentPreviewImageEntry entry)
+    {
+        foreach (var category in _viewModel.Categories)
+        {
+            foreach (var component in category.Components)
+            {
+                if (component.PreviewKey.Equals(entry.Key))
+                {
+                    component.UpdatePreviewImageEntry(entry);
+                }
+            }
+        }
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)

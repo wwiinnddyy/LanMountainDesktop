@@ -21,6 +21,8 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
 
         ClockFormats = CreateClockFormats();
+        ClockPositions = CreateClockPositions();
+        TextCapsulePositions = CreateTextCapsulePositions();
         SpacingModes = CreateSpacingModes();
         RefreshLocalizedText();
 
@@ -30,6 +32,10 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     }
 
     public IReadOnlyList<SelectionOption> ClockFormats { get; }
+
+    public IReadOnlyList<SelectionOption> ClockPositions { get; }
+
+    public IReadOnlyList<SelectionOption> TextCapsulePositions { get; }
 
     public IReadOnlyList<SelectionOption> SpacingModes { get; }
 
@@ -41,6 +47,9 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _clockTransparentBackground;
+
+    [ObservableProperty]
+    private SelectionOption _selectedClockPosition = new("Left", "Left");
 
     [ObservableProperty]
     private SelectionOption _selectedSpacingMode = new("Relaxed", "Relaxed");
@@ -76,6 +85,36 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     private string _clockTransparentBackgroundDescription = string.Empty;
 
     [ObservableProperty]
+    private string _clockPositionLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _textCapsuleHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _textCapsuleDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _showTextCapsule;
+
+    [ObservableProperty]
+    private string _textCapsuleContent = "**Hello** World!";
+
+    [ObservableProperty]
+    private SelectionOption _selectedTextCapsulePosition = new("Right", "Right");
+
+    [ObservableProperty]
+    private bool _textCapsuleTransparentBackground;
+
+    [ObservableProperty]
+    private string _textCapsulePositionLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _textCapsuleContentLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _textCapsuleTransparentBackgroundLabel = string.Empty;
+
+    [ObservableProperty]
     private string _spacingHeader = string.Empty;
 
     [ObservableProperty]
@@ -98,6 +137,20 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
             string.Equals(option.Value, clockFormat, StringComparison.OrdinalIgnoreCase))
             ?? ClockFormats[1];
         ClockTransparentBackground = state.ClockTransparentBackground;
+
+        var clockPosition = NormalizeClockPosition(state.ClockPosition);
+        SelectedClockPosition = ClockPositions.FirstOrDefault(option =>
+            string.Equals(option.Value, clockPosition, StringComparison.OrdinalIgnoreCase))
+            ?? ClockPositions[0];
+
+        // 文字胶囊设置
+        ShowTextCapsule = state.ShowTextCapsule;
+        TextCapsuleContent = state.TextCapsuleContent ?? "**Hello** World!";
+        var textCapsulePosition = NormalizeTextCapsulePosition(state.TextCapsulePosition);
+        SelectedTextCapsulePosition = TextCapsulePositions.FirstOrDefault(option =>
+            string.Equals(option.Value, textCapsulePosition, StringComparison.OrdinalIgnoreCase))
+            ?? TextCapsulePositions[2]; // 默认靠右
+        TextCapsuleTransparentBackground = state.TextCapsuleTransparentBackground;
 
         var spacingMode = NormalizeSpacingMode(state.SpacingMode);
         SelectedSpacingMode = SpacingModes.FirstOrDefault(option =>
@@ -128,6 +181,56 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     }
 
     partial void OnClockTransparentBackgroundChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnSelectedClockPositionChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnShowTextCapsuleChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnTextCapsuleContentChanged(string value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnSelectedTextCapsulePositionChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    partial void OnTextCapsuleTransparentBackgroundChanged(bool value)
     {
         if (_isInitializing)
         {
@@ -184,6 +287,11 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
             state.TaskbarLayoutMode,
             SelectedClockFormat.Value,
             ClockTransparentBackground,
+            SelectedClockPosition.Value,
+            ShowTextCapsule,
+            TextCapsuleContent ?? "**Hello** World!",
+            SelectedTextCapsulePosition?.Value ?? "Right",
+            TextCapsuleTransparentBackground,
             NormalizeSpacingMode(SelectedSpacingMode.Value),
             Math.Clamp(CustomSpacingPercent, 0, 30)));
     }
@@ -194,6 +302,26 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         [
             new SelectionOption("HourMinute", L("settings.status_bar.clock_format.hm", "Hour:Minute")),
             new SelectionOption("HourMinuteSecond", L("settings.status_bar.clock_format.hms", "Hour:Minute:Second"))
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateClockPositions()
+    {
+        return
+        [
+            new SelectionOption("Left", L("settings.status_bar.clock_position.left", "Left")),
+            new SelectionOption("Center", L("settings.status_bar.clock_position.center", "Center")),
+            new SelectionOption("Right", L("settings.status_bar.clock_position.right", "Right"))
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateTextCapsulePositions()
+    {
+        return
+        [
+            new SelectionOption("Left", L("settings.status_bar.text_capsule_position.left", "Left")),
+            new SelectionOption("Center", L("settings.status_bar.text_capsule_position.center", "Center")),
+            new SelectionOption("Right", L("settings.status_bar.text_capsule_position.right", "Right"))
         ];
     }
 
@@ -217,6 +345,12 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         ClockFormatLabel = L("settings.status_bar.clock_format_label", "Clock format");
         ClockTransparentBackgroundLabel = L("settings.status_bar.clock_transparent_background_label", "Transparent background");
         ClockTransparentBackgroundDescription = L("settings.status_bar.clock_transparent_background_desc", "Remove the capsule background and keep only the clock text.");
+        ClockPositionLabel = L("settings.status_bar.clock_position_label", "Clock position");
+        TextCapsuleHeader = L("settings.status_bar.text_capsule_header", "Text Capsule");
+        TextCapsuleDescription = L("settings.status_bar.text_capsule_description", "Display custom text with Markdown support on the status bar.");
+        TextCapsulePositionLabel = L("settings.status_bar.text_capsule_position_label", "Text capsule position");
+        TextCapsuleContentLabel = L("settings.status_bar.text_capsule_content_label", "Text content (Markdown supported)");
+        TextCapsuleTransparentBackgroundLabel = L("settings.status_bar.text_capsule_transparent_background_label", "Transparent background");
         SpacingHeader = L("settings.status_bar.spacing_header", "Component Spacing");
         SpacingDescription = L("settings.status_bar.spacing_desc", "Adjust spacing between status bar components.");
         CustomSpacingLabel = L("settings.status_bar.spacing_custom_label", "Custom spacing (%)");
@@ -229,6 +363,26 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
             _ when string.Equals(value, "Compact", StringComparison.OrdinalIgnoreCase) => "Compact",
             _ when string.Equals(value, "Custom", StringComparison.OrdinalIgnoreCase) => "Custom",
             _ => "Relaxed"
+        };
+    }
+
+    private static string NormalizeClockPosition(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
+            _ when string.Equals(value, "Right", StringComparison.OrdinalIgnoreCase) => "Right",
+            _ => "Left"
+        };
+    }
+
+    private static string NormalizeTextCapsulePosition(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase) => "Left",
+            _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
+            _ => "Right"
         };
     }
 

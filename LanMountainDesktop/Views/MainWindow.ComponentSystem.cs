@@ -364,12 +364,295 @@ public partial class MainWindow
             ? ClockDisplayFormat.HourMinute
             : ClockDisplayFormat.HourMinuteSecond;
         _statusBarClockTransparentBackground = snapshot.StatusBarClockTransparentBackground;
+        _clockPosition = NormalizeClockPosition(snapshot.ClockPosition);
 
-        if (ClockWidget is not null)
+        _showTextCapsule = snapshot.ShowTextCapsule;
+        _textCapsuleContent = snapshot.TextCapsuleContent ?? "**Hello** World!";
+        _textCapsulePosition = NormalizeTextCapsulePosition(snapshot.TextCapsulePosition);
+        _textCapsuleTransparentBackground = snapshot.TextCapsuleTransparentBackground;
+
+        ApplyClockSettingsToAllWidgets();
+        ApplyTextCapsuleSettingsToAllWidgets();
+    }
+
+    private void ApplyClockSettingsToAllWidgets()
+    {
+        if (ClockWidgetLeft is not null)
         {
-            ClockWidget.SetDisplayFormat(_clockDisplayFormat);
-            ClockWidget.SetTransparentBackground(_statusBarClockTransparentBackground);
+            ClockWidgetLeft.SetDisplayFormat(_clockDisplayFormat);
+            ClockWidgetLeft.SetTransparentBackground(_statusBarClockTransparentBackground);
         }
+        if (ClockWidgetCenter is not null)
+        {
+            ClockWidgetCenter.SetDisplayFormat(_clockDisplayFormat);
+            ClockWidgetCenter.SetTransparentBackground(_statusBarClockTransparentBackground);
+        }
+        if (ClockWidgetRight is not null)
+        {
+            ClockWidgetRight.SetDisplayFormat(_clockDisplayFormat);
+            ClockWidgetRight.SetTransparentBackground(_statusBarClockTransparentBackground);
+        }
+    }
+
+    private static string NormalizeClockPosition(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
+            _ when string.Equals(value, "Right", StringComparison.OrdinalIgnoreCase) => "Right",
+            _ => "Left"
+        };
+    }
+
+    private void ApplyTextCapsuleSettingsToAllWidgets()
+    {
+        if (TextCapsuleWidgetLeft is not null)
+        {
+            TextCapsuleWidgetLeft.SetText(_textCapsuleContent);
+            TextCapsuleWidgetLeft.SetTransparentBackground(_textCapsuleTransparentBackground);
+        }
+        if (TextCapsuleWidgetCenter is not null)
+        {
+            TextCapsuleWidgetCenter.SetText(_textCapsuleContent);
+            TextCapsuleWidgetCenter.SetTransparentBackground(_textCapsuleTransparentBackground);
+        }
+        if (TextCapsuleWidgetRight is not null)
+        {
+            TextCapsuleWidgetRight.SetText(_textCapsuleContent);
+            TextCapsuleWidgetRight.SetTransparentBackground(_textCapsuleTransparentBackground);
+        }
+    }
+
+    private static string NormalizeTextCapsulePosition(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "Center", StringComparison.OrdinalIgnoreCase) => "Center",
+            _ when string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase) => "Left",
+            _ => "Right"
+        };
+    }
+
+    /// <summary>
+    /// 检测状态栏组件是否会发生碰撞
+    /// </summary>
+    private bool WouldComponentsCollide()
+    {
+        if (TopStatusBarHost is null)
+            return false;
+
+        // 获取各区域当前占用的宽度
+        var leftWidth = GetLeftPanelOccupiedWidth();
+        var centerWidth = GetCenterPanelOccupiedWidth();
+        var rightWidth = GetRightPanelOccupiedWidth();
+
+        // 获取状态栏总宽度
+        var totalWidth = TopStatusBarHost.Bounds.Width;
+        if (totalWidth <= 0)
+            return false;
+
+        // 计算中间区域的实际位置
+        // 左列是 *, 中列是 Auto, 右列是 *
+        // 中间区域居中显示
+        var centerLeft = (totalWidth - centerWidth) / 2;
+        var centerRight = centerLeft + centerWidth;
+
+        // 安全间距（像素）
+        const double safetyMargin = 20;
+
+        // 检测左侧组件是否会与中间区域碰撞
+        // 左侧组件右边界 = leftWidth
+        // 中间区域左边界 = centerLeft
+        if (leftWidth + safetyMargin > centerLeft)
+        {
+            return true;
+        }
+
+        // 检测右侧组件是否会与中间区域碰撞
+        // 右侧组件左边界 = totalWidth - rightWidth
+        // 中间区域右边界 = centerRight
+        if (totalWidth - rightWidth - safetyMargin < centerRight)
+        {
+            return true;
+        }
+
+        // 检测中间区域是否会与左右两侧碰撞（中间区域过宽）
+        if (centerLeft < leftWidth + safetyMargin ||
+            centerRight > totalWidth - rightWidth - safetyMargin)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 获取左侧面板占用的宽度（包括间距）
+    /// </summary>
+    private double GetLeftPanelOccupiedWidth()
+    {
+        if (TopStatusLeftPanel is null)
+            return 0;
+
+        var spacing = TopStatusLeftPanel.Spacing;
+        var width = 0.0;
+        var visibleCount = 0;
+
+        foreach (var child in TopStatusLeftPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+            {
+                width += control.Bounds.Width;
+                visibleCount++;
+            }
+        }
+
+        // 添加间距
+        if (visibleCount > 1)
+        {
+            width += spacing * (visibleCount - 1);
+        }
+
+        return width;
+    }
+
+    /// <summary>
+    /// 获取中间面板占用的宽度（包括间距）
+    /// </summary>
+    private double GetCenterPanelOccupiedWidth()
+    {
+        if (TopStatusCenterPanel is null)
+            return 0;
+
+        var spacing = TopStatusCenterPanel.Spacing;
+        var width = 0.0;
+        var visibleCount = 0;
+
+        foreach (var child in TopStatusCenterPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+            {
+                width += control.Bounds.Width;
+                visibleCount++;
+            }
+        }
+
+        // 添加间距
+        if (visibleCount > 1)
+        {
+            width += spacing * (visibleCount - 1);
+        }
+
+        return width;
+    }
+
+    /// <summary>
+    /// 获取右侧面板占用的宽度（包括间距）
+    /// </summary>
+    private double GetRightPanelOccupiedWidth()
+    {
+        if (TopStatusRightPanel is null)
+            return 0;
+
+        var spacing = TopStatusRightPanel.Spacing;
+        var width = 0.0;
+        var visibleCount = 0;
+
+        foreach (var child in TopStatusRightPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+            {
+                width += control.Bounds.Width;
+                visibleCount++;
+            }
+        }
+
+        // 添加间距
+        if (visibleCount > 1)
+        {
+            width += spacing * (visibleCount - 1);
+        }
+
+        return width;
+    }
+
+    /// <summary>
+    /// 检查是否可以在指定位置添加组件
+    /// </summary>
+    private bool CanAddComponentAtPosition(string position)
+    {
+        // 先临时显示组件以计算宽度
+        var wouldCollide = WouldComponentsCollide();
+        if (!wouldCollide)
+            return true;
+
+        // 如果会发生碰撞，检查是否是因为目标位置导致的
+        // 获取当前各区域宽度
+        var leftWidth = GetLeftPanelOccupiedWidth();
+        var centerWidth = GetCenterPanelOccupiedWidth();
+        var rightWidth = GetRightPanelOccupiedWidth();
+
+        // 估算新组件的宽度（基于当前单元格大小）
+        var estimatedNewComponentWidth = _currentDesktopCellSize > 0 ? _currentDesktopCellSize * 2 : 120;
+
+        // 根据目标位置检查添加后是否会碰撞
+        return position switch
+        {
+            "Left" => CanAddToLeft(leftWidth, centerWidth, rightWidth, estimatedNewComponentWidth),
+            "Center" => CanAddToCenter(leftWidth, centerWidth, rightWidth, estimatedNewComponentWidth),
+            "Right" => CanAddToRight(leftWidth, centerWidth, rightWidth, estimatedNewComponentWidth),
+            _ => false
+        };
+    }
+
+    private bool CanAddToLeft(double leftWidth, double centerWidth, double rightWidth, double newWidth)
+    {
+        if (TopStatusBarHost is null)
+            return false;
+
+        var totalWidth = TopStatusBarHost.Bounds.Width;
+        if (totalWidth <= 0)
+            return true;
+
+        var newLeftWidth = leftWidth + newWidth + TopStatusLeftPanel?.Spacing ?? 6;
+        var centerLeft = (totalWidth - centerWidth) / 2;
+
+        const double safetyMargin = 20;
+        return newLeftWidth + safetyMargin <= centerLeft;
+    }
+
+    private bool CanAddToCenter(double leftWidth, double centerWidth, double rightWidth, double newWidth)
+    {
+        if (TopStatusBarHost is null)
+            return false;
+
+        var totalWidth = TopStatusBarHost.Bounds.Width;
+        if (totalWidth <= 0)
+            return true;
+
+        var newCenterWidth = centerWidth + newWidth + TopStatusCenterPanel?.Spacing ?? 6;
+        var centerLeft = (totalWidth - newCenterWidth) / 2;
+        var centerRight = centerLeft + newCenterWidth;
+
+        const double safetyMargin = 20;
+        return centerLeft >= leftWidth + safetyMargin &&
+               centerRight <= totalWidth - rightWidth - safetyMargin;
+    }
+
+    private bool CanAddToRight(double leftWidth, double centerWidth, double rightWidth, double newWidth)
+    {
+        if (TopStatusBarHost is null)
+            return false;
+
+        var totalWidth = TopStatusBarHost.Bounds.Width;
+        if (totalWidth <= 0)
+            return true;
+
+        var newRightWidth = rightWidth + newWidth + TopStatusRightPanel?.Spacing ?? 6;
+        var centerRight = (totalWidth + centerWidth) / 2;
+
+        const double safetyMargin = 20;
+        return totalWidth - newRightWidth - safetyMargin >= centerRight;
     }
 
     private void ApplyTopStatusComponentVisibility()
@@ -377,16 +660,113 @@ public partial class MainWindow
         var showClock = _topStatusComponentIds.Contains(BuiltInComponentIds.Clock);
         var hasVisibleTopStatusComponent = false;
 
-        if (ClockWidget is not null)
+        // 先隐藏所有时钟控件
+        if (ClockWidgetLeft is not null)
+            ClockWidgetLeft.IsVisible = false;
+        if (ClockWidgetCenter is not null)
+            ClockWidgetCenter.IsVisible = false;
+        if (ClockWidgetRight is not null)
+            ClockWidgetRight.IsVisible = false;
+
+        // 先隐藏所有文字胶囊控件
+        if (TextCapsuleWidgetLeft is not null)
+            TextCapsuleWidgetLeft.IsVisible = false;
+        if (TextCapsuleWidgetCenter is not null)
+            TextCapsuleWidgetCenter.IsVisible = false;
+        if (TextCapsuleWidgetRight is not null)
+            TextCapsuleWidgetRight.IsVisible = false;
+
+        // 根据位置设置显示对应的时钟控件（带碰撞检测）
+        if (showClock)
         {
-            ClockWidget.IsVisible = showClock;
-            ClockWidget.SetTransparentBackground(_statusBarClockTransparentBackground);
-            if (showClock)
+            var targetPosition = _clockPosition;
+            var canAdd = CanAddComponentAtPosition(targetPosition);
+
+            if (canAdd)
             {
-                ClockWidget.SetDisplayFormat(_clockDisplayFormat);
-                var columnSpan = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? 2 : 3;
-                Grid.SetColumnSpan(ClockWidget, columnSpan);
-                hasVisibleTopStatusComponent = true;
+                var targetClock = targetPosition switch
+                {
+                    "Center" => ClockWidgetCenter,
+                    "Right" => ClockWidgetRight,
+                    _ => ClockWidgetLeft
+                };
+
+                if (targetClock is not null)
+                {
+                    targetClock.IsVisible = true;
+                    targetClock.SetTransparentBackground(_statusBarClockTransparentBackground);
+                    targetClock.SetDisplayFormat(_clockDisplayFormat);
+                    hasVisibleTopStatusComponent = true;
+                }
+            }
+            else
+            {
+                // 如果目标位置无法添加，尝试其他位置
+                var alternativePosition = FindAlternativePosition(targetPosition);
+                if (alternativePosition is not null)
+                {
+                    var targetClock = alternativePosition switch
+                    {
+                        "Center" => ClockWidgetCenter,
+                        "Right" => ClockWidgetRight,
+                        _ => ClockWidgetLeft
+                    };
+
+                    if (targetClock is not null)
+                    {
+                        targetClock.IsVisible = true;
+                        targetClock.SetTransparentBackground(_statusBarClockTransparentBackground);
+                        targetClock.SetDisplayFormat(_clockDisplayFormat);
+                        hasVisibleTopStatusComponent = true;
+                    }
+                }
+            }
+        }
+
+        // 根据位置设置显示对应的文字胶囊控件（带碰撞检测）
+        if (_showTextCapsule)
+        {
+            var targetPosition = _textCapsulePosition;
+            var canAdd = CanAddComponentAtPosition(targetPosition);
+
+            if (canAdd)
+            {
+                var targetTextCapsule = targetPosition switch
+                {
+                    "Left" => TextCapsuleWidgetLeft,
+                    "Center" => TextCapsuleWidgetCenter,
+                    _ => TextCapsuleWidgetRight
+                };
+
+                if (targetTextCapsule is not null)
+                {
+                    targetTextCapsule.IsVisible = true;
+                    targetTextCapsule.SetTransparentBackground(_textCapsuleTransparentBackground);
+                    targetTextCapsule.SetText(_textCapsuleContent);
+                    hasVisibleTopStatusComponent = true;
+                }
+            }
+            else
+            {
+                // 如果目标位置无法添加，尝试其他位置
+                var alternativePosition = FindAlternativePosition(targetPosition);
+                if (alternativePosition is not null)
+                {
+                    var targetTextCapsule = alternativePosition switch
+                    {
+                        "Left" => TextCapsuleWidgetLeft,
+                        "Center" => TextCapsuleWidgetCenter,
+                        _ => TextCapsuleWidgetRight
+                    };
+
+                    if (targetTextCapsule is not null)
+                    {
+                        targetTextCapsule.IsVisible = true;
+                        targetTextCapsule.SetTransparentBackground(_textCapsuleTransparentBackground);
+                        targetTextCapsule.SetText(_textCapsuleContent);
+                        hasVisibleTopStatusComponent = true;
+                    }
+                }
             }
         }
 
@@ -394,6 +774,168 @@ public partial class MainWindow
         {
             TopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
         }
+
+        // 延迟检查碰撞并调整
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await System.Threading.Tasks.Task.Delay(50);
+            AdjustComponentsIfColliding();
+        });
+    }
+
+    /// <summary>
+    /// 当组件发生碰撞时，自动调整位置
+    /// </summary>
+    private void AdjustComponentsIfColliding()
+    {
+        if (!WouldComponentsCollide())
+            return;
+
+        // 获取当前可见的组件
+        var leftComponents = GetVisibleLeftComponents();
+        var centerComponents = GetVisibleCenterComponents();
+        var rightComponents = GetVisibleRightComponents();
+
+        // 优先保留时钟，调整文字胶囊位置
+        if (TextCapsuleWidgetLeft?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将左侧文字胶囊移到中间
+            if (CanAddComponentAtPosition("Center"))
+            {
+                TextCapsuleWidgetLeft.IsVisible = false;
+                TextCapsuleWidgetCenter!.IsVisible = true;
+                TextCapsuleWidgetCenter.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetCenter.SetText(_textCapsuleContent);
+            }
+            // 或者移到右侧
+            else if (CanAddComponentAtPosition("Right"))
+            {
+                TextCapsuleWidgetLeft.IsVisible = false;
+                TextCapsuleWidgetRight!.IsVisible = true;
+                TextCapsuleWidgetRight.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetRight.SetText(_textCapsuleContent);
+            }
+            // 如果都无法添加，则隐藏文字胶囊
+            else
+            {
+                TextCapsuleWidgetLeft.IsVisible = false;
+            }
+        }
+
+        if (TextCapsuleWidgetRight?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将右侧文字胶囊移到中间
+            if (CanAddComponentAtPosition("Center"))
+            {
+                TextCapsuleWidgetRight.IsVisible = false;
+                TextCapsuleWidgetCenter!.IsVisible = true;
+                TextCapsuleWidgetCenter.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetCenter.SetText(_textCapsuleContent);
+            }
+            // 或者移到左侧
+            else if (CanAddComponentAtPosition("Left"))
+            {
+                TextCapsuleWidgetRight.IsVisible = false;
+                TextCapsuleWidgetLeft!.IsVisible = true;
+                TextCapsuleWidgetLeft.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetLeft.SetText(_textCapsuleContent);
+            }
+            // 如果都无法添加，则隐藏文字胶囊
+            else
+            {
+                TextCapsuleWidgetRight.IsVisible = false;
+            }
+        }
+
+        if (TextCapsuleWidgetCenter?.IsVisible == true && WouldComponentsCollide())
+        {
+            // 尝试将中间文字胶囊移到左侧
+            if (CanAddComponentAtPosition("Left"))
+            {
+                TextCapsuleWidgetCenter.IsVisible = false;
+                TextCapsuleWidgetLeft!.IsVisible = true;
+                TextCapsuleWidgetLeft.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetLeft.SetText(_textCapsuleContent);
+            }
+            // 或者移到右侧
+            else if (CanAddComponentAtPosition("Right"))
+            {
+                TextCapsuleWidgetCenter.IsVisible = false;
+                TextCapsuleWidgetRight!.IsVisible = true;
+                TextCapsuleWidgetRight.SetTransparentBackground(_textCapsuleTransparentBackground);
+                TextCapsuleWidgetRight.SetText(_textCapsuleContent);
+            }
+            // 如果都无法添加，则隐藏文字胶囊
+            else
+            {
+                TextCapsuleWidgetCenter.IsVisible = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 查找可用的替代位置
+    /// </summary>
+    private string? FindAlternativePosition(string originalPosition)
+    {
+        // 尝试所有可能的位置
+        var positions = new[] { "Left", "Center", "Right" };
+        foreach (var position in positions)
+        {
+            if (position != originalPosition && CanAddComponentAtPosition(position))
+            {
+                return position;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 获取左侧可见组件列表
+    /// </summary>
+    private List<Control> GetVisibleLeftComponents()
+    {
+        var result = new List<Control>();
+        if (TopStatusLeftPanel is null) return result;
+
+        foreach (var child in TopStatusLeftPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+                result.Add(control);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 获取中间可见组件列表
+    /// </summary>
+    private List<Control> GetVisibleCenterComponents()
+    {
+        var result = new List<Control>();
+        if (TopStatusCenterPanel is null) return result;
+
+        foreach (var child in TopStatusCenterPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+                result.Add(control);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 获取右侧可见组件列表
+    /// </summary>
+    private List<Control> GetVisibleRightComponents()
+    {
+        var result = new List<Control>();
+        if (TopStatusRightPanel is null) return result;
+
+        foreach (var child in TopStatusRightPanel.Children)
+        {
+            if (child is Control control && control.IsVisible)
+                result.Add(control);
+        }
+        return result;
     }
 
     private TaskbarContext GetCurrentTaskbarContext()

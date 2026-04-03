@@ -135,6 +135,11 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
     private bool _statusBarClockTransparentBackground;
+    private string _clockPosition = "Left"; // Left, Center, Right
+    private bool _showTextCapsule;
+    private string _textCapsuleContent = "**Hello** World!";
+    private string _textCapsulePosition = "Right"; // Left, Center, Right
+    private bool _textCapsuleTransparentBackground;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
     private string _languageCode = "zh-CN";
@@ -238,9 +243,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         TaskbarProfileButton.IsEnabled = false;
         TaskbarProfilePopup.IsOpen = false;
 
-        ClockWidget.IsVisible = true;
-        ClockWidget.SetDisplayFormat(ClockDisplayFormat.HourMinute);
-        ClockWidget.SetTransparentBackground(false);
+        ClockWidgetLeft.IsVisible = true;
+        ClockWidgetLeft.SetDisplayFormat(ClockDisplayFormat.HourMinute);
+        ClockWidgetLeft.SetTransparentBackground(false);
 
         ConfigureDesignTimeDesktopGrid();
         PopulateDesignTimeDesktopSurface();
@@ -288,7 +293,7 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         DesktopPagesHost.ColumnDefinitions.Clear();
         DesktopPagesHost.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
 
-        ClockWidget.ApplyCellSize(72);
+        ClockWidgetLeft.ApplyCellSize(72);
     }
 
     private void PopulateDesignTimeDesktopSurface()
@@ -481,7 +486,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         RebuildDesktopGrid();
         LoadLauncherEntriesAsync();
         InitializeTimeZoneSettings();
-        ClockWidget.SetTimeZoneService(_timeZoneService);
+        ClockWidgetLeft.SetTimeZoneService(_timeZoneService);
+        ClockWidgetCenter.SetTimeZoneService(_timeZoneService);
+        ClockWidgetRight.SetTimeZoneService(_timeZoneService);
 
         _suppressSettingsPersistence = false;
         PersistSettings();
@@ -621,7 +628,9 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
     private void ApplyDesktopStatusBarComponentSpacing()
     {
-        ApplyStatusBarComponentSpacingForPanel(TopStatusComponentsPanel, _currentDesktopCellSize);
+        ApplyStatusBarComponentSpacingForPanel(TopStatusLeftPanel, _currentDesktopCellSize);
+        ApplyStatusBarComponentSpacingForPanel(TopStatusCenterPanel, _currentDesktopCellSize);
+        ApplyStatusBarComponentSpacingForPanel(TopStatusRightPanel, _currentDesktopCellSize);
     }
 
     private int ResolveStatusBarSpacingPercent()
@@ -697,8 +706,19 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
         ApplyUnifiedMainRectangleChrome();
         BottomTaskbarContainer.Padding = new Thickness(Math.Clamp(taskbarCellHeight * 0.16, 6, 14));
 
-        ClockWidget.Margin = new Thickness(0);
-        ClockWidget.ApplyCellSize(cellSize);
+        ClockWidgetLeft.Margin = new Thickness(0);
+        ClockWidgetLeft.ApplyCellSize(cellSize);
+        ClockWidgetCenter.Margin = new Thickness(0);
+        ClockWidgetCenter.ApplyCellSize(cellSize);
+        ClockWidgetRight.Margin = new Thickness(0);
+        ClockWidgetRight.ApplyCellSize(cellSize);
+
+        TextCapsuleWidgetLeft.Margin = new Thickness(0);
+        TextCapsuleWidgetLeft.ApplyCellSize(cellSize);
+        TextCapsuleWidgetCenter.Margin = new Thickness(0);
+        TextCapsuleWidgetCenter.ApplyCellSize(cellSize);
+        TextCapsuleWidgetRight.Margin = new Thickness(0);
+        TextCapsuleWidgetRight.ApplyCellSize(cellSize);
 
         var buttonMinWidth = Math.Clamp(taskbarCellHeight * 2.35, 100, 340);
 
@@ -737,7 +757,12 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
         if (_currentDesktopCellSize > 0)
         {
-            ClockWidget.ApplyCellSize(_currentDesktopCellSize);
+            ClockWidgetLeft.ApplyCellSize(_currentDesktopCellSize);
+            ClockWidgetCenter.ApplyCellSize(_currentDesktopCellSize);
+            ClockWidgetRight.ApplyCellSize(_currentDesktopCellSize);
+            TextCapsuleWidgetLeft.ApplyCellSize(_currentDesktopCellSize);
+            TextCapsuleWidgetCenter.ApplyCellSize(_currentDesktopCellSize);
+            TextCapsuleWidgetRight.ApplyCellSize(_currentDesktopCellSize);
         }
     }
 

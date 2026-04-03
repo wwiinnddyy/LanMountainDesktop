@@ -52,12 +52,21 @@ public partial class TransparentOverlayWindow : Window
     
     // 渲染参数
     private const double DefaultCellSize = 100;
+    private double _currentDesktopCellSize;
     
-    // 拖拽状态
+    // 拖拽与缩放状态
     private bool _isDragging;
-    private string? _draggingPlacementId;
-    private Point _dragStartPoint;
-    private Border? _draggingHost;
+    private bool _isResizing;
+    private string? _interactionPlacementId;
+    private Point _interactionStartPoint;
+    private double _interactionOriginalX;
+    private double _interactionOriginalY;
+    private double _interactionOriginalWidth;
+    private double _interactionOriginalHeight;
+    private Border? _interactionHost;
+    
+    // 选中状态
+    private Border? _selectedHost;
     
     public event EventHandler? RestoreMainWindowRequested;
     
@@ -97,6 +106,15 @@ public partial class TransparentOverlayWindow : Window
             Position = new PixelPoint(workArea.X, workArea.Y);
             Width = workArea.Width / scaling;
             Height = workArea.Height / scaling;
+            
+            // 基于设置计算单元格尺寸
+            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var shortCells = Math.Clamp(appSnapshot.GridShortSideCells > 0 ? appSnapshot.GridShortSideCells : 12, 6, 96);
+            _currentDesktopCellSize = Height / shortCells;
+        }
+        else
+        {
+            _currentDesktopCellSize = DefaultCellSize;
         }
 
         if (Content is Canvas canvas)
@@ -139,6 +157,7 @@ public partial class TransparentOverlayWindow : Window
         
         canvas.Children.Clear();
         _componentHosts.Clear();
+        _selectedHost = null;
         
         foreach (var placement in _layout.ComponentPlacements)
         {
@@ -190,9 +209,14 @@ public partial class TransparentOverlayWindow : Window
             return;
         }
 
-        // 解析尺寸：如果未提供，则使用组件定义的最小尺寸 * 100
-        var finalWidth = width ?? (definition.MinWidthCells * DefaultCellSize);
-        var finalHeight = height ?? (definition.MinHeightCells * DefaultCellSize);
+        var finalWidth = width ?? (definition.MinWidthCells * _currentDesktopCellSize);
+        var finalHeight = height ?? (definition.MinHeightCells * _currentDesktopCellSize);
+        
+        // 对齐网格
+        x = Math.Round(x / _currentDesktopCellSize) * _currentDesktopCellSize;
+        y = Math.Round(y / _currentDesktopCellSize) * _currentDesktopCellSize;
+        finalWidth = Math.Round(finalWidth / _currentDesktopCellSize) * _currentDesktopCellSize;
+        finalHeight = Math.Round(finalHeight / _currentDesktopCellSize) * _currentDesktopCellSize;
         
         var placementId = Guid.NewGuid().ToString("N");
         var placement = new FusedDesktopComponentPlacementSnapshot
@@ -235,7 +259,7 @@ public partial class TransparentOverlayWindow : Window
         }
         
         var control = descriptor.CreateControl(
-            DefaultCellSize,
+            _currentDesktopCellSize,
             _timeZoneService,
             _weatherDataService,
             _recommendationInfoService,
@@ -270,24 +294,44 @@ public partial class TransparentOverlayWindow : Window
     /// </summary>
     public void RenderComponent(string placementId, Control component, double x, double y, double width, double height)
     {
+        var grid = new Grid();
+        grid.Children.Add(component);
+        
+        var resizeHandle = new Border
+        {
+            Width = 24,
+            Height = 24,
+            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3B82F6")),
+            CornerRadius = new Avalonia.CornerRadius(12),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom,
+            Margin = new Avalonia.Thickness(0, 0, -12, -12),
+            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.BottomRightCorner),
+            Tag = "desktop-component-resize-handle",
+            IsVisible = false
+        };
+        grid.Children.Add(resizeHandle);
+        
         var host = new Border
         {
             Tag = placementId,
             Width = width,
             Height = height,
-            Background = Brushes.Transparent,
-            CornerRadius = new CornerRadius(12),
-            ClipToBounds = true,
-            Child = component
+            Background = Avalonia.Media.Brushes.Transparent,
+            CornerRadius = new Avalonia.CornerRadius(12),
+            ClipToBounds = false, // 允许把手溢出
+            BorderBrush = Avalonia.Media.Brushes.Transparent,
+            BorderThickness = new Avalonia.Thickness(3),
+            Child = grid,
+            Classes = { "desktop-component-host" }
         };
         
         Canvas.SetLeft(host, x);
         Canvas.SetTop(host, y);
         
-        // 添加拖拽支持
         host.PointerPressed += OnComponentPointerPressed;
-        host.PointerMoved += OnComponentPointerMoved;
-        host.PointerReleased += OnComponentPointerReleased;
+        host.PointerMoved += OnInteractionPointerMoved;
+        host.PointerReleased += OnInteractionPointerReleased;
         
         // 右键上下文菜单（删除组件）
         host.ContextRequested += OnComponentContextRequested;
@@ -328,7 +372,60 @@ public partial class TransparentOverlayWindow : Window
         e.Handled = true;
     }
     
-    // 组件拖拽处理
+    // 取消选中
+    private void OnCanvasPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        DeselectComponent();
+    }
+    
+    // 选中组件
+    private void SelectComponent(Border host)
+    {
+        if (_selectedHost == host) return;
+        DeselectComponent();
+        
+        _selectedHost = host;
+        
+        // 渲染选中边框和把手
+        host.BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3B82F6"));
+        host.Classes.Add("desktop-component-host-selected");
+        
+        if (host.Child is Grid grid)
+        {
+            foreach (var child in grid.Children)
+            {
+                if (child is Control c && c.Tag is string tg && tg == "desktop-component-resize-handle")
+                {
+                    c.IsVisible = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    private void DeselectComponent()
+    {
+        if (_selectedHost != null)
+        {
+            _selectedHost.BorderBrush = Avalonia.Media.Brushes.Transparent;
+            _selectedHost.Classes.Remove("desktop-component-host-selected");
+            
+            if (_selectedHost.Child is Grid grid)
+            {
+                foreach (var child in grid.Children)
+                {
+                    if (child is Control c && c.Tag is string tg && tg == "desktop-component-resize-handle")
+                    {
+                        c.IsVisible = false;
+                        break;
+                    }
+                }
+            }
+        }
+        _selectedHost = null;
+    }
+    
+    // 组件拖拽与缩放处理
     private void OnComponentPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Border host || host.Tag is not string placementId) return;
@@ -336,55 +433,97 @@ public partial class TransparentOverlayWindow : Window
         var point = e.GetCurrentPoint(this);
         if (!point.Properties.IsLeftButtonPressed) return;
         
-        _isDragging = true;
-        _draggingPlacementId = placementId;
-        _draggingHost = host;
-        _dragStartPoint = e.GetPosition(this);
+        SelectComponent(host);
+        
+        _interactionPlacementId = placementId;
+        _interactionHost = host;
+        _interactionStartPoint = e.GetPosition(this);
+        
+        // 这里必须用未吸附的原始屏幕位置计算 delta
+        _interactionOriginalX = Canvas.GetLeft(host);
+        _interactionOriginalY = Canvas.GetTop(host);
+        _interactionOriginalWidth = host.Width;
+        _interactionOriginalHeight = host.Height;
+        
+        if (e.Source is Control sourceControl && sourceControl.Tag is string tag && tag == "desktop-component-resize-handle")
+        {
+            _isResizing = true;
+            _isDragging = false;
+        }
+        else
+        {
+            _isDragging = true;
+            _isResizing = false;
+        }
         
         e.Pointer.Capture(host);
         e.Handled = true;
     }
     
-    private void OnComponentPointerMoved(object? sender, PointerEventArgs e)
+    private void OnInteractionPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDragging || _draggingHost is null) return;
+        if ((!_isDragging && !_isResizing) || _interactionHost is null) return;
         
         var currentPoint = e.GetPosition(this);
-        var deltaX = currentPoint.X - _dragStartPoint.X;
-        var deltaY = currentPoint.Y - _dragStartPoint.Y;
+        var deltaX = currentPoint.X - _interactionStartPoint.X;
+        var deltaY = currentPoint.Y - _interactionStartPoint.Y;
         
-        var currentX = Canvas.GetLeft(_draggingHost);
-        var currentY = Canvas.GetTop(_draggingHost);
+        if (_isDragging)
+        {
+            var rawX = _interactionOriginalX + deltaX;
+            var rawY = _interactionOriginalY + deltaY;
+            
+            var snapX = Math.Round(rawX / _currentDesktopCellSize) * _currentDesktopCellSize;
+            var snapY = Math.Round(rawY / _currentDesktopCellSize) * _currentDesktopCellSize;
+            
+            Canvas.SetLeft(_interactionHost, snapX);
+            Canvas.SetTop(_interactionHost, snapY);
+        }
+        else if (_isResizing)
+        {
+            var rawWidth = _interactionOriginalWidth + deltaX;
+            var rawHeight = _interactionOriginalHeight + deltaY;
+            
+            var snapWidth = Math.Round(rawWidth / _currentDesktopCellSize) * _currentDesktopCellSize;
+            var snapHeight = Math.Round(rawHeight / _currentDesktopCellSize) * _currentDesktopCellSize;
+            
+            // 防溢出与极小值保护
+            snapWidth = Math.Max(_currentDesktopCellSize, snapWidth);
+            snapHeight = Math.Max(_currentDesktopCellSize, snapHeight);
+            
+            _interactionHost.Width = snapWidth;
+            _interactionHost.Height = snapHeight;
+        }
         
-        Canvas.SetLeft(_draggingHost, currentX + deltaX);
-        Canvas.SetTop(_draggingHost, currentY + deltaY);
-        
-        _dragStartPoint = currentPoint;
         e.Handled = true;
     }
     
-    private void OnComponentPointerReleased(object? sender, PointerReleasedEventArgs e)
+    private void OnInteractionPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_isDragging || _draggingHost is null || _draggingPlacementId is null)
+        if ((!_isDragging && !_isResizing) || _interactionHost is null || _interactionPlacementId is null)
         {
             _isDragging = false;
+            _isResizing = false;
             return;
         }
         
-        // 更新布局中的位置
-        var placement = _layout.ComponentPlacements.Find(p => p.PlacementId == _draggingPlacementId);
+        // 更新布局中的位置与尺寸
+        var placement = _layout.ComponentPlacements.Find(p => p.PlacementId == _interactionPlacementId);
         if (placement is not null)
         {
-            placement.X = Canvas.GetLeft(_draggingHost);
-            placement.Y = Canvas.GetTop(_draggingHost);
+            placement.X = Canvas.GetLeft(_interactionHost);
+            placement.Y = Canvas.GetTop(_interactionHost);
+            placement.Width = _interactionHost.Width;
+            placement.Height = _interactionHost.Height;
         }
         
         UpdateInteractiveRegions();
         SaveLayout();
         
         _isDragging = false;
-        _draggingPlacementId = null;
-        _draggingHost = null;
+        _isResizing = false;
+        _interactionPlacementId = null;
+        _interactionHost = null;
         
         e.Pointer.Capture(null);
         e.Handled = true;

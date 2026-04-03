@@ -112,6 +112,16 @@ public sealed class AppSettingsSnapshot
 
     public bool StatusBarClockTransparentBackground { get; set; }
 
+    public string ClockPosition { get; set; } = "Left"; // Left, Center, Right
+
+    public bool ShowTextCapsule { get; set; } = false;
+
+    public string TextCapsuleContent { get; set; } = "**Hello** World!";
+
+    public string TextCapsulePosition { get; set; } = "Right"; // Left, Center, Right
+
+    public bool TextCapsuleTransparentBackground { get; set; } = false;
+
     public string StatusBarSpacingMode { get; set; } = "Relaxed";
 
     public int StatusBarCustomSpacingPercent { get; set; } = 12;

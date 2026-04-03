@@ -24,6 +24,7 @@ public partial class MainWindow
     private readonly IComponentPreviewImageService _componentPreviewImageService = new ComponentPreviewImageService();
     private readonly Dictionary<ComponentPreviewKey, List<ComponentLibraryPreviewVisualTarget>> _componentLibraryPreviewVisualTargets = new(ComponentPreviewKeyComparer.Instance);
     private bool _componentLibraryPreviewWarmupStarted;
+    private FusedDesktopComponentLibraryWindow? _fusedLibraryWindow;
 
     private sealed record ComponentLibraryPreviewVisualTarget(Image Image, Control Fallback);
 
@@ -519,6 +520,7 @@ public partial class MainWindow
             {
                 ApplyPreviewEntryToEmbeddedVisuals(entry.Key);
                 _detachedComponentLibraryWindow?.UpdatePreviewImage(entry);
+                _fusedLibraryWindow?.UpdatePreviewImage(entry);
 
                 if (entry.Key.Kind == ComponentPreviewKeyKind.PlacementInstance)
                 {
@@ -596,5 +598,31 @@ public partial class MainWindow
             pageIndex: null,
             action: "DetachedLibraryRender",
             forceRefresh: false);
+    }
+    
+    // FusedDesktop 支持
+
+    public void RegisterFusedLibraryWindow(FusedDesktopComponentLibraryWindow window)
+    {
+        _fusedLibraryWindow = window;
+    }
+
+    public void UnregisterFusedLibraryWindow(FusedDesktopComponentLibraryWindow window)
+    {
+        if (ReferenceEquals(_fusedLibraryWindow, window))
+        {
+            _fusedLibraryWindow = null;
+        }
+    }
+
+    public ComponentPreviewImageEntry? GetPreviewEntry(ComponentPreviewKey key)
+    {
+        return ResolvePreviewEntry(key);
+    }
+
+    public void RequestDetachedLibraryPreview(ComponentPreviewKey key)
+    {
+        RequestDetachedLibraryPreviewWarm(key);
+        RequestDetachedLibraryPreviewRender(key);
     }
 }

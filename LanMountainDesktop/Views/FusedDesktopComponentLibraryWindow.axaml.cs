@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace LanMountainDesktop.Views;
 
@@ -27,6 +28,9 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         InitializeComponent();
         
         LibraryControl.AddComponentRequested += OnAddComponentRequested;
+        
+        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+        mainWindow?.RegisterFusedLibraryWindow(this);
     }
     
     /// <summary>
@@ -97,5 +101,17 @@ public partial class FusedDesktopComponentLibraryWindow : Window
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
         Close();
+    }
+    
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+        mainWindow?.UnregisterFusedLibraryWindow(this);
+    }
+    
+    public void UpdatePreviewImage(ComponentPreviewImageEntry entry)
+    {
+        LibraryControl.UpdatePreviewImage(entry);
     }
 }

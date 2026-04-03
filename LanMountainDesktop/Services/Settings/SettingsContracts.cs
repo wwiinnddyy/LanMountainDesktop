@@ -41,8 +41,20 @@ public sealed record StatusBarSettingsState(
     string TaskbarLayoutMode,
     string ClockDisplayFormat,
     bool ClockTransparentBackground,
+    string ClockPosition,
+    bool ShowTextCapsule,
+    string TextCapsuleContent,
+    string TextCapsulePosition,
+    bool TextCapsuleTransparentBackground,
     string SpacingMode,
     int CustomSpacingPercent);
+
+public sealed record TextCapsuleSettingsState(
+    bool ShowTextCapsule,
+    string Content,
+    string Position,
+    bool TransparentBackground);
+
 public sealed record WeatherSettingsState(
     string LocationMode,
     string LocationKey,
@@ -274,6 +286,12 @@ public interface IStatusBarSettingsService
     void Save(StatusBarSettingsState state);
 }
 
+public interface ITextCapsuleSettingsService
+{
+    TextCapsuleSettingsState Get();
+    void Save(TextCapsuleSettingsState state);
+}
+
 public interface IWeatherProvider
 {
     Task<WeatherQueryResult<IReadOnlyList<WeatherLocation>>> SearchLocationsAsync(
@@ -385,6 +403,7 @@ public interface ISettingsFacadeService
     IWallpaperMediaService WallpaperMedia { get; }
     IThemeAppearanceService Theme { get; }
     IStatusBarSettingsService StatusBar { get; }
+    ITextCapsuleSettingsService TextCapsule { get; }
     IWeatherSettingsService Weather { get; }
     IRegionSettingsService Region { get; }
     IPrivacySettingsService Privacy { get; }

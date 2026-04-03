@@ -52,6 +52,78 @@
                                       VerticalAlignment="Center" />
                     </Grid>
                 </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding ClockPositionLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowClock}"
+                                  ItemsSource="{Binding ClockPositions}"
+                                  SelectedItem="{Binding SelectedClockPosition}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="{Binding TextCapsuleHeader}"
+                                 Description="{Binding TextCapsuleDescription}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="TextQuote" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ShowTextCapsule}" />
+                </ui:SettingsExpander.Footer>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding TextCapsuleContentLabel}"
+                                   VerticalAlignment="Top"
+                                   Margin="0,8,0,0" />
+                        <TextBox Grid.Column="1"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 Height="100"
+                                 IsEnabled="{Binding ShowTextCapsule}"
+                                 Text="{Binding TextCapsuleContent}"
+                                 Watermark="Enter Markdown text..." />
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding TextCapsulePositionLabel}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1"
+                                  Width="220"
+                                  IsEnabled="{Binding ShowTextCapsule}"
+                                  ItemsSource="{Binding TextCapsulePositions}"
+                                  SelectedItem="{Binding SelectedTextCapsulePosition}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </ui:SettingsExpanderItem>
+                <ui:SettingsExpanderItem>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="16">
+                        <TextBlock Text="{Binding TextCapsuleTransparentBackgroundLabel}"
+                                   VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding TextCapsuleTransparentBackground}"
+                                      IsEnabled="{Binding ShowTextCapsule}"
+                                      VerticalAlignment="Center" />
+                    </Grid>
+                </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
             <Separator Classes="settings-separator" />

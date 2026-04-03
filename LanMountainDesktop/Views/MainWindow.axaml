@@ -233,13 +233,47 @@
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Padding="4">
-                            <StackPanel x:Name="TopStatusComponentsPanel"
-                                        Orientation="Horizontal"
-                                        Spacing="6">
-                                <comp:ClockWidget x:Name="ClockWidget"
-                                                  IsVisible="False"
-                                                  Margin="0" />
-                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto,*">
+                                <!-- 左侧状态栏组件 -->
+                                <StackPanel x:Name="TopStatusLeftPanel"
+                                            Grid.Column="0"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Left">
+                                    <comp:ClockWidget x:Name="ClockWidgetLeft"
+                                                      IsVisible="False"
+                                                      Margin="0" />
+                                    <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetLeft"
+                                                            IsVisible="False"
+                                                            Margin="0" />
+                                </StackPanel>
+                                <!-- 中间状态栏组件 -->
+                                <StackPanel x:Name="TopStatusCenterPanel"
+                                            Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Center">
+                                    <comp:ClockWidget x:Name="ClockWidgetCenter"
+                                                      IsVisible="False"
+                                                      Margin="0" />
+                                    <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetCenter"
+                                                            IsVisible="False"
+                                                            Margin="0" />
+                                </StackPanel>
+                                <!-- 右侧状态栏组件 -->
+                                <StackPanel x:Name="TopStatusRightPanel"
+                                            Grid.Column="2"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Right">
+                                    <comp:ClockWidget x:Name="ClockWidgetRight"
+                                                      IsVisible="False"
+                                                      Margin="0" />
+                                    <comp:TextCapsuleWidget x:Name="TextCapsuleWidgetRight"
+                                                            IsVisible="False"
+                                                            Margin="0" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
 
                         <Border x:Name="BottomTaskbarContainer"

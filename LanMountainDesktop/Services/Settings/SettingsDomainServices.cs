@@ -386,6 +386,11 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
             snapshot.TaskbarLayoutMode,
             snapshot.ClockDisplayFormat,
             snapshot.StatusBarClockTransparentBackground,
+            snapshot.ClockPosition,
+            snapshot.ShowTextCapsule,
+            snapshot.TextCapsuleContent,
+            snapshot.TextCapsulePosition,
+            snapshot.TextCapsuleTransparentBackground,
             snapshot.StatusBarSpacingMode,
             snapshot.StatusBarCustomSpacingPercent);
     }
@@ -399,6 +404,11 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
         snapshot.TaskbarLayoutMode = state.TaskbarLayoutMode;
         snapshot.ClockDisplayFormat = state.ClockDisplayFormat;
         snapshot.StatusBarClockTransparentBackground = state.ClockTransparentBackground;
+        snapshot.ClockPosition = state.ClockPosition;
+        snapshot.ShowTextCapsule = state.ShowTextCapsule;
+        snapshot.TextCapsuleContent = state.TextCapsuleContent;
+        snapshot.TextCapsulePosition = state.TextCapsulePosition;
+        snapshot.TextCapsuleTransparentBackground = state.TextCapsuleTransparentBackground;
         snapshot.StatusBarSpacingMode = state.SpacingMode;
         snapshot.StatusBarCustomSpacingPercent = state.CustomSpacingPercent;
         _settingsService.SaveSnapshot(
@@ -412,8 +422,52 @@ internal sealed class StatusBarSettingsService : IStatusBarSettingsService
                 nameof(AppSettingsSnapshot.TaskbarLayoutMode),
                 nameof(AppSettingsSnapshot.ClockDisplayFormat),
                 nameof(AppSettingsSnapshot.StatusBarClockTransparentBackground),
+                nameof(AppSettingsSnapshot.ClockPosition),
+                nameof(AppSettingsSnapshot.ShowTextCapsule),
+                nameof(AppSettingsSnapshot.TextCapsuleContent),
+                nameof(AppSettingsSnapshot.TextCapsulePosition),
+                nameof(AppSettingsSnapshot.TextCapsuleTransparentBackground),
                 nameof(AppSettingsSnapshot.StatusBarSpacingMode),
                 nameof(AppSettingsSnapshot.StatusBarCustomSpacingPercent)
+            ]);
+    }
+}
+
+internal sealed class TextCapsuleSettingsService : ITextCapsuleSettingsService
+{
+    private readonly ISettingsService _settingsService;
+
+    public TextCapsuleSettingsService(ISettingsService settingsService)
+    {
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+    }
+
+    public TextCapsuleSettingsState Get()
+    {
+        var snapshot = _settingsService.Load();
+        return new TextCapsuleSettingsState(
+            snapshot.ShowTextCapsule,
+            snapshot.TextCapsuleContent,
+            snapshot.TextCapsulePosition,
+            snapshot.TextCapsuleTransparentBackground);
+    }
+
+    public void Save(TextCapsuleSettingsState state)
+    {
+        var snapshot = _settingsService.Load();
+        snapshot.ShowTextCapsule = state.ShowTextCapsule;
+        snapshot.TextCapsuleContent = state.Content;
+        snapshot.TextCapsulePosition = state.Position;
+        snapshot.TextCapsuleTransparentBackground = state.TransparentBackground;
+        _settingsService.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.ShowTextCapsule),
+                nameof(AppSettingsSnapshot.TextCapsuleContent),
+                nameof(AppSettingsSnapshot.TextCapsulePosition),
+                nameof(AppSettingsSnapshot.TextCapsuleTransparentBackground)
             ]);
     }
 }
@@ -1198,6 +1252,7 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
         WallpaperMedia = new WallpaperMediaService();
         Theme = new ThemeAppearanceService(Settings);
         StatusBar = new StatusBarSettingsService(Settings);
+        TextCapsule = new TextCapsuleSettingsService(Settings);
         _weatherSettingsService = new WeatherSettingsService(Settings);
         Weather = _weatherSettingsService;
         Region = new RegionSettingsService(Settings);
@@ -1226,6 +1281,8 @@ internal sealed class SettingsFacadeService : ISettingsFacadeService, IDisposabl
     public IThemeAppearanceService Theme { get; }
 
     public IStatusBarSettingsService StatusBar { get; }
+
+    public ITextCapsuleSettingsService TextCapsule { get; }
 
     public IWeatherSettingsService Weather { get; }
 
