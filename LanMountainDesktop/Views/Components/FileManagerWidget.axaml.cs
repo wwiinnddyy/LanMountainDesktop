@@ -9,6 +9,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using FluentIcons.Avalonia;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -33,6 +35,18 @@ public partial class FileManagerWidget : UserControl,
     private bool _isEditMode;
     private bool _isAttached;
     private bool _isDisposed;
+
+    private const double TapMovementThreshold = 10;
+    private const long TapTimeThresholdMs = 500;
+
+    private readonly Dictionary<int, PointerGestureState> _gestureStates = new();
+
+    private record PointerGestureState(
+        Point StartPosition,
+        long StartTime,
+        FileSystemItem Item,
+        Border Border
+    );
 
     public FileManagerWidget()
     {
@@ -90,6 +104,8 @@ public partial class FileManagerWidget : UserControl,
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
+
+        _gestureStates.Clear();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -198,20 +214,80 @@ public partial class FileManagerWidget : UserControl,
 
     private void OnItemPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        _ = e;
-
         if (sender is not Border border || border.DataContext is not FileSystemItem item)
         {
             return;
         }
 
-        if (item.IsDirectory)
+        var pointer = e.GetCurrentPoint(border);
+        var pointerId = e.Pointer.Id;
+        var position = pointer.Position;
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        _gestureStates[pointerId] = new PointerGestureState(position, timestamp, item, border);
+
+        e.Pointer.Capture(border);
+    }
+
+    private void OnItemPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (sender is not Border border)
         {
-            LoadDirectory(item.FullPath, addToHistory: true);
+            return;
         }
-        else
+
+        var pointerId = e.Pointer.Id;
+        if (!_gestureStates.TryGetValue(pointerId, out var state))
         {
-            OpenFile(item.FullPath);
+            return;
+        }
+
+        var currentPoint = e.GetCurrentPoint(border);
+        var distance = Math.Sqrt(
+            Math.Pow(currentPoint.Position.X - state.StartPosition.X, 2) +
+            Math.Pow(currentPoint.Position.Y - state.StartPosition.Y, 2)
+        );
+
+        if (distance > TapMovementThreshold)
+        {
+            _gestureStates.Remove(pointerId);
+            e.Pointer.Capture(null);
+        }
+    }
+
+    private void OnItemPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (sender is not Border border)
+        {
+            return;
+        }
+
+        var pointerId = e.Pointer.Id;
+        if (!_gestureStates.Remove(pointerId, out var state))
+        {
+            return;
+        }
+
+        e.Pointer.Capture(null);
+
+        var currentPoint = e.GetCurrentPoint(border);
+        var distance = Math.Sqrt(
+            Math.Pow(currentPoint.Position.X - state.StartPosition.X, 2) +
+            Math.Pow(currentPoint.Position.Y - state.StartPosition.Y, 2)
+        );
+
+        var elapsed = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - state.StartTime;
+
+        if (distance <= TapMovementThreshold && elapsed <= TapTimeThresholdMs)
+        {
+            if (state.Item.IsDirectory)
+            {
+                LoadDirectory(state.Item.FullPath, addToHistory: true);
+            }
+            else
+            {
+                OpenFile(state.Item.FullPath);
+            }
         }
     }
 
@@ -225,34 +301,118 @@ public partial class FileManagerWidget : UserControl,
         {
             var drives = new List<FileSystemItem>();
 
-            foreach (var drive in DriveInfo.GetDrives())
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                try
+                foreach (var drive in DriveInfo.GetDrives())
                 {
-                    if (!drive.IsReady)
+                    try
                     {
-                        continue;
-                    }
+                        if (!drive.IsReady)
+                        {
+                            continue;
+                        }
 
-                    var item = FileSystemItem.FromDriveInfo(drive);
-                    drives.Add(item);
+                        var item = FileSystemItem.FromDriveInfo(drive);
+                        drives.Add(item);
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn("FileManagerWidget", $"Failed to access drive: {drive?.Name}", ex);
+                    }
                 }
-                catch (Exception ex)
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                drives.Add(new FileSystemItem
                 {
-                    AppLogger.Warn("FileManagerWidget", $"Failed to access drive: {drive?.Name}", ex);
+                    Name = "根目录",
+                    FullPath = "/",
+                    ItemType = FileSystemItemType.Directory
+                });
+
+                var homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(homePath) && Directory.Exists(homePath))
+                {
+                    drives.Add(new FileSystemItem
+                    {
+                        Name = "主目录",
+                        FullPath = homePath,
+                        ItemType = FileSystemItemType.Directory
+                    });
+                }
+
+                var linuxMountPoints = new[] { "/mnt", "/media", "/run/media" };
+                foreach (var mount in linuxMountPoints)
+                {
+                    if (Directory.Exists(mount))
+                    {
+                        drives.Add(new FileSystemItem
+                        {
+                            Name = mount,
+                            FullPath = mount,
+                            ItemType = FileSystemItemType.Directory
+                        });
+                    }
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                drives.Add(new FileSystemItem
+                {
+                    Name = "根目录",
+                    FullPath = "/",
+                    ItemType = FileSystemItemType.Directory
+                });
+
+                drives.Add(new FileSystemItem
+                {
+                    Name = "用户",
+                    FullPath = "/Users",
+                    ItemType = FileSystemItemType.Directory
+                });
+
+                drives.Add(new FileSystemItem
+                {
+                    Name = "应用程序",
+                    FullPath = "/Applications",
+                    ItemType = FileSystemItemType.Directory
+                });
+
+                var homePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(homePath) && Directory.Exists(homePath))
+                {
+                    drives.Add(new FileSystemItem
+                    {
+                        Name = "个人",
+                        FullPath = homePath,
+                        ItemType = FileSystemItemType.Directory
+                    });
+                }
+
+                if (Directory.Exists("/Volumes"))
+                {
+                    foreach (var volume in Directory.GetDirectories("/Volumes"))
+                    {
+                        drives.Add(new FileSystemItem
+                        {
+                            Name = Path.GetFileName(volume),
+                            FullPath = volume,
+                            ItemType = FileSystemItemType.Directory
+                        });
+                    }
                 }
             }
 
             RenderFileItems(drives);
-            PathTextBlock.Text = "此电脑";
+            PathTextBlock.Text = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "此电脑" : "文件系统";
 
-            UpdateEmptyState(drives.Count == 0, "没有可用的驱动器");
+            UpdateEmptyState(drives.Count == 0, "没有可用的位置");
             ErrorStatePanel.IsVisible = false;
         }
         catch (Exception ex)
         {
             AppLogger.Warn("FileManagerWidget", "Failed to load drives.", ex);
-            ShowError("无法加载驱动器列表");
+            ShowError("无法加载位置列表");
         }
     }
 
@@ -354,18 +514,6 @@ public partial class FileManagerWidget : UserControl,
         var iconSize = Math.Clamp(32 * scale, 24, 40);
         var fontSize = Math.Clamp(11 * scale, 10, 14);
 
-        // 根据类型选择图标
-        var symbol = item.ItemType switch
-        {
-            FileSystemItemType.Drive => FluentIcons.Common.Symbol.HardDrive,
-            FileSystemItemType.Directory => FluentIcons.Common.Symbol.Folder,
-            _ => FluentIcons.Common.Symbol.Document
-        };
-
-        var iconBrush = item.ItemType == FileSystemItemType.File
-            ? this.FindResource("AdaptiveTextSecondaryBrush") as IBrush ?? new SolidColorBrush(Colors.Gray)
-            : this.FindResource("AdaptiveAccentBrush") as IBrush ?? new SolidColorBrush(Colors.DodgerBlue);
-
         var textBrush = this.FindResource("AdaptiveTextPrimaryBrush") as IBrush ?? new SolidColorBrush(Colors.White);
 
         var border = new Border
@@ -385,17 +533,8 @@ public partial class FileManagerWidget : UserControl,
             Margin = new Thickness(4)
         };
 
-        // 图标
-        var icon = new SymbolIcon
-        {
-            Symbol = symbol,
-            FontSize = iconSize,
-            Foreground = iconBrush,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
+        var iconImage = CreateSystemIconImage(item, iconSize);
 
-        // 名称
         var textBlock = new TextBlock
         {
             Text = item.Name,
@@ -407,21 +546,155 @@ public partial class FileManagerWidget : UserControl,
             Foreground = textBrush
         };
 
-        grid.Children.Add(icon);
-        Grid.SetRow(icon, 0);
+        if (iconImage is not null)
+        {
+            grid.Children.Add(iconImage);
+            Grid.SetRow(iconImage, 0);
+        }
 
         grid.Children.Add(textBlock);
         Grid.SetRow(textBlock, 1);
 
         border.Child = grid;
 
-        // 添加提示
         ToolTip.SetTip(border, item.Name);
 
-        // 添加点击事件
         border.PointerPressed += OnItemPointerPressed;
+        border.PointerMoved += OnItemPointerMoved;
+        border.PointerReleased += OnItemPointerReleased;
 
         return border;
+    }
+
+    private Control? CreateSystemIconImage(FileSystemItem item, double iconSize)
+    {
+        byte[]? pngBytes = null;
+
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                pngBytes = item.ItemType switch
+                {
+                    FileSystemItemType.Drive => GetDriveIconBytes(item.FullPath),
+                    FileSystemItemType.Directory => WindowsIconService.TryGetSystemFolderIconPngBytes(),
+                    _ => WindowsIconService.TryGetIconPngBytes(item.FullPath)
+                };
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                pngBytes = item.ItemType switch
+                {
+                    FileSystemItemType.Drive => LinuxIconService.TryGetDriveIconPngBytes(),
+                    FileSystemItemType.Directory => LinuxIconService.TryGetSystemFolderIconPngBytes(),
+                    _ => LinuxIconService.TryGetIconPngBytes(item.FullPath)
+                };
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                pngBytes = item.ItemType switch
+                {
+                    FileSystemItemType.Drive => MacIconService.TryGetDriveIconPngBytes(),
+                    FileSystemItemType.Directory => MacIconService.TryGetSystemFolderIconPngBytes(),
+                    _ => MacIconService.TryGetIconPngBytes(item.FullPath)
+                };
+            }
+        }
+        catch
+        {
+            pngBytes = null;
+        }
+
+        if (pngBytes is not null)
+        {
+            try
+            {
+                using var stream = new MemoryStream(pngBytes);
+                var bitmap = new Bitmap(stream);
+                return new Image
+                {
+                    Source = bitmap,
+                    Width = iconSize,
+                    Height = iconSize,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+                    Stretch = Stretch.Uniform
+                };
+            }
+            catch
+            {
+            }
+        }
+
+        return CreateFallbackIconImage(item, iconSize);
+    }
+
+    private static byte[]? GetDriveIconBytes(string drivePath)
+    {
+        if (string.IsNullOrWhiteSpace(drivePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                if (Directory.Exists(drivePath))
+                {
+                    return WindowsIconService.TryGetIconPngBytes(drivePath);
+                }
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                return LinuxIconService.TryGetDriveIconPngBytes();
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                return MacIconService.TryGetDriveIconPngBytes();
+            }
+        }
+        catch
+        {
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return WindowsIconService.TryGetSystemFolderIconPngBytes();
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            return LinuxIconService.TryGetSystemFolderIconPngBytes();
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            return MacIconService.TryGetSystemFolderIconPngBytes();
+        }
+
+        return null;
+    }
+
+    private Control CreateFallbackIconImage(FileSystemItem item, double iconSize)
+    {
+        var symbol = item.ItemType switch
+        {
+            FileSystemItemType.Drive => FluentIcons.Common.Symbol.HardDrive,
+            FileSystemItemType.Directory => FluentIcons.Common.Symbol.Folder,
+            _ => FluentIcons.Common.Symbol.Document
+        };
+
+        var iconBrush = item.ItemType == FileSystemItemType.File
+            ? this.FindResource("AdaptiveTextSecondaryBrush") as IBrush ?? new SolidColorBrush(Colors.Gray)
+            : this.FindResource("AdaptiveAccentBrush") as IBrush ?? new SolidColorBrush(Colors.DodgerBlue);
+
+        return new SymbolIcon
+        {
+            Symbol = symbol,
+            FontSize = iconSize,
+            Foreground = iconBrush,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
     }
 
     private void RefreshCurrentDirectory()
@@ -481,35 +754,66 @@ public partial class FileManagerWidget : UserControl,
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            return "此电脑";
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "此电脑" : "文件系统";
         }
 
-        // 如果是驱动器根目录，显示驱动器名称
-        if (path.Length <= 3 && path.EndsWith(":\\", StringComparison.OrdinalIgnoreCase))
+        var separator = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? '\\' : '/';
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            try
+            if (path.Length <= 3 && path.EndsWith(":\\", StringComparison.OrdinalIgnoreCase))
             {
-                var driveInfo = new DriveInfo(path.Substring(0, 1));
-                if (!string.IsNullOrWhiteSpace(driveInfo.VolumeLabel))
+                try
                 {
-                    return $"{driveInfo.VolumeLabel} ({path.Substring(0, 2)})";
+                    var driveInfo = new DriveInfo(path.Substring(0, 1));
+                    if (!string.IsNullOrWhiteSpace(driveInfo.VolumeLabel))
+                    {
+                        return $"{driveInfo.VolumeLabel} ({path.Substring(0, 2)})";
+                    }
+                }
+                catch
+                {
+                }
+                return path;
+            }
+        }
+        else
+        {
+            if (path == "/")
+            {
+                return "根目录";
+            }
+
+            if (path == Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            {
+                return "主目录";
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                if (path == "/Applications")
+                {
+                    return "应用程序";
+                }
+
+                if (path == "/Users")
+                {
+                    return "用户";
+                }
+
+                if (path.StartsWith("/Volumes/"))
+                {
+                    return Path.GetFileName(path);
                 }
             }
-            catch
-            {
-                // 忽略错误，返回默认格式
-            }
-            return path;
         }
 
-        // 智能路径截断：保留根目录和最后两级
         var parts = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length <= 3)
         {
             return path;
         }
 
-        // 格式：根目录\...\父文件夹\当前文件夹
-        return $"{parts[0]}\\...\\{parts[^2]}\\{parts[^1]}";
+        return $"{parts[0]}{separator}...{separator}{parts[^2]}{separator}{parts[^1]}";
     }
 }

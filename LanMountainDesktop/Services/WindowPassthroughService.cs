@@ -93,6 +93,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     private const uint SWP_NOACTIVATE = 0x0010;
     private const int WM_WINDOWPOSCHANGING = 0x0046;
     private const int WM_NCHITTEST = 0x0084;
+    private const int WM_ACTIVATEAPP = 0x001C;  // 【新增】应用激活消息
     private const int HTTRANSPARENT = -1;
     private const int HTCLIENT = 1;
     
@@ -104,6 +105,20 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     // 记录每个窗口的屏幕原点（窗口左上角的屏幕坐标），用于将 WM_NCHITTEST 屏幕坐标转成窗口相对坐标
     private static readonly Dictionary<IntPtr, Point> _windowScreenOrigins = new();
     private static readonly object _staticLock = new();
+    
+    // 【修复问题1】静态持有委托引用，防止 GC 回收导致 CallbackOnCollectedDelegate 崩溃
+    private static WndProcDelegate? _wndProcDelegate;
+    
+    // 【修复问题2】记录每个窗口的 DPI 缩放比例
+    private static readonly Dictionary<IntPtr, double> _windowDpiScales = new();
+    
+    // 【修复问题5】Z 轴竞争优化 - 记录上次置底时间，避免频繁操作
+    private static readonly Dictionary<IntPtr, long> _lastSendToBottomTime = new();
+    private const long MinSendToBottomIntervalMs = 100;  // 【修复置底问题】降低到 100ms，提高响应速度
+    
+    // 【新增】定时器定期强制置底
+    private static System.Timers.Timer? _keepBottomTimer;
+    private static readonly object _timerLock = new();
     
     public bool IsBottomMostSupported => true;
     
@@ -130,6 +145,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
                 _bottomMostWindows[handle] = true;
                 _interactiveRegions[handle] = [];
                 UpdateWindowScreenOrigin(handle);
+                UpdateWindowDpiScale(handle);  // 【修复问题2】初始化 DPI 缩放
             }
             
             // 注入消息钩子
@@ -137,6 +153,9 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
             
             // 初始置底
             SendToBottomInternal(handle);
+            
+            // 【新增】启动定时器定期强制置底
+            StartKeepBottomTimer();
             
             AppLogger.Info("WindowBottomMost", $"Window setup as bottom-most: {handle}");
         };
@@ -152,6 +171,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
                     _originalWndProcs.Remove(handle);
                     _interactiveRegions.Remove(handle);
                     _windowScreenOrigins.Remove(handle);
+                    _windowDpiScales.Remove(handle);  // 【修复问题2】清理 DPI 缩放记录
                 }
             }
         };
@@ -174,19 +194,111 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         SetWindowPos(handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
     }
     
+    /// <summary>
+    /// 【新增】启动定时器定期强制置底所有窗口
+    /// </summary>
+    private static void StartKeepBottomTimer()
+    {
+        lock (_timerLock)
+        {
+            if (_keepBottomTimer != null) return;
+            
+            _keepBottomTimer = new System.Timers.Timer(200);  // 每 200ms 检查一次
+            _keepBottomTimer.Elapsed += (s, e) =>
+            {
+                try
+                {
+                    lock (_staticLock)
+                    {
+                        foreach (var kvp in _bottomMostWindows)
+                        {
+                            if (kvp.Value)  // 如果标记为置底
+                            {
+                                SendToBottomInternal(kvp.Key);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略定时器错误
+                }
+            };
+            _keepBottomTimer.Start();
+        }
+    }
+    
+    /// <summary>
+    /// 【新增】停止定时器
+    /// </summary>
+    private static void StopKeepBottomTimer()
+    {
+        lock (_timerLock)
+        {
+            _keepBottomTimer?.Stop();
+            _keepBottomTimer?.Dispose();
+            _keepBottomTimer = null;
+        }
+    }
+    
     private static void SetAsDesktopChild(IntPtr handle)
     {
+        // 【修复问题4】增强桌面挂载逻辑，支持 Wallpaper Engine 等动态壁纸软件
+        
+        // 方案1: 尝试找到 WorkerW 层（Wallpaper Engine 创建的层）
+        var workerW = IntPtr.Zero;
+        var hDefView = IntPtr.Zero;
+        
+        // 枚举所有顶层窗口
         var windowHandles = new ArrayList();
         EnumWindows(EnumWindowsCallback, windowHandles);
+        
         foreach (IntPtr h in windowHandles)
         {
-            var hDefView = FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null);
+            // 查找 WorkerW 窗口（Wallpaper Engine 创建）
+            var className = GetWindowClassName(h);
+            if (className == "WorkerW")
+            {
+                // 在 WorkerW 下查找 SHELLDLL_DefView
+                var defView = FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null);
+                if (defView != IntPtr.Zero)
+                {
+                    workerW = h;
+                    hDefView = defView;
+                    break;
+                }
+            }
+        }
+        
+        // 如果找到了 WorkerW 层，使用它作为父窗口
+        if (workerW != IntPtr.Zero && hDefView != IntPtr.Zero)
+        {
+            SetWindowLong(handle, GWL_HWNDPARENT, hDefView.ToInt32());
+            AppLogger.Info("WindowBottomMost", "Mounted to WorkerW layer (Wallpaper Engine detected)");
+            return;
+        }
+        
+        // 方案2: 回退到传统方式，查找 Progman 下的 SHELLDLL_DefView
+        foreach (IntPtr h in windowHandles)
+        {
+            hDefView = FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null);
             if (hDefView != IntPtr.Zero)
             {
                 SetWindowLong(handle, GWL_HWNDPARENT, hDefView.ToInt32());
+                AppLogger.Info("WindowBottomMost", "Mounted to traditional desktop layer");
                 break;
             }
         }
+    }
+    
+    /// <summary>
+    /// 【修复问题4】获取窗口类名
+    /// </summary>
+    private static string GetWindowClassName(IntPtr hWnd)
+    {
+        var buffer = new char[256];
+        var length = GetClassName(hWnd, buffer, buffer.Length);
+        return length > 0 ? new string(buffer, 0, length) : string.Empty;
     }
     
     private static bool EnumWindowsCallback(IntPtr handle, ArrayList handles)
@@ -203,13 +315,29 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         lock (_staticLock)
         {
             _originalWndProcs[handle] = originalWndProc;
+            
+            // 【修复问题1】确保委托实例被静态引用持有，防止 GC 回收
+            _wndProcDelegate ??= SubclassWndProc;
         }
         
-        SetWindowLongPtr(handle, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate<WndProcDelegate>(SubclassWndProc));
+        SetWindowLongPtr(handle, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProcDelegate));
     }
     
     private static IntPtr SubclassWndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam)
     {
+        // 【新增】处理应用激活消息 - 当其他应用激活时立即置底
+        if (msg == WM_ACTIVATEAPP)
+        {
+            lock (_staticLock)
+            {
+                if (_bottomMostWindows.TryGetValue(hWnd, out var isBottomMost) && isBottomMost)
+                {
+                    // 立即置底，不进行频率限制
+                    SendToBottomInternal(hWnd);
+                }
+            }
+        }
+        
         // 处理 WM_WINDOWPOSCHANGING - 保持置底
         if (msg == WM_WINDOWPOSCHANGING)
         {
@@ -217,7 +345,19 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
             {
                 if (_bottomMostWindows.TryGetValue(hWnd, out var isBottomMost) && isBottomMost)
                 {
+                    // 【修复问题5】优化 Z 轴竞争 - 限制置底操作频率
+                    var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    if (_lastSendToBottomTime.TryGetValue(hWnd, out var lastTime))
+                    {
+                        if (now - lastTime < MinSendToBottomIntervalMs)
+                        {
+                            // 跳过过于频繁的置底操作
+                            goto CallOriginal;
+                        }
+                    }
+                    
                     SendToBottomInternal(hWnd);
+                    _lastSendToBottomTime[hWnd] = now;
                 }
             }
         }
@@ -233,11 +373,20 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
             {
                 if (_interactiveRegions.TryGetValue(hWnd, out var regions) && regions.Count > 0)
                 {
-                    // 将屏幕坐标转为窗口相对坐标（_interactiveRegions 存的是窗口内坐标）
+                    // 【修复问题2】获取窗口原点和 DPI 缩放比例
                     _windowScreenOrigins.TryGetValue(hWnd, out var origin);
+                    _windowDpiScales.TryGetValue(hWnd, out var dpiScale);
+                    if (dpiScale <= 0) dpiScale = 1.0;  // 默认缩放为 1.0
+                    
+                    // 将屏幕物理像素坐标转为窗口相对坐标
                     var clientX = screenX - origin.X;
                     var clientY = screenY - origin.Y;
-                    var point = new Point(clientX, clientY);
+                    
+                    // 【修复问题2】将物理像素坐标转换为逻辑 DIP 坐标
+                    // _interactiveRegions 存储的是 Avalonia UI 的逻辑 DIP 坐标
+                    var logicalX = clientX / dpiScale;
+                    var logicalY = clientY / dpiScale;
+                    var point = new Point(logicalX, logicalY);
                     
                     foreach (var region in regions)
                     {
@@ -255,6 +404,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         }
         
         // 调用原始窗口过程
+        CallOriginal:
         IntPtr originalWndProc;
         lock (_staticLock)
         {
@@ -277,6 +427,7 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
             _interactiveRegions[handle] = regions;
             // 同步刷新屏幕原点（DPI 缩放可能影响坐标，每次更新区域时一并刷新）
             UpdateWindowScreenOrigin(handle);
+            UpdateWindowDpiScale(handle);  // 【修复问题2】同步更新 DPI 缩放
         }
     }
     
@@ -288,6 +439,31 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
         if (GetWindowRect(handle, out var rect))
         {
             _windowScreenOrigins[handle] = new Point(rect.Left, rect.Top);
+        }
+    }
+    
+    /// <summary>
+    /// 【修复问题2】更新指定窗口的 DPI 缩放比例
+    /// </summary>
+    private static void UpdateWindowDpiScale(IntPtr handle)
+    {
+        try
+        {
+            // 获取窗口所在的显示器 DPI
+            var monitor = MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
+            if (monitor != IntPtr.Zero)
+            {
+                if (GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, out var dpiX, out var _) == 0)
+                {
+                    // DPI 缩放比例 = 当前 DPI / 96 (标准 DPI)
+                    _windowDpiScales[handle] = dpiX / 96.0;
+                }
+            }
+        }
+        catch
+        {
+            // 如果获取失败，使用默认缩放 1.0
+            _windowDpiScales[handle] = 1.0;
         }
     }
     
@@ -328,6 +504,20 @@ internal sealed class WindowsWindowBottomMostService : IWindowBottomMostService
     
     [DllImport("user32.dll")]
     private static extern IntPtr DefWindowProc(IntPtr hWnd, int uMsg, IntPtr wParam, IntPtr lParam);
+    
+    // 【修复问题2】DPI 相关的 P/Invoke 声明
+    private const int MONITOR_DEFAULTTONEAREST = 2;
+    private const int MDT_EFFECTIVE_DPI = 0;
+    
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hWnd, int dwFlags);
+    
+    [DllImport("shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+    
+    // 【修复问题4】获取窗口类名的 P/Invoke
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr hWnd, char[] lpClassName, int nMaxCount);
 }
 
 /// <summary>

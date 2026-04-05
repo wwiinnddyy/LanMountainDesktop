@@ -1,214 +1,265 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
+using System.Runtime.Versioning;
 
 namespace LanMountainDesktop.Services;
 
+[SupportedOSPlatform("linux")]
 internal static class LinuxIconService
 {
-    private static readonly string[] SupportedRasterExtensions =
-    [
-        ".png",
-        ".ico"
-    ];
+    private static readonly string[] IconThemePaths = {
+        "/usr/share/icons",
+        "/usr/share/pixmaps",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local/share/icons"),
+        "/var/lib/snapd/desktop/icons"
+    };
 
-    private static readonly Regex SizeDirectoryRegex =
-        new(@"(?<size>\d{1,4})x\d{1,4}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly string[] IconSizes = { "512x512", "256x256", "128x128", "96x96", "64x64", "48x48", "32x32", "24x24", "16x16" };
 
-    private static readonly ConcurrentDictionary<string, string?> IconPathCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly string[] FolderIconNames = { "folder", "inode-directory", "folder-default" };
+    private static readonly string[] DriveIconNames = { "drive-harddisk", "drive-removable-media", "media-removable" };
 
-    public static byte[]? TryGetIconPngBytes(string? iconKey, string? desktopFileDirectory = null)
+    public static byte[]? TryGetIconPngBytes(string filePath)
     {
-        if (!OperatingSystem.IsLinux() || string.IsNullOrWhiteSpace(iconKey))
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
         {
             return null;
         }
 
-        foreach (var candidatePath in ResolveIconCandidates(iconKey.Trim(), desktopFileDirectory))
+        try
         {
-            if (TryReadIconBytes(candidatePath, out var bytes))
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            var iconName = GetIconNameForExtension(extension);
+
+            return TryGetThemeIcon(iconName);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static byte[]? TryGetIconPngBytes(string iconName, string? searchDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(iconName))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (Path.IsPathRooted(iconName) && File.Exists(iconName))
             {
-                return bytes;
+                if (iconName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                {
+                    return File.ReadAllBytes(iconName);
+                }
+
+                if (iconName.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (iconName.EndsWith(".xpm", StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+            }
+
+            var pngBytes = TryGetThemeIcon(iconName);
+            if (pngBytes is not null)
+            {
+                return pngBytes;
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchDirectory))
+            {
+                var localIconPath = Path.Combine(searchDirectory, "icons", iconName + ".png");
+                if (File.Exists(localIconPath))
+                {
+                    return File.ReadAllBytes(localIconPath);
+                }
+
+                localIconPath = Path.Combine(searchDirectory, iconName + ".png");
+                if (File.Exists(localIconPath))
+                {
+                    return File.ReadAllBytes(localIconPath);
+                }
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static byte[]? TryGetSystemFolderIconPngBytes()
+    {
+        foreach (var iconName in FolderIconNames)
+        {
+            var iconBytes = TryGetThemeIcon(iconName);
+            if (iconBytes is not null)
+            {
+                return iconBytes;
             }
         }
 
         return null;
     }
 
-    private static IEnumerable<string> ResolveIconCandidates(string iconKey, string? desktopFileDirectory)
+    public static byte[]? TryGetDriveIconPngBytes()
     {
-        if (Path.HasExtension(iconKey))
+        foreach (var iconName in DriveIconNames)
         {
-            var directPath = ExpandHome(iconKey);
-            if (Path.IsPathRooted(directPath))
+            var iconBytes = TryGetThemeIcon(iconName);
+            if (iconBytes is not null)
             {
-                yield return directPath;
+                return iconBytes;
             }
-            else if (!string.IsNullOrWhiteSpace(desktopFileDirectory))
-            {
-                yield return Path.GetFullPath(Path.Combine(desktopFileDirectory, directPath));
-            }
-
-            yield break;
         }
 
-        var resolvedThemePath = ResolveThemedIconPath(iconKey);
-        if (!string.IsNullOrWhiteSpace(resolvedThemePath))
+        return null;
+    }
+
+    private static string GetIconNameForExtension(string extension)
+    {
+        return extension switch
         {
-            yield return resolvedThemePath;
+            ".txt" => "text-x-generic",
+            ".md" => "text-x-markdown",
+            ".pdf" => "application-pdf",
+            ".doc" or ".docx" => "application-msword",
+            ".xls" or ".xlsx" => "application-vnd.ms-excel",
+            ".ppt" or ".pptx" => "application-vnd.ms-powerpoint",
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => "application-x-archive",
+            ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" => "audio-x-generic",
+            ".mp4" or ".avi" or ".mkv" or ".mov" or ".wmv" => "video-x-generic",
+            ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".svg" => "image-x-generic",
+            ".cs" => "text-x-csharp",
+            ".js" or ".ts" => "text-x-javascript",
+            ".py" => "text-x-python",
+            ".java" => "text-x-java",
+            ".cpp" or ".c" or ".h" => "text-x-c++",
+            ".json" => "application-json",
+            ".xml" => "text-xml",
+            ".html" or ".htm" => "text-html",
+            ".css" => "text-css",
+            ".sh" or ".bash" => "text-x-script",
+            ".exe" or ".msi" => "application-x-executable",
+            ".deb" or ".rpm" => "application-x-package",
+            ".iso" or ".img" => "application-x-cd-image",
+            _ => "text-x-generic"
+        };
+    }
+
+    private static byte[]? TryGetThemeIcon(string iconName)
+    {
+        if (string.IsNullOrWhiteSpace(iconName))
+        {
+            return null;
         }
-    }
 
-    private static string? ResolveThemedIconPath(string iconName)
-    {
-        return IconPathCache.GetOrAdd(iconName, static key => FindBestMatchingIconPath(key));
-    }
-
-    private static string? FindBestMatchingIconPath(string iconName)
-    {
-        var candidates = new List<(string Path, int Score)>();
-        foreach (var iconRoot in EnumerateIconRoots())
+        foreach (var themePath in IconThemePaths)
         {
-            foreach (var extension in SupportedRasterExtensions)
+            if (!Directory.Exists(themePath))
             {
-                foreach (var candidatePath in EnumerateFilesSafe(iconRoot, iconName + extension))
+                continue;
+            }
+
+            var iconBytes = TryFindIconInTheme(themePath, iconName);
+            if (iconBytes is not null)
+            {
+                return iconBytes;
+            }
+        }
+
+        return TryGetIconFromGtkTheme(iconName);
+    }
+
+    private static byte[]? TryFindIconInTheme(string themePath, string iconName)
+    {
+        try
+        {
+            foreach (var sizeDir in IconSizes)
+            {
+                var iconPath = Path.Combine(themePath, "Adwaita", sizeDir, "mimetypes", $"{iconName}.png");
+                if (File.Exists(iconPath))
                 {
-                    candidates.Add((candidatePath, ScoreIconPath(candidatePath)));
+                    return File.ReadAllBytes(iconPath);
+                }
+
+                iconPath = Path.Combine(themePath, "Adwaita", sizeDir, "places", $"{iconName}.png");
+                if (File.Exists(iconPath))
+                {
+                    return File.ReadAllBytes(iconPath);
+                }
+
+                iconPath = Path.Combine(themePath, "Adwaita", sizeDir, "devices", $"{iconName}.png");
+                if (File.Exists(iconPath))
+                {
+                    return File.ReadAllBytes(iconPath);
                 }
             }
-        }
 
-        return candidates
-            .OrderByDescending(candidate => candidate.Score)
-            .ThenBy(candidate => candidate.Path.Length)
-            .Select(candidate => candidate.Path)
-            .FirstOrDefault();
-    }
-
-    private static IEnumerable<string> EnumerateIconRoots()
-    {
-        var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-        if (string.IsNullOrWhiteSpace(dataHome) && !string.IsNullOrWhiteSpace(homeDirectory))
-        {
-            dataHome = Path.Combine(homeDirectory, ".local", "share");
-        }
-
-        var dataDirs = (Environment.GetEnvironmentVariable("XDG_DATA_DIRS") ?? "/usr/local/share:/usr/share")
-            .Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        var candidates = new List<string>();
-        if (!string.IsNullOrWhiteSpace(dataHome))
-        {
-            candidates.Add(Path.Combine(dataHome, "icons"));
-            candidates.Add(Path.Combine(dataHome, "pixmaps"));
-        }
-
-        foreach (var dataDir in dataDirs)
-        {
-            candidates.Add(Path.Combine(dataDir, "icons"));
-            candidates.Add(Path.Combine(dataDir, "pixmaps"));
-        }
-
-        if (!string.IsNullOrWhiteSpace(homeDirectory))
-        {
-            candidates.Add(Path.Combine(homeDirectory, ".icons"));
-            candidates.Add(Path.Combine(homeDirectory, ".local", "share", "flatpak", "exports", "share", "icons"));
-        }
-
-        candidates.Add("/var/lib/flatpak/exports/share/icons");
-        candidates.Add("/var/lib/snapd/desktop/icons");
-
-        return candidates
-            .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static IEnumerable<string> EnumerateFilesSafe(string rootPath, string fileName)
-    {
-        try
-        {
-            return Directory.EnumerateFiles(rootPath, fileName, SearchOption.AllDirectories);
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
-    }
-
-    private static bool TryReadIconBytes(string filePath, out byte[] bytes)
-    {
-        bytes = [];
-        try
-        {
-            var extension = Path.GetExtension(filePath);
-            if (!SupportedRasterExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase) ||
-                !File.Exists(filePath))
+            foreach (var sizeDir in IconSizes)
             {
-                return false;
+                var iconPath = Path.Combine(themePath, "hicolor", sizeDir, "mimetypes", $"{iconName}.png");
+                if (File.Exists(iconPath))
+                {
+                    return File.ReadAllBytes(iconPath);
+                }
+
+                iconPath = Path.Combine(themePath, "hicolor", sizeDir, "places", $"{iconName}.png");
+                if (File.Exists(iconPath))
+                {
+                    return File.ReadAllBytes(iconPath);
+                }
+
+                iconPath = Path.Combine(themePath, "hicolor", sizeDir, "devices", $"{iconName}.png");
+                if (File.Exists(iconPath))
+                {
+                    return File.ReadAllBytes(iconPath);
+                }
             }
 
-            bytes = File.ReadAllBytes(filePath);
-            return bytes.Length > 0;
+            var directPath = Path.Combine(themePath, $"{iconName}.png");
+            if (File.Exists(directPath))
+            {
+                return File.ReadAllBytes(directPath);
+            }
         }
         catch
         {
-            return false;
         }
+
+        return null;
     }
 
-    private static int ScoreIconPath(string filePath)
+    private static byte[]? TryGetIconFromGtkTheme(string iconName)
     {
-        var score = 0;
-        var extension = Path.GetExtension(filePath);
-        if (extension.Equals(".png", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            score += 4_000;
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "gtk3-icon-browser",
+                    Arguments = $"--icon={iconName}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            return null;
         }
-        else if (extension.Equals(".ico", StringComparison.OrdinalIgnoreCase))
+        catch
         {
-            score += 2_000;
+            return null;
         }
-
-        if (filePath.Contains($"{Path.DirectorySeparatorChar}hicolor{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-        {
-            score += 8_000;
-        }
-
-        if (filePath.Contains($"{Path.DirectorySeparatorChar}apps{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-        {
-            score += 1_000;
-        }
-
-        var match = SizeDirectoryRegex.Match(filePath);
-        if (match.Success &&
-            int.TryParse(match.Groups["size"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size))
-        {
-            score += Math.Min(size, 512);
-        }
-
-        return score;
-    }
-
-    private static string ExpandHome(string path)
-    {
-        if (!path.StartsWith("~", StringComparison.Ordinal))
-        {
-            return path;
-        }
-
-        var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (string.IsNullOrWhiteSpace(homeDirectory))
-        {
-            return path;
-        }
-
-        return path.Length == 1
-            ? homeDirectory
-            : Path.Combine(homeDirectory, path[2..]);
     }
 }

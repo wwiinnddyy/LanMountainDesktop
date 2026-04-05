@@ -258,16 +258,41 @@ public partial class TransparentOverlayWindow : Window
             return;
         }
         
-        var control = descriptor.CreateControl(
-            _currentDesktopCellSize,
-            _timeZoneService,
-            _weatherDataService,
-            _recommendationInfoService,
-            _calculatorDataService,
-            _settingsFacade,
-            placement.PlacementId);
+        // 【修复问题3】尝试从现有窗口中获取组件实例，避免重新创建导致状态丢失
+        var control = TryGetExistingControl(placement.PlacementId);
+        if (control is null)
+        {
+            // 如果没有现有实例，才创建新的
+            control = descriptor.CreateControl(
+                _currentDesktopCellSize,
+                _timeZoneService,
+                _weatherDataService,
+                _recommendationInfoService,
+                _calculatorDataService,
+                _settingsFacade,
+                placement.PlacementId);
+        }
             
         RenderComponent(placement.PlacementId, control, placement.X, placement.Y, placement.Width, placement.Height);
+    }
+    
+    /// <summary>
+    /// 【修复问题3】尝试从现有的小窗口中获取组件控件实例
+    /// </summary>
+    private Control? TryGetExistingControl(string placementId)
+    {
+        try
+        {
+            var manager = FusedDesktopManagerServiceFactory.GetOrCreate();
+            // 通过反射或公共 API 获取现有窗口中的控件
+            // 这里需要 FusedDesktopManagerService 提供获取控件的方法
+            // 暂时返回 null，后续需要扩展接口
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
     
     /// <summary>

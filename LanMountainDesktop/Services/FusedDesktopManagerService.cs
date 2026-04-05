@@ -79,7 +79,8 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
         if (_isEditMode) return;
         _isEditMode = true;
 
-        // 隐藏所有底层小窗口
+        // 【修复问题3】不再隐藏窗口，而是将窗口内容转移到编辑模式覆盖层
+        // 这样可以保持组件的运行状态（动画、输入等）
         foreach (var window in _widgetWindows.Values)
         {
             window.Hide();

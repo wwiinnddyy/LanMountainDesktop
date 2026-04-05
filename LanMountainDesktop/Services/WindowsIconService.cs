@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -696,17 +696,22 @@ internal static class WindowsIconService
         try
         {
             using var source = Image.FromHbitmap(bitmapHandle);
-            using var bitmap = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppArgb);
+            var width = source.Width;
+            var height = source.Height;
+
+            using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
             using (var graphics = Graphics.FromImage(bitmap))
             {
                 graphics.Clear(Color.Transparent);
-                graphics.CompositingMode = CompositingMode.SourceOver;
+                graphics.CompositingMode = CompositingMode.SourceCopy;
                 graphics.CompositingQuality = CompositingQuality.HighQuality;
                 graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 graphics.SmoothingMode = SmoothingMode.HighQuality;
                 graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                graphics.DrawImage(source, 0, 0, source.Width, source.Height);
+                graphics.DrawImage(source, 0, 0, width, height);
             }
+
+            FixBitmapAlpha(bitmap);
 
             using var stream = new MemoryStream();
             bitmap.Save(stream, ImageFormat.Png);
@@ -715,6 +720,47 @@ internal static class WindowsIconService
         catch
         {
             return null;
+        }
+    }
+
+    private static void FixBitmapAlpha(Bitmap bitmap)
+    {
+        var width = bitmap.Width;
+        var height = bitmap.Height;
+        var rect = new Rectangle(0, 0, width, height);
+        var data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+        
+        try
+        {
+            var bytes = Math.Abs(data.Stride) * height;
+            var buffer = new byte[bytes];
+            Marshal.Copy(data.Scan0, buffer, 0, bytes);
+
+            for (var i = 0; i < bytes; i += 4)
+            {
+                var b = buffer[i];
+                var g = buffer[i + 1];
+                var r = buffer[i + 2];
+                var a = buffer[i + 3];
+
+                if (a == 0 && (r != 0 || g != 0 || b != 0))
+                {
+                    a = (byte)Math.Max(r, Math.Max(g, b));
+                    buffer[i + 3] = a;
+                }
+                else if (a > 0 && a < 255)
+                {
+                    buffer[i] = (byte)(b * 255 / a);
+                    buffer[i + 1] = (byte)(g * 255 / a);
+                    buffer[i + 2] = (byte)(r * 255 / a);
+                }
+            }
+
+            Marshal.Copy(buffer, 0, data.Scan0, bytes);
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
         }
     }
 
