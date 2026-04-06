@@ -267,6 +267,11 @@ public static class DesktopComponentEditorRegistryFactory
                 BuiltInComponentIds.DesktopZhiJiaoHub,
                 context => new ZhiJiaoHubComponentEditor(context),
                 preferredWidth: 480d,
+                preferredHeight: 520d),
+            [BuiltInComponentIds.DesktopNotificationBox] = new(
+                BuiltInComponentIds.DesktopNotificationBox,
+                context => new NotificationBoxComponentEditor(context),
+                preferredWidth: 480d,
                 preferredHeight: 520d)
         };
 

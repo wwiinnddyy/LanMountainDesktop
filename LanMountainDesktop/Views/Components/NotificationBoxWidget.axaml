@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:symbol="using:FluentIcons.Common"
+             x:Class="LanMountainDesktop.Views.Components.NotificationBoxWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            Background="Transparent"
+            ClipToBounds="True">
+        <Grid>
+            <!-- 主卡片 -->
+            <Border x:Name="CardBorder"
+                    Background="#FCFCFD"
+                    CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+                    Padding="12,10">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- 头部 -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <fi:SymbolIcon x:Name="HeaderIcon" Symbol="{x:Static symbol:Symbol.MailInbox}" FontSize="16" />
+                            <TextBlock x:Name="HeaderTextBlock"
+                                       Text="消息盒子"
+                                       FontSize="15"
+                                       FontWeight="SemiBold" />
+                            <Border x:Name="UnreadBadge"
+                                    Background="#E24B2D"
+                                    CornerRadius="8"
+                                    Padding="5,2"
+                                    IsVisible="False">
+                                <TextBlock x:Name="UnreadCountText"
+                                           Foreground="White"
+                                           FontSize="11"
+                                           FontWeight="Bold" />
+                            </Border>
+                        </StackPanel>
+
+                        <Button x:Name="ClearButton"
+                                Grid.Column="1"
+                                IsVisible="False"
+                                Click="OnClearButtonClick"
+                                Padding="6"
+                                Background="Transparent"
+                                BorderThickness="0">
+                            <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.Delete}" FontSize="14" />
+                        </Button>
+                    </Grid>
+
+                    <!-- 通知列表 -->
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="0,8,0,0"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="NotificationListPanel" Spacing="6" />
+                    </ScrollViewer>
+
+                    <!-- 空状态 -->
+                    <TextBlock x:Name="EmptyStateText"
+                               Grid.Row="1"
+                               Text="暂无通知"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#8B95A5"
+                               FontSize="13"
+                               IsVisible="False" />
+
+                    <!-- 隐私模式遮罩 -->
+                    <Border x:Name="PrivacyOverlay"
+                            Grid.Row="1"
+                            Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                            IsVisible="False">
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="6">
+                            <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.EyeOff}" FontSize="24" Foreground="#8B95A5" />
+                            <TextBlock Text="您有新的通知"
+                                       Foreground="#8B95A5"
+                                       FontSize="12" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 底部状态 -->
+                    <TextBlock x:Name="StatusTextBlock"
+                               Grid.Row="2"
+                               FontSize="11"
+                               Foreground="#8B95A5"
+                               Margin="0,6,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

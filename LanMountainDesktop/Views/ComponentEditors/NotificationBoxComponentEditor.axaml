@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.NotificationBoxComponentEditor"
+             x:DataType="vm:NotificationBoxEditorViewModel">
+
+    <StackPanel Spacing="16">
+        <!-- 说明卡片 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <TextBlock Text="{Binding DescriptionText}"
+                       Classes="component-editor-secondary-text"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- 最大显示数量 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding MaxDisplayCountLabel}"
+                           Classes="component-editor-section-title" />
+                <TextBlock Text="{Binding MaxDisplayCountDescription}"
+                           Classes="component-editor-secondary-text" />
+                <ComboBox ItemsSource="{Binding MaxDisplayCountOptions}"
+                          SelectedItem="{Binding SelectedMaxDisplayCount}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectionOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <!-- 排序方式 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding SortOrderLabel}"
+                           Classes="component-editor-section-title" />
+                <ComboBox ItemsSource="{Binding SortOrderOptions}"
+                          SelectedItem="{Binding SelectedSortOrder}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectionOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <!-- 显示选项 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="16">
+                <TextBlock Text="{Binding DisplayOptionsLabel}"
+                           Classes="component-editor-section-title" />
+
+                <CheckBox IsChecked="{Binding ShowAppIcon}"
+                          Content="{Binding ShowAppIconLabel}" />
+
+                <CheckBox IsChecked="{Binding ShowTimestamp}"
+                          Content="{Binding ShowTimestampLabel}" />
+
+                <CheckBox IsChecked="{Binding GroupByApp}"
+                          Content="{Binding GroupByAppLabel}" />
+
+                <CheckBox IsChecked="{Binding ShowClearButton}"
+                          Content="{Binding ShowClearButtonLabel}" />
+            </StackPanel>
+        </Border>
+
+        <!-- 时间格式 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding TimeFormatLabel}"
+                           Classes="component-editor-section-title" />
+                <ComboBox ItemsSource="{Binding TimeFormatOptions}"
+                          SelectedItem="{Binding SelectedTimeFormat}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectionOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

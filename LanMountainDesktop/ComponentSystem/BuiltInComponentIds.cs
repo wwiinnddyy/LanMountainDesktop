@@ -45,4 +45,5 @@ public static class BuiltInComponentIds
     public const string DesktopRemovableStorage = "DesktopRemovableStorage";
     public const string DesktopZhiJiaoHub = "DesktopZhiJiaoHub";
     public const string DesktopFileManager = "DesktopFileManager";
+    public const string DesktopNotificationBox = "DesktopNotificationBox";
 }

@@ -200,6 +200,35 @@ public sealed class AppSettingsSnapshot
 
     #endregion
 
+    #region Notification Box Settings (消息盒子全局设置)
+
+    /// <summary>
+    /// 启用消息盒子功能（Windows通知监听）
+    /// </summary>
+    public bool NotificationBoxEnabled { get; set; } = true;
+
+    /// <summary>
+    /// 隐私模式：开启后只显示"您有新的通知"，不显示具体内容
+    /// </summary>
+    public bool NotificationBoxPrivacyMode { get; set; } = false;
+
+    /// <summary>
+    /// 被屏蔽的应用列表（不接收这些应用的通知）
+    /// </summary>
+    public List<string> NotificationBoxBlockedApps { get; set; } = [];
+
+    /// <summary>
+    /// 历史记录保留天数
+    /// </summary>
+    public int NotificationBoxHistoryRetentionDays { get; set; } = 7;
+
+    /// <summary>
+    /// 最大存储通知数量（防止内存无限增长）
+    /// </summary>
+    public int NotificationBoxMaxStoredCount { get; set; } = 500;
+
+    #endregion
+
     public AppSettingsSnapshot Clone()
     {
         var clone = (AppSettingsSnapshot)MemberwiseClone();
@@ -212,6 +241,9 @@ public sealed class AppSettingsSnapshot
             : [];
         clone.DisabledPluginIds = DisabledPluginIds is { Count: > 0 }
             ? new List<string>(DisabledPluginIds)
+            : [];
+        clone.NotificationBoxBlockedApps = NotificationBoxBlockedApps is { Count: > 0 }
+            ? new List<string>(NotificationBoxBlockedApps)
             : [];
 
         return clone;

@@ -410,6 +410,16 @@ public sealed class ComponentRegistry
                 MinHeightCells: 4,
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopNotificationBox,
+                "消息盒子",
+                "Inbox",
+                "Info",
+                MinWidthCells: 2,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free)
         };
 

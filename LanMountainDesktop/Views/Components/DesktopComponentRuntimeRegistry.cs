@@ -479,7 +479,11 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopFileManager,
                     "component.file_manager",
-                    () => new FileManagerWidget())
+                    () => new FileManagerWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopNotificationBox,
+                    "component.notification_box",
+                    () => new NotificationBoxWidget())
         ];
     }
 

@@ -76,6 +76,7 @@
     <PackageReference Include="WebView.Avalonia" Version="11.0.0.1" />
     <PackageReference Include="WebView.Avalonia.Desktop" Version="11.0.0.1" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.22.0" />
   </ItemGroup>
 
   <Target Name="CopyPluginsInstallHelperToOutput" AfterTargets="Build">
