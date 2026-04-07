@@ -25,6 +25,12 @@
 - `glass-strong`：主要大容器
 - `glass-panel`：子区域、小面板、卡片
 
+### 形状与圆角 (Shape & Corner Radius)
+
+- **全局统一**：所有 UI 元素的圆角必须遵循 [圆角设计规范](file:///c:/Users/USER154971/Documents/GitHub/LanMountainDesktop/docs/CORNER_RADIUS_SPEC.md)。
+- **禁止硬编码**：严禁在资源库以外的地方硬编码 `CornerRadius` 数值。
+- **动态适配**：桌面组件必须使用 `DesignCornerRadiusComponent` 动态资源，以支持用户在设置中全局切换“锐利/平衡/圆润/开放”风格。
+
 ### 可访问性
 
 - 正文对比度目标不低于 `4.5:1`

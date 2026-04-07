@@ -614,10 +614,10 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _systemMaterialLabel = string.Empty;
 
     [ObservableProperty]
-    private string _globalCornerRadiusLabel = string.Empty;
+    private string _cornerRadiusStyleLabel = string.Empty;
 
     [ObservableProperty]
-    private string _globalCornerRadiusDescription = string.Empty;
+    private string _cornerRadiusStyleDescription = string.Empty;
 
     [ObservableProperty]
     private string _themeHeader = string.Empty;
@@ -701,6 +701,15 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 
     public IBrush NeutralDarkPreviewBrush => NeutralDarkBrushValue;
 
+    [ObservableProperty]
+    private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
+
+    [ObservableProperty]
+    private IReadOnlyList<SelectionOption> _cornerRadiusStyleOptions = [];
+
+    [ObservableProperty]
+    private SelectionOption? _selectedCornerRadiusStyle;
+
     public void Load()
     {
         var theme = _settingsFacade.Theme.Get();
@@ -740,29 +749,14 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PersistCurrentState(restartRequired: false);
     }
 
-    partial void OnGlobalCornerRadiusScaleChanged(double value)
+    partial void OnSelectedCornerRadiusStyleChanged(SelectionOption? value)
     {
-        if (_isInitializing)
+        if (_isInitializing || value is null)
         {
             return;
         }
 
-        var normalized = GlobalAppearanceSettings.NormalizeCornerRadiusScale(value);
-        if (Math.Abs(normalized - value) > 0.0001d)
-        {
-            _isInitializing = true;
-            try
-            {
-                GlobalCornerRadiusScale = normalized;
-            }
-            finally
-            {
-                _isInitializing = false;
-            }
-
-            return;
-        }
-
+        CornerRadiusStyle = value.Value;
         PersistCurrentState(restartRequired: false);
     }
 
@@ -830,8 +824,12 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeColorLabel = L("settings.color.theme_color_label", "Theme Accent Color");
         ThemeColorModeLabel = L("settings.appearance.theme_color_mode_label", "Theme color source");
         SystemMaterialLabel = L("settings.appearance.system_material_label", "System material");
-        GlobalCornerRadiusLabel = L("settings.appearance.corner_radius.label", "Global corner radius");
-        GlobalCornerRadiusDescription = L("settings.appearance.corner_radius.description", "Adjust the shared radius scale used by cards, panels, and component containers.");
+        CornerRadiusStyleLabel = L("settings.appearance.corner_radius.label", "Global corner radius style");
+        CornerRadiusStyleDescription = L("settings.appearance.corner_radius.description", "Select a fixed corner radius style inspired by Xiaomi HyperOS.");
+        
+        CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
+            .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
+            .ToList();
         ThemeSourceNeutralText = L("settings.appearance.theme_color_mode.neutral", "Default neutral");
         ThemeSourceUserColorText = L("settings.appearance.theme_color_mode.user", "User theme color Monet");
         ThemeSourceWallpaperText = L("settings.appearance.theme_color_mode.wallpaper", "Wallpaper Monet");
@@ -876,7 +874,10 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         IsNightMode = theme.IsNightMode;
         ThemeColor = theme.ThemeColor ?? string.Empty;
         UseSystemChrome = theme.UseSystemChrome;
-        GlobalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(theme.GlobalCornerRadiusScale);
+        CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(theme.CornerRadiusStyle);
+        SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
+            ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
         _selectedWallpaperSeed = theme.SelectedWallpaperSeed;
         SyncCustomSeedPickerWithSavedThemeColor();
 
@@ -926,7 +927,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             IsNightMode,
             themeColor,
             UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusScale(GlobalCornerRadiusScale),
+            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
             themeColorMode,
             ThemeAppearanceValues.NormalizeSystemMaterialMode(SelectedSystemMaterialMode?.Value),
             _selectedWallpaperSeed);
@@ -1070,20 +1071,22 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private string _spacingPresetLabel = string.Empty;
 
     [ObservableProperty]
-    private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
+    private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
 
-    public double GlobalCornerRadiusMinimum => GlobalAppearanceSettings.MinimumCornerRadiusScale;
+    [ObservableProperty]
+    private IReadOnlyList<SelectionOption> _cornerRadiusStyleOptions = [];
 
-    public double GlobalCornerRadiusMaximum => GlobalAppearanceSettings.MaximumCornerRadiusScale;
+    [ObservableProperty]
+    private SelectionOption? _selectedCornerRadiusStyle;
 
     [ObservableProperty]
     private string _componentRadiusHeader = string.Empty;
 
     [ObservableProperty]
-    private string _globalCornerRadiusLabel = string.Empty;
+    private string _cornerRadiusStyleLabel = string.Empty;
 
     [ObservableProperty]
-    private string _globalCornerRadiusDescription = string.Empty;
+    private string _cornerRadiusStyleDescription = string.Empty;
 
     public void Load()
     {
@@ -1096,7 +1099,10 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
             ?? SpacingPresets[1];
 
         var theme = _settingsFacade.Theme.Get();
-        GlobalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(theme.GlobalCornerRadiusScale);
+        CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(theme.CornerRadiusStyle);
+        SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
+            ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
     }
 
     partial void OnShortSideCellsChanged(int value)
@@ -1129,29 +1135,14 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SaveGrid();
     }
 
-    partial void OnGlobalCornerRadiusScaleChanged(double value)
+    partial void OnSelectedCornerRadiusStyleChanged(SelectionOption? value)
     {
-        if (_isInitializing)
+        if (_isInitializing || value is null)
         {
             return;
         }
 
-        var normalized = GlobalAppearanceSettings.NormalizeCornerRadiusScale(value);
-        if (Math.Abs(normalized - value) > 0.0001d)
-        {
-            _isInitializing = true;
-            try
-            {
-                GlobalCornerRadiusScale = normalized;
-            }
-            finally
-            {
-                _isInitializing = false;
-            }
-
-            return;
-        }
-
+        CornerRadiusStyle = value.Value;
         SaveComponentCornerRadius();
     }
 
@@ -1170,7 +1161,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
             theme.IsNightMode,
             theme.ThemeColor,
             theme.UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusScale(GlobalCornerRadiusScale),
+            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
             theme.ThemeColorMode,
             theme.SystemMaterialMode,
             theme.SelectedWallpaperSeed));
@@ -1194,10 +1185,14 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         EdgeInsetPercentLabel = L("settings.components.edge_inset_label", "Screen Inset");
         SpacingPresetLabel = L("settings.components.spacing_label", "Component Spacing");
         ComponentRadiusHeader = L("settings.components.corner_radius.header", "Corner Design");
-        GlobalCornerRadiusLabel = L("settings.components.corner_radius.label", "Component Corner Radius");
-        GlobalCornerRadiusDescription = L(
+        CornerRadiusStyleLabel = L("settings.components.corner_radius.label", "Component Corner Radius Style");
+        CornerRadiusStyleDescription = L(
             "settings.components.corner_radius.description",
-            "Adjust the shared corner radius from a square edge to a capsule-like shape, and expand the internal safe area with it.");
+            "Select a fixed corner radius style (inspired by Xiaomi HyperOS) to ensure consistency across all components.");
+            
+        CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
+            .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
+            .ToList();
     }
 
     private string L(string key, string fallback)

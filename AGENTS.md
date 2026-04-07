@@ -62,7 +62,10 @@ dotnet test LanMountainDesktop.slnx -c Debug
 ### UI
 
 - 主题、资源和视觉语义优先遵守 `docs/VISUAL_SPEC.md` 与 `docs/CORNER_RADIUS_SPEC.md`
-- **组件圆角**：所有内置与插件组件的根边框必须使用 `{DynamicResource DesignCornerRadiusComponent}` 资源。
+- **圆角规范 (AI 强制建议)**：
+    - **桌面组件根容器**：必须且仅能使用 `{DynamicResource DesignCornerRadiusComponent}`。
+    - **内部元素**：必须根据嵌套层级使用 `DesignCornerRadiusSm/Md/Lg` 等 Token，严禁硬编码像素值。
+    - **禁止修改系数**：严禁在圆角资源上乘以任何 `scale` 变量，圆角现在由全局样式固定控制。
 - 设置页相关改动通常同时落在 `Views/`、`ViewModels/`、`Services/` 和 `.trae/specs/`
 - UI 启动与窗口生命周期主线在 `Program.cs` 和 `App.axaml.cs`
 

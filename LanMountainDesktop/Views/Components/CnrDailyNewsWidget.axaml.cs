@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -552,7 +552,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
             {
                 Width = 160,
                 Height = 90,
-                CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16, 8, 22),
+                CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16, 8, 22),
                 ClipToBounds = true,
                 Background = new SolidColorBrush(Color.Parse("#E6E6E6")),
                 IsHitTestVisible = false
@@ -647,8 +647,8 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         News1ImageHost.Height = imageHeight;
         News2ImageHost.Width = imageWidth;
         News2ImageHost.Height = imageHeight;
-        News1ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
-        News2ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
+        News1ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
+        News2ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
         News1ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
         News2ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
 
@@ -691,7 +691,7 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
 
             row.ImageHost.Width = imageWidth;
             row.ImageHost.Height = imageHeight;
-            row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(16 * scale, 8, 22);
+            row.ImageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(16 * scale, 8, 22);
             row.ImageHost.Background = new SolidColorBrush(_isNightVisual ? Color.Parse("#3D4250") : Color.Parse("#E6E6E6"));
 
             row.TitleTextBlock.MaxWidth = availableTextWidth;

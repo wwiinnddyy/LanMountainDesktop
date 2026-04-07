@@ -51,6 +51,7 @@ public partial class MainWindow
                 string.Equals(key, nameof(AppSettingsSnapshot.ThemeColorMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.CornerRadiusStyle), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.PendingUpdateInstallerPath), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.PendingUpdateVersion), StringComparison.OrdinalIgnoreCase) ||
@@ -611,7 +612,7 @@ public partial class MainWindow
             SystemMaterialMode = latestThemeState.SystemMaterialMode,
             SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
             UseSystemChrome = latestThemeState.UseSystemChrome,
-            GlobalCornerRadiusScale = latestThemeState.GlobalCornerRadiusScale,
+            CornerRadiusStyle = latestThemeState.CornerRadiusStyle,
             WallpaperPath = latestWallpaperState.WallpaperPath,
             WallpaperType = latestWallpaperState.Type,
             WallpaperColor = string.Equals(latestWallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase)

@@ -254,11 +254,19 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
     public ThemeAppearanceSettingsState Get()
     {
         var snapshot = _settingsService.Load();
+        var cornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(snapshot.CornerRadiusStyle);
+        if (string.Equals(cornerRadiusStyle, GlobalAppearanceSettings.DefaultCornerRadiusStyle, StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(snapshot.CornerRadiusStyle) &&
+            Math.Abs(snapshot.GlobalCornerRadiusScale - GlobalAppearanceSettings.DefaultCornerRadiusScale) > 0.01)
+        {
+            cornerRadiusStyle = GlobalAppearanceSettings.MigrateScaleToStyle(snapshot.GlobalCornerRadiusScale);
+        }
+
         return new ThemeAppearanceSettingsState(
             snapshot.IsNightMode ?? false,
             snapshot.ThemeColor,
             snapshot.UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusScale(snapshot.GlobalCornerRadiusScale),
+            cornerRadiusStyle,
             ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
             ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
             snapshot.SelectedWallpaperSeed);
@@ -269,7 +277,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         var snapshot = _settingsService.Load();
         var changedKeys = new List<string>();
         var normalizedThemeColor = string.IsNullOrWhiteSpace(state.ThemeColor) ? null : state.ThemeColor;
-        var normalizedCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(state.GlobalCornerRadiusScale);
+        var normalizedCornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(state.CornerRadiusStyle);
         var normalizedThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(state.ThemeColorMode, state.ThemeColor);
         var normalizedSystemMaterialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(state.SystemMaterialMode);
         var normalizedSelectedWallpaperSeed = string.IsNullOrWhiteSpace(state.SelectedWallpaperSeed)
@@ -294,10 +302,10 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             changedKeys.Add(nameof(AppSettingsSnapshot.UseSystemChrome));
         }
 
-        if (Math.Abs(GlobalAppearanceSettings.NormalizeCornerRadiusScale(snapshot.GlobalCornerRadiusScale) - normalizedCornerRadiusScale) > 0.0001d)
+        if (!string.Equals(GlobalAppearanceSettings.NormalizeCornerRadiusStyle(snapshot.CornerRadiusStyle), normalizedCornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
         {
-            snapshot.GlobalCornerRadiusScale = normalizedCornerRadiusScale;
-            changedKeys.Add(nameof(AppSettingsSnapshot.GlobalCornerRadiusScale));
+            snapshot.CornerRadiusStyle = normalizedCornerRadiusStyle;
+            changedKeys.Add(nameof(AppSettingsSnapshot.CornerRadiusStyle));
         }
 
         if (!string.Equals(snapshot.ThemeColorMode, normalizedThemeColorMode, StringComparison.OrdinalIgnoreCase))

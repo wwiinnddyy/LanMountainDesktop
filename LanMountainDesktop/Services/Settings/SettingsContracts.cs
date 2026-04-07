@@ -30,7 +30,7 @@ public sealed record ThemeAppearanceSettingsState(
     bool IsNightMode,
     string? ThemeColor,
     bool UseSystemChrome,
-    double GlobalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale,
+    string CornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle,
     string ThemeColorMode = ThemeAppearanceValues.ColorModeDefaultNeutral,
     string SystemMaterialMode = ThemeAppearanceValues.MaterialNone,
     string? SelectedWallpaperSeed = null);

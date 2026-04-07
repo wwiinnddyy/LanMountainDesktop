@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -638,7 +638,7 @@ public partial class Stcn24ForumWidget : UserControl, IDesktopComponentWidget, I
 
         foreach (var visual in _itemVisuals)
         {
-            visual.Host.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(10 * softScale, 6, 14);
+            visual.Host.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(10 * softScale, 6, 14);
             visual.Host.Padding = new Thickness(rowPaddingHorizontal, rowPaddingVertical);
             visual.RowGrid.ColumnSpacing = Math.Clamp(8 * softScale, 4, 12);
 

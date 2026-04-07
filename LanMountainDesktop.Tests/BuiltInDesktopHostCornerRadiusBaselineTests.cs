@@ -11,19 +11,19 @@ namespace LanMountainDesktop.Tests;
 public sealed class BuiltInDesktopHostCornerRadiusBaselineTests
 {
     [Theory]
-    [InlineData(80d, 0d)]
-    [InlineData(120d, 1d)]
-    [InlineData(160d, 2.5d)]
-    public void BuiltInDesktopHosts_ResolveToTheUnifiedLgBaseline(double cellSize, double globalScale)
+    [InlineData(80d, "Sharp")]
+    [InlineData(120d, "Balanced")]
+    [InlineData(160d, "Rounded")]
+    public void BuiltInDesktopHosts_ResolveToTheUnifiedLgBaseline(double cellSize, string style)
     {
         var registry = new DesktopComponentRuntimeRegistry(
             ComponentRegistry.CreateDefault(),
             DesktopComponentRuntimeRegistry.GetDefaultRegistrations());
-        var expected = AppearanceCornerRadiusTokenFactory.Create(globalScale).Component.TopLeft;
+        var expected = AppearanceCornerRadiusTokenFactory.Create(style).Component.TopLeft;
 
         foreach (var descriptor in registry.GetDesktopComponents())
         {
-            var resolved = descriptor.ResolveCornerRadius(CreateChromeContext(descriptor.Definition.Id, cellSize, globalScale));
+            var resolved = descriptor.ResolveCornerRadius(CreateChromeContext(descriptor.Definition.Id, cellSize, style));
             Assert.Equal(expected, resolved, 3);
         }
     }
@@ -31,13 +31,12 @@ public sealed class BuiltInDesktopHostCornerRadiusBaselineTests
     private static ComponentChromeContext CreateChromeContext(
         string componentId,
         double cellSize,
-        double globalScale)
+        string style)
     {
         return new ComponentChromeContext(
             componentId,
             null,
             cellSize,
-            globalScale,
-            AppearanceCornerRadiusTokenFactory.Create(globalScale));
+            AppearanceCornerRadiusTokenFactory.Create(style));
     }
 }

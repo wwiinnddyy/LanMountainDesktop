@@ -1548,7 +1548,6 @@ public partial class MainWindow
                 var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
                 return new ComponentLibraryCreateContext(
                     cellSize,
-                    appearanceSnapshot.GlobalCornerRadiusScale,
                     _timeZoneService,
                     _weatherDataService,
                     _recommendationInfoService,
@@ -2552,12 +2551,10 @@ public partial class MainWindow
                 componentId,
                 null,
                 _currentDesktopCellSize,
-                appearanceSnapshot.GlobalCornerRadiusScale,
                 appearanceSnapshot.CornerRadiusTokens));
         }
 
-        var scale = Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, appearanceSnapshot.GlobalCornerRadiusScale);
-        return Math.Clamp(_currentDesktopCellSize * 0.22, 8, 18) * scale;
+        return Math.Max(0d, appearanceSnapshot.CornerRadiusTokens.Component.TopLeft);
     }
 
     private Thickness GetDesktopComponentVisualInset(int widthCells, int heightCells)
@@ -2809,7 +2806,6 @@ public partial class MainWindow
             var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
             var createContext = new ComponentLibraryCreateContext(
                 cellSize,
-                appearanceSnapshot.GlobalCornerRadiusScale,
                 _timeZoneService,
                 _weatherDataService,
                 _recommendationInfoService,

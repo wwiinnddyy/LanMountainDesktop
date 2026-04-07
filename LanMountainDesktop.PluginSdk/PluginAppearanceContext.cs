@@ -9,7 +9,6 @@ public sealed class PluginAppearanceContext : IPluginAppearanceContext
 
         Snapshot = snapshot with
         {
-            GlobalCornerRadiusScale = Math.Max(0d, snapshot.GlobalCornerRadiusScale),
             ThemeVariant = string.IsNullOrWhiteSpace(snapshot.ThemeVariant)
                 ? "Unknown"
                 : snapshot.ThemeVariant.Trim()
@@ -20,13 +19,15 @@ public sealed class PluginAppearanceContext : IPluginAppearanceContext
 
     public double ResolveScaledCornerRadius(double baseRadius, double? minimum = null, double? maximum = null)
     {
-        var scale = Snapshot.GlobalCornerRadiusScale;
-        var scaled = Math.Max(0d, baseRadius) * scale;
-        var scaledMin = minimum.HasValue ? minimum.Value * scale : scaled;
-        var scaledMax = maximum.HasValue ? maximum.Value * scale : scaled;
-        return minimum.HasValue || maximum.HasValue
-            ? Math.Clamp(scaled, scaledMin, scaledMax)
-            : scaled;
+        var value = Math.Max(0d, baseRadius);
+        if (!minimum.HasValue && !maximum.HasValue)
+        {
+            return value;
+        }
+
+        var clampedMin = minimum ?? value;
+        var clampedMax = maximum ?? value;
+        return Math.Clamp(value, clampedMin, clampedMax);
     }
 
     public double ResolveCornerRadius(PluginCornerRadiusPreset preset, double? minimum = null, double? maximum = null)

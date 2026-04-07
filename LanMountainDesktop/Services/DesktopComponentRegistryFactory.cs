@@ -129,7 +129,6 @@ public static class DesktopComponentRegistryFactory
                 settingsService);
             var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
             var pluginAppearance = new PluginAppearanceContext(new PluginAppearanceSnapshot(
-                GlobalCornerRadiusScale: appearanceSnapshot.GlobalCornerRadiusScale,
                 CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(appearanceSnapshot.CornerRadiusTokens),
                 ThemeVariant: appearanceSnapshot.IsNightMode ? "Dark" : "Light"));
             var pluginContext = new PluginDesktopComponentContext(
@@ -157,7 +156,6 @@ public static class DesktopComponentRegistryFactory
     private static IPluginAppearanceContext CreatePluginAppearanceContext(ComponentChromeContext chromeContext)
     {
         return new PluginAppearanceContext(new PluginAppearanceSnapshot(
-            GlobalCornerRadiusScale: chromeContext.GlobalCornerRadiusScale,
             CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(chromeContext.CornerRadiusTokens),
             ThemeVariant: "Unknown"));
     }

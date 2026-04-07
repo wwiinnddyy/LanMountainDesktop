@@ -10,7 +10,7 @@ namespace LanMountainDesktop.Tests;
 public sealed class DesktopComponentRuntimeRegistrationCornerRadiusTests
 {
     [Fact]
-    public void LegacyCellSizeResolver_AppliesGlobalCornerRadiusScale()
+    public void LegacyCellSizeResolver_ReturnsUnscaledFixedValue()
     {
         var registration = new DesktopComponentRuntimeRegistration(
             componentId: "test.component",
@@ -19,41 +19,42 @@ public sealed class DesktopComponentRuntimeRegistrationCornerRadiusTests
             cornerRadiusResolver: cellSize => Math.Clamp(cellSize * 0.30, 10, 40));
 
         var resolver = Assert.IsType<Func<ComponentChromeContext, double>>(registration.CornerRadiusResolver);
-        var resolved = resolver(CreateChromeContext(cellSize: 120, globalScale: 2.0));
+        // Previously: (120 * 0.30) * 2.0 = 72.0
+        // Now: (120 * 0.30) = 36.0 (No scale applied automatically by the wrapper)
+        var resolved = resolver(CreateChromeContext(cellSize: 120));
 
-        Assert.Equal(72.0, resolved, 3);
+        Assert.Equal(36.0, resolved, 3);
     }
 
     [Fact]
-    public void ChromeContextResolver_IsNotDoubleScaledByRegistrationWrapper()
+    public void ChromeContextResolver_UsesTokenValue()
     {
         var registration = new DesktopComponentRuntimeRegistration(
             componentId: "test.component",
             displayNameLocalizationKey: null,
             controlFactory: _ => new Border(),
-            cornerRadiusResolver: chromeContext => chromeContext.CellSize + chromeContext.GlobalCornerRadiusScale);
+            cornerRadiusResolver: chromeContext => chromeContext.CornerRadiusTokens.Component.TopLeft);
 
         var resolver = Assert.IsType<Func<ComponentChromeContext, double>>(registration.CornerRadiusResolver);
-        var resolved = resolver(CreateChromeContext(cellSize: 50, globalScale: 2.5));
+        var resolved = resolver(CreateChromeContext(cellSize: 50));
 
-        Assert.Equal(52.5, resolved, 3);
+        Assert.Equal(24.0, resolved, 3);
     }
 
-    private static ComponentChromeContext CreateChromeContext(double cellSize, double globalScale)
+    private static ComponentChromeContext CreateChromeContext(double cellSize)
     {
         return new ComponentChromeContext(
             ComponentId: "test.component",
             PlacementId: null,
             CellSize: cellSize,
-            GlobalCornerRadiusScale: globalScale,
             CornerRadiusTokens: new AppearanceCornerRadiusTokens(
-                new CornerRadius(6),
-                new CornerRadius(12),
-                new CornerRadius(14),
-                new CornerRadius(20),
-                new CornerRadius(28),
-                new CornerRadius(32),
-                new CornerRadius(36),
-                new CornerRadius(8)));
+                Micro: new CornerRadius(6),
+                Xs: new CornerRadius(12),
+                Sm: new CornerRadius(14),
+                Md: new CornerRadius(20),
+                Lg: new CornerRadius(28),
+                Xl: new CornerRadius(32),
+                Island: new CornerRadius(36),
+                Component: new CornerRadius(24)));
     }
 }

@@ -44,7 +44,7 @@ public sealed record AppearanceThemeSnapshot(
     string ThemeColorMode,
     string? UserThemeColor,
     string? SelectedWallpaperSeed,
-    double GlobalCornerRadiusScale,
+    string CornerRadiusStyle,
     AppearanceCornerRadiusTokens CornerRadiusTokens,
     string ResolvedSeedSource,
     MonetPalette MonetPalette,
@@ -551,7 +551,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         if (!refreshAll &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) &&
-            !changedKeys.Contains(nameof(AppSettingsSnapshot.GlobalCornerRadiusScale), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.CornerRadiusStyle), StringComparer.OrdinalIgnoreCase) &&
             !(respondsToThemeColor &&
               changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) &&
             !(respondsToWallpaper &&
@@ -573,8 +573,8 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         bool queueWallpaperPaletteBuild)
     {
         var availableModes = _windowMaterialService.GetAvailableModes();
-        var globalCornerRadiusScale = GlobalAppearanceSettings.NormalizeCornerRadiusScale(themeState.GlobalCornerRadiusScale);
-        var cornerRadiusTokens = AppearanceCornerRadiusTokenFactory.Create(globalCornerRadiusScale);
+        var cornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(themeState.CornerRadiusStyle);
+        var cornerRadiusTokens = AppearanceCornerRadiusTokenFactory.Create(cornerRadiusStyle);
         MonetPalette palette;
         IReadOnlyList<Color> wallpaperSeedCandidates;
         Color effectiveSeedColor;
@@ -614,7 +614,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             themeColorMode,
             themeState.ThemeColor,
             selectedWallpaperSeed,
-            globalCornerRadiusScale,
+            cornerRadiusStyle,
             cornerRadiusTokens,
             resolvedSeedSource,
             palette,

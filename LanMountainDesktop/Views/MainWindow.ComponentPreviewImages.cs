@@ -295,7 +295,7 @@ public partial class MainWindow
         var renderScale = RenderScaling > 0 ? RenderScaling : 1d;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{key}|Cell={renderCellSize:F2}|Scale={renderScale:F2}|Night={(appearance.IsNightMode ? 1 : 0)}|Corner={appearance.GlobalCornerRadiusScale:F3}|Accent={FormatSignatureColor(appearance.AccentColor)}");
+            $"{key}|Cell={renderCellSize:F2}|Scale={renderScale:F2}|Night={(appearance.IsNightMode ? 1 : 0)}|Corner={appearance.CornerRadiusStyle}|Accent={FormatSignatureColor(appearance.AccentColor)}");
     }
 
     private ComponentPreviewKey CreateComponentTypePreviewKey(string componentId, int widthCells, int heightCells)

@@ -48,26 +48,27 @@ public sealed class InfoRecommendationHostCornerRadiusTests
             registry.TryGetDescriptor(componentId, out var descriptor),
             $"Missing runtime registration for '{componentId}'.");
 
-        var zero = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, 0d));
-        var unit = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, 1d));
-        var max = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, 2.5d));
+        var sharp = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, "Sharp"));
+        var balanced = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, "Balanced"));
+        var rounded = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, "Rounded"));
+        var open = descriptor.ResolveCornerRadius(CreateChromeContext(componentId, cellSize, "Open"));
 
-        Assert.Equal(0d, zero, 3);
-        Assert.Equal(18d, unit, 3);
-        Assert.Equal(45d, max, 3);
-        Assert.True(zero <= unit && unit <= max);
+        // All info widgets should resolve to the Component token in the new system
+        Assert.Equal(20d, sharp, 3);
+        Assert.Equal(24d, balanced, 3);
+        Assert.Equal(28d, rounded, 3);
+        Assert.Equal(32d, open, 3);
     }
 
     private static ComponentChromeContext CreateChromeContext(
         string componentId,
         double cellSize,
-        double globalScale)
+        string style)
     {
         return new ComponentChromeContext(
             componentId,
             null,
             cellSize,
-            globalScale,
-            AppearanceCornerRadiusTokenFactory.Create(globalScale));
+            AppearanceCornerRadiusTokenFactory.Create(style));
     }
 }

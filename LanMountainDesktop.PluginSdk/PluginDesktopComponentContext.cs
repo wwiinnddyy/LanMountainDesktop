@@ -52,8 +52,6 @@ public sealed class PluginDesktopComponentContext
 
     public IPluginAppearanceContext Appearance { get; }
 
-    public double GlobalCornerRadiusScale => Appearance.Snapshot.GlobalCornerRadiusScale;
-
     public PluginCornerRadiusTokens CornerRadiusTokens => Appearance.Snapshot.CornerRadiusTokens;
 
     public IPluginSettingsService? PluginSettings { get; }

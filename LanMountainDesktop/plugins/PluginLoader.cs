@@ -339,8 +339,7 @@ public sealed class PluginLoader
     private static PluginAppearanceSnapshot BuildAppearanceSnapshot(IServiceProvider? hostServices)
     {
         var defaultSnapshot = new PluginAppearanceSnapshot(
-            GlobalCornerRadiusScale: 1d,
-            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 18),
+            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
             ThemeVariant: "Unknown");
 
         if (hostServices?.GetService(typeof(IAppearanceThemeService)) is not IAppearanceThemeService appearanceThemeService)
@@ -352,7 +351,6 @@ public sealed class PluginLoader
         {
             var hostSnapshot = appearanceThemeService.GetCurrent();
             return new PluginAppearanceSnapshot(
-                GlobalCornerRadiusScale: Math.Max(0d, hostSnapshot.GlobalCornerRadiusScale),
                 CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(hostSnapshot.CornerRadiusTokens),
                 ThemeVariant: hostSnapshot.IsNightMode ? "Dark" : "Light");
         }

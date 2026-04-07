@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -730,7 +730,7 @@ public partial class IfengNewsWidget : UserControl, IDesktopComponentWidget, IRe
 
             _imageHost.Width = imageWidth;
             _imageHost.Height = imageHeight;
-            _imageHost.CornerRadius = ComponentChromeCornerRadiusHelper.Scale(imageHeight * 0.15, 8, 16);
+            _imageHost.CornerRadius = ComponentChromeCornerRadiusHelper.ScaleRadius(imageHeight * 0.15, 8, 16);
 
             var textWidth = Math.Max(84, innerWidth - imageWidth - columnGap);
             _titleTextBlock.MaxWidth = textWidth;

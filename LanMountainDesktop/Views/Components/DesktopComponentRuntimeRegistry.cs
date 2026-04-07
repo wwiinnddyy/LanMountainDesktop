@@ -39,8 +39,7 @@ public sealed class DesktopComponentRuntimeRegistration
             _ => controlFactory(),
             cornerRadiusResolver is null
                 ? null
-                : chromeContext => cornerRadiusResolver(chromeContext.CellSize) *
-                    Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale))
+                : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
     {
     }
 
@@ -55,8 +54,7 @@ public sealed class DesktopComponentRuntimeRegistration
             controlFactory,
             cornerRadiusResolver is null
                 ? null
-                : chromeContext => cornerRadiusResolver(chromeContext.CellSize) *
-                    Math.Max(GlobalAppearanceSettings.MinimumCornerRadiusScale, chromeContext.GlobalCornerRadiusScale))
+                : chromeContext => cornerRadiusResolver(chromeContext.CellSize))
     {
     }
 
@@ -131,7 +129,6 @@ public sealed class DesktopComponentRuntimeDescriptor
             Definition.Id,
             placementId,
             cellSize,
-            appearanceSnapshot.GlobalCornerRadiusScale,
             appearanceSnapshot.CornerRadiusTokens);
         var control = _controlFactory(new DesktopComponentControlFactoryContext(
             Definition,
@@ -226,8 +223,7 @@ public sealed class DesktopComponentRuntimeDescriptor
             Definition.Id,
             null,
             Math.Max(1, cellSize),
-            1d,
-            AppearanceCornerRadiusTokenFactory.Create(1d)));
+            AppearanceCornerRadiusTokenFactory.Create(GlobalAppearanceSettings.DefaultCornerRadiusStyle)));
     }
 
     private static void ApplySettingsDependencies(

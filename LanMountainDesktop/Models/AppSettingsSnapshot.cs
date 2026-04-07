@@ -19,6 +19,8 @@ public sealed class AppSettingsSnapshot
 
     public double GlobalCornerRadiusScale { get; set; } = GlobalAppearanceSettings.DefaultCornerRadiusScale;
 
+    public string CornerRadiusStyle { get; set; } = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
+
     public string ThemeColorMode { get; set; } = "default_neutral";
 
     public string SystemMaterialMode { get; set; } = "none";
