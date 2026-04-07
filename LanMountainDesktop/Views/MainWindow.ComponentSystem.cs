@@ -74,6 +74,10 @@ public partial class MainWindow
         Color PressedColor,
         Color DividerColor);
 
+    private readonly IPowerManagementService _powerService = PowerManagementServiceFactory.GetOrCreate();
+    private bool _isPowerMenuOpen;
+    private bool _isPowerMenuAnimating;
+
     private void InitializeTaskbarProfileFlyout()
     {
         if (TaskbarProfileButton is null || TaskbarProfilePopup is null)
@@ -98,6 +102,16 @@ public partial class MainWindow
         TaskbarProfileDisplayNameTextBlock.Text = profile.DisplayName;
         TaskbarProfileSettingsActionTextBlock.Text = L("tooltip.open_settings", "Settings");
         TaskbarProfileDesktopEditActionTextBlock.Text = L("button.component_library", "Edit Desktop");
+        TaskbarProfilePowerActionTextBlock.Text = L("power.menu", "Power");
+        TaskbarPowerTitleTextBlock.Text = L("power.title", "Power");
+        TaskbarPowerBackTextBlock.Text = L("power.back", "Back");
+        PowerShutdownTextBlock.Text = L("power.shutdown", "Shutdown");
+        PowerRestartTextBlock.Text = L("power.restart", "Restart");
+        PowerLogoutTextBlock.Text = L("power.logout", "Log Out");
+        PowerSleepTextBlock.Text = L("power.sleep", "Sleep");
+        PowerLockTextBlock.Text = L("power.lock_screen", "Lock Screen");
+
+        UpdatePowerMenuVisibility();
         ApplyTaskbarProfilePopupTheme(_appearanceThemeService.GetCurrent());
 
         ToolTip.SetTip(TaskbarProfileButton, profile.DisplayName);
@@ -216,6 +230,7 @@ public partial class MainWindow
             return;
         }
 
+        ResetPowerMenuState();
         RefreshTaskbarProfilePresentation();
         TaskbarProfilePopup.IsOpen = true;
     }
@@ -277,6 +292,202 @@ public partial class MainWindow
         }
 
         app?.OpenIndependentSettingsModule("MainWindowTaskbar");
+    }
+
+    private void OnPowerMenuEnterClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        EnterPowerMenu();
+    }
+
+    private void OnPowerMenuBackClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ExitPowerMenu();
+    }
+
+    private void ResetPowerMenuState()
+    {
+        _isPowerMenuOpen = false;
+        _isPowerMenuAnimating = false;
+
+        if (TaskbarProfileMainPanel is not null)
+        {
+            TaskbarProfileMainPanel.IsVisible = true;
+            TaskbarProfileMainPanel.Opacity = 1d;
+        }
+
+        if (TaskbarProfilePowerPanel is not null)
+        {
+            TaskbarProfilePowerPanel.IsVisible = false;
+            TaskbarProfilePowerPanel.Opacity = 0d;
+            var transform = TaskbarProfilePowerPanel.RenderTransform as TranslateTransform;
+            if (transform is not null) transform.X = 340d;
+        }
+    }
+
+    private void UpdatePowerMenuVisibility()
+    {
+        var supported = _powerService.IsShutdownSupported ||
+                        _powerService.IsRestartSupported ||
+                        _powerService.IsLogoutSupported ||
+                        _powerService.IsSleepSupported ||
+                        _powerService.IsLockSupported;
+
+        if (TaskbarProfilePowerActionButton is not null)
+        {
+            TaskbarProfilePowerActionButton.IsVisible = supported;
+        }
+    }
+
+    private async void EnterPowerMenu()
+    {
+        if (_isPowerMenuAnimating || _isPowerMenuOpen || TaskbarProfileMainPanel is null || TaskbarProfilePowerPanel is null)
+            return;
+
+        _isPowerMenuAnimating = true;
+
+        TaskbarProfilePowerPanel.IsVisible = true;
+        TaskbarProfilePowerPanel.Opacity = 0d;
+        var powerTransform = TaskbarProfilePowerPanel.RenderTransform as TranslateTransform;
+        if (powerTransform is not null) powerTransform.X = 340d;
+
+        await Task.Delay(16);
+
+        TaskbarProfileMainPanel.Opacity = 0d;
+        TaskbarProfilePowerPanel.Opacity = 1d;
+        if (powerTransform is not null) powerTransform.X = 0d;
+
+        await Task.Delay(280);
+
+        TaskbarProfileMainPanel.IsVisible = false;
+        _isPowerMenuOpen = true;
+        _isPowerMenuAnimating = false;
+    }
+
+    private async void ExitPowerMenu()
+    {
+        if (_isPowerMenuAnimating || !_isPowerMenuOpen || TaskbarProfileMainPanel is null || TaskbarProfilePowerPanel is null)
+            return;
+
+        _isPowerMenuAnimating = true;
+
+        TaskbarProfileMainPanel.IsVisible = true;
+        TaskbarProfileMainPanel.Opacity = 0d;
+        var powerTransform = TaskbarProfilePowerPanel.RenderTransform as TranslateTransform;
+        if (powerTransform is not null) powerTransform.X = 0d;
+
+        await Task.Delay(16);
+
+        TaskbarProfileMainPanel.Opacity = 1d;
+        TaskbarProfilePowerPanel.Opacity = 0d;
+        if (powerTransform is not null) powerTransform.X = 340d;
+
+        await Task.Delay(280);
+
+        TaskbarProfilePowerPanel.IsVisible = false;
+        _isPowerMenuOpen = false;
+        _isPowerMenuAnimating = false;
+    }
+
+    private async void OnPowerShutdownClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ClosePopupIfOpen();
+
+        if (OperatingSystem.IsWindows())
+        {
+            _powerService.ShowNativePowerUI(PowerAction.Shutdown);
+        }
+        else
+        {
+            await ShowPowerConfirmDialogAsync(L("power.shutdown_confirm_title", "Shutdown"),
+                L("power.shutdown_confirm_message", "Are you sure you want to shut down this computer?"),
+                () => _powerService.ShutdownAsync());
+        }
+    }
+
+    private async void OnPowerRestartClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ClosePopupIfOpen();
+
+        if (OperatingSystem.IsWindows())
+        {
+            _powerService.ShowNativePowerUI(PowerAction.Restart);
+        }
+        else
+        {
+            await ShowPowerConfirmDialogAsync(L("power.restart_confirm_title", "Restart"),
+                L("power.restart_confirm_message", "Are you sure you want to restart this computer?"),
+                () => _powerService.RestartAsync());
+        }
+    }
+
+    private async void OnPowerLogoutClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ClosePopupIfOpen();
+
+        await ShowPowerConfirmDialogAsync(L("power.logout_confirm_title", "Log Out"),
+            L("power.logout_confirm_message", "Are you sure you want to log out?"),
+            () => _powerService.LogoutAsync());
+    }
+
+    private async void OnPowerSleepClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ClosePopupIfOpen();
+
+        await ShowPowerConfirmDialogAsync(L("power.sleep_confirm_title", "Sleep"),
+            L("power.sleep_confirm_message", "Are you sure you want to put the computer to sleep?"),
+            () => _powerService.SleepAsync());
+    }
+
+    private async void OnPowerLockClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ClosePopupIfOpen();
+        await _powerService.LockAsync();
+    }
+
+    private async Task ShowPowerConfirmDialogAsync(string title, string message, Func<Task> action)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                PrimaryButtonText = L("power.confirm_yes", "Yes"),
+                SecondaryButtonText = L("power.confirm_cancel", "Cancel")
+            };
+
+            var result = await dialog.ShowAsync(this);
+            if (result == ContentDialogResult.Primary)
+            {
+                await action();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("PowerMenu", $"Dialog error: {ex.Message}");
+        }
+    }
+
+    private void ClosePopupIfOpen()
+    {
+        if (TaskbarProfilePopup is not null && TaskbarProfilePopup.IsOpen)
+        {
+            TaskbarProfilePopup.IsOpen = false;
+        }
     }
 
     private void OnCloseComponentLibraryClick(object? sender, RoutedEventArgs e)

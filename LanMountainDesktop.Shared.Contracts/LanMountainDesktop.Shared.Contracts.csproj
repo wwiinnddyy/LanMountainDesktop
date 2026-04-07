@@ -13,6 +13,8 @@
     <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (c) LanMountainDesktop Contributors</Copyright>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />

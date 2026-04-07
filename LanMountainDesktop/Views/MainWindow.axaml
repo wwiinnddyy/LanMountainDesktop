@@ -398,69 +398,215 @@
                                             <Border x:Name="TaskbarProfilePopupPanel"
                                                     Classes="taskbar-profile-popup-panel"
                                                     Margin="0,0,0,10">
-                                                <StackPanel Width="280"
-                                                            Spacing="12">
-                                                    <Grid ColumnDefinitions="Auto,*"
-                                                          ColumnSpacing="12">
-                                                        <Border x:Name="TaskbarProfileHeaderAvatarBorder"
-                                                                Classes="taskbar-profile-popup-avatar"
-                                                                Width="44"
-                                                                Height="44"
-                                                                ClipToBounds="True">
-                                                            <Grid>
-                                                                <Image x:Name="TaskbarProfileHeaderAvatarImage"
-                                                                       Stretch="UniformToFill"
-                                                                       IsVisible="False" />
-                                                                <TextBlock x:Name="TaskbarProfileHeaderAvatarFallbackText"
-                                                                           Classes="taskbar-profile-popup-primary"
-                                                                           HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center"
-                                                                           FontWeight="SemiBold"
-                                                                           Text="U" />
-                                                            </Grid>
-                                                        </Border>
+                                                <Grid Width="340">
+                                                    <Grid x:Name="TaskbarProfileMainPanel"
+                                                          HorizontalAlignment="Stretch"
+                                                          VerticalAlignment="Stretch">
+                                                        <Grid.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                                                            </Transitions>
+                                                        </Grid.Transitions>
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="Auto,*"
+                                                                  ColumnSpacing="12">
+                                                                <Border x:Name="TaskbarProfileHeaderAvatarBorder"
+                                                                        Classes="taskbar-profile-popup-avatar"
+                                                                        Width="44"
+                                                                        Height="44"
+                                                                        ClipToBounds="True">
+                                                                    <Grid>
+                                                                        <Image x:Name="TaskbarProfileHeaderAvatarImage"
+                                                                               Stretch="UniformToFill"
+                                                                               IsVisible="False" />
+                                                                        <TextBlock x:Name="TaskbarProfileHeaderAvatarFallbackText"
+                                                                                   Classes="taskbar-profile-popup-primary"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Text="U" />
+                                                                    </Grid>
+                                                                </Border>
 
-                                                        <StackPanel Grid.Column="1"
-                                                                    VerticalAlignment="Center"
-                                                                    Spacing="2">
-                                                            <TextBlock x:Name="TaskbarProfileDisplayNameTextBlock"
-                                                                       Classes="taskbar-profile-popup-title"
-                                                                       Text="User" />
+                                                                <StackPanel Grid.Column="1"
+                                                                            VerticalAlignment="Center"
+                                                                            Spacing="2">
+                                                                    <TextBlock x:Name="TaskbarProfileDisplayNameTextBlock"
+                                                                               Classes="taskbar-profile-popup-title"
+                                                                               Text="User" />
+                                                                </StackPanel>
+                                                            </Grid>
+
+                                                            <Border x:Name="TaskbarProfilePopupDivider"
+                                                                    Height="1"
+                                                                    Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
+
+                                                            <Button x:Name="TaskbarProfileSettingsActionButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnOpenSettingsClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="12">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Settings" />
+                                                                    <TextBlock x:Name="TaskbarProfileSettingsActionTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Settings" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="TaskbarProfileDesktopEditActionButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnOpenComponentLibraryClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="12">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Pencil" />
+                                                                    <TextBlock x:Name="TaskbarProfileDesktopEditActionTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Edit Desktop" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="TaskbarProfilePowerActionButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerMenuEnterClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="12">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Power" />
+                                                                    <TextBlock x:Name="TaskbarProfilePowerActionTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Power" />
+                                                                </Grid>
+                                                            </Button>
                                                         </StackPanel>
                                                     </Grid>
 
-                                                    <Border x:Name="TaskbarProfilePopupDivider"
-                                                            Height="1"
-                                                            Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
+                                                    <Grid x:Name="TaskbarProfilePowerPanel"
+                                                          IsVisible="False"
+                                                          Opacity="0"
+                                                          HorizontalAlignment="Stretch"
+                                                          VerticalAlignment="Stretch">
+                                                        <Grid.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="Opacity" Duration="{StaticResource FluttermotionToken.Duration.Fast}" />
+                                                            </Transitions>
+                                                        </Grid.Transitions>
+                                                        <Grid.RenderTransform>
+                                                            <TranslateTransform>
+                                                                <TranslateTransform.Transitions>
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="X"
+                                                                                          Duration="{StaticResource FluttermotionToken.Duration.Fast}"
+                                                                                          Easing="0.22,1,0.36,1" />
+                                                                    </Transitions>
+                                                                </TranslateTransform.Transitions>
+                                                            </TranslateTransform>
+                                                        </Grid.RenderTransform>
+                                                        <StackPanel Spacing="8">
+                                                            <Button x:Name="TaskbarPowerBackButton"
+                                                                    Padding="4,6"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0"
+                                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                    HorizontalAlignment="Left"
+                                                                    Click="OnPowerMenuBackClick">
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <fi:SymbolIcon Classes="icon-s"
+                                                                                   Symbol="ArrowLeft"
+                                                                                   IconVariant="Regular" />
+                                                                    <TextBlock x:Name="TaskbarPowerBackTextBlock"
+                                                                               VerticalAlignment="Center"
+                                                                               Text="Back" />
+                                                                </StackPanel>
+                                                            </Button>
 
-                                                    <Button x:Name="TaskbarProfileSettingsActionButton"
-                                                            Classes="taskbar-profile-popup-action"
-                                                            Click="OnOpenSettingsClick">
-                                                        <Grid ColumnDefinitions="Auto,*"
-                                                              ColumnSpacing="12">
-                                                            <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                             Kind="Settings" />
-                                                            <TextBlock x:Name="TaskbarProfileSettingsActionTextBlock"
-                                                                       Grid.Column="1"
-                                                                       Classes="taskbar-profile-popup-action-text"
-                                                                       Text="Settings" />
-                                                        </Grid>
-                                                    </Button>
+                                                            <TextBlock x:Name="TaskbarPowerTitleTextBlock"
+                                                                       FontSize="16"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource TaskbarProfilePopupTextBrush}"
+                                                                       Margin="2,6,0,0"
+                                                                       Text="Power" />
 
-                                                    <Button x:Name="TaskbarProfileDesktopEditActionButton"
-                                                            Classes="taskbar-profile-popup-action"
-                                                            Click="OnOpenComponentLibraryClick">
-                                                        <Grid ColumnDefinitions="Auto,*"
-                                                              ColumnSpacing="12">
-                                                            <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
-                                                                             Kind="Pencil" />
-                                                            <TextBlock x:Name="TaskbarProfileDesktopEditActionTextBlock"
-                                                                       Grid.Column="1"
-                                                                       Classes="taskbar-profile-popup-action-text"
-                                                                       Text="Edit Desktop" />
-                                                        </Grid>
-                                                    </Button>
-                                                </StackPanel>
+                                                            <Border Height="1"
+                                                                    Background="{DynamicResource TaskbarProfilePopupDividerBrush}"
+                                                                    Margin="0,4" />
+
+                                                            <Button x:Name="PowerShutdownButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerShutdownClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="14">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Power" />
+                                                                    <TextBlock x:Name="PowerShutdownTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Shutdown" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="PowerRestartButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerRestartClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="14">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Refresh" />
+                                                                    <TextBlock x:Name="PowerRestartTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Restart" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="PowerLogoutButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerLogoutClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="14">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="ExitToApp" />
+                                                                    <TextBlock x:Name="PowerLogoutTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Log Out" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="PowerSleepButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerSleepClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="14">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="WeatherNight" />
+                                                                    <TextBlock x:Name="PowerSleepTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Sleep" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button x:Name="PowerLockButton"
+                                                                    Classes="taskbar-profile-popup-action"
+                                                                    Click="OnPowerLockClick">
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="14">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="Lock" />
+                                                                    <TextBlock x:Name="PowerLockTextBlock"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
+                                                                               Text="Lock Screen" />
+                                                                </Grid>
+                                                            </Button>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Grid>
                                             </Border>
                                         </Popup>
                                     </Grid>
