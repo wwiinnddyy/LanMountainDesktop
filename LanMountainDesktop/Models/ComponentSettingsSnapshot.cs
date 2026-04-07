@@ -123,6 +123,25 @@ public sealed class ComponentSettingsSnapshot
 
     #endregion
 
+    #region Shortcut Component Settings (快捷方式组件设置)
+
+    /// <summary>
+    /// 快捷方式目标路径
+    /// </summary>
+    public string? ShortcutTargetPath { get; set; }
+
+    /// <summary>
+    /// 点击模式：Single(单击打开) 或 Double(双击打开)
+    /// </summary>
+    public string ShortcutClickMode { get; set; } = "Double";
+
+    /// <summary>
+    /// 是否透明背景
+    /// </summary>
+    public bool ShortcutTransparentBackground { get; set; } = false;
+
+    #endregion
+
     public ComponentSettingsSnapshot Clone()
     {
         var clone = (ComponentSettingsSnapshot)MemberwiseClone();

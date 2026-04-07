@@ -272,7 +272,12 @@ public static class DesktopComponentEditorRegistryFactory
                 BuiltInComponentIds.DesktopNotificationBox,
                 context => new NotificationBoxComponentEditor(context),
                 preferredWidth: 480d,
-                preferredHeight: 520d)
+                preferredHeight: 520d),
+            [BuiltInComponentIds.DesktopShortcut] = new(
+                BuiltInComponentIds.DesktopShortcut,
+                context => new ShortcutComponentEditor(context),
+                preferredWidth: 420d,
+                preferredHeight: 400d)
         };
 
         foreach (var componentId in GetBuiltInDesktopComponentIds(componentRegistry))

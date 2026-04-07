@@ -479,7 +479,11 @@ public sealed class DesktopComponentRuntimeRegistry
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopNotificationBox,
                     "component.notification_box",
-                    () => new NotificationBoxWidget())
+                    () => new NotificationBoxWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopShortcut,
+                    "component.shortcut",
+                    () => new ShortcutWidget())
         ];
     }
 

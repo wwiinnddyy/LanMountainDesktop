@@ -46,4 +46,5 @@ public static class BuiltInComponentIds
     public const string DesktopZhiJiaoHub = "DesktopZhiJiaoHub";
     public const string DesktopFileManager = "DesktopFileManager";
     public const string DesktopNotificationBox = "DesktopNotificationBox";
+    public const string DesktopShortcut = "DesktopShortcut";
 }

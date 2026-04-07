@@ -420,6 +420,16 @@ public sealed class ComponentRegistry
                 MinHeightCells: 2,
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopShortcut,
+                "快捷方式",
+                "App",
+                "Launcher",
+                MinWidthCells: 1,
+                MinHeightCells: 1,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free)
         };
 

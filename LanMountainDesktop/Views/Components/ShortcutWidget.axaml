@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="96"
+             d:DesignHeight="96"
+             x:Class="LanMountainDesktop.Views.Components.ShortcutWidget">
+
+    <Border x:Name="RootBorder"
+            Classes="glass-panel"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <Grid RowDefinitions="*,Auto"
+              x:Name="ContentGrid">
+            
+            <Border x:Name="IconHost"
+                    Grid.Row="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <Image x:Name="IconImage"
+                       Stretch="Uniform" />
+            </Border>
+            
+            <TextBlock x:Name="NameTextBlock"
+                       Grid.Row="1"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="2"
+                       TextWrapping="Wrap"
+                       Margin="4,0,4,4"
+                       FontSize="11" />
+        </Grid>
+    </Border>
+
+</UserControl>
