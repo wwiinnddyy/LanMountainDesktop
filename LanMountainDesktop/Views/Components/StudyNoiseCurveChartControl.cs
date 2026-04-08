@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using Avalonia;
@@ -20,10 +20,24 @@ public sealed class StudyNoiseCurveChartControl : Control
 
     private IReadOnlyList<NoiseRealtimePoint> _points = Array.Empty<NoiseRealtimePoint>();
     private Point[]? _pointBuffer;
+    private StreamGeometry? _lineGeometry;
+    private StreamGeometry? _fillGeometry;
+    private Rect _cachedPlot;
+    private bool _geometryDirty = true;
+    private int _lastSeriesSignature;
 
     public void UpdateSeries(IReadOnlyList<NoiseRealtimePoint>? points)
     {
-        _points = points ?? Array.Empty<NoiseRealtimePoint>();
+        var nextPoints = points ?? Array.Empty<NoiseRealtimePoint>();
+        var nextSignature = ComputeSeriesSignature(nextPoints);
+        if (ReferenceEquals(_points, nextPoints) && _lastSeriesSignature == nextSignature)
+        {
+            return;
+        }
+
+        _points = nextPoints;
+        _lastSeriesSignature = nextSignature;
+        _geometryDirty = true;
         InvalidateVisual();
     }
 
@@ -34,11 +48,18 @@ public sealed class StudyNoiseCurveChartControl : Control
             ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
             _pointBuffer = null;
         }
+
+        _lineGeometry = null;
+        _fillGeometry = null;
+        _geometryDirty = true;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         ReleasePointBuffer();
+        _lineGeometry = null;
+        _fillGeometry = null;
+        _geometryDirty = true;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -64,16 +85,14 @@ public sealed class StudyNoiseCurveChartControl : Control
             return;
         }
 
-        var maxSamples = Math.Clamp((int)Math.Floor(plot.Width), 56, 360);
-        var pointCount = BuildPlotPoints(plot, maxSamples);
-        if (pointCount < 2 || _pointBuffer is null)
+        EnsureGeometry(plot);
+        if (_lineGeometry is null || _fillGeometry is null)
         {
             return;
         }
 
-        var span = _pointBuffer.AsSpan(0, pointCount);
-        DrawAreaFill(context, plot.Bottom, span);
-        DrawLine(context, span);
+        context.DrawGeometry(FillBrush, pen: null, _fillGeometry);
+        context.DrawGeometry(brush: null, pen: LinePen, _lineGeometry);
     }
 
     private static void DrawGrid(DrawingContext context, Rect plot)
@@ -97,42 +116,56 @@ public sealed class StudyNoiseCurveChartControl : Control
         context.DrawLine(AxisPen, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
     }
 
-    private void DrawLine(DrawingContext context, ReadOnlySpan<Point> points)
+    private void EnsureGeometry(Rect plot)
     {
-        var geometry = new StreamGeometry();
-        using (var builder = geometry.Open())
+        if (!_geometryDirty && _cachedPlot == plot)
         {
-            builder.BeginFigure(points[0], false);
-            for (var i = 1; i < points.Length; i++)
+            return;
+        }
+
+        _cachedPlot = plot;
+        _lineGeometry = null;
+        _fillGeometry = null;
+
+        var maxSamples = Math.Clamp((int)Math.Floor(plot.Width), 56, 360);
+        var pointCount = BuildPlotPoints(plot, maxSamples);
+        if (pointCount < 2 || _pointBuffer is null)
+        {
+            _geometryDirty = false;
+            return;
+        }
+
+        var lineGeometry = new StreamGeometry();
+        using (var builder = lineGeometry.Open())
+        {
+            builder.BeginFigure(_pointBuffer[0], false);
+            for (var i = 1; i < pointCount; i++)
             {
-                builder.LineTo(points[i]);
+                builder.LineTo(_pointBuffer[i]);
             }
         }
 
-        context.DrawGeometry(brush: null, pen: LinePen, geometry);
-    }
-
-    private void DrawAreaFill(DrawingContext context, double baselineY, ReadOnlySpan<Point> points)
-    {
-        var geometry = new StreamGeometry();
-        using (var builder = geometry.Open())
+        var fillGeometry = new StreamGeometry();
+        using (var builder = fillGeometry.Open())
         {
-            var first = points[0];
-            builder.BeginFigure(new Point(first.X, baselineY), true);
+            var first = _pointBuffer[0];
+            builder.BeginFigure(new Point(first.X, plot.Bottom), true);
             builder.LineTo(first);
 
-            for (var i = 1; i < points.Length; i++)
+            for (var i = 1; i < pointCount; i++)
             {
-                builder.LineTo(points[i]);
+                builder.LineTo(_pointBuffer[i]);
             }
 
-            var last = points[^1];
-            builder.LineTo(new Point(last.X, baselineY));
-            builder.LineTo(new Point(first.X, baselineY));
+            var last = _pointBuffer[pointCount - 1];
+            builder.LineTo(new Point(last.X, plot.Bottom));
+            builder.LineTo(new Point(first.X, plot.Bottom));
             builder.EndFigure(true);
         }
 
-        context.DrawGeometry(FillBrush, pen: null, geometry);
+        _lineGeometry = lineGeometry;
+        _fillGeometry = fillGeometry;
+        _geometryDirty = false;
     }
 
     private int BuildPlotPoints(Rect plot, int maxSamples)
@@ -294,5 +327,21 @@ public sealed class StudyNoiseCurveChartControl : Control
 
         ArrayPool<Point>.Shared.Return(_pointBuffer, clearArray: false);
         _pointBuffer = null;
+    }
+
+    private static int ComputeSeriesSignature(IReadOnlyList<NoiseRealtimePoint> points)
+    {
+        if (points.Count == 0)
+        {
+            return 0;
+        }
+
+        var first = points[0];
+        var last = points[^1];
+        return HashCode.Combine(
+            points.Count,
+            first.Timestamp.UtcTicks,
+            last.Timestamp.UtcTicks,
+            Math.Round(last.DisplayDb, 2));
     }
 }

@@ -425,7 +425,7 @@ public sealed class ComponentRegistry
                 BuiltInComponentIds.DesktopShortcut,
                 "快捷方式",
                 "App",
-                "Launcher",
+                "File",
                 MinWidthCells: 1,
                 MinHeightCells: 1,
                 AllowStatusBarPlacement: false,

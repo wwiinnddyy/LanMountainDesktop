@@ -37,6 +37,7 @@ public enum StudyDataMode
 
 public sealed record StudyAnalyticsConfig(
     int FrameMs = 50,
+    int UiPublishIntervalMs = 125,
     int SliceSec = 30,
     double ScoreThresholdDbfs = -50,
     int SegmentMergeGapMs = 500,

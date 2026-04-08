@@ -16,13 +16,13 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
+public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IComponentSettingsContextAware, IDisposable
 {
     private string _componentId = BuiltInComponentIds.DesktopShortcut;
     private string _placementId = string.Empty;
     private string? _targetPath;
     private string _clickMode = "Double";
-    private bool _transparentBackground;
+    private bool _showBackground = true;
     private double _currentCellSize = 48;
     private bool _isDisposed;
 
@@ -51,13 +51,19 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         _placementId = placementId?.Trim() ?? string.Empty;
     }
 
+    public void SetComponentSettingsContext(DesktopComponentSettingsContext context)
+    {
+        var snapshot = context.ComponentSettingsAccessor.LoadSnapshot<ComponentSettingsSnapshot>();
+        ApplySettings(snapshot);
+    }
+
     public void ApplySettings(ComponentSettingsSnapshot snapshot)
     {
         _targetPath = snapshot.ShortcutTargetPath;
         _clickMode = string.Equals(snapshot.ShortcutClickMode, "Single", StringComparison.OrdinalIgnoreCase)
             ? "Single"
             : "Double";
-        _transparentBackground = snapshot.ShortcutTransparentBackground;
+        _showBackground = snapshot.ShortcutShowBackground;
         UpdateDisplay();
         ApplyChrome();
     }
@@ -85,7 +91,7 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         {
             var name = GetDisplayName(_targetPath);
             NameTextBlock.Text = name;
-            NameTextBlock.Foreground = this.FindResource("AdaptiveTextPrimaryBrush") as IBrush ?? new SolidColorBrush(Colors.White);
+            // 文字颜色由 XAML 中的 DynamicResource 自动适配主题
 
             LoadIcon(_targetPath);
         }
@@ -98,9 +104,13 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     private void ShowEmptyState()
     {
         NameTextBlock.Text = "添加快捷方式";
-        NameTextBlock.Foreground = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush ?? new SolidColorBrush(Colors.Gray);
+        // 使用次要文字颜色（由主题自动适配）
+        NameTextBlock.Foreground = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush;
 
-        var iconBrush = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush ?? new SolidColorBrush(Colors.Gray);
+        var iconBrush = this.FindResource("AdaptiveTextSecondaryBrush") as IBrush;
+        
+        // 隐藏图片图标，显示符号图标
+        IconImage.IsVisible = false;
         IconImage.Source = null;
         
         var iconHostContent = new SymbolIcon
@@ -111,7 +121,8 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
-        IconHost.Child = iconHostContent;
+        SymbolIconHost.Content = iconHostContent;
+        SymbolIconHost.IsVisible = true;
     }
 
     private static string GetDisplayName(string path)
@@ -188,7 +199,8 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             {
                 using var stream = new MemoryStream(pngBytes);
                 IconImage.Source = new Bitmap(stream);
-                IconHost.Child = IconImage;
+                IconImage.IsVisible = true;
+                SymbolIconHost.IsVisible = false;
                 return;
             }
             catch
@@ -205,9 +217,13 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             ? FluentIcons.Common.Symbol.Folder
             : FluentIcons.Common.Symbol.Document;
 
-        var iconBrush = this.FindResource("AdaptiveAccentBrush") as IBrush ?? new SolidColorBrush(Colors.DodgerBlue);
+        // 使用强调色（由主题自动适配）
+        var iconBrush = this.FindResource("AdaptiveAccentBrush") as IBrush;
 
+        // 隐藏图片图标，显示符号图标
+        IconImage.IsVisible = false;
         IconImage.Source = null;
+        
         var iconHostContent = new SymbolIcon
         {
             Symbol = symbol,
@@ -216,28 +232,24 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
-        IconHost.Child = iconHostContent;
+        SymbolIconHost.Content = iconHostContent;
+        SymbolIconHost.IsVisible = true;
     }
 
     private void ApplyChrome()
     {
-        if (_transparentBackground)
+        if (!_showBackground)
         {
-            RootBorder.Classes.Remove("glass-panel");
             RootBorder.Background = Brushes.Transparent;
             RootBorder.BorderBrush = Brushes.Transparent;
             RootBorder.BorderThickness = new Thickness(0);
             return;
         }
 
-        if (!RootBorder.Classes.Contains("glass-panel"))
-        {
-            RootBorder.Classes.Add("glass-panel");
-        }
-
-        RootBorder.ClearValue(Border.BackgroundProperty);
-        RootBorder.ClearValue(Border.BorderBrushProperty);
-        RootBorder.ClearValue(Border.BorderThicknessProperty);
+        // 恢复默认的实心背景样式
+        RootBorder.Background = this.FindResource("AdaptiveSurfaceRaisedBrush") as IBrush ?? Brushes.Transparent;
+        RootBorder.BorderBrush = this.FindResource("AdaptiveButtonBorderBrush") as IBrush ?? Brushes.Transparent;
+        RootBorder.BorderThickness = new Thickness(1);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)

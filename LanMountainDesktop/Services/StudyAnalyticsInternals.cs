@@ -12,8 +12,13 @@ internal readonly record struct NoisePipelineTickResult(
 internal sealed class NoiseFramePipeline
 {
     private StudyAnalyticsConfig _config;
-    private readonly Queue<NoiseRealtimePoint> _realtimeBuffer = new();
     private readonly List<NoiseRealtimePoint> _slicePoints = [];
+    private NoiseRealtimePoint[] _realtimeBuffer;
+    private IReadOnlyList<NoiseRealtimePoint> _realtimeSnapshot = Array.Empty<NoiseRealtimePoint>();
+    private int _realtimeBufferStart;
+    private int _realtimeBufferCount;
+    private int _realtimeBufferVersion;
+    private int _realtimeSnapshotVersion = -1;
 
     private DateTimeOffset _sliceStartAt;
     private DateTimeOffset _lastFrameAt;
@@ -28,18 +33,29 @@ internal sealed class NoiseFramePipeline
     public NoiseFramePipeline(StudyAnalyticsConfig config)
     {
         _config = NormalizeConfig(config);
+        _realtimeBuffer = new NoiseRealtimePoint[_config.RealtimeBufferCapacity];
     }
 
     public void UpdateConfig(StudyAnalyticsConfig config)
     {
-        _config = NormalizeConfig(config);
+        var normalized = NormalizeConfig(config);
+        if (normalized.RealtimeBufferCapacity != _config.RealtimeBufferCapacity)
+        {
+            _realtimeBuffer = new NoiseRealtimePoint[normalized.RealtimeBufferCapacity];
+        }
+
+        _config = normalized;
         Reset();
     }
 
     public void Reset()
     {
-        _realtimeBuffer.Clear();
         _slicePoints.Clear();
+        _realtimeBufferStart = 0;
+        _realtimeBufferCount = 0;
+        _realtimeBufferVersion++;
+        _realtimeSnapshot = Array.Empty<NoiseRealtimePoint>();
+        _realtimeSnapshotVersion = -1;
         _sliceStartAt = default;
         _lastFrameAt = default;
         _lastOverThresholdAt = default;
@@ -52,7 +68,27 @@ internal sealed class NoiseFramePipeline
 
     public IReadOnlyList<NoiseRealtimePoint> GetRealtimeBufferSnapshot()
     {
-        return _realtimeBuffer.ToArray();
+        if (_realtimeBufferCount == 0)
+        {
+            return Array.Empty<NoiseRealtimePoint>();
+        }
+
+        if (_realtimeSnapshotVersion == _realtimeBufferVersion)
+        {
+            return _realtimeSnapshot;
+        }
+
+        var snapshot = new NoiseRealtimePoint[_realtimeBufferCount];
+        var firstSegmentLength = Math.Min(_realtimeBufferCount, _realtimeBuffer.Length - _realtimeBufferStart);
+        Array.Copy(_realtimeBuffer, _realtimeBufferStart, snapshot, 0, firstSegmentLength);
+        if (firstSegmentLength < _realtimeBufferCount)
+        {
+            Array.Copy(_realtimeBuffer, 0, snapshot, firstSegmentLength, _realtimeBufferCount - firstSegmentLength);
+        }
+
+        _realtimeSnapshot = snapshot;
+        _realtimeSnapshotVersion = _realtimeBufferVersion;
+        return snapshot;
     }
 
     public NoisePipelineTickResult AddFrame(DateTimeOffset timestamp, double rms, double dbfs, double displayDb, double peak)
@@ -114,12 +150,7 @@ internal sealed class NoiseFramePipeline
             peak,
             isOverThreshold);
         _slicePoints.Add(point);
-        _realtimeBuffer.Enqueue(point);
-
-        while (_realtimeBuffer.Count > _config.RealtimeBufferCapacity)
-        {
-            _realtimeBuffer.Dequeue();
-        }
+        AddRealtimePoint(point);
 
         var elapsedSeconds = (timestamp - _sliceStartAt).TotalSeconds;
         if (elapsedSeconds + 1e-6 < _config.SliceSec)
@@ -130,6 +161,29 @@ internal sealed class NoiseFramePipeline
         var slice = BuildClosedSlice(timestamp);
         ResetSliceState(timestamp);
         return new NoisePipelineTickResult(point, slice);
+    }
+
+    private void AddRealtimePoint(NoiseRealtimePoint point)
+    {
+        if (_realtimeBuffer.Length == 0)
+        {
+            _realtimeBuffer = new NoiseRealtimePoint[Math.Max(1, _config.RealtimeBufferCapacity)];
+        }
+
+        if (_realtimeBufferCount < _realtimeBuffer.Length)
+        {
+            var writeIndex = (_realtimeBufferStart + _realtimeBufferCount) % _realtimeBuffer.Length;
+            _realtimeBuffer[writeIndex] = point;
+            _realtimeBufferCount++;
+        }
+        else
+        {
+            _realtimeBuffer[_realtimeBufferStart] = point;
+            _realtimeBufferStart = (_realtimeBufferStart + 1) % _realtimeBuffer.Length;
+        }
+
+        _realtimeBufferVersion++;
+        _realtimeSnapshotVersion = -1;
     }
 
     private NoiseSliceSummary BuildClosedSlice(DateTimeOffset endAt)
@@ -247,6 +301,7 @@ internal sealed class NoiseFramePipeline
     private static StudyAnalyticsConfig NormalizeConfig(StudyAnalyticsConfig config)
     {
         var frameMs = Math.Clamp(config.FrameMs, 20, 250);
+        var uiPublishIntervalMs = Math.Clamp(config.UiPublishIntervalMs, 50, 500);
         var sliceSec = Math.Clamp(config.SliceSec, 5, 600);
         var threshold = Math.Clamp(config.ScoreThresholdDbfs, -100, -5);
         var mergeGapMs = Math.Clamp(config.SegmentMergeGapMs, 100, 4000);
@@ -259,6 +314,7 @@ internal sealed class NoiseFramePipeline
         return config with
         {
             FrameMs = frameMs,
+            UiPublishIntervalMs = uiPublishIntervalMs,
             SliceSec = sliceSec,
             ScoreThresholdDbfs = threshold,
             SegmentMergeGapMs = mergeGapMs,

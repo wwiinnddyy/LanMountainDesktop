@@ -9,6 +9,8 @@ namespace LanMountainDesktop.Views.Components;
 
 public sealed class StudyNoiseDistributionScatterChartControl : Control
 {
+    private readonly record struct SampledPoint(double X, double Y, NoiseDistributionLevel Level);
+
     private static readonly IBrush GridBrush = new SolidColorBrush(Color.Parse("#2E5E7A96"));
     private static readonly IBrush AxisBrush = new SolidColorBrush(Color.Parse("#5C6D86A1"));
     private static readonly Pen GridPen = new(GridBrush, 1);
@@ -18,14 +20,35 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
     private static readonly IBrush NormalBrush = new SolidColorBrush(Color.Parse("#FF60A5FA"));
     private static readonly IBrush NoisyBrush = new SolidColorBrush(Color.Parse("#FFF59E0B"));
     private static readonly IBrush ExtremeBrush = new SolidColorBrush(Color.Parse("#FFEF4444"));
+    private static readonly byte[] CloudAlphas = [44, 58, 72, 86];
+    private static readonly byte[] GlowAlphas = [26, 36];
+    private static readonly IBrush[][] CloudBrushes = CreateBrushTable(CloudAlphas);
+    private static readonly IBrush[][] GlowBrushes = CreateBrushTable(GlowAlphas);
 
     private IReadOnlyList<NoiseRealtimePoint> _points = Array.Empty<NoiseRealtimePoint>();
+    private SampledPoint[] _sampledPoints = Array.Empty<SampledPoint>();
+    private int _sampledPointCount;
     private double _baselineDb = 45;
+    private Rect _cachedPlot;
+    private bool _sampleCacheDirty = true;
+    private int _lastSeriesSignature;
 
     public void UpdateSeries(IReadOnlyList<NoiseRealtimePoint>? points, double baselineDb)
     {
-        _points = points ?? Array.Empty<NoiseRealtimePoint>();
-        _baselineDb = Math.Clamp(baselineDb, 20, 85);
+        var nextPoints = points ?? Array.Empty<NoiseRealtimePoint>();
+        var nextBaselineDb = Math.Clamp(baselineDb, 20, 85);
+        var nextSignature = ComputeSeriesSignature(nextPoints, nextBaselineDb);
+        if (ReferenceEquals(_points, nextPoints) &&
+            Math.Abs(_baselineDb - nextBaselineDb) < 0.001 &&
+            _lastSeriesSignature == nextSignature)
+        {
+            return;
+        }
+
+        _points = nextPoints;
+        _baselineDb = nextBaselineDb;
+        _lastSeriesSignature = nextSignature;
+        _sampleCacheDirty = true;
         InvalidateVisual();
     }
 
@@ -52,45 +75,34 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
             return;
         }
 
+        EnsureSampleCache(plot);
+        if (_sampledPointCount < 2)
+        {
+            return;
+        }
+
         DrawElectronCloud(context, plot);
     }
 
     private void DrawElectronCloud(DrawingContext context, Rect plot)
     {
-        var start = _points[0].Timestamp;
-        var end = _points[^1].Timestamp;
-        var totalTicks = Math.Max(1, (end - start).Ticks);
-
-        var pointCount = _points.Count;
-        var cloudLayers = 8;
+        var cloudLayers = CloudAlphas.Length;
         var baseRadius = Math.Clamp(Math.Min(plot.Width, plot.Height) / 45d, 3, 12);
-        
-        var sortedPoints = new List<(double X, double Y, NoiseDistributionLevel Level)>();
-        for (var i = 0; i < pointCount; i++)
-        {
-            var point = _points[i];
-            var x = MapX(plot, point.Timestamp, start, totalTicks);
-            var y = MapYContinuous(plot, point.DisplayDb);
-            var level = ResolveLevel(point.DisplayDb, _baselineDb);
-            sortedPoints.Add((x, y, level));
-        }
-
-        sortedPoints.Sort((a, b) => a.X.CompareTo(b.X));
 
         for (var layer = cloudLayers - 1; layer >= 0; layer--)
         {
-            var layerRatio = (double)layer / (cloudLayers - 1);
+            var layerRatio = cloudLayers == 1 ? 0d : layer / (double)(cloudLayers - 1);
             var layerRadius = baseRadius * (1.2 + layerRatio * 0.8);
-            var layerAlpha = (byte)(40 + layerRatio * 25);
+            var layerBrushes = CloudBrushes[layer];
 
-            foreach (var pt in sortedPoints)
+            for (var i = 0; i < _sampledPointCount; i++)
             {
-                var brush = GetLevelBrushWithAlpha(pt.Level, layerAlpha);
+                var pt = _sampledPoints[i];
                 var jitterX = ComputeJitter(pt.X * 1000 + layer) * layerRadius * 0.3;
                 var jitterY = ComputeJitter(pt.Y * 1000 + layer) * layerRadius * 0.3;
-                
+
                 context.DrawEllipse(
-                    brush,
+                    layerBrushes[(int)pt.Level],
                     pen: null,
                     center: new Point(pt.X + jitterX, pt.Y + jitterY),
                     radiusX: layerRadius,
@@ -98,18 +110,17 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
             }
         }
 
-        var glowLayers = 5;
+        var glowLayers = GlowAlphas.Length;
         for (var layer = glowLayers - 1; layer >= 0; layer--)
         {
-            var layerRatio = (double)layer / (glowLayers - 1);
+            var layerRatio = glowLayers == 1 ? 0d : layer / (double)(glowLayers - 1);
             var layerRadius = baseRadius * (0.8 + layerRatio * 0.6);
-            var layerAlpha = (byte)(20 + layerRatio * 15);
-
-            foreach (var pt in sortedPoints)
+            var layerBrushes = GlowBrushes[layer];
+            for (var i = 0; i < _sampledPointCount; i++)
             {
-                var brush = GetLevelBrushWithAlpha(pt.Level, layerAlpha);
+                var pt = _sampledPoints[i];
                 context.DrawEllipse(
-                    brush,
+                    layerBrushes[(int)pt.Level],
                     pen: null,
                     center: new Point(pt.X, pt.Y),
                     radiusX: layerRadius,
@@ -117,32 +128,40 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
             }
         }
 
-        var latest = _points[^1];
-        var latestX = MapX(plot, latest.Timestamp, start, totalTicks);
-        var latestY = MapYContinuous(plot, latest.DisplayDb);
-        var latestLevel = ResolveLevel(latest.DisplayDb, _baselineDb);
-
+        var latest = _sampledPoints[_sampledPointCount - 1];
         for (var i = 3; i >= 0; i--)
         {
             var radius = baseRadius * (1.5 + i * 0.8);
             var alpha = (byte)(30 - i * 6);
-            var glowBrush = GetLevelBrushWithAlpha(latestLevel, alpha);
-            context.DrawEllipse(glowBrush, null, new Point(latestX, latestY), radius, radius * 0.6);
+            var glowBrush = GetAlphaBrush(latest.Level, alpha);
+            context.DrawEllipse(glowBrush, null, new Point(latest.X, latest.Y), radius, radius * 0.6);
         }
 
         context.DrawEllipse(
-            GetLevelBrush(latestLevel),
+            GetLevelBrush(latest.Level),
             new Pen(Brushes.White, 1.5),
-            new Point(latestX, latestY),
+            new Point(latest.X, latest.Y),
             baseRadius + 1,
             baseRadius * 0.7 + 1);
 
         context.DrawEllipse(
             Brushes.White,
             null,
-            new Point(latestX, latestY),
+            new Point(latest.X, latest.Y),
             2,
             2);
+    }
+
+    private void EnsureSampleCache(Rect plot)
+    {
+        if (!_sampleCacheDirty && _cachedPlot == plot)
+        {
+            return;
+        }
+
+        _cachedPlot = plot;
+        _sampledPointCount = BuildSampledPoints(plot);
+        _sampleCacheDirty = false;
     }
 
     private static void DrawGrid(DrawingContext context, Rect plot)
@@ -176,7 +195,10 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
         var minDb = _baselineDb - 5;
         var maxDb = _baselineDb + 25;
         var dbRange = maxDb - minDb;
-        if (dbRange <= 0) dbRange = 30;
+        if (dbRange <= 0)
+        {
+            dbRange = 30;
+        }
 
         var normalizedDb = (displayDb - minDb) / dbRange;
         normalizedDb = Math.Clamp(normalizedDb, 0, 1);
@@ -242,6 +264,106 @@ public sealed class StudyNoiseDistributionScatterChartControl : Control
             NoiseDistributionLevel.Extreme => new SolidColorBrush(Color.FromArgb(alpha, 0xEF, 0x44, 0x44)),
             _ => new SolidColorBrush(Color.FromArgb(alpha, 0x60, 0xA5, 0xFA))
         };
+    }
+
+    private int BuildSampledPoints(Rect plot)
+    {
+        if (_points.Count < 2)
+        {
+            return 0;
+        }
+
+        var maxSamples = Math.Clamp((int)Math.Ceiling(plot.Width / 2d), 48, 144);
+        var targetCount = Math.Min(_points.Count, maxSamples);
+        if (_sampledPoints.Length < targetCount)
+        {
+            _sampledPoints = new SampledPoint[targetCount];
+        }
+
+        var start = _points[0].Timestamp;
+        var end = _points[^1].Timestamp;
+        var totalTicks = Math.Max(1, (end - start).Ticks);
+        var step = _points.Count <= targetCount
+            ? 1d
+            : (_points.Count - 1d) / Math.Max(1d, targetCount - 1d);
+
+        var outputIndex = 0;
+        var lastSourceIndex = -1;
+        for (var i = 0; i < targetCount; i++)
+        {
+            var sourceIndex = i == targetCount - 1
+                ? _points.Count - 1
+                : (int)Math.Round(i * step);
+            sourceIndex = Math.Clamp(sourceIndex, 0, _points.Count - 1);
+            if (sourceIndex == lastSourceIndex)
+            {
+                continue;
+            }
+
+            var point = _points[sourceIndex];
+            _sampledPoints[outputIndex++] = new SampledPoint(
+                MapX(plot, point.Timestamp, start, totalTicks),
+                MapYContinuous(plot, point.DisplayDb),
+                ResolveLevel(point.DisplayDb, _baselineDb));
+            lastSourceIndex = sourceIndex;
+        }
+
+        return outputIndex;
+    }
+
+    private static int ComputeSeriesSignature(IReadOnlyList<NoiseRealtimePoint> points, double baselineDb)
+    {
+        if (points.Count == 0)
+        {
+            return HashCode.Combine(0, baselineDb);
+        }
+
+        var first = points[0];
+        var last = points[^1];
+        return HashCode.Combine(
+            points.Count,
+            first.Timestamp.UtcTicks,
+            last.Timestamp.UtcTicks,
+            Math.Round(last.DisplayDb, 2),
+            Math.Round(baselineDb, 2));
+    }
+
+    private static IBrush[][] CreateBrushTable(IReadOnlyList<byte> alphas)
+    {
+        var table = new IBrush[alphas.Count][];
+        for (var i = 0; i < alphas.Count; i++)
+        {
+            table[i] =
+            [
+                GetLevelBrushWithAlpha(NoiseDistributionLevel.Quiet, alphas[i]),
+                GetLevelBrushWithAlpha(NoiseDistributionLevel.Normal, alphas[i]),
+                GetLevelBrushWithAlpha(NoiseDistributionLevel.Noisy, alphas[i]),
+                GetLevelBrushWithAlpha(NoiseDistributionLevel.Extreme, alphas[i])
+            ];
+        }
+
+        return table;
+    }
+
+    private static IBrush GetAlphaBrush(NoiseDistributionLevel level, byte alpha)
+    {
+        for (var i = 0; i < CloudAlphas.Length; i++)
+        {
+            if (CloudAlphas[i] == alpha)
+            {
+                return CloudBrushes[i][(int)level];
+            }
+        }
+
+        for (var i = 0; i < GlowAlphas.Length; i++)
+        {
+            if (GlowAlphas[i] == alpha)
+            {
+                return GlowBrushes[i][(int)level];
+            }
+        }
+
+        return GetLevelBrushWithAlpha(level, alpha);
     }
 }
 

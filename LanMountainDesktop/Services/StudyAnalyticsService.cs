@@ -46,6 +46,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
     private readonly List<StudySessionReport> _sessionHistory = [];
     private string? _selectedSessionReportId;
     private string _lastError = string.Empty;
+    private DateTimeOffset _lastUiPublishedAt;
     private bool _disposed;
 
     public StudyAnalyticsService(IAudioRecorderService? audioRecorderService = null)
@@ -102,6 +103,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             ThrowIfDisposedLocked();
             _config = NormalizeConfig(config);
             _pipeline.UpdateConfig(_config);
+            _lastUiPublishedAt = default;
             if (_state == StudyAnalyticsRuntimeState.Running)
             {
                 StartTimerLocked();
@@ -546,7 +548,11 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
 
                 _lastError = string.Empty;
                 UpdateDataModeLocked();
-                snapshot = BuildSnapshotLocked(now);
+                if (ShouldPublishRealtimeSnapshotLocked(now, closedSlice is not null))
+                {
+                    snapshot = BuildSnapshotLocked(now);
+                    _lastUiPublishedAt = now;
+                }
             }
         }
 
@@ -599,6 +605,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
 
     private void StartTimerLocked()
     {
+        _lastUiPublishedAt = default;
         _samplingTimer.Change(
             dueTime: TimeSpan.Zero,
             period: TimeSpan.FromMilliseconds(_config.FrameMs));
@@ -673,6 +680,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
     private static StudyAnalyticsConfig NormalizeConfig(StudyAnalyticsConfig config)
     {
         var frameMs = Math.Clamp(config.FrameMs, 20, 250);
+        var uiPublishIntervalMs = Math.Clamp(config.UiPublishIntervalMs, 50, 500);
         var sliceSec = Math.Clamp(config.SliceSec, 5, 600);
         var threshold = Math.Clamp(config.ScoreThresholdDbfs, -100, -5);
         var mergeGapMs = Math.Clamp(config.SegmentMergeGapMs, 100, 4000);
@@ -685,6 +693,7 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
         return config with
         {
             FrameMs = frameMs,
+            UiPublishIntervalMs = uiPublishIntervalMs,
             SliceSec = sliceSec,
             ScoreThresholdDbfs = threshold,
             SegmentMergeGapMs = mergeGapMs,
@@ -694,6 +703,16 @@ public sealed class StudyAnalyticsService : IStudyAnalyticsService
             AvgWindowSec = avgWindowSec,
             RealtimeBufferCapacity = ringCapacity
         };
+    }
+
+    private bool ShouldPublishRealtimeSnapshotLocked(DateTimeOffset now, bool hasClosedSlice)
+    {
+        if (hasClosedSlice || _lastUiPublishedAt == default)
+        {
+            return true;
+        }
+
+        return (now - _lastUiPublishedAt).TotalMilliseconds >= _config.UiPublishIntervalMs;
     }
 
     private void ThrowIfDisposedLocked()

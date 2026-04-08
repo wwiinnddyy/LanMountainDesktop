@@ -8,7 +8,9 @@
              x:Class="LanMountainDesktop.Views.Components.ShortcutWidget">
 
     <Border x:Name="RootBorder"
-            Classes="glass-panel"
+            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
+            BorderThickness="1"
             CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True">
         <Grid RowDefinitions="*,Auto"
@@ -18,8 +20,13 @@
                     Grid.Row="0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
-                <Image x:Name="IconImage"
-                       Stretch="Uniform" />
+                <Panel>
+                    <Image x:Name="IconImage"
+                           Stretch="Uniform"
+                           IsVisible="False" />
+                    <ContentControl x:Name="SymbolIconHost"
+                                    IsVisible="False" />
+                </Panel>
             </Border>
             
             <TextBlock x:Name="NameTextBlock"
@@ -31,7 +38,8 @@
                        MaxLines="2"
                        TextWrapping="Wrap"
                        Margin="4,0,4,4"
-                       FontSize="11" />
+                       FontSize="11"
+                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
         </Grid>
     </Border>
 

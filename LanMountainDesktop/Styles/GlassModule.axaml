@@ -222,10 +222,37 @@
     </Style>
 
     <!-- 向后兼容的旧样式类（已弃用） -->
-    <Style Selector="Border.glass-panel" />
-    <Style Selector="Border.glass-strong" />
-    <Style Selector="Border.glass-island" />
-    <Style Selector="Border.mica-strong" />
-    <Style Selector="Border.glass-overlay" />
+    <Style Selector="Border.glass-panel">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1.2" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassPanelOpacity}" />
+        <Setter Property="BoxShadow" Value="0 4 12 #1A000000" />
+    </Style>
+    <Style Selector="Border.glass-strong">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassStrongBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
+        <Setter Property="BoxShadow" Value="0 8 24 #26000000" />
+    </Style>
+    <Style Selector="Border.glass-island">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveDockGlassBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveDockGlassBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
+        <Setter Property="BoxShadow" Value="0 12 32 #33000000" />
+    </Style>
+    <Style Selector="Border.mica-strong">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassStrongBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassStrongOpacity}" />
+        <Setter Property="BoxShadow" Value="0 8 22 #2A000000" />
+    </Style>
+    <Style Selector="Border.glass-overlay">
+        <Setter Property="Background" Value="{DynamicResource AdaptiveGlassOverlayBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassOverlayOpacity}" />
+    </Style>
 
 </Styles>

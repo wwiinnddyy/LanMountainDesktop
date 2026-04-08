@@ -1,86 +1,66 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
-             mc:Ignorable="d"
-             d:DesignWidth="360"
-             d:DesignHeight="400"
-             x:Class="LanMountainDesktop.Views.ComponentEditors.ShortcutComponentEditor">
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             x:Class="LanMountainDesktop.Views.ComponentEditors.ShortcutComponentEditor"
+             x:DataType="vm:ShortcutEditorViewModel">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="16" Margin="20">
-            
-            <TextBlock x:Name="HeadlineTextBlock"
-                       FontSize="18"
-                       FontWeight="SemiBold" />
-            
-            <TextBlock x:Name="DescriptionTextBlock"
-                       Opacity="0.75"
+    <StackPanel Spacing="16">
+        <!-- 说明卡片 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <TextBlock Text="{Binding DescriptionText}"
+                       Classes="component-editor-secondary-text"
                        TextWrapping="Wrap" />
+        </Border>
 
-            <ui:SettingsExpander x:Name="TargetPathExpander">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Folder" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <Button x:Name="BrowseButton"
-                            Content="浏览..."
-                            Click="OnBrowseClick" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
-                    <TextBox x:Name="TargetPathTextBox"
+        <!-- 目标路径 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding TargetPathLabel}"
+                           Classes="component-editor-section-title" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Text="{Binding TargetPath}"
                              IsReadOnly="True"
-                             Watermark="未选择目标"
-                             MinWidth="200" />
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
-                    <Button x:Name="ClearButton"
-                            Content="清除"
-                            Click="OnClearClick"
-                            HorizontalAlignment="Stretch" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                             Watermark="{Binding TargetPathPlaceholder}"
+                             Grid.Column="0" />
+                    <Button Content="{Binding BrowseButtonText}"
+                            Click="OnBrowseClick"
+                            Grid.Column="1"
+                            Margin="8,0,0,0" />
+                </Grid>
+                <Button Content="{Binding ClearButtonText}"
+                        Click="OnClearClick"
+                        HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </Border>
 
-            <ui:SettingsExpander>
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="CursorClick" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
-                    <StackPanel Orientation="Horizontal" Spacing="16">
-                        <RadioButton x:Name="SingleClickRadio"
-                                     Content="单击打开"
-                                     GroupName="ClickModeGroup" />
-                        <RadioButton x:Name="DoubleClickRadio"
-                                     Content="双击打开"
-                                     GroupName="ClickModeGroup"
-                                     IsChecked="True" />
-                    </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+        <!-- 打开方式 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding ClickModeLabel}"
+                           Classes="component-editor-section-title" />
+                <ComboBox ItemsSource="{Binding ClickModeOptions}"
+                          SelectedItem="{Binding SelectedClickMode}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectionOption">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Border>
 
-            <ui:SettingsExpander>
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ColorBackground" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <ToggleSwitch x:Name="BackgroundToggle"
-                                  OnContent=""
-                                  OffContent=""
-                                  IsChecked="True" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
-                    <StackPanel Spacing="2">
-                        <TextBlock x:Name="BackgroundLabel" />
-                        <TextBlock x:Name="BackgroundDescription"
-                                   Opacity="0.75"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
-
-        </StackPanel>
-    </ScrollViewer>
+        <!-- 背景设置 -->
+        <Border Classes="component-editor-card" Padding="20">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding BackgroundLabel}"
+                           Classes="component-editor-section-title" />
+                <TextBlock Text="{Binding BackgroundDescription}"
+                           Classes="component-editor-secondary-text" />
+                <CheckBox IsChecked="{Binding ShowBackground}"
+                          Content="{Binding BackgroundLabel}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
 
 </UserControl>

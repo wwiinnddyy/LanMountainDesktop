@@ -136,9 +136,9 @@ public sealed class ComponentSettingsSnapshot
     public string ShortcutClickMode { get; set; } = "Double";
 
     /// <summary>
-    /// 是否透明背景
+    /// 是否显示背景
     /// </summary>
-    public bool ShortcutTransparentBackground { get; set; } = false;
+    public bool ShortcutShowBackground { get; set; } = true;
 
     #endregion
 
