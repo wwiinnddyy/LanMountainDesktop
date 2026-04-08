@@ -725,6 +725,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             ? CreateBrush("#FF4FC3F7")
             : CreateBrush("#FF4D5A");
         var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
+        var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
+        var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
 
         for (var i = 0; i < _courseItems.Count && i < CourseListPanel.Children.Count; i++)
         {
@@ -746,19 +748,31 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var timeText = textStack.Children[1] as TextBlock;
             var detailText = textStack.Children[2] as TextBlock;
 
-            if (titleText != null && titleText.Text != item.Name)
+            if (titleText != null)
             {
-                titleText.Text = item.Name;
+                if (titleText.Text != item.Name)
+                {
+                    titleText.Text = item.Name;
+                }
+                titleText.Foreground = primaryBrush;
             }
 
-            if (timeText != null && timeText.Text != item.TimeRange)
+            if (timeText != null)
             {
-                timeText.Text = item.TimeRange;
+                if (timeText.Text != item.TimeRange)
+                {
+                    timeText.Text = item.TimeRange;
+                }
+                timeText.Foreground = secondaryBrush;
             }
 
-            if (detailText != null && detailText.Text != item.Detail)
+            if (detailText != null)
             {
-                detailText.Text = item.Detail;
+                if (detailText.Text != item.Detail)
+                {
+                    detailText.Text = item.Detail;
+                }
+                detailText.Foreground = secondaryBrush;
             }
         }
     }
