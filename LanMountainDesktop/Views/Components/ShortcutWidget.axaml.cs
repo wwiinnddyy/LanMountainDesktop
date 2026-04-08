@@ -71,12 +71,21 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     public void ApplyCellSize(double cellSize)
     {
         _currentCellSize = cellSize;
-        var iconSize = Math.Clamp(cellSize * 0.5, 24, 64);
+        
+        // 图标大小：从 cellSize 的 50% 计算，最小 24px，最大 128px
+        var iconSize = Math.Clamp(cellSize * 0.5, 24, 128);
         IconImage.Width = iconSize;
         IconImage.Height = iconSize;
 
-        var fontSize = Math.Clamp(cellSize * 0.18, 10, 16);
+        // 字体大小：从 cellSize 的 18% 计算，最小 10px，最大 24px
+        var fontSize = Math.Clamp(cellSize * 0.18, 10, 24);
         NameTextBlock.FontSize = fontSize;
+        
+        // 更新符号图标的大小（如果当前显示的是符号图标）
+        if (SymbolIconHost.Content is SymbolIcon symbolIcon)
+        {
+            symbolIcon.FontSize = iconSize;
+        }
     }
 
     private void UpdateDisplay()
@@ -113,10 +122,13 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         IconImage.IsVisible = false;
         IconImage.Source = null;
         
+        // 计算图标大小
+        var iconSize = Math.Clamp(_currentCellSize * 0.5, 24, 128);
+        
         var iconHostContent = new SymbolIcon
         {
             Symbol = FluentIcons.Common.Symbol.Add,
-            FontSize = 32,
+            FontSize = iconSize,
             Foreground = iconBrush,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
@@ -224,10 +236,13 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         IconImage.IsVisible = false;
         IconImage.Source = null;
         
+        // 计算图标大小
+        var iconSize = Math.Clamp(_currentCellSize * 0.5, 24, 128);
+        
         var iconHostContent = new SymbolIcon
         {
             Symbol = symbol,
-            FontSize = 32,
+            FontSize = iconSize,
             Foreground = iconBrush,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center

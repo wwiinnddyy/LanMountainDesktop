@@ -508,38 +508,34 @@
                                                         </Grid.RenderTransform>
                                                         <StackPanel Spacing="8">
                                                             <Button x:Name="TaskbarPowerBackButton"
-                                                                    Padding="4,6"
-                                                                    Background="Transparent"
-                                                                    BorderThickness="0"
-                                                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                                    Classes="taskbar-profile-popup-action"
                                                                     HorizontalAlignment="Left"
                                                                     Click="OnPowerMenuBackClick">
-                                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                    <fi:SymbolIcon Classes="icon-s"
-                                                                                   Symbol="ArrowLeft"
-                                                                                   IconVariant="Regular" />
+                                                                <Grid ColumnDefinitions="Auto,*"
+                                                                      ColumnSpacing="12">
+                                                                    <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
+                                                                                     Kind="ArrowLeft" />
                                                                     <TextBlock x:Name="TaskbarPowerBackTextBlock"
-                                                                               VerticalAlignment="Center"
+                                                                               Grid.Column="1"
+                                                                               Classes="taskbar-profile-popup-action-text"
                                                                                Text="Back" />
-                                                                </StackPanel>
+                                                                </Grid>
                                                             </Button>
 
                                                             <TextBlock x:Name="TaskbarPowerTitleTextBlock"
                                                                        FontSize="16"
                                                                        FontWeight="SemiBold"
                                                                        Foreground="{DynamicResource TaskbarProfilePopupTextBrush}"
-                                                                       Margin="2,6,0,0"
                                                                        Text="Power" />
 
                                                             <Border Height="1"
-                                                                    Background="{DynamicResource TaskbarProfilePopupDividerBrush}"
-                                                                    Margin="0,4" />
+                                                                    Background="{DynamicResource TaskbarProfilePopupDividerBrush}" />
 
                                                             <Button x:Name="PowerShutdownButton"
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerShutdownClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
-                                                                      ColumnSpacing="14">
+                                                                      ColumnSpacing="12">
                                                                     <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Power" />
                                                                     <TextBlock x:Name="PowerShutdownTextBlock"
@@ -553,7 +549,7 @@
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerRestartClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
-                                                                      ColumnSpacing="14">
+                                                                      ColumnSpacing="12">
                                                                     <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Refresh" />
                                                                     <TextBlock x:Name="PowerRestartTextBlock"
@@ -567,7 +563,7 @@
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerLogoutClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
-                                                                      ColumnSpacing="14">
+                                                                      ColumnSpacing="12">
                                                                     <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="ExitToApp" />
                                                                     <TextBlock x:Name="PowerLogoutTextBlock"
@@ -581,7 +577,7 @@
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerSleepClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
-                                                                      ColumnSpacing="14">
+                                                                      ColumnSpacing="12">
                                                                     <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="WeatherNight" />
                                                                     <TextBlock x:Name="PowerSleepTextBlock"
@@ -595,7 +591,7 @@
                                                                     Classes="taskbar-profile-popup-action"
                                                                     Click="OnPowerLockClick">
                                                                 <Grid ColumnDefinitions="Auto,*"
-                                                                      ColumnSpacing="14">
+                                                                      ColumnSpacing="12">
                                                                     <mi:MaterialIcon Classes="taskbar-profile-popup-action-icon"
                                                                                      Kind="Lock" />
                                                                     <TextBlock x:Name="PowerLockTextBlock"
