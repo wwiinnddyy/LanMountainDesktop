@@ -1,4 +1,4 @@
-# 阑山桌面 / LanMountainDesktop
+# 阑山桌面LanMountainDesktop
 
 > 你的桌面，不止一面
 
