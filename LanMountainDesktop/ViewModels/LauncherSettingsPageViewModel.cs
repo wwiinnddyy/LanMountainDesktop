@@ -117,6 +117,36 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
     [ObservableProperty]
     private bool _isHiddenItemsEmpty = true;
 
+    [ObservableProperty]
+    private string _appearanceHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _appearanceDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _showTileBackgroundHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _showTileBackgroundDescription = string.Empty;
+
+    [ObservableProperty]
+    private bool _showTileBackground;
+
+    partial void OnShowTileBackgroundChanged(bool value)
+    {
+        SaveShowTileBackgroundSetting(value);
+    }
+
+    private void SaveShowTileBackgroundSetting(bool value)
+    {
+        var snapshot = _settingsFacade.LauncherPolicy.Get()?.Clone() ?? new LauncherSettingsSnapshot();
+        snapshot.ShowTileBackground = value;
+        _settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.Launcher,
+            snapshot,
+            changedKeys: [nameof(LauncherSettingsSnapshot.ShowTileBackground)]);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -157,6 +187,8 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
             ResolveCulture(),
             L("settings.launcher.hidden_summary_format", "{0} hidden items"),
             HiddenItems.Count);
+
+        ShowTileBackground = snapshot.ShowTileBackground;
     }
 
     private StartMenuFolderNode LoadCatalogSafe()
@@ -317,6 +349,10 @@ public sealed partial class LauncherSettingsPageViewModel : ViewModelBase, IDisp
         HiddenDescription = L("settings.launcher.hidden_desc", "Review hidden launcher entries and show them again.");
         HiddenHint = L("settings.launcher.hidden_hint", "In desktop edit mode, select a launcher icon and click Hide. Hidden entries appear here.");
         HiddenEmptyText = L("settings.launcher.hidden_empty", "No hidden items.");
+        AppearanceHeader = L("settings.launcher.appearance_header", "Appearance");
+        AppearanceDescription = L("settings.launcher.appearance_desc", "Customize the appearance of the App Launcher.");
+        ShowTileBackgroundHeader = L("settings.launcher.show_tile_background_header", "Show tile background");
+        ShowTileBackgroundDescription = L("settings.launcher.show_tile_background_desc", "Display a background card behind each app icon in the launcher.");
     }
 
     private CultureInfo ResolveCulture()

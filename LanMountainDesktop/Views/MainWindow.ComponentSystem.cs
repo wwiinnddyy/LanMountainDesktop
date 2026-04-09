@@ -400,10 +400,12 @@ public partial class MainWindow
 
         if (OperatingSystem.IsWindows())
         {
+            // Windows: 使用 SlideToShutDown 滑动关机界面
             _powerService.ShowNativePowerUI(PowerAction.Shutdown);
         }
         else
         {
+            // Linux: 二次确认对话框
             await ShowPowerConfirmDialogAsync(L("power.shutdown_confirm_title", "Shutdown"),
                 L("power.shutdown_confirm_message", "Are you sure you want to shut down this computer?"),
                 () => _powerService.ShutdownAsync());
@@ -416,16 +418,11 @@ public partial class MainWindow
         _ = e;
         ClosePopupIfOpen();
 
-        if (OperatingSystem.IsWindows())
-        {
-            _powerService.ShowNativePowerUI(PowerAction.Restart);
-        }
-        else
-        {
-            await ShowPowerConfirmDialogAsync(L("power.restart_confirm_title", "Restart"),
-                L("power.restart_confirm_message", "Are you sure you want to restart this computer?"),
-                () => _powerService.RestartAsync());
-        }
+        // 所有平台：统一使用二次确认对话框
+        // Note: SlideToShutDown.exe 只支持关机，不支持重启
+        await ShowPowerConfirmDialogAsync(L("power.restart_confirm_title", "Restart"),
+            L("power.restart_confirm_message", "Are you sure you want to restart this computer?"),
+            () => _powerService.RestartAsync());
     }
 
     private async void OnPowerLogoutClick(object? sender, RoutedEventArgs e)

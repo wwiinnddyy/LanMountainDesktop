@@ -44,6 +44,23 @@ public partial class MainWindow
             return;
         }
 
+        // 启动台设置变化时，重新渲染启动台图标
+        if (e.Scope == SettingsScope.Launcher && e.ChangedKeys is { Count: > 0 })
+        {
+            var changedKeys = e.ChangedKeys.ToArray();
+            if (changedKeys.Any(key =>
+                string.Equals(key, nameof(LauncherSettingsSnapshot.ShowTileBackground), StringComparison.OrdinalIgnoreCase)))
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var launcherSnapshot = _settingsService.LoadSnapshot<LauncherSettingsSnapshot>(SettingsScope.Launcher);
+                    InitializeLauncherVisibilitySettings(launcherSnapshot);
+                    RenderLauncherRootTiles();
+                }, DispatcherPriority.Background);
+                return;
+            }
+        }
+
         if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();

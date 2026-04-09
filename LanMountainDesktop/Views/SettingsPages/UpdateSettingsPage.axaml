@@ -37,11 +37,6 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-            <TextBlock Classes="settings-section-title"
-                       Text="{Binding PageTitle}" />
-            <TextBlock Classes="settings-section-description"
-                       Text="{Binding PageDescription}" />
-
             <Border Classes="update-status-card">
                 <StackPanel Spacing="18">
                     <Grid ColumnDefinitions="Auto,*,Auto"

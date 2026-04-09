@@ -8,6 +8,8 @@ public sealed class LauncherSettingsSnapshot
 
     public List<string> HiddenLauncherAppPaths { get; set; } = [];
 
+    public bool ShowTileBackground { get; set; } = true;
+
     public LauncherSettingsSnapshot Clone()
     {
         var clone = (LauncherSettingsSnapshot)MemberwiseClone();

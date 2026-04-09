@@ -113,6 +113,11 @@ internal sealed class WindowsPowerManagementService : IPowerManagementService
 
     public void ShowNativePowerUI(PowerAction action)
     {
+        // SlideToShutDown.exe 只支持关机，不支持重启
+        // 重启操作应该通过 RestartAsync() 使用 shutdown /r 命令
+        if (action != PowerAction.Shutdown)
+            return;
+
         var slideToShutDownPath = Environment.ExpandEnvironmentVariables(@"%windir%\System32\SlideToShutDown.exe");
         if (System.IO.File.Exists(slideToShutDownPath))
         {
@@ -124,26 +129,13 @@ internal sealed class WindowsPowerManagementService : IPowerManagementService
             return;
         }
 
-        switch (action)
+        // 回退到标准关机命令
+        Process.Start(new ProcessStartInfo
         {
-            case PowerAction.Shutdown:
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "shutdown",
-                    Arguments = "/s /t 5 /c \"LanMountainDesktop: Shutting down...\"",
-                    UseShellExecute = true
-                });
-                break;
-
-            case PowerAction.Restart:
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "shutdown",
-                    Arguments = "/r /t 5 /c \"LanMountainDesktop: Restarting...\"",
-                    UseShellExecute = true
-                });
-                break;
-        }
+            FileName = "shutdown",
+            Arguments = "/s /t 5 /c \"LanMountainDesktop: Shutting down...\"",
+            UseShellExecute = true
+        });
     }
 
     [DllImport("user32.dll", SetLastError = true)]

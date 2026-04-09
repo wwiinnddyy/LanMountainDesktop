@@ -47,6 +47,7 @@ public partial class MainWindow
     private readonly Stack<StartMenuFolderNode> _launcherFolderStack = [];
     private readonly HashSet<string> _hiddenLauncherFolderPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _hiddenLauncherAppPaths = new(StringComparer.OrdinalIgnoreCase);
+    private bool _showLauncherTileBackground = true;
     private Button? _selectedLauncherTileButton;
     private LauncherEntryKind? _selectedLauncherEntryKind;
     private string? _selectedLauncherEntryKey;
@@ -116,6 +117,8 @@ public partial class MainWindow
                 }
             }
         }
+
+        _showLauncherTileBackground = snapshot.ShowTileBackground;
     }
 
     private void InitializeDesktopSurfaceSwipeHandlers()
@@ -1137,7 +1140,6 @@ public partial class MainWindow
 
         var button = new Button
         {
-            Classes = { "glass-panel" },
             Margin = new Thickness(0, 0, 12, 12),
             BorderThickness = new Thickness(0),
             BorderBrush = Brushes.Transparent,
@@ -1146,6 +1148,16 @@ public partial class MainWindow
             Content = content
             // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
         };
+
+        // 根据设置决定是否显示背景
+        if (_showLauncherTileBackground)
+        {
+            button.Classes.Add("glass-panel");
+        }
+        else
+        {
+            button.Background = Brushes.Transparent;
+        }
         button.Click += (_, _) =>
         {
             if (_isComponentLibraryOpen)
@@ -1676,7 +1688,6 @@ public partial class MainWindow
 
         var button = new Button
         {
-            Classes = { "glass-panel" },
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             BorderThickness = new Thickness(0),
@@ -1684,6 +1695,17 @@ public partial class MainWindow
             Padding = new Thickness(8, 8, 8, 6),
             Content = content
         };
+
+        // 根据设置决定是否显示背景
+        if (_showLauncherTileBackground)
+        {
+            button.Classes.Add("glass-panel");
+        }
+        else
+        {
+            button.Background = Brushes.Transparent;
+        }
+
         button.Click += (_, _) =>
         {
             if (_isComponentLibraryOpen)
@@ -1745,7 +1767,6 @@ public partial class MainWindow
 
         var button = new Button
         {
-            Classes = { "glass-panel" },
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             BorderThickness = new Thickness(0),
@@ -1753,6 +1774,17 @@ public partial class MainWindow
             Padding = new Thickness(8, 8, 8, 6),
             Content = content
         };
+
+        // 根据设置决定是否显示背景
+        if (_showLauncherTileBackground)
+        {
+            button.Classes.Add("glass-panel");
+        }
+        else
+        {
+            button.Background = Brushes.Transparent;
+        }
+
         button.Click += (_, _) =>
         {
             if (_isComponentLibraryOpen)

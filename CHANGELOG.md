@@ -23,6 +23,33 @@
 
 ---
 
+## [0.8.3.2] - 2026-04-09
+
+### 新增 (Added)
+- ✨ **应用启动台图标卡片显示选项**: 新增应用启动台图标卡片显示设置
+  - 用户可在设置中选择是否显示应用图标的专属卡片背景
+  - 关闭后仅显示应用图标本身，更加简洁
+  - 支持动态切换，实时预览效果
+
+### 变更 (Changed)
+- 无
+
+### 修复 (Fixed)
+- 🐛 **应用启动台文件夹应用数量限制**: 修复了应用启动台文件夹无法查看超过12个应用的问题
+  - 问题原因: 文件夹弹窗未实现滚动功能，应用列表超出显示区域后被截断
+  - 修复方案: 为文件夹内容区域添加滚动支持，允许用户滚动查看所有应用
+- 🐛 **电源菜单重启导致关机问题**: 修复了点击电源菜单"重启"选项却触发关机的问题
+  - 问题原因: `SlideToShutDown.exe` 仅支持关机操作，不支持重启，错误地将其用于重启功能
+  - 修复方案: 重启操作改为使用标准的二次确认对话框（所有平台统一），仅关机操作使用 SlideToShutDown 滑动界面
+- 🐛 **课表组件字体显示问题**: 修复了日间模式下课表组件字体颜色与背景色相近导致看不清的问题
+  - 问题原因: 主题切换时增量更新逻辑未同步更新文字颜色
+  - 修复方案: 在 `IncrementalUpdateItems()` 方法中同步更新课程项的文字颜色
+
+### 移除 (Removed)
+- 🗑️ **更新页面重复标题**: 移除了更新页面中重复的更新标题，优化页面布局
+
+---
+
 ## [0.8.3.1] - 2026-04-08
 
 ### 新增 (Added)
@@ -78,5 +105,6 @@
 
 ## 链接
 
-[Unreleased]: https://github.com/yourorg/LanMountainDesktop/compare/v0.8.3.1...HEAD
+[Unreleased]: https://github.com/yourorg/LanMountainDesktop/compare/v0.8.3.2...HEAD
+[0.8.3.2]: https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.2
 [0.8.3.1]: https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.1
