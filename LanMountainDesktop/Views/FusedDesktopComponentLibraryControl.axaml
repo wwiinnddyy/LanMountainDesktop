@@ -111,91 +111,96 @@
         <ScrollViewer Grid.Column="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="24,16,20,16"
+            <StackPanel Margin="16,8,12,8"
                         Spacing="0">
 
                 <!-- 有选中组件时的显示 -->
                 <Panel IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
 
-                    <!-- 组件标题 - 在右侧内容区顶部 -->
-                    <TextBlock FontSize="28"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                               Text="{Binding SelectedComponent.DisplayName}"
-                               Margin="0,0,0,16"/>
+                    <!-- 组件展示面板 - 有独立背景色，与窗口背景形成层级分界 -->
+                    <Border Classes="surface-translucent-panel"
+                            CornerRadius="{DynamicResource DesignCornerRadiusLg}"
+                            Padding="20">
+                        <StackPanel Spacing="16">
+                            <!-- 组件标题 -->
+                            <TextBlock FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                       Text="{Binding SelectedComponent.DisplayName}"/>
 
-                    <!-- 固定大小的预览卡片 - 与窗口背景有色差 -->
-                    <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
-                            BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
-                            BorderThickness="1"
-                            Width="420"
-                            Height="320"
-                            HorizontalAlignment="Center">
-                        <Grid Margin="16">
-                            <!-- 预览图片 -->
-                            <Image Source="{Binding SelectedComponent.PreviewBitmap}"
-                                   Stretch="Uniform"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   RenderOptions.BitmapInterpolationMode="HighQuality"
-                                   IsVisible="{Binding SelectedComponent.IsPreviewReady}"/>
+                            <!-- 固定大小的预览卡片 -->
+                            <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+                                    BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                    BorderThickness="1"
+                                    Width="420"
+                                    Height="300"
+                                    HorizontalAlignment="Center">
+                                <Grid Margin="16">
+                                    <!-- 预览图片 -->
+                                    <Image Source="{Binding SelectedComponent.PreviewBitmap}"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                                           IsVisible="{Binding SelectedComponent.IsPreviewReady}"/>
 
-                            <!-- 加载中状态 -->
-                            <Border IsVisible="{Binding SelectedComponent.IsPreviewPending}"
-                                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
-                                <StackPanel HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Spacing="12">
-                                    <ProgressBar Width="120"
-                                                 IsIndeterminate="True"/>
-                                    <TextBlock HorizontalAlignment="Center"
-                                               TextAlignment="Center"
-                                               FontSize="14"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="{Binding SelectedComponent.PreviewStatusText}"/>
-                                </StackPanel>
+                                    <!-- 加载中状态 -->
+                                    <Border IsVisible="{Binding SelectedComponent.IsPreviewPending}"
+                                            Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+                                        <StackPanel HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="12">
+                                            <ProgressBar Width="120"
+                                                         IsIndeterminate="True"/>
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                       Text="{Binding SelectedComponent.PreviewStatusText}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 失败状态 -->
+                                    <Border IsVisible="{Binding SelectedComponent.IsPreviewFailed}"
+                                            Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
+                                        <StackPanel HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="8">
+                                            <fi:FluentIcon Icon="ImageOff"
+                                                           IconVariant="Regular"
+                                                           FontSize="48"
+                                                           Opacity="0.5"
+                                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                                                       Text="{Binding SelectedComponent.PreviewStatusText}"/>
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
+                                                       Text="{Binding SelectedComponent.PreviewErrorMessage}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </Border>
 
-                            <!-- 失败状态 -->
-                            <Border IsVisible="{Binding SelectedComponent.IsPreviewFailed}"
-                                    Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
-                                <StackPanel HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Spacing="8">
-                                    <fi:FluentIcon Icon="ImageOff"
-                                                   IconVariant="Regular"
-                                                   FontSize="48"
-                                                   Opacity="0.5"
-                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
-                                    <TextBlock HorizontalAlignment="Center"
-                                               TextAlignment="Center"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                               Text="{Binding SelectedComponent.PreviewStatusText}"/>
-                                    <TextBlock HorizontalAlignment="Center"
-                                               TextAlignment="Center"
-                                               FontSize="12"
-                                               TextWrapping="Wrap"
-                                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                               Text="{Binding SelectedComponent.PreviewErrorMessage}"/>
+                            <!-- "添加小组件"按钮 - 在面板内居中，使用主题强调色 -->
+                            <Button HorizontalAlignment="Center"
+                                    Classes="accent"
+                                    Padding="24,10"
+                                    Tag="{Binding SelectedComponent.ComponentId}"
+                                    Click="OnAddComponentClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
+                                    <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
                                 </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Border>
-
-                    <!-- "添加小组件"按钮 - 在预览卡片正下方居中，使用主题强调色 -->
-                    <Button HorizontalAlignment="Center"
-                            Classes="accent"
-                            Padding="24,10"
-                            Margin="0,16,0,0"
-                            Tag="{Binding SelectedComponent.ComponentId}"
-                            Click="OnAddComponentClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
-                            <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
+                            </Button>
                         </StackPanel>
-                    </Button>
+                    </Border>
                 </Panel>
 
                 <!-- 空状态 -->
