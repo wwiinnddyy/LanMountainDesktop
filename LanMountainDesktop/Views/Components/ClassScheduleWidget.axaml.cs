@@ -928,7 +928,28 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         MetaStack.Spacing = Math.Clamp(6 * scale, 3, 10);
         CourseListPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
 
-        var dateFont = Math.Clamp(66 * scale, 26, 82);
+        var dateFontByScale = Math.Clamp(66 * scale, 26, 82);
+        var weekdayFontByScale = Math.Clamp(34 * scale, 13, 32);
+        var classCountFontByScale = Math.Clamp(40 * scale, 14, 36);
+
+        // 宽度感知：当头部内容总需求超过可用宽度时，按比例缩小日期字体
+        var availableWidth = Math.Max(1, Bounds.Width - rootPadding.Left - rootPadding.Right);
+        var dateGroupEstimatedWidth = dateFontByScale * 0.6 * 3 + DateGroup.Spacing * 2;
+        var metaStackEstimatedWidth = classCountFontByScale * 0.6 * 4 + MetaStack.Spacing;
+        var headerColumnSpacing = Math.Clamp(10 * scale, 4, 16);
+        var totalHeaderNeed = dateGroupEstimatedWidth + headerColumnSpacing + metaStackEstimatedWidth;
+
+        var dateFont = dateFontByScale;
+        if (totalHeaderNeed > availableWidth)
+        {
+            var shrinkRatio = availableWidth / totalHeaderNeed;
+            dateFont = Math.Max(20, dateFontByScale * shrinkRatio);
+        }
+
+        // 为 HeaderGrid 左列设置最小宽度，防止被压缩至零
+        var minDateColumnWidth = dateFont * 0.6 * 3 + DateGroup.Spacing * 2;
+        HeaderGrid.ColumnDefinitions[0].MinWidth = minDateColumnWidth;
+
         MonthTextBlock.FontSize = dateFont;
         DayTextBlock.FontSize = dateFont;
         SlashTextBlock.FontSize = dateFont;
@@ -940,8 +961,8 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         ClassCountTextBlock.Foreground = CreateBrush(_isNightVisual ? "#8D95A4" : "#738095");
         StatusTextBlock.Foreground = CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
 
-        WeekdayTextBlock.FontSize = Math.Clamp(34 * scale, 13, 32);
-        ClassCountTextBlock.FontSize = Math.Clamp(40 * scale, 14, 36);
+        WeekdayTextBlock.FontSize = weekdayFontByScale;
+        ClassCountTextBlock.FontSize = classCountFontByScale;
         StatusTextBlock.FontSize = Math.Clamp(30 * scale, 12, 30);
 
         WeekdayTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));

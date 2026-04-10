@@ -1,27 +1,5 @@
 # 更新日志 / Changelog
 
-所有重要的更改都将记录在此文件中。
-
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
-并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
-
----
-
-## [Unreleased]
-
-### 新增 (Added)
-- 待发布的新功能
-
-### 变更 (Changed)
-- 待发布的变更
-
-### 修复 (Fixed)
-- 待发布的修复
-
-### 移除 (Removed)
-- 待发布的移除项
-
----
 
 ## [0.8.3.2] - 2026-04-09
 
@@ -70,6 +48,28 @@
 
 ---
 
+所有重要的更改都将记录在此文件中。
+
+格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/),
+并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+
+---
+
+## [格式示例]
+
+### 新增 (Added)
+- 待发布的新功能
+
+### 变更 (Changed)
+- 待发布的变更
+
+### 修复 (Fixed)
+- 待发布的修复
+
+### 移除 (Removed)
+- 待发布的移除项
+
+---
 ## 版本说明
 
 ### 版本号规则

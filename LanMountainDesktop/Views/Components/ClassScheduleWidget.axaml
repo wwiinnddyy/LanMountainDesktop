@@ -34,11 +34,13 @@
                     <TextBlock x:Name="WeekdayTextBlock"
                                Text="周一"
                                TextAlignment="Right"
-                               FontWeight="SemiBold" />
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="ClassCountTextBlock"
                                Text="0节课"
                                TextAlignment="Right"
-                               FontWeight="SemiBold" />
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Grid>
 

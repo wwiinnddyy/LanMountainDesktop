@@ -704,6 +704,24 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         ExtraNewsItemsPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
 
         ApplyNightModeVisual();
+
+        var headerHeight = refreshHeight;
+        var newsItemHeight = Math.Max(imageHeight, mainNewsMinHeight);
+
+        var requiredHeight = verticalPadding * 2
+                          + headerHeight
+                          + rowSpacing
+                          + newsItemHeight
+                          + rowSpacing
+                          + newsItemHeight;
+
+        if (_extraNewsRows.Count > 0)
+        {
+            var extraSpacing = ExtraNewsItemsPanel.Spacing * (_extraNewsRows.Count - 1);
+            requiredHeight += rowSpacing + extraSpacing + _extraNewsRows.Count * newsItemHeight;
+        }
+
+        this.MinHeight = requiredHeight;
     }
 
     private void UpdateRefreshButtonState()
@@ -842,6 +860,11 @@ public partial class CnrDailyNewsWidget : UserControl, IDesktopComponentWidget, 
         oldBitmap?.Dispose();
         _newsBitmaps[index] = bitmap;
         imageControl.Source = bitmap;
+
+        if (bitmap != null)
+        {
+            InvalidateMeasure();
+        }
     }
 
     private void DisposeNewsBitmaps()
