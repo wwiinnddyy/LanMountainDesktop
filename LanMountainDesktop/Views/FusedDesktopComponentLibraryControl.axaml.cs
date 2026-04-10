@@ -39,12 +39,22 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
         LoadRegistry();
         LoadCategories();
-        SearchBox.KeyUp += (s, e) => FilterComponents();
+
+        // 为 ListBoxItem 添加 category-item 样式类
+        CategoryListBox.ContainerPrepared += OnCategoryListBoxContainerPrepared;
 
         // 默认选择第一个分类
         if (_viewModel.Categories.Count > 0)
         {
             CategoryListBox.SelectedIndex = 0;
+        }
+    }
+
+    private void OnCategoryListBoxContainerPrepared(object? sender, ContainerPreparedEventArgs e)
+    {
+        if (e.Container is ListBoxItem listBoxItem)
+        {
+            listBoxItem.Classes.Add("category-item");
         }
     }
 
@@ -65,7 +75,6 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private void LoadCategories()
     {
         _viewModel.Categories.Clear();
-        _viewModel.Components.Clear();
 
         // 添加"全部组件"分类
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
@@ -130,10 +139,11 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             definition.Id,
             definition.DisplayName,
             previewKey,
+            description: null,
             "正在加载预览...",
             "预览不可用",
             previewEntry);
-            
+
         if (mainWindow is not null && (previewEntry is null || previewEntry.State == ComponentPreviewImageState.Pending))
         {
             mainWindow.RequestDetachedLibraryPreview(previewKey);
@@ -158,25 +168,49 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        FilterComponents();
+        UpdateSelectedComponent();
     }
 
-    private void FilterComponents()
+    private void UpdateSelectedComponent()
     {
-        var selectedCategory = (CategoryListBox.SelectedItem as ComponentLibraryCategoryViewModel)?.Id;
-        var searchText = SearchBox.Text?.ToLower() ?? "";
-
-        var filtered = _allDefinitions.Where(d =>
+        var selectedCategory = CategoryListBox.SelectedItem as ComponentLibraryCategoryViewModel;
+        if (selectedCategory is null)
         {
-            var matchesCategory = selectedCategory == "all" || string.Equals(d.Category, selectedCategory, StringComparison.OrdinalIgnoreCase);
-            var matchesSearch = string.IsNullOrEmpty(searchText) || d.DisplayName.ToLower().Contains(searchText) || d.Id.ToLower().Contains(searchText);
-            return matchesCategory && matchesSearch;
-        });
+            _viewModel.SelectedComponent = null;
+            return;
+        }
 
-        _viewModel.Components.Clear();
-        foreach (var def in filtered)
+        // 获取该分类下的组件列表
+        IEnumerable<DesktopComponentDefinition> filtered;
+        if (selectedCategory.Id == "all")
         {
-            _viewModel.Components.Add(CreateComponentItem(def));
+            filtered = _allDefinitions.OrderBy(d => d.DisplayName);
+        }
+        else
+        {
+            filtered = _allDefinitions
+                .Where(d => string.Equals(d.Category, selectedCategory.Id, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(d => d.DisplayName);
+        }
+
+        // 选择该分类下的第一个组件作为默认选中
+        var firstComponent = filtered.FirstOrDefault();
+        if (firstComponent is not null)
+        {
+            // 查找或创建对应的 ViewModel
+            var existingComponent = selectedCategory.Components.FirstOrDefault(c => c.ComponentId == firstComponent.Id);
+            if (existingComponent is not null)
+            {
+                _viewModel.SelectedComponent = existingComponent;
+            }
+            else
+            {
+                _viewModel.SelectedComponent = CreateComponentItem(firstComponent);
+            }
+        }
+        else
+        {
+            _viewModel.SelectedComponent = null;
         }
     }
 

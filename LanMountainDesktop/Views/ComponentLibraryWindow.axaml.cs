@@ -94,6 +94,7 @@ public partial class ComponentLibraryWindow : Window
             entry.ComponentId,
             displayName,
             previewKey,
+            description: null,
             _localize?.Invoke("component_library.preview.loading", "Loading preview...") ?? "Loading preview...",
             _localize?.Invoke("component_library.preview.unavailable", "Preview unavailable") ?? "Preview unavailable",
             previewEntry);

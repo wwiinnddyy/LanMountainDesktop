@@ -10,6 +10,7 @@ namespace LanMountainDesktop.ViewModels;
 public sealed class ComponentLibraryWindowViewModel : ViewModelBase
 {
     private string _title = "Widgets";
+    private ComponentLibraryItemViewModel? _selectedComponent;
 
     public string Title
     {
@@ -20,6 +21,12 @@ public sealed class ComponentLibraryWindowViewModel : ViewModelBase
     public ObservableCollection<ComponentLibraryCategoryViewModel> Categories { get; } = [];
 
     public ObservableCollection<ComponentLibraryItemViewModel> Components { get; } = [];
+
+    public ComponentLibraryItemViewModel? SelectedComponent
+    {
+        get => _selectedComponent;
+        set => SetProperty(ref _selectedComponent, value);
+    }
 }
 
 public sealed class ComponentLibraryCategoryViewModel
@@ -51,6 +58,7 @@ public sealed class ComponentLibraryItemViewModel
     private readonly string _loadingPreviewText;
     private readonly string _previewUnavailableText;
     private string _displayName;
+    private string? _description;
     private ComponentPreviewKey _previewKey;
     private ComponentPreviewImageEntry? _previewImageEntry;
     private ComponentPreviewImageState _previewState;
@@ -61,12 +69,14 @@ public sealed class ComponentLibraryItemViewModel
         string componentId,
         string displayName,
         ComponentPreviewKey previewKey,
+        string? description = null,
         string loadingPreviewText = "Loading preview...",
         string previewUnavailableText = "Preview unavailable",
         ComponentPreviewImageEntry? previewImageEntry = null)
     {
         ComponentId = componentId;
         _displayName = displayName;
+        _description = description;
         _previewKey = previewKey;
         _loadingPreviewText = loadingPreviewText;
         _previewUnavailableText = previewUnavailableText;
@@ -80,6 +90,12 @@ public sealed class ComponentLibraryItemViewModel
     {
         get => _displayName;
         set => SetProperty(ref _displayName, value);
+    }
+
+    public string? Description
+    {
+        get => _description;
+        set => SetProperty(ref _description, value);
     }
 
     public ComponentPreviewKey PreviewKey

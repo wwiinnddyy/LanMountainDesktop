@@ -12,21 +12,21 @@
         ExtendClientAreaTitleBarHeightHint="-1"
         Background="Transparent"
         TransparencyLevelHint="Mica"
-        Title="融合桌面组件库">
-    
+        Title="添加小组件">
+
     <Panel>
         <!-- 背景磨砂效果 -->
         <Border Background="{DynamicResource AdaptiveSurfaceLowBrush}"
                 Opacity="0.85" />
-        
-        <Grid RowDefinitions="Auto,*">
+
+        <Grid RowDefinitions="Auto,*,Auto">
             <!-- 自定义标题栏 -->
             <Border Background="Transparent"
                     IsHitTestVisible="True"
                     Padding="20,16">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="融合桌面组件库"
+                        <TextBlock Text="添加小组件"
                                    FontWeight="SemiBold"
                                    FontSize="20"
                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
@@ -35,23 +35,35 @@
                                    FontSize="13"
                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                     </StackPanel>
-                    
+
                     <Button Grid.Column="1"
-                            Classes="accent"
                             Width="36" Height="36"
                             Padding="0"
-                            CornerRadius="18"
+                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                             BorderThickness="0"
-                            Background="{DynamicResource AdaptiveButtonHoverBackgroundBrush}"
                             Click="OnCloseClick">
                         <fi:SymbolIcon Symbol="Dismiss" FontSize="18" />
                     </Button>
                 </Grid>
             </Border>
-            
+
             <!-- 组件库控件 -->
             <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
                                                           Grid.Row="1" />
+
+            <!-- 底部查找更多组件链接 -->
+            <Border Grid.Row="2"
+                    Background="Transparent"
+                    Padding="20,12">
+                <Button Classes="hyperlink"
+                        HorizontalAlignment="Center"
+                        Click="OnFindMoreComponentsClick">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <fi:SymbolIcon Symbol="Globe" FontSize="14" />
+                        <TextBlock Text="查找更多组件" />
+                    </StackPanel>
+                </Button>
+            </Border>
         </Grid>
     </Panel>
 </Window>

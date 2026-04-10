@@ -102,6 +102,26 @@ public partial class FusedDesktopComponentLibraryWindow : Window
     {
         Close();
     }
+
+    /// <summary>
+    /// 查找更多组件链接点击处理 - 打开设置窗口的插件目录页面
+    /// </summary>
+    private void OnFindMoreComponentsClick(object? sender, RoutedEventArgs e)
+    {
+        // 关闭当前窗口
+        Close();
+
+        // 打开设置窗口并导航到插件目录页面
+        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        {
+            var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+            var request = new SettingsWindowOpenRequest(
+                Source: "FusedDesktopComponentLibrary",
+                Owner: mainWindow,
+                PageId: "plugin-catalog");
+            settingsWindowService.Open(request);
+        }
+    }
     
     protected override void OnClosed(EventArgs e)
     {

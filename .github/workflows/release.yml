@@ -66,8 +66,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64, x86]
-    name: Build_Windows_${{ matrix.arch }}
+        include:
+          # 完整版（自包含 .NET 运行时）
+          - arch: x64
+            self_contained: true
+            suffix: ''
+          - arch: x86
+            self_contained: true
+            suffix: ''
+          # 轻盈版（框架依赖，仅 x64）
+          - arch: x64
+            self_contained: false
+            suffix: '-lite'
+    name: Build_Windows_${{ matrix.arch }}${{ matrix.suffix }}
     
     steps:
       - name: Checkout
@@ -95,13 +106,16 @@ jobs:
 
       - name: Publish
         run: |
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-${{ matrix.arch }}" } else { "publish/windows-${{ matrix.arch }}-lite" }
+
           dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
             -c Release `
-            -o ./publish/windows-${{ matrix.arch }} `
-            --self-contained `
+            -o ./$publishDir `
+            --self-contained:$selfContained `
             -r win-${{ matrix.arch }} `
             -p:PublishSingleFile=false `
-            -p:SelfContained=true `
+            -p:SelfContained=$selfContained `
             -p:DebugType=none `
             -p:DebugSymbols=false `
             -p:PublishTrimmed=false `
@@ -110,6 +124,9 @@ jobs:
             -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
+          Write-Host "Published to: $publishDir"
+          Write-Host "Self-contained: $selfContained"
         shell: pwsh
 
       - name: Install Inno Setup
@@ -120,7 +137,9 @@ jobs:
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $publishDir = "publish\windows-$arch"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $suffix = "${{ matrix.suffix }}"
+          $publishDir = if ($selfContained) { "publish\windows-$arch" } else { "publish\windows-$arch-lite" }
           $installerScript = "LanMountainDesktop\installer\LanMountainDesktop.iss"
           $outputDir = "build-installer"
           
@@ -187,6 +206,8 @@ jobs:
             "/DPublishDir=$publishDir",
             "/DMyOutputDir=$outputDir",
             "/DMyAppArch=$arch",
+            "/DMyAppSuffix=$suffix",
+            "/DIsSelfContained=$selfContained",
             $installerScript
           )
           
@@ -213,7 +234,7 @@ jobs:
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: release-windows-${{ matrix.arch }}
+          name: release-windows-${{ matrix.arch }}${{ matrix.suffix }}
           path: build-installer/*.exe
           if-no-files-found: error
           retention-days: 30
@@ -548,19 +569,22 @@ jobs:
           artifacts: "release-files/**"
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
-            
+
             ### Windows
-            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer
-            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer
-            
+            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer (完整版，包含 .NET 运行时)
+            - **LanMountainDesktop-Setup-{version}-x64-lite.exe** - 64-bit installer (轻量版，需安装 .NET 10 Runtime)
+            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer (完整版，包含 .NET 运行时)
+
+            > **轻量版说明**：轻量版不包含 .NET 运行时，体积更小。首次运行前需安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。
+
             Installation: Double-click the .exe file and follow the wizard.
-            
+
             ### Linux
             - **LanMountainDesktop-{version}-linux-x64.deb** - Debian package (x64)
-            
+
             ### macOS
             - **LanMountainDesktop-{version}-macos-x64.dmg** - Intel processor
             - **LanMountainDesktop-{version}-macos-arm64.dmg** - Apple Silicon (M1/M2/M3)
-            
+
             See commits for changes.
           token: ${{ secrets.GITHUB_TOKEN }}
