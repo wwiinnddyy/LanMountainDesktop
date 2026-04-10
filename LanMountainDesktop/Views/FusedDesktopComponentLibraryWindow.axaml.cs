@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
@@ -103,23 +104,11 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         Close();
     }
 
-    /// <summary>
-    /// 查找更多组件链接点击处理 - 打开设置窗口的插件目录页面
-    /// </summary>
-    private void OnFindMoreComponentsClick(object? sender, RoutedEventArgs e)
+    private void OnWindowTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        // 关闭当前窗口
-        Close();
-
-        // 打开设置窗口并导航到插件目录页面
-        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
-            var request = new SettingsWindowOpenRequest(
-                Source: "FusedDesktopComponentLibrary",
-                Owner: mainWindow,
-                PageId: "plugin-catalog");
-            settingsWindowService.Open(request);
+            BeginMoveDrag(e);
         }
     }
     

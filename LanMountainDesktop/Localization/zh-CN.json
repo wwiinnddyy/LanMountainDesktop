@@ -692,6 +692,7 @@
     "component.editor.placement_label": "实例 ID",
     "component.editor.scope_label": "作用域",
     "component.editor.scope_instance": "实例级编辑器",
+    "component_category.all":  "全部",
     "component_category.clock":  "时钟",
     "component_category.date":  "日历",
     "component_category.weather":  "天气",

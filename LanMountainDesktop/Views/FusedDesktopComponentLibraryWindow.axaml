@@ -1,69 +1,73 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:LanMountainDesktop.Views"
-        xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:fi="using:FluentIcons.Avalonia.Fluent"
         x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryWindow"
         Width="860" Height="620"
         MinWidth="600" MinHeight="500"
+        CanResize="True"
         WindowStartupLocation="CenterScreen"
-        SystemDecorations="Full"
+        SystemDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
-        ExtendClientAreaTitleBarHeightHint="-1"
+        ExtendClientAreaTitleBarHeightHint="48"
         Background="Transparent"
-        TransparencyLevelHint="Mica"
         Title="添加小组件">
 
-    <Panel>
-        <!-- 背景磨砂效果 -->
-        <Border Background="{DynamicResource AdaptiveSurfaceLowBrush}"
-                Opacity="0.85" />
+    <Grid x:Name="RootGrid"
+          Classes="settings-scope"
+          Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+          RowDefinitions="Auto,*">
+        <!-- 自定义标题栏 - 与 SettingsWindow 风格一致 -->
+        <Border x:Name="WindowTitleBarHost"
+                Height="48"
+                Padding="12,0,12,0"
+                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+                BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
+                BorderThickness="0,0,0,1"
+                PointerPressed="OnWindowTitleBarPointerPressed">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                  ColumnSpacing="8"
+                  VerticalAlignment="Center">
+                <fi:FluentIcon x:Name="WindowBrandIcon"
+                               Icon="Apps"
+                               IconVariant="Filled"
+                               FontSize="16"
+                               IsHitTestVisible="False"
+                               VerticalAlignment="Center" />
 
-        <Grid RowDefinitions="Auto,*,Auto">
-            <!-- 自定义标题栏 -->
-            <Border Background="Transparent"
-                    IsHitTestVisible="True"
-                    Padding="20,16">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="添加小组件"
-                                   FontWeight="SemiBold"
-                                   FontSize="20"
-                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                        <TextBlock Text="将精美组件放置在您的系统桌面上（负一屏）"
-                                   Opacity="0.6"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
-                    </StackPanel>
+                <TextBlock x:Name="WindowTitleTextBlock"
+                           Grid.Column="1"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           IsHitTestVisible="False"
+                           Text="添加小组件" />
 
-                    <Button Grid.Column="1"
-                            Width="36" Height="36"
-                            Padding="0"
-                            CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                            BorderThickness="0"
-                            Click="OnCloseClick">
-                        <fi:SymbolIcon Symbol="Dismiss" FontSize="18" />
-                    </Button>
-                </Grid>
-            </Border>
+                <TextBlock Grid.Column="2"
+                           FontSize="12"
+                           Opacity="0.6"
+                           IsHitTestVisible="False"
+                           VerticalAlignment="Center"
+                           Text="将精美组件放置在您的系统桌面上（负一屏）" />
 
-            <!-- 组件库控件 -->
-            <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
-                                                          Grid.Row="1" />
-
-            <!-- 底部查找更多组件链接 -->
-            <Border Grid.Row="2"
-                    Background="Transparent"
-                    Padding="20,12">
-                <Button Classes="hyperlink"
-                        HorizontalAlignment="Center"
-                        Click="OnFindMoreComponentsClick">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <fi:SymbolIcon Symbol="Globe" FontSize="14" />
-                        <TextBlock Text="查找更多组件" />
-                    </StackPanel>
+                <Button x:Name="CloseWindowButton"
+                        Grid.Column="3"
+                        Width="40"
+                        Height="32"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnCloseClick">
+                    <fi:FluentIcon Icon="Dismiss"
+                                   IconVariant="Regular"
+                                   FontSize="16" />
                 </Button>
-            </Border>
-        </Grid>
-    </Panel>
+            </Grid>
+        </Border>
+
+        <!-- 组件库控件 -->
+        <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
+                                                      Grid.Row="1"
+                                                      Margin="12,8,16,8" />
+    </Grid>
 </Window>

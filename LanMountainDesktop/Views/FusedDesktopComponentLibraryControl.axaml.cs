@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
@@ -28,6 +29,8 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private readonly TimeZoneService _timeZoneService;
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
+
+    private static readonly LocalizationService _localizationService = new();
 
     public FusedDesktopComponentLibraryControl()
     {
@@ -76,25 +79,14 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     {
         _viewModel.Categories.Clear();
 
+        var languageCode = _settingsFacade.Region.Get().LanguageCode;
+
         // 添加"全部组件"分类
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
             "all",
-            "全部组件",
+            L(languageCode, "component_category.all", "All"),
             Symbol.Apps,
             Array.Empty<ComponentLibraryItemViewModel>()));
-
-        var categoryMap = new Dictionary<string, (string Display, Symbol Icon)>
-        {
-            { "clock", ("时钟", Symbol.Clock) },
-            { "date", ("日历", Symbol.CalendarDate) },
-            { "weather", ("天气", Symbol.WeatherSunny) },
-            { "board", ("画板", Symbol.Edit) },
-            { "media", ("媒体", Symbol.Play) },
-            { "info", ("资讯", Symbol.News) },
-            { "calculator", ("工具", Symbol.Calculator) },
-            { "study", ("学习", Symbol.Hourglass) },
-            { "file", ("文件", Symbol.Folder) }
-        };
 
         var usedCategories = _allDefinitions
             .Select(d => d.Category)
@@ -103,21 +95,60 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
         foreach (var cat in usedCategories)
         {
-            if (categoryMap.TryGetValue(cat.ToLower(), out var info))
-            {
-                var categoryComponents = _allDefinitions
-                    .Where(d => string.Equals(d.Category, cat, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(d => d.DisplayName)
-                    .Select(d => CreateComponentItem(d))
-                    .ToArray();
+            var icon = ResolveCategoryIcon(cat);
+            var title = GetLocalizedCategoryTitle(languageCode, cat);
 
-                _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
-                    cat,
-                    info.Display,
-                    info.Icon,
-                    categoryComponents));
-            }
+            var categoryComponents = _allDefinitions
+                .Where(d => string.Equals(d.Category, cat, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(d => d.DisplayName)
+                .Select(d => CreateComponentItem(d))
+                .ToArray();
+
+            _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
+                cat,
+                title,
+                icon,
+                categoryComponents));
         }
+    }
+
+    /// <summary>
+    /// 分类图标映射 - 与阑山桌面 Dock 栏组件库 (MainWindow.ComponentSystem) 保持一致
+    /// </summary>
+    private static Symbol ResolveCategoryIcon(string categoryId)
+    {
+        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return Symbol.Clock;
+        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase)) return Symbol.CalendarDate;
+        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase)) return Symbol.WeatherSunny;
+        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase)) return Symbol.Edit;
+        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase)) return Symbol.Play;
+        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return Symbol.Apps;
+        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase)) return Symbol.Calculator;
+        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase)) return Symbol.Hourglass;
+        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase)) return Symbol.Folder;
+        return Symbol.Apps;
+    }
+
+    /// <summary>
+    /// 分类本地化标题 - 与阑山桌面 Dock 栏组件库 (MainWindow.ComponentSystem) 保持一致
+    /// </summary>
+    private string GetLocalizedCategoryTitle(string languageCode, string categoryId)
+    {
+        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.clock", "Clock");
+        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.date", "Calendar");
+        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.weather", "Weather");
+        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.board", "Board");
+        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.media", "Media");
+        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.info", "Info");
+        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.calculator", "Calculator");
+        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.study", "Study");
+        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.file", "File");
+        return categoryId;
+    }
+
+    private string L(string languageCode, string key, string fallback)
+    {
+        return _localizationService.GetString(languageCode, key, fallback);
     }
 
     private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
@@ -220,5 +251,23 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         {
             AddComponentRequested?.Invoke(this, componentId);
         }
+    }
+
+    private void OnFindMoreComponentsClick(object? sender, RoutedEventArgs e)
+    {
+        // 打开设置窗口并导航到插件目录页面
+        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        {
+            var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
+            var request = new SettingsWindowOpenRequest(
+                Source: "FusedDesktopComponentLibrary",
+                Owner: mainWindow,
+                PageId: "plugin-catalog");
+            settingsWindowService.Open(request);
+        }
+
+        // 关闭所在窗口
+        var window = this.FindAncestorOfType<Window>();
+        window?.Close();
     }
 }

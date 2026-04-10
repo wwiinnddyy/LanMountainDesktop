@@ -698,6 +698,7 @@
     "component.editor.placement_label": "Placement ID",
     "component.editor.scope_label": "Scope",
     "component.editor.scope_instance": "Instance-scoped editor",
+    "component_category.all":  "All",
     "component_category.clock":  "Clock",
     "component_category.date":  "Calendar",
     "component_category.weather":  "Weather",

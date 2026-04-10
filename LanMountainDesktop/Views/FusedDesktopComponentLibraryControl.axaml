@@ -1,116 +1,138 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
-             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              xmlns:converters="using:Avalonia.Data.Converters"
              x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl"
              x:DataType="vm:ComponentLibraryWindowViewModel">
 
     <UserControl.Styles>
-        <!-- 分类列表项样式 -->
+        <!-- 分类列表项样式 - 遵循 Fluent NavigationView 风格 -->
         <Style Selector="ListBoxItem.category-item">
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Margin" Value="0,2"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="ListBoxItem.category-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
         </Style>
         <Style Selector="ListBoxItem.category-item:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}"/>
+        </Style>
+        <Style Selector="ListBoxItem.category-item:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
         </Style>
 
-        <!-- 分类项内容容器 - 默认状态 -->
-        <Style Selector="Border.category-content">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemBackgroundBrush}"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}"/>
-        </Style>
-        <Style Selector="ListBoxItem.category-item:selected Border.category-content">
-            <Setter Property="Background" Value="{DynamicResource AdaptiveAccentBrush}"/>
-        </Style>
-        <Style Selector="ListBoxItem.category-item:pointerover Border.category-content">
-            <Setter Property="Opacity" Value="0.9"/>
-        </Style>
-
-        <!-- 分类项图标和文字 - 默认状态 -->
-        <Style Selector="ListBoxItem.category-item fi|SymbolIcon.category-icon">
+        <!-- 分类项图标和文字 -->
+        <Style Selector="ListBoxItem.category-item fi|FluentIcon.category-icon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
         </Style>
-        <Style Selector="ListBoxItem.category-item:selected fi|SymbolIcon.category-icon">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
+        <Style Selector="ListBoxItem.category-item:selected fi|FluentIcon.category-icon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
         </Style>
 
         <Style Selector="ListBoxItem.category-item TextBlock.category-text">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
         </Style>
         <Style Selector="ListBoxItem.category-item:selected TextBlock.category-text">
-            <Setter Property="Foreground" Value="{DynamicResource AdaptiveOnAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="280,*"
-          ColumnSpacing="16"
+    <Grid ColumnDefinitions="Auto,*"
+          ColumnSpacing="0"
           Margin="0">
-        <!-- 分类列表 (左侧) -->
-        <Border Classes="surface-translucent-panel"
-                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
-                Padding="12">
-            <ListBox x:Name="CategoryListBox"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     SelectionChanged="OnCategorySelectionChanged"
-                     ItemsSource="{Binding Categories}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ComponentLibraryCategoryViewModel">
-                        <Border Classes="category-content">
+        <!-- 左侧导航列 - 分类列表 + 底部"查找更多组件" -->
+        <Border Width="280"
+                Background="Transparent">
+            <Grid RowDefinitions="*,Auto">
+                <!-- 分类列表 -->
+                <ListBox x:Name="CategoryListBox"
+                         Grid.Row="0"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,8,4,0"
+                         SelectionChanged="OnCategorySelectionChanged"
+                         ItemsSource="{Binding Categories}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ComponentLibraryCategoryViewModel">
                             <Grid ColumnDefinitions="Auto,*"
-                                  ColumnSpacing="12">
-                                <fi:SymbolIcon Symbol="{Binding Icon}"
+                                  ColumnSpacing="12"
+                                  Margin="12,10">
+                                <fi:FluentIcon Icon="{Binding Icon}"
                                                IconVariant="Regular"
-                                               FontSize="20"
+                                               FontSize="18"
                                                Classes="category-icon"/>
                                 <TextBlock Grid.Column="1"
                                            VerticalAlignment="Center"
                                            FontSize="14"
-                                           FontWeight="SemiBold"
                                            Classes="category-text"
                                            Text="{Binding Title}"/>
                             </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- 底部"查找更多组件" - 在左侧导航列底部 -->
+                <StackPanel Grid.Row="1"
+                            Margin="12,8,8,12">
+                    <Border Height="1"
+                            Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                            Opacity="0.4"
+                            Margin="0,0,0,8"/>
+                    <Button Classes="hyperlink"
+                            HorizontalAlignment="Left"
+                            Click="OnFindMoreComponentsClick">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <fi:FluentIcon Icon="Globe" IconVariant="Regular" FontSize="14"/>
+                            <TextBlock Text="查找更多组件"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- 组件预览区 (右侧) -->
+        <!-- 右侧内容区与左侧的分隔线 -->
         <Border Grid.Column="1"
-                Classes="surface-translucent-strong"
-                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
-                Padding="24">
-            <Panel>
+                Width="1"
+                HorizontalAlignment="Left"
+                Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                Opacity="0.5"/>
+
+        <!-- 组件预览区 (右侧) -->
+        <ScrollViewer Grid.Column="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,16,20,16"
+                        Spacing="0">
+
                 <!-- 有选中组件时的显示 -->
-                <Grid RowDefinitions="Auto,*,Auto"
-                      IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
-                    <!-- 组件标题 -->
-                    <TextBlock Grid.Row="0"
-                               FontSize="28"
-                               FontWeight="Bold"
+                <Panel IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
+
+                    <!-- 组件标题 - 在右侧内容区顶部 -->
+                    <TextBlock FontSize="28"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                Text="{Binding SelectedComponent.DisplayName}"
-                               Margin="0,0,0,20"/>
+                               Margin="0,0,0,16"/>
 
-                    <!-- 预览区域 -->
-                    <Border Grid.Row="1"
-                            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-                            Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+                    <!-- 固定大小的预览卡片 - 与窗口背景有色差 -->
+                    <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
                             BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                             BorderThickness="1"
-                            Padding="20"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                        <Grid Width="400"
-                              Height="300">
+                            Width="420"
+                            Height="320"
+                            HorizontalAlignment="Center">
+                        <Grid Margin="16">
                             <!-- 预览图片 -->
                             <Image Source="{Binding SelectedComponent.PreviewBitmap}"
                                    Stretch="Uniform"
@@ -141,7 +163,8 @@
                                 <StackPanel HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Spacing="8">
-                                    <fi:SymbolIcon Symbol="ImageOff"
+                                    <fi:FluentIcon Icon="ImageOff"
+                                                   IconVariant="Regular"
                                                    FontSize="48"
                                                    Opacity="0.5"
                                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
@@ -161,34 +184,29 @@
                         </Grid>
                     </Border>
 
-                    <!-- 底部操作区 -->
-                    <Grid Grid.Row="2"
-                          ColumnDefinitions="*,Auto"
-                          Margin="0,24,0,0">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                   Text="{Binding SelectedComponent.ComponentId, StringFormat='组件 ID: {0}'}"/>
-                        <Button Grid.Column="1"
-                                Classes="accent"
-                                Padding="20,12"
-                                Tag="{Binding SelectedComponent.ComponentId}"
-                                Click="OnAddComponentClick">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <fi:SymbolIcon Symbol="Add" FontSize="16"/>
-                                <TextBlock Text="添加到桌面" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </Grid>
+                    <!-- "添加小组件"按钮 - 在预览卡片正下方居中，使用主题强调色 -->
+                    <Button HorizontalAlignment="Center"
+                            Classes="accent"
+                            Padding="24,10"
+                            Margin="0,16,0,0"
+                            Tag="{Binding SelectedComponent.ComponentId}"
+                            Click="OnAddComponentClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
+                            <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </Panel>
 
                 <!-- 空状态 -->
                 <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNull}}"
                       HorizontalAlignment="Center"
-                      VerticalAlignment="Center">
-                    <StackPanel Spacing="16" HorizontalAlignment="Center">
-                        <fi:SymbolIcon Symbol="Apps"
+                      VerticalAlignment="Center"
+                      MinHeight="400">
+                    <StackPanel Spacing="16" HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <fi:FluentIcon Icon="Apps"
+                                       IconVariant="Regular"
                                        FontSize="64"
                                        Opacity="0.3"
                                        Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"/>
@@ -198,7 +216,7 @@
                                    Text="请从左侧选择一个组件"/>
                     </StackPanel>
                 </Grid>
-            </Panel>
-        </Border>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>
