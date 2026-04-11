@@ -40,13 +40,12 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
     private bool? _isNightModeApplied;
     private SKColor _selectedInkColor = SKColors.Black;
+    private bool _isUserCustomColor;
     private float _selectedInkThickness = 2.5f;
     private string _componentId = BuiltInComponentIds.DesktopWhiteboard;
     private string _placementId = string.Empty;
     private int _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
     private bool _isApplyingPersistedSnapshot;
-    private bool? _lastBitmapCacheEnabled;
-    private int _lastBitmapCacheSize;
     private bool _noteDirty;
     private int _noteLoadRevision;
     private bool _disposed;
@@ -121,10 +120,11 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         settings.IgnorePressure = true;
         settings.InkThickness = _selectedInkThickness;
         settings.EraserSize = new Size(20, 20);
+        settings.IsBitmapCacheEnabled = true;
+        settings.MaxBitmapCacheSize = 2048;
         InkCanvas.StrokeCollected += OnInkCanvasStrokeCollected;
         InkCanvas.PointerReleased += OnInkCanvasPointerReleased;
         InkCanvas.PointerCaptureLost += OnInkCanvasPointerCaptureLost;
-        UpdateInkCanvasCacheSettings(forceRefresh: true);
     }
 
     public void ApplyCellSize(double cellSize)
@@ -158,7 +158,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         var settings = InkCanvas.AvaloniaSkiaInkCanvas.Settings;
         var eraserSize = Math.Clamp(_currentCellSize * 0.42, 12, 44);
         settings.EraserSize = new Size(eraserSize, eraserSize);
-        UpdateInkCanvasCacheSettings(forceRefresh: false);
     }
 
     private void ApplyThemeVisual(bool force)
@@ -169,6 +168,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             return;
         }
 
+        var wasNightMode = _isNightModeApplied;
         _isNightModeApplied = isNightMode;
 
         RootBorder.Background = new SolidColorBrush(isNightMode ? Color.Parse("#FF181B22") : Color.Parse("#FFF1F4F9"));
@@ -177,7 +177,37 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ToolbarBorder.Background = new SolidColorBrush(isNightMode ? Color.Parse("#1AFFFFFF") : Color.Parse("#E6FFFFFF"));
         ToolbarBorder.BorderBrush = new SolidColorBrush(isNightMode ? Color.Parse("#26FFFFFF") : Color.Parse("#16000000"));
 
+        ApplyThemeDefaultInkColor(isNightMode, wasNightMode);
         RefreshToolButtonVisuals();
+    }
+
+    private void ApplyThemeDefaultInkColor(bool isNightMode, bool? wasNightMode)
+    {
+        if (_isUserCustomColor || wasNightMode == isNightMode)
+        {
+            return;
+        }
+
+        var oldDefault = wasNightMode == true ? SKColors.White : SKColors.Black;
+        var newDefault = isNightMode ? SKColors.White : SKColors.Black;
+
+        if (_selectedInkColor == oldDefault)
+        {
+            _selectedInkColor = newDefault;
+            if (_toolMode == WhiteboardToolMode.Pen)
+            {
+                InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
+            }
+
+            if (InkColorPicker is not null)
+            {
+                InkColorPicker.Color = new Color(
+                    _selectedInkColor.Alpha,
+                    _selectedInkColor.Red,
+                    _selectedInkColor.Green,
+                    _selectedInkColor.Blue);
+            }
+        }
     }
 
     public void SetComponentPlacementContext(string componentId, string? placementId)
@@ -431,7 +461,9 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void OnColorPickerColorChanged(object? sender, ColorChangedEventArgs e)
     {
         var color = e.NewColor;
-        SetInkColor(new SKColor(color.R, color.G, color.B, color.A));
+        var skColor = new SKColor(color.R, color.G, color.B, color.A);
+        _isUserCustomColor = skColor != SKColors.Black && skColor != SKColors.White;
+        SetInkColor(skColor);
     }
 
     private void OnInkThicknessSliderValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
@@ -713,7 +745,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             InkCanvas.AvaloniaSkiaInkCanvas.AddStaticStroke(staticStroke);
         }
 
-        UpdateInkCanvasCacheSettings(forceRefresh: true);
+        InkCanvas.AvaloniaSkiaInkCanvas.UpdateBitmapCache();
+        InkCanvas.InvalidateVisual();
     }
 
     private static InkStylusPoint ConvertStylusPoint(WhiteboardStylusPointSnapshot point)
@@ -766,7 +799,9 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             }
         }
 
-        UpdateInkCanvasCacheSettings(forceRefresh: true);
+        InkCanvas.AvaloniaSkiaInkCanvas.UseBitmapCache(false);
+        InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
+        InkCanvas.InvalidateVisual();
     }
 
     private bool HasValidPersistenceContext()
@@ -783,48 +818,5 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
 
         return Array.Empty<InkStylusPoint>();
-    }
-
-    private void UpdateInkCanvasCacheSettings(bool forceRefresh)
-    {
-        var renderScaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1d;
-        var widthPx = Math.Max(1d, CanvasBorder.Bounds.Width * renderScaling);
-        var heightPx = Math.Max(1d, CanvasBorder.Bounds.Height * renderScaling);
-        var longestSide = Math.Max(widthPx, heightPx);
-        var area = widthPx * heightPx;
-
-        var cacheEnabled = longestSide <= 1536d && area <= 1_400_000d;
-        var cacheSize = (int)Math.Clamp(Math.Ceiling(longestSide), 384d, 1536d);
-        if (!forceRefresh &&
-            _lastBitmapCacheEnabled == cacheEnabled &&
-            _lastBitmapCacheSize == cacheSize)
-        {
-            return;
-        }
-
-        _lastBitmapCacheEnabled = cacheEnabled;
-        _lastBitmapCacheSize = cacheSize;
-
-        var settings = InkCanvas.AvaloniaSkiaInkCanvas.Settings;
-        settings.IsBitmapCacheEnabled = cacheEnabled;
-        settings.MaxBitmapCacheSize = cacheSize;
-
-        try
-        {
-            InkCanvas.AvaloniaSkiaInkCanvas.UseBitmapCache(cacheEnabled);
-            if (cacheEnabled)
-            {
-                InkCanvas.AvaloniaSkiaInkCanvas.UpdateBitmapCache();
-            }
-            else
-            {
-                InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
-                InkCanvas.InvalidateVisual();
-            }
-        }
-        catch
-        {
-            // Keep drawing available even if the underlying cache backend rejects the cache update.
-        }
     }
 }
