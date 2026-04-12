@@ -256,6 +256,29 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 ? null
                 : localizer.GetString(section.DescriptionLocalizationKey, section.DescriptionLocalizationKey);
 
+            Func<ISettingsPageHostContext, Control> factory;
+
+            if (section.CustomViewType is not null)
+            {
+                var customViewType = section.CustomViewType;
+                var pluginServices = loadedPlugin.Services;
+                factory = hostContext => CreatePage(pluginServices, customViewType, hostContext);
+            }
+            else
+            {
+                factory = hostContext =>
+                {
+                    var page = new GeneratedPluginSettingsPage(
+                        new PluginGeneratedSettingsPageViewModel(
+                            _settingsFacade.Settings,
+                            loadedPlugin.Manifest.Id,
+                            section,
+                            localizer));
+                    page.InitializeHostContext(hostContext);
+                    return page;
+                };
+            }
+
             _pages.Add(new SettingsPageDescriptor(
                 pageId,
                 title,
@@ -270,17 +293,7 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
                 hidePageTitle: false,
                 useFullWidth: false,
                 groupId: null,
-                hostContext =>
-                {
-                    var page = new GeneratedPluginSettingsPage(
-                        new PluginGeneratedSettingsPageViewModel(
-                            _settingsFacade.Settings,
-                            loadedPlugin.Manifest.Id,
-                            section,
-                            localizer));
-                    page.InitializeHostContext(hostContext);
-                    return page;
-                }));
+                factory));
         }
     }
 

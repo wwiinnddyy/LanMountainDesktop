@@ -1,10 +1,13 @@
+using System;
 using System.Collections.Generic;
+using Avalonia.Controls;
 
 namespace LanMountainDesktop.PluginSdk;
 
 public sealed class PluginSettingsSectionBuilder
 {
     private readonly List<SettingsOptionDefinition> _options = [];
+    private Type? _customViewType;
 
     internal PluginSettingsSectionBuilder(
         string id,
@@ -30,7 +33,45 @@ public sealed class PluginSettingsSectionBuilder
 
     public int SortOrder { get; }
 
+    public Type? CustomViewType => _customViewType;
+
     public IReadOnlyList<SettingsOptionDefinition> Options => _options;
+
+    /// <summary>
+    /// Sets a custom AXAML view for this settings section.
+    /// The view type must be a subclass of <see cref="SettingsPageBase"/>.
+    /// When a custom view is provided, the host application will use it directly
+    /// instead of generating a page from the declared options, allowing the plugin
+    /// to use any Fluent Avalonia controls and custom layouts.
+    /// </summary>
+    /// <typeparam name="TView">A <see cref="SettingsPageBase"/> subclass that defines the settings UI.</typeparam>
+    public PluginSettingsSectionBuilder SetCustomView<TView>() where TView : SettingsPageBase
+    {
+        _customViewType = typeof(TView);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a custom AXAML view for this settings section.
+    /// The view type must be a subclass of <see cref="SettingsPageBase"/>.
+    /// When a custom view is provided, the host application will use it directly
+    /// instead of generating a page from the declared options.
+    /// </summary>
+    /// <param name="viewType">A <see cref="SettingsPageBase"/> subclass type that defines the settings UI.</param>
+    public PluginSettingsSectionBuilder SetCustomView(Type viewType)
+    {
+        ArgumentNullException.ThrowIfNull(viewType);
+
+        if (!typeof(SettingsPageBase).IsAssignableFrom(viewType))
+        {
+            throw new ArgumentException(
+                $"Custom view type must be a subclass of {nameof(SettingsPageBase)}.",
+                nameof(viewType));
+        }
+
+        _customViewType = viewType;
+        return this;
+    }
 
     public PluginSettingsSectionBuilder AddOption(SettingsOptionDefinition option)
     {
@@ -142,6 +183,7 @@ public sealed class PluginSettingsSectionBuilder
             _options.ToArray(),
             DescriptionLocalizationKey,
             IconKey,
-            SortOrder);
+            SortOrder,
+            _customViewType);
     }
 }

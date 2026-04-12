@@ -28,6 +28,35 @@ public static class PluginServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers a plugin settings section with a custom AXAML view.
+    /// The host application will display <typeparamref name="TView"/> directly
+    /// in the settings window, allowing the plugin to use any Fluent Avalonia controls
+    /// and custom layouts — just like built-in settings pages.
+    /// </summary>
+    /// <typeparam name="TView">A <see cref="SettingsPageBase"/> subclass that defines the settings UI using AXAML.</typeparam>
+    public static IServiceCollection AddPluginSettingsSection<TView>(
+        this IServiceCollection services,
+        string id,
+        string titleLocalizationKey,
+        string? descriptionLocalizationKey = null,
+        string iconKey = "PuzzlePiece",
+        int sortOrder = 0)
+        where TView : SettingsPageBase
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        var builder = new PluginSettingsSectionBuilder(
+            id,
+            titleLocalizationKey,
+            descriptionLocalizationKey,
+            iconKey,
+            sortOrder);
+        builder.SetCustomView<TView>();
+        services.AddSingleton(builder.Build());
+        return services;
+    }
+
     public static IServiceCollection AddPluginDesktopComponent<TControl>(
         this IServiceCollection services,
         PluginDesktopComponentOptions options)
