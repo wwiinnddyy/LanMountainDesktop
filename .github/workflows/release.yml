@@ -109,21 +109,36 @@ jobs:
           $selfContained = "${{ matrix.self_contained }}" -eq "true"
           $publishDir = if ($selfContained) { "publish/windows-${{ matrix.arch }}" } else { "publish/windows-${{ matrix.arch }}-lite" }
 
-          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
-            -c Release `
-            -o ./$publishDir `
-            --self-contained:$selfContained `
-            -r win-${{ matrix.arch }} `
-            -p:PublishSingleFile=false `
-            -p:SelfContained=$selfContained `
-            -p:DebugType=none `
-            -p:DebugSymbols=false `
-            -p:PublishTrimmed=false `
-            -p:PublishReadyToRun=false `
-            -p:Version=${{ needs.prepare.outputs.version }} `
-            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
-            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
-            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+          if ($selfContained) {
+            dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
+              -c Release `
+              -o ./$publishDir `
+              --self-contained `
+              -r win-${{ matrix.arch }} `
+              -p:PublishSingleFile=false `
+              -p:DebugType=none `
+              -p:DebugSymbols=false `
+              -p:PublishTrimmed=false `
+              -p:PublishReadyToRun=false `
+              -p:Version=${{ needs.prepare.outputs.version }} `
+              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+          } else {
+            dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
+              -c Release `
+              -o ./$publishDir `
+              --self-contained:false `
+              -p:PublishSingleFile=false `
+              -p:DebugType=none `
+              -p:DebugSymbols=false `
+              -p:PublishTrimmed=false `
+              -p:PublishReadyToRun=false `
+              -p:Version=${{ needs.prepare.outputs.version }} `
+              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+          }
 
           Write-Host "Published to: $publishDir"
           Write-Host "Self-contained: $selfContained"

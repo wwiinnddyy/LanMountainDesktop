@@ -2,12 +2,12 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RollForward>LatestMajor</RollForward>
     <Nullable>enable</Nullable>
     <Version>1.0.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\logo_nightly.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
   </PropertyGroup>
 
   <!-- Keep Release defaults compatibility-first for desktop dependencies (WebView/interop/reflection). -->

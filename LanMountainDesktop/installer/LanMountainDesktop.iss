@@ -454,21 +454,73 @@ begin
     RegQueryStringValue(HKCU32, WebView2RuntimeKeyPath, 'pv', VersionValue);
 end;
 
+// Checks whether a .NET 10.x shared framework is installed under the given
+// base path by enumerating version sub-directories and looking for one that
+// starts with '10.'.
+function IsDotNet10RuntimePresent(const BasePath: String): Boolean;
+var
+  FindRec: TFindRec;
+begin
+  Result := False;
+  if not DirExists(BasePath) then
+  begin
+    exit;
+  end;
+
+  if FindFirst(BasePath + '\*', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
+           (Length(FindRec.Name) >= 3) and
+           (Copy(FindRec.Name, 1, 3) = '10.') then
+        begin
+          Result := True;
+          exit;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
+// Returns True when the .NET 10 Desktop Runtime (or the .NET 10 Core Runtime
+// which is sufficient for Avalonia apps) is found on the system.
+// We check both Microsoft.WindowsDesktop.App and Microsoft.NETCore.App because
+// the runtimeconfig.json may reference either framework depending on the
+// publish mode and the app only needs the one it actually references.
 function IsDotNetDesktopRuntimeInstalled(): Boolean;
 var
-  RuntimePath: String;
+  BasePath: String;
 begin
   Result := False;
 
-  RuntimePath := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  if DirExists(RuntimePath) then
+  // Check 64-bit Program Files
+  BasePath := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  if IsDotNet10RuntimePresent(BasePath) then
   begin
     Result := True;
     exit;
   end;
 
-  RuntimePath := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  if DirExists(RuntimePath) then
+  BasePath := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.NETCore.App');
+  if IsDotNet10RuntimePresent(BasePath) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  // Check 32-bit Program Files
+  BasePath := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  if IsDotNet10RuntimePresent(BasePath) then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  BasePath := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.NETCore.App');
+  if IsDotNet10RuntimePresent(BasePath) then
   begin
     Result := True;
     exit;
