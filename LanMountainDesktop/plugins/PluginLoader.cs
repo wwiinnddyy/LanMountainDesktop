@@ -848,6 +848,8 @@ public sealed class PluginLoader
 
     private sealed class PluginRuntimeContext : IPluginRuntimeContext
     {
+        private readonly PluginAppearanceContext _appearanceContext;
+
         public PluginRuntimeContext(
             PluginManifest manifest,
             string pluginDirectory,
@@ -859,7 +861,8 @@ public sealed class PluginLoader
             PluginDirectory = pluginDirectory;
             DataDirectory = dataDirectory;
             Properties = properties;
-            Appearance = new PluginAppearanceContext(appearanceSnapshot);
+            _appearanceContext = new PluginAppearanceContext(appearanceSnapshot);
+            Appearance = _appearanceContext;
             Services = NullServiceProvider.Instance;
         }
 
@@ -897,6 +900,14 @@ public sealed class PluginLoader
         public void SetServices(IServiceProvider services)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
+        }
+
+        /// <summary>
+        /// 更新外观快照并通知插件。
+        /// </summary>
+        internal void UpdateAppearanceSnapshot(PluginAppearanceSnapshot newSnapshot, IReadOnlyCollection<AppearanceProperty> changedProperties)
+        {
+            _appearanceContext.UpdateSnapshot(newSnapshot, changedProperties);
         }
     }
 

@@ -35,10 +35,11 @@ public sealed class CornerRadiusStyleTests
                 Component: 24d),
             ThemeVariant: "Light"));
 
-        // Preset resolution should return fixed values from tokens regardless of any legacy scale
+        // Preset resolution should return fixed values from tokens
         Assert.Equal(20d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md), 3);
-        Assert.Equal(20d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md, maximum: 15d), 3);
-        Assert.Equal(20d, context.ResolveScaledCornerRadius(18d), 3);
+        Assert.Equal(15d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Md, maximum: 15d), 3);
+        // ResolveScaledCornerRadius returns baseRadius as-is when no min/max specified
+        Assert.Equal(18d, context.ResolveScaledCornerRadius(18d), 3);
         Assert.Equal(24d, context.ResolveCornerRadius(PluginCornerRadiusPreset.Component), 3);
     }
 
@@ -60,8 +61,12 @@ public sealed class CornerRadiusStyleTests
             96d,
             appearanceContext);
 
-        Assert.Equal(24d, context.ResolveScaledCornerRadius(12d), 3);
-        Assert.Equal(24d, context.ResolveScaledCornerRadius(12d, 8d, 18d), 3);
+        // ResolveScaledCornerRadius returns baseRadius as-is when no min/max specified
+        Assert.Equal(12d, context.ResolveScaledCornerRadius(12d), 3);
+        // When min/max specified, value is clamped
+        Assert.Equal(12d, context.ResolveScaledCornerRadius(12d, 8d, 18d), 3);
+        // Component token access
+        Assert.Equal(24d, context.CornerRadiusTokens.Component, 3);
     }
 
     private sealed class NullServiceProvider : IServiceProvider

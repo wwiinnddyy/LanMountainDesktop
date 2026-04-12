@@ -72,14 +72,11 @@ public sealed class PluginDesktopComponentRegistration
         var resolved = CornerRadiusResolver is not null
             ? CornerRadiusResolver(appearance, Math.Max(1d, cellSize))
             : CornerRadiusPreset == PluginCornerRadiusPreset.Default
-                ? appearance.ResolveScaledCornerRadius(
-                    Math.Clamp(Math.Max(1d, cellSize) * 0.22, 8, 18),
-                    8,
-                    18)
+                ? appearance.ResolveCornerRadius(PluginCornerRadiusPreset.Component)
                 : appearance.ResolveCornerRadius(CornerRadiusPreset);
 
         return double.IsFinite(resolved)
             ? Math.Max(0d, resolved)
-            : appearance.ResolveCornerRadius(PluginCornerRadiusPreset.Default);
+            : appearance.ResolveCornerRadius(PluginCornerRadiusPreset.Component);
     }
 }
