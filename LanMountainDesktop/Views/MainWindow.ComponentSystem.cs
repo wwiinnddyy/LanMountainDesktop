@@ -4286,6 +4286,10 @@ public partial class MainWindow
                 {
                     whiteboard.ForceSaveNote();
                 }
+                else if (contentHost?.Child is StickyNoteWidget stickyNote)
+                {
+                    stickyNote.ForceSave();
+                }
             }
         }
     }

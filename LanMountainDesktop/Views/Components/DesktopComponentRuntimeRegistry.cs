@@ -453,6 +453,10 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.blackboard_landscape",
                     () => new WhiteboardWidget(baseWidthCells: 4)),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStickyNote,
+                    "component.sticky_note",
+                    () => new StickyNoteWidget()),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopBrowser,
                     "component.browser",
                     () => new BrowserWidget()),

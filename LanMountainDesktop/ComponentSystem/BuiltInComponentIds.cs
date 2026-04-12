@@ -47,4 +47,5 @@ public static class BuiltInComponentIds
     public const string DesktopFileManager = "DesktopFileManager";
     public const string DesktopNotificationBox = "DesktopNotificationBox";
     public const string DesktopShortcut = "DesktopShortcut";
+    public const string DesktopStickyNote = "DesktopStickyNote";
 }

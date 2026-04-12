@@ -328,6 +328,16 @@ public sealed class ComponentRegistry
                 AllowDesktopPlacement: true,
                 ResizeMode: DesktopComponentResizeMode.Free),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStickyNote,
+                "Sticky Note",
+                "Notepad",
+                "Board",
+                MinWidthCells: 2,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true,
+                ResizeMode: DesktopComponentResizeMode.Free),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopBrowser,
                 "Browser",
                 "Globe",

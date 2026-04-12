@@ -142,6 +142,12 @@ public sealed class ComponentSettingsSnapshot
 
     #endregion
 
+    #region Sticky Note Component Settings (便签组件设置)
+
+    public string StickyNoteContent { get; set; } = string.Empty;
+
+    #endregion
+
     public ComponentSettingsSnapshot Clone()
     {
         var clone = (ComponentSettingsSnapshot)MemberwiseClone();

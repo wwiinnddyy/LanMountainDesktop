@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+             mc:Ignorable="d"
+             d:DesignWidth="200"
+             d:DesignHeight="200"
+             x:Class="LanMountainDesktop.Views.Components.StickyNoteWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            BorderBrush="#E0C878"
+            BorderThickness="1">
+        <Grid>
+            <md:MarkdownScrollViewer x:Name="MarkdownViewer"
+                                     Margin="14,14,14,10"
+                                     IsVisible="True" />
+
+            <TextBox x:Name="NoteTextBox"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     IsVisible="False"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Margin="14,14,14,10"
+                     FontFamily="Consolas,Cascadia Code,Courier New,monospace"
+                     Foreground="#5D4E37" />
+
+            <Button x:Name="ToggleButton"
+                    Width="28"
+                    Height="28"
+                    CornerRadius="14"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="4,4,4,0"
+                    Padding="0"
+                    Background="#00000010"
+                    BorderThickness="0"
+                    Click="OnToggleButtonClick">
+                <fi:SymbolIcon x:Name="ToggleIcon"
+                               Symbol="Edit"
+                               IconVariant="Regular"
+                               FontSize="13"
+                               Foreground="#8B7D5A" />
+            </Button>
+        </Grid>
+    </Border>
+
+</UserControl>
