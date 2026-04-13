@@ -85,6 +85,7 @@ public sealed class PluginRuntimeService : IDisposable
         Directory.CreateDirectory(PluginsDirectory);
         ApplyPendingPluginDeletions();
         UnloadInstalledPlugins();
+        MergeDevSettingsFromSnapshot();
         AppLogger.Info("PluginRuntime", $"Loading installed plugins from '{PluginsDirectory}'.");
 
         var disabledPluginIds = GetDisabledPluginIds();
@@ -108,19 +109,30 @@ public sealed class PluginRuntimeService : IDisposable
         var selectedPluginIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates)
         {
+            var isDevPlugin = candidate.SourceKind == PluginCatalogSourceKind.DevPlugin;
+
             if (!selectedPluginIds.Add(candidate.Manifest.Id))
             {
-                var duplicateFailure = PluginLoadResult.Failure(
-                    candidate.SourcePath,
-                    candidate.Manifest,
-                    new InvalidOperationException(
-                        $"Duplicate plugin id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected."));
-                _loadResults.Add(duplicateFailure);
-                LogPluginFailure("CatalogSelection", duplicateFailure, treatAsError: false);
-                continue;
+                if (isDevPlugin)
+                {
+                    AppLogger.Info(
+                        "DevPlugin",
+                        $"Developer plugin '{candidate.Manifest.Id}' overrides an already-registered plugin from '{candidate.SourcePath}'.");
+                }
+                else
+                {
+                    var duplicateFailure = PluginLoadResult.Failure(
+                        candidate.SourcePath,
+                        candidate.Manifest,
+                        new InvalidOperationException(
+                            $"Duplicate plugin id '{candidate.Manifest.Id}' was found. Source '{candidate.SourcePath}' was ignored because a higher-priority source was already selected."));
+                    _loadResults.Add(duplicateFailure);
+                    LogPluginFailure("CatalogSelection", duplicateFailure, treatAsError: false);
+                    continue;
+                }
             }
 
-            var isEnabled = !disabledPluginIds.Contains(candidate.Manifest.Id);
+            var isEnabled = isDevPlugin || !disabledPluginIds.Contains(candidate.Manifest.Id);
             if (!isEnabled)
             {
                 _catalog.Add(new PluginCatalogEntry(
@@ -172,6 +184,10 @@ public sealed class PluginRuntimeService : IDisposable
                     PluginsDirectory,
                     services: _hostServices,
                     hostProperties),
+                PluginCatalogSourceKind.DevPlugin => _loader.LoadFromManifest(
+                    candidate.SourcePath,
+                    services: _hostServices,
+                    hostProperties),
                 _ => _loader.LoadFromManifest(
                     candidate.SourcePath,
                     services: _hostServices,
@@ -192,7 +208,8 @@ public sealed class PluginRuntimeService : IDisposable
                     true,
                     null,
                     loadResult.LoadedPlugin.SettingsSections.Count,
-                    loadResult.LoadedPlugin.DesktopComponents.Count));
+                    loadResult.LoadedPlugin.DesktopComponents.Count,
+                    IsDevPlugin: isDevPlugin));
                 AppLogger.Info(
                     "PluginRuntime",
                     $"Plugin loaded. PluginId='{loadResult.LoadedPlugin.Manifest.Id}'; SourcePath='{loadResult.SourcePath}'; ManifestVersion='{loadResult.LoadedPlugin.Manifest.Version ?? "<unknown>"}'; ApiVersion='{loadResult.LoadedPlugin.Manifest.ApiVersion ?? "<unknown>"}'; SourceKind='{candidate.SourceKind}'; SettingsSections={loadResult.LoadedPlugin.SettingsSections.Count}; Widgets={loadResult.LoadedPlugin.DesktopComponents.Count}; Editors={loadResult.LoadedPlugin.DesktopComponentEditors.Count}.");
@@ -208,7 +225,8 @@ public sealed class PluginRuntimeService : IDisposable
                 false,
                 loadResult.Error?.Message,
                 0,
-                0));
+                0,
+                IsDevPlugin: isDevPlugin));
             LogPluginFailure("Load", loadResult, treatAsError: true);
             Debug.WriteLine($"[PluginRuntime] Failed to load plugin from '{loadResult.SourcePath}': {loadResult.Error}");
         }
@@ -226,6 +244,14 @@ public sealed class PluginRuntimeService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(pluginId))
         {
+            return false;
+        }
+
+        var catalogEntry = _catalog.FirstOrDefault(entry =>
+            string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        if (catalogEntry.IsDevPlugin && !isEnabled)
+        {
+            AppLogger.Warn("DevPlugin", $"Cannot disable developer plugin '{pluginId}'. Developer plugins are always enabled in dev mode.");
             return false;
         }
 
@@ -459,10 +485,72 @@ public sealed class PluginRuntimeService : IDisposable
             }
         }
 
+        DiscoverDevPluginCandidates(candidates, failures);
+
         return candidates
-            .OrderBy(candidate => candidate.SourceKind)
+            .OrderByDescending(candidate => candidate.SourceKind)
             .ThenBy(candidate => candidate.SourcePath, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private void DiscoverDevPluginCandidates(List<PluginCandidate> candidates, List<PluginLoadResult> failures)
+    {
+        var devOptions = DevPluginOptions.Current;
+        if (!devOptions.IsDevMode || devOptions.DevPluginPaths.Count == 0)
+        {
+            return;
+        }
+
+        AppLogger.Info("DevPlugin", $"Scanning developer plugin paths. Count={devOptions.DevPluginPaths.Count}.");
+
+        foreach (var devPath in devOptions.DevPluginPaths)
+        {
+            if (File.Exists(devPath) && string.Equals(Path.GetExtension(devPath), PluginSdkInfo.PackageFileExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var manifest = ReadManifestFromPackage(devPath);
+                    candidates.Add(new PluginCandidate(devPath, manifest, PluginCatalogSourceKind.DevPlugin));
+                    AppLogger.Info("DevPlugin", $"Found developer plugin package. PluginId='{manifest.Id}'; Path='{devPath}'.");
+                }
+                catch (Exception ex)
+                {
+                    var failure = PluginLoadResult.Failure(devPath, null, ex);
+                    failures.Add(failure);
+                    AppLogger.Warn("DevPlugin", $"Failed to read developer plugin package '{devPath}'.", ex);
+                }
+
+                continue;
+            }
+
+            if (Directory.Exists(devPath))
+            {
+                var manifestPath = Path.Combine(devPath, PluginSdkInfo.ManifestFileName);
+                if (File.Exists(manifestPath))
+                {
+                    try
+                    {
+                        var manifest = PluginManifest.Load(manifestPath);
+                        candidates.Add(new PluginCandidate(manifestPath, manifest, PluginCatalogSourceKind.DevPlugin));
+                        AppLogger.Info("DevPlugin", $"Found developer plugin manifest. PluginId='{manifest.Id}'; Path='{manifestPath}'.");
+                    }
+                    catch (Exception ex)
+                    {
+                        var failure = PluginLoadResult.Failure(manifestPath, null, ex);
+                        failures.Add(failure);
+                        AppLogger.Warn("DevPlugin", $"Failed to load developer plugin manifest '{manifestPath}'.", ex);
+                    }
+                }
+                else
+                {
+                    AppLogger.Warn("DevPlugin", $"Developer plugin directory '{devPath}' does not contain '{PluginSdkInfo.ManifestFileName}'. Skipping.");
+                }
+
+                continue;
+            }
+
+            AppLogger.Warn("DevPlugin", $"Developer plugin path '{devPath}' is neither a file nor a directory. Skipping.");
+        }
     }
 
     private IEnumerable<string> EnumerateCandidatePaths(string searchPattern)
@@ -582,7 +670,8 @@ public sealed class PluginRuntimeService : IDisposable
 
     private static PluginLoaderOptions CreateOptions()
     {
-        var options = new PluginLoaderOptions();
+        var devOptions = DevPluginOptions.Current;
+        var options = new PluginLoaderOptions { IsDevMode = devOptions.IsDevMode };
         AddSharedAssembly(options, typeof(App).Assembly);
         AddSharedAssembly(options, typeof(IServiceCollection).Assembly);
         AddSharedAssembly(options, typeof(HostBuilderContext).Assembly);
@@ -611,6 +700,31 @@ public sealed class PluginRuntimeService : IDisposable
         if (!string.IsNullOrWhiteSpace(assemblyName))
         {
             options.SharedAssemblyNames.Add(assemblyName);
+        }
+    }
+
+    private void MergeDevSettingsFromSnapshot()
+    {
+        var devOptions = DevPluginOptions.Current;
+
+        try
+        {
+            var snapshot = LoadAppSettingsSnapshot();
+
+            if (snapshot.IsDevModeEnabled && !devOptions.IsDevMode)
+            {
+                devOptions.ApplySettingsFromSnapshot(isDevMode: true, devPluginPath: snapshot.DevPluginPath);
+                AppLogger.Info("DevPlugin", $"Developer mode enabled via settings. DevPluginPath='{snapshot.DevPluginPath}'.");
+            }
+            else if (!string.IsNullOrWhiteSpace(snapshot.DevPluginPath) && string.IsNullOrWhiteSpace(devOptions.DevPluginPath))
+            {
+                devOptions.ApplySettingsFromSnapshot(isDevMode: devOptions.IsDevMode, devPluginPath: snapshot.DevPluginPath);
+                AppLogger.Info("DevPlugin", $"Developer plugin path merged from settings. DevPluginPath='{snapshot.DevPluginPath}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DevPlugin", "Failed to merge developer settings from snapshot.", ex);
         }
     }
 
@@ -824,6 +938,13 @@ public sealed class PluginRuntimeService : IDisposable
         _desktopComponents.RemoveAll(entry => string.Equals(entry.Plugin.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
         _loadResults.RemoveAll(entry => string.Equals(entry.Manifest?.Id, pluginId, StringComparison.OrdinalIgnoreCase));
         _settingsCatalogService.RemovePluginSections(pluginId);
+    }
+
+    private enum PluginCatalogSourceKind
+    {
+        Package = 0,
+        Manifest = 1,
+        DevPlugin = 2
     }
 
     private sealed record PluginCandidate(

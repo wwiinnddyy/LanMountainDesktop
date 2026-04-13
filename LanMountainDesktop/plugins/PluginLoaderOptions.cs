@@ -19,6 +19,8 @@ public sealed class PluginLoaderOptions
 
     public string PackagedDataDirectoryName { get; init; } = PluginSdkInfo.PackagedDataDirectoryName;
 
+    public bool IsDevMode { get; init; }
+
     public ISet<string> SharedAssemblyNames { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         typeof(IPlugin).Assembly.GetName().Name!

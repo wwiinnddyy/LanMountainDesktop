@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.WebView.Desktop;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
+using LanMountainDesktop.Plugins;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 
@@ -19,6 +20,7 @@ public sealed class Program
     public static void Main(string[] args)
     {
         AppLogger.Initialize();
+        DevPluginOptions.Parse(args);
         RegisterGlobalExceptionLogging();
         var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
 

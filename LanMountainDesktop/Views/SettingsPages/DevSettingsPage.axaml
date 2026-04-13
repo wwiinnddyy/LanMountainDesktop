@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             x:Class="LanMountainDesktop.Views.SettingsPages.DevSettingsPage"
+             x:DataType="vm:DevSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container settings-page-animated">
+
+            <ui:InfoBar IsOpen="True"
+                        IsClosable="False"
+                        Severity="Warning"
+                        Title="开发者模式"
+                        Message="开发者模式仅供开发和调试用途。开发者不对以非开发用途使用此功能造成的任何后果负责。"
+                        Margin="0,0,0,16" />
+
+            <ui:SettingsExpander Header="启用开发者模式"
+                                 Description="启用后可使用插件调试、开发者插件路径等高级功能">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="DeveloperBoard" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding IsDevModeEnabled}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <Separator Classes="settings-separator" />
+
+            <ui:SettingsExpander Header="开发者插件路径"
+                                 Description="指定开发中的插件目录路径，无需打包即可直接加载。多个路径用分号分隔。">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="FolderLink" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <TextBox Text="{Binding DevPluginPath}"
+                             Watermark="C:\path\to\plugin\bin\Debug\net10.0"
+                             Width="360"
+                             MinWidth="200" />
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+            <Separator Classes="settings-separator" />
+
+            <ui:SettingsExpander Header="命令行参数"
+                                 Description="也可以通过命令行参数或环境变量指定开发者插件路径">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="WindowConsole" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpanderItem>
+                    <StackPanel Margin="0,8,0,0" Spacing="8">
+                        <TextBlock Text="命令行参数：" FontWeight="SemiBold" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="12,8">
+                            <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
+                                       FontSize="12"
+                                       Text="--dev-plugin &lt;path&gt;   或   -dp &lt;path&gt;"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <TextBlock Text="环境变量：" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="12,8">
+                            <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
+                                       FontSize="12"
+                                       Text="LMD_DEV_PLUGIN=&lt;path&gt;"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <TextBlock Text="其他参数：" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                Padding="12,8">
+                            <StackPanel Spacing="4">
+                                <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
+                                           FontSize="12"
+                                           Text="--dev-mode / -dev     启用开发者模式" />
+                                <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
+                                           FontSize="12"
+                                           Text="--hot-reload / -hr    启用热重载（预留）" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ui:SettingsExpanderItem>
+            </ui:SettingsExpander>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

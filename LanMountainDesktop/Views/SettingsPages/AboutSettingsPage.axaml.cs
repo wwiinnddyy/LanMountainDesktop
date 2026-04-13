@@ -1,7 +1,13 @@
 using System;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using FluentAvalonia.UI.Controls;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 
@@ -19,6 +25,10 @@ namespace LanMountainDesktop.Views.SettingsPages;
 public partial class AboutSettingsPage : SettingsPageBase
 {
     private const double HeroAspectRatio = 9d / 16d;
+    private const int DevModeActivationClicks = 5;
+
+    private int _heroCardClickCount;
+    private DateTime _lastHeroCardClickTime = DateTime.MinValue;
 
     public AboutSettingsPage()
         : this(new AboutSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))
@@ -59,5 +69,95 @@ public partial class AboutSettingsPage : SettingsPageBase
         }
 
         AboutHeroCard.Height = targetHeight;
+    }
+
+    private void OnAboutHeroCardPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        var now = DateTime.UtcNow;
+        var elapsed = now - _lastHeroCardClickTime;
+
+        if (elapsed.TotalSeconds > 3)
+        {
+            _heroCardClickCount = 1;
+        }
+        else
+        {
+            _heroCardClickCount++;
+        }
+
+        _lastHeroCardClickTime = now;
+
+        var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+
+        if (snapshot.IsDevModeEnabled)
+        {
+            if (_heroCardClickCount >= 3)
+            {
+                _heroCardClickCount = 0;
+                _ = ShowMessageAsync("开发者模式", "开发者模式已启用，无需重复操作。");
+            }
+
+            return;
+        }
+
+        var remaining = DevModeActivationClicks - _heroCardClickCount;
+
+        if (remaining <= 0)
+        {
+            _heroCardClickCount = 0;
+            PromptEnableDevMode(settingsFacade);
+        }
+        else if (remaining <= 2)
+        {
+            Debug.WriteLine($"[AboutSettingsPage] 再点击 {remaining} 次即可启用开发者模式。");
+        }
+    }
+
+    private async void PromptEnableDevMode(ISettingsFacadeService settingsFacade)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "启用开发者模式",
+            Content = "开发者模式提供了插件调试、热重载等高级功能，仅供开发和调试用途。\n\n" +
+                      "请注意：开发者不对以非开发用途使用此功能造成的任何后果负责，也不接受以非开发用途使用时产生的 Bug 反馈。\n\n" +
+                      "确定要启用开发者模式吗？",
+            PrimaryButtonText = "启用",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.IsDevModeEnabled = true;
+        settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys: [nameof(AppSettingsSnapshot.IsDevModeEnabled)]);
+
+        AppLogger.Info("DevMode", "Developer mode enabled via About page activation.");
+
+        _ = ShowMessageAsync("开发者模式", "已启用开发者模式。重新打开设置窗口即可看到开发者选项。");
+
+        if (HostContext is not null)
+        {
+            HostContext.RequestRestart("开发者模式已更改");
+        }
+    }
+
+    private static async Task ShowMessageAsync(string title, string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "确定"
+        };
+        await dialog.ShowAsync();
     }
 }

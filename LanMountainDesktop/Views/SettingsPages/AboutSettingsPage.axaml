@@ -36,7 +36,8 @@
         <StackPanel Classes="about-page-container">
             <Border x:Name="AboutHeroCard"
                     Classes="about-hero-card"
-                    Height="240">
+                    Height="240"
+                    PointerPressed="OnAboutHeroCardPointerPressed">
                 <Image Source="/Assets/about_banner.png"
                        Stretch="Uniform"
                        HorizontalAlignment="Center"

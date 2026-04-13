@@ -9,5 +9,6 @@ public enum SettingsPageCategory
     PluginCatalog = 35,
     [Obsolete("Use PluginCatalog instead.")]
     PluginMarket = 35,
-    About = 40
+    About = 40,
+    Dev = 50
 }

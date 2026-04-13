@@ -87,7 +87,7 @@ dotnet new install LanMountainDesktop.PluginTemplate
 dotnet new lmd-plugin -n MyPlugin
 ```
 
-- **Plugin SDK**: `LanMountainDesktop.PluginSdk` (API 4.0.0)
+- **Plugin SDK**: `LanMountainDesktop.PluginSdk` (API 4.0.1)
 - **共享契约**: `LanMountainDesktop.Shared.Contracts`
 - **迁移指南**: [PLUGIN_SDK_V4_MIGRATION.md](docs/PLUGIN_SDK_V4_MIGRATION.md)
 

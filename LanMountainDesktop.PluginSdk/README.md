@@ -14,7 +14,7 @@ Official SDK package for LanMountainDesktop plugins.
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="LanMountainDesktop.PluginSdk" Version="4.0.0" />
+  <PackageReference Include="LanMountainDesktop.PluginSdk" Version="4.0.1" />
 </ItemGroup>
 ```
 

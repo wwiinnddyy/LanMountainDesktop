@@ -734,8 +734,11 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             "Hourglass" => Symbol.Hourglass,
-            "Alert" => Symbol.Alert,  // 铃铛图标
-            "Bell" => Symbol.Alert,   // Bell也映射到Alert图标
+            "Alert" => Symbol.Alert,
+            "Bell" => Symbol.Alert,
+            "DeveloperBoard" => Symbol.DeveloperBoard,
+            "FolderLink" => Symbol.FolderLink,
+            "WindowConsole" => Symbol.WindowConsole,
             _ => Symbol.Settings
         };
     }

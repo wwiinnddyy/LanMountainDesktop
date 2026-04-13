@@ -5,7 +5,8 @@ namespace LanMountainDesktop.Services;
 public enum PluginCatalogSourceKind
 {
     Package = 0,
-    Manifest = 1
+    Manifest = 1,
+    DevPlugin = 2
 }
 
 public sealed record PluginCatalogEntry(
@@ -16,4 +17,5 @@ public sealed record PluginCatalogEntry(
     bool IsLoaded,
     string? ErrorMessage,
     int SettingsPageCount,
-    int WidgetCount);
+    int WidgetCount,
+    bool IsDevPlugin = false);

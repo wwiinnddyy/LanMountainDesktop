@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Avalonia.Controls;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.Services.PluginMarket;
@@ -204,6 +205,10 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
         string? pluginId,
         bool isBuiltIn)
     {
+        var isDevModeEnabled = _settingsFacade.Settings
+            .LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App)
+            .IsDevModeEnabled;
+
         foreach (var pageType in assembly.GetTypes()
                      .Where(type => !type.IsAbstract && typeof(SettingsPageBase).IsAssignableFrom(type)))
         {
@@ -214,6 +219,12 @@ internal sealed class SettingsPageRegistry : ISettingsPageRegistry, IDisposable
             }
 
             var category = isBuiltIn ? pageInfo.Category : SettingsPageCategory.Plugins;
+
+            if (category == SettingsPageCategory.Dev && !isDevModeEnabled)
+            {
+                continue;
+            }
+
             var sortOrder = isBuiltIn ? pageInfo.SortOrder : 100 + pageInfo.SortOrder;
             var title = ResolveLocalizedText(pageInfo.TitleLocalizationKey, pageInfo.Name);
             var description = ResolveLocalizedText(pageInfo.DescriptionLocalizationKey, null);

@@ -3088,3 +3088,54 @@ public sealed class PluginGeneratedSettingsPageViewModel
 
     public string? Description { get; }
 }
+
+public sealed partial class DevSettingsPageViewModel : ViewModelBase
+{
+    private readonly ISettingsFacadeService _settingsFacade;
+    private bool _isInitializing;
+
+    public DevSettingsPageViewModel(ISettingsFacadeService settingsFacade)
+    {
+        _settingsFacade = settingsFacade;
+        _isInitializing = true;
+        LoadSettings();
+        _isInitializing = false;
+    }
+
+    [ObservableProperty]
+    private bool _isDevModeEnabled;
+
+    [ObservableProperty]
+    private string _devPluginPath = string.Empty;
+
+    partial void OnIsDevModeEnabledChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.IsDevModeEnabled), value);
+    }
+
+    partial void OnDevPluginPathChanged(string value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.DevPluginPath), value);
+    }
+
+    private void LoadSettings()
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        IsDevModeEnabled = snapshot.IsDevModeEnabled;
+        DevPluginPath = snapshot.DevPluginPath ?? string.Empty;
+    }
+
+    private void SaveField<T>(string key, T value)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var property = typeof(AppSettingsSnapshot).GetProperty(key);
+        if (property is not null && property.CanWrite)
+        {
+            property.SetValue(snapshot, value);
+        }
+
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+    }
+}

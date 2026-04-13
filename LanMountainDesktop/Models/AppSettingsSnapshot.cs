@@ -154,6 +154,10 @@ public sealed class AppSettingsSnapshot
 
     public List<string> DisabledPluginIds { get; set; } = [];
 
+    public bool IsDevModeEnabled { get; set; }
+
+    public string? DevPluginPath { get; set; }
+
     #region Study Settings
 
     public bool StudyEnabled { get; set; } = true;

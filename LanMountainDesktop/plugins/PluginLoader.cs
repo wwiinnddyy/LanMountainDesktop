@@ -146,7 +146,7 @@ public sealed class PluginLoader
         try
         {
             Directory.CreateDirectory(dataDirectory);
-            ValidatePluginRuntimeAssets(manifest, assemblyPath, pluginDirectory);
+            ValidatePluginRuntimeAssets(manifest, assemblyPath, pluginDirectory, _options.IsDevMode);
             AppLogger.Info(
                 "PluginLoader",
                 $"LoadCore starting. PluginId='{manifest.Id}'; AssemblyPath='{assemblyPath}'; PluginDirectory='{pluginDirectory}'; DataDirectory='{dataDirectory}'.");
@@ -721,13 +721,23 @@ public sealed class PluginLoader
     private static void ValidatePluginRuntimeAssets(
         PluginManifest manifest,
         string assemblyPath,
-        string pluginDirectory)
+        string pluginDirectory,
+        bool isDevMode)
     {
         var depsFilePath = Path.ChangeExtension(assemblyPath, ".deps.json");
         if (!File.Exists(depsFilePath))
         {
-            throw new InvalidOperationException(
-                $"Plugin '{manifest.Id}' targets API {PluginSdkInfo.ApiVersion} and must include '{Path.GetFileName(depsFilePath)}' next to its main assembly.");
+            if (isDevMode)
+            {
+                AppLogger.Warn(
+                    "PluginLoader",
+                    $"Plugin '{manifest.Id}' is missing '{Path.GetFileName(depsFilePath)}'. In developer mode this is allowed, but dependency resolution may fail at runtime.");
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Plugin '{manifest.Id}' targets API {PluginSdkInfo.ApiVersion} and must include '{Path.GetFileName(depsFilePath)}' next to its main assembly.");
+            }
         }
 
         var runtimesDirectory = Path.Combine(pluginDirectory, "runtimes");

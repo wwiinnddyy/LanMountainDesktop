@@ -39,7 +39,7 @@
 ### 当前阶段
 
 - 产品版本：`1.0.0`
-- Plugin SDK API 基线：`4.0.0`
+- Plugin SDK API 基线：`4.0.1`
 - 当前重点：持续完善宿主体验、设置页体验、组件能力与插件生态
 - 近期需求入口：以 `.trae/specs/` 中的 feature spec 为准
 
@@ -59,4 +59,4 @@
 
 LanMountainDesktop is a cross-platform desktop enhancement product built with Avalonia UI and .NET 10. It targets students, office users, and customization-focused users who want a programmable desktop surface for information, tools, and plugin-driven extensions.
 
-This repository is the source of truth for the desktop host, plugin runtime, Plugin SDK, shared contracts, and core appearance/settings infrastructure. The current product version is `1.0.0`, and the active Plugin SDK baseline in this repository is `4.0.0`.
+This repository is the source of truth for the desktop host, plugin runtime, Plugin SDK, shared contracts, and core appearance/settings infrastructure. The current product version is `1.0.0`, and the active Plugin SDK baseline in this repository is `4.0.1`.

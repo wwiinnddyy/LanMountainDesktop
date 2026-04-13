@@ -1,5 +1,28 @@
 # 更新日志 / Changelog
 
+## [0.8.3.4](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.4) - 2026-04-12
+
+### 新增 (Added)
+
+- 无
+
+### 变更 (Changed)
+
+- ✨ **插件设置页面支持 View 展示**: 插件设置页面现在支持使用 View 进行展示
+  - 插件开发者可以通过 View 自定义设置页面的 UI 和交互
+  - 提供更灵活的设置页面展示方式，提升插件用户体验
+  - 兼容原有的设置方式，平滑过渡
+
+### 修复 (Fixed)
+
+- 无
+
+### 移除 (Removed)
+
+- 无
+
+***
+
 ## [0.8.3.3](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.3) - 2026-04-12
 
 ### 新增 (Added)
