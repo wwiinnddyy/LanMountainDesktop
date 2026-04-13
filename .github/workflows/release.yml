@@ -1,4 +1,4 @@
-﻿name: Release
+name: Release
 
 on:
   push:
@@ -74,10 +74,6 @@ jobs:
           - arch: x86
             self_contained: true
             suffix: ''
-          # 轻盈版（框架依赖，仅 x64）
-          - arch: x64
-            self_contained: false
-            suffix: '-lite'
     name: Build_Windows_${{ matrix.arch }}${{ matrix.suffix }}
     
     steps:
@@ -586,11 +582,8 @@ jobs:
             ## Release ${{ needs.prepare.outputs.version }}
 
             ### Windows
-            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer (完整版，包含 .NET 运行时)
-            - **LanMountainDesktop-Setup-{version}-x64-lite.exe** - 64-bit installer (轻量版，需安装 .NET 10 Runtime)
-            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer (完整版，包含 .NET 运行时)
-
-            > **轻量版说明**：轻量版不包含 .NET 运行时，体积更小。首次运行前需安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。
+            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer (包含 .NET 运行时)
+            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer (包含 .NET 运行时)
 
             Installation: Double-click the .exe file and follow the wizard.
 
