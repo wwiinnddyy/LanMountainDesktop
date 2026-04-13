@@ -3,13 +3,14 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
+using LanMountainDesktop.Views;
 
 namespace LanMountainDesktop.Views.SettingsPages;
 
@@ -95,7 +96,7 @@ public partial class AboutSettingsPage : SettingsPageBase
             if (_heroCardClickCount >= 3)
             {
                 _heroCardClickCount = 0;
-                _ = ShowMessageAsync("开发者模式", "开发者模式已启用，无需重复操作。");
+                Debug.WriteLine("[AboutSettingsPage] Developer mode is already enabled.");
             }
 
             return;
@@ -142,22 +143,9 @@ public partial class AboutSettingsPage : SettingsPageBase
 
         AppLogger.Info("DevMode", "Developer mode enabled via About page activation.");
 
-        _ = ShowMessageAsync("开发者模式", "已启用开发者模式。重新打开设置窗口即可看到开发者选项。");
-
-        if (HostContext is not null)
+        if (this.FindAncestorOfType<SettingsWindow>() is { } settingsWindow)
         {
-            HostContext.RequestRestart("开发者模式已更改");
+            settingsWindow.RebuildAndNavigateToDevPage();
         }
-    }
-
-    private static async Task ShowMessageAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = message,
-            CloseButtonText = "确定"
-        };
-        await dialog.ShowAsync();
     }
 }

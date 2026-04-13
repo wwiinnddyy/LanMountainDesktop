@@ -97,6 +97,12 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         NavigateTo(pageId ?? ViewModel.Pages.FirstOrDefault()?.PageId);
     }
 
+    public void RebuildAndNavigateToDevPage()
+    {
+        _pageRegistry.Rebuild();
+        ReloadPages("dev");
+    }
+
     public void OpenDrawer(Control content, string? title = null)
     {
         if (DrawerContentHost is null)

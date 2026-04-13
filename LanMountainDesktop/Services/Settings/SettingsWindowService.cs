@@ -72,6 +72,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _localizationService = new();
         _settingsFacade.Settings.Changed += OnSettingsChanged;
         _appearanceThemeService.Changed += OnAppearanceThemeChanged;
+        AppSettingsService.SettingsSaved += OnAppSettingsSaved;
     }
 
     private string L(string key)
@@ -279,6 +280,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             var changedKeys = e.ChangedKeys?.ToArray();
             var refreshAll = changedKeys is null || changedKeys.Length == 0;
             var languageChanged = refreshAll || changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
+            var devModeChanged = refreshAll || changedKeys.Contains(nameof(AppSettingsSnapshot.IsDevModeEnabled), StringComparer.OrdinalIgnoreCase);
             var liveAppearance = _appearanceThemeService.GetCurrent();
             var themeChanged =
                 refreshAll ||
@@ -291,14 +293,13 @@ internal sealed class SettingsWindowService : ISettingsWindowService
                   changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase))) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase);
 
-            if (languageChanged)
+            if (languageChanged || devModeChanged)
             {
                 var regionState = _settingsFacade.Region.Get();
-                // 清除本地化缓存，强制重新加载语言文件
                 _localizationService.ClearCache();
                 _viewModel.RefreshLanguage(regionState.LanguageCode);
                 _pageRegistry.Rebuild();
-                _window.ReloadPages(_viewModel.CurrentPageId);
+                _window.ReloadPages(devModeChanged ? "dev" : _viewModel.CurrentPageId);
                 _window.RefreshShellText();
             }
 
@@ -307,6 +308,31 @@ internal sealed class SettingsWindowService : ISettingsWindowService
                 var appearanceSnapshot = _appearanceThemeService.GetCurrent();
                 _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
                 ApplyTheme(_window);
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnAppSettingsSaved(string instanceId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_window is null || _viewModel is null)
+            {
+                return;
+            }
+
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            var devPageVisible = _pageRegistry.GetPages().Any(p => p.PageId == "dev");
+
+            if (snapshot.IsDevModeEnabled && !devPageVisible)
+            {
+                _pageRegistry.Rebuild();
+                _window.ReloadPages("dev");
+            }
+            else if (!snapshot.IsDevModeEnabled && devPageVisible)
+            {
+                _pageRegistry.Rebuild();
+                _window.ReloadPages(null);
             }
         }, DispatcherPriority.Background);
     }
