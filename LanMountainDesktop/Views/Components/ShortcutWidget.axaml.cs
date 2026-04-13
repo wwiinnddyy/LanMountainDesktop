@@ -25,6 +25,7 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     private bool _showBackground = true;
     private double _currentCellSize = 48;
     private bool _isDisposed;
+    private bool _chromeApplied;
 
     private const double TapMovementThreshold = 10;
     private const long TapTimeThresholdMs = 500;
@@ -40,7 +41,30 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
     {
         InitializeComponent();
         DoubleTapped += OnDoubleTapped;
+        Loaded += OnLoaded;
         UpdateDisplay();
+    }
+
+    private void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        // ApplyChrome() may have been called before the control was attached to the visual tree,
+        // causing FindResource() to fail. Re-apply now that resources are available.
+        if (!_chromeApplied)
+        {
+            ApplyChrome();
+        }
+
+        // Subscribe to theme changes so the background follows theme updates.
+        var themeService = HostAppearanceThemeProvider.GetOrCreate();
+        themeService.Changed += OnAppearanceThemeChanged;
+    }
+
+    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot e)
+    {
+        if (_isDisposed || _showBackground)
+        {
+            ApplyChrome();
+        }
     }
 
     public void SetComponentPlacementContext(string componentId, string? placementId)
@@ -258,13 +282,25 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
             RootBorder.Background = Brushes.Transparent;
             RootBorder.BorderBrush = Brushes.Transparent;
             RootBorder.BorderThickness = new Thickness(0);
+            _chromeApplied = true;
             return;
         }
 
-        // 恢复默认的实心背景样式
-        RootBorder.Background = this.FindResource("AdaptiveSurfaceRaisedBrush") as IBrush ?? Brushes.Transparent;
-        RootBorder.BorderBrush = this.FindResource("AdaptiveButtonBorderBrush") as IBrush ?? Brushes.Transparent;
+        // FindResource requires the control to be attached to the visual tree.
+        // If it returns null, _chromeApplied stays false so OnLoaded will retry.
+        var background = this.FindResource("AdaptiveSurfaceRaisedBrush") as IBrush;
+        var borderBrush = this.FindResource("AdaptiveButtonBorderBrush") as IBrush;
+
+        if (background is null || borderBrush is null)
+        {
+            _chromeApplied = false;
+            return;
+        }
+
+        RootBorder.Background = background;
+        RootBorder.BorderBrush = borderBrush;
         RootBorder.BorderThickness = new Thickness(1);
+        _chromeApplied = true;
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -391,6 +427,10 @@ public partial class ShortcutWidget : UserControl, IDesktopComponentWidget, ICom
         }
 
         _isDisposed = true;
+
+        var themeService = HostAppearanceThemeProvider.GetOrCreate();
+        themeService.Changed -= OnAppearanceThemeChanged;
+
         _gestureStates.Clear();
     }
 }

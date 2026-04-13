@@ -8,9 +8,6 @@
              x:Class="LanMountainDesktop.Views.Components.ShortcutWidget">
 
     <Border x:Name="RootBorder"
-            Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
-            BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
-            BorderThickness="1"
             CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
             ClipToBounds="True">
         <Grid RowDefinitions="*,Auto"
