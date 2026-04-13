@@ -58,6 +58,14 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     {
         if (!OperatingSystem.IsWindows()) return;
         
+        // 检查融合桌面功能是否启用
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        if (!appSnapshot.EnableFusedDesktop)
+        {
+            AppLogger.Info("FusedDesktop", "Fused desktop is disabled. Skipping initialization.");
+            return;
+        }
+        
         EnsureRegistries();
         ReloadWidgets();
     }

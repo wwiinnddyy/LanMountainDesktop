@@ -773,11 +773,6 @@ public sealed class PluginRuntimeService : IDisposable
     private void ApplyPendingPluginDeletions()
     {
         var pendingPaths = ReadPendingPluginDeletions();
-        if (pendingPaths.Count == 0)
-        {
-            return;
-        }
-
         var remainingPaths = new List<string>();
         foreach (var path in pendingPaths)
         {
@@ -788,6 +783,41 @@ public sealed class PluginRuntimeService : IDisposable
         }
 
         SavePendingPluginDeletions(remainingPaths);
+        CleanupPendingDeletionDirectory();
+    }
+
+    private void CleanupPendingDeletionDirectory()
+    {
+        var pendingDeletionDir = Path.Combine(PluginsDirectory, ".pending-deletions");
+        if (!Directory.Exists(pendingDeletionDir))
+        {
+            return;
+        }
+
+        foreach (var pendingFile in Directory.EnumerateFiles(pendingDeletionDir, "*.pending"))
+        {
+            try
+            {
+                File.Delete(pendingFile);
+            }
+            catch
+            {
+                // Ignore cleanup failures for pending deletions.
+            }
+        }
+
+        try
+        {
+            if (Directory.GetFiles(pendingDeletionDir).Length == 0 &&
+                Directory.GetDirectories(pendingDeletionDir).Length == 0)
+            {
+                Directory.Delete(pendingDeletionDir);
+            }
+        }
+        catch
+        {
+            // Ignore directory cleanup failures.
+        }
     }
 
     private string ResolvePluginRemovalTargetPath(PluginCatalogEntry entry)

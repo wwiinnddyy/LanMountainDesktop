@@ -135,6 +135,9 @@ internal static class Program
     private static void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), PluginSdkInfo.RuntimeDirectoryName));
+        var pendingDeletionDir = Path.Combine(pluginsDirectory, ".pending-deletions");
+        Directory.CreateDirectory(pendingDeletionDir);
+
         foreach (var existingPackagePath in Directory
                      .EnumerateFiles(pluginsDirectory, "*" + PluginSdkInfo.PackageFileExtension, SearchOption.AllDirectories)
                      .Select(Path.GetFullPath)
@@ -154,11 +157,56 @@ internal static class Program
                     continue;
                 }
 
-                DeleteFileWithRetry(existingPackagePath);
+                TryRemoveExistingPackage(existingPackagePath, pendingDeletionDir);
             }
             catch
             {
                 // Ignore unrelated or malformed packages while replacing an install target.
+            }
+        }
+
+        CleanupPendingDeletions(pendingDeletionDir);
+    }
+
+    private static void TryRemoveExistingPackage(string existingPackagePath, string pendingDeletionDir)
+    {
+        try
+        {
+            DeleteFileWithRetry(existingPackagePath);
+        }
+        catch (IOException)
+        {
+            var fileName = Path.GetFileName(existingPackagePath);
+            var pendingPath = Path.Combine(pendingDeletionDir, $"{fileName}.{Guid.NewGuid():N}.pending");
+            try
+            {
+                File.Move(existingPackagePath, pendingPath);
+            }
+            catch (IOException moveEx)
+            {
+                throw new IOException(
+                    $"Cannot delete or move existing plugin package '{existingPackagePath}'. " +
+                    $"The file may be in use by another process. Error: {moveEx.Message}", moveEx);
+            }
+        }
+    }
+
+    private static void CleanupPendingDeletions(string pendingDeletionDir)
+    {
+        if (!Directory.Exists(pendingDeletionDir))
+        {
+            return;
+        }
+
+        foreach (var pendingFile in Directory.EnumerateFiles(pendingDeletionDir, "*.pending"))
+        {
+            try
+            {
+                File.Delete(pendingFile);
+            }
+            catch
+            {
+                // Ignore cleanup failures for pending deletions.
             }
         }
     }

@@ -25,6 +25,26 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
+            <ui:SettingsExpander Header="启用三指滑动"
+                                 Description="使用三根手指或鼠标右键拖动自由滑动页面，在第一页向右滑动可回到 Windows 桌面（实验性功能）">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Gesture" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding EnableThreeFingerSwipe}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="启用融合桌面"
+                                 Description="允许将组件放置在 Windows 系统桌面上（实验性功能，重启后生效）">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Apps" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding EnableFusedDesktop}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
             <Separator Classes="settings-separator" />
 
             <ui:SettingsExpander Header="开发者插件路径"

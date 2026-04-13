@@ -305,7 +305,8 @@ internal sealed record AirAppMarketLoadResult(
 internal sealed record AirAppMarketInstallResult(
     bool Success,
     PluginManifest? Manifest,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    bool RestartRequired = false);
 
 internal sealed class AirAppMarketIndexDocument
 {

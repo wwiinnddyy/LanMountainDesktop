@@ -152,6 +152,8 @@ public sealed class AppSettingsSnapshot
 
     public bool EnableThreeFingerSwipe { get; set; } = false;
 
+    public bool EnableFusedDesktop { get; set; } = false;
+
     public List<string> DisabledPluginIds { get; set; } = [];
 
     public bool IsDevModeEnabled { get; set; }

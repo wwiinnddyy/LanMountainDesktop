@@ -174,9 +174,6 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         private bool _isInitializing;
         private bool _disposed;
 
-        [ObservableProperty]
-        private bool _enableThreeFingerSwipe;
-
     public GeneralSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
@@ -204,7 +201,6 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
-        EnableThreeFingerSwipe = appSnapshot.EnableThreeFingerSwipe;
         _isInitializing = false;
 
         RefreshPreview();
@@ -236,33 +232,6 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             return;
         }
-        
-        // 如果是其他设置变更，重新加载我们的设置
-        _isInitializing = true;
-        try
-        {
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-            EnableThreeFingerSwipe = appSnapshot.EnableThreeFingerSwipe;
-        }
-        finally
-        {
-            _isInitializing = false;
-        }
-    }
-
-    partial void OnEnableThreeFingerSwipeChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        appSnapshot.EnableThreeFingerSwipe = value;
-        _settingsFacade.Settings.SaveSnapshot(
-            SettingsScope.App,
-            appSnapshot,
-            changedKeys: [nameof(AppSettingsSnapshot.EnableThreeFingerSwipe)]);
     }
 
     public event Action? RestartRequested;
@@ -3100,6 +3069,9 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         _isInitializing = true;
         LoadSettings();
         _isInitializing = false;
+
+        // 监听设置变更，防止被意外重置
+        _settingsFacade.Settings.Changed += OnSettingsChanged;
     }
 
     [ObservableProperty]
@@ -3107,6 +3079,12 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _devPluginPath = string.Empty;
+
+    [ObservableProperty]
+    private bool _enableThreeFingerSwipe;
+
+    [ObservableProperty]
+    private bool _enableFusedDesktop;
 
     partial void OnIsDevModeEnabledChanged(bool value)
     {
@@ -3120,11 +3098,52 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         SaveField(nameof(AppSettingsSnapshot.DevPluginPath), value);
     }
 
+    partial void OnEnableThreeFingerSwipeChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), value);
+    }
+
+    partial void OnEnableFusedDesktopChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.EnableFusedDesktop), value);
+    }
+
     private void LoadSettings()
     {
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         IsDevModeEnabled = snapshot.IsDevModeEnabled;
         DevPluginPath = snapshot.DevPluginPath ?? string.Empty;
+        EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
+        EnableFusedDesktop = snapshot.EnableFusedDesktop;
+    }
+
+    private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
+    {
+        if (e.Scope != SettingsScope.App)
+        {
+            return;
+        }
+
+        var changedKeys = e.ChangedKeys?.ToArray();
+        if (changedKeys is null || changedKeys.Length == 0)
+        {
+            return;
+        }
+
+        // 如果是其他设置变更，重新加载我们的设置
+        _isInitializing = true;
+        try
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
+            EnableFusedDesktop = snapshot.EnableFusedDesktop;
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
     }
 
     private void SaveField<T>(string key, T value)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
@@ -20,7 +21,9 @@ internal sealed class AirAppMarketInstallService : IDisposable
     private readonly HttpClient _httpClient;
     private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
+    private readonly PendingPluginUpgradeService _pendingUpgradeService;
     private readonly string _downloadsDirectory;
+    private readonly Version? _hostVersion;
 
     public AirAppMarketInstallService(PluginRuntimeService runtime, string dataDirectory)
     {
@@ -33,6 +36,8 @@ internal sealed class AirAppMarketInstallService : IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("LanMountainDesktop-PluginMarketplace/1.0");
         _downloadService = new ResumableDownloadService(_httpClient);
         _releaseResolverService = new AirAppMarketReleaseResolverService(_httpClient);
+        _pendingUpgradeService = new PendingPluginUpgradeService(runtime.PluginsDirectory);
+        _hostVersion = typeof(App).Assembly.GetName().Version;
     }
 
     public async Task<AirAppMarketInstallResult> InstallAsync(
@@ -40,18 +45,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plugin);
-
-        if (OperatingSystem.IsWindows())
-        {
-            var helperPath = ResolveHelperPath();
-            if (!File.Exists(helperPath))
-            {
-                return new AirAppMarketInstallResult(
-                    false,
-                    null,
-                    $"Plugins install helper was not found at '{helperPath}'.");
-            }
-        }
 
         Directory.CreateDirectory(_downloadsDirectory);
         var sources = plugin.GetPackageSourcesInInstallOrder();
@@ -66,6 +59,39 @@ internal sealed class AirAppMarketInstallService : IDisposable
         AppLogger.Info(
             "PluginMarket",
             $"Starting install. PluginId='{plugin.Id}'; Version='{plugin.Version}'; Sources='{string.Join(", ", sources.Select(source => source.SourceKind.ToString()))}'.");
+
+        var compatibilityError = ValidateCompatibility(plugin);
+        if (!string.IsNullOrWhiteSpace(compatibilityError))
+        {
+            AppLogger.Warn("PluginMarket", $"Compatibility check failed. PluginId='{plugin.Id}'; Error='{compatibilityError}'.");
+            return new AirAppMarketInstallResult(false, null, compatibilityError);
+        }
+
+        var isUpgrade = IsPluginInstalled(plugin.Id);
+        if (isUpgrade)
+        {
+            return await InstallUpgradeAsync(plugin, sources, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await InstallNewAsync(plugin, sources, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<AirAppMarketInstallResult> InstallNewAsync(
+        AirAppMarketPluginEntry plugin,
+        IReadOnlyList<AirAppMarketPluginPackageSourceEntry> sources,
+        CancellationToken cancellationToken)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var helperPath = ResolveHelperPath();
+            if (!File.Exists(helperPath))
+            {
+                return new AirAppMarketInstallResult(
+                    false,
+                    null,
+                    $"Plugins install helper was not found at '{helperPath}'.");
+            }
+        }
 
         var sourceErrors = new List<string>();
         foreach (var source in sources)
@@ -91,6 +117,88 @@ internal sealed class AirAppMarketInstallService : IDisposable
             ? $"Failed to install plugin '{plugin.Id}' from all available package sources."
             : $"Failed to install plugin '{plugin.Id}' from all available package sources. {string.Join(" ", sourceErrors)}";
         return new AirAppMarketInstallResult(false, null, combinedMessage);
+    }
+
+    private async Task<AirAppMarketInstallResult> InstallUpgradeAsync(
+        AirAppMarketPluginEntry plugin,
+        IReadOnlyList<AirAppMarketPluginPackageSourceEntry> sources,
+        CancellationToken cancellationToken)
+    {
+        AppLogger.Info("PluginMarket", $"Detected upgrade scenario. Downloading package for deferred upgrade. PluginId='{plugin.Id}'.");
+
+        foreach (var source in sources)
+        {
+            var downloadResult = await DownloadPackageAsync(plugin, source, cancellationToken).ConfigureAwait(false);
+            if (downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.PackagePath))
+            {
+                _pendingUpgradeService.AddPendingUpgrade(plugin.Id, downloadResult.PackagePath, plugin.Version);
+
+                AppLogger.Info(
+                    "PluginMarket",
+                    $"Upgrade staged for next restart. PluginId='{plugin.Id}'; Version='{plugin.Version}'; PackagePath='{downloadResult.PackagePath}'.");
+
+                var manifest = ReadManifestFromPackage(downloadResult.PackagePath);
+                return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
+            }
+        }
+
+        return new AirAppMarketInstallResult(
+            false,
+            null,
+            $"Failed to download upgrade package for plugin '{plugin.Id}' from all available sources.");
+    }
+
+    private bool IsPluginInstalled(string pluginId)
+    {
+        return _runtime.Catalog.Any(entry =>
+            string.Equals(entry.Manifest.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? ValidateCompatibility(AirAppMarketPluginEntry plugin)
+    {
+        if (_hostVersion is null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(plugin.MinHostVersion))
+        {
+            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.MinHostVersion, out var minHostVersion) ||
+                minHostVersion is null)
+            {
+                return $"Plugin '{plugin.Id}' declares invalid minimum host version '{plugin.MinHostVersion}'.";
+            }
+
+            if (_hostVersion < minHostVersion)
+            {
+                return $"Plugin '{plugin.Id}' requires host version {plugin.MinHostVersion} or newer. Current host version is {_hostVersion}.";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(plugin.ApiVersion))
+        {
+            if (!AirAppMarketIndexDocument.TryParseVersion(plugin.ApiVersion, out var pluginApiVersion) ||
+                pluginApiVersion is null)
+            {
+                return $"Plugin '{plugin.Id}' declares invalid API version '{plugin.ApiVersion}'.";
+            }
+
+            var hostApiVersion = PluginSdkInfo.ApiVersion;
+            if (hostApiVersion is not null)
+            {
+                if (!AirAppMarketIndexDocument.TryParseVersion(hostApiVersion, out var hostApiVersionParsed) ||
+                    hostApiVersionParsed is null)
+                {
+                    AppLogger.Warn("PluginMarket", $"Host API version '{hostApiVersion}' could not be parsed. Skipping API version check.");
+                }
+                else if (pluginApiVersion.Major != hostApiVersionParsed.Major)
+                {
+                    return $"Plugin '{plugin.Id}' uses incompatible API version {plugin.ApiVersion}. Host API version is {hostApiVersion}. Major version must match.";
+                }
+            }
+        }
+
+        return null;
     }
 
     private async Task<AirAppMarketInstallAttemptResult> TryInstallFromSourceAsync(
@@ -275,6 +383,71 @@ internal sealed class AirAppMarketInstallService : IDisposable
         }
     }
 
+    private async Task<DownloadPackageResult> DownloadPackageAsync(
+        AirAppMarketPluginEntry plugin,
+        AirAppMarketPluginPackageSourceEntry source,
+        CancellationToken cancellationToken)
+    {
+        var packagePath = Path.Combine(
+            _downloadsDirectory,
+            $"{SanitizeFileName(plugin.Id)}-{SanitizeFileName(plugin.Version)}-{SanitizeFileName(source.SourceKind.ToString())}-{Guid.NewGuid():N}.laapp");
+
+        try
+        {
+            var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false);
+            AppLogger.Info(
+                "PluginMarket",
+                $"Downloading upgrade package for '{plugin.Id}' from '{resolvedDownloadUrl}'.");
+
+            var acquireResult = await AcquirePackageAsync(plugin, source, resolvedDownloadUrl, packagePath, cancellationToken).ConfigureAwait(false);
+            if (!acquireResult.Success)
+            {
+                TryDeleteFile(packagePath);
+                return new DownloadPackageResult(false, null, acquireResult.ErrorMessage);
+            }
+
+            var verificationResult = await VerifyPackageAsync(plugin, packagePath, cancellationToken).ConfigureAwait(false);
+            if (!verificationResult.Success)
+            {
+                TryDeleteFile(packagePath);
+                return new DownloadPackageResult(false, null, verificationResult.ErrorMessage);
+            }
+
+            return new DownloadPackageResult(true, packagePath, null);
+        }
+        catch (OperationCanceledException)
+        {
+            TryDeleteFile(packagePath);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            TryDeleteFile(packagePath);
+            return new DownloadPackageResult(false, null, ex.Message);
+        }
+    }
+
+    private static PluginManifest ReadManifestFromPackage(string packagePath)
+    {
+        using var archive = System.IO.Compression.ZipFile.OpenRead(packagePath);
+        var entries = archive.Entries
+            .Where(entry => string.Equals(entry.Name, "plugin.json", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (entries.Length == 0)
+        {
+            throw new InvalidOperationException($"Plugin package '{packagePath}' does not contain 'plugin.json'.");
+        }
+
+        if (entries.Length > 1)
+        {
+            throw new InvalidOperationException($"Plugin package '{packagePath}' contains multiple 'plugin.json' files.");
+        }
+
+        using var stream = entries[0].Open();
+        return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
@@ -298,5 +471,10 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
     private sealed record AirAppMarketVerificationResult(
         bool Success,
+        string? ErrorMessage);
+
+    private sealed record DownloadPackageResult(
+        bool Success,
+        string? PackagePath,
         string? ErrorMessage);
 }

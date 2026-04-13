@@ -784,12 +784,28 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             }
 
             RefreshInstalledSnapshot();
-            SetStatus(
-                F(
-                    "market.status.install_success_format",
-                    "Plugin '{0}' has been staged. Restart the app to apply it.",
-                    result.Manifest.Name),
-                SuccessBrush);
+
+            if (result.RestartRequired)
+            {
+                SetStatus(
+                    F(
+                        "market.status.upgrade_staged_format",
+                        "Plugin '{0}' v{1} has been downloaded. Restart to complete the upgrade.",
+                        result.Manifest.Name,
+                        result.Manifest.Version),
+                    WarningBrush);
+                PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+            }
+            else
+            {
+                SetStatus(
+                    F(
+                        "market.status.install_success_format",
+                        "Plugin '{0}' has been installed successfully.",
+                        result.Manifest.Name),
+                    SuccessBrush);
+            }
+
             RebuildSurface();
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
@@ -1015,14 +1031,22 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
     private static int CompareVersions(string? left, string? right)
     {
-        if (!AirAppMarketIndexDocument.TryParseVersion(left, out var leftVersion))
+        var leftParsed = AirAppMarketIndexDocument.TryParseVersion(left, out var leftVersion);
+        var rightParsed = AirAppMarketIndexDocument.TryParseVersion(right, out var rightVersion);
+
+        if (!leftParsed && !rightParsed)
         {
-            leftVersion = new Version(0, 0, 0);
+            return 0;
         }
 
-        if (!AirAppMarketIndexDocument.TryParseVersion(right, out var rightVersion))
+        if (!leftParsed)
         {
-            rightVersion = new Version(0, 0, 0);
+            return -1;
+        }
+
+        if (!rightParsed)
+        {
+            return 1;
         }
 
         return (leftVersion ?? new Version(0, 0, 0)).CompareTo(rightVersion ?? new Version(0, 0, 0));

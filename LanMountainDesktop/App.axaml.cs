@@ -404,10 +404,7 @@ public partial class App : Application
             _traySettingsMenuItem.Header = L("tray.menu.settings", "Settings");
         }
 
-        if (_trayComponentLibraryMenuItem is not null)
-        {
-            _trayComponentLibraryMenuItem.Header = L("tray.menu.component_library", "Component Library");
-        }
+        RefreshFusedDesktopMenuItemVisibility();
 
         if (_trayRestartMenuItem is not null)
         {
@@ -417,6 +414,30 @@ public partial class App : Application
         if (_trayExitMenuItem is not null)
         {
             _trayExitMenuItem.Header = L("tray.menu.exit", "Exit App");
+        }
+    }
+
+    private void RefreshFusedDesktopMenuItemVisibility()
+    {
+        if (_trayComponentLibraryMenuItem is null)
+        {
+            return;
+        }
+
+        // 仅在 Windows 上支持融合桌面功能
+        if (!OperatingSystem.IsWindows())
+        {
+            _trayComponentLibraryMenuItem.IsVisible = false;
+            return;
+        }
+
+        // 检查融合桌面功能是否启用
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        _trayComponentLibraryMenuItem.IsVisible = appSnapshot.EnableFusedDesktop;
+
+        if (_trayComponentLibraryMenuItem.IsVisible)
+        {
+            _trayComponentLibraryMenuItem.Header = L("tray.menu.component_library", "Component Library");
         }
     }
 
@@ -686,6 +707,16 @@ public partial class App : Application
                 _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
                 RefreshTrayIconContent();
+            }
+
+            // 检查融合桌面设置是否变更
+            var fusedDesktopChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.EnableFusedDesktop), StringComparer.OrdinalIgnoreCase);
+
+            if (fusedDesktopChanged)
+            {
+                RefreshFusedDesktopMenuItemVisibility();
             }
         }, DispatcherPriority.Background);
     }
