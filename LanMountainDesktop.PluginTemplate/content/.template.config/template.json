@@ -47,7 +47,7 @@
     "pluginSdkVersion": {
       "type": "parameter",
       "datatype": "text",
-      "defaultValue": "4.0.0",
+      "defaultValue": "4.0.2",
       "description": "LanMountainDesktop.PluginSdk package version.",
       "replaces": "__PLUGIN_SDK_VERSION__"
     }

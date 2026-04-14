@@ -36,6 +36,28 @@
 
 ***
 
+## [0.8.3.4](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.4) - 2026-04-12
+
+### 新增 (Added)
+
+- 无
+
+### 变更 (Changed)
+
+- ♻️ **插件 SDK 更新**: 更新插件 SDK，优化插件开发接口和兼容性
+
+### 修复 (Fixed)
+
+- 🐛 **轻量版 .NET 依赖问题（实验性）**: 实验性修复了轻量版在 .NET 环境下的依赖问题
+  - 问题原因: 轻量版与 .NET 的依赖兼容性存在冲突
+  - 修复方案: 调整依赖配置，提升兼容性（实验性修复，持续观察中）
+
+### 移除 (Removed)
+
+- 无
+
+***
+
 ## [0.8.3.3](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.3) - 2026-04-12
 
 ### 新增 (Added)

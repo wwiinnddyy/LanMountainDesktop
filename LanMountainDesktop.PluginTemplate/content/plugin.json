@@ -4,7 +4,7 @@
   "description": "__PLUGIN_DESCRIPTION__",
   "author": "__PLUGIN_AUTHOR__",
   "version": "1.0.0",
-  "apiVersion": "4.0.1",
+  "apiVersion": "4.0.2",
   "entranceAssembly": "LanMountainDesktop.PluginTemplate.dll",
   "sharedContracts": []
 }
