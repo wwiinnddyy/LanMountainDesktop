@@ -36,7 +36,7 @@
     <ProjectReference Include="..\LanMountainDesktop.DesktopComponents.Runtime\LanMountainDesktop.DesktopComponents.Runtime.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopHost\LanMountainDesktop.DesktopHost.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
-    <ProjectReference Include="..\LanMountainDesktop.PluginsInstallHelper\LanMountainDesktop.PluginsInstallHelper.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -79,17 +79,17 @@
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.22.0" />
   </ItemGroup>
 
-  <Target Name="CopyPluginsInstallHelperToOutput" AfterTargets="Build">
+  <Target Name="CopyLauncherToOutput" AfterTargets="Build">
     <ItemGroup>
-      <PluginsInstallHelperFiles Include="..\LanMountainDesktop.PluginsInstallHelper\bin\$(Configuration)\net10.0\**\*.*" />
+      <LauncherFiles Include="..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(PluginsInstallHelperFiles)" DestinationFiles="@(PluginsInstallHelperFiles->'$(OutDir)PluginsInstallHelper\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(LauncherFiles)" DestinationFiles="@(LauncherFiles->'$(OutDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="CopyPluginsInstallHelperToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+  <Target Name="CopyLauncherToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
     <ItemGroup>
-      <PluginsInstallHelperPublishFiles Include="..\LanMountainDesktop.PluginsInstallHelper\bin\$(Configuration)\net10.0\**\*.*" />
+      <LauncherPublishFiles Include="..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(PluginsInstallHelperPublishFiles)" DestinationFiles="@(PluginsInstallHelperPublishFiles->'$(PublishDir)PluginsInstallHelper\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(LauncherPublishFiles)" DestinationFiles="@(LauncherPublishFiles->'$(PublishDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

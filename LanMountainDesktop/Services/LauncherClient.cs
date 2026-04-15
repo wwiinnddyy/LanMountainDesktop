@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 
 namespace LanMountainDesktop.Services;
 
-internal sealed class PluginsInstallHelperClient
+internal sealed class LauncherClient
 {
     private const int UserCanceledUacErrorCode = 1223;
-    private const string HelperExecutableName = "LanMountainDesktop.PluginsInstallHelper.exe";
+    private const string LauncherExecutableName = "LanMountainDesktop.Launcher.exe";
 
-    public async Task<PluginsInstallHelperResult> InstallPackageAsync(
+    public async Task<LauncherInstallResult> InstallPackageAsync(
         string packagePath,
         string pluginsDirectory,
         CancellationToken cancellationToken = default)
@@ -25,19 +25,19 @@ internal sealed class PluginsInstallHelperClient
 
         if (!OperatingSystem.IsWindows())
         {
-            return new PluginsInstallHelperResult(
+            return new LauncherInstallResult(
                 false,
                 null,
                 "Elevated helper install is only supported on Windows.");
         }
 
-        var helperPath = ResolveHelperPath();
-        if (!File.Exists(helperPath))
+        var launcherPath = ResolveLauncherPath();
+        if (!File.Exists(launcherPath))
         {
-            return new PluginsInstallHelperResult(
+            return new LauncherInstallResult(
                 false,
                 null,
-                $"Plugins install helper was not found at '{helperPath}'.");
+                $"Launcher executable was not found at '{launcherPath}'.");
         }
 
         var resultPath = Path.Combine(
@@ -50,38 +50,38 @@ internal sealed class PluginsInstallHelperClient
 
         try
         {
-            using var process = StartHelperProcess(helperPath, packagePath, pluginsDirectory, resultPath);
+            using var process = StartLauncherProcess(launcherPath, packagePath, pluginsDirectory, resultPath);
             if (process is null)
             {
-                return new PluginsInstallHelperResult(false, null, "Failed to start plugins install helper.");
+                return new LauncherInstallResult(false, null, "Failed to start launcher process.");
             }
 
             await process.WaitForExitAsync(cancellationToken);
             var result = await ReadResultAsync(resultPath, cancellationToken);
             if (result is not null)
             {
-                return new PluginsInstallHelperResult(result.Success, result.InstalledPackagePath, result.ErrorMessage);
+                return new LauncherInstallResult(result.Success, result.InstalledPackagePath, result.ErrorMessage);
             }
 
             if (process.ExitCode == 0)
             {
-                return new PluginsInstallHelperResult(
+                return new LauncherInstallResult(
                     false,
                     null,
-                    "Plugins install helper exited without producing a result file.");
+                    "Launcher exited without producing a result file.");
             }
 
-            return new PluginsInstallHelperResult(
+            return new LauncherInstallResult(
                 false,
                 null,
                 string.Format(
                     CultureInfo.InvariantCulture,
-                    "Plugins install helper exited with code {0}.",
+                    "Launcher exited with code {0}.",
                     process.ExitCode));
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == UserCanceledUacErrorCode)
         {
-            return new PluginsInstallHelperResult(false, null, "Administrator permission request was canceled.");
+            return new LauncherInstallResult(false, null, "Administrator permission request was canceled.");
         }
         finally
         {
@@ -89,18 +89,18 @@ internal sealed class PluginsInstallHelperClient
         }
     }
 
-    private static Process? StartHelperProcess(
-        string helperPath,
+    private static Process? StartLauncherProcess(
+        string launcherPath,
         string packagePath,
         string pluginsDirectory,
         string resultPath)
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = helperPath,
+            FileName = launcherPath,
             Verb = "runas",
             UseShellExecute = true,
-            WorkingDirectory = Path.GetDirectoryName(helperPath) ?? AppContext.BaseDirectory,
+            WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
             Arguments = string.Create(
                 CultureInfo.InvariantCulture,
                 $"--source {QuoteArgument(Path.GetFullPath(packagePath))} --plugins-dir {QuoteArgument(Path.GetFullPath(pluginsDirectory))} --result {QuoteArgument(Path.GetFullPath(resultPath))}")
@@ -120,9 +120,9 @@ internal sealed class PluginsInstallHelperClient
         return await JsonSerializer.DeserializeAsync<HelperResultFile>(stream, cancellationToken: cancellationToken);
     }
 
-    private static string ResolveHelperPath()
+    private static string ResolveLauncherPath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "PluginsInstallHelper", HelperExecutableName);
+        return Path.Combine(AppContext.BaseDirectory, "Launcher", LauncherExecutableName);
     }
 
     private static string QuoteArgument(string value)
@@ -180,7 +180,7 @@ internal sealed class PluginsInstallHelperClient
     }
 }
 
-internal sealed record PluginsInstallHelperResult(
+internal sealed record LauncherInstallResult(
     bool Success,
     string? InstalledPackagePath,
     string? ErrorMessage);

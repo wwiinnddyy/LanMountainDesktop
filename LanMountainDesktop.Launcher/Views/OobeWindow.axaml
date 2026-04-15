@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LanMountainDesktop.Launcher.Views.OobeWindow"
+        Title="阑山桌面"
+        Width="420"
+        Height="260"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="24" RowDefinitions="*,Auto">
+    <TextBlock Text="欢迎使用阑山桌面"
+               FontSize="26"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center" />
+    <Button Grid.Row="1"
+            x:Name="EnterButton"
+            HorizontalAlignment="Right"
+            Width="64"
+            Height="40"
+            Content="→"
+            FontSize="18" />
+  </Grid>
+</Window>

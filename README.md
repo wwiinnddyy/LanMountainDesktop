@@ -58,6 +58,7 @@
 
 ### 构建与运行
 
+**开发模式 (推荐):**
 ```bash
 # 还原依赖
 dotnet restore
@@ -65,9 +66,17 @@ dotnet restore
 # 构建项目
 dotnet build LanMountainDesktop.slnx -c Debug
 
-# 运行桌面宿主
+# 直接运行主程序 (跳过 Launcher,快速开发)
 dotnet run --project LanMountainDesktop/LanMountainDesktop.csproj
 ```
+
+**生产模式 (完整流程):**
+```bash
+# 通过 Launcher 启动 (包含 OOBE、Splash、版本管理)
+dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- launch
+```
+
+详细说明请参考 [开发文档](docs/DEVELOPMENT.md)。
 
 ### 运行测试
 
@@ -96,6 +105,7 @@ dotnet new lmd-plugin -n MyPlugin
 ```
 LanMountainDesktop/
 ├── LanMountainDesktop/              # 桌面宿主应用
+├── LanMountainDesktop.Launcher/     # 启动器 (OOBE、Splash、版本管理、更新)
 ├── LanMountainDesktop.PluginSdk/    # 官方插件 SDK
 ├── LanMountainDesktop.Shared.Contracts/  # 宿主与插件共享契约
 ├── LanMountainDesktop.Appearance/   # 主题与外观基础设施

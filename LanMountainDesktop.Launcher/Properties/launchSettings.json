@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Launcher (Launch Mode)": {
+      "commandName": "Project",
+      "commandLineArgs": "launch",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Update Check)": {
+      "commandName": "Project",
+      "commandLineArgs": "update check",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Plugin Install)": {
+      "commandName": "Project",
+      "commandLineArgs": "plugin install <path-to-plugin.laapp>",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

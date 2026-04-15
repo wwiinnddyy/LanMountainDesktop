@@ -1,10 +1,10 @@
 using System.IO.Compression;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Launcher.Models;
 
-internal static class Program
+namespace LanMountainDesktop.Launcher.Services;
+
+internal sealed class PluginInstallerService
 {
     private static readonly TimeSpan[] RetryDelays =
     [
@@ -13,103 +13,38 @@ internal static class Program
         TimeSpan.FromMilliseconds(500)
     ];
 
-    private static async Task<int> Main(string[] args)
+    public LauncherResult InstallPackage(string sourcePath, string pluginsDirectory)
     {
-        var result = new HelperResult();
-        string? resultPath = null;
+        var fullSourcePath = Path.GetFullPath(sourcePath);
+        var fullPluginsDirectory = Path.GetFullPath(pluginsDirectory);
 
-        try
+        if (!File.Exists(fullSourcePath))
         {
-            var parsedArgs = ParseArgs(args);
-            if (!parsedArgs.TryGetValue("source", out var sourcePath) ||
-                !parsedArgs.TryGetValue("plugins-dir", out var pluginsDirectory) ||
-                !parsedArgs.TryGetValue("result", out resultPath) ||
-                string.IsNullOrWhiteSpace(sourcePath) ||
-                string.IsNullOrWhiteSpace(pluginsDirectory) ||
-                string.IsNullOrWhiteSpace(resultPath))
-            {
-                throw new InvalidOperationException("Required arguments: --source <path> --plugins-dir <path> --result <path>.");
-            }
-
-            var fullSourcePath = Path.GetFullPath(sourcePath);
-            var fullPluginsDirectory = Path.GetFullPath(pluginsDirectory);
-            resultPath = Path.GetFullPath(resultPath);
-
-            if (!File.Exists(fullSourcePath))
-            {
-                throw new FileNotFoundException($"Plugin package '{fullSourcePath}' was not found.", fullSourcePath);
-            }
-
-            var manifest = ReadManifestFromPackage(fullSourcePath);
-            Directory.CreateDirectory(fullPluginsDirectory);
-            var destinationPath = Path.Combine(fullPluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
-            var stagingPath = destinationPath + ".incoming";
-            DeleteFileWithRetry(stagingPath);
-            CopyWithRetry(fullSourcePath, stagingPath, overwrite: true);
-            RemoveExistingPluginPackages(fullPluginsDirectory, manifest.Id, destinationPath, stagingPath);
-            MoveWithOverwriteRetry(stagingPath, destinationPath);
-
-            result = new HelperResult
-            {
-                Success = true,
-                InstalledPackagePath = destinationPath,
-                ManifestId = manifest.Id,
-                ManifestName = manifest.Name
-            };
-        }
-        catch (Exception ex)
-        {
-            result = new HelperResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
+            throw new FileNotFoundException($"Plugin package '{fullSourcePath}' was not found.", fullSourcePath);
         }
 
-        if (!string.IsNullOrWhiteSpace(resultPath))
+        var manifest = ReadManifestFromPackage(fullSourcePath);
+        Directory.CreateDirectory(fullPluginsDirectory);
+        var destinationPath = Path.Combine(fullPluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
+        var stagingPath = destinationPath + ".incoming";
+        DeleteFileWithRetry(stagingPath);
+        CopyWithRetry(fullSourcePath, stagingPath, overwrite: true);
+        RemoveExistingPluginPackages(fullPluginsDirectory, manifest.Id, destinationPath, stagingPath);
+        MoveWithOverwriteRetry(stagingPath, destinationPath);
+
+        return new LauncherResult
         {
-            var resultDirectory = Path.GetDirectoryName(resultPath);
-            if (!string.IsNullOrWhiteSpace(resultDirectory))
-            {
-                Directory.CreateDirectory(resultDirectory);
-            }
-
-            await File.WriteAllTextAsync(
-                resultPath,
-                JsonSerializer.Serialize(result, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                }),
-                Encoding.UTF8);
-        }
-
-        return result.Success ? 0 : 1;
+            Success = true,
+            Stage = "plugin.install",
+            Code = "ok",
+            Message = "Plugin installed.",
+            InstalledPackagePath = destinationPath,
+            ManifestId = manifest.Id,
+            ManifestName = manifest.Name
+        };
     }
 
-    private static Dictionary<string, string> ParseArgs(string[] args)
-    {
-        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < args.Length; i++)
-        {
-            var current = args[i];
-            if (!current.StartsWith("--", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            var key = current[2..];
-            if (string.IsNullOrWhiteSpace(key) || i + 1 >= args.Length)
-            {
-                continue;
-            }
-
-            values[key] = args[++i];
-        }
-
-        return values;
-    }
-
-    private static PluginManifest ReadManifestFromPackage(string packagePath)
+    public PluginManifest ReadManifestFromPackage(string packagePath)
     {
         using var archive = ZipFile.OpenRead(packagePath);
         var entries = archive.Entries
@@ -132,7 +67,7 @@ internal static class Program
         return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 
-    private static void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
+    private void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), PluginSdkInfo.RuntimeDirectoryName));
         var pendingDeletionDir = Path.Combine(pluginsDirectory, ".pending-deletions");
@@ -161,14 +96,13 @@ internal static class Program
             }
             catch
             {
-                // Ignore unrelated or malformed packages while replacing an install target.
             }
         }
 
         CleanupPendingDeletions(pendingDeletionDir);
     }
 
-    private static void TryRemoveExistingPackage(string existingPackagePath, string pendingDeletionDir)
+    private void TryRemoveExistingPackage(string existingPackagePath, string pendingDeletionDir)
     {
         try
         {
@@ -178,16 +112,7 @@ internal static class Program
         {
             var fileName = Path.GetFileName(existingPackagePath);
             var pendingPath = Path.Combine(pendingDeletionDir, $"{fileName}.{Guid.NewGuid():N}.pending");
-            try
-            {
-                File.Move(existingPackagePath, pendingPath);
-            }
-            catch (IOException moveEx)
-            {
-                throw new IOException(
-                    $"Cannot delete or move existing plugin package '{existingPackagePath}'. " +
-                    $"The file may be in use by another process. Error: {moveEx.Message}", moveEx);
-            }
+            File.Move(existingPackagePath, pendingPath);
         }
     }
 
@@ -206,7 +131,6 @@ internal static class Program
             }
             catch
             {
-                // Ignore cleanup failures for pending deletions.
             }
         }
     }
@@ -235,7 +159,6 @@ internal static class Program
     private static void Retry(Action action)
     {
         Exception? lastException = null;
-
         for (var attempt = 0; attempt <= RetryDelays.Length; attempt++)
         {
             try
@@ -273,18 +196,5 @@ internal static class Program
         return path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
             ? path
             : path + Path.DirectorySeparatorChar;
-    }
-
-    private sealed class HelperResult
-    {
-        public bool Success { get; init; }
-
-        public string? InstalledPackagePath { get; init; }
-
-        public string? ManifestId { get; init; }
-
-        public string? ManifestName { get; init; }
-
-        public string? ErrorMessage { get; init; }
     }
 }

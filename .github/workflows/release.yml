@@ -140,6 +140,48 @@ jobs:
           Write-Host "Self-contained: $selfContained"
         shell: pwsh
 
+      - name: Restructure for Launcher
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+          $appDir = "app-$version"
+          
+          Write-Host "重组目录结构为 Launcher 模式..."
+          Write-Host "版本: $version"
+          Write-Host "发布目录: $publishDir"
+          
+          # 创建新的目录结构
+          $newStructure = "publish-launcher/windows-$arch"
+          New-Item -ItemType Directory -Path $newStructure -Force | Out-Null
+          
+          # 移动主程序到 app-{version} 子目录
+          $appPath = Join-Path $newStructure $appDir
+          Move-Item -Path $publishDir -Destination $appPath -Force
+          
+          # Launcher 应该在根目录
+          # 注意: Launcher 已经通过 CopyLauncherToPublish 目标复制到了 Launcher/ 子目录
+          $launcherSource = Join-Path $appPath "Launcher"
+          if (Test-Path $launcherSource) {
+            Write-Host "移动 Launcher 到根目录..."
+            Get-ChildItem -Path $launcherSource | Move-Item -Destination $newStructure -Force
+            Remove-Item -Path $launcherSource -Recurse -Force
+          } else {
+            Write-Warning "Launcher 目录不存在: $launcherSource"
+          }
+          
+          # 创建 .current 标记
+          New-Item -ItemType File -Path (Join-Path $appPath ".current") -Force | Out-Null
+          
+          Write-Host "新目录结构:"
+          Get-ChildItem -Path $newStructure -Recurse -Depth 2 | Select-Object FullName
+          
+          # 替换原发布目录
+          Remove-Item -Path $publishDir -Recurse -Force -ErrorAction SilentlyContinue
+          Move-Item -Path $newStructure -Destination $publishDir -Force
+        shell: pwsh
+
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
         shell: pwsh
@@ -241,6 +283,75 @@ jobs:
           Write-Host "✅ Successfully created: $($installerFile.Name)"
           Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
+
+      - name: Generate Delta Package
+        if: matrix.self_contained == true && matrix.arch == 'x64'
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $publishDir = "publish/windows-${{ matrix.arch }}"
+          $appDir = "app-$version"
+          $currentAppPath = Join-Path $publishDir $appDir
+          
+          Write-Host "生成增量更新包..."
+          Write-Host "当前版本: $version"
+          
+          # TODO: 从上一个 Release 下载并解压以生成增量包
+          # 这里先生成完整的 files.json
+          
+          $outputDir = "delta-output"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          
+          # 生成 files.json (完整文件清单)
+          $files = Get-ChildItem -Path $currentAppPath -Recurse -File
+          $fileEntries = @()
+          
+          foreach ($file in $files) {
+            $relativePath = $file.FullName.Substring($currentAppPath.Length).TrimStart('\', '/')
+            $relativePath = $relativePath.Replace('\', '/')
+            
+            # 跳过标记文件
+            if ($relativePath -match '^\.(current|partial|destroy)$') {
+              continue
+            }
+            
+            $hash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
+            
+            $fileEntries += @{
+              Path = $relativePath
+              Action = "add"
+              Sha256 = $hash
+              Size = $file.Length
+              ArchivePath = $relativePath
+            }
+          }
+          
+          $filesJson = @{
+            FromVersion = $null
+            ToVersion = $version
+            GeneratedAt = (Get-Date).ToUniversalTime().ToString("o")
+            Files = $fileEntries
+          } | ConvertTo-Json -Depth 10
+          
+          $filesJsonPath = Join-Path $outputDir "files-$version.json"
+          $filesJson | Set-Content -Path $filesJsonPath -Encoding UTF8
+          
+          Write-Host "生成文件清单: $filesJsonPath"
+          Write-Host "文件数量: $($fileEntries.Count)"
+          
+          # 创建完整应用包 (app-{version}.zip)
+          $appZipPath = Join-Path $outputDir "app-$version.zip"
+          Compress-Archive -Path "$currentAppPath\*" -DestinationPath $appZipPath -CompressionLevel Optimal
+          
+          Write-Host "创建应用包: $appZipPath"
+          Write-Host "包大小: $([Math]::Round((Get-Item $appZipPath).Length / 1MB, 2)) MB"
+        shell: pwsh
+
+      - name: Upload Delta Package
+        if: matrix.self_contained == true && matrix.arch == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-package-windows-${{ matrix.arch }}
+          path: delta-output/*
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4

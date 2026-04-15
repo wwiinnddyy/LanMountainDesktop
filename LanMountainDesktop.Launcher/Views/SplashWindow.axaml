@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
+        Title="阑山桌面"
+        Width="420"
+        Height="220"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None">
+  <Grid Margin="24">
+    <TextBlock x:Name="AppNameText"
+               Text="阑山桌面"
+               FontSize="34"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center" />
+  </Grid>
+</Window>
