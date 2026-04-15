@@ -77,7 +77,9 @@ public partial class MainWindow
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateChannel), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadSource), StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase)))
+                string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.EnableSlideTransition), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
             }

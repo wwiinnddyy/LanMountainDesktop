@@ -106,6 +106,17 @@
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
+            <ui:SettingsExpander Header="滑入滑出过渡效果"
+                                 Description="启用后，进入和退出桌面时使用滑入滑出动画（仅 Windows）"
+                                 IsVisible="{Binding IsSlideTransitionAvailable}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ArrowRight" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding EnableSlideTransition}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

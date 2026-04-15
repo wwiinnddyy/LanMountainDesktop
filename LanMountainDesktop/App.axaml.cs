@@ -566,13 +566,14 @@ public partial class App : Application
 
             try
             {
-                // 先隐藏透明覆盖层窗口
                 if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
                 {
                     _transparentOverlayWindow.Hide();
                 }
-                
+
                 var mainWindow = GetOrCreateMainWindow(desktop, source);
+                mainWindow.PrepareEnterAnimation();
+
                 mainWindow.ShowInTaskbar = true;
 
                 if (!mainWindow.IsVisible)
@@ -593,6 +594,12 @@ public partial class App : Application
                 mainWindow.Activate();
                 mainWindow.Topmost = true;
                 mainWindow.Topmost = false;
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    mainWindow.PlayEnterAnimation();
+                }, DispatcherPriority.Background);
+
                 SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
                 AppLogger.Info(
                     "DesktopShell",

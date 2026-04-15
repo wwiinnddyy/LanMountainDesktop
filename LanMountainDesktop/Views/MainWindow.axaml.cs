@@ -132,6 +132,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
     private double _currentDesktopCellGap;
     private double _currentDesktopEdgeInset;
     private string _gridSpacingPreset = "Relaxed";
+    private bool _isSlideAnimationActive;
+    private TranslateTransform? _desktopPageSlideTransform;
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
     private bool _statusBarClockTransparentBackground;
@@ -833,7 +835,103 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
     private void OnMinimizeClick(object? sender, RoutedEventArgs e)
     {
+        if (_isSlideAnimationActive)
+        {
+            return;
+        }
+
+        SlideOutAndMinimizeAsync();
+    }
+
+    private TranslateTransform GetDesktopPageSlideTransform()
+    {
+        if (_desktopPageSlideTransform is not null)
+        {
+            return _desktopPageSlideTransform;
+        }
+
+        _desktopPageSlideTransform = DesktopPage.RenderTransform as TranslateTransform;
+        if (_desktopPageSlideTransform is null)
+        {
+            _desktopPageSlideTransform = new TranslateTransform();
+            DesktopPage.RenderTransform = _desktopPageSlideTransform;
+        }
+
+        return _desktopPageSlideTransform;
+    }
+
+    private async void SlideOutAndMinimizeAsync()
+    {
+        _isSlideAnimationActive = true;
+        DesktopPage.IsHitTestVisible = false;
+
+        var useSlide = IsSlideTransitionEnabled();
+        var slideTransform = GetDesktopPageSlideTransform();
+
+        if (useSlide)
+        {
+            slideTransform.X = Bounds.Width;
+        }
+
+        DesktopPage.Opacity = 0;
+
+        await Task.Delay(useSlide
+            ? FluttermotionToken.Intro
+            : FluttermotionToken.Page);
+
+        if (!_isSlideAnimationActive)
+        {
+            return;
+        }
+
         WindowState = WindowState.Minimized;
+
+        slideTransform.X = 0;
+        DesktopPage.Opacity = 1;
+        DesktopPage.IsHitTestVisible = true;
+        _isSlideAnimationActive = false;
+    }
+
+    public void PrepareEnterAnimation()
+    {
+        _isSlideAnimationActive = false;
+
+        var useSlide = IsSlideTransitionEnabled();
+        var slideTransform = GetDesktopPageSlideTransform();
+
+        var savedTransitions = DesktopPage.Transitions;
+        DesktopPage.Transitions = null;
+
+        DesktopPage.Opacity = 0;
+
+        if (useSlide)
+        {
+            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : 1920;
+        }
+
+        DesktopPage.Transitions = savedTransitions;
+        DesktopPage.IsHitTestVisible = false;
+        _isSlideAnimationActive = true;
+    }
+
+    public void PlayEnterAnimation()
+    {
+        var slideTransform = GetDesktopPageSlideTransform();
+        DesktopPage.Opacity = 1;
+        slideTransform.X = 0;
+        DesktopPage.IsHitTestVisible = true;
+        _isSlideAnimationActive = false;
+    }
+
+    private bool IsSlideTransitionEnabled()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return false;
+        }
+
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        return snapshot.EnableSlideTransition;
     }
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -848,8 +946,18 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             return;
         }
 
+        if (_isSlideAnimationActive)
+        {
+            return;
+        }
+
         Dispatcher.UIThread.Post(() =>
         {
+            if (_isSlideAnimationActive)
+            {
+                return;
+            }
+
             if (WindowState is not (WindowState.Minimized or WindowState.FullScreen))
             {
                 WindowState = WindowState.FullScreen;

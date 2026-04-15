@@ -201,6 +201,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
+        EnableSlideTransition = appSnapshot.EnableSlideTransition;
         _isInitializing = false;
 
         RefreshPreview();
@@ -232,6 +233,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             return;
         }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.EnableSlideTransition)))
+        {
+            EnableSlideTransition = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableSlideTransition;
+        }
     }
 
     public event Action? RestartRequested;
@@ -250,6 +256,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private SelectionOption _selectedRenderMode = new(AppRenderingModeHelper.Default, "Default");
+
+    [ObservableProperty]
+    private bool _enableSlideTransition;
+
+    public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
     [ObservableProperty]
     private string _pageTitle = string.Empty;
@@ -348,6 +359,24 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             RestartRequested?.Invoke();
         }
+    }
+
+    partial void OnEnableSlideTransitionChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.EnableSlideTransition), value);
+    }
+
+    private void SaveField<T>(string key, T value)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        var property = typeof(AppSettingsSnapshot).GetProperty(key);
+        if (property is not null && property.CanWrite)
+        {
+            property.SetValue(snapshot, value);
+        }
+
+        _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
     }
 
     private IReadOnlyList<SelectionOption> CreateLanguageOptions()
