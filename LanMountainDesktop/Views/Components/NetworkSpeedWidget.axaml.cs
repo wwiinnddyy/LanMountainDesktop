@@ -317,31 +317,32 @@ public partial class NetworkSpeedWidget : UserControl, IDesktopComponentWidget
 
     private static string FormatSpeed(long bytesPerSecond)
     {
-        // 根据数值大小决定显示格式，始终保持3个字符宽度
-        // 例如: 1.23, 12.3, 123
+        // 根据数值大小选择合适的单位，确保显示始终在1-99.9范围内
+        // 当数值达到100时自动切换到更大的单位
         return bytesPerSecond switch
         {
-            >= 1024 * 1024 * 1024 => FormatWithThreeDigits(bytesPerSecond / (1024.0 * 1024.0 * 1024.0), "G"),
-            >= 1024 * 1024 => FormatWithThreeDigits(bytesPerSecond / (1024.0 * 1024.0), "M"),
-            >= 1024 => FormatWithThreeDigits(bytesPerSecond / 1024.0, "K"),
+            >= 100L * 1024 * 1024 * 1024 => FormatWithThreeDigits(bytesPerSecond / (1024.0 * 1024.0 * 1024.0), "G"),
+            >= 100L * 1024 * 1024 => FormatWithThreeDigits(bytesPerSecond / (1024.0 * 1024.0), "M"),
+            >= 100L * 1024 => FormatWithThreeDigits(bytesPerSecond / 1024.0, "K"),
+            >= 100 => FormatWithThreeDigits(bytesPerSecond / 1024.0, "K"),  // 100B+ 显示为 0.1K
             _ => FormatWithThreeDigits(bytesPerSecond, "B")
         };
     }
 
     /// <summary>
-    /// 格式化数字，始终保持3个有效数字的显示宽度
+    /// 格式化数字，始终保持3位数字+小数点，确保宽度恒定
+    /// 数值范围始终在1-99.9之间
     /// </summary>
     private static string FormatWithThreeDigits(double value, string unit)
     {
-        // 根据数值大小决定小数位数，确保总宽度一致
+        // 始终保持3位数字，小数点始终存在
+        // 数值范围: 0.0 - 99.9
         // < 10: 显示两位小数 (如 1.23)
-        // 10-99: 显示一位小数 (如 12.3)
-        // >= 100: 显示整数 (如 123)
+        // >= 10: 显示一位小数 (如 12.3, 99.9)
         string formatted = value switch
         {
-            < 10 => $"{value:F2}",
-            < 100 => $"{value:F1}",
-            _ => $"{value:F0}"
+            < 10 => $"{value:F2}",   // 1.23
+            _ => $"{value:F1}"       // 12.3, 99.9
         };
 
         return formatted + unit;

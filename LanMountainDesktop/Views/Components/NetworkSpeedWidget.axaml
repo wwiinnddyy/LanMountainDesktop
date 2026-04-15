@@ -30,7 +30,10 @@
                            FontWeight="SemiBold"
                            Margin="2,0,0,0"
                            VerticalAlignment="Center"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"/>
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           FontFamily="Consolas, Courier New, monospace"
+                           MinWidth="42"
+                           TextAlignment="Right"/>
             </StackPanel>
 
             <!-- 分隔符 -->
@@ -55,7 +58,10 @@
                            FontWeight="SemiBold"
                            Margin="2,0,0,0"
                            VerticalAlignment="Center"
-                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"/>
+                           Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                           FontFamily="Consolas, Courier New, monospace"
+                           MinWidth="42"
+                           TextAlignment="Right"/>
             </StackPanel>
 
             <!-- 网络类型图标 -->
