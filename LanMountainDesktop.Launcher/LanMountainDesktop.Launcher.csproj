@@ -19,6 +19,30 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
     <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.106" PrivateAssets="all" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
   </ItemGroup>
+
+  <!-- Embed public-key.pem and copy to .launcher/update/ in output directory -->
+  <ItemGroup>
+    <None Include="Assets\public-key.pem" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CopyPublicKeyToLauncherDir" AfterTargets="Build">
+    <PropertyGroup>
+      <PublicKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublicKeySource>
+      <PublicKeyDestDir>$(OutDir).launcher\update</PublicKeyDestDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PublicKeyDestDir)" />
+    <Copy SourceFiles="$(PublicKeySource)" DestinationFolder="$(PublicKeyDestDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyPublicKeyToPublishDir" AfterTargets="Publish">
+    <PropertyGroup>
+      <PublishedKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublishedKeySource>
+      <PublishedKeyDestDir>$(PublishDir).launcher\update</PublishedKeyDestDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PublishedKeyDestDir)" />
+    <Copy SourceFiles="$(PublishedKeySource)" DestinationFolder="$(PublishedKeyDestDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

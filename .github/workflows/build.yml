@@ -1,4 +1,4 @@
-﻿name: Build
+name: Build
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
+  DOTNET_gcServer: 1
 
 jobs:
   build-windows:
@@ -63,7 +64,8 @@ jobs:
           sudo apt-get install -y \
             libfontconfig1 libfreetype6 \
             libx11-6 libxrandr2 libxinerama1 \
-            libxi6 libxcursor1 libxext6
+            libxi6 libxcursor1 libxext6 \
+            libxrender1 libxkbcommon-x11-0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

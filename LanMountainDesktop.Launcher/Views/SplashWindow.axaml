@@ -3,15 +3,38 @@
         x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
         Title="阑山桌面"
         Width="420"
-        Height="220"
+        Height="240"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None">
-  <Grid Margin="24">
+  <Grid Margin="24" RowDefinitions="*,Auto,Auto,Auto">
     <TextBlock x:Name="AppNameText"
                Text="阑山桌面"
                FontSize="34"
                VerticalAlignment="Center"
-               HorizontalAlignment="Center" />
+               HorizontalAlignment="Center"
+               Grid.Row="0" />
+    <ProgressBar x:Name="ProgressIndicator"
+                 Grid.Row="1"
+                 Minimum="0"
+                 Maximum="100"
+                 Value="0"
+                 Height="4"
+                 Margin="0,12,0,0"
+                 IsIndeterminate="True" />
+    <TextBlock x:Name="StageText"
+               Grid.Row="2"
+               FontSize="12"
+               Foreground="#999999"
+               HorizontalAlignment="Center"
+               Margin="0,8,0,0"
+               Text="" />
+    <TextBlock x:Name="DetailText"
+               Grid.Row="3"
+               FontSize="11"
+               Foreground="#BBBBBB"
+               HorizontalAlignment="Center"
+               Margin="0,2,0,0"
+               Text="" />
   </Grid>
 </Window>

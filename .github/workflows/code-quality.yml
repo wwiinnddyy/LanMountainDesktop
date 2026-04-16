@@ -1,4 +1,4 @@
-﻿name: Quality Check
+name: Quality Check
 
 on:
   pull_request:
@@ -9,6 +9,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
+  DOTNET_gcServer: 1
 
 jobs:
   analyze:

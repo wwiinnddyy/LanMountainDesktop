@@ -1,29 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
+using PostHog;
 
 namespace LanMountainDesktop.Services;
 
 public sealed class PostHogUsageTelemetryService : IDisposable
 {
     private const string PostHogApiKey = "phc_bhQZvKDDfsEdLT6kkRFvrWMT8Pc5aCGGsnxoc5ijSf9";
-    private const string PostHogHost = "https://us.i.posthog.com/capture/";
+    private const string PostHogHostUrl = "https://us.i.posthog.com";
 
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly ISettingsService _settingsService;
-    private readonly HttpClient _httpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(10)
-    };
-    private readonly Queue<TelemetryEvent> _eventQueue = new();
-    private readonly object _queueLock = new();
+    private readonly PostHogClient _client;
+    private readonly CancellationTokenSource _cts = new();
 
     private Timer? _flushTimer;
     private bool _isInitialized;
@@ -39,6 +33,14 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _settingsService = settingsFacade.Settings;
         _settingsService.Changed += OnSettingsChanged;
+
+        _client = new PostHogClient(new PostHogOptions
+        {
+            ProjectApiKey = PostHogApiKey,
+            HostUrl = new Uri(PostHogHostUrl),
+            FlushAt = 20,
+            FlushInterval = TimeSpan.FromSeconds(30)
+        });
     }
 
     public bool IsUsageEnabled => _isUsageEnabled;
@@ -56,7 +58,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         RefreshEnabledState(forceSessionStart: true);
 
         _flushTimer = new Timer(
-            _ => FlushEvents(),
+            _ => _ = _client.FlushAsync(),
             null,
             TimeSpan.FromSeconds(10),
             TimeSpan.FromSeconds(30));
@@ -88,14 +90,12 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 return;
             }
 
-            ClearQueuedEvents();
             StopSessionWithoutSending();
         }
         catch (Exception ex)
         {
             AppLogger.Warn("PostHogUsage", "Failed to refresh usage analytics enabled state.", ex);
             _isUsageEnabled = false;
-            ClearQueuedEvents();
             StopSessionWithoutSending();
         }
     }
@@ -278,7 +278,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             EndSession(source, isRestart);
         }
 
-        FlushEvents();
+        _ = _client.FlushAsync();
         AppLogger.Info(
             "PostHogUsage",
             $"Usage telemetry shutdown complete. Source='{source}'; Restart='{isRestart}'; Enabled={_isUsageEnabled}.");
@@ -291,15 +291,12 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             _flushTimer?.Dispose();
             _settingsService.Changed -= OnSettingsChanged;
             Shutdown(isRestart: false, source: "Dispose");
-            FlushEvents();
+            _cts.Cancel();
+            _client.Dispose();
         }
         catch (Exception ex)
         {
             AppLogger.Warn("PostHogUsage", "Error disposing usage telemetry service.", ex);
-        }
-        finally
-        {
-            _httpClient.Dispose();
         }
     }
 
@@ -313,66 +310,35 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 return;
             }
 
-            var now = DateTimeOffset.UtcNow;
-            if (SendBaselineEventToPostHog(identity.InstallId, now))
+            var distinctId = identity.InstallId;
+            var personProps = new Dictionary<string, object?>
             {
-                identity.MarkBaselineReported();
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("PostHogUsage", "Failed to send baseline launch event.", ex);
-        }
-    }
-
-    private bool SendBaselineEventToPostHog(string installId, DateTimeOffset timestamp)
-    {
-        try
-        {
-            var requestBody = new Dictionary<string, object?>
-            {
-                ["api_key"] = PostHogApiKey,
-                ["event"] = "app_first_launch",
-                ["distinct_id"] = installId,
-                ["timestamp"] = timestamp.ToString("o"),
-                ["properties"] = new Dictionary<string, object?>
-                {
-                    ["install_id"] = installId,
-                    ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
-                    ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
-                    ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
-                    ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
-                    ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
-                    ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
-                    ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage(),
-                    ["launch_time_utc"] = timestamp.ToString("o")
-                }
+                ["install_id"] = identity.InstallId,
+                ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
+                ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
+                ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
+                ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
+                ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
+                ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
+                ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage()
             };
 
-            var json = JsonSerializer.Serialize(requestBody);
-            var bytes = Encoding.UTF8.GetBytes(json);
+            _ = _client.IdentifyAsync(distinctId, personProps, null, _cts.Token);
 
-            using var content = new ByteArrayContent(bytes);
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            _client.Capture(
+                distinctId,
+                "app_first_launch",
+                personProps,
+                groups: null,
+                sendFeatureFlags: false);
 
-            var response = _httpClient.PostAsync(PostHogHost, content).GetAwaiter().GetResult();
-            var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                AppLogger.Warn(
-                    "PostHogUsage",
-                    $"PostHog baseline event failed: {response.StatusCode} - {responseBody}");
-                return false;
-            }
-
-            AppLogger.Info("PostHogUsage", "Sent first-launch baseline event.");
-            return true;
+            _ = _client.FlushAsync();
+            identity.MarkBaselineReported();
+            AppLogger.Info("PostHogUsage", "Sent first-launch baseline event via SDK.");
         }
         catch (Exception ex)
         {
             AppLogger.Warn("PostHogUsage", "Failed to send baseline launch event.", ex);
-            return false;
         }
     }
 
@@ -479,137 +445,60 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             return;
         }
 
-        var eventData = new TelemetryEvent(
-            eventName,
-            TelemetryIdentityService.Instance.TelemetryId,
-            TelemetryIdentityService.Instance.InstallId,
-            TelemetryIdentityService.Instance.TelemetryId,
-            _sessionId,
-            Interlocked.Increment(ref _sequence),
-            DateTimeOffset.UtcNow,
-            payload ?? new Dictionary<string, object?>(),
-            stateBefore,
-            stateAfter);
+        var identity = TelemetryIdentityService.Instance;
+        var distinctId = identity.TelemetryId;
+        var seq = Interlocked.Increment(ref _sequence);
 
-        lock (_queueLock)
+        var properties = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            _eventQueue.Enqueue(eventData);
+            ["install_id"] = identity.InstallId,
+            ["telemetry_id"] = identity.TelemetryId,
+            ["session_id"] = _sessionId,
+            ["sequence"] = seq,
+            ["timestamp_utc"] = DateTimeOffset.UtcNow.ToString("o"),
+            ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
+            ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
+            ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
+            ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
+            ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
+            ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
+            ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage()
+        };
+
+        if (payload is not null)
+        {
+            foreach (var kvp in payload)
+            {
+                properties[$"payload_{kvp.Key}"] = kvp.Value;
+            }
         }
+
+        if (stateBefore is not null && stateBefore.Count > 0)
+        {
+            foreach (var kvp in stateBefore)
+            {
+                properties[$"state_before_{kvp.Key}"] = kvp.Value;
+            }
+        }
+
+        if (stateAfter is not null && stateAfter.Count > 0)
+        {
+            foreach (var kvp in stateAfter)
+            {
+                properties[$"state_after_{kvp.Key}"] = kvp.Value;
+            }
+        }
+
+        _client.Capture(
+            distinctId,
+            eventName,
+            properties,
+            groups: null,
+            sendFeatureFlags: false);
 
         if (forceFlush)
         {
-            FlushEvents();
-            return;
-        }
-
-        var shouldFlush = false;
-        lock (_queueLock)
-        {
-            shouldFlush = _eventQueue.Count >= 20;
-        }
-
-        if (shouldFlush)
-        {
-            FlushEvents();
-        }
-    }
-
-    private void FlushEvents()
-    {
-        List<TelemetryEvent> eventsToSend;
-
-        lock (_queueLock)
-        {
-            if (_eventQueue.Count == 0)
-            {
-                return;
-            }
-
-            eventsToSend = new List<TelemetryEvent>();
-            while (_eventQueue.Count > 0 && eventsToSend.Count < 20)
-            {
-                eventsToSend.Add(_eventQueue.Dequeue());
-            }
-        }
-
-        try
-        {
-            foreach (var telemetryEvent in eventsToSend)
-            {
-                if (!SendEventToPostHog(telemetryEvent, flushImmediately: false))
-                {
-                    throw new InvalidOperationException($"Failed to send PostHog event '{telemetryEvent.EventName}'.");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("PostHogUsage", "Failed to send queued events to PostHog.", ex);
-
-            lock (_queueLock)
-            {
-                foreach (var evt in eventsToSend)
-                {
-                    if (_eventQueue.Count >= 100)
-                    {
-                        break;
-                    }
-
-                    _eventQueue.Enqueue(evt);
-                }
-            }
-        }
-    }
-
-    private bool SendEventToPostHog(TelemetryEvent telemetryEvent, bool flushImmediately)
-    {
-        try
-        {
-            var requestBody = new Dictionary<string, object?>
-            {
-                ["api_key"] = PostHogApiKey,
-                ["event"] = telemetryEvent.EventName,
-                ["distinct_id"] = telemetryEvent.DistinctId,
-                ["timestamp"] = telemetryEvent.Timestamp.ToString("o"),
-                ["properties"] = telemetryEvent.ToPostHogProperties()
-            };
-
-            var json = JsonSerializer.Serialize(requestBody);
-            var bytes = Encoding.UTF8.GetBytes(json);
-
-            using var content = new ByteArrayContent(bytes);
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-
-            var response = _httpClient.PostAsync(PostHogHost, content).GetAwaiter().GetResult();
-            var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                AppLogger.Warn(
-                    "PostHogUsage",
-                    $"PostHog event '{telemetryEvent.EventName}' failed: {response.StatusCode} - {responseBody}");
-                return false;
-            }
-
-            if (flushImmediately)
-            {
-                AppLogger.Info("PostHogUsage", $"Sent event '{telemetryEvent.EventName}' immediately.");
-            }
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("PostHogUsage", $"Failed to send PostHog event '{telemetryEvent.EventName}'.", ex);
-            return false;
-        }
-    }
-
-    private void ClearQueuedEvents()
-    {
-        lock (_queueLock)
-        {
-            _eventQueue.Clear();
+            _ = _client.FlushAsync();
         }
     }
 

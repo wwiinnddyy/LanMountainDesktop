@@ -76,20 +76,37 @@
     <PackageReference Include="WebView.Avalonia" Version="11.0.0.1" />
     <PackageReference Include="WebView.Avalonia.Desktop" Version="11.0.0.1" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    <PackageReference Include="Tmds.DBus.Protocol" Version="0.22.0" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+    <PackageReference Include="log4net" Version="3.3.0" />
   </ItemGroup>
 
   <Target Name="CopyLauncherToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <_LauncherOutputPath>..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\</_LauncherOutputPath>
+    </PropertyGroup>
     <ItemGroup>
-      <LauncherFiles Include="..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\**\*.*" />
+      <LauncherFiles Include="$(_LauncherOutputPath)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(LauncherFiles)" DestinationFiles="@(LauncherFiles->'$(OutDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(LauncherFiles)" DestinationFiles="@(LauncherFiles->'$(OutDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="Exists('$(_LauncherOutputPath)')" />
+  </Target>
+
+  <Target Name="PublishLauncher" BeforeTargets="CopyLauncherToPublish" Condition="'$(PublishDir)' != '' and '$(RuntimeIdentifier)' != ''">
+    <PropertyGroup>
+      <_LauncherPublishPath>..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\</_LauncherPublishPath>
+    </PropertyGroup>
+    <MSBuild Projects="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishDir=$(_LauncherPublishPath);PublishSingleFile=false;PublishTrimmed=false;PublishReadyToRun=false;DebugType=none;DebugSymbols=false" />
   </Target>
 
   <Target Name="CopyLauncherToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+    <PropertyGroup>
+      <_LauncherPublishSource Condition="'$(RuntimeIdentifier)' != '' and Exists('..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\')">..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\</_LauncherPublishSource>
+      <_LauncherPublishSource Condition="'$(_LauncherPublishSource)' == ''">..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\</_LauncherPublishSource>
+    </PropertyGroup>
     <ItemGroup>
-      <LauncherPublishFiles Include="..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\**\*.*" />
+      <LauncherPublishFiles Include="$(_LauncherPublishSource)**\*.*" />
     </ItemGroup>
-    <Copy SourceFiles="@(LauncherPublishFiles)" DestinationFiles="@(LauncherPublishFiles->'$(PublishDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(LauncherPublishFiles)" DestinationFiles="@(LauncherPublishFiles->'$(PublishDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="Exists('$(_LauncherPublishSource)')" />
   </Target>
 </Project>

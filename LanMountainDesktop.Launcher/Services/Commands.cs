@@ -89,7 +89,7 @@ internal static class Commands
         return context.SubCommand.ToLowerInvariant() switch
         {
             "check" => updateEngine.CheckPendingUpdate(),
-            "apply" => updateEngine.ApplyPendingUpdate(),
+            "apply" => await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false),
             "rollback" => updateEngine.RollbackLatest(),
             "download" => await updateEngine.DownloadAsync(
                 context.GetOption("manifest-url") ?? throw new InvalidOperationException("Missing --manifest-url."),

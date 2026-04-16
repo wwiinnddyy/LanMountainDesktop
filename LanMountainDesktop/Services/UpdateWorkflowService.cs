@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.PluginSdk;
@@ -47,6 +49,13 @@ public sealed class UpdateWorkflowService
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly string _updatesDirectory;
 
+    private const string LauncherDirectoryName = ".launcher";
+    private const string UpdateDirectoryName = "update";
+    private const string IncomingDirectoryName = "incoming";
+    private const string DeltaManifestFileName = "files.json";
+    private const string DeltaSignatureFileName = "files.json.sig";
+    private const string DeltaArchiveFileName = "update.zip";
+
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
@@ -54,6 +63,175 @@ public sealed class UpdateWorkflowService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "LanMountainDesktop",
             "Updates");
+    }
+
+    /// <summary>
+    /// Gets the path to the Launcher's incoming update directory where delta packages should be placed.
+    /// </summary>
+    public static string GetLauncherIncomingDirectory()
+    {
+        // The app runs from app-{version}/ subdirectory; Launcher root is one level up.
+        var appBaseDir = AppContext.BaseDirectory;
+        var launcherRoot = Path.GetDirectoryName(appBaseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(launcherRoot))
+        {
+            launcherRoot = appBaseDir;
+        }
+        return Path.Combine(launcherRoot, LauncherDirectoryName, UpdateDirectoryName, IncomingDirectoryName);
+    }
+
+    /// <summary>
+    /// Checks whether a GitHub Release contains delta update assets (files.json, files.json.sig, update.zip).
+    /// </summary>
+    public static bool IsDeltaUpdateAvailable(GitHubReleaseInfo release)
+    {
+        if (release is null || release.Assets is null || release.Assets.Count == 0)
+        {
+            return false;
+        }
+
+        var assetNames = release.Assets.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return assetNames.Contains(DeltaManifestFileName)
+            && assetNames.Contains(DeltaSignatureFileName)
+            && assetNames.Contains(DeltaArchiveFileName);
+    }
+
+    /// <summary>
+    /// Downloads the delta update package (files.json, files.json.sig, update.zip) from a GitHub Release
+    /// and places them in the Launcher's incoming directory for the Launcher to apply on next startup.
+    /// </summary>
+    public async Task<UpdateDownloadResult> DownloadDeltaUpdateAsync(
+        UpdateCheckResult checkResult,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkResult);
+
+        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null)
+        {
+            return new UpdateDownloadResult(false, null, "No update available for delta download.");
+        }
+
+        if (!IsDeltaUpdateAvailable(checkResult.Release))
+        {
+            return new UpdateDownloadResult(false, null, "Release does not contain delta update assets.");
+        }
+
+        var incomingDir = GetLauncherIncomingDirectory();
+
+        try
+        {
+            Directory.CreateDirectory(incomingDir);
+        }
+        catch (Exception ex)
+        {
+            return new UpdateDownloadResult(false, null, $"Failed to create incoming directory: {ex.Message}");
+        }
+
+        var state = _settingsFacade.Update.Get();
+        var downloadSource = state.UpdateDownloadSource;
+        var downloadThreads = state.UpdateDownloadThreads;
+
+        var requiredAssets = new Dictionary<string, GitHubReleaseAsset>(StringComparer.OrdinalIgnoreCase)
+        {
+            [DeltaManifestFileName] = null!,
+            [DeltaSignatureFileName] = null!,
+            [DeltaArchiveFileName] = null!
+        };
+
+        foreach (var asset in checkResult.Release.Assets)
+        {
+            if (requiredAssets.ContainsKey(asset.Name))
+            {
+                requiredAssets[asset.Name] = asset;
+            }
+        }
+
+        if (requiredAssets.Any(kvp => kvp.Value is null))
+        {
+            return new UpdateDownloadResult(false, null, "One or more delta assets not found in release.");
+        }
+
+        var totalAssets = requiredAssets.Count;
+        var completedAssets = 0;
+
+        foreach (var (name, asset) in requiredAssets)
+        {
+            var destinationPath = Path.Combine(incomingDir, name);
+
+            // Skip if already downloaded and file exists
+            if (File.Exists(destinationPath))
+            {
+                var existingHash = await GitHubReleaseUpdateService.ComputeFileSha256Async(destinationPath, cancellationToken);
+                if (asset.Sha256 is not null && string.Equals(existingHash, asset.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLogger.Info("UpdateWorkflow", $"Delta asset {name} already downloaded with matching hash, skipping.");
+                    completedAssets++;
+                    progress?.Report((double)completedAssets / totalAssets);
+                    continue;
+                }
+            }
+
+            var assetProgress = progress is null ? null : new Progress<double>(p =>
+            {
+                var overallProgress = ((double)completedAssets + p) / totalAssets;
+                progress.Report(overallProgress);
+            });
+
+            var result = await _settingsFacade.Update.DownloadAssetAsync(
+                asset,
+                destinationPath,
+                downloadSource,
+                downloadThreads,
+                assetProgress,
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                // Clean up partially downloaded files
+                foreach (var file in requiredAssets.Keys)
+                {
+                    try { File.Delete(Path.Combine(incomingDir, file)); } catch { }
+                }
+                return new UpdateDownloadResult(false, null, $"Failed to download delta asset {name}: {result.ErrorMessage}");
+            }
+
+            completedAssets++;
+            progress?.Report((double)completedAssets / totalAssets);
+        }
+
+        // Save state indicating a delta update is pending
+        SaveState(state with
+        {
+            PendingUpdateInstallerPath = Path.Combine(incomingDir, DeltaManifestFileName),
+            PendingUpdateVersion = checkResult.LatestVersionText,
+            PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
+                ? null
+                : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+            LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            PendingUpdateSha256 = null
+        });
+
+        AppLogger.Info("UpdateWorkflow", $"Delta update package downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
+
+        return new UpdateDownloadResult(true, Path.Combine(incomingDir, DeltaManifestFileName), null);
+    }
+
+    /// <summary>
+    /// Checks whether the pending update is a delta update (files.json in incoming dir) vs a full installer.
+    /// </summary>
+    public bool IsPendingDeltaUpdate()
+    {
+        var state = _settingsFacade.Update.Get();
+        var pendingPath = state.PendingUpdateInstallerPath?.Trim();
+        if (string.IsNullOrWhiteSpace(pendingPath))
+        {
+            return false;
+        }
+
+        // Delta updates are identified by the manifest file path
+        return pendingPath.EndsWith(DeltaManifestFileName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
     }
 
     public UpdatePendingInfo? GetPendingUpdate()
@@ -261,7 +439,7 @@ public sealed class UpdateWorkflowService
         {
             // Always check for updates on startup (removed AutoCheckUpdates check)
             var result = await CheckForUpdatesAsync(currentVersion, isForce: false, cancellationToken);
-            if (!result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
+            if (!result.Success || !result.IsUpdateAvailable || result.Release is null)
             {
                 return;
             }
@@ -272,7 +450,16 @@ public sealed class UpdateWorkflowService
             if (string.Equals(normalizedMode, UpdateSettingsValues.ModeDownloadThenConfirm, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(normalizedMode, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase))
             {
-                await DownloadReleaseAsync(result, cancellationToken: cancellationToken);
+                // Prefer delta update if available (smaller download, faster)
+                if (IsDeltaUpdateAvailable(result.Release))
+                {
+                    AppLogger.Info("UpdateWorkflow", "Delta update available, downloading incremental package.");
+                    await DownloadDeltaUpdateAsync(result, cancellationToken: cancellationToken);
+                }
+                else if (result.PreferredAsset is not null)
+                {
+                    await DownloadReleaseAsync(result, cancellationToken: cancellationToken);
+                }
             }
             // For "Manual" mode, just check but don't download
         }
@@ -300,6 +487,15 @@ public sealed class UpdateWorkflowService
                 StringComparison.OrdinalIgnoreCase))
         {
             return false;
+        }
+
+        // For delta updates, the files are already in .launcher/update/incoming/.
+        // Just exit the app - the Launcher will detect and apply the update on next startup.
+        if (IsPendingDeltaUpdate())
+        {
+            AppLogger.Info("UpdateWorkflow", "Delta update pending in incoming directory. Exiting to let Launcher apply on next startup.");
+            ClearPendingUpdate();
+            return true;
         }
 
         var result = LaunchPendingInstaller(silent: true, exitApplicationAfterLaunch: false);

@@ -110,7 +110,7 @@ internal sealed class UpdateEngineService
         };
     }
 
-    public LauncherResult ApplyPendingUpdate()
+    public async Task<LauncherResult> ApplyPendingUpdateAsync()
     {
         Directory.CreateDirectory(_incomingRoot);
         Directory.CreateDirectory(_snapshotsRoot);
@@ -136,7 +136,7 @@ internal sealed class UpdateEngineService
             return Failed("update.apply", "signature_failed", verifyResult.Message);
         }
 
-        var fileMapText = File.ReadAllText(fileMapPath);
+        var fileMapText = await File.ReadAllTextAsync(fileMapPath);
         var fileMap = JsonSerializer.Deserialize<SignedFileMap>(fileMapText);
         if (fileMap is null || fileMap.Files.Count == 0)
         {

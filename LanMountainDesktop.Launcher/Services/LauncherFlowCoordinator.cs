@@ -13,7 +13,6 @@ internal sealed class LauncherFlowCoordinator
     private readonly UpdateEngineService _updateEngine;
     private readonly UpdateCheckService _updateCheckService;
     private readonly PluginInstallerService _pluginInstallerService;
-    private readonly ISplashStageReporter _splashStageReporter;
     private readonly IReadOnlyList<IOobeStep> _oobeSteps;
 
     public LauncherFlowCoordinator(
@@ -30,7 +29,6 @@ internal sealed class LauncherFlowCoordinator
         _updateEngine = updateEngine;
         _updateCheckService = updateCheckService;
         _pluginInstallerService = pluginInstallerService;
-        _splashStageReporter = new NullSplashStageReporter();
         _oobeSteps = [new WelcomeOobeStep(_oobeStateService)];
     }
 
@@ -41,7 +39,6 @@ internal sealed class LauncherFlowCoordinator
             // 清理待删除的旧版本
             _deploymentLocator.CleanupDestroyedDeployments();
 
-            _splashStageReporter.Report("bootstrap", "bootstrap");
             if (_oobeStateService.IsFirstRun())
             {
                 foreach (var step in _oobeSteps)
@@ -57,16 +54,18 @@ internal sealed class LauncherFlowCoordinator
                 return window;
             });
 
+            var reporter = (ISplashStageReporter)splashWindow;
+
             try
             {
-                _splashStageReporter.Report("silentUpdate", "update");
-                var updateResult = _updateEngine.ApplyPendingUpdate();
+                reporter.Report("silentUpdate", "update");
+                var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
                     return updateResult;
                 }
 
-                _splashStageReporter.Report("pluginTasks", "plugins");
+                reporter.Report("pluginTasks", "plugins");
                 var pluginsDir = _context.GetOption("plugins-dir")
                                  ?? Path.Combine(_deploymentLocator.GetAppRoot(), "plugins");
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
@@ -75,7 +74,7 @@ internal sealed class LauncherFlowCoordinator
                     return queueResult;
                 }
 
-                _splashStageReporter.Report("launchHost", "launch");
+                reporter.Report("launchHost", "launch");
                 var hostResult = LaunchHost();
                 if (!hostResult.Success)
                 {
@@ -190,15 +189,6 @@ internal sealed class LauncherFlowCoordinator
             {
                 await Dispatcher.UIThread.InvokeAsync(() => window.Close());
             }
-        }
-    }
-
-    private sealed class NullSplashStageReporter : ISplashStageReporter
-    {
-        public void Report(string stage, string message)
-        {
-            _ = stage;
-            _ = message;
         }
     }
 }
