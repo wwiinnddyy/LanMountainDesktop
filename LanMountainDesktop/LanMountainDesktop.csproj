@@ -36,7 +36,7 @@
     <ProjectReference Include="..\LanMountainDesktop.DesktopComponents.Runtime\LanMountainDesktop.DesktopComponents.Runtime.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopHost\LanMountainDesktop.DesktopHost.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
-    <ProjectReference Include="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" ReferenceOutputAssembly="false" />
+    <!-- Launcher 引用已移除 - Launcher 现在是独立应用 -->
   </ItemGroup>
 
   <ItemGroup>
@@ -80,33 +80,5 @@
     <PackageReference Include="log4net" Version="3.3.0" />
   </ItemGroup>
 
-  <Target Name="CopyLauncherToOutput" AfterTargets="Build">
-    <PropertyGroup>
-      <_LauncherOutputPath>..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\</_LauncherOutputPath>
-    </PropertyGroup>
-    <ItemGroup>
-      <LauncherFiles Include="$(_LauncherOutputPath)**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(LauncherFiles)" DestinationFiles="@(LauncherFiles->'$(OutDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="Exists('$(_LauncherOutputPath)')" />
-  </Target>
-
-  <Target Name="PublishLauncher" BeforeTargets="CopyLauncherToPublish" Condition="'$(PublishDir)' != '' and '$(RuntimeIdentifier)' != ''">
-    <PropertyGroup>
-      <_LauncherPublishPath>..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\</_LauncherPublishPath>
-    </PropertyGroup>
-    <MSBuild Projects="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj"
-             Targets="Publish"
-             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishDir=$(_LauncherPublishPath);PublishSingleFile=false;PublishTrimmed=false;PublishReadyToRun=false;DebugType=none;DebugSymbols=false" />
-  </Target>
-
-  <Target Name="CopyLauncherToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
-    <PropertyGroup>
-      <_LauncherPublishSource Condition="'$(RuntimeIdentifier)' != '' and Exists('..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\')">..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\$(RuntimeIdentifier)\publish\</_LauncherPublishSource>
-      <_LauncherPublishSource Condition="'$(_LauncherPublishSource)' == ''">..\LanMountainDesktop.Launcher\bin\$(Configuration)\net10.0\</_LauncherPublishSource>
-    </PropertyGroup>
-    <ItemGroup>
-      <LauncherPublishFiles Include="$(_LauncherPublishSource)**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(LauncherPublishFiles)" DestinationFiles="@(LauncherPublishFiles->'$(PublishDir)Launcher\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="Exists('$(_LauncherPublishSource)')" />
-  </Target>
+  <!-- Launcher 构建目标已移除 - Launcher 现在是独立应用，由 CI/CD 单独构建 -->
 </Project>

@@ -4,13 +4,17 @@ using Avalonia.Markup.Xaml;
 
 namespace LanMountainDesktop.Launcher.Views;
 
-internal partial class OobeWindow : Window
+/// <summary>
+/// OOBE（首次使用体验）窗口
+/// </summary>
+public partial class OobeWindow : Window
 {
     private readonly TaskCompletionSource<bool> _completionSource = new();
 
     public OobeWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        
         var enterButton = this.FindControl<Button>("EnterButton");
         if (enterButton is not null)
         {
@@ -18,6 +22,9 @@ internal partial class OobeWindow : Window
         }
     }
 
+    /// <summary>
+    /// 等待用户点击开始按钮
+    /// </summary>
     public Task WaitForEnterAsync() => _completionSource.Task;
 
     private void OnEnterClick(object? sender, RoutedEventArgs e)

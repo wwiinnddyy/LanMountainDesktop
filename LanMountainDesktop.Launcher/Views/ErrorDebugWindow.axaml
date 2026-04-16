@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="420"
+        d:DesignHeight="320"
+        x:Class="LanMountainDesktop.Launcher.Views.ErrorDebugWindow"
+        x:DataType="views:ErrorDebugWindow"
+        Title="调试模式"
+        Width="420"
+        Height="320"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None">
+  <Design.DataContext>
+    <views:ErrorDebugWindow />
+  </Design.DataContext>
+
+  <Grid Margin="24" RowDefinitions="Auto,*,Auto">
+    <!-- 标题 -->
+    <TextBlock Grid.Row="0"
+               Text="调试设置"
+               FontSize="20"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+               Margin="0,0,0,16" />
+
+    <!-- 设置内容 -->
+    <StackPanel Grid.Row="1" Spacing="16">
+      <!-- 开发模式开关 -->
+      <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="{DynamicResource ControlCornerRadius}"
+              Padding="16,12">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="开发模式"
+                       FontSize="14"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="启用后自动扫描开发目录"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="0,2,0,0" />
+          </StackPanel>
+          <ToggleSwitch x:Name="DevModeToggle"
+                        Grid.Column="1"
+                        OnContent="开"
+                        OffContent="关" />
+        </Grid>
+      </Border>
+
+      <!-- 应用路径选择 -->
+      <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="{DynamicResource ControlCornerRadius}"
+              Padding="16,12">
+        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0"
+                     Text="应用路径"
+                     FontSize="14"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+          <TextBlock x:Name="PathTextBlock"
+                     Grid.Row="1" Grid.Column="0"
+                     Text="未选择"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     TextTrimming="CharacterEllipsis"
+                     Margin="0,4,12,0" />
+          <Button x:Name="BrowseButton"
+                  Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                  Content="浏览..."
+                  VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <!-- 提示信息 -->
+      <Border Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+              CornerRadius="{DynamicResource ControlCornerRadius}"
+              Padding="12,10"
+              IsVisible="True">
+        <TextBlock Text="此功能仅供开发人员使用"
+                   FontSize="12"
+                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                   TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
+
+    <!-- 按钮区域 -->
+    <StackPanel Grid.Row="2"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="12"
+                Margin="0,16,0,0">
+      <Button x:Name="CancelButton"
+              Content="取消"
+              Width="80"
+              Height="32" />
+      <Button x:Name="OkButton"
+              Content="确定"
+              Width="80"
+              Height="32"
+              Theme="{DynamicResource AccentButtonTheme}" />
+    </StackPanel>
+  </Grid>
+</Window>

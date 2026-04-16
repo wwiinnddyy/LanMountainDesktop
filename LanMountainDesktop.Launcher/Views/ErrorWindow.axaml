@@ -1,0 +1,84 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="480"
+        d:DesignHeight="320"
+        x:Class="LanMountainDesktop.Launcher.Views.ErrorWindow"
+        x:DataType="views:ErrorWindow"
+        Title="阑山桌面 - 启动失败"
+        Width="480"
+        Height="320"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None">
+  <Design.DataContext>
+    <views:ErrorWindow />
+  </Design.DataContext>
+
+  <Grid Margin="40" RowDefinitions="Auto,*,Auto">
+    <!-- 错误图标和标题 -->
+    <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+      <!-- 错误图标 - 可点击进入调试模式（隐藏功能，无提示） -->
+      <Border x:Name="ErrorIconBorder"
+              Width="64"
+              Height="64"
+              Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+              CornerRadius="32"
+              HorizontalAlignment="Center">
+        <TextBlock x:Name="ErrorIconText"
+                   Text="!"
+                   FontSize="36"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+      </Border>
+
+      <TextBlock Text="启动失败"
+                 FontSize="24"
+                 FontWeight="Medium"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 HorizontalAlignment="Center"
+                 Margin="0,20,0,0" />
+    </StackPanel>
+
+    <!-- 错误信息 -->
+    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,20">
+      <TextBlock x:Name="ErrorMessageText"
+                 Text="找不到阑山桌面应用程序。"
+                 FontSize="14"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 LineHeight="22" />
+
+      <TextBlock Text="请确保应用程序已正确安装，或尝试重新安装。"
+                 FontSize="13"
+                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 Margin="0,12,0,0"
+                 LineHeight="20" />
+    </StackPanel>
+
+    <!-- 按钮区域 -->
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+      <Button x:Name="RetryButton"
+              Content="重试"
+              Width="100"
+              Height="36"
+              FontSize="14"
+              Theme="{DynamicResource AccentButtonTheme}" />
+
+      <Button x:Name="ExitButton"
+              Content="退出"
+              Width="100"
+              Height="36"
+              FontSize="14" />
+    </StackPanel>
+  </Grid>
+</Window>

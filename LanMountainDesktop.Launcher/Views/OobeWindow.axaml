@@ -1,22 +1,55 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        mc:Ignorable="d"
+        d:DesignWidth="420"
+        d:DesignHeight="260"
         x:Class="LanMountainDesktop.Launcher.Views.OobeWindow"
-        Title="阑山桌面"
+        x:DataType="views:OobeWindow"
+        Title="欢迎使用阑山桌面"
         Width="420"
         Height="260"
         CanResize="False"
-        WindowStartupLocation="CenterScreen">
-  <Grid Margin="24" RowDefinitions="*,Auto">
-    <TextBlock Text="欢迎使用阑山桌面"
-               FontSize="26"
-               VerticalAlignment="Center"
-               HorizontalAlignment="Center" />
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None">
+  <Design.DataContext>
+    <views:OobeWindow />
+  </Design.DataContext>
+
+  <Grid Margin="32" RowDefinitions="*,Auto">
+    <!-- 欢迎文本 -->
+    <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+      <TextBlock Text="欢迎使用"
+                 FontSize="18"
+                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                 HorizontalAlignment="Center" />
+      <TextBlock Text="阑山桌面"
+                 FontSize="32"
+                 FontWeight="Light"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 HorizontalAlignment="Center"
+                 Margin="0,8,0,0" />
+      <TextBlock Text="您的智能桌面助手"
+                 FontSize="14"
+                 Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                 HorizontalAlignment="Center"
+                 Margin="0,16,0,0" />
+    </StackPanel>
+
+    <!-- 进入按钮 -->
     <Button Grid.Row="1"
             x:Name="EnterButton"
             HorizontalAlignment="Right"
-            Width="64"
-            Height="40"
-            Content="→"
-            FontSize="18" />
+            Width="80"
+            Height="36"
+            Content="开始使用"
+            FontSize="14"
+            Background="{DynamicResource AccentFillColorDefaultBrush}"
+            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+            CornerRadius="4" />
   </Grid>
 </Window>

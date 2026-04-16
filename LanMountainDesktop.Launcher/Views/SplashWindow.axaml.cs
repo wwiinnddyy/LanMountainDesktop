@@ -1,48 +1,92 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
 
-internal partial class SplashWindow : Window, ISplashStageReporter
+/// <summary>
+/// 启动画面窗口 - 简洁设计
+/// </summary>
+public partial class SplashWindow : Window, ISplashStageReporter
 {
-    private static readonly (string Stage, string Label, double Progress)[] StageMap =
-    [
-        ("bootstrap", "正在初始化...", 10),
-        ("silentUpdate", "正在应用更新...", 35),
-        ("pluginTasks", "正在处理插件...", 65),
-        ("launchHost", "正在启动...", 90),
-    ];
-
     public SplashWindow()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <summary>
+    /// 更新进度和状态
+    /// </summary>
     public void Report(string stage, string message)
     {
-        var (label, progress) = ResolveStageInfo(stage);
+        Dispatcher.UIThread.Post(() =>
+        {
+            var statusText = this.GetControl<TextBlock>("StatusText");
+            var progressIndicator = this.GetControl<ProgressBar>("ProgressIndicator");
 
-        var stageText = this.GetControl<TextBlock>("StageText");
-        var detailText = this.GetControl<TextBlock>("DetailText");
-        var progressIndicator = this.GetControl<ProgressBar>("ProgressIndicator");
+            // 更新状态文本
+            statusText.Text = message;
 
-        stageText.Text = label;
-        detailText.Text = message;
-        progressIndicator.IsIndeterminate = false;
-        progressIndicator.Value = progress;
+            // 根据阶段更新进度
+            var progress = ResolveProgress(stage);
+            if (progress > 0)
+            {
+                progressIndicator.IsIndeterminate = false;
+                progressIndicator.Value = progress;
+            }
+            else
+            {
+                progressIndicator.IsIndeterminate = true;
+            }
+        });
     }
 
-    private static (string Label, double Progress) ResolveStageInfo(string stage)
+    /// <summary>
+    /// 更新进度（0-100）
+    /// </summary>
+    public void UpdateProgress(int percent, string? message = null)
     {
-        foreach (var (s, label, progress) in StageMap)
+        Dispatcher.UIThread.Post(() =>
         {
-            if (string.Equals(s, stage, StringComparison.OrdinalIgnoreCase))
-            {
-                return (label, progress);
-            }
-        }
+            var statusText = this.GetControl<TextBlock>("StatusText");
+            var progressIndicator = this.GetControl<ProgressBar>("ProgressIndicator");
 
-        return (stage, 0);
+            if (!string.IsNullOrEmpty(message))
+            {
+                statusText.Text = message;
+            }
+
+            progressIndicator.IsIndeterminate = false;
+            progressIndicator.Value = Math.Clamp(percent, 0, 100);
+        });
+    }
+
+    /// <summary>
+    /// 更新状态文本
+    /// </summary>
+    public void UpdateStatus(string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var statusText = this.GetControl<TextBlock>("StatusText");
+            statusText.Text = message;
+        });
+    }
+
+    /// <summary>
+    /// 根据阶段名称解析进度值
+    /// </summary>
+    private static int ResolveProgress(string stage)
+    {
+        return stage.ToLowerInvariant() switch
+        {
+            "initializing" => 10,
+            "update" => 30,
+            "plugins" => 50,
+            "launch" => 70,
+            "ready" => 100,
+            _ => 0
+        };
     }
 }

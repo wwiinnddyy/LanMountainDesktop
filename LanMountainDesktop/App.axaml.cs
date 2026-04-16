@@ -19,7 +19,9 @@ using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -71,6 +73,7 @@ public partial class App : Application
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
+    private LauncherIpcClient? _launcherIpcClient;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -136,7 +139,7 @@ public partial class App : Application
         EnsureNotificationService();
     }
 
-    public override void OnFrameworkInitializationCompleted()
+    public override async void OnFrameworkInitializationCompleted()
     {
         if (Design.IsDesignMode)
         {
@@ -145,6 +148,10 @@ public partial class App : Application
         }
 
         AppLogger.Info("App", "Framework initialization completed.");
+        
+        // 初始化 Launcher IPC 客户端（如果从 Launcher 启动）
+        await InitializeLauncherIpcAsync();
+        
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
@@ -155,6 +162,35 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+    
+    private async Task InitializeLauncherIpcAsync()
+    {
+        if (!LauncherIpcClient.IsLaunchedByLauncher())
+            return;
+        
+        try
+        {
+            _launcherIpcClient = new LauncherIpcClient();
+            var connected = await _launcherIpcClient.ConnectAsync();
+            
+            if (connected)
+            {
+                AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
+                
+                // 报告初始化进度
+                await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                {
+                    Stage = StartupStage.Initializing,
+                    ProgressPercent = 10,
+                    Message = "正在初始化..."
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Failed to initialize Launcher IPC: {ex.Message}");
+        }
     }
 
     private void ApplyDesignTimeTheme()

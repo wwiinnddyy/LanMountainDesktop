@@ -1,40 +1,57 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        mc:Ignorable="d"
+        d:DesignWidth="400"
+        d:DesignHeight="200"
         x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
+        x:DataType="views:SplashWindow"
         Title="阑山桌面"
-        Width="420"
-        Height="240"
+        Width="400"
+        Height="200"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
-        SystemDecorations="None">
-  <Grid Margin="24" RowDefinitions="*,Auto,Auto,Auto">
+        SystemDecorations="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None">
+  <Design.DataContext>
+    <views:SplashWindow />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="*,Auto,Auto">
+    <!-- 应用名称 -->
     <TextBlock x:Name="AppNameText"
                Text="阑山桌面"
-               FontSize="34"
+               FontSize="36"
+               FontWeight="Light"
                VerticalAlignment="Center"
                HorizontalAlignment="Center"
-               Grid.Row="0" />
+               Grid.Row="0"
+               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+    <!-- 进度条 -->
     <ProgressBar x:Name="ProgressIndicator"
                  Grid.Row="1"
                  Minimum="0"
                  Maximum="100"
                  Value="0"
-                 Height="4"
-                 Margin="0,12,0,0"
-                 IsIndeterminate="True" />
-    <TextBlock x:Name="StageText"
+                 Height="3"
+                 Width="200"
+                 Margin="0,20,0,0"
+                 IsIndeterminate="True"
+                 Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                 Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+    <!-- 状态文本 -->
+    <TextBlock x:Name="StatusText"
                Grid.Row="2"
                FontSize="12"
-               Foreground="#999999"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                HorizontalAlignment="Center"
-               Margin="0,8,0,0"
-               Text="" />
-    <TextBlock x:Name="DetailText"
-               Grid.Row="3"
-               FontSize="11"
-               Foreground="#BBBBBB"
-               HorizontalAlignment="Center"
-               Margin="0,2,0,0"
-               Text="" />
+               Margin="0,12,0,24"
+               Text="正在启动..." />
   </Grid>
 </Window>

@@ -1,11 +1,18 @@
 using System.IO.Compression;
-using LanMountainDesktop.PluginSdk;
+using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 
 namespace LanMountainDesktop.Launcher.Services;
 
+/// <summary>
+/// 插件安装服务 - 简化版，不依赖 PluginSdk
+/// </summary>
 internal sealed class PluginInstallerService
 {
+    private const string ManifestFileName = "manifest.json";
+    private const string PackageFileExtension = ".lmdp";
+    private const string RuntimeDirectoryName = "runtime";
+    
     private static readonly TimeSpan[] RetryDelays =
     [
         TimeSpan.FromMilliseconds(120),
@@ -48,33 +55,40 @@ internal sealed class PluginInstallerService
     {
         using var archive = ZipFile.OpenRead(packagePath);
         var entries = archive.Entries
-            .Where(entry => string.Equals(entry.Name, PluginSdkInfo.ManifestFileName, StringComparison.OrdinalIgnoreCase))
+            .Where(entry => string.Equals(entry.Name, ManifestFileName, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         if (entries.Length == 0)
         {
             throw new InvalidOperationException(
-                $"Plugin package '{packagePath}' does not contain '{PluginSdkInfo.ManifestFileName}'.");
+                $"Plugin package '{packagePath}' does not contain '{ManifestFileName}'.");
         }
 
         if (entries.Length > 1)
         {
             throw new InvalidOperationException(
-                $"Plugin package '{packagePath}' contains multiple '{PluginSdkInfo.ManifestFileName}' files.");
+                $"Plugin package '{packagePath}' contains multiple '{ManifestFileName}' files.");
         }
 
         using var stream = entries[0].Open();
-        return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
+        using var reader = new StreamReader(stream);
+        var json = reader.ReadToEnd();
+        var manifest = JsonSerializer.Deserialize<PluginManifest>(json);
+        if (manifest == null)
+        {
+            throw new InvalidOperationException($"Failed to deserialize manifest from '{packagePath}'.");
+        }
+        return manifest;
     }
 
     private void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
     {
-        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), PluginSdkInfo.RuntimeDirectoryName));
+        var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), RuntimeDirectoryName));
         var pendingDeletionDir = Path.Combine(pluginsDirectory, ".pending-deletions");
         Directory.CreateDirectory(pendingDeletionDir);
 
         foreach (var existingPackagePath in Directory
-                     .EnumerateFiles(pluginsDirectory, "*" + PluginSdkInfo.PackageFileExtension, SearchOption.AllDirectories)
+                     .EnumerateFiles(pluginsDirectory, "*" + PackageFileExtension, SearchOption.AllDirectories)
                      .Select(Path.GetFullPath)
                      .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase)))
         {
@@ -188,7 +202,7 @@ internal sealed class PluginInstallerService
     {
         var invalidChars = Path.GetInvalidFileNameChars();
         var fileName = new string(pluginId.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
-        return fileName + PluginSdkInfo.PackageFileExtension;
+        return fileName + PackageFileExtension;
     }
 
     private static string EnsureTrailingSeparator(string path)
@@ -197,4 +211,16 @@ internal sealed class PluginInstallerService
             ? path
             : path + Path.DirectorySeparatorChar;
     }
+}
+
+/// <summary>
+/// 简化的插件清单模型
+/// </summary>
+public class PluginManifest
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Version { get; set; } = "";
+    public string? Description { get; set; }
+    public string? Author { get; set; }
 }

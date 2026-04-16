@@ -146,7 +146,9 @@ internal sealed class UpdateEngineService
         var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
         if (string.IsNullOrWhiteSpace(currentDeployment))
         {
-            return Failed("update.apply", "no_current_deployment", "Current deployment directory not found.");
+            // 全新安装场景：没有当前部署目录，但有更新包
+            // 这种情况下应该直接应用更新作为首次安装
+            return await ApplyInitialDeploymentAsync(fileMap, archivePath, fileMapPath, signaturePath);
         }
 
         var currentVersion = _deploymentLocator.GetCurrentVersion();
@@ -256,6 +258,167 @@ internal sealed class UpdateEngineService
             {
             }
         }
+    }
+
+    /// <summary>
+    /// 全新安装场景：直接应用更新包作为首次部署
+    /// </summary>
+    private async Task<LauncherResult> ApplyInitialDeploymentAsync(
+        SignedFileMap fileMap,
+        string archivePath,
+        string fileMapPath,
+        string signaturePath)
+    {
+        var targetVersion = string.IsNullOrWhiteSpace(fileMap.ToVersion) ? "1.0.0" : fileMap.ToVersion!;
+        var targetDeployment = _deploymentLocator.BuildNextDeploymentDirectory(targetVersion);
+        var partialMarker = Path.Combine(targetDeployment, ".partial");
+        var snapshotPath = Path.Combine(_snapshotsRoot, $"initial-{Guid.NewGuid():N}.json");
+
+        var extractRoot = Path.Combine(_incomingRoot, "extracted");
+        try
+        {
+            // 保存快照（用于回滚，虽然首次安装回滚意义不大）
+            var snapshot = new SnapshotMetadata
+            {
+                SnapshotId = Guid.NewGuid().ToString("N"),
+                SourceVersion = "0.0.0",
+                TargetVersion = targetVersion,
+                CreatedAt = DateTimeOffset.UtcNow,
+                SourceDirectory = "",
+                TargetDirectory = targetDeployment,
+                Status = "pending"
+            };
+            SaveSnapshot(snapshotPath, snapshot);
+
+            // 清理并解压更新包
+            if (Directory.Exists(extractRoot))
+            {
+                Directory.Delete(extractRoot, true);
+            }
+            Directory.CreateDirectory(extractRoot);
+            ZipFile.ExtractToDirectory(archivePath, extractRoot, overwriteFiles: true);
+
+            // 创建目标部署目录
+            Directory.CreateDirectory(targetDeployment);
+            File.WriteAllText(partialMarker, string.Empty);
+
+            // 应用所有文件（全新安装时，所有文件都是新增或替换）
+            foreach (var file in fileMap.Files)
+            {
+                ApplyInitialFileEntry(file, targetDeployment, extractRoot);
+            }
+
+            // 验证文件哈希
+            foreach (var file in fileMap.Files)
+            {
+                if (!NeedsVerification(file))
+                {
+                    continue;
+                }
+
+                var fullPath = Path.Combine(targetDeployment, file.Path);
+                var actualHash = ComputeSha256Hex(fullPath);
+                if (!string.Equals(actualHash, file.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"File hash mismatch for '{file.Path}'.");
+                }
+            }
+
+            // 激活部署（创建 .current 标记，删除 .partial 标记）
+            var currentMarker = Path.Combine(targetDeployment, ".current");
+            File.WriteAllText(currentMarker, string.Empty);
+            if (File.Exists(partialMarker))
+            {
+                File.Delete(partialMarker);
+            }
+
+            // 清理更新包
+            snapshot.Status = "applied";
+            SaveSnapshot(snapshotPath, snapshot);
+            CleanupIncomingArtifacts();
+
+            return new LauncherResult
+            {
+                Success = true,
+                Stage = "update.apply",
+                Code = "ok",
+                Message = $"Initial deployment to {targetVersion}.",
+                CurrentVersion = "0.0.0",
+                TargetVersion = targetVersion
+            };
+        }
+        catch (Exception ex)
+        {
+            // 清理失败的目标目录
+            try
+            {
+                if (Directory.Exists(targetDeployment))
+                {
+                    Directory.Delete(targetDeployment, true);
+                }
+            }
+            catch
+            {
+            }
+
+            return new LauncherResult
+            {
+                Success = false,
+                Stage = "update.apply",
+                Code = "initial_deploy_failed",
+                Message = "Failed to apply initial deployment.",
+                ErrorMessage = ex.Message,
+                CurrentVersion = "0.0.0",
+                TargetVersion = targetVersion
+            };
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(extractRoot))
+                {
+                    Directory.Delete(extractRoot, true);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    /// <summary>
+    /// 应用初始部署文件（全新安装场景，不需要源目录）
+    /// </summary>
+    private void ApplyInitialFileEntry(UpdateFileEntry file, string targetDeployment, string extractRoot)
+    {
+        var normalizedPath = NormalizeRelativePath(file.Path);
+
+        // 删除操作在全新安装时忽略
+        if (string.Equals(file.Action, "delete", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var targetPath = Path.Combine(targetDeployment, normalizedPath);
+        EnsurePathWithinRoot(targetPath, targetDeployment);
+        var targetDir = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(targetDir))
+        {
+            Directory.CreateDirectory(targetDir);
+        }
+
+        // 无论是 add 还是 replace，都从压缩包复制
+        var archiveRelative = string.IsNullOrWhiteSpace(file.ArchivePath) ? normalizedPath : NormalizeRelativePath(file.ArchivePath);
+        var extractedPath = Path.Combine(extractRoot, archiveRelative);
+        EnsurePathWithinRoot(extractedPath, extractRoot);
+
+        if (!File.Exists(extractedPath))
+        {
+            throw new FileNotFoundException($"Archive file '{archiveRelative}' not found for '{file.Path}'.");
+        }
+
+        File.Copy(extractedPath, targetPath, overwrite: true);
     }
 
     public LauncherResult RollbackLatest()

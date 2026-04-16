@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Services;
 
@@ -39,14 +41,7 @@ internal sealed class LauncherFlowCoordinator
             // 清理待删除的旧版本
             _deploymentLocator.CleanupDestroyedDeployments();
 
-            if (_oobeStateService.IsFirstRun())
-            {
-                foreach (var step in _oobeSteps)
-                {
-                    await step.RunAsync(CancellationToken.None).ConfigureAwait(false);
-                }
-            }
-
+            // 显示 Splash 窗口
             var splashWindow = await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 var window = new SplashWindow();
@@ -55,17 +50,29 @@ internal sealed class LauncherFlowCoordinator
             });
 
             var reporter = (ISplashStageReporter)splashWindow;
+            
+            // 启动 IPC 服务端监听主程序进度
+            using var ipcServer = new LauncherIpcServer(msg =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    reporter.Report(msg.Stage.ToString().ToLower(), msg.Message ?? "");
+                });
+            });
+            ipcServer.Start();
 
             try
             {
-                reporter.Report("silentUpdate", "update");
+                // 检查并安装待处理的更新（主程序下载的）
+                reporter.Report("update", "检查更新...");
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
                     return updateResult;
                 }
 
-                reporter.Report("pluginTasks", "plugins");
+                // 检查并安装待处理的插件更新
+                reporter.Report("plugins", "检查插件更新...");
                 var pluginsDir = _context.GetOption("plugins-dir")
                                  ?? Path.Combine(_deploymentLocator.GetAppRoot(), "plugins");
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
@@ -74,12 +81,27 @@ internal sealed class LauncherFlowCoordinator
                     return queueResult;
                 }
 
-                reporter.Report("launchHost", "launch");
-                var hostResult = LaunchHost();
+                // OOBE（首次运行引导）
+                if (_oobeStateService.IsFirstRun())
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Hide());
+                    foreach (var step in _oobeSteps)
+                    {
+                        await step.RunAsync(CancellationToken.None).ConfigureAwait(false);
+                    }
+                    await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Show());
+                }
+
+                // 启动主程序
+                reporter.Report("launch", "正在启动...");
+                var hostResult = await LaunchHostWithIpcAsync();
                 if (!hostResult.Success)
                 {
                     return hostResult;
                 }
+
+                // 等待主程序就绪或超时
+                await Task.Delay(TimeSpan.FromSeconds(30));
 
                 return new LauncherResult
                 {
@@ -107,11 +129,28 @@ internal sealed class LauncherFlowCoordinator
         }
     }
 
-    private LauncherResult LaunchHost()
+    private async Task<LauncherResult> LaunchHostWithIpcAsync(string? customHostPath = null)
     {
-        var hostPath = _deploymentLocator.ResolveHostExecutablePath();
+        // 优先使用自定义路径（调试模式选择的路径）
+        var hostPath = customHostPath ?? _deploymentLocator.ResolveHostExecutablePath();
+        
         if (string.IsNullOrWhiteSpace(hostPath))
         {
+            // 关闭 Splash 窗口
+            // 显示错误窗口而不是直接退出
+            var (errorResult, selectedPath) = await ShowHostNotFoundErrorAsync();
+            
+            if (errorResult == ErrorWindowResult.Retry)
+            {
+                // 用户选择重试，如果有选择路径则使用，否则重新尝试
+                if (!string.IsNullOrWhiteSpace(selectedPath))
+                {
+                    return await LaunchHostWithIpcAsync(selectedPath);
+                }
+                return await LaunchHostWithIpcAsync();
+            }
+            
+            // 用户选择退出
             return new LauncherResult
             {
                 Success = false,
@@ -133,6 +172,12 @@ internal sealed class LauncherFlowCoordinator
             WorkingDirectory = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot()
         };
 
+        // 传递环境变量供 IPC 使用
+        processStartInfo.EnvironmentVariables[LauncherIpcConstants.LauncherPidEnvVar] = 
+            Environment.ProcessId.ToString();
+        processStartInfo.EnvironmentVariables[LauncherIpcConstants.PackageRootEnvVar] = 
+            _deploymentLocator.GetAppRoot();
+
         Process.Start(processStartInfo);
         return new LauncherResult
         {
@@ -141,6 +186,26 @@ internal sealed class LauncherFlowCoordinator
             Code = "ok",
             Message = "Host launched."
         };
+    }
+
+    /// <summary>
+    /// 显示找不到主程序的错误窗口
+    /// </summary>
+    private async Task<(ErrorWindowResult Result, string? CustomPath)> ShowHostNotFoundErrorAsync()
+    {
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var errorWindow = new ErrorWindow();
+            errorWindow.SetErrorMessage("找不到阑山桌面应用程序。");
+            errorWindow.Show();
+            
+            var result = await errorWindow.WaitForChoiceAsync();
+            var customPath = errorWindow.GetCustomHostPath();
+            
+            await Dispatcher.UIThread.InvokeAsync(() => errorWindow.Close());
+            
+            return (result, customPath);
+        });
     }
 
     private static void EnsureExecutable(string path)

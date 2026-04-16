@@ -58,6 +58,8 @@ internal sealed class DeploymentLocator
     public string? ResolveHostExecutablePath()
     {
         var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
+        
+        // 1. 首先查找 app-{version} 目录（生产环境）
         var currentDeployment = FindCurrentDeploymentDirectory();
         if (!string.IsNullOrWhiteSpace(currentDeployment))
         {
@@ -68,15 +70,98 @@ internal sealed class DeploymentLocator
             }
         }
 
+        // 2. 查找 Launcher 所在目录（开发环境 - 直接运行）
         var inRoot = Path.Combine(_appRoot, executable);
         if (File.Exists(inRoot))
         {
             return inRoot;
         }
 
+        // 3. 查找父目录（开发环境 - 从 Launcher 项目运行）
         var parent = Path.GetFullPath(Path.Combine(_appRoot, ".."));
         var inParent = Path.Combine(parent, executable);
-        return File.Exists(inParent) ? inParent : null;
+        if (File.Exists(inParent))
+        {
+            return inParent;
+        }
+
+        // 4. 开发模式：如果启用了开发模式，优先扫描开发路径
+        if (Views.ErrorWindow.CheckDevModeEnabled())
+        {
+            var devPath = ScanDevelopmentPaths(executable);
+            if (!string.IsNullOrWhiteSpace(devPath))
+            {
+                return devPath;
+            }
+        }
+
+        // 5. 开发模式：查找主程序项目的输出目录
+        var devPaths = GetDevelopmentPaths(executable);
+        foreach (var devPath in devPaths)
+        {
+            if (File.Exists(devPath))
+            {
+                return devPath;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 扫描开发路径（开发模式）
+    /// </summary>
+    private static string? ScanDevelopmentPaths(string executable)
+    {
+        var possiblePaths = new[]
+        {
+            // 从 Launcher 项目运行
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // 从解决方案根目录运行
+            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // dev-test 目录
+            Path.Combine(AppContext.BaseDirectory, "..", "dev-test", "app-1.0.0-dev", executable),
+        };
+
+        foreach (var path in possiblePaths.Select(Path.GetFullPath).Distinct())
+        {
+            if (File.Exists(path))
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 获取开发环境可能的主程序路径
+    /// </summary>
+    private static IEnumerable<string> GetDevelopmentPaths(string executable)
+    {
+        // 获取 Launcher 所在目录
+        var launcherDir = AppContext.BaseDirectory;
+        
+        // 可能的开发目录结构
+        var possiblePaths = new[]
+        {
+            // 从 Launcher 项目运行：..\LanMountainDesktop\bin\Debug\net10.0\LanMountainDesktop.exe
+            Path.Combine(launcherDir, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(launcherDir, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // 从解决方案根目录运行：LanMountainDesktop\bin\Debug\net10.0\LanMountainDesktop.exe
+            Path.Combine(launcherDir, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(launcherDir, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // 从 dev-test 目录运行
+            Path.Combine(launcherDir, "..", "dev-test", "app-1.0.0-dev", executable),
+        };
+
+        return possiblePaths.Select(Path.GetFullPath).Distinct();
     }
 
     public string GetCurrentVersion()
