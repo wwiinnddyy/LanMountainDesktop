@@ -89,7 +89,8 @@
       <AppVersion>$(Version)</AppVersion>
       <AppCodename>Administrate</AppCodename>
     </PropertyGroup>
-    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" />
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
 
   <!-- 发布时也生成版本信息文件 -->
@@ -99,6 +100,7 @@
       <AppVersion>$(Version)</AppVersion>
       <AppCodename>Administrate</AppCodename>
     </PropertyGroup>
-    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" />
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
 </Project>
