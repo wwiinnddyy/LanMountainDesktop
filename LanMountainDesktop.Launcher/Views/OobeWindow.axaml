@@ -5,51 +5,72 @@
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         mc:Ignorable="d"
-        d:DesignWidth="420"
-        d:DesignHeight="260"
+        d:DesignWidth="600"
+        d:DesignHeight="500"
         x:Class="LanMountainDesktop.Launcher.Views.OobeWindow"
         x:DataType="views:OobeWindow"
         Title="欢迎使用阑山桌面"
-        Width="420"
-        Height="260"
+        Width="600"
+        Height="500"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-        TransparencyLevelHint="None">
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
   <Design.DataContext>
     <views:OobeWindow />
   </Design.DataContext>
 
-  <Grid Margin="32" RowDefinitions="*,Auto">
-    <!-- 欢迎文本 -->
-    <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-      <TextBlock Text="欢迎使用"
-                 FontSize="18"
-                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                 HorizontalAlignment="Center" />
-      <TextBlock Text="阑山桌面"
-                 FontSize="32"
-                 FontWeight="Light"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                 HorizontalAlignment="Center"
-                 Margin="0,8,0,0" />
-      <TextBlock Text="您的智能桌面助手"
-                 FontSize="14"
-                 Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                 HorizontalAlignment="Center"
-                 Margin="0,16,0,0" />
-    </StackPanel>
+  <Grid x:Name="ContentGrid">
+    <!-- 主内容区域 -->
+    <Grid Margin="48" RowDefinitions="*,Auto">
+      <!-- 中央内容区域 -->
+      <StackPanel Grid.Row="0" 
+                  VerticalAlignment="Center" 
+                  HorizontalAlignment="Center"
+                  Spacing="24">
+        
+        <!-- 顶部：完成状态勾号图标 -->
+        <Border Width="80"
+                Height="80"
+                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                CornerRadius="40"
+                HorizontalAlignment="Center">
+          <ui:SymbolIcon Symbol="Accept"
+                         FontSize="40"
+                         Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+        </Border>
+        
+        <!-- 中央：欢迎文字 -->
+        <StackPanel Spacing="8" HorizontalAlignment="Center">
+          <TextBlock Text="欢迎使用阑山桌面"
+                     FontSize="28"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="你的桌面，不止一面"
+                     FontSize="14"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+        
+      </StackPanel>
 
-    <!-- 进入按钮 -->
-    <Button Grid.Row="1"
-            x:Name="EnterButton"
-            HorizontalAlignment="Right"
-            Width="80"
-            Height="36"
-            Content="开始使用"
-            FontSize="14"
-            Background="{DynamicResource AccentFillColorDefaultBrush}"
-            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
-            CornerRadius="4" />
+      <!-- 底部：圆形开始按钮 -->
+      <Button Grid.Row="1"
+              x:Name="EnterButton"
+              HorizontalAlignment="Center"
+              Width="56"
+              Height="56"
+              Margin="0,0,0,16"
+              Theme="{DynamicResource AccentButtonTheme}"
+              CornerRadius="28">
+        <ui:SymbolIcon Symbol="Forward"
+                       FontSize="24"
+                       Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+      </Button>
+    </Grid>
   </Grid>
 </Window>

@@ -1225,10 +1225,18 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
 
 internal sealed class ApplicationInfoService : IApplicationInfoService
 {
-    private const string Codename = "Administrate";
+    private const string DefaultCodename = "Administrate";
 
     public string GetAppVersionText()
     {
+        // 优先从环境变量读取（Launcher 传递）
+        var envVersion = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.VersionEnvVar);
+        if (!string.IsNullOrWhiteSpace(envVersion))
+        {
+            return envVersion;
+        }
+
+        // 回退：从程序集读取
         var assembly = typeof(App).Assembly;
         var informationalVersion = assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
@@ -1268,7 +1276,15 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 
     public string GetAppCodenameText()
     {
-        return Codename;
+        // 优先从环境变量读取（Launcher 传递）
+        var envCodename = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.CodenameEnvVar);
+        if (!string.IsNullOrWhiteSpace(envCodename))
+        {
+            return envCodename;
+        }
+
+        // 回退：使用默认开发代号
+        return DefaultCodename;
     }
 
     public AppRenderBackendInfo GetRenderBackendInfo()

@@ -29,4 +29,12 @@ internal sealed class DeferredSplashStageReporter : ISplashStageReporter
             _pending.Add((stage, message));
         }
     }
+
+    public void ReportStage(string stage, int progress)
+    {
+        if (_inner is not null)
+        {
+            _inner.ReportStage(stage, progress);
+        }
+    }
 }

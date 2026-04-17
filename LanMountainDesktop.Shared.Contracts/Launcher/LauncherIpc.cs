@@ -81,4 +81,9 @@ public static class LauncherIpcConstants
     /// 版本环境变量
     /// </summary>
     public const string VersionEnvVar = "LMD_VERSION";
+    
+    /// <summary>
+    /// 开发代号环境变量
+    /// </summary>
+    public const string CodenameEnvVar = "LMD_CODENAME";
 }

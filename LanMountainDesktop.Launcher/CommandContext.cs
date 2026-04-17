@@ -10,16 +10,30 @@ internal sealed class CommandContext
 
     public IReadOnlyDictionary<string, string> Options { get; }
 
+    /// <summary>
+    /// 原始命令行参数，用于转发给主程序
+    /// </summary>
+    public IReadOnlyList<string> RawArgs { get; }
+
     public bool IsLegacyPluginInstall =>
         Options.ContainsKey("source") &&
         Options.ContainsKey("plugins-dir") &&
         Options.ContainsKey("result");
 
-    private CommandContext(string command, string subCommand, Dictionary<string, string> options)
+    /// <summary>
+    /// 是否处于调试模式（从 Rider/VS 等 IDE 启动）
+    /// 仅当明确指定 --debug 参数或调试器附加时才启用
+    /// </summary>
+    public bool IsDebugMode =>
+        Options.ContainsKey("debug") ||
+        System.Diagnostics.Debugger.IsAttached;
+
+    private CommandContext(string command, string subCommand, Dictionary<string, string> options, string[] rawArgs)
     {
         Command = command;
         SubCommand = subCommand;
         Options = options;
+        RawArgs = rawArgs;
     }
 
     public static CommandContext FromArgs(string[] args)
@@ -32,7 +46,7 @@ internal sealed class CommandContext
             ? args[1]
             : string.Empty;
 
-        return new CommandContext(command, subCommand, options);
+        return new CommandContext(command, subCommand, options, args);
     }
 
     public string? GetOption(string key)

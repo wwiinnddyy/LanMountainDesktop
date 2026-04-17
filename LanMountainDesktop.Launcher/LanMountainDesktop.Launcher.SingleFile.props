@@ -1,0 +1,29 @@
+<!-- 单文件发布配置文件（非 AOT，但接近单文件体验） -->
+<Project>
+  <PropertyGroup Condition="'$(PublishSingleFileMode)' == 'true'">
+    <!-- 自包含 -->
+    <SelfContained>true</SelfContained>
+    
+    <!-- 单文件发布 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    
+    <!-- 包含 native 库到单文件中 -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- 压缩单文件 -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    
+    <!-- ReadyToRun 预编译（提升启动速度） -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    
+    <!-- 修剪以减小体积 -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    
+    <!-- 优化大小 -->
+    <OptimizationPreference>Size</OptimizationPreference>
+    
+    <!-- 目标运行时 -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+</Project>

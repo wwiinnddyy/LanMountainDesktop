@@ -11,6 +11,7 @@ namespace LanMountainDesktop.Launcher.Views;
 public partial class ErrorDebugWindow : Window
 {
     private string? _selectedHostPath;
+    private bool _isInitialized = false;
 
     /// <summary>
     /// 是否启用了开发模式
@@ -25,22 +26,36 @@ public partial class ErrorDebugWindow : Window
     public ErrorDebugWindow()
     {
         AvaloniaXamlLoader.Load(this);
-        InitializeComponents();
+        
+        // 延迟到窗口加载完成后再初始化组件
+        this.Loaded += OnWindowLoaded;
     }
 
     public ErrorDebugWindow(bool devModeEnabled, string? initialPath) : this()
     {
         IsDevModeEnabled = devModeEnabled;
         _selectedHostPath = initialPath;
+    }
 
-        // 设置初始值
+    /// <summary>
+    /// 窗口加载完成事件
+    /// </summary>
+    private void OnWindowLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (_isInitialized) return;
+        _isInitialized = true;
+        
+        Console.WriteLine("[ErrorDebugWindow] Window loaded, initializing components...");
+        InitializeComponents();
+        
+        // 设置初始值（在视觉树准备好后）
         var devModeToggle = this.FindControl<ToggleSwitch>("DevModeToggle");
         if (devModeToggle is not null)
         {
-            devModeToggle.IsChecked = devModeEnabled;
+            devModeToggle.IsChecked = IsDevModeEnabled;
         }
 
-        UpdatePathDisplay(initialPath);
+        UpdatePathDisplay(_selectedHostPath);
     }
 
     private void InitializeComponents()
@@ -52,7 +67,13 @@ public partial class ErrorDebugWindow : Window
             devModeToggle.IsCheckedChanged += (s, e) =>
             {
                 IsDevModeEnabled = devModeToggle.IsChecked ?? false;
+                Console.WriteLine($"[ErrorDebugWindow] DevMode changed to: {IsDevModeEnabled}");
             };
+            Console.WriteLine("[ErrorDebugWindow] DevModeToggle event bound");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorDebugWindow] Failed to find DevModeToggle!");
         }
 
         // 浏览按钮
@@ -60,6 +81,11 @@ public partial class ErrorDebugWindow : Window
         if (browseButton is not null)
         {
             browseButton.Click += OnBrowseClick;
+            Console.WriteLine("[ErrorDebugWindow] BrowseButton event bound");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorDebugWindow] Failed to find BrowseButton!");
         }
 
         // 确定按钮
@@ -67,6 +93,11 @@ public partial class ErrorDebugWindow : Window
         if (okButton is not null)
         {
             okButton.Click += (s, e) => Close();
+            Console.WriteLine("[ErrorDebugWindow] OkButton event bound");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorDebugWindow] Failed to find OkButton!");
         }
 
         // 取消按钮
@@ -78,9 +109,17 @@ public partial class ErrorDebugWindow : Window
                 // 取消时恢复原始状态
                 IsDevModeEnabled = false;
                 _selectedHostPath = null;
+                Console.WriteLine("[ErrorDebugWindow] Cancel clicked, resetting state");
                 Close();
             };
+            Console.WriteLine("[ErrorDebugWindow] CancelButton event bound");
         }
+        else
+        {
+            Console.Error.WriteLine("[ErrorDebugWindow] Failed to find CancelButton!");
+        }
+        
+        Console.WriteLine("[ErrorDebugWindow] Components initialization completed");
     }
 
     /// <summary>
@@ -110,6 +149,7 @@ public partial class ErrorDebugWindow : Window
         if (result.Count > 0)
         {
             _selectedHostPath = result[0].Path.LocalPath;
+            Console.WriteLine($"[ErrorDebugWindow] Selected host path: {_selectedHostPath}");
             UpdatePathDisplay(_selectedHostPath);
         }
     }
@@ -123,6 +163,10 @@ public partial class ErrorDebugWindow : Window
         if (pathTextBlock is not null)
         {
             pathTextBlock.Text = string.IsNullOrEmpty(path) ? "未选择" : path;
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorDebugWindow] Failed to find PathTextBlock!");
         }
     }
 }

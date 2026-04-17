@@ -5,53 +5,83 @@
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         mc:Ignorable="d"
-        d:DesignWidth="400"
-        d:DesignHeight="200"
+        d:DesignWidth="480"
+        d:DesignHeight="320"
         x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
         x:DataType="views:SplashWindow"
-        Title="阑山桌面"
-        Width="400"
-        Height="200"
+        Title="LanMountain Desktop"
+        Width="480"
+        Height="320"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-        TransparencyLevelHint="None">
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
   <Design.DataContext>
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Grid RowDefinitions="*,Auto,Auto">
-    <!-- 应用名称 -->
+  <Grid>
+    <!-- 左上角：应用名称 -->
     <TextBlock x:Name="AppNameText"
-               Text="阑山桌面"
-               FontSize="36"
-               FontWeight="Light"
-               VerticalAlignment="Center"
-               HorizontalAlignment="Center"
-               Grid.Row="0"
+               Text="LanMountain Desktop"
+               FontSize="24"
+               FontWeight="SemiBold"
+               VerticalAlignment="Top"
+               HorizontalAlignment="Left"
+               Margin="24,24,0,0"
                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
-    <!-- 进度条 -->
-    <ProgressBar x:Name="ProgressIndicator"
-                 Grid.Row="1"
-                 Minimum="0"
-                 Maximum="100"
-                 Value="0"
-                 Height="3"
-                 Width="200"
-                 Margin="0,20,0,0"
-                 IsIndeterminate="True"
-                 Foreground="{DynamicResource AccentFillColorDefaultBrush}"
-                 Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
-
-    <!-- 状态文本 -->
-    <TextBlock x:Name="StatusText"
-               Grid.Row="2"
-               FontSize="12"
-               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-               HorizontalAlignment="Center"
-               Margin="0,12,0,24"
-               Text="正在启动..." />
+    <!-- 底部区域：进度条和状态 -->
+    <Grid VerticalAlignment="Bottom" Margin="24,0,24,24">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      
+      <!-- 第一行：左下角版本信息，右下角阶段文字 -->
+      <Grid Grid.Row="0" Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- 左下角：版本和开发代号 - 可点击打开开发者界面（隐藏功能） -->
+        <Border x:Name="VersionTextBorder"
+                Grid.Column="0"
+                Background="Transparent"
+                Cursor="Hand"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom">
+          <TextBlock x:Name="VersionText"
+                     FontSize="11"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     Opacity="0.8"
+                     Text="1.0.0 (Administrate)" />
+        </Border>
+        
+        <!-- 右下角：阶段文字 -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Column="1"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Bottom"
+                   Opacity="0.8"
+                   Text="Initializing..." />
+      </Grid>
+      
+      <!-- 底部：进度条 -->
+      <ProgressBar x:Name="ProgressIndicator"
+                   Grid.Row="1"
+                   Minimum="0"
+                   Maximum="100"
+                   Value="0"
+                   Height="4"
+                   IsIndeterminate="False"
+                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                   Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+    </Grid>
   </Grid>
 </Window>

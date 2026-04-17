@@ -165,10 +165,27 @@ internal static class Commands
         }
 
         var baseDir = AppContext.BaseDirectory;
+        
+        // 发布版结构：Launcher 和 app-* 目录在同一目录
+        // 检查当前目录是否有 app-* 子目录（发布版）
+        var appDirs = Directory.GetDirectories(baseDir, "app-*", SearchOption.TopDirectoryOnly);
+        if (appDirs.Length > 0)
+        {
+            // 找到 app-* 目录，说明是发布版结构
+            return baseDir;
+        }
+        
+        // 开发环境：检查父目录是否有主程序
         var parent = Path.GetFullPath(Path.Combine(baseDir, ".."));
         var parentHost = OperatingSystem.IsWindows()
             ? Path.Combine(parent, "LanMountainDesktop.exe")
             : Path.Combine(parent, "LanMountainDesktop");
-        return File.Exists(parentHost) ? parent : baseDir;
+        if (File.Exists(parentHost))
+        {
+            return parent;
+        }
+        
+        // 默认返回 baseDir
+        return baseDir;
     }
 }

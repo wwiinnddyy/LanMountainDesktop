@@ -489,13 +489,17 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        // For delta updates, the files are already in .launcher/update/incoming/.
-        // Just exit the app - the Launcher will detect and apply the update on next startup.
+        // For delta updates, launch the Launcher with apply-update command so it can
+        // apply the update immediately with a progress UI, matching the full installer experience.
         if (IsPendingDeltaUpdate())
         {
-            AppLogger.Info("UpdateWorkflow", "Delta update pending in incoming directory. Exiting to let Launcher apply on next startup.");
-            ClearPendingUpdate();
-            return true;
+            AppLogger.Info("UpdateWorkflow", "Delta update pending. Launching Launcher to apply update with progress UI.");
+            var launchResult = LaunchLauncherForApplyUpdate();
+            if (launchResult)
+            {
+                ClearPendingUpdate();
+            }
+            return launchResult;
         }
 
         var result = LaunchPendingInstaller(silent: true, exitApplicationAfterLaunch: false);
@@ -505,6 +509,53 @@ public sealed class UpdateWorkflowService
         }
 
         return result.Success;
+    }
+
+    /// <summary>
+    /// Launches the Launcher process with the apply-update command to apply a pending delta update
+    /// with a progress UI, providing an experience similar to a full installer.
+    /// </summary>
+    public bool LaunchLauncherForApplyUpdate()
+    {
+        try
+        {
+            var launcherExeName = OperatingSystem.IsWindows()
+                ? "LanMountainDesktop.Launcher.exe"
+                : "LanMountainDesktop.Launcher";
+
+            // The Launcher is in the parent directory of the app's base directory
+            // (app runs from app-{version}/ subdirectory, Launcher is at root)
+            var appBaseDir = AppContext.BaseDirectory;
+            var launcherRoot = Path.GetDirectoryName(appBaseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(launcherRoot))
+            {
+                launcherRoot = appBaseDir;
+            }
+
+            var launcherPath = Path.Combine(launcherRoot, launcherExeName);
+            if (!File.Exists(launcherPath))
+            {
+                AppLogger.Warn("UpdateWorkflow", $"Launcher executable not found at '{launcherPath}'. Falling back to next-startup apply.");
+                return false;
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = launcherPath,
+                Arguments = $"apply-update --app-root \"{launcherRoot}\"",
+                UseShellExecute = false,
+                WorkingDirectory = launcherRoot
+            };
+
+            Process.Start(startInfo);
+            AppLogger.Info("UpdateWorkflow", $"Launched Launcher for apply-update: {launcherPath}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("UpdateWorkflow", $"Failed to launch Launcher for apply-update: {ex.Message}");
+            return false;
+        }
     }
 
     public void ClearPendingUpdate()

@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.Json;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Services;
 
@@ -57,6 +59,38 @@ internal sealed class DeploymentLocator
 
     public string? ResolveHostExecutablePath()
     {
+        // 使用新的灵活定位器
+        var options = new HostDiscoveryOptions
+        {
+            ExecutableName = "LanMountainDesktop",
+            PreferDevModeConfig = true,
+            RecursiveSearch = false, // 默认不启用递归搜索以提高性能
+            AdditionalSearchPaths = new List<string>
+            {
+                // 可以通过配置文件或环境变量添加更多路径
+                "${AppRoot}",
+                "${AppRoot}/..",
+                "${BaseDirectory}/../..",
+            }
+        };
+
+        var locator = new FlexibleHostLocator(_appRoot, options);
+        var result = locator.ResolveHostExecutablePath();
+        
+        if (result != null)
+        {
+            return result;
+        }
+
+        // 回退到旧逻辑（作为备选）
+        return ResolveHostExecutablePathLegacy();
+    }
+
+    /// <summary>
+    /// 传统的主程序路径解析（作为备选）
+    /// </summary>
+    private string? ResolveHostExecutablePathLegacy()
+    {
         var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
         
         // 1. 首先查找 app-{version} 目录（生产环境）
@@ -85,9 +119,17 @@ internal sealed class DeploymentLocator
             return inParent;
         }
 
-        // 4. 开发模式：如果启用了开发模式，优先扫描开发路径
+        // 4. 开发模式：如果启用了开发模式，优先使用保存的自定义路径
         if (Views.ErrorWindow.CheckDevModeEnabled())
         {
+            // 4.1 首先检查保存的自定义路径
+            var savedCustomPath = Views.ErrorWindow.GetSavedCustomHostPath();
+            if (!string.IsNullOrWhiteSpace(savedCustomPath) && File.Exists(savedCustomPath))
+            {
+                return savedCustomPath;
+            }
+
+            // 4.2 扫描开发路径
             var devPath = ScanDevelopmentPaths(executable);
             if (!string.IsNullOrWhiteSpace(devPath))
             {
@@ -241,5 +283,40 @@ internal sealed class DeploymentLocator
         }
 
         return segments[1];
+    }
+
+    /// <summary>
+    /// 从部署目录读取版本信息
+    /// </summary>
+    public AppVersionInfo GetVersionInfo()
+    {
+        var deploymentDir = FindCurrentDeploymentDirectory();
+        if (!string.IsNullOrWhiteSpace(deploymentDir))
+        {
+            var versionFile = Path.Combine(deploymentDir, "version.json");
+            if (File.Exists(versionFile))
+            {
+                try
+                {
+                    var json = File.ReadAllText(versionFile);
+                    var info = JsonSerializer.Deserialize<AppVersionInfo>(json);
+                    if (info is not null)
+                    {
+                        return info;
+                    }
+                }
+                catch
+                {
+                    // 忽略读取失败，回退到默认值
+                }
+            }
+        }
+
+        // 回退：从目录名解析版本，使用默认开发代号
+        return new AppVersionInfo
+        {
+            Version = GetCurrentVersion(),
+            Codename = "Administrate" // 默认开发代号
+        };
     }
 }

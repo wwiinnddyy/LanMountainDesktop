@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="400"
+        d:DesignHeight="220"
+        x:Class="LanMountainDesktop.Launcher.Views.UpdateWindow"
+        x:DataType="views:UpdateWindow"
+        Title="阑山桌面 - 更新"
+        Width="400"
+        Height="220"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+  <Design.DataContext>
+    <views:UpdateWindow />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="Auto,*,Auto,Auto">
+    <!-- 应用名称 -->
+    <TextBlock x:Name="TitleText"
+               Text="阑山桌面"
+               FontSize="36"
+               FontWeight="Light"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center"
+               Grid.Row="0"
+               Margin="0,30,0,0"
+               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+    <!-- 状态文本 -->
+    <TextBlock x:Name="StatusText"
+               Grid.Row="1"
+               FontSize="13"
+               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Margin="0,16,0,0"
+               Text="正在更新，请稍候..." />
+
+    <!-- 进度条 -->
+    <ProgressBar x:Name="ProgressIndicator"
+                 Grid.Row="2"
+                 Minimum="0"
+                 Maximum="100"
+                 Value="0"
+                 Height="3"
+                 Width="200"
+                 Margin="0,16,0,0"
+                 IsIndeterminate="True"
+                 Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                 Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+    <!-- 底部提示 -->
+    <TextBlock x:Name="DetailText"
+               Grid.Row="3"
+               FontSize="11"
+               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+               HorizontalAlignment="Center"
+               Margin="0,12,0,24"
+               Text="" />
+  </Grid>
+</Window>

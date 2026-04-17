@@ -23,17 +23,44 @@ public partial class ErrorWindow : Window
 
         // 先加载保存的状态
         _devModeEnabled = LoadDevModeStateInternal();
+        _customHostPath = LoadCustomHostPathInternal();
 
+        // 延迟到窗口加载完成后再初始化组件，确保视觉树已准备好
+        this.Loaded += OnWindowLoaded;
+        this.Opened += OnWindowOpened;
+    }
+
+    /// <summary>
+    /// 窗口加载完成事件 - 视觉树已准备好
+    /// </summary>
+    private void OnWindowLoaded(object? sender, RoutedEventArgs e)
+    {
+        Console.WriteLine("[ErrorWindow] Window loaded, initializing components...");
         InitializeComponents();
+    }
+
+    /// <summary>
+    /// 窗口打开事件
+    /// </summary>
+    private void OnWindowOpened(object? sender, EventArgs e)
+    {
+        Console.WriteLine("[ErrorWindow] Window opened and visible");
     }
 
     private void InitializeComponents()
     {
+        Console.WriteLine("[ErrorWindow] Initializing components...");
+        
         // 错误图标点击事件（进入调试模式 - 隐藏功能）
         var errorIconBorder = this.FindControl<Border>("ErrorIconBorder");
         if (errorIconBorder is not null)
         {
             errorIconBorder.PointerPressed += OnErrorIconClick;
+            Console.WriteLine("[ErrorWindow] ErrorIconBorder event bound successfully");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorWindow] Failed to find ErrorIconBorder!");
         }
 
         // 按钮事件
@@ -43,12 +70,24 @@ public partial class ErrorWindow : Window
         if (retryButton is not null)
         {
             retryButton.Click += OnRetryClick;
+            Console.WriteLine("[ErrorWindow] RetryButton event bound");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorWindow] Failed to find RetryButton!");
         }
 
         if (exitButton is not null)
         {
             exitButton.Click += OnExitClick;
+            Console.WriteLine("[ErrorWindow] ExitButton event bound");
         }
+        else
+        {
+            Console.Error.WriteLine("[ErrorWindow] Failed to find ExitButton!");
+        }
+        
+        Console.WriteLine("[ErrorWindow] Components initialization completed");
     }
 
     /// <summary>
@@ -60,6 +99,19 @@ public partial class ErrorWindow : Window
         if (errorText is not null)
         {
             errorText.Text = message;
+        }
+    }
+
+    /// <summary>
+    /// 设置调试模式
+    /// </summary>
+    public void SetDebugMode(bool isDebugMode)
+    {
+        _isDebugMode = isDebugMode;
+        var titleText = this.FindControl<TextBlock>("TitleText");
+        if (titleText is not null && isDebugMode)
+        {
+            titleText.Text = "[调试模式] 错误页面";
         }
     }
 
@@ -114,13 +166,19 @@ public partial class ErrorWindow : Window
             _devModeEnabled = debugWindow.IsDevModeEnabled;
             _customHostPath = debugWindow.SelectedHostPath;
 
-            // 保存开发模式状态
+            // 保存开发模式状态和自定义路径
             SaveDevModeStateInternal(_devModeEnabled);
+            SaveCustomHostPathInternal(_customHostPath);
 
             // 如果启用了开发模式且没有选择路径，自动扫描
             if (_devModeEnabled && string.IsNullOrEmpty(_customHostPath))
             {
                 ScanDevPaths();
+                // 扫描到路径后也保存
+                if (!string.IsNullOrEmpty(_customHostPath))
+                {
+                    SaveCustomHostPathInternal(_customHostPath);
+                }
             }
         };
 
@@ -204,11 +262,84 @@ public partial class ErrorWindow : Window
     }
 
     /// <summary>
+    /// 保存自定义主程序路径（内部方法）
+    /// </summary>
+    private static void SaveCustomHostPathInternal(string? path)
+    {
+        try
+        {
+            var hostPathFile = GetCustomHostPathFilePath();
+            var dir = Path.GetDirectoryName(hostPathFile);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            File.WriteAllText(hostPathFile, path ?? string.Empty);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to save custom host path: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 加载自定义主程序路径（内部方法）
+    /// </summary>
+    private static string? LoadCustomHostPathInternal()
+    {
+        try
+        {
+            var hostPathFile = GetCustomHostPathFilePath();
+            if (File.Exists(hostPathFile))
+            {
+                var content = File.ReadAllText(hostPathFile).Trim();
+                // 验证路径是否仍然有效
+                if (!string.IsNullOrEmpty(content) && File.Exists(content))
+                {
+                    return content;
+                }
+                // 路径已失效，清理配置文件
+                try
+                {
+                    File.Delete(hostPathFile);
+                    Console.WriteLine("Custom host path is no longer valid, cleared saved path.");
+                }
+                catch (Exception clearEx)
+                {
+                    Console.Error.WriteLine($"Failed to clear invalid host path: {clearEx.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load custom host path: {ex.Message}");
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 获取自定义主程序路径文件路径
+    /// </summary>
+    private static string GetCustomHostPathFilePath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(appData, "LanMountainDesktop", ".launcher", "custom-host-path.config");
+    }
+
+    /// <summary>
     /// 检查是否启用了开发模式（静态方法，启动时调用）
     /// </summary>
     public static bool CheckDevModeEnabled()
     {
         return LoadDevModeStateInternal();
+    }
+
+    /// <summary>
+    /// 获取保存的自定义主程序路径（静态方法，启动时调用）
+    /// </summary>
+    public static string? GetSavedCustomHostPath()
+    {
+        return LoadCustomHostPathInternal();
     }
 
     private void OnRetryClick(object? sender, RoutedEventArgs e)

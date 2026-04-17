@@ -100,37 +100,46 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish Launcher
+      - name: Publish Launcher (AOT)
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
           $launcherPublishDir = "publish/launcher-win-$arch"
 
-          if ($selfContained) {
-            dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
-              -c Release `
-              -o ./$launcherPublishDir `
-              --self-contained `
-              -r win-$arch `
-              -p:PublishSingleFile=false `
-              -p:PublishTrimmed=false `
-              -p:PublishReadyToRun=false `
-              -p:DebugType=none `
-              -p:DebugSymbols=false
-          } else {
-            dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
-              -c Release `
-              -o ./$launcherPublishDir `
-              --self-contained:false `
-              -p:PublishSingleFile=false `
-              -p:PublishTrimmed=false `
-              -p:PublishReadyToRun=false `
-              -p:DebugType=none `
-              -p:DebugSymbols=false
+          Write-Host "Publishing Launcher with AOT for Windows $arch..."
+
+          # AOT 单文件发布
+          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
+            -c Release `
+            -o ./$launcherPublishDir `
+            --self-contained `
+            -r win-$arch `
+            -p:PublishAot=true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Launcher AOT publish failed"
+            exit 1
           }
 
+          # 显示发布结果
           Write-Host "Launcher published to: $launcherPublishDir"
+          $exeFile = Get-ChildItem -Path $launcherPublishDir -Filter "*.exe" | Select-Object -First 1
+          if ($exeFile) {
+            $size = [Math]::Round($exeFile.Length / 1MB, 2)
+            Write-Host "Launcher executable: $($exeFile.Name) ($size MB)"
+          }
+
+          # 清理不必要的文件（AOT 单文件应该只有一个 exe）
+          $files = Get-ChildItem -Path $launcherPublishDir -File
+          if ($files.Count -gt 1) {
+            Write-Host "Warning: Expected single file but found $($files.Count) files"
+            $files | ForEach-Object { Write-Host "  - $($_.Name)" }
+          }
         shell: pwsh
 
       - name: Publish Main App
@@ -552,18 +561,29 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish Launcher
+      - name: Publish Launcher (AOT)
         run: |
+          echo "Publishing Launcher with AOT for Linux x64..."
+          
           dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
             -c Release \
             -o ./publish/launcher-linux-x64 \
             --self-contained \
             -r linux-x64 \
-            -p:PublishSingleFile=false \
-            -p:PublishTrimmed=false \
-            -p:PublishReadyToRun=false \
+            -p:PublishAot=true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
             -p:DebugType=none \
             -p:DebugSymbols=false
+          
+          if [ $? -ne 0 ]; then
+            echo "Launcher AOT publish failed"
+            exit 1
+          fi
+          
+          echo "Launcher published to: ./publish/launcher-linux-x64"
+          ls -lh ./publish/launcher-linux-x64/
 
       - name: Publish Main App
         run: |
@@ -731,18 +751,29 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish Launcher
+      - name: Publish Launcher (AOT)
         run: |
+          echo "Publishing Launcher with AOT for macOS ${{ matrix.arch }}..."
+          
           dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
             -c Release \
             -o ./publish/launcher-macos-${{ matrix.arch }} \
             --self-contained \
             -r osx-${{ matrix.arch }} \
-            -p:PublishSingleFile=false \
-            -p:PublishTrimmed=false \
-            -p:PublishReadyToRun=false \
+            -p:PublishAot=true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
             -p:DebugType=none \
             -p:DebugSymbols=false
+          
+          if [ $? -ne 0 ]; then
+            echo "Launcher AOT publish failed"
+            exit 1
+          fi
+          
+          echo "Launcher published to: ./publish/launcher-macos-${{ matrix.arch }}"
+          ls -lh ./publish/launcher-macos-${{ matrix.arch }}/
 
       - name: Publish Main App
         run: |
@@ -908,6 +939,8 @@ jobs:
             ### Windows
             - **LanMountainDesktop-Setup-${{ needs.prepare.outputs.version }}-x64.exe** - 64-bit installer (includes .NET runtime)
             - **LanMountainDesktop-Setup-${{ needs.prepare.outputs.version }}-x86.exe** - 32-bit installer (includes .NET runtime)
+
+            **Note:** The Launcher is now built with AOT (Ahead-of-Time) compilation as a single executable file for faster startup and smaller footprint.
 
             Installation: Double-click the .exe file and follow the wizard.
 

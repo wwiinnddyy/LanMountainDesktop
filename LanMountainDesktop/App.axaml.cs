@@ -154,6 +154,7 @@ public partial class App : Application
         
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
+        ReportStartupProgress(StartupStage.LoadingSettings, 20, "正在加载设置...");
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
         if (!Design.IsDesignMode && OperatingSystem.IsWindows())
@@ -177,20 +178,39 @@ public partial class App : Application
             if (connected)
             {
                 AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
-                
-                // 报告初始化进度
-                await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
-                {
-                    Stage = StartupStage.Initializing,
-                    ProgressPercent = 10,
-                    Message = "正在初始化..."
-                });
+                ReportStartupProgress(StartupStage.Initializing, 10, "正在初始化...");
             }
         }
         catch (Exception ex)
         {
             AppLogger.Warn("LauncherIpc", $"Failed to initialize Launcher IPC: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 向 Launcher 报告启动进度（fire-and-forget，不阻塞主流程）
+    /// </summary>
+    private void ReportStartupProgress(StartupStage stage, int percent, string message)
+    {
+        if (_launcherIpcClient is null)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                {
+                    Stage = stage,
+                    ProgressPercent = percent,
+                    Message = message
+                });
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
+            }
+        });
     }
 
     private void ApplyDesignTimeTheme()
@@ -218,6 +238,7 @@ public partial class App : Application
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
+                ReportStartupProgress(StartupStage.InitializingUI, 60, "正在初始化界面...");
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
             () =>
@@ -358,6 +379,7 @@ public partial class App : Application
 
     private void InitializePluginRuntime()
     {
+        ReportStartupProgress(StartupStage.LoadingPlugins, 30, "正在加载插件...");
         try
         {
             _pluginRuntimeService?.Dispose();
@@ -905,6 +927,7 @@ public partial class App : Application
         AppLogger.Info("App", $"Main window created. Reason='{reason}'. LogFile={AppLogger.LogFilePath}");
         LogBrowserStartupDiagnostics();
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"MainWindowCreated:{reason}");
+        ReportStartupProgress(StartupStage.Ready, 100, "就绪");
         return mainWindow;
     }
 

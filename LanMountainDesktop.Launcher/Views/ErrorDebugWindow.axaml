@@ -14,7 +14,8 @@
         CanResize="False"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-        TransparencyLevelHint="None">
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
   <Design.DataContext>
     <views:ErrorDebugWindow />
   </Design.DataContext>

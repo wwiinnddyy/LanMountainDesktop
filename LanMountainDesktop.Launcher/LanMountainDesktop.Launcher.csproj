@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="Version;PackageVersion;InformationalVersion;AssemblyVersion;FileVersion">
+  
+  <!-- 导入 AOT 配置 -->
+  <Import Project="LanMountainDesktop.Launcher.AOT.props" Condition="Exists('LanMountainDesktop.Launcher.AOT.props')" />
+  
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,6 +11,8 @@
     <Version>1.0.0</Version>
     <PackageVersion>$(Version)</PackageVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- 应用程序图标 -->
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,9 +29,12 @@
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
   </ItemGroup>
 
-  <!-- Embed public-key.pem and copy to .launcher/update/ in output directory -->
+  <!-- 资源文件 -->
   <ItemGroup>
+    <!-- 公钥文件 -->
     <None Include="Assets\public-key.pem" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Avalonia 资源文件 -->
+    <AvaloniaResource Include="Assets\logo.ico" />
   </ItemGroup>
 
   <Target Name="CopyPublicKeyToLauncherDir" AfterTargets="Build">

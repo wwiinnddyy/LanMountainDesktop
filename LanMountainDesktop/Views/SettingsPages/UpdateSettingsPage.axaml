@@ -65,7 +65,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto"
                           ColumnSpacing="20"
                           RowSpacing="16">
                         <StackPanel Grid.Row="0"
@@ -105,6 +105,16 @@
                                        Text="{Binding LastCheckedLabel}" />
                             <TextBlock Classes="update-kv-value"
                                        Text="{Binding LastCheckedText}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2"
+                                    Grid.Column="0"
+                                    Spacing="4"
+                                    IsVisible="{Binding HasPendingInstaller}">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding UpdateTypeLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding PendingUpdateTypeText}" />
                         </StackPanel>
                     </Grid>
 

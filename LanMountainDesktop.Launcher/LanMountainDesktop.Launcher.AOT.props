@@ -1,0 +1,62 @@
+<!-- AOT 发布配置文件 -->
+<Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 启用 Native AOT -->
+    <PublishAot>true</PublishAot>
+    
+    <!-- 启用修剪以减小体积 -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    
+    <!-- 自包含（不依赖系统 .NET Runtime） -->
+    <SelfContained>true</SelfContained>
+    
+    <!-- 单文件发布 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    
+    <!-- 包含 native 库到单文件中 -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- 压缩单文件 -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    
+    <!-- 优化大小 -->
+    <OptimizationPreference>Size</OptimizationPreference>
+    
+    <!-- 禁用 ReadyToRun（AOT 不需要） -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    
+    <!-- 目标运行时 -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+  
+  <!-- AOT 兼容性设置 -->
+  <PropertyGroup>
+    <!-- 允许不安全代码（某些 AOT 场景需要） -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- 启用编译时绑定（Avalonia 需要） -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  
+  <!-- AOT 修剪配置 -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 保留 Avalonia 必要的类型 -->
+    <TrimmerRootAssembly Include="Avalonia" />
+    <TrimmerRootAssembly Include="Avalonia.Desktop" />
+    
+    <!-- 保留动态序列化类型 -->
+    <TrimmerRootAssembly Include="System.Text.Json" />
+  </ItemGroup>
+  
+  <!-- AOT 兼容性：某些包可能需要特殊处理 -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 忽略某些警告 -->
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <!-- 允许 IL 警告 -->
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    
+    <!-- FluentAvaloniaUI 需要：启用反射序列化（AOT 兼容模式） -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+</Project>

@@ -6,7 +6,12 @@ internal sealed class OobeStateService
 
     public OobeStateService(string appRoot)
     {
-        var stateDir = Path.Combine(appRoot, ".launcher", "state");
+        // 将 OOBE 状态文件存储在用户可写的 LocalApplicationData 目录中，
+        // 而不是安装目录（Program Files 下普通用户没有写入权限）。
+        var appDataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LanMountainDesktop");
+        var stateDir = Path.Combine(appDataDir, ".launcher", "state");
         Directory.CreateDirectory(stateDir);
         _markerPath = Path.Combine(stateDir, "first_run_completed");
     }

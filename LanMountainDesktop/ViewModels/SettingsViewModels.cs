@@ -1562,6 +1562,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _lastCheckedLabel = string.Empty;
 
     [ObservableProperty]
+    private string _updateTypeLabel = string.Empty;
+
+    [ObservableProperty]
     private string _checkForUpdatesButtonText = string.Empty;
 
     [ObservableProperty]
@@ -1593,6 +1596,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasPendingInstaller;
+
+    [ObservableProperty]
+    private string _pendingUpdateTypeText = string.Empty;
 
     [ObservableProperty]
     private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
@@ -1987,6 +1993,26 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanInstallPendingUpdate))]
     private void InstallPendingUpdate()
     {
+        // For delta updates, launch the Launcher with apply-update command
+        if (_updateWorkflowService.IsPendingDeltaUpdate())
+        {
+            var launchResult = _updateWorkflowService.LaunchLauncherForApplyUpdate();
+            if (launchResult)
+            {
+                UpdateStatus = L(
+                    "settings.update.status_delta_applying",
+                    "Applying incremental update. The app will close for update.");
+                HasPendingInstaller = false;
+                return;
+            }
+
+            UpdateStatus = L(
+                "settings.update.status_delta_launch_failed",
+                "Failed to launch updater for incremental update.");
+            return;
+        }
+
+        // For full installer, launch the installer executable
         var result = _updateWorkflowService.LaunchPendingInstallerNow();
         if (result.Success)
         {
@@ -2083,6 +2109,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
         PublishedAtLabel = L("settings.update.published_at_label", "Published At");
         LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
+        UpdateTypeLabel = L("settings.update.type_label", "Update Type");
         StableChannelText = L("settings.update.channel_stable", "Stable");
         PreviewChannelText = L("settings.update.channel_preview", "Preview");
         GitHubSourceText = L("settings.update.source_github", "GitHub");
@@ -2130,6 +2157,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         HasPendingInstaller = pending is not null;
         if (pending is null)
         {
+            PendingUpdateTypeText = string.Empty;
             return;
         }
 
@@ -2137,6 +2165,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
         PublishedAtText = pending.PublishedAt is null ? string.Empty : FormatTimestamp(pending.PublishedAt.Value.ToUnixTimeMilliseconds());
         IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
+        PendingUpdateTypeText = _updateWorkflowService.IsPendingDeltaUpdate()
+            ? L("settings.update.type_delta", "Incremental Update")
+            : L("settings.update.type_full", "Full Installer");
         UpdateStatus = BuildPendingReadyStatus();
     }
 
@@ -2165,7 +2196,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     private async Task DownloadLatestReleaseCoreAsync(UpdateCheckResult? result, bool invokedFromCheck)
     {
-        if (result is null || !result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
+        if (result is null || !result.Success || !result.IsUpdateAvailable)
         {
             return;
         }
@@ -2176,7 +2207,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             IsDownloadProgressVisible = true;
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
 
             var progress = new Progress<double>(value =>
             {
@@ -2187,7 +2217,35 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                     DownloadProgressValue);
             });
 
-            var downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+            UpdateDownloadResult downloadResult;
+
+            // Prefer delta update if available (smaller download, faster)
+            if (result.Release is not null && UpdateWorkflowService.IsDeltaUpdateAvailable(result.Release))
+            {
+                UpdateStatus = L("settings.update.status_downloading_delta", "Downloading incremental update...");
+                downloadResult = await _updateWorkflowService.DownloadDeltaUpdateAsync(result, progress);
+                if (!downloadResult.Success)
+                {
+                    // Delta download failed, fall back to full installer
+                    AppLogger.Warn("UpdateSettings", $"Delta update download failed: {downloadResult.ErrorMessage}. Falling back to full installer.");
+                    if (result.PreferredAsset is not null)
+                    {
+                        UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
+                        downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+                    }
+                }
+            }
+            else if (result.PreferredAsset is not null)
+            {
+                UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
+                downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+            }
+            else
+            {
+                UpdateStatus = L("settings.update.status_asset_missing", "A new release is available, but no compatible installer was found.");
+                return;
+            }
+
             if (!downloadResult.Success)
             {
                 UpdateStatus = string.Format(

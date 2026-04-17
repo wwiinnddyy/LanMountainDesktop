@@ -81,4 +81,24 @@
   </ItemGroup>
 
   <!-- Launcher 构建目标已移除 - Launcher 现在是独立应用，由 CI/CD 单独构建 -->
+
+  <!-- 生成版本信息文件 -->
+  <Target Name="GenerateVersionFile" AfterTargets="Build">
+    <PropertyGroup>
+      <VersionFilePath>$(OutDir)version.json</VersionFilePath>
+      <AppVersion>$(Version)</AppVersion>
+      <AppCodename>Administrate</AppCodename>
+    </PropertyGroup>
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" />
+  </Target>
+
+  <!-- 发布时也生成版本信息文件 -->
+  <Target Name="GenerateVersionFilePublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <VersionFilePath>$(PublishDir)version.json</VersionFilePath>
+      <AppVersion>$(Version)</AppVersion>
+      <AppCodename>Administrate</AppCodename>
+    </PropertyGroup>
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" />
+  </Target>
 </Project>
