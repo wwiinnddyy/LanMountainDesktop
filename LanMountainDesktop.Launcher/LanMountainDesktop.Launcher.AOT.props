@@ -26,8 +26,8 @@
     <!-- 禁用 ReadyToRun（AOT 不需要） -->
     <PublishReadyToRun>false</PublishReadyToRun>
     
-    <!-- 目标运行时 -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- 注意：RuntimeIdentifier 由 CI/CD 工作流通过 -r 参数传入，不在此处硬编码 -->
+    <!-- 支持的平台：win-x64, win-x86, linux-x64, osx-x64, osx-arm64 -->
   </PropertyGroup>
   
   <!-- AOT 兼容性设置 -->
