@@ -12,6 +12,22 @@ public partial class UpdateWindow : Window
     public UpdateWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        InitializeEventHandlers();
+    }
+
+    /// <summary>
+    /// 初始化事件处理程序
+    /// </summary>
+    private void InitializeEventHandlers()
+    {
+        var minimizeButton = this.FindControl<Button>("MinimizeButton");
+        if (minimizeButton != null)
+        {
+            minimizeButton.Click += (s, e) =>
+            {
+                this.WindowState = WindowState.Minimized;
+            };
+        }
     }
 
     /// <summary>
@@ -23,11 +39,11 @@ public partial class UpdateWindow : Window
         {
             var statusText = this.FindControl<TextBlock>("StatusText");
             var progressIndicator = this.FindControl<ProgressBar>("ProgressIndicator");
-            var detailText = this.FindControl<TextBlock>("DetailText");
+            var percentText = this.FindControl<TextBlock>("PercentText");
 
-            if (statusText is null || progressIndicator is null || detailText is null)
+            if (statusText is null || progressIndicator is null || percentText is null)
             {
-                Console.Error.WriteLine($"[UpdateWindow] Controls not found in Report: StatusText={statusText != null}, ProgressIndicator={progressIndicator != null}, DetailText={detailText != null}");
+                Console.Error.WriteLine($"[UpdateWindow] Controls not found in Report: StatusText={statusText != null}, ProgressIndicator={progressIndicator != null}, PercentText={percentText != null}");
                 return;
             }
 
@@ -37,23 +53,13 @@ public partial class UpdateWindow : Window
             {
                 progressIndicator.IsIndeterminate = false;
                 progressIndicator.Value = progressPercent;
+                percentText.Text = $"{progressPercent}%";
             }
             else
             {
                 progressIndicator.IsIndeterminate = true;
+                percentText.Text = "";
             }
-
-            // 根据阶段显示不同的底部提示
-            detailText.Text = stage.ToLowerInvariant() switch
-            {
-                "verify" => "正在验证更新完整性...",
-                "extract" => "正在解压更新包...",
-                "apply" => "正在应用更新文件...",
-                "plugins" => "正在升级插件...",
-                "cleanup" => "正在清理...",
-                "done" => "",
-                _ => ""
-            };
         });
     }
 
@@ -66,10 +72,10 @@ public partial class UpdateWindow : Window
         {
             var statusText = this.FindControl<TextBlock>("StatusText");
             var progressIndicator = this.FindControl<ProgressBar>("ProgressIndicator");
-            var detailText = this.FindControl<TextBlock>("DetailText");
+            var percentText = this.FindControl<TextBlock>("PercentText");
             var titleText = this.FindControl<TextBlock>("TitleText");
 
-            if (statusText is null || progressIndicator is null || detailText is null || titleText is null)
+            if (statusText is null || progressIndicator is null || percentText is null || titleText is null)
             {
                 Console.Error.WriteLine($"[UpdateWindow] Controls not found in ReportComplete");
                 return;
@@ -77,7 +83,7 @@ public partial class UpdateWindow : Window
 
             progressIndicator.IsIndeterminate = false;
             progressIndicator.Value = 100;
-            detailText.Text = "";
+            percentText.Text = "100%";
 
             if (success)
             {

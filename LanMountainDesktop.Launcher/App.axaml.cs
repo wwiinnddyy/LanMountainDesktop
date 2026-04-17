@@ -13,6 +13,10 @@ public partial class App : Application
 {
     public override void Initialize()
     {
+        // 初始化日志记录器
+        Logger.Initialize();
+        Logger.Info("Launcher starting...");
+        
         AvaloniaXamlLoader.Load(this);
     }
 
@@ -50,27 +54,12 @@ public partial class App : Application
             }
             else
             {
-                // 正常启动流程
-                var appRoot = Commands.ResolveAppRoot(context);
-                var deploymentLocator = new DeploymentLocator(appRoot);
-                
-                // TODO: 从配置读取 GitHub 仓库信息
-                var updateCheckService = new UpdateCheckService("ClassIsland", "LanMountainDesktop");
-                
-                var coordinator = new LauncherFlowCoordinator(
-                    context,
-                    deploymentLocator,
-                    new OobeStateService(appRoot),
-                    new UpdateEngineService(deploymentLocator),
-                    updateCheckService,
-                    new PluginInstallerService());
-
                 // 先显示 Splash 窗口，确保应用程序不会立即退出
                 var splashWindow = new SplashWindow();
                 splashWindow.Show();
                 
-                // 启动协调器流程
-                _ = RunCoordinatorWithSplashAsync(desktop, coordinator, splashWindow);
+                // 在 try-catch 块中实例化所有服务，确保任何异常都能被捕获
+                _ = RunCoordinatorWithSplashAsync(desktop, context, splashWindow);
             }
         }
 
@@ -211,14 +200,30 @@ public partial class App : Application
     
     private static async Task RunCoordinatorWithSplashAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
-        LauncherFlowCoordinator coordinator,
+        CommandContext context,
         SplashWindow splashWindow)
     {
         LauncherResult result;
         ErrorWindow? errorWindow = null;
+        LauncherFlowCoordinator? coordinator = null;
         
         try
         {
+            // 在 try-catch 块中实例化所有服务，确保异常被捕获
+            var appRoot = Commands.ResolveAppRoot(context);
+            var deploymentLocator = new DeploymentLocator(appRoot);
+            
+            // TODO: 从配置读取 GitHub 仓库信息
+            var updateCheckService = new UpdateCheckService("ClassIsland", "LanMountainDesktop");
+            
+            coordinator = new LauncherFlowCoordinator(
+                context,
+                deploymentLocator,
+                new OobeStateService(appRoot),
+                new UpdateEngineService(deploymentLocator),
+                updateCheckService,
+                new PluginInstallerService());
+
             result = await coordinator.RunAsync(splashWindow).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -344,11 +349,11 @@ public partial class App : Application
                 }
             }
 
-            // 3. 清理旧版本
+            // 3. 清理旧版本，保留至少3个版本以支持回滚
             if (success)
             {
                 await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", "正在清理...", 90));
-                deploymentLocator.CleanupDestroyedDeployments();
+                deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
             }
         }
         catch (Exception ex)

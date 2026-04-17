@@ -76,21 +76,30 @@
     <Border Grid.Row="1"
             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
             Padding="24,16">
-      <StackPanel Orientation="Horizontal" 
-                  HorizontalAlignment="Right" 
-                  Spacing="8">
-        <Button x:Name="ExitButton"
-                Content="退出"
-                Width="80"
-                Height="32"
-                FontSize="13"/>
-        <Button x:Name="RetryButton"
-                Content="重试"
-                Width="80"
+      <Grid ColumnDefinitions="*,Auto">
+        <Button x:Name="OpenLogButton"
+                Grid.Column="0"
+                Content="打开日志"
+                Width="100"
                 Height="32"
                 FontSize="13"
-                Theme="{DynamicResource AccentButtonTheme}"/>
-      </StackPanel>
+                HorizontalAlignment="Left"/>
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal" 
+                    Spacing="8">
+          <Button x:Name="ExitButton"
+                  Content="退出"
+                  Width="80"
+                  Height="32"
+                  FontSize="13"/>
+          <Button x:Name="RetryButton"
+                  Content="重试"
+                  Width="80"
+                  Height="32"
+                  FontSize="13"
+                  Theme="{DynamicResource AccentButtonTheme}"/>
+        </StackPanel>
+      </Grid>
     </Border>
   </Grid>
 </Window>

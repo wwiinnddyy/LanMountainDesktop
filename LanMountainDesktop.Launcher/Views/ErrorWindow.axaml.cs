@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using LanMountainDesktop.Launcher.Services;
+using System.Diagnostics;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -66,6 +68,7 @@ public partial class ErrorWindow : Window
         // 按钮事件
         var retryButton = this.FindControl<Button>("RetryButton");
         var exitButton = this.FindControl<Button>("ExitButton");
+        var openLogButton = this.FindControl<Button>("OpenLogButton");
 
         if (retryButton is not null)
         {
@@ -85,6 +88,16 @@ public partial class ErrorWindow : Window
         else
         {
             Console.Error.WriteLine("[ErrorWindow] Failed to find ExitButton!");
+        }
+
+        if (openLogButton is not null)
+        {
+            openLogButton.Click += OnOpenLogClick;
+            Console.WriteLine("[ErrorWindow] OpenLogButton event bound");
+        }
+        else
+        {
+            Console.Error.WriteLine("[ErrorWindow] Failed to find OpenLogButton!");
         }
         
         Console.WriteLine("[ErrorWindow] Components initialization completed");
@@ -211,23 +224,81 @@ public partial class ErrorWindow : Window
     }
 
     /// <summary>
+    /// 获取配置存储的基础目录
+    /// </summary>
+    private static string GetConfigBaseDirectory()
+    {
+        try
+        {
+            // 优先使用 LocalApplicationData（用户状态）
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrEmpty(appData))
+            {
+                var configDir = Path.Combine(appData, "LanMountainDesktop", ".launcher");
+                return configDir;
+            }
+        }
+        catch
+        {
+            // LocalApplicationData 不可用，回退到 Launcher 所在目录
+        }
+
+        // 回退方案：使用 Launcher 所在目录
+        try
+        {
+            var launcherDir = AppContext.BaseDirectory;
+            var configDir = Path.Combine(launcherDir, ".launcher");
+            return configDir;
+        }
+        catch
+        {
+            // 最后的兜底：使用当前目录
+            return Path.Combine(Directory.GetCurrentDirectory(), ".launcher");
+        }
+    }
+
+    /// <summary>
+    /// 确保配置目录存在
+    /// </summary>
+    private static bool EnsureConfigDirectory(string dirPath)
+    {
+        try
+        {
+            if (!Directory.Exists(dirPath))
+            {
+                Directory.CreateDirectory(dirPath);
+                Console.WriteLine($"[ErrorWindow] Created config directory: {dirPath}");
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ErrorWindow] Failed to create config directory: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 保存开发模式状态（内部方法）
     /// </summary>
     private static void SaveDevModeStateInternal(bool enabled)
     {
         try
         {
-            var devModeFile = GetDevModeFilePath();
-            var dir = Path.GetDirectoryName(devModeFile);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            var configDir = GetConfigBaseDirectory();
+            if (!EnsureConfigDirectory(configDir))
             {
-                Directory.CreateDirectory(dir);
+                Console.Error.WriteLine("[ErrorWindow] Cannot save dev mode: config directory unavailable");
+                return;
             }
+
+            var devModeFile = Path.Combine(configDir, "devmode.config");
             File.WriteAllText(devModeFile, enabled ? "1" : "0");
+            Console.WriteLine($"[ErrorWindow] Dev mode state saved: {enabled}");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to save dev mode state: {ex.Message}");
+            Console.Error.WriteLine($"[ErrorWindow] Failed to save dev mode state: {ex.Message}");
         }
     }
 
@@ -238,27 +309,22 @@ public partial class ErrorWindow : Window
     {
         try
         {
-            var devModeFile = GetDevModeFilePath();
+            var configDir = GetConfigBaseDirectory();
+            var devModeFile = Path.Combine(configDir, "devmode.config");
+
             if (File.Exists(devModeFile))
             {
                 var content = File.ReadAllText(devModeFile).Trim();
-                return content == "1";
+                var enabled = content == "1";
+                Console.WriteLine($"[ErrorWindow] Dev mode state loaded: {enabled}");
+                return enabled;
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to load dev mode state: {ex.Message}");
+            Console.Error.WriteLine($"[ErrorWindow] Failed to load dev mode state: {ex.Message}");
         }
         return false;
-    }
-
-    /// <summary>
-    /// 获取开发模式状态文件路径
-    /// </summary>
-    private static string GetDevModeFilePath()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "LanMountainDesktop", ".launcher", "devmode.config");
     }
 
     /// <summary>
@@ -268,17 +334,20 @@ public partial class ErrorWindow : Window
     {
         try
         {
-            var hostPathFile = GetCustomHostPathFilePath();
-            var dir = Path.GetDirectoryName(hostPathFile);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            var configDir = GetConfigBaseDirectory();
+            if (!EnsureConfigDirectory(configDir))
             {
-                Directory.CreateDirectory(dir);
+                Console.Error.WriteLine("[ErrorWindow] Cannot save custom path: config directory unavailable");
+                return;
             }
+
+            var hostPathFile = Path.Combine(configDir, "custom-host-path.config");
             File.WriteAllText(hostPathFile, path ?? string.Empty);
+            Console.WriteLine($"[ErrorWindow] Custom host path saved: {path}");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to save custom host path: {ex.Message}");
+            Console.Error.WriteLine($"[ErrorWindow] Failed to save custom host path: {ex.Message}");
         }
     }
 
@@ -289,41 +358,40 @@ public partial class ErrorWindow : Window
     {
         try
         {
-            var hostPathFile = GetCustomHostPathFilePath();
+            var configDir = GetConfigBaseDirectory();
+            var hostPathFile = Path.Combine(configDir, "custom-host-path.config");
+
             if (File.Exists(hostPathFile))
             {
                 var content = File.ReadAllText(hostPathFile).Trim();
                 // 验证路径是否仍然有效
                 if (!string.IsNullOrEmpty(content) && File.Exists(content))
                 {
+                    Console.WriteLine($"[ErrorWindow] Custom host path loaded: {content}");
                     return content;
                 }
+
                 // 路径已失效，清理配置文件
-                try
+                if (!string.IsNullOrEmpty(content))
                 {
-                    File.Delete(hostPathFile);
-                    Console.WriteLine("Custom host path is no longer valid, cleared saved path.");
-                }
-                catch (Exception clearEx)
-                {
-                    Console.Error.WriteLine($"Failed to clear invalid host path: {clearEx.Message}");
+                    Console.WriteLine($"[ErrorWindow] Custom host path is no longer valid: {content}");
+                    try
+                    {
+                        File.Delete(hostPathFile);
+                        Console.WriteLine("[ErrorWindow] Cleared invalid custom host path");
+                    }
+                    catch (Exception clearEx)
+                    {
+                        Console.Error.WriteLine($"[ErrorWindow] Failed to clear invalid host path: {clearEx.Message}");
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Failed to load custom host path: {ex.Message}");
+            Console.Error.WriteLine($"[ErrorWindow] Failed to load custom host path: {ex.Message}");
         }
         return null;
-    }
-
-    /// <summary>
-    /// 获取自定义主程序路径文件路径
-    /// </summary>
-    private static string GetCustomHostPathFilePath()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        return Path.Combine(appData, "LanMountainDesktop", ".launcher", "custom-host-path.config");
     }
 
     /// <summary>
@@ -350,6 +418,110 @@ public partial class ErrorWindow : Window
     private void OnExitClick(object? sender, RoutedEventArgs e)
     {
         _completionSource.TrySetResult(ErrorWindowResult.Exit);
+    }
+
+    /// <summary>
+    /// 打开日志文件
+    /// </summary>
+    private async void OnOpenLogClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var logFilePath = Logger.GetLogFilePath();
+
+            if (string.IsNullOrEmpty(logFilePath) || !File.Exists(logFilePath))
+            {
+                // 如果没有日志文件，打开日志目录
+                var logDir = Path.GetDirectoryName(logFilePath);
+                if (!string.IsNullOrEmpty(logDir) && Directory.Exists(logDir))
+                {
+                    OpenFolder(logDir);
+                }
+                else
+                {
+                    // 尝试打开配置目录
+                    var configDir = GetConfigBaseDirectory();
+                    if (Directory.Exists(configDir))
+                    {
+                        OpenFolder(configDir);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[ErrorWindow] No log file or directory available");
+                    }
+                }
+                return;
+            }
+
+            Console.WriteLine($"[ErrorWindow] Opening log file: {logFilePath}");
+            OpenFile(logFilePath);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ErrorWindow] Failed to open log: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 打开文件
+    /// </summary>
+    private static void OpenFile(string filePath)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", filePath);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ErrorWindow] Failed to open file: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 打开文件夹
+    /// </summary>
+    private static void OpenFolder(string folderPath)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{folderPath}\"",
+                    UseShellExecute = true
+                });
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", folderPath);
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", folderPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ErrorWindow] Failed to open folder: {ex.Message}");
+        }
     }
 }
 

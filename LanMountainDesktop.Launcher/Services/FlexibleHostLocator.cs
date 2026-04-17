@@ -4,50 +4,67 @@ using System.Text.Json;
 namespace LanMountainDesktop.Launcher.Services;
 
 /// <summary>
-/// 灵活的主程序定位器
-/// </summary>
-internal sealed class FlexibleHostLocator
-{
-    private readonly HostDiscoveryOptions _options;
-    private readonly string _appRoot;
-
-    public FlexibleHostLocator(string appRoot, HostDiscoveryOptions? options = null)
-    {
-        _appRoot = appRoot;
-        _options = options ?? new HostDiscoveryOptions();
-    }
-
-    /// <summary>
-    /// 解析主程序可执行文件路径
+    /// 灵活的主程序定位器
     /// </summary>
-    public string? ResolveHostExecutablePath()
+    internal sealed class FlexibleHostLocator
     {
-        var executable = GetExecutableName();
-        var searchContext = new SearchContext
-        {
-            ExecutableName = executable,
-            AppRoot = _appRoot,
-            Options = _options
-        };
+        private readonly HostDiscoveryOptions _options;
+        private readonly string _appRoot;
+        private readonly DeploymentLocator _deploymentLocator;
 
-        // ========== 第一阶段：标准路径查找（快速路径）==========
-        
-        // 1. 检查环境变量指定的路径（最高优先级 - 用于调试和特殊场景）
-        var envPath = GetPathFromEnvironment();
-        if (!string.IsNullOrWhiteSpace(envPath))
+        public FlexibleHostLocator(string appRoot, HostDiscoveryOptions? options = null)
         {
-            var validated = ValidateAndReturn(envPath, "environment variable");
-            if (validated != null) return validated;
+            _appRoot = appRoot;
+            _options = options ?? new HostDiscoveryOptions();
+            _deploymentLocator = new DeploymentLocator(appRoot);
         }
 
-        // 2. 搜索部署目录（app-*）- 生产环境标准路径
-        var deploymentPath = SearchDeploymentDirectories(searchContext);
-        if (!string.IsNullOrWhiteSpace(deploymentPath))
+        /// <summary>
+        /// 解析主程序可执行文件路径
+        /// </summary>
+        public string? ResolveHostExecutablePath()
         {
-            return deploymentPath;
-        }
+            var executable = GetExecutableName();
+            var searchContext = new SearchContext
+            {
+                ExecutableName = executable,
+                AppRoot = _appRoot,
+                Options = _options
+            };
 
-        // 3. 检查 Launcher 同级目录（便携模式）
+            // ========== 第一阶段：标准路径查找（快速路径）==========
+            
+            // 1. 检查环境变量指定的路径（最高优先级 - 用于调试和特殊场景）
+            var envPath = GetPathFromEnvironment();
+            if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                var validated = ValidateAndReturn(envPath, "environment variable");
+                if (validated != null) return validated;
+            }
+
+            // 2. 使用 DeploymentLocator（ClassIsland 风格的简洁查询 - 优先）
+            Console.WriteLine("[FlexibleHostLocator] Trying quick path: DeploymentLocator.FindCurrentDeploymentDirectory()");
+            var deploymentDir = _deploymentLocator.FindCurrentDeploymentDirectory();
+            if (!string.IsNullOrWhiteSpace(deploymentDir))
+            {
+                var deploymentExePath = Path.Combine(deploymentDir, executable);
+                if (File.Exists(deploymentExePath))
+                {
+                    Console.WriteLine($"[FlexibleHostLocator] Quick path found: {deploymentExePath}");
+                    return deploymentExePath;
+                }
+                Console.WriteLine($"[FlexibleHostLocator] Quick path found dir but no exe: {deploymentExePath}");
+            }
+
+            // 3. 快速路径失败，尝试旧的 SearchDeploymentDirectories 作为 fallback
+            Console.WriteLine("[FlexibleHostLocator] Quick path failed, falling back to SearchDeploymentDirectories");
+            var deploymentPath = SearchDeploymentDirectories(searchContext);
+            if (!string.IsNullOrWhiteSpace(deploymentPath))
+            {
+                return deploymentPath;
+            }
+
+        // 4. 检查 Launcher 同级目录（便携模式）
         var portablePath = SearchPortableLocation(searchContext);
         if (!string.IsNullOrWhiteSpace(portablePath))
         {
@@ -56,7 +73,7 @@ internal sealed class FlexibleHostLocator
 
         // ========== 第二阶段：灵活查找（标准路径找不到时）==========
         
-        // 4. 检查配置文件中的路径 - 用户自定义配置
+        // 5. 检查配置文件中的路径 - 用户自定义配置
         var configPath = GetPathFromConfigFile();
         if (!string.IsNullOrWhiteSpace(configPath))
         {
@@ -71,7 +88,7 @@ internal sealed class FlexibleHostLocator
             return nearbyPath;
         }
 
-        // 6. 开发模式：检查保存的自定义路径
+        // 7. 开发模式：检查保存的自定义路径
         if (_options.PreferDevModeConfig && Views.ErrorWindow.CheckDevModeEnabled())
         {
             var savedPath = Views.ErrorWindow.GetSavedCustomHostPath();
@@ -82,21 +99,21 @@ internal sealed class FlexibleHostLocator
             }
         }
 
-        // 7. 搜索标准开发路径
+        // 8. 搜索标准开发路径
         var devPath = SearchDevelopmentPaths(searchContext);
         if (!string.IsNullOrWhiteSpace(devPath))
         {
             return devPath;
         }
 
-        // 8. 搜索额外的配置路径
+        // 9. 搜索额外的配置路径
         var additionalPath = SearchAdditionalPaths(searchContext);
         if (!string.IsNullOrWhiteSpace(additionalPath))
         {
             return additionalPath;
         }
 
-        // 9. 递归搜索（如果启用）
+        // 10. 递归搜索（如果启用）
         if (_options.RecursiveSearch)
         {
             var recursivePath = SearchRecursively(searchContext);

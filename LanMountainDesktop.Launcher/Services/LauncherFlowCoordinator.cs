@@ -38,8 +38,8 @@ internal sealed class LauncherFlowCoordinator
     {
         try
         {
-            // 清理待删除的旧版本
-            _deploymentLocator.CleanupDestroyedDeployments();
+            // 清理旧版本，保留至少3个版本
+            _deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
 
             // 使用传入的 Splash 窗口或创建新的
             var splashWindow = existingSplashWindow ?? await Dispatcher.UIThread.InvokeAsync(() =>

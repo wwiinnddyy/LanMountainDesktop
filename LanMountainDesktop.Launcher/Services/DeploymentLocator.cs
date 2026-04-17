@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Services;
@@ -17,44 +18,65 @@ internal sealed class DeploymentLocator
 
     public string? FindCurrentDeploymentDirectory()
     {
-        var candidates = Directory.Exists(_appRoot)
-            ? Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly)
-            : [];
+        Console.WriteLine("[DeploymentLocator] Searching for deployment directories (ClassIsland style)...");
 
-        // 过滤掉无效的部署目录
-        var validCandidates = candidates
-            .Where(path => 
-                !File.Exists(Path.Combine(path, ".destroy")) &&    // 排除待删除
-                !File.Exists(Path.Combine(path, ".partial")))      // 排除未完成
-            .ToList();
-
-        // 优先选择带 .current 标记的版本
-        var withMarkers = validCandidates
-            .Where(path => File.Exists(Path.Combine(path, ".current")))
-            .Select(path => new
-            {
-                Path = path,
-                Version = ParseVersionFromDirectory(path)
-            })
-            .OrderByDescending(item => item.Version)
-            .ToList();
-
-        if (withMarkers.Count > 0)
+        if (!Directory.Exists(_appRoot))
         {
-            return withMarkers[0].Path;
+            Console.WriteLine("[DeploymentLocator] App root directory does not exist");
+            return null;
         }
 
-        // 如果没有 .current 标记,选择最新版本
-        var byVersion = validCandidates
-            .Select(path => new
-            {
-                Path = path,
-                Version = ParseVersionFromDirectory(path)
-            })
-            .OrderByDescending(item => item.Version)
-            .ToList();
+        var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
 
-        return byVersion.Count > 0 ? byVersion[0].Path : null;
+        try
+        {
+            var candidates = Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly);
+            Console.WriteLine($"[DeploymentLocator] Found {candidates.Length} app-* directories");
+
+            // ClassIsland 风格的查询：先筛选，后排序
+            var validInstallations = candidates
+                .Where(path =>
+                {
+                    var hasDestroy = File.Exists(Path.Combine(path, ".destroy"));
+                    var hasPartial = File.Exists(Path.Combine(path, ".partial"));
+                    var hasExe = File.Exists(Path.Combine(path, executable));
+                    var hasCurrent = File.Exists(Path.Combine(path, ".current"));
+                    var version = ParseVersionFromDirectory(path);
+
+                    Console.WriteLine($"[DeploymentLocator] Candidate: {Path.GetFileName(path)} | " +
+                        $"Version={version} | " +
+                        $"Current={hasCurrent} | " +
+                        $"Destroy={hasDestroy} | " +
+                        $"Partial={hasPartial} | " +
+                        $"HasExe={hasExe}");
+
+                    return !hasDestroy && !hasPartial && hasExe;
+                })
+                .Select(path => new
+                {
+                    Path = path,
+                    Version = ParseVersionFromDirectory(path),
+                    HasCurrentMarker = File.Exists(Path.Combine(path, ".current"))
+                })
+                .OrderBy(x => x.HasCurrentMarker ? 0 : 1)  // .current 标记的排前面
+                .ThenByDescending(x => x.Version)  // 然后按版本号降序
+                .ToList();
+
+            if (validInstallations.Count == 0)
+            {
+                Console.WriteLine("[DeploymentLocator] No valid deployment directories found");
+                return null;
+            }
+
+            var best = validInstallations[0];
+            Console.WriteLine($"[DeploymentLocator] Selected: {Path.GetFileName(best.Path)} (current={best.HasCurrentMarker}, version={best.Version})");
+            return best.Path;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[DeploymentLocator] Error searching for deployments: {ex}");
+            return null;
+        }
     }
 
     public string? ResolveHostExecutablePath()
@@ -233,33 +255,157 @@ internal sealed class DeploymentLocator
         }
     }
 
-    public void CleanupDestroyedDeployments()
+    /// <summary>
+    /// 清理旧版本部署，保留最近的N个版本
+    /// </summary>
+    /// <param name="minVersionsToKeep">最少保留版本数，默认3个</param>
+    public void CleanupOldDeployments(int minVersionsToKeep = 3)
     {
         try
         {
-            var candidates = Directory.Exists(_appRoot)
-                ? Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly)
-                : [];
+            Console.WriteLine($"[DeploymentLocator] Starting cleanup with retention policy: keep at least {minVersionsToKeep} versions");
 
-            var destroyedDirs = candidates
-                .Where(path => File.Exists(Path.Combine(path, ".destroy")));
+            if (!Directory.Exists(_appRoot))
+            {
+                return;
+            }
 
-            foreach (var dir in destroyedDirs)
+            var candidates = Directory.GetDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly);
+
+            // 过滤掉无效部署目录（排除partial），按版本排序
+            var validDeployments = candidates
+                .Where(path => !File.Exists(Path.Combine(path, ".partial")))
+                .Select(path => new
+                {
+                    Path = path,
+                    Version = ParseVersionFromDirectory(path),
+                    IsDestroyed = File.Exists(Path.Combine(path, ".destroy")),
+                    IsCurrent = File.Exists(Path.Combine(path, ".current"))
+                })
+                .OrderByDescending(item => item.Version)
+                .ToList();
+
+            Console.WriteLine($"[DeploymentLocator] Found {validDeployments.Count} valid deployments");
+
+            // 确定要保留的版本
+            var versionsToKeep = new HashSet<string>();
+
+            // 1. 总是保留当前版本
+            var currentVersion = validDeployments.FirstOrDefault(d => d.IsCurrent);
+            if (currentVersion != null)
+            {
+                versionsToKeep.Add(currentVersion.Path);
+                Console.WriteLine($"[DeploymentLocator] Keep current version: {currentVersion.Path}");
+            }
+
+            // 2. 保留最近的N个有效版本（不包括已标记destroy的）
+            var activeVersions = validDeployments
+                .Where(d => !d.IsDestroyed)
+                .Take(minVersionsToKeep)
+                .ToList();
+
+            foreach (var ver in activeVersions)
+            {
+                versionsToKeep.Add(ver.Path);
+                Console.WriteLine($"[DeploymentLocator] Keep recent version: {ver.Path}");
+            }
+
+            // 3. 保留有快照的版本（用于回滚）
+            var snapshotDir = Path.Combine(_appRoot, ".launcher", "snapshots");
+            if (Directory.Exists(snapshotDir))
             {
                 try
                 {
-                    Directory.Delete(dir, recursive: true);
+                    var snapshotFiles = Directory.GetFiles(snapshotDir, "*.json", SearchOption.TopDirectoryOnly);
+                    foreach (var snapshotFile in snapshotFiles)
+                    {
+                        try
+                        {
+                            var json = File.ReadAllText(snapshotFile);
+                            var snapshot = System.Text.Json.JsonSerializer.Deserialize<SnapshotMetadata>(json);
+                            if (snapshot != null && !string.IsNullOrEmpty(snapshot.SourceDirectory))
+                            {
+                                if (Directory.Exists(snapshot.SourceDirectory))
+                                {
+                                    versionsToKeep.Add(snapshot.SourceDirectory);
+                                    Console.WriteLine($"[DeploymentLocator] Keep version for rollback: {snapshot.SourceDirectory}");
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略快照解析错误
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略快照目录访问错误
+                }
+            }
+
+            // 清理不需要的版本
+            foreach (var deployment in validDeployments)
+            {
+                if (versionsToKeep.Contains(deployment.Path))
+                {
+                    // 保留此版本，如果之前标记了destroy则取消标记
+                    if (deployment.IsDestroyed)
+                    {
+                        try
+                        {
+                            File.Delete(Path.Combine(deployment.Path, ".destroy"));
+                            Console.WriteLine($"[DeploymentLocator] Unmarked for deletion (kept): {deployment.Path}");
+                        }
+                        catch
+                        {
+                            // 忽略取消标记失败
+                        }
+                    }
+                    continue;
+                }
+
+                // 如果还没标记destroy的，先标记
+                if (!deployment.IsDestroyed)
+                {
+                    try
+                    {
+                        File.WriteAllText(Path.Combine(deployment.Path, ".destroy"), string.Empty);
+                        Console.WriteLine($"[DeploymentLocator] Marked for deletion: {deployment.Path}");
+                    }
+                    catch
+                    {
+                        // 忽略标记失败
+                    }
+                }
+
+                // 尝试删除
+                try
+                {
+                    Directory.Delete(deployment.Path, recursive: true);
+                    Console.WriteLine($"[DeploymentLocator] Deleted: {deployment.Path}");
                 }
                 catch
                 {
                     // 忽略删除失败(可能文件被占用),下次启动再试
+                    Console.WriteLine($"[DeploymentLocator] Failed to delete (will retry later): {deployment.Path}");
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[DeploymentLocator] Cleanup failed: {ex.Message}");
             // 忽略清理失败
         }
+    }
+
+    /// <summary>
+    /// 仅清理已标记为.destroy的部署（兼容旧方法）
+    /// </summary>
+    [Obsolete("Use CleanupOldDeployments instead")]
+    public void CleanupDestroyedDeployments()
+    {
+        CleanupOldDeployments(3);
     }
 
     public static Version ParseVersionFromDirectory(string path)

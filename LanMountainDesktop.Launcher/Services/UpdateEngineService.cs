@@ -217,6 +217,7 @@ internal sealed class UpdateEngineService
             snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
+            // 清理旧版本，但保留最近3个版本以支持回滚
             CleanupDestroyedDeployments();
 
             return new LauncherResult
