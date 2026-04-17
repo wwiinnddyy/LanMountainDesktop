@@ -60,10 +60,20 @@ function Get-FileManifest {
 }
 
 Write-Host "扫描上一版本文件..." -ForegroundColor Yellow
+Write-Host "  目录: $PreviousDir" -ForegroundColor Gray
+if (-not (Test-Path $PreviousDir)) {
+    throw "Previous directory does not exist: $PreviousDir"
+}
 $previousManifest = Get-FileManifest -RootDir $PreviousDir
+Write-Host "  找到 $($previousManifest.Count) 个文件" -ForegroundColor Gray
 
 Write-Host "扫描当前版本文件..." -ForegroundColor Yellow
+Write-Host "  目录: $CurrentDir" -ForegroundColor Gray
+if (-not (Test-Path $CurrentDir)) {
+    throw "Current directory does not exist: $CurrentDir"
+}
 $currentManifest = Get-FileManifest -RootDir $CurrentDir
+Write-Host "  找到 $($currentManifest.Count) 个文件" -ForegroundColor Gray
 
 # 分析文件变更
 $changedFiles = @()
@@ -125,6 +135,18 @@ Write-Host "  复用: $($reusedFiles.Count) 个文件"
 Write-Host "  删除: $($deletedFiles.Count) 个文件"
 Write-Host ""
 
+# 显示前10个变更的文件（用于调试）
+if ($changedFiles.Count -gt 0) {
+    Write-Host "变更的文件示例:" -ForegroundColor Cyan
+    $changedFiles | Select-Object -First 10 | ForEach-Object {
+        Write-Host "  [$($_.Action)] $($_.Path)" -ForegroundColor Gray
+    }
+    if ($changedFiles.Count -gt 10) {
+        Write-Host "  ... 还有 $($changedFiles.Count - 10) 个文件" -ForegroundColor Gray
+    }
+    Write-Host ""
+}
+
 # 创建临时目录用于打包
 $tempDir = Join-Path $OutputDir "temp_delta"
 if (Test-Path $tempDir) {
@@ -146,20 +168,28 @@ foreach ($file in $changedFiles) {
     Copy-Item -Path $sourcePath -Destination $destPath -Force
 }
 
-# 创建 delta.zip
-$deltaZipPath = Join-Path $OutputDir "delta-$PreviousVersion-to-$CurrentVersion.zip"
-Write-Host "创建增量包: $deltaZipPath" -ForegroundColor Yellow
+# 创建 update.zip (Launcher 期望的文件名)
+$updateZipPath = Join-Path $OutputDir "update.zip"
+Write-Host "创建增量包: $updateZipPath" -ForegroundColor Yellow
 
+if (Test-Path $updateZipPath) {
+    Remove-Item -Path $updateZipPath -Force
+}
+
+Compress-Archive -Path "$tempDir\*" -DestinationPath $updateZipPath -CompressionLevel Optimal
+
+# 同时创建带版本号的副本（用于发布到 GitHub Release）
+$deltaZipPath = Join-Path $OutputDir "delta-$PreviousVersion-to-$CurrentVersion.zip"
+Write-Host "创建带版本号的副本: $deltaZipPath" -ForegroundColor Yellow
 if (Test-Path $deltaZipPath) {
     Remove-Item -Path $deltaZipPath -Force
 }
-
-Compress-Archive -Path "$tempDir\*" -DestinationPath $deltaZipPath -CompressionLevel Optimal
+Copy-Item -Path $updateZipPath -Destination $deltaZipPath -Force
 
 # 清理临时目录
 Remove-Item -Path $tempDir -Recurse -Force
 
-# 生成 files.json
+# 生成 files.json (Launcher 期望的文件名)
 $filesJson = @{
     FromVersion = $PreviousVersion
     ToVersion = $CurrentVersion
@@ -167,18 +197,26 @@ $filesJson = @{
     Files = @($changedFiles + $reusedFiles + $deletedFiles)
 }
 
-$filesJsonPath = Join-Path $OutputDir "files-$CurrentVersion.json"
+$filesJsonPath = Join-Path $OutputDir "files.json"
 Write-Host "生成文件清单: $filesJsonPath" -ForegroundColor Yellow
 
 $filesJson | ConvertTo-Json -Depth 10 | Set-Content -Path $filesJsonPath -Encoding UTF8
 
+# 同时创建带版本号的副本（用于发布到 GitHub Release）
+$versionedFilesJsonPath = Join-Path $OutputDir "files-$CurrentVersion.json"
+Write-Host "创建带版本号的副本: $versionedFilesJsonPath" -ForegroundColor Yellow
+Copy-Item -Path $filesJsonPath -Destination $versionedFilesJsonPath -Force
+
 # 计算增量包大小
-$deltaSize = (Get-Item $deltaZipPath).Length
-$deltaSizeMB = [math]::Round($deltaSize / 1MB, 2)
+$updateSize = (Get-Item $updateZipPath).Length
+$updateSizeMB = [math]::Round($updateSize / 1MB, 2)
 
 Write-Host ""
 Write-Host "=== 完成 ===" -ForegroundColor Green
-Write-Host "增量包大小: $deltaSizeMB MB"
-Write-Host "输出文件:"
-Write-Host "  - $deltaZipPath"
+Write-Host "增量包大小: $updateSizeMB MB"
+Write-Host "输出文件 (Launcher 使用):"
+Write-Host "  - $updateZipPath"
 Write-Host "  - $filesJsonPath"
+Write-Host "输出文件 (GitHub Release 发布):"
+Write-Host "  - $deltaZipPath"
+Write-Host "  - $versionedFilesJsonPath"

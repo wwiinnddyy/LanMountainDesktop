@@ -41,6 +41,18 @@ internal sealed class LauncherFlowCoordinator
             // 清理旧版本，保留至少3个版本
             _deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
 
+            // 检测老版本安装（首次运行时）
+            if (_oobeStateService.IsFirstRun())
+            {
+                var legacyInfo = LegacyVersionDetector.DetectLegacyInstallation();
+                if (legacyInfo != null)
+                {
+                    var migrationResult = await ShowMigrationPromptAsync(legacyInfo);
+                    // 无论用户选择什么，都继续启动流程
+                    Console.WriteLine($"[LauncherFlowCoordinator] Migration prompt result: {migrationResult}");
+                }
+            }
+
             // 使用传入的 Splash 窗口或创建新的
             var splashWindow = existingSplashWindow ?? await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -339,6 +351,69 @@ internal sealed class LauncherFlowCoordinator
         });
         
         return (result, customPath);
+    }
+
+    /// <summary>
+    /// 显示迁移提示窗口
+    /// </summary>
+    private async Task<MigrationResult> ShowMigrationPromptAsync(LegacyVersionInfo legacyInfo)
+    {
+        MigrationPromptWindow? migrationWindow = null;
+
+        // 在 UI 线程创建并显示迁移提示窗口
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            try
+            {
+                migrationWindow = new MigrationPromptWindow();
+                migrationWindow.SetLegacyInfo(legacyInfo);
+                migrationWindow.Show();
+                Console.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow shown");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to show MigrationPromptWindow: {ex.Message}");
+            }
+        });
+
+        if (migrationWindow is null)
+        {
+            Console.Error.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow is null, skipping migration prompt");
+            return MigrationResult.Skipped;
+        }
+
+        // 等待用户选择
+        MigrationResult result;
+
+        try
+        {
+            result = await migrationWindow.WaitForChoiceAsync();
+            Console.WriteLine($"[LauncherFlowCoordinator] MigrationPromptWindow result: {result}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[LauncherFlowCoordinator] Error waiting for migration choice: {ex.Message}");
+            result = MigrationResult.Skipped;
+        }
+
+        // 安全关闭窗口
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            try
+            {
+                if (migrationWindow.IsVisible && migrationWindow.IsLoaded)
+                {
+                    migrationWindow.Close();
+                    Console.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow closed successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing MigrationPromptWindow: {ex.Message}");
+            }
+        });
+
+        return result;
     }
 
     private static void EnsureExecutable(string path)

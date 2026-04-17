@@ -82,6 +82,7 @@ public sealed class UpdateWorkflowService
 
     /// <summary>
     /// Checks whether a GitHub Release contains delta update assets (files.json, files.json.sig, update.zip).
+    /// Also supports versioned filenames like files-{version}.json, delta-{old}-to-{new}.zip
     /// </summary>
     public static bool IsDeltaUpdateAvailable(GitHubReleaseInfo release)
     {
@@ -91,9 +92,67 @@ public sealed class UpdateWorkflowService
         }
 
         var assetNames = release.Assets.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return assetNames.Contains(DeltaManifestFileName)
-            && assetNames.Contains(DeltaSignatureFileName)
-            && assetNames.Contains(DeltaArchiveFileName);
+        
+        // Check for exact matches first (preferred)
+        var hasExactManifest = assetNames.Contains(DeltaManifestFileName);
+        var hasExactSignature = assetNames.Contains(DeltaSignatureFileName);
+        var hasExactArchive = assetNames.Contains(DeltaArchiveFileName);
+        
+        if (hasExactManifest && hasExactSignature && hasExactArchive)
+        {
+            return true;
+        }
+        
+        // Check for versioned filenames (e.g., files-1.0.0.json, delta-0.9.9-to-1.0.0.zip)
+        var hasVersionedManifest = assetNames.Any(n => n.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
+            && n.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+        var hasVersionedSignature = assetNames.Any(n => n.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
+            && n.EndsWith(".sig", StringComparison.OrdinalIgnoreCase));
+        var hasVersionedArchive = assetNames.Any(n => n.StartsWith("delta-", StringComparison.OrdinalIgnoreCase) 
+            && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+        
+        return hasVersionedManifest && hasVersionedSignature && hasVersionedArchive;
+    }
+    
+    /// <summary>
+    /// Finds the best matching delta asset name from the release assets.
+    /// Prefers exact matches, falls back to versioned filenames.
+    /// </summary>
+    private static string? FindDeltaAssetName(GitHubReleaseInfo release, string baseName)
+    {
+        if (release?.Assets is null)
+        {
+            return null;
+        }
+        
+        // Try exact match first
+        var exactMatch = release.Assets.FirstOrDefault(a => 
+            string.Equals(a.Name, baseName, StringComparison.OrdinalIgnoreCase));
+        if (exactMatch != null)
+        {
+            return exactMatch.Name;
+        }
+        
+        // Fall back to pattern matching
+        return baseName.ToLowerInvariant() switch
+        {
+            "files.json" => release.Assets
+                .Where(a => a.Name.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
+                    && a.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(a => a.Name.Length)
+                .FirstOrDefault()?.Name,
+            "files.json.sig" => release.Assets
+                .Where(a => a.Name.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
+                    && a.Name.EndsWith(".sig", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(a => a.Name.Length)
+                .FirstOrDefault()?.Name,
+            "update.zip" => release.Assets
+                .Where(a => a.Name.StartsWith("delta-", StringComparison.OrdinalIgnoreCase) 
+                    && a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(a => a.Name.Length)
+                .FirstOrDefault()?.Name,
+            _ => null
+        };
     }
 
     /// <summary>
@@ -132,6 +191,24 @@ public sealed class UpdateWorkflowService
         var downloadSource = state.UpdateDownloadSource;
         var downloadThreads = state.UpdateDownloadThreads;
 
+        // Find the actual asset names (support both exact and versioned filenames)
+        var manifestAssetName = FindDeltaAssetName(checkResult.Release, DeltaManifestFileName);
+        var signatureAssetName = FindDeltaAssetName(checkResult.Release, DeltaSignatureFileName);
+        var archiveAssetName = FindDeltaAssetName(checkResult.Release, DeltaArchiveFileName);
+        
+        if (manifestAssetName is null || signatureAssetName is null || archiveAssetName is null)
+        {
+            return new UpdateDownloadResult(false, null, "One or more delta assets not found in release.");
+        }
+        
+        // Build asset map with actual names from release
+        var assetMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [DeltaManifestFileName] = manifestAssetName,
+            [DeltaSignatureFileName] = signatureAssetName,
+            [DeltaArchiveFileName] = archiveAssetName
+        };
+        
         var requiredAssets = new Dictionary<string, GitHubReleaseAsset>(StringComparer.OrdinalIgnoreCase)
         {
             [DeltaManifestFileName] = null!,
@@ -141,9 +218,14 @@ public sealed class UpdateWorkflowService
 
         foreach (var asset in checkResult.Release.Assets)
         {
-            if (requiredAssets.ContainsKey(asset.Name))
+            // Match by actual asset name
+            foreach (var (key, actualName) in assetMap)
             {
-                requiredAssets[asset.Name] = asset;
+                if (string.Equals(asset.Name, actualName, StringComparison.OrdinalIgnoreCase))
+                {
+                    requiredAssets[key] = asset;
+                    break;
+                }
             }
         }
 

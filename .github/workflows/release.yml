@@ -219,8 +219,10 @@ jobs:
           Move-Item -Path $newStructure -Destination $publishDir -Force
         shell: pwsh
 
-      - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+      - name: Install Inno Setup and 7z
+        run: |
+          choco install innosetup -y --no-progress
+          choco install 7zip -y --no-progress
         shell: pwsh
 
       - name: Build Installer
@@ -314,18 +316,41 @@ jobs:
           Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Generate Delta Package
+      - name: Create App Package
         if: matrix.self_contained == true && matrix.arch == 'x64'
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
-          $publishDir = "publish/windows-${{ matrix.arch }}"
+          $arch = "${{ matrix.arch }}"
+          $publishDir = "publish/windows-$arch"
           $appDir = "app-$version"
           $currentAppPath = Join-Path $publishDir $appDir
           $outputDir = "delta-output"
 
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-          # --- Determine previous version and download its update.zip for diff ---
+          # 创建 app-{version}-win-{arch}.zip 供后续版本作为旧版本对比
+          $appZipPath = Join-Path $outputDir "app-$version-win-$arch.zip"
+          Write-Host "Creating app-$version-win-$arch.zip..."
+          Compress-Archive -Path "$currentAppPath\*" -DestinationPath $appZipPath -CompressionLevel Optimal
+
+          $sizeMB = [Math]::Round((Get-Item $appZipPath).Length / 1MB, 2)
+          Write-Host "Created app-$version-win-$arch.zip: $sizeMB MB"
+        shell: pwsh
+
+      - name: Generate Delta Package
+        if: matrix.self_contained == true && matrix.arch == 'x64'
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $publishDir = "publish/windows-$arch"
+          $appDir = "app-$version"
+          $currentAppPath = Join-Path $publishDir $appDir
+          $outputDir = "delta-output"
+          $scriptPath = "scripts/Generate-DeltaPackage.ps1"
+
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+
+          # --- Determine previous version and download its app package for diff ---
           $previousVersion = $null
           $previousAppPath = $null
           try {
@@ -336,127 +361,72 @@ jobs:
               $previousVersion = $previousRelease.tag_name.TrimStart('v','V')
               Write-Host "Previous release version: $previousVersion"
 
-              # Try to download update.zip from previous release for diff
-              $prevUpdateZip = $previousRelease.assets | Where-Object { $_.name -eq "update.zip" } | Select-Object -First 1
-              if ($prevUpdateZip) {
-                Write-Host "Found update.zip in previous release - extracting for diff..."
-                $prevZipDest = Join-Path $outputDir "prev-update.zip"
-                Invoke-WebRequest -Uri $prevUpdateZip.browser_download_url -OutFile $prevZipDest -Headers $headers
+              # 下载旧版本的 app-{version}-win-{arch}.zip
+              $prevAppZip = $previousRelease.assets | Where-Object { $_.name -eq "app-$previousVersion-win-$arch.zip" } | Select-Object -First 1
+              if ($prevAppZip) {
+                Write-Host "Found app-$previousVersion-win-$arch.zip in previous release - downloading for diff..."
+                $prevAppZipDest = Join-Path $outputDir "prev-app.zip"
+                Invoke-WebRequest -Uri $prevAppZip.browser_download_url -OutFile $prevAppZipDest -Headers $headers
 
+                # 解压 app-{version}.zip
                 $previousAppPath = Join-Path $outputDir "prev-app"
                 New-Item -ItemType Directory -Path $previousAppPath -Force | Out-Null
-                Expand-Archive -Path $prevZipDest -DestinationPath $previousAppPath -Force
-                Remove-Item -Path $prevZipDest -Force
+                Expand-Archive -Path $prevAppZipDest -DestinationPath $previousAppPath -Force
+                Remove-Item -Path $prevAppZipDest -Force -ErrorAction SilentlyContinue
 
-                $prevFileCount = (Get-ChildItem -Path $previousAppPath -Recurse -File).Count
-                Write-Host "Extracted $prevFileCount files from previous version for diff"
+                if ($previousAppPath -and (Test-Path $previousAppPath)) {
+                  $prevFileCount = (Get-ChildItem -Path $previousAppPath -Recurse -File).Count
+                  Write-Host "Extracted $prevFileCount files from previous version for diff"
+                }
               } else {
-                Write-Host "No update.zip found in previous release - will generate full package"
+                Write-Host "No app-$previousVersion-win-$arch.zip found in previous release - will generate full package"
+                Write-Host "This is expected for the first release after this fix."
               }
             }
           } catch {
             Write-Host "Could not fetch previous release: $_"
           }
 
-          # --- Generate file manifest with diff against previous version ---
-          Write-Host "Generating update package for version $version..."
-          $files = Get-ChildItem -Path $currentAppPath -Recurse -File
-          $fileEntries = [System.Collections.ArrayList]::new()
-          $changedFiles = [System.Collections.ArrayList]::new()
-          $reusedCount = 0
-          $addedCount = 0
-          $replacedCount = 0
-          $deletedCount = 0
+          # --- Generate delta package using the script ---
+          if ($previousAppPath -and (Test-Path $previousAppPath) -and $previousVersion) {
+            Write-Host "Generating delta package from $previousVersion to $version..."
+            & $scriptPath `
+              -PreviousVersion $previousVersion `
+              -CurrentVersion $version `
+              -PreviousDir $previousAppPath `
+              -CurrentDir $currentAppPath `
+              -OutputDir $outputDir
 
-          # Build hash map of previous version files for quick lookup
-          $prevHashMap = @{}
-          if ($previousAppPath -and (Test-Path $previousAppPath)) {
-            $prevFiles = Get-ChildItem -Path $previousAppPath -Recurse -File
-            foreach ($pf in $prevFiles) {
-              $relPath = $pf.FullName.Substring($previousAppPath.Length).TrimStart('\', '/').Replace('\', '/')
-              if ($relPath -match '^\.(current|partial|destroy)$') { continue }
-              $prevHashMap[$relPath] = (Get-FileHash -Path $pf.FullName -Algorithm SHA256).Hash.ToLower()
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Generate-DeltaPackage.ps1 failed"
+              exit 1
             }
-            Write-Host "Previous version has $($prevHashMap.Count) files for comparison"
-          }
-
-          foreach ($file in $files) {
-            $relativePath = $file.FullName.Substring($currentAppPath.Length).TrimStart('\', '/')
-            $relativePath = $relativePath.Replace('\', '/')
-
-            # Skip deployment marker files
-            if ($relativePath -match '^\.(current|partial|destroy)$') {
-              continue
-            }
-
-            $hash = (Get-FileHash -Path $file.FullName -Algorithm SHA256).Hash.ToLower()
-
-            if ($prevHashMap.ContainsKey($relativePath)) {
-              $prevHash = $prevHashMap[$relativePath]
-              if ($hash -eq $prevHash) {
-                $fileEntries += @{ Path = $relativePath; Action = "reuse"; Sha256 = $hash }
-                $reusedCount++
-              } else {
-                $fileEntries += @{ Path = $relativePath; Action = "replace"; Sha256 = $hash; ArchivePath = $relativePath }
-                $changedFiles += $file
-                $replacedCount++
-              }
-              $prevHashMap.Remove($relativePath)
-            } else {
-              $fileEntries += @{ Path = $relativePath; Action = "add"; Sha256 = $hash; ArchivePath = $relativePath }
-              $changedFiles += $file
-              $addedCount++
-            }
-          }
-
-          # Files in previous version but not in current = deleted
-          foreach ($deletedPath in $prevHashMap.Keys) {
-            $fileEntries += @{ Path = $deletedPath; Action = "delete" }
-            $deletedCount++
-          }
-
-          Write-Host "Delta summary: $reusedCount reused, $replacedCount replaced, $addedCount added, $deletedCount deleted"
-          Write-Host "Changed files to include in update.zip: $($changedFiles.Count)"
-
-          $filesJson = @{
-            FromVersion = $previousVersion
-            ToVersion = $version
-            Platform = "windows"
-            Arch = "x64"
-            Files = $fileEntries
-          } | ConvertTo-Json -Depth 10
-
-          $filesJsonPath = Join-Path $outputDir "files.json"
-          $filesJson | Set-Content -Path $filesJsonPath -Encoding UTF8
-          Write-Host "Generated files.json with $($fileEntries.Count) entries"
-
-          # Create update.zip with only changed files
-          $tempDir = Join-Path $outputDir "temp_staging"
-          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-          foreach ($file in $changedFiles) {
-            $relativePath = $file.FullName.Substring($currentAppPath.Length).TrimStart('\', '/')
-            $destPath = Join-Path $tempDir $relativePath
-            $destDir = Split-Path -Parent $destPath
-            if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
-            Copy-Item -Path $file.FullName -Destination $destPath -Force
-          }
-
-          $updateZipPath = Join-Path $outputDir "update.zip"
-          if ($changedFiles.Count -gt 0) {
-            Compress-Archive -Path "$tempDir\*" -DestinationPath $updateZipPath -CompressionLevel Optimal
           } else {
-            # No changed files - create a minimal zip
-            $emptyMarker = Join-Path $tempDir ".no-changes"
-            Set-Content -Path $emptyMarker -Value ""
-            Compress-Archive -Path "$tempDir\*" -DestinationPath $updateZipPath -CompressionLevel Optimal
-          }
-          Remove-Item -Path $tempDir -Recurse -Force
+            Write-Host "No previous version available - generating full package..."
+            # Generate a "full" delta package (all files as "add")
+            & $scriptPath `
+              -PreviousVersion "0.0.0" `
+              -CurrentVersion $version `
+              -PreviousDir $currentAppPath `
+              -CurrentDir $currentAppPath `
+              -OutputDir $outputDir
 
-          Write-Host "Created update.zip: $([Math]::Round((Get-Item $updateZipPath).Length / 1MB, 2)) MB"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Generate-DeltaPackage.ps1 failed"
+              exit 1
+            }
+          }
 
           # Clean up previous version extraction
           if ($previousAppPath -and (Test-Path $previousAppPath)) {
             Remove-Item -Path $previousAppPath -Recurse -Force -ErrorAction SilentlyContinue
+          }
+
+          # Display results
+          $updateZipPath = Join-Path $outputDir "update.zip"
+          if (Test-Path $updateZipPath) {
+            $sizeMB = [Math]::Round((Get-Item $updateZipPath).Length / 1MB, 2)
+            Write-Host "Created update.zip: $sizeMB MB"
           }
         shell: pwsh
 
@@ -512,6 +482,7 @@ jobs:
             delta-output/files.json
             delta-output/files.json.sig
             delta-output/update.zip
+            delta-output/app-*.zip
           if-no-files-found: error
           retention-days: 90
 
@@ -912,6 +883,8 @@ jobs:
           find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
           # Copy delta update files (files.json, files.json.sig, update.zip)
           find artifacts -type f \( -name "files.json" -o -name "files.json.sig" -o -name "update.zip" \) -exec cp -v {} release-files/ \;
+          # Copy app package for future delta generation (app-{version}-win-{arch}.zip)
+          find artifacts -type f -name "app-*.zip" -exec cp -v {} release-files/ \;
           echo ""
           echo "Files ready for release:"
           ls -lh release-files/ || echo "No files found in release-files"
