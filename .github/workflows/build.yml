@@ -65,7 +65,8 @@ jobs:
             libfontconfig1 libfreetype6 \
             libx11-6 libxrandr2 libxinerama1 \
             libxi6 libxcursor1 libxext6 \
-            libxrender1 libxkbcommon-x11-0
+            libxrender1 libxkbcommon-x11-0 \
+            clang zlib1g-dev
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
