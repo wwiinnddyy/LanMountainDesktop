@@ -20,6 +20,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Launcher;
+using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Theme;
@@ -74,6 +75,8 @@ public partial class App : Application
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
     private LauncherIpcClient? _launcherIpcClient;
+    private LoadingStateManager? _loadingStateManager;
+    private LoadingStateReporter? _loadingStateReporter;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -178,6 +181,16 @@ public partial class App : Application
             if (connected)
             {
                 AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
+                
+                // 初始化加载状态管理器
+                _loadingStateManager = new LoadingStateManager();
+                _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _launcherIpcClient);
+                _loadingStateReporter.Start();
+                
+                // 注册系统初始化加载项
+                _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "系统初始化", "初始化系统核心组件");
+                _loadingStateManager.StartItem("system.init", "正在连接启动器...");
+                
                 ReportStartupProgress(StartupStage.Initializing, 10, "正在初始化...");
             }
         }
@@ -211,6 +224,41 @@ public partial class App : Application
                 AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
             }
         });
+    }
+
+    /// <summary>
+    /// 同步向 Launcher 报告启动进度，确保关键消息可靠送达
+    /// 用于 Ready 等关键状态报告
+    /// </summary>
+    private void ReportStartupProgressSync(StartupStage stage, int percent, string message)
+    {
+        if (_launcherIpcClient is null)
+            return;
+
+        try
+        {
+            // 使用同步等待确保消息发送完成
+            var task = _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+            {
+                Stage = stage,
+                ProgressPercent = percent,
+                Message = message
+            });
+            
+            // 等待最多 5 秒，确保消息发送成功
+            if (!task.Wait(TimeSpan.FromSeconds(5)))
+            {
+                AppLogger.Warn("LauncherIpc", "Report progress timeout after 5 seconds");
+            }
+            else
+            {
+                AppLogger.Info("LauncherIpc", $"Successfully reported stage: {stage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Failed to report progress synchronously: {ex.Message}");
+        }
     }
 
     private void ApplyDesignTimeTheme()
@@ -927,8 +975,34 @@ public partial class App : Application
         AppLogger.Info("App", $"Main window created. Reason='{reason}'. LogFile={AppLogger.LogFilePath}");
         LogBrowserStartupDiagnostics();
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"MainWindowCreated:{reason}");
-        ReportStartupProgress(StartupStage.Ready, 100, "就绪");
+        
+        // 延迟报告 Ready 直到窗口实际打开并可见
+        // 使用 Opened 事件确保所有资源已加载完毕
+        mainWindow.Opened += OnMainWindowOpened;
+        
         return mainWindow;
+    }
+
+    /// <summary>
+    /// 主窗口打开完成事件 - 此时所有组件、资源及功能模块均已完全加载
+    /// </summary>
+    private void OnMainWindowOpened(object? sender, EventArgs e)
+    {
+        if (sender is MainWindow mainWindow)
+        {
+            mainWindow.Opened -= OnMainWindowOpened;
+            
+            AppLogger.Info("App", "Main window opened and ready. Reporting Ready to Launcher...");
+            
+            // 完成系统初始化加载项
+            _loadingStateManager?.CompleteItem("system.init", "系统初始化完成");
+            
+            // 报告 Ready 状态，启动器可以安全关闭 Splash 窗口
+            ReportStartupProgressSync(StartupStage.Ready, 100, "就绪");
+            
+            // 停止加载状态上报
+            _loadingStateReporter?.Stop();
+        }
     }
 
     private MainWindow GetOrCreateMainWindow(

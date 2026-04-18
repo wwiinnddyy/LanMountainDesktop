@@ -63,8 +63,22 @@ internal sealed class LauncherFlowCoordinator
 
             var reporter = (ISplashStageReporter)splashWindow;
             
+            // 创建加载详情窗口（可选，用于显示详细加载状态）
+            LoadingDetailsWindow? loadingDetailsWindow = null;
+            if (_context.IsDebugMode || _context.GetOption("show-loading-details") == "true")
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    loadingDetailsWindow = new LoadingDetailsWindow();
+                    loadingDetailsWindow.Show();
+                });
+            }
+            
             // 跟踪主程序是否已就绪，就绪后自动关闭 Splash 窗口
             var hostReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+            // 加载状态管理
+            var loadingState = new LoadingStateMessage();
             
             // 启动 IPC 服务端监听主程序进度
             using var ipcServer = new LauncherIpcServer(msg =>
@@ -73,12 +87,29 @@ internal sealed class LauncherFlowCoordinator
                 {
                     try
                     {
+                        // 更新加载状态
+                        loadingState = loadingState with
+                        {
+                            Stage = msg.Stage,
+                            OverallProgressPercent = msg.ProgressPercent,
+                            Message = msg.Message,
+                            Timestamp = DateTimeOffset.UtcNow
+                        };
+                        
+                        // 报告到 Splash 窗口
                         reporter.Report(msg.Stage.ToString().ToLower(), msg.Message ?? "");
                         
-                        // 主程序报告就绪后，关闭 Splash 窗口
-                        if (msg.Stage == StartupStage.Ready && splashWindow.IsVisible && splashWindow.IsLoaded)
+                        // 更新加载详情窗口
+                        loadingDetailsWindow?.UpdateLoadingState(loadingState);
+                        
+                        // 主程序报告就绪后，关闭 Splash 窗口和加载详情窗口
+                        if (msg.Stage == StartupStage.Ready)
                         {
-                            splashWindow.Close();
+                            if (splashWindow.IsVisible && splashWindow.IsLoaded)
+                            {
+                                splashWindow.Close();
+                            }
+                            loadingDetailsWindow?.Close();
                             hostReadyTcs.TrySetResult();
                         }
                     }
@@ -133,20 +164,52 @@ internal sealed class LauncherFlowCoordinator
                 // 维持 IPC 管道服务端供主程序报告启动进度。
                 if (hostProcess is not null)
                 {
-                    // 等待主程序就绪或进程退出（取先发生者）
-                    // 如果主程序在 60 秒内未报告 Ready，也关闭 Splash 窗口作为超时保护
-                    var readyOrTimeout = Task.WhenAny(
-                        hostReadyTcs.Task,
-                        Task.Delay(TimeSpan.FromSeconds(60)));
-                    
                     var processExitTask = hostProcess.WaitForExitAsync();
                     
-                    // 先等待就绪/超时，然后等待进程退出
-                    await readyOrTimeout;
+                    // 等待主程序就绪或进程退出（取先发生者）
+                    // 延长超时到 120 秒，给主程序足够的加载时间
+                    var readyOrTimeoutOrExit = Task.WhenAny(
+                        hostReadyTcs.Task,
+                        processExitTask,
+                        Task.Delay(TimeSpan.FromSeconds(120)));
+                    
+                    var completedTask = await readyOrTimeoutOrExit;
+                    
+                    // 检查是否是进程先退出（异常情况）
+                    if (completedTask == processExitTask)
+                    {
+                        var exitCode = hostProcess.ExitCode;
+                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Host process exited unexpectedly with code: {exitCode}");
+                        
+                        // 关闭 Splash 窗口
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            try
+                            {
+                                if (splashWindow.IsVisible && splashWindow.IsLoaded)
+                                {
+                                    splashWindow.Close();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing splash window: {ex.Message}");
+                            }
+                        });
+                        
+                        return new LauncherResult
+                        {
+                            Success = false,
+                            Stage = "launch",
+                            Code = "host_crashed",
+                            Message = $"主程序异常退出，退出代码: {exitCode}"
+                        };
+                    }
                     
                     // 如果 Splash 窗口仍然打开（超时情况），关闭它
                     if (splashWindow.IsVisible)
                     {
+                        Console.WriteLine("[LauncherFlowCoordinator] Timeout waiting for Ready signal, closing splash window...");
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             try
@@ -163,7 +226,11 @@ internal sealed class LauncherFlowCoordinator
                         });
                     }
                     
-                    await processExitTask;
+                    // 继续等待主程序进程退出（如果它还在运行）
+                    if (!hostProcess.HasExited)
+                    {
+                        await processExitTask;
+                    }
                 }
                 else
                 {

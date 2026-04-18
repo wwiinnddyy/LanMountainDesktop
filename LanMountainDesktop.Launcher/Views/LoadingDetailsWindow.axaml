@@ -1,0 +1,250 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DesignWidth="600"
+        d:DesignHeight="500"
+        x:Class="LanMountainDesktop.Launcher.Views.LoadingDetailsWindow"
+        Title="阑山桌面 - 加载详情"
+        Width="600"
+        Height="500"
+        WindowStartupLocation="CenterScreen"
+        CanResize="True"
+        MinWidth="500"
+        MinHeight="400"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        Icon="/Assets/logo.ico">
+
+  <Grid RowDefinitions="Auto,*,Auto,Auto">
+    <!-- 标题栏 -->
+    <Border Grid.Row="0" 
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            Padding="20,16">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Text="正在启动阑山桌面"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+          <TextBlock x:Name="SubtitleText"
+                     Text="初始化系统组件..."
+                     FontSize="13"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+        <Border Grid.Column="1"
+                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                CornerRadius="12"
+                Padding="12,6"
+                VerticalAlignment="Center">
+          <TextBlock x:Name="PercentText"
+                     Text="0%"
+                     FontSize="16"
+                     FontWeight="Bold"
+                     Foreground="White"/>
+        </Border>
+      </Grid>
+    </Border>
+
+    <!-- 主要内容区域 -->
+    <Grid Grid.Row="1" Margin="16,12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <!-- 整体进度条 -->
+      <ProgressBar x:Name="OverallProgressBar"
+                   Grid.Row="0"
+                   Height="8"
+                   Minimum="0"
+                   Maximum="100"
+                   Value="0"
+                   CornerRadius="4"
+                   Margin="0,0,0,16"/>
+
+      <!-- 当前活动项 -->
+      <Border Grid.Row="1"
+              Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+              CornerRadius="8"
+              Padding="16,12"
+              Margin="0,0,0,12">
+        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+          <!-- 图标 -->
+          <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0"
+                  Width="40"
+                  Height="40"
+                  CornerRadius="20"
+                  Background="{DynamicResource AccentFillColorDefaultBrush}"
+                  Margin="0,0,12,0"
+                  VerticalAlignment="Center">
+            <TextBlock x:Name="CurrentItemIcon"
+                       Text="&#xE768;"
+                       FontSize="20"
+                       FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+          </Border>
+
+          <!-- 名称 -->
+          <TextBlock x:Name="CurrentItemName"
+                     Grid.Row="0" Grid.Column="1"
+                     Text="正在初始化..."
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+          <!-- 描述 -->
+          <TextBlock x:Name="CurrentItemDescription"
+                     Grid.Row="1" Grid.Column="1"
+                     Text="准备加载系统组件"
+                     FontSize="13"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     Margin="0,4,0,0"/>
+
+          <!-- 进度 -->
+          <Grid Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+            <ProgressBar x:Name="CurrentItemProgress"
+                         Height="4"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="0"
+                         CornerRadius="2"/>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- 加载项列表 -->
+      <Border Grid.Row="2"
+              Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="8">
+        <Grid RowDefinitions="Auto,*">
+          <!-- 列表标题 -->
+          <Grid Grid.Row="0" Margin="12,8" ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="加载项"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+            <TextBlock x:Name="CompletedCountText"
+                       Grid.Column="1"
+                       Text="0"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="2"
+                       Text="已完成"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+          </Grid>
+
+          <!-- 列表内容 -->
+          <ScrollViewer Grid.Row="1"
+                        VerticalScrollBarVisibility="Auto"
+                        Margin="8,0,8,8">
+            <ItemsControl x:Name="LoadingItemsList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto" 
+                        Margin="4,3"
+                        Opacity="{Binding Opacity}">
+                    <!-- 状态图标 -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding StatusIcon}"
+                               FontSize="14"
+                               FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                               Foreground="{Binding StatusColor}"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+
+                    <!-- 名称 -->
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"/>
+
+                    <!-- 进度 -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding ProgressText}"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="8,0"
+                               VerticalAlignment="Center"/>
+
+                    <!-- 类型标签 -->
+                    <Border Grid.Column="3"
+                            Background="{Binding TypeBackground}"
+                            CornerRadius="4"
+                            Padding="6,2"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="{Binding TypeLabel}"
+                                 FontSize="11"
+                                 Foreground="{Binding TypeForeground}"/>
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- 错误信息区域 -->
+    <Border x:Name="ErrorPanel"
+            Grid.Row="2"
+            Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+            BorderBrush="{DynamicResource SystemFillColorCriticalBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12,10"
+            Margin="16,0,16,12"
+            IsVisible="False">
+      <Grid ColumnDefinitions="Auto,*">
+        <TextBlock Grid.Column="0"
+                   Text="&#xE783;"
+                   FontSize="16"
+                   FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   Margin="0,0,8,0"
+                   VerticalAlignment="Center"/>
+        <TextBlock x:Name="ErrorText"
+                   Grid.Column="1"
+                   Text="加载过程中出现错误"
+                   FontSize="13"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   TextWrapping="Wrap"/>
+      </Grid>
+    </Border>
+
+    <!-- 底部按钮 -->
+    <Border Grid.Row="3"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            Padding="16,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="VersionText"
+                   Grid.Column="0"
+                   Text="v1.0.0"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                   VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="DetailsButton"
+                  Content="查看详情"
+                  Width="90"
+                  Height="32"
+                  FontSize="13"/>
+          <Button x:Name="CancelButton"
+                  Content="取消"
+                  Width="90"
+                  Height="32"
+                  FontSize="13"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
