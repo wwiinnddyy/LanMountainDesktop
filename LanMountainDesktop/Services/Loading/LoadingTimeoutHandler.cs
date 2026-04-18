@@ -1,4 +1,5 @@
 using System.Timers;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Services.Loading;
 

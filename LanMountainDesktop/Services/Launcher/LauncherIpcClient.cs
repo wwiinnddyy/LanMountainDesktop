@@ -18,6 +18,11 @@ public class LauncherIpcClient : IDisposable
     private readonly object _writeLock = new();
 
     /// <summary>
+    /// 是否已连接到 Launcher
+    /// </summary>
+    public bool IsConnected => _isConnected && _pipeClient?.IsConnected == true;
+
+    /// <summary>
     /// 协议：每条消息以 4 字节小端 int32 长度前缀开头，后跟 UTF-8 JSON 正文。
     /// </summary>
     private const int LengthPrefixSize = 4;
@@ -92,11 +97,28 @@ public class LauncherIpcClient : IDisposable
 
     /// <summary>
     /// 检查是否从 Launcher 启动
+    /// 优先检查环境变量，回退到命令行参数（UseShellExecute=true 时环境变量仍可继承，
+    /// 命令行参数作为备选确保兼容性）
     /// </summary>
     public static bool IsLaunchedByLauncher()
     {
-        return !string.IsNullOrEmpty(
-            Environment.GetEnvironmentVariable(LauncherIpcConstants.LauncherPidEnvVar));
+        // 优先检查环境变量
+        if (!string.IsNullOrEmpty(
+            Environment.GetEnvironmentVariable(LauncherIpcConstants.LauncherPidEnvVar)))
+        {
+            return true;
+        }
+
+        // 回退到命令行参数检查（格式: --LMD_LAUNCHER_PID=<value>）
+        foreach (var arg in Environment.GetCommandLineArgs())
+        {
+            if (arg.StartsWith($"--{LauncherIpcConstants.LauncherPidEnvVar}=", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Dispose()

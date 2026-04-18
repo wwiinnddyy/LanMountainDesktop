@@ -142,7 +142,7 @@ public partial class App : Application
         EnsureNotificationService();
     }
 
-    public override async void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
     {
         if (Design.IsDesignMode)
         {
@@ -152,12 +152,8 @@ public partial class App : Application
 
         AppLogger.Info("App", "Framework initialization completed.");
         
-        // 初始化 Launcher IPC 客户端（如果从 Launcher 启动）
-        await InitializeLauncherIpcAsync();
-        
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
-        ReportStartupProgress(StartupStage.LoadingSettings, 20, "正在加载设置...");
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
         if (!Design.IsDesignMode && OperatingSystem.IsWindows())
@@ -166,6 +162,10 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+        
+        // IPC 初始化移到窗口创建之后，避免 async void 中的 await 导致窗口创建延迟
+        // 使用 fire-and-forget 模式，不阻塞主流程
+        _ = InitializeLauncherIpcAsync();
     }
     
     private async Task InitializeLauncherIpcAsync()
@@ -189,9 +189,10 @@ public partial class App : Application
                 
                 // 注册系统初始化加载项
                 _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "系统初始化", "初始化系统核心组件");
-                _loadingStateManager.StartItem("system.init", "正在连接启动器...");
+                _loadingStateManager.StartItem("system.init", "已连接启动器");
                 
                 ReportStartupProgress(StartupStage.Initializing, 10, "正在初始化...");
+                ReportStartupProgress(StartupStage.LoadingSettings, 20, "正在加载设置...");
             }
         }
         catch (Exception ex)
@@ -227,7 +228,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// 同步向 Launcher 报告启动进度，确保关键消息可靠送达
+    /// 向 Launcher 报告关键启动进度，使用后台线程避免阻塞 UI
     /// 用于 Ready 等关键状态报告
     /// </summary>
     private void ReportStartupProgressSync(StartupStage stage, int percent, string message)
@@ -237,27 +238,27 @@ public partial class App : Application
 
         try
         {
-            // 使用同步等待确保消息发送完成
-            var task = _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+            _ = Task.Run(async () =>
             {
-                Stage = stage,
-                ProgressPercent = percent,
-                Message = message
+                try
+                {
+                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                    {
+                        Stage = stage,
+                        ProgressPercent = percent,
+                        Message = message
+                    });
+                    AppLogger.Info("LauncherIpc", $"Successfully reported stage: {stage}");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
+                }
             });
-            
-            // 等待最多 5 秒，确保消息发送成功
-            if (!task.Wait(TimeSpan.FromSeconds(5)))
-            {
-                AppLogger.Warn("LauncherIpc", "Report progress timeout after 5 seconds");
-            }
-            else
-            {
-                AppLogger.Info("LauncherIpc", $"Successfully reported stage: {stage}");
-            }
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("LauncherIpc", $"Failed to report progress synchronously: {ex.Message}");
+            AppLogger.Warn("LauncherIpc", $"Failed to launch progress report task: {ex.Message}");
         }
     }
 
@@ -979,6 +980,27 @@ public partial class App : Application
         // 延迟报告 Ready 直到窗口实际打开并可见
         // 使用 Opened 事件确保所有资源已加载完毕
         mainWindow.Opened += OnMainWindowOpened;
+        
+        // 兜底机制：如果 Opened 事件 10 秒内未触发，强制发送 Ready 信号
+        // 防止因渲染问题导致 Opened 不触发，启动器 Splash 窗口一直显示
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            if (_launcherIpcClient is not null && _launcherIpcClient.IsConnected)
+            {
+                try
+                {
+                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                    {
+                        Stage = StartupStage.Ready,
+                        ProgressPercent = 100,
+                        Message = "就绪"
+                    });
+                    AppLogger.Warn("App", "Ready signal sent via fallback (Opened event did not fire within 10s)");
+                }
+                catch { }
+            }
+        });
         
         return mainWindow;
     }

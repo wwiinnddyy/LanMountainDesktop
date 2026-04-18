@@ -9,6 +9,15 @@ namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class LauncherFlowCoordinator
 {
+    private static readonly string[] LauncherOnlyOptions =
+    [
+        "debug", "show-loading-details", "plugins-dir", "source", "result",
+        LauncherIpcConstants.LauncherPidEnvVar,
+        LauncherIpcConstants.PackageRootEnvVar,
+        LauncherIpcConstants.VersionEnvVar,
+        LauncherIpcConstants.CodenameEnvVar
+    ];
+
     private readonly CommandContext _context;
     private readonly DeploymentLocator _deploymentLocator;
     private readonly OobeStateService _oobeStateService;
@@ -167,11 +176,11 @@ internal sealed class LauncherFlowCoordinator
                     var processExitTask = hostProcess.WaitForExitAsync();
                     
                     // 等待主程序就绪或进程退出（取先发生者）
-                    // 延长超时到 120 秒，给主程序足够的加载时间
+                    // 30 秒超时，宿主端有 10 秒兜底机制确保 Ready 信号发送
                     var readyOrTimeoutOrExit = Task.WhenAny(
                         hostReadyTcs.Task,
                         processExitTask,
-                        Task.Delay(TimeSpan.FromSeconds(120)));
+                        Task.Delay(TimeSpan.FromSeconds(30)));
                     
                     var completedTask = await readyOrTimeoutOrExit;
                     
@@ -315,32 +324,55 @@ internal sealed class LauncherFlowCoordinator
             EnsureExecutable(hostPath);
         }
 
+        var hostWorkingDir = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot();
+        var versionInfo = _deploymentLocator.GetVersionInfo();
+
+        // 构建命令行参数：转发用户参数 + IPC 环境信息通过命令行传递
+        // UseShellExecute = true 确保 Shell 启动子进程，使其正确关联到交互式桌面窗口站(WinSta0)，
+        // 避免子进程窗口创建成功但不可见的问题。
+        var arguments = new System.Text.StringBuilder();
+
+        // 转发命令行参数给主程序（排除 Launcher 自己的命令和选项）
+        // 只过滤 Launcher 专属的选项，保留宿主程序需要的参数（如 --restart-parent-pid）
+        foreach (var arg in _context.RawArgs)
+        {
+            if (arg == _context.Command || arg == _context.SubCommand)
+                continue;
+            
+            if (arg.StartsWith("--"))
+            {
+                var key = arg[2..];
+                var equalsIndex = key.IndexOf('=');
+                if (equalsIndex >= 0) key = key[..equalsIndex];
+                
+                if (LauncherOnlyOptions.Contains(key, StringComparer.OrdinalIgnoreCase))
+                    continue;
+            }
+            
+            if (arguments.Length > 0) arguments.Append(' ');
+            arguments.Append(QuoteArgument(arg));
+        }
+
+        // 通过命令行参数传递 IPC 连接信息（UseShellExecute=true 时不支持 EnvironmentVariables）
+        if (arguments.Length > 0) arguments.Append(' ');
+        arguments.Append($"--{LauncherIpcConstants.LauncherPidEnvVar}={Environment.ProcessId}");
+        arguments.Append($" --{LauncherIpcConstants.PackageRootEnvVar}={QuoteArgument(_deploymentLocator.GetAppRoot())}");
+        arguments.Append($" --{LauncherIpcConstants.VersionEnvVar}={versionInfo.Version}");
+        arguments.Append($" --{LauncherIpcConstants.CodenameEnvVar}={versionInfo.Codename}");
+
         var processStartInfo = new ProcessStartInfo
         {
             FileName = hostPath,
-            UseShellExecute = false,
-            WorkingDirectory = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot()
+            UseShellExecute = true,
+            WorkingDirectory = hostWorkingDir,
+            Arguments = arguments.ToString()
         };
 
-        // 转发命令行参数给主程序（排除 Launcher 自己的命令和选项）
-        foreach (var arg in _context.RawArgs)
-        {
-            // 跳过 Launcher 自己的命令和选项，只传递用户原始参数
-            if (arg == _context.Command || arg == _context.SubCommand || arg.StartsWith("--"))
-            {
-                continue;
-            }
-            processStartInfo.ArgumentList.Add(arg);
-        }
-
-        // 传递环境变量供 IPC 使用
+        // 同时设置环境变量作为备选（当 UseShellExecute=true 时 EnvironmentVariables 仍会被子进程继承）
         processStartInfo.EnvironmentVariables[LauncherIpcConstants.LauncherPidEnvVar] = 
             Environment.ProcessId.ToString();
         processStartInfo.EnvironmentVariables[LauncherIpcConstants.PackageRootEnvVar] = 
             _deploymentLocator.GetAppRoot();
-        
-        // 传递版本信息
-        var versionInfo = _deploymentLocator.GetVersionInfo();
         processStartInfo.EnvironmentVariables[LauncherIpcConstants.VersionEnvVar] = versionInfo.Version;
         processStartInfo.EnvironmentVariables[LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename;
 
@@ -481,6 +513,36 @@ internal sealed class LauncherFlowCoordinator
         });
 
         return result;
+    }
+
+    private static string QuoteArgument(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        if (!value.Contains('"') && !value.Contains(' ') && !value.Contains('\t'))
+        {
+            return value;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        builder.Append('"');
+        foreach (var ch in value)
+        {
+            if (ch == '"')
+            {
+                builder.Append("\\\"");
+            }
+            else
+            {
+                builder.Append(ch);
+            }
+        }
+
+        builder.Append('"');
+        return builder.ToString();
     }
 
     private static void EnsureExecutable(string path)
