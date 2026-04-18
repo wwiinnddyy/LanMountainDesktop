@@ -149,10 +149,7 @@ internal static class Commands
             Directory.CreateDirectory(dir);
         }
 
-        var json = JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(result, AppJsonContext.Default.LauncherResult);
         await File.WriteAllTextAsync(fullPath, json, Encoding.UTF8).ConfigureAwait(false);
     }
 

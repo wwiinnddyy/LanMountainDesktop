@@ -56,7 +56,11 @@
     <!-- 允许 IL 警告 -->
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
     
-    <!-- FluentAvaloniaUI 需要：启用反射序列化（AOT 兼容模式） -->
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- AOT 模式下禁用反射式 JSON 序列化，强制使用 Source Generator -->
+    <!-- 之前设置为 true 与 AOT 矛盾，导致 IL2026/IL3050 警告和运行时失败 -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    
+    <!-- 启用 ISerializable 支持（部分库需要） -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 </Project>

@@ -29,7 +29,7 @@ internal sealed class PluginUpgradeQueueService
         }
 
         var text = File.ReadAllText(pendingPath);
-        var pending = JsonSerializer.Deserialize<List<PendingUpgrade>>(text) ?? [];
+        var pending = JsonSerializer.Deserialize(text, AppJsonContext.Default.ListPendingUpgrade) ?? [];
         var failures = new List<string>();
         var succeeded = new List<PendingUpgrade>();
 
@@ -63,10 +63,7 @@ internal sealed class PluginUpgradeQueueService
         }
         else
         {
-            File.WriteAllText(pendingPath, JsonSerializer.Serialize(remaining, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            }));
+            File.WriteAllText(pendingPath, JsonSerializer.Serialize(remaining, AppJsonContext.Default.ListPendingUpgrade));
         }
 
         return new LauncherResult
@@ -79,19 +76,19 @@ internal sealed class PluginUpgradeQueueService
                 : $"Applied {succeeded.Count} upgrades, failed: {string.Join(", ", failures)}."
         };
     }
+}
 
-    private sealed record PendingUpgrade(
-        string PluginId,
-        string SourcePackagePath,
-        string TargetVersion,
-        DateTimeOffset CreatedAt)
+internal sealed record PendingUpgrade(
+    string PluginId,
+    string SourcePackagePath,
+    string TargetVersion,
+    DateTimeOffset CreatedAt)
+{
+    public bool IsValid()
     {
-        public bool IsValid()
-        {
-            return !string.IsNullOrWhiteSpace(PluginId) &&
-                   !string.IsNullOrWhiteSpace(SourcePackagePath) &&
-                   !string.IsNullOrWhiteSpace(TargetVersion) &&
-                   File.Exists(SourcePackagePath);
-        }
+        return !string.IsNullOrWhiteSpace(PluginId) &&
+               !string.IsNullOrWhiteSpace(SourcePackagePath) &&
+               !string.IsNullOrWhiteSpace(TargetVersion) &&
+               File.Exists(SourcePackagePath);
     }
 }

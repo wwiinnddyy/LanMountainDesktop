@@ -159,7 +159,7 @@ namespace LanMountainDesktop.Launcher.Services;
         try
         {
             var json = File.ReadAllText(configPath);
-            var config = JsonSerializer.Deserialize<HostDiscoveryConfig>(json);
+            var config = JsonSerializer.Deserialize(json, AppJsonContext.Default.HostDiscoveryConfig);
             if (config?.HostPath != null && File.Exists(config.HostPath))
             {
                 return config.HostPath;
@@ -617,13 +617,13 @@ namespace LanMountainDesktop.Launcher.Services;
         public required string AppRoot { get; set; }
         public required HostDiscoveryOptions Options { get; set; }
     }
+}
 
-    /// <summary>
-    /// 发现配置文件
-    /// </summary>
-    private class HostDiscoveryConfig
-    {
-        public string? HostPath { get; set; }
-        public List<string>? AdditionalPaths { get; set; }
-    }
+/// <summary>
+/// 发现配置文件
+/// </summary>
+internal class HostDiscoveryConfig
+{
+    public string? HostPath { get; set; }
+    public List<string>? AdditionalPaths { get; set; }
 }

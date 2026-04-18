@@ -73,7 +73,7 @@ internal sealed class PluginInstallerService
         using var stream = entries[0].Open();
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
-        var manifest = JsonSerializer.Deserialize<PluginManifest>(json);
+        var manifest = JsonSerializer.Deserialize(json, AppJsonContext.Default.PluginManifest);
         if (manifest == null)
         {
             throw new InvalidOperationException($"Failed to deserialize manifest from '{packagePath}'.");

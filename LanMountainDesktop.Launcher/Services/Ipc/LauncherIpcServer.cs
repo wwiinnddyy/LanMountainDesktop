@@ -143,7 +143,7 @@ public class LauncherIpcServer : IDisposable
 
                     // 3. 反序列化并回调
                     var json = System.Text.Encoding.UTF8.GetString(payloadBuffer, 0, payloadLength);
-                    var message = JsonSerializer.Deserialize<StartupProgressMessage>(json);
+                    var message = JsonSerializer.Deserialize(json, AppJsonContext.Default.StartupProgressMessage);
                     if (message is not null)
                     {
                         _onProgress(message);

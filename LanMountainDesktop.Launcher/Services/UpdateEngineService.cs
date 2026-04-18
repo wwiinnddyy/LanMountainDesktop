@@ -48,7 +48,7 @@ internal sealed class UpdateEngineService
         }
 
         var fileMapText = File.ReadAllText(fileMapPath);
-        var fileMap = JsonSerializer.Deserialize<SignedFileMap>(fileMapText);
+        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.SignedFileMap);
         if (fileMap is null)
         {
             return Failed("update.check", "invalid_manifest", "files.json is invalid.");
@@ -137,7 +137,7 @@ internal sealed class UpdateEngineService
         }
 
         var fileMapText = await File.ReadAllTextAsync(fileMapPath);
-        var fileMap = JsonSerializer.Deserialize<SignedFileMap>(fileMapText);
+        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.SignedFileMap);
         if (fileMap is null || fileMap.Files.Count == 0)
         {
             return Failed("update.apply", "invalid_manifest", "No update file entries were found.");
@@ -438,7 +438,7 @@ internal sealed class UpdateEngineService
             return Failed("update.rollback", "no_snapshot", "No snapshot found.");
         }
 
-        var snapshot = JsonSerializer.Deserialize<SnapshotMetadata>(File.ReadAllText(snapshotPath));
+        var snapshot = JsonSerializer.Deserialize(File.ReadAllText(snapshotPath), AppJsonContext.Default.SnapshotMetadata);
         if (snapshot is null || string.IsNullOrWhiteSpace(snapshot.SourceDirectory))
         {
             return Failed("update.rollback", "invalid_snapshot", "Invalid snapshot metadata.");
@@ -656,10 +656,7 @@ internal sealed class UpdateEngineService
 
     private static void SaveSnapshot(string path, SnapshotMetadata snapshot)
     {
-        File.WriteAllText(path, JsonSerializer.Serialize(snapshot, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        }));
+        File.WriteAllText(path, JsonSerializer.Serialize(snapshot, AppJsonContext.Default.SnapshotMetadata));
     }
 
     private static LauncherResult Failed(string stage, string code, string message)

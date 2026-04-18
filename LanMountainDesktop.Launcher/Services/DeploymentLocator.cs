@@ -322,7 +322,7 @@ internal sealed class DeploymentLocator
                         try
                         {
                             var json = File.ReadAllText(snapshotFile);
-                            var snapshot = System.Text.Json.JsonSerializer.Deserialize<SnapshotMetadata>(json);
+                            var snapshot = System.Text.Json.JsonSerializer.Deserialize(json, AppJsonContext.Default.SnapshotMetadata);
                             if (snapshot != null && !string.IsNullOrEmpty(snapshot.SourceDirectory))
                             {
                                 if (Directory.Exists(snapshot.SourceDirectory))
@@ -445,7 +445,7 @@ internal sealed class DeploymentLocator
                 try
                 {
                     var json = File.ReadAllText(versionFile);
-                    var info = JsonSerializer.Deserialize<AppVersionInfo>(json);
+                    var info = JsonSerializer.Deserialize(json, AppJsonContext.Default.AppVersionInfo);
                     if (info is not null)
                     {
                         return info;

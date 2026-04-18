@@ -31,6 +31,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}

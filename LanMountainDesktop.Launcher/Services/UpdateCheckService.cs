@@ -15,7 +15,6 @@ internal sealed class UpdateCheckService
     private readonly string _repoOwner;
     private readonly string _repoName;
     private readonly HttpClient _httpClient;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     public UpdateCheckService(string repoOwner, string repoName)
     {
@@ -24,12 +23,6 @@ internal sealed class UpdateCheckService
         _httpClient = new HttpClient();
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "LanMountainDesktop-Launcher");
         _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
-
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        };
     }
 
     /// <summary>
@@ -97,7 +90,7 @@ internal sealed class UpdateCheckService
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var releases = JsonSerializer.Deserialize<List<GitHubRelease>>(json, _jsonOptions);
+        var releases = JsonSerializer.Deserialize(json, AppJsonContext.Default.ListGitHubRelease);
 
         return releases?.Select(r => new ReleaseInfo
         {
@@ -131,38 +124,38 @@ internal sealed class UpdateCheckService
         var cleaned = ParseVersionString(versionString);
         return Version.TryParse(cleaned, out var version) ? version : new Version(0, 0, 0);
     }
+}
 
-    // GitHub API 响应模型
-    private sealed class GitHubRelease
-    {
-        [JsonPropertyName("tag_name")]
-        public string? TagName { get; set; }
+// GitHub API 响应模型
+internal sealed class GitHubRelease
+{
+    [JsonPropertyName("tag_name")]
+    public string? TagName { get; set; }
 
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 
-        [JsonPropertyName("prerelease")]
-        public bool Prerelease { get; set; }
+    [JsonPropertyName("prerelease")]
+    public bool Prerelease { get; set; }
 
-        [JsonPropertyName("published_at")]
-        public DateTime PublishedAt { get; set; }
+    [JsonPropertyName("published_at")]
+    public DateTime PublishedAt { get; set; }
 
-        [JsonPropertyName("body")]
-        public string? Body { get; set; }
+    [JsonPropertyName("body")]
+    public string? Body { get; set; }
 
-        [JsonPropertyName("assets")]
-        public List<GitHubAsset>? Assets { get; set; }
-    }
+    [JsonPropertyName("assets")]
+    public List<GitHubAsset>? Assets { get; set; }
+}
 
-    private sealed class GitHubAsset
-    {
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+internal sealed class GitHubAsset
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 
-        [JsonPropertyName("browser_download_url")]
-        public string? BrowserDownloadUrl { get; set; }
+    [JsonPropertyName("browser_download_url")]
+    public string? BrowserDownloadUrl { get; set; }
 
-        [JsonPropertyName("size")]
-        public long Size { get; set; }
-    }
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
 }
