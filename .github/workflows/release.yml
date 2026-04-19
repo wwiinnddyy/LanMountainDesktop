@@ -321,9 +321,15 @@ jobs:
       - name: Install vpk
         if: matrix.self_contained == true && matrix.arch == 'x64'
         run: |
-          dotnet tool install --global vpk
-          echo "$env:USERPROFILE\\.dotnet\\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          vpk --version
+          $ErrorActionPreference = "Stop"
+          dotnet tool uninstall --global vpk | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "vpk is not preinstalled, proceeding with fresh install."
+          }
+          dotnet tool install --global vpk --allow-roll-forward
+          "$env:USERPROFILE\\.dotnet\\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $env:PATH = "$env:USERPROFILE\\.dotnet\\tools;$env:PATH"
+          vpk -h
         shell: pwsh
 
       - name: Prepare Previous Velopack Full Package
@@ -447,9 +453,14 @@ jobs:
             libx11-6 libxrandr2 libxinerama1 \
             libxi6 libxcursor1 libxext6 \
             libxrender1 libxkbcommon-x11-0 \
-            clang zlib1g-dev \
-            libportaudio2 libasound2 \
-            libwebkit2gtk-4.1-dev
+            clang zlib1g-dev
+
+          # Ubuntu 24.04+ moved several packages to t64 names.
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
+          sudo apt-get install -y libportaudio2t64 || sudo apt-get install -y libportaudio2
+
+          # Prefer modern WebKit package, fallback for older images.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
