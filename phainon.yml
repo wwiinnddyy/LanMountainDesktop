@@ -1,0 +1,29 @@
+# Phainon Distribution Center (PDC) publish configuration
+# This file is intentionally conservative: Launcher remains installer/rollback authority.
+name: "LanMountainDesktop"
+
+components:
+  app:
+    allowDiffUpdate: true
+    root: "app-$(version)/"
+    includes:
+      - "**"
+  launcher:
+    root: ""
+    includes:
+      - "**"
+    excludes:
+      - "app-*/**"
+      - ".launcher/update/incoming/**"
+      - "files.json"
+      - "files.json.sig"
+      - "update.zip"
+
+variables:
+  number: 0
+
+# Replace these roots in CI/CD or environment-specific templates when enabling PDCC publish.
+fileRepoRoot: "https://example.invalid/lanmountain/distribution-v1/repo/"
+archiveRoot: "https://example.invalid/lanmountain/distribution-v1/$(primaryVersion)/$(version)/"
+bucketKeyRoot: "lanmountain/distribution-v1/repo/"
+archiveBucketKeyRoot: "lanmountain/distribution-v1/$(primaryVersion)/$(version)/"

@@ -14,7 +14,6 @@ internal sealed class UpdateEngineService
     private const string SignedFileMapName = "files.json";
     private const string SignatureFileName = "files.json.sig";
     private const string ArchiveFileName = "update.zip";
-    private const string VelopackReleasesFileName = "releases.win.json";
     private const string PublicKeyFileName = "public-key.pem";
 
     private readonly DeploymentLocator _deploymentLocator;
@@ -34,16 +33,6 @@ internal sealed class UpdateEngineService
 
     public LauncherResult CheckPendingUpdate()
     {
-        var velopackFeedPath = Path.Combine(_incomingRoot, VelopackReleasesFileName);
-        if (File.Exists(velopackFeedPath))
-        {
-            var velopackResult = CheckVelopackPendingUpdate(velopackFeedPath);
-            if (velopackResult is not null)
-            {
-                return velopackResult;
-            }
-        }
-
         var fileMapPath = Path.Combine(_incomingRoot, SignedFileMapName);
         var archivePath = Path.Combine(_incomingRoot, ArchiveFileName);
         var signaturePath = Path.Combine(_incomingRoot, SignatureFileName);
@@ -79,47 +68,6 @@ internal sealed class UpdateEngineService
             Message = "Pending update is available.",
             CurrentVersion = _deploymentLocator.GetCurrentVersion(),
             TargetVersion = fileMap.ToVersion
-        };
-    }
-
-    public async Task<LauncherResult> DownloadVelopackAsync(
-        string releasesJsonUrl,
-        IReadOnlyList<string> packageUrls,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(releasesJsonUrl))
-        {
-            return Failed("update.download", "invalid_argument", "Missing releases feed url.");
-        }
-
-        Directory.CreateDirectory(_incomingRoot);
-
-        using var client = new HttpClient
-        {
-            Timeout = TimeSpan.FromMinutes(2)
-        };
-
-        var releasesPath = Path.Combine(_incomingRoot, VelopackReleasesFileName);
-        await DownloadToFileAsync(client, releasesJsonUrl, releasesPath, cancellationToken).ConfigureAwait(false);
-
-        foreach (var url in packageUrls.Where(u => !string.IsNullOrWhiteSpace(u)).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var fileName = Path.GetFileName(new Uri(url).AbsolutePath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                continue;
-            }
-
-            var destination = Path.Combine(_incomingRoot, fileName);
-            await DownloadToFileAsync(client, url, destination, cancellationToken).ConfigureAwait(false);
-        }
-
-        return new LauncherResult
-        {
-            Success = true,
-            Stage = "update.download",
-            Code = "ok",
-            Message = "Velopack update payload downloaded."
         };
     }
 
@@ -166,12 +114,6 @@ internal sealed class UpdateEngineService
     {
         Directory.CreateDirectory(_incomingRoot);
         Directory.CreateDirectory(_snapshotsRoot);
-
-        var velopackFeedPath = Path.Combine(_incomingRoot, VelopackReleasesFileName);
-        if (File.Exists(velopackFeedPath))
-        {
-            return await ApplyVelopackPendingUpdateAsync(velopackFeedPath).ConfigureAwait(false);
-        }
 
         var fileMapPath = Path.Combine(_incomingRoot, SignedFileMapName);
         var signaturePath = Path.Combine(_incomingRoot, SignatureFileName);
@@ -631,8 +573,7 @@ internal sealed class UpdateEngineService
                  {
                      Path.Combine(_incomingRoot, SignedFileMapName),
                      Path.Combine(_incomingRoot, SignatureFileName),
-                     Path.Combine(_incomingRoot, ArchiveFileName),
-                     Path.Combine(_incomingRoot, VelopackReleasesFileName)
+                     Path.Combine(_incomingRoot, ArchiveFileName)
                  })
         {
             try
@@ -645,17 +586,6 @@ internal sealed class UpdateEngineService
             catch
             {
             }
-        }
-
-        try
-        {
-            foreach (var nupkgPath in Directory.EnumerateFiles(_incomingRoot, "*.nupkg", SearchOption.TopDirectoryOnly))
-            {
-                File.Delete(nupkgPath);
-            }
-        }
-        catch
-        {
         }
     }
 
@@ -722,307 +652,6 @@ internal sealed class UpdateEngineService
         using var stream = File.OpenRead(filePath);
         var hash = SHA256.HashData(stream);
         return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-    private LauncherResult? CheckVelopackPendingUpdate(string feedPath)
-    {
-        try
-        {
-            var feed = JsonSerializer.Deserialize(File.ReadAllText(feedPath), AppJsonContext.Default.VelopackReleaseFeed);
-            if (feed?.Assets is null || feed.Assets.Count == 0)
-            {
-                return Failed("update.check", "invalid_manifest", "releases.win.json is invalid.");
-            }
-
-            var currentVersion = ParseVersionSafe(_deploymentLocator.GetCurrentVersion());
-            var latest = feed.Assets
-                .Where(a => string.Equals(a.Type, "Full", StringComparison.OrdinalIgnoreCase))
-                .Select(a => new { Asset = a, Version = ParseVersionSafe(a.Version) })
-                .Where(x => x.Version > currentVersion)
-                .OrderByDescending(x => x.Version)
-                .FirstOrDefault();
-
-            if (latest is null)
-            {
-                return new LauncherResult
-                {
-                    Success = true,
-                    Stage = "update.check",
-                    Code = "noop",
-                    Message = "No pending update for current version."
-                };
-            }
-
-            var packagePath = Path.Combine(_incomingRoot, latest.Asset.FileName);
-            if (!File.Exists(packagePath))
-            {
-                return Failed("update.check", "missing_payload", $"Missing Velopack package '{latest.Asset.FileName}'.");
-            }
-
-            return new LauncherResult
-            {
-                Success = true,
-                Stage = "update.check",
-                Code = "available",
-                Message = "Pending Velopack update is available.",
-                CurrentVersion = _deploymentLocator.GetCurrentVersion(),
-                TargetVersion = latest.Asset.Version
-            };
-        }
-        catch (Exception ex)
-        {
-            return Failed("update.check", "invalid_manifest", ex.Message);
-        }
-    }
-
-    private async Task<LauncherResult> ApplyVelopackPendingUpdateAsync(string feedPath)
-    {
-        VelopackReleaseFeed? feed;
-        try
-        {
-            var json = await File.ReadAllTextAsync(feedPath).ConfigureAwait(false);
-            feed = JsonSerializer.Deserialize(json, AppJsonContext.Default.VelopackReleaseFeed);
-        }
-        catch (Exception ex)
-        {
-            return Failed("update.apply", "invalid_manifest", $"Invalid releases feed: {ex.Message}");
-        }
-
-        if (feed?.Assets is null || feed.Assets.Count == 0)
-        {
-            return Failed("update.apply", "invalid_manifest", "releases.win.json has no assets.");
-        }
-
-        var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
-        if (string.IsNullOrWhiteSpace(currentDeployment))
-        {
-            return Failed("update.apply", "no_current_deployment", "Current deployment not found.");
-        }
-
-        var currentVersionText = _deploymentLocator.GetCurrentVersion();
-        var currentVersion = ParseVersionSafe(currentVersionText);
-        var target = feed.Assets
-            .Where(a => string.Equals(a.Type, "Full", StringComparison.OrdinalIgnoreCase))
-            .Select(a => new { Asset = a, Version = ParseVersionSafe(a.Version) })
-            .Where(x => x.Version > currentVersion)
-            .OrderByDescending(x => x.Version)
-            .FirstOrDefault();
-
-        if (target is null)
-        {
-            return new LauncherResult
-            {
-                Success = true,
-                Stage = "update.apply",
-                Code = "noop",
-                Message = "No Velopack update payload found."
-            };
-        }
-
-        var packagePath = Path.Combine(_incomingRoot, target.Asset.FileName);
-        if (!File.Exists(packagePath))
-        {
-            return Failed("update.apply", "missing_payload", $"Missing Velopack package '{target.Asset.FileName}'.");
-        }
-
-        if (!VerifyVelopackPackageChecksum(packagePath, target.Asset))
-        {
-            return Failed("update.apply", "checksum_failed", "Velopack package checksum verification failed.");
-        }
-
-        var targetVersion = string.IsNullOrWhiteSpace(target.Asset.Version) ? currentVersionText : target.Asset.Version;
-        var targetDeployment = _deploymentLocator.BuildNextDeploymentDirectory(targetVersion);
-        var partialMarker = Path.Combine(targetDeployment, ".partial");
-        var snapshot = new SnapshotMetadata
-        {
-            SnapshotId = Guid.NewGuid().ToString("N"),
-            SourceVersion = currentVersionText,
-            TargetVersion = targetVersion,
-            CreatedAt = DateTimeOffset.UtcNow,
-            SourceDirectory = currentDeployment,
-            TargetDirectory = targetDeployment,
-            Status = "pending"
-        };
-        var snapshotPath = Path.Combine(_snapshotsRoot, $"{snapshot.SnapshotId}.json");
-        var extractRoot = Path.Combine(_incomingRoot, "extracted-velopack");
-
-        try
-        {
-            SaveSnapshot(snapshotPath, snapshot);
-
-            if (Directory.Exists(extractRoot))
-            {
-                Directory.Delete(extractRoot, true);
-            }
-
-            Directory.CreateDirectory(extractRoot);
-            ZipFile.ExtractToDirectory(packagePath, extractRoot, overwriteFiles: true);
-
-            var contentRoot = ResolveVelopackContentRoot(extractRoot);
-            if (contentRoot is null)
-            {
-                throw new InvalidOperationException("Unable to locate app payload in Velopack package.");
-            }
-
-            Directory.CreateDirectory(targetDeployment);
-            File.WriteAllText(partialMarker, string.Empty);
-            CopyDirectory(contentRoot, targetDeployment);
-
-            var hostExecutable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
-            if (!File.Exists(Path.Combine(targetDeployment, hostExecutable)))
-            {
-                throw new InvalidOperationException($"Host executable '{hostExecutable}' not found after applying Velopack package.");
-            }
-
-            ActivateDeployment(currentDeployment, targetDeployment);
-            snapshot.Status = "applied";
-            SaveSnapshot(snapshotPath, snapshot);
-            CleanupIncomingArtifacts();
-            CleanupDestroyedDeployments();
-
-            return new LauncherResult
-            {
-                Success = true,
-                Stage = "update.apply",
-                Code = "ok",
-                Message = $"Updated to {targetVersion}.",
-                CurrentVersion = currentVersionText,
-                TargetVersion = targetVersion
-            };
-        }
-        catch (Exception ex)
-        {
-            TryRollbackOnFailure(snapshot);
-            snapshot.Status = "rolled_back";
-            SaveSnapshot(snapshotPath, snapshot);
-            return new LauncherResult
-            {
-                Success = false,
-                Stage = "update.apply",
-                Code = "apply_failed",
-                Message = "Failed to apply update. Rolled back to previous version.",
-                ErrorMessage = ex.Message,
-                CurrentVersion = currentVersionText,
-                RolledBackTo = currentVersionText
-            };
-        }
-        finally
-        {
-            try
-            {
-                if (Directory.Exists(extractRoot))
-                {
-                    Directory.Delete(extractRoot, true);
-                }
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    private static Version ParseVersionSafe(string? version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            return new Version(0, 0, 0);
-        }
-
-        var normalized = version.Trim();
-        var separatorIndex = normalized.IndexOfAny(['-', '+', ' ']);
-        if (separatorIndex > 0)
-        {
-            normalized = normalized[..separatorIndex];
-        }
-
-        return Version.TryParse(normalized, out var parsed) ? parsed : new Version(0, 0, 0);
-    }
-
-    private static bool VerifyVelopackPackageChecksum(string packagePath, VelopackReleaseAsset asset)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(asset.SHA256))
-            {
-                var actualSha256 = ComputeSha256Hex(packagePath);
-                return string.Equals(actualSha256, asset.SHA256, StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (!string.IsNullOrWhiteSpace(asset.SHA1))
-            {
-                using var stream = File.OpenRead(packagePath);
-                var sha1 = SHA1.HashData(stream);
-                var actualSha1 = Convert.ToHexString(sha1);
-                return string.Equals(actualSha1, asset.SHA1, StringComparison.OrdinalIgnoreCase);
-            }
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static string? ResolveVelopackContentRoot(string extractRoot)
-    {
-        var hostExecutable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
-        var hostPath = Directory
-            .EnumerateFiles(extractRoot, hostExecutable, SearchOption.AllDirectories)
-            .FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(hostPath))
-        {
-            return Path.GetDirectoryName(hostPath);
-        }
-
-        // common nupkg layout fallback
-        var libRoot = Path.Combine(extractRoot, "lib");
-        if (Directory.Exists(libRoot))
-        {
-            var best = Directory.GetDirectories(libRoot, "*", SearchOption.TopDirectoryOnly)
-                .OrderByDescending(d => Directory.EnumerateFiles(d, "*", SearchOption.AllDirectories).Count())
-                .FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(best))
-            {
-                return best;
-            }
-        }
-
-        var candidate = Directory.GetDirectories(extractRoot, "*", SearchOption.TopDirectoryOnly)
-            .Where(d => !string.Equals(Path.GetFileName(d), "_rels", StringComparison.OrdinalIgnoreCase))
-            .Where(d => !string.Equals(Path.GetFileName(d), "package", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(d => Directory.EnumerateFiles(d, "*", SearchOption.AllDirectories).Count())
-            .FirstOrDefault();
-
-        return candidate;
-    }
-
-    private static void CopyDirectory(string sourceDir, string targetDir)
-    {
-        foreach (var dirPath in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(sourceDir, dirPath);
-            Directory.CreateDirectory(Path.Combine(targetDir, relative));
-        }
-
-        foreach (var sourceFile in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(sourceDir, sourceFile);
-            var destFile = Path.Combine(targetDir, relative);
-            var destDir = Path.GetDirectoryName(destFile);
-            if (!string.IsNullOrWhiteSpace(destDir))
-            {
-                Directory.CreateDirectory(destDir);
-            }
-            File.Copy(sourceFile, destFile, overwrite: true);
-        }
-    }
-
-    private static async Task DownloadToFileAsync(HttpClient client, string url, string destination, CancellationToken cancellationToken)
-    {
-        await using var stream = await client.GetStreamAsync(url, cancellationToken).ConfigureAwait(false);
-        await using var output = File.Create(destination);
-        await stream.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
     }
 
     private static void SaveSnapshot(string path, SnapshotMetadata snapshot)

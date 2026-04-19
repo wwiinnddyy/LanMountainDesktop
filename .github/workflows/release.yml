@@ -20,7 +20,6 @@ env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
   DOTNET_gcServer: 1
-  ENABLE_LEGACY_DELTA_FALLBACK: 'false'
 
 jobs:
   prepare:
@@ -318,56 +317,20 @@ jobs:
           Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Install vpk
-        if: matrix.self_contained == true && matrix.arch == 'x64'
+      - name: Build Signed FileMap Update Package
+        if: matrix.self_contained == true
         run: |
           $ErrorActionPreference = "Stop"
-          dotnet tool uninstall --global vpk | Out-Null
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "vpk is not preinstalled, proceeding with fresh install."
-          }
-          dotnet tool install --global vpk --allow-roll-forward
-          "$env:USERPROFILE\\.dotnet\\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          $env:PATH = "$env:USERPROFILE\\.dotnet\\tools;$env:PATH"
-          vpk -h
-        shell: pwsh
 
-      - name: Prepare Previous Velopack Full Package
-        if: matrix.self_contained == true && matrix.arch == 'x64'
-        run: |
-          $outputDir = "velopack-output"
-          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-
-          try {
-            $headers = @{ "User-Agent" = "LanMountainDesktop-CI"; "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}" }
-            $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases?per_page=10" -Headers $headers
-            $previousRelease = $releases | Where-Object { -not $_.prerelease -and -not $_.draft } | Select-Object -First 1
-            if ($previousRelease) {
-              $previousFull = $previousRelease.assets |
-                Where-Object { $_.name -like "*-full.nupkg" } |
-                Select-Object -First 1
-              if ($previousFull) {
-                $dest = Join-Path $outputDir $previousFull.name
-                Invoke-WebRequest -Uri $previousFull.browser_download_url -OutFile $dest -Headers $headers
-                Write-Host "Downloaded previous package for Velopack delta generation."
-              } else {
-                Write-Host "No previous full package found. Velopack will generate full package only."
-              }
-            }
-          } catch {
-            Write-Host "Could not fetch previous release package: $_"
-          }
-        shell: pwsh
-
-      - name: Build Velopack Packages
-        if: matrix.self_contained == true && matrix.arch == 'x64'
-        run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
+          $platform = "windows-$arch"
           $publishDir = "publish/windows-$arch"
           $appDir = "app-$version"
           $currentAppPath = Join-Path $publishDir $appDir
-          $outputDir = "velopack-output"
+          $outputDir = Join-Path "delta-output" $platform
+          $generateScript = "scripts/Generate-DeltaPackage.ps1"
+          $signScript = "scripts/Sign-FileMap.ps1"
 
           if (-not (Test-Path $currentAppPath)) {
             Write-Error "Expected app directory not found: $currentAppPath"
@@ -375,54 +338,65 @@ jobs:
           }
 
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          vpk pack `
-            --packId LanMountainDesktop `
-            --packVersion $version `
-            --packDir $currentAppPath `
-            --mainExe LanMountainDesktop.exe `
-            --outputDir $outputDir `
-            --channel win `
-            --noPortable `
-            --skipVeloAppCheck
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Velopack packaging failed."
-            exit 1
-          }
-
-          Get-ChildItem -Path $outputDir -File | Select-Object Name,Length
-        shell: pwsh
-
-      - name: Legacy Delta Fallback (disabled by default)
-        if: matrix.self_contained == true && matrix.arch == 'x64' && env.ENABLE_LEGACY_DELTA_FALLBACK == 'true'
-        run: |
-          $version = "${{ needs.prepare.outputs.version }}"
-          $arch = "${{ matrix.arch }}"
-          $publishDir = "publish/windows-$arch"
-          $appDir = "app-$version"
-          $currentAppPath = Join-Path $publishDir $appDir
-          $outputDir = "delta-output"
-          $scriptPath = "scripts/Generate-DeltaPackage.ps1"
-
-          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          & $scriptPath `
+          & $generateScript `
             -PreviousVersion "0.0.0" `
             -CurrentVersion $version `
             -PreviousDir $currentAppPath `
             -CurrentDir $currentAppPath `
             -OutputDir $outputDir
+
+          $privateKeyPem = @'
+          ${{ secrets.PDC_SIGNING_KEY }}
+          '@.Trim()
+          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
+            $privateKeyPem = @'
+          ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+          '@.Trim()
+          }
+          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
+            Write-Error "Missing required secret: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM"
+            exit 1
+          }
+
+          $privateKeyPem = $privateKeyPem -replace '\\n', "`n"
+          $tempDir = Join-Path $env:RUNNER_TEMP "update-signing"
+          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+          $privateKeyPath = Join-Path $tempDir "private-key.pem"
+          $publicKeyPath = Join-Path $tempDir "public-key.pem"
+
+          Set-Content -Path $privateKeyPath -Value $privateKeyPem -NoNewline
+          $rsa = [System.Security.Cryptography.RSA]::Create()
+          $rsa.ImportFromPem($privateKeyPem)
+          $derivedPublicKey = $rsa.ExportRSAPublicKeyPem()
+          Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
+
+          $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
+          $repoPublicKey = (Get-Content -Path $repoPublicKeyPath -Raw).Trim()
+          if ($repoPublicKey -ne $derivedPublicKey.Trim()) {
+            Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
+            exit 1
+          }
+
+          & $signScript `
+            -FilesJsonPath (Join-Path $outputDir "files.json") `
+            -PrivateKeyPath $privateKeyPath `
+            -OutputPath (Join-Path $outputDir "files.json.sig")
+
+          Copy-Item (Join-Path $outputDir "files.json") (Join-Path $outputDir "files-$platform.json") -Force
+          Copy-Item (Join-Path $outputDir "files.json.sig") (Join-Path $outputDir "files-$platform.json.sig") -Force
+          Copy-Item (Join-Path $outputDir "update.zip") (Join-Path $outputDir "update-$platform.zip") -Force
         shell: pwsh
 
-      - name: Upload Velopack Package
-        if: matrix.self_contained == true && matrix.arch == 'x64'
+      - name: Upload Signed FileMap Update Package
+        if: matrix.self_contained == true
         uses: actions/upload-artifact@v4
         with:
-          name: release-velopack-windows-x64
+          name: release-update-windows-${{ matrix.arch }}
           path: |
-            velopack-output/*.nupkg
-            velopack-output/releases.win.json
-            velopack-output/assets.win.json
-            velopack-output/RELEASES
+            delta-output/windows-${{ matrix.arch }}/files-windows-${{ matrix.arch }}.json
+            delta-output/windows-${{ matrix.arch }}/files-windows-${{ matrix.arch }}.json.sig
+            delta-output/windows-${{ matrix.arch }}/update-windows-${{ matrix.arch }}.zip
           if-no-files-found: error
           retention-days: 90
       - name: Upload Installer
@@ -630,6 +604,86 @@ jobs:
             exit 1
           fi
 
+      - name: Build Signed FileMap Update Package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $version = "${{ needs.prepare.outputs.version }}"
+          $platform = "linux-x64"
+          $publishDir = "publish/linux-x64"
+          $appDir = "app-$version"
+          $currentAppPath = Join-Path $publishDir $appDir
+          $outputDir = Join-Path "delta-output" $platform
+          $generateScript = "scripts/Generate-DeltaPackage.ps1"
+          $signScript = "scripts/Sign-FileMap.ps1"
+
+          if (-not (Test-Path $currentAppPath)) {
+            Write-Error "Expected app directory not found: $currentAppPath"
+            exit 1
+          }
+
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          & $generateScript `
+            -PreviousVersion "0.0.0" `
+            -CurrentVersion $version `
+            -PreviousDir $currentAppPath `
+            -CurrentDir $currentAppPath `
+            -OutputDir $outputDir
+
+          $privateKeyPem = @'
+          ${{ secrets.PDC_SIGNING_KEY }}
+          '@.Trim()
+          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
+            $privateKeyPem = @'
+          ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+          '@.Trim()
+          }
+          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
+            Write-Error "Missing required secret: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM"
+            exit 1
+          }
+
+          $privateKeyPem = $privateKeyPem -replace '\\n', "`n"
+          $tempDir = Join-Path $env:RUNNER_TEMP "update-signing"
+          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+          $privateKeyPath = Join-Path $tempDir "private-key.pem"
+          $publicKeyPath = Join-Path $tempDir "public-key.pem"
+
+          Set-Content -Path $privateKeyPath -Value $privateKeyPem -NoNewline
+          $rsa = [System.Security.Cryptography.RSA]::Create()
+          $rsa.ImportFromPem($privateKeyPem)
+          $derivedPublicKey = $rsa.ExportRSAPublicKeyPem()
+          Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
+
+          $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
+          $repoPublicKey = (Get-Content -Path $repoPublicKeyPath -Raw).Trim()
+          if ($repoPublicKey -ne $derivedPublicKey.Trim()) {
+            Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
+            exit 1
+          }
+
+          & $signScript `
+            -FilesJsonPath (Join-Path $outputDir "files.json") `
+            -PrivateKeyPath $privateKeyPath `
+            -OutputPath (Join-Path $outputDir "files.json.sig")
+
+          Copy-Item (Join-Path $outputDir "files.json") (Join-Path $outputDir "files-$platform.json") -Force
+          Copy-Item (Join-Path $outputDir "files.json.sig") (Join-Path $outputDir "files-$platform.json.sig") -Force
+          Copy-Item (Join-Path $outputDir "update.zip") (Join-Path $outputDir "update-$platform.zip") -Force
+
+      - name: Upload Signed FileMap Update Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-update-linux-x64
+          path: |
+            delta-output/linux-x64/files-linux-x64.json
+            delta-output/linux-x64/files-linux-x64.json.sig
+            delta-output/linux-x64/update-linux-x64.zip
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
@@ -832,8 +886,8 @@ jobs:
           mkdir -p release-files
           # Copy installers and packages
           find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
-          # Copy Velopack release feed and update packages
-          find artifacts -type f \( -name "releases.win.json" -o -name "assets.win.json" -o -name "RELEASES" -o -name "*.nupkg" \) -exec cp -v {} release-files/ \;
+          # Copy signed file-map incremental update assets
+          find artifacts -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-files/ \;
           echo ""
           echo "Files ready for release:"
           ls -lh release-files/ || echo "No files found in release-files"
@@ -845,6 +899,38 @@ jobs:
             echo "Error: No release files found"
             exit 1
           fi
+
+      - name: Upload Incremental Assets to S3 (optional)
+        if: ${{ vars.S3_ENDPOINT != '' && vars.S3_BUCKET != '' && secrets.S3_ACCESS_KEY != '' && secrets.S3_SECRET_KEY != '' }}
+        env:
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_REGION: ${{ vars.S3_REGION != '' && vars.S3_REGION || 'cn-nb1' }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_OBJECT_PREFIX: lanmountain/distribution-v1
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade awscli
+
+          mkdir -p release-update-assets
+          find release-files -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-update-assets/ \;
+
+          asset_count=$(find release-update-assets -type f | wc -l)
+          if [ "$asset_count" -eq 0 ]; then
+            echo "Error: no incremental update assets found for S3 upload."
+            exit 1
+          fi
+
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
+          export AWS_DEFAULT_REGION="$S3_REGION"
+
+          version_prefix="${S3_OBJECT_PREFIX}/${{ needs.prepare.outputs.version }}/"
+          latest_prefix="${S3_OBJECT_PREFIX}/latest/"
+
+          aws --endpoint-url "$S3_ENDPOINT" s3 sync release-update-assets "s3://${S3_BUCKET}/${version_prefix}" --only-show-errors
+          aws --endpoint-url "$S3_ENDPOINT" s3 sync release-update-assets "s3://${S3_BUCKET}/${latest_prefix}" --delete --only-show-errors
 
       - name: Create Release
         uses: ncipollo/release-action@v1
@@ -867,12 +953,12 @@ jobs:
 
             Installation: Double-click the .exe file and follow the wizard.
 
-            ### Incremental Update (Windows x64)
-            - **releases.win.json** - Velopack release feed consumed by the launcher update flow
-            - **LanMountainDesktop-<version>-full.nupkg** - full package
-            - **LanMountainDesktop-<version>-delta.nupkg** - delta package (when available)
+            ### Incremental Update Assets
+            - **files-windows-x64.json / files-windows-x64.json.sig / update-windows-x64.zip**
+            - **files-windows-x86.json / files-windows-x86.json.sig / update-windows-x86.zip**
+            - **files-linux-x64.json / files-linux-x64.json.sig / update-linux-x64.zip**
 
-            Existing users: The app will automatically detect and apply the incremental update on next launch.
+            Existing users: Launcher will detect platform-matching signed assets and apply update on next startup.
 
             ### Linux
             - **LanMountainDesktop-${{ needs.prepare.outputs.version }}-linux-x64.deb** - Debian package (x64)

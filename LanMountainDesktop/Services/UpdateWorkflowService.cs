@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.PluginSdk;
@@ -52,7 +53,9 @@ public sealed class UpdateWorkflowService
     private const string LauncherDirectoryName = ".launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
-    private const string VelopackReleasesFileName = "releases.win.json";
+    private const string SignedFileMapName = "files.json";
+    private const string SignedFileMapSignatureName = "files.json.sig";
+    private const string UpdateArchiveName = "update.zip";
 
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
@@ -79,7 +82,7 @@ public sealed class UpdateWorkflowService
     }
 
     /// <summary>
-    /// Checks whether a GitHub Release contains Velopack assets needed for incremental updates.
+    /// Checks whether a GitHub Release contains signed file-map assets needed for incremental updates.
     /// </summary>
     public static bool IsDeltaUpdateAvailable(GitHubReleaseInfo release)
     {
@@ -88,13 +91,11 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        var hasFeed = release.Assets.Any(a => string.Equals(a.Name, VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase));
-        var hasFull = release.Assets.Any(a => a.Name.EndsWith("-full.nupkg", StringComparison.OrdinalIgnoreCase));
-        return hasFeed && hasFull;
+        return TryResolveDeltaAssets(release.Assets, out _, out _, out _);
     }
 
     /// <summary>
-    /// Downloads Velopack release feed and package files to the Launcher's incoming directory.
+    /// Downloads signed file-map assets to the Launcher's incoming directory.
     /// </summary>
     public async Task<UpdateDownloadResult> DownloadDeltaUpdateAsync(
         UpdateCheckResult checkResult,
@@ -108,11 +109,9 @@ public sealed class UpdateWorkflowService
             return new UpdateDownloadResult(false, null, "No update available for delta download.");
         }
 
-        var releasesFeedAsset = checkResult.Release.Assets.FirstOrDefault(a =>
-            string.Equals(a.Name, VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase));
-        if (releasesFeedAsset is null)
+        if (!TryResolveDeltaAssets(checkResult.Release.Assets, out var manifestAsset, out var signatureAsset, out var archiveAsset))
         {
-            return new UpdateDownloadResult(false, null, "Release does not contain releases.win.json.");
+            return new UpdateDownloadResult(false, null, "Release does not contain compatible signed file-map assets.");
         }
 
         var incomingDir = GetLauncherIncomingDirectory();
@@ -130,29 +129,19 @@ public sealed class UpdateWorkflowService
         var downloadSource = state.UpdateDownloadSource;
         var downloadThreads = state.UpdateDownloadThreads;
 
-        var latestVersionText = checkResult.LatestVersionText.Trim();
-        var targetPackages = checkResult.Release.Assets
-            .Where(a => a.Name.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
-            .Where(a => a.Name.Contains(latestVersionText, StringComparison.OrdinalIgnoreCase))
-            .Where(a =>
-                a.Name.EndsWith("-full.nupkg", StringComparison.OrdinalIgnoreCase) ||
-                a.Name.EndsWith("-delta.nupkg", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        if (targetPackages.Count == 0)
+        var requiredAssets = new List<(GitHubReleaseAsset Asset, string DestinationFileName)>
         {
-            return new UpdateDownloadResult(false, null, "No Velopack nupkg asset found for the target version.");
-        }
-
-        var requiredAssets = new List<GitHubReleaseAsset> { releasesFeedAsset };
-        requiredAssets.AddRange(targetPackages);
+            (manifestAsset, SignedFileMapName),
+            (signatureAsset, SignedFileMapSignatureName),
+            (archiveAsset, UpdateArchiveName)
+        };
 
         var totalAssets = requiredAssets.Count;
         var completedAssets = 0;
 
-        foreach (var asset in requiredAssets)
+        foreach (var (asset, destinationFileName) in requiredAssets)
         {
-            var destinationPath = Path.Combine(incomingDir, asset.Name);
+            var destinationPath = Path.Combine(incomingDir, destinationFileName);
 
             // Skip if already downloaded and file exists
             if (File.Exists(destinationPath))
@@ -160,7 +149,7 @@ public sealed class UpdateWorkflowService
                 var existingHash = await GitHubReleaseUpdateService.ComputeFileSha256Async(destinationPath, cancellationToken);
                 if (asset.Sha256 is not null && string.Equals(existingHash, asset.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    AppLogger.Info("UpdateWorkflow", $"Velopack asset {asset.Name} already downloaded with matching hash, skipping.");
+                    AppLogger.Info("UpdateWorkflow", $"Update asset {asset.Name} already downloaded with matching hash, skipping.");
                     completedAssets++;
                     progress?.Report((double)completedAssets / totalAssets);
                     continue;
@@ -184,21 +173,21 @@ public sealed class UpdateWorkflowService
             if (!result.Success)
             {
                 // Clean up partially downloaded files
-                foreach (var file in requiredAssets.Select(a => a.Name))
+                foreach (var file in requiredAssets.Select(a => a.DestinationFileName))
                 {
                     try { File.Delete(Path.Combine(incomingDir, file)); } catch { }
                 }
-                return new UpdateDownloadResult(false, null, $"Failed to download Velopack asset {asset.Name}: {result.ErrorMessage}");
+                return new UpdateDownloadResult(false, null, $"Failed to download update asset {asset.Name}: {result.ErrorMessage}");
             }
 
             completedAssets++;
             progress?.Report((double)completedAssets / totalAssets);
         }
 
-        // Save state indicating a Velopack update is pending.
+        // Save state indicating a signed file-map update is pending.
         SaveState(state with
         {
-            PendingUpdateInstallerPath = Path.Combine(incomingDir, VelopackReleasesFileName),
+            PendingUpdateInstallerPath = Path.Combine(incomingDir, SignedFileMapName),
             PendingUpdateVersion = checkResult.LatestVersionText,
             PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
                 ? null
@@ -207,9 +196,9 @@ public sealed class UpdateWorkflowService
             PendingUpdateSha256 = null
         });
 
-        AppLogger.Info("UpdateWorkflow", $"Velopack update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
+        AppLogger.Info("UpdateWorkflow", $"Signed file-map update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
 
-        return new UpdateDownloadResult(true, Path.Combine(incomingDir, VelopackReleasesFileName), null);
+        return new UpdateDownloadResult(true, Path.Combine(incomingDir, SignedFileMapName), null);
     }
 
     /// <summary>
@@ -224,9 +213,69 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        // Velopack updates are identified by the releases feed path.
-        return pendingPath.EndsWith(VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase)
+        // Incoming payload updates are identified by files.json or incoming directory path.
+        return pendingPath.EndsWith(SignedFileMapName, StringComparison.OrdinalIgnoreCase)
             || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryResolveDeltaAssets(
+        IReadOnlyList<GitHubReleaseAsset> assets,
+        out GitHubReleaseAsset manifestAsset,
+        out GitHubReleaseAsset signatureAsset,
+        out GitHubReleaseAsset archiveAsset)
+    {
+        manifestAsset = default!;
+        signatureAsset = default!;
+        archiveAsset = default!;
+
+        if (assets is null || assets.Count == 0)
+        {
+            return false;
+        }
+
+        var platformSuffix = GetPlatformAssetSuffix();
+        var platformManifest = $"files-{platformSuffix}.json";
+        var platformSignature = $"files-{platformSuffix}.json.sig";
+        var platformArchive = $"update-{platformSuffix}.zip";
+
+        var manifestCandidate = FindAsset(assets, platformManifest) ?? FindAsset(assets, SignedFileMapName);
+        var signatureCandidate = FindAsset(assets, platformSignature) ?? FindAsset(assets, SignedFileMapSignatureName);
+        var archiveCandidate = FindAsset(assets, platformArchive) ?? FindAsset(assets, UpdateArchiveName);
+        if (manifestCandidate is null || signatureCandidate is null || archiveCandidate is null)
+        {
+            return false;
+        }
+
+        manifestAsset = manifestCandidate;
+        signatureAsset = signatureCandidate;
+        archiveAsset = archiveCandidate;
+        return true;
+    }
+
+    private static GitHubReleaseAsset? FindAsset(IReadOnlyList<GitHubReleaseAsset> assets, string name)
+    {
+        return assets.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetPlatformAssetSuffix()
+    {
+        var os = OperatingSystem.IsWindows()
+            ? "windows"
+            : OperatingSystem.IsLinux()
+                ? "linux"
+                : OperatingSystem.IsMacOS()
+                    ? "macos"
+                    : "unknown";
+
+        var arch = RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.X86 => "x86",
+            Architecture.Arm => "arm",
+            Architecture.Arm64 => "arm64",
+            _ => "x64"
+        };
+
+        return $"{os}-{arch}";
     }
 
     public UpdatePendingInfo? GetPendingUpdate()

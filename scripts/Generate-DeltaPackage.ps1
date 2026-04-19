@@ -1,105 +1,152 @@
-# Generate-DeltaPackage.ps1
-# 生成增量更新包 (delta.zip + files.json)
-
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$PreviousVersion,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$CurrentVersion,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$PreviousDir,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$CurrentDir,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$OutputDir
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== 生成增量更新包 ===" -ForegroundColor Cyan
-Write-Host "从版本: $PreviousVersion"
-Write-Host "到版本: $CurrentVersion"
-Write-Host "上一版本目录: $PreviousDir"
-Write-Host "当前版本目录: $CurrentDir"
-Write-Host "输出目录: $OutputDir"
-Write-Host ""
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-# 确保输出目录存在
-New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+function Get-NormalizedRelativePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RootDir,
 
-# 计算文件 SHA256
-function Get-FileSha256 {
-    param([string]$Path)
-    $hash = Get-FileHash -Path $Path -Algorithm SHA256
-    return $hash.Hash.ToLower()
+        [Parameter(Mandatory = $true)]
+        [string]$FullPath
+    )
+
+    $root = [System.IO.Path]::GetFullPath($RootDir)
+    $path = [System.IO.Path]::GetFullPath($FullPath)
+
+    if (-not $root.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString()) -and
+        -not $root.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString())) {
+        $root += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    $rootUri = [System.Uri]$root
+    $pathUri = [System.Uri]$path
+    $relative = [System.Uri]::UnescapeDataString($rootUri.MakeRelativeUri($pathUri).ToString())
+
+    return $relative.Replace('\', '/')
 }
 
-# 获取目录中所有文件的相对路径和哈希
+function Get-FileSha256Hex {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
 function Get-FileManifest {
-    param([string]$RootDir)
-    
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RootDir
+    )
+
+    if (-not (Test-Path -LiteralPath $RootDir)) {
+        throw "Directory does not exist: $RootDir"
+    }
+
+    $resolvedRoot = (Resolve-Path -LiteralPath $RootDir).Path
     $manifest = @{}
-    $files = Get-ChildItem -Path $RootDir -Recurse -File
-    
+    $files = Get-ChildItem -LiteralPath $resolvedRoot -Recurse -File
+
     foreach ($file in $files) {
-        $relativePath = $file.FullName.Substring($RootDir.Length).TrimStart('\', '/')
-        $relativePath = $relativePath.Replace('\', '/')
-        
-        $manifest[$relativePath] = @{
+        $relativePath = Get-NormalizedRelativePath -RootDir $resolvedRoot -FullPath $file.FullName
+        $manifest[$relativePath] = [ordered]@{
             Path = $relativePath
-            Sha256 = Get-FileSha256 -Path $file.FullName
-            Size = $file.Length
+            Sha256 = Get-FileSha256Hex -Path $file.FullName
+            Size = [long]$file.Length
         }
     }
-    
+
     return $manifest
 }
 
-Write-Host "扫描上一版本文件..." -ForegroundColor Yellow
-Write-Host "  目录: $PreviousDir" -ForegroundColor Gray
-if (-not (Test-Path $PreviousDir)) {
-    throw "Previous directory does not exist: $PreviousDir"
+function New-DeltaArchive {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ZipPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CurrentRoot,
+
+        [Parameter(Mandatory = $true)]
+        [object[]]$ChangedFiles
+    )
+
+    if (Test-Path -LiteralPath $ZipPath) {
+        Remove-Item -LiteralPath $ZipPath -Force
+    }
+
+    $zip = [System.IO.Compression.ZipFile]::Open($ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($file in $ChangedFiles) {
+            $sourcePath = Join-Path $CurrentRoot $file.Path
+            if (-not (Test-Path -LiteralPath $sourcePath)) {
+                throw "Changed file was not found while building archive: $sourcePath"
+            }
+
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $zip,
+                $sourcePath,
+                $file.Path,
+                [System.IO.Compression.CompressionLevel]::Optimal
+            ) | Out-Null
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
 }
+
+Write-Host "Generating incremental package..."
+Write-Host "From: $PreviousVersion"
+Write-Host "To:   $CurrentVersion"
+Write-Host "Prev: $PreviousDir"
+Write-Host "Curr: $CurrentDir"
+Write-Host "Out:  $OutputDir"
+
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+
 $previousManifest = Get-FileManifest -RootDir $PreviousDir
-Write-Host "  找到 $($previousManifest.Count) 个文件" -ForegroundColor Gray
-
-Write-Host "扫描当前版本文件..." -ForegroundColor Yellow
-Write-Host "  目录: $CurrentDir" -ForegroundColor Gray
-if (-not (Test-Path $CurrentDir)) {
-    throw "Current directory does not exist: $CurrentDir"
-}
 $currentManifest = Get-FileManifest -RootDir $CurrentDir
-Write-Host "  找到 $($currentManifest.Count) 个文件" -ForegroundColor Gray
 
-# 分析文件变更
 $changedFiles = @()
 $reusedFiles = @()
 $deletedFiles = @()
 
-Write-Host "分析文件变更..." -ForegroundColor Yellow
-
-# 检查新增和修改的文件
-foreach ($path in $currentManifest.Keys) {
+foreach ($path in ($currentManifest.Keys | Sort-Object)) {
     $currentFile = $currentManifest[$path]
-    
+
     if ($previousManifest.ContainsKey($path)) {
         $previousFile = $previousManifest[$path]
-        
         if ($currentFile.Sha256 -eq $previousFile.Sha256) {
-            # 文件未变更,可以复用
-            $reusedFiles += @{
+            $reusedFiles += [ordered]@{
                 Path = $path
                 Action = "reuse"
                 Sha256 = $currentFile.Sha256
                 Size = $currentFile.Size
             }
-        } else {
-            # 文件已修改
-            $changedFiles += @{
+        }
+        else {
+            $changedFiles += [ordered]@{
                 Path = $path
                 Action = "replace"
                 Sha256 = $currentFile.Sha256
@@ -107,9 +154,9 @@ foreach ($path in $currentManifest.Keys) {
                 ArchivePath = $path
             }
         }
-    } else {
-        # 新增文件
-        $changedFiles += @{
+    }
+    else {
+        $changedFiles += [ordered]@{
             Path = $path
             Action = "add"
             Sha256 = $currentFile.Sha256
@@ -119,104 +166,51 @@ foreach ($path in $currentManifest.Keys) {
     }
 }
 
-# 检查删除的文件
-foreach ($path in $previousManifest.Keys) {
+foreach ($path in ($previousManifest.Keys | Sort-Object)) {
     if (-not $currentManifest.ContainsKey($path)) {
-        $deletedFiles += @{
+        $deletedFiles += [ordered]@{
             Path = $path
             Action = "delete"
         }
     }
 }
 
-Write-Host "变更统计:" -ForegroundColor Green
-Write-Host "  新增/修改: $($changedFiles.Count) 个文件"
-Write-Host "  复用: $($reusedFiles.Count) 个文件"
-Write-Host "  删除: $($deletedFiles.Count) 个文件"
-Write-Host ""
+Write-Host "Changed: $($changedFiles.Count)"
+Write-Host "Reused:  $($reusedFiles.Count)"
+Write-Host "Deleted: $($deletedFiles.Count)"
 
-# 显示前10个变更的文件（用于调试）
-if ($changedFiles.Count -gt 0) {
-    Write-Host "变更的文件示例:" -ForegroundColor Cyan
-    $changedFiles | Select-Object -First 10 | ForEach-Object {
-        Write-Host "  [$($_.Action)] $($_.Path)" -ForegroundColor Gray
-    }
-    if ($changedFiles.Count -gt 10) {
-        Write-Host "  ... 还有 $($changedFiles.Count - 10) 个文件" -ForegroundColor Gray
-    }
-    Write-Host ""
-}
-
-# 创建临时目录用于打包
-$tempDir = Join-Path $OutputDir "temp_delta"
-if (Test-Path $tempDir) {
-    Remove-Item -Path $tempDir -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
-
-# 复制变更的文件到临时目录
-Write-Host "复制变更文件..." -ForegroundColor Yellow
-foreach ($file in $changedFiles) {
-    $sourcePath = Join-Path $CurrentDir $file.Path
-    $destPath = Join-Path $tempDir $file.Path
-    $destDir = Split-Path -Parent $destPath
-    
-    if (-not (Test-Path $destDir)) {
-        New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-    }
-    
-    Copy-Item -Path $sourcePath -Destination $destPath -Force
-}
-
-# 创建 update.zip (Launcher 期望的文件名)
+$resolvedCurrentDir = (Resolve-Path -LiteralPath $CurrentDir).Path
 $updateZipPath = Join-Path $OutputDir "update.zip"
-Write-Host "创建增量包: $updateZipPath" -ForegroundColor Yellow
+New-DeltaArchive -ZipPath $updateZipPath -CurrentRoot $resolvedCurrentDir -ChangedFiles $changedFiles
 
-if (Test-Path $updateZipPath) {
-    Remove-Item -Path $updateZipPath -Force
-}
+$deltaZipPath = Join-Path $OutputDir ("delta-{0}-to-{1}.zip" -f $PreviousVersion, $CurrentVersion)
+Copy-Item -LiteralPath $updateZipPath -Destination $deltaZipPath -Force
 
-Compress-Archive -Path "$tempDir\*" -DestinationPath $updateZipPath -CompressionLevel Optimal
-
-# 同时创建带版本号的副本（用于发布到 GitHub Release）
-$deltaZipPath = Join-Path $OutputDir "delta-$PreviousVersion-to-$CurrentVersion.zip"
-Write-Host "创建带版本号的副本: $deltaZipPath" -ForegroundColor Yellow
-if (Test-Path $deltaZipPath) {
-    Remove-Item -Path $deltaZipPath -Force
-}
-Copy-Item -Path $updateZipPath -Destination $deltaZipPath -Force
-
-# 清理临时目录
-Remove-Item -Path $tempDir -Recurse -Force
-
-# 生成 files.json (Launcher 期望的文件名)
-$filesJson = @{
+$allEntries = @($changedFiles + $reusedFiles + $deletedFiles)
+$filesJson = [ordered]@{
     FromVersion = $PreviousVersion
     ToVersion = $CurrentVersion
-    GeneratedAt = (Get-Date).ToUniversalTime().ToString("o")
-    Files = @($changedFiles + $reusedFiles + $deletedFiles)
+    GeneratedAt = [DateTimeOffset]::UtcNow.ToString("o")
+    Files = $allEntries
 }
 
+$jsonText = $filesJson | ConvertTo-Json -Depth 10
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
 $filesJsonPath = Join-Path $OutputDir "files.json"
-Write-Host "生成文件清单: $filesJsonPath" -ForegroundColor Yellow
+[System.IO.File]::WriteAllText($filesJsonPath, $jsonText, $utf8NoBom)
 
-$filesJson | ConvertTo-Json -Depth 10 | Set-Content -Path $filesJsonPath -Encoding UTF8
+$versionedFilesJsonPath = Join-Path $OutputDir ("files-{0}.json" -f $CurrentVersion)
+Copy-Item -LiteralPath $filesJsonPath -Destination $versionedFilesJsonPath -Force
 
-# 同时创建带版本号的副本（用于发布到 GitHub Release）
-$versionedFilesJsonPath = Join-Path $OutputDir "files-$CurrentVersion.json"
-Write-Host "创建带版本号的副本: $versionedFilesJsonPath" -ForegroundColor Yellow
-Copy-Item -Path $filesJsonPath -Destination $versionedFilesJsonPath -Force
-
-# 计算增量包大小
-$updateSize = (Get-Item $updateZipPath).Length
-$updateSizeMB = [math]::Round($updateSize / 1MB, 2)
+$updateSizeBytes = (Get-Item -LiteralPath $updateZipPath).Length
+$updateSizeMb = [Math]::Round($updateSizeBytes / 1MB, 2)
 
 Write-Host ""
-Write-Host "=== 完成 ===" -ForegroundColor Green
-Write-Host "增量包大小: $updateSizeMB MB"
-Write-Host "输出文件 (Launcher 使用):"
-Write-Host "  - $updateZipPath"
-Write-Host "  - $filesJsonPath"
-Write-Host "输出文件 (GitHub Release 发布):"
-Write-Host "  - $deltaZipPath"
-Write-Host "  - $versionedFilesJsonPath"
+Write-Host "Done."
+Write-Host "update.zip size: $updateSizeMb MB"
+Write-Host "Generated:"
+Write-Host "  $updateZipPath"
+Write-Host "  $filesJsonPath"
+Write-Host "  $deltaZipPath"
+Write-Host "  $versionedFilesJsonPath"

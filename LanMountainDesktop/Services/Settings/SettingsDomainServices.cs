@@ -751,7 +751,8 @@ internal sealed class PrivacySettingsService : IPrivacySettingsService
 internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposable
 {
     private readonly ISettingsService _settingsService;
-    private readonly GitHubReleaseUpdateService _releaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
+    private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
+    private readonly PdcReleaseUpdateService _pdcReleaseUpdateService = new();
 
     public UpdateSettingsService(ISettingsService settingsService)
     {
@@ -830,7 +831,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool includePrerelease,
         CancellationToken cancellationToken = default)
     {
-        return _releaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        return CheckForUpdatesCoreAsync(currentVersion, includePrerelease, isForce: false, cancellationToken);
     }
 
     public Task<UpdateCheckResult> ForceCheckForUpdatesAsync(
@@ -838,7 +839,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool includePrerelease,
         CancellationToken cancellationToken = default)
     {
-        return _releaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        return CheckForUpdatesCoreAsync(currentVersion, includePrerelease, isForce: true, cancellationToken);
     }
 
     public Task<UpdateDownloadResult> DownloadAssetAsync(
@@ -849,7 +850,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        return _releaseUpdateService.DownloadAssetAsync(
+        return _githubReleaseUpdateService.DownloadAssetAsync(
             asset,
             destinationFilePath,
             downloadSource,
@@ -866,7 +867,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        return _releaseUpdateService.RedownloadAssetAsync(
+        return _githubReleaseUpdateService.RedownloadAssetAsync(
             asset,
             destinationFilePath,
             downloadSource,
@@ -877,7 +878,36 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     public void Dispose()
     {
-        _releaseUpdateService.Dispose();
+        _githubReleaseUpdateService.Dispose();
+        _pdcReleaseUpdateService.Dispose();
+    }
+
+    private async Task<UpdateCheckResult> CheckForUpdatesCoreAsync(
+        Version currentVersion,
+        bool includePrerelease,
+        bool isForce,
+        CancellationToken cancellationToken)
+    {
+        var source = UpdateSettingsValues.NormalizeDownloadSource(_settingsService.Load().UpdateDownloadSource);
+        if (string.Equals(source, UpdateSettingsValues.DownloadSourcePdc, StringComparison.OrdinalIgnoreCase))
+        {
+            var pdcResult = isForce
+                ? await _pdcReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+                : await _pdcReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+
+            if (pdcResult.Success)
+            {
+                return pdcResult;
+            }
+
+            AppLogger.Warn(
+                "UpdateSettings",
+                $"PDC update check failed and will fallback to GitHub. Error: {pdcResult.ErrorMessage}");
+        }
+
+        return isForce
+            ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
     }
 }
 

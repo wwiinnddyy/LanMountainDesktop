@@ -1496,7 +1496,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
 
     [ObservableProperty]
-    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
+    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
 
     [ObservableProperty]
     private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
@@ -1631,6 +1631,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _previewChannelText = string.Empty;
 
     [ObservableProperty]
+    private string _pdcSourceText = string.Empty;
+
+    [ObservableProperty]
     private string _gitHubSourceText = string.Empty;
 
     [ObservableProperty]
@@ -1665,6 +1668,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     public bool IsPreviewChannelSelected =>
         string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPdcSourceSelected =>
+        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourcePdc, StringComparison.OrdinalIgnoreCase);
 
     public bool IsGitHubSourceSelected =>
         string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase);
@@ -1859,6 +1865,12 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void SelectPdcSource()
+    {
+        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
+    }
+
+    [RelayCommand]
     private void SelectGitHubSource()
     {
         SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
@@ -1929,8 +1941,8 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
             UpdateStatus = isForce
-                ? L("settings.update.status_force_checking", "Force checking GitHub releases...")
-                : L("settings.update.status_checking", "Checking GitHub releases...");
+                ? L("settings.update.status_force_checking", "Force checking update source...")
+                : L("settings.update.status_checking", "Checking update source...");
 
             var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce);
             _lastCheckResult = result.Success ? result : null;
@@ -2100,7 +2112,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
         DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
         ForceCheckUpdateLabel = L("settings.update.force_check_label", "Force Check Update");
-        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates from GitHub, ignoring version comparison.");
+        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates, ignoring version comparison.");
         CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
         DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
         InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
@@ -2112,6 +2124,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         UpdateTypeLabel = L("settings.update.type_label", "Update Type");
         StableChannelText = L("settings.update.channel_stable", "Stable");
         PreviewChannelText = L("settings.update.channel_preview", "Preview");
+        PdcSourceText = L("settings.update.source_pdc", "PDC");
         GitHubSourceText = L("settings.update.source_github", "GitHub");
         GhProxySourceText = L("settings.update.source_ghproxy", "gh-proxy");
         ManualModeText = L("settings.update.mode_manual", "Manual Update");
@@ -2309,6 +2322,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         return UpdateSettingsValues.NormalizeDownloadSource(value) switch
         {
+            UpdateSettingsValues.DownloadSourcePdc => L(
+                "settings.update.source_pdc_desc",
+                "Prefer PDC metadata and distribution endpoints, then automatically fallback to GitHub."),
             UpdateSettingsValues.DownloadSourceGhProxy => L(
                 "settings.update.source_ghproxy_desc",
                 "Use the gh-proxy mirror when downloading GitHub release assets."),
@@ -2360,6 +2376,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         return
         [
+            new SelectionOption(UpdateSettingsValues.DownloadSourcePdc, PdcSourceText),
             new SelectionOption(UpdateSettingsValues.DownloadSourceGitHub, GitHubSourceText),
             new SelectionOption(UpdateSettingsValues.DownloadSourceGhProxy, GhProxySourceText)
         ];

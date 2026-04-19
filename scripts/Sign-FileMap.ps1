@@ -1,65 +1,56 @@
-# Sign-FileMap.ps1
-# 对 files.json 进行 RSA 签名
-
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$FilesJsonPath,
-    
-    [Parameter(Mandatory=$true)]
+
+    [Parameter(Mandatory = $true)]
     [string]$PrivateKeyPath,
-    
-    [Parameter(Mandatory=$false)]
+
+    [Parameter(Mandatory = $false)]
     [string]$OutputPath
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== 签名文件清单 ===" -ForegroundColor Cyan
-Write-Host "文件清单: $FilesJsonPath"
-Write-Host "私钥: $PrivateKeyPath"
-Write-Host ""
-
-# 检查文件是否存在
-if (-not (Test-Path $FilesJsonPath)) {
-    Write-Error "文件清单不存在: $FilesJsonPath"
-    exit 1
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    throw "Sign-FileMap.ps1 requires PowerShell 7 or newer."
 }
 
-if (-not (Test-Path $PrivateKeyPath)) {
-    Write-Error "私钥文件不存在: $PrivateKeyPath"
-    exit 1
+if (-not (Test-Path -LiteralPath $FilesJsonPath)) {
+    throw "Manifest file not found: $FilesJsonPath"
 }
 
-# 确定输出路径
+if (-not (Test-Path -LiteralPath $PrivateKeyPath)) {
+    throw "Private key file not found: $PrivateKeyPath"
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = "$FilesJsonPath.sig"
 }
 
-# 读取文件内容
-$jsonBytes = [System.IO.File]::ReadAllBytes($FilesJsonPath)
+$resolvedManifestPath = (Resolve-Path -LiteralPath $FilesJsonPath).Path
+$manifestBytes = [System.IO.File]::ReadAllBytes($resolvedManifestPath)
 
-# 读取私钥
-$privateKeyPem = Get-Content -Path $PrivateKeyPath -Raw
-
-# 使用 .NET 进行 RSA 签名
-Add-Type -AssemblyName System.Security.Cryptography
+$privateKeyPem = Get-Content -LiteralPath $PrivateKeyPath -Raw
+if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
+    throw "Private key PEM is empty: $PrivateKeyPath"
+}
 
 $rsa = [System.Security.Cryptography.RSA]::Create()
-$rsa.ImportFromPem($privateKeyPem)
+try {
+    $rsa.ImportFromPem($privateKeyPem)
+    $signatureBytes = $rsa.SignData(
+        $manifestBytes,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+    )
+}
+finally {
+    $rsa.Dispose()
+}
 
-# 生成签名
-$signature = $rsa.SignData(
-    $jsonBytes,
-    [System.Security.Cryptography.HashAlgorithmName]::SHA256,
-    [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
-)
+$signatureBase64 = [Convert]::ToBase64String($signatureBytes)
+[System.IO.File]::WriteAllText($OutputPath, $signatureBase64, [System.Text.Encoding]::ASCII)
 
-# 转换为 Base64
-$signatureBase64 = [Convert]::ToBase64String($signature)
-
-# 写入签名文件
-Set-Content -Path $OutputPath -Value $signatureBase64 -Encoding ASCII
-
-Write-Host "=== 完成 ===" -ForegroundColor Green
-Write-Host "签名文件: $OutputPath"
-Write-Host "签名长度: $($signature.Length) 字节"
+Write-Host "Signed manifest file."
+Write-Host "Manifest:  $FilesJsonPath"
+Write-Host "Signature: $OutputPath"

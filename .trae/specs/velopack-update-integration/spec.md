@@ -1,16 +1,15 @@
-﻿# VeloPack Update Integration
+# VeloPack Update Integration (Deprecated)
 
-## Goal
-Switch incremental package generation and release assets to VeloPack native outputs while keeping Launcher as the update installer and rollback authority.
+## Status
 
-## Requirements
-- CI/release pipeline produces `releases.win.json` and `*.nupkg` assets for Windows x64.
-- Launcher can detect pending VeloPack payload in `.launcher/update/incoming`.
-- Launcher applies update into new `app-*` deployment and preserves rollback snapshot behavior.
-- Existing launcher responsibilities (OOBE/startup/plugin upgrade) remain unchanged.
+This spec is deprecated and superseded by `.trae/specs/pdc-incremental-migration/`.
 
-## Acceptance
-- Build and quality workflows pass after migration changes.
-- Release workflow publishes VeloPack assets.
-- Launcher `update apply` succeeds with VeloPack full package payload.
-- Manual rollback still works after a VeloPack-based update.
+## Deprecation Reason
+
+- VeloPack native package generation introduced unstable release blocking (version format coupling and platform divergence).
+- The project has switched back to signed FileMap incremental assets as the primary update path.
+- Launcher remains the update installer/rollback authority; packaging and distribution are being migrated to PDC/S3-compatible flows.
+
+## Migration Note
+
+Use `.trae/specs/pdc-incremental-migration/spec.md` as the active authority for incremental update implementation and acceptance.

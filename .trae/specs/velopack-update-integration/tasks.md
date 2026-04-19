@@ -1,9 +1,6 @@
-﻿# Tasks
+# Tasks (Deprecated)
 
-- [x] Fix Launcher `LoadingDetailsWindow.axaml` compile regression.
-- [x] Add VeloPack feed/package model support in Launcher update engine.
-- [x] Keep legacy delta flow behind disabled fallback switch.
-- [x] Migrate release workflow packaging assets to VeloPack outputs.
-- [x] Update host-side update workflow to download VeloPack payload files.
-- [ ] Run full release workflow dry-run on GitHub and validate artifacts.
-- [ ] Validate end-to-end update + rollback on a staging machine.
+- [x] Mark VeloPack integration spec as deprecated.
+- [x] Remove VeloPack runtime branches from launcher/host update path.
+- [x] Remove VeloPack release workflow packaging steps.
+- [ ] Keep archive for historical context only (no new implementation tasks here).

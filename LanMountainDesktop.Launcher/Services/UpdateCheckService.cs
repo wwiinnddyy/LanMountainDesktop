@@ -104,11 +104,7 @@ internal sealed class UpdateCheckService
                 Name = a.Name ?? "",
                 BrowserDownloadUrl = a.BrowserDownloadUrl ?? "",
                 Size = a.Size
-            }).ToList() ?? [],
-            VelopackFeedUrl = r.Assets?.FirstOrDefault(a =>
-                string.Equals(a.Name, "releases.win.json", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl,
-            VelopackLegacyReleasesUrl = r.Assets?.FirstOrDefault(a =>
-                string.Equals(a.Name, "RELEASES", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl
+            }).ToList() ?? []
         }).ToList() ?? [];
     }
 
