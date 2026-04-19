@@ -117,8 +117,9 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             
             if (_widgetWindows.TryGetValue(placement.PlacementId, out var existingWindow))
             {
-                // 已存在，可能只更新位置或尺寸
+                // 编辑完成后，已有小窗也要同步尺寸，否则会出现“布局已保存但窗口没变”的假象。
                 existingWindow.Position = new Avalonia.PixelPoint((int)placement.X, (int)placement.Y);
+                existingWindow.UpdateComponentLayout(placement.Width, placement.Height);
                 if (existingWindow.IsVisible == false)
                 {
                     existingWindow.Show();

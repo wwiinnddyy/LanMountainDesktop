@@ -184,13 +184,23 @@ internal sealed class LauncherFlowCoordinator
                     
                     var completedTask = await readyOrTimeoutOrExit;
                     
-                    // 检查是否是进程先退出（异常情况）
+                    // Host process exited before reporting Ready.
                     if (completedTask == processExitTask)
                     {
                         var exitCode = hostProcess.ExitCode;
-                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Host process exited unexpectedly with code: {exitCode}");
-                        
-                        // 关闭 Splash 窗口
+                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Host process exited before Ready. ExitCode={exitCode}.");
+
+                        var recoveryResult = await TryRecoverFromEarlyHostExitAsync(
+                            exitCode,
+                            hostReadyTcs,
+                            splashWindow,
+                            loadingDetailsWindow).ConfigureAwait(false);
+                        if (recoveryResult is not null)
+                        {
+                            return recoveryResult;
+                        }
+
+                        // Close Splash window for unrecoverable early exits.
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             try
@@ -205,7 +215,7 @@ internal sealed class LauncherFlowCoordinator
                                 Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing splash window: {ex.Message}");
                             }
                         });
-                        
+                            
                         return new LauncherResult
                         {
                             Success = false,
@@ -286,6 +296,133 @@ internal sealed class LauncherFlowCoordinator
                 ErrorMessage = ex.ToString()
             };
         }
+    }
+
+    private async Task<LauncherResult?> TryRecoverFromEarlyHostExitAsync(
+        int exitCode,
+        TaskCompletionSource hostReadyTcs,
+        SplashWindow splashWindow,
+        LoadingDetailsWindow? loadingDetailsWindow)
+    {
+        if (exitCode == HostExitCodes.SecondaryActivationSucceeded)
+        {
+            Console.WriteLine("[LauncherFlowCoordinator] Host redirected activation to an existing primary instance.");
+            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+            return new LauncherResult
+            {
+                Success = true,
+                Stage = "launch",
+                Code = "activated_existing_instance",
+                Message = "Detected existing running instance and activation was acknowledged."
+            };
+        }
+
+        if (exitCode is not HostExitCodes.SecondaryActivationFailed and not HostExitCodes.RestartLockNotAcquired)
+        {
+            return null;
+        }
+
+        Console.Error.WriteLine(
+            $"[LauncherFlowCoordinator] Activation handshake failed with exit code {exitCode}. Retrying explicit activation once...");
+
+        var (retryLaunchResult, retryProcess) = await LaunchHostWithIpcAsync(splashWindow).ConfigureAwait(false);
+        if (!retryLaunchResult.Success)
+        {
+            return retryLaunchResult;
+        }
+
+        if (retryProcess is null)
+        {
+            return new LauncherResult
+            {
+                Success = false,
+                Stage = "launch",
+                Code = "activation_retry_start_failed",
+                Message = "Explicit activation retry failed because no host process was created."
+            };
+        }
+
+        Console.WriteLine($"[LauncherFlowCoordinator] Explicit activation retry started. RetryPid={retryProcess.Id}.");
+        var retryExitTask = retryProcess.WaitForExitAsync();
+        var retryCompleted = await Task.WhenAny(
+            hostReadyTcs.Task,
+            retryExitTask,
+            Task.Delay(TimeSpan.FromSeconds(15))).ConfigureAwait(false);
+
+        if (retryCompleted == hostReadyTcs.Task)
+        {
+            Console.WriteLine("[LauncherFlowCoordinator] Host reported Ready after explicit activation retry.");
+            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+            return new LauncherResult
+            {
+                Success = true,
+                Stage = "launch",
+                Code = "activation_retry_ready",
+                Message = "Explicit activation retry succeeded and host reported Ready."
+            };
+        }
+
+        if (retryCompleted == retryExitTask)
+        {
+            var retryExitCode = retryProcess.ExitCode;
+            if (retryExitCode == HostExitCodes.SecondaryActivationSucceeded)
+            {
+                await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                return new LauncherResult
+                {
+                    Success = true,
+                    Stage = "launch",
+                    Code = "activation_retry_redirected",
+                    Message = "Explicit activation retry redirected to the existing primary instance."
+                };
+            }
+
+            return new LauncherResult
+            {
+                Success = false,
+                Stage = "launch",
+                Code = "activation_retry_failed",
+                Message = $"Explicit activation retry failed. ExitCode={retryExitCode}. 请结束残留后台进程后重试。"
+            };
+        }
+
+        return new LauncherResult
+        {
+            Success = false,
+            Stage = "launch",
+            Code = "activation_retry_timeout",
+            Message = "Explicit activation retry timed out before host became ready. 请结束残留后台进程后重试。"
+        };
+    }
+
+    private static async Task CloseWindowsAsync(SplashWindow splashWindow, LoadingDetailsWindow? loadingDetailsWindow)
+    {
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            try
+            {
+                if (splashWindow.IsVisible && splashWindow.IsLoaded)
+                {
+                    splashWindow.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to close splash window: {ex.Message}");
+            }
+
+            try
+            {
+                if (loadingDetailsWindow is not null && loadingDetailsWindow.IsVisible)
+                {
+                    loadingDetailsWindow.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to close loading details window: {ex.Message}");
+            }
+        });
     }
 
     private async Task<(LauncherResult Result, Process? Process)> LaunchHostWithIpcAsync(SplashWindow? splashWindow = null, string? customHostPath = null)
@@ -377,6 +514,9 @@ internal sealed class LauncherFlowCoordinator
         processStartInfo.EnvironmentVariables[LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename;
 
         var hostProcess = Process.Start(processStartInfo);
+        Console.WriteLine(
+            $"[LauncherFlowCoordinator] Host launch requested. Path='{hostPath}'; WorkingDir='{hostWorkingDir}'; " +
+            $"Pid={(hostProcess is null ? -1 : hostProcess.Id)}; Args='{processStartInfo.Arguments}'.");
         return (new LauncherResult
         {
             Success = true,

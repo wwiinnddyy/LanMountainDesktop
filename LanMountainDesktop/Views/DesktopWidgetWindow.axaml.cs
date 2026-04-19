@@ -25,6 +25,23 @@ public partial class DesktopWidgetWindow : Window
         ComponentContainer.Child = componentContent;
     }
 
+    public void UpdateComponentLayout(double width, double height)
+    {
+        ComponentContainer.Width = width;
+        ComponentContainer.Height = height;
+
+        if (ComponentContainer.Child is Control child)
+        {
+            child.Width = width;
+            child.Height = height;
+        }
+
+        if (OperatingSystem.IsWindows() && IsVisible)
+        {
+            Dispatcher.UIThread.Post(UpdateInteractiveRegion, DispatcherPriority.Render);
+        }
+    }
+
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);

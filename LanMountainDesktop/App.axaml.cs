@@ -77,6 +77,8 @@ public partial class App : Application
     private LauncherIpcClient? _launcherIpcClient;
     private LoadingStateManager? _loadingStateManager;
     private LoadingStateReporter? _loadingStateReporter;
+    private bool _singleInstanceReleased;
+    private int _forcedExitScheduled;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -290,14 +292,18 @@ public partial class App : Application
                 ReportStartupProgress(StartupStage.InitializingUI, 60, "正在初始化界面...");
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
-            () =>
-            {
-                AppLogger.Info("App", "Desktop lifetime exit triggered.");
-                PerformExitCleanup();
-            },
+            OnDesktopLifetimeExit,
             () => CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow),
             StartWeatherLocationRefreshIfNeeded);
         _desktopShellHost.Initialize(this);
+    }
+
+    private void OnDesktopLifetimeExit()
+    {
+        AppLogger.Info("App", "Desktop lifetime exit triggered.");
+        PerformExitCleanup();
+        ReleaseSingleInstanceAfterExit("DesktopLifetimeExit");
+        ScheduleForcedProcessTermination("DesktopLifetimeExit");
     }
 
     private void OnTrayExitClick(object? sender, EventArgs e)
@@ -659,69 +665,101 @@ public partial class App : Application
 
     private void ActivateMainWindow()
     {
-        RestoreOrCreateMainWindow(showSingleInstanceNotice: true, source: "SingleInstance");
+        AppLogger.Info("SingleInstance", $"Activation callback received. Pid={Environment.ProcessId}.");
+
+        try
+        {
+            var restored = Dispatcher.UIThread.CheckAccess()
+                ? RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance")
+                : Dispatcher.UIThread.InvokeAsync(
+                    () => RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance"),
+                    DispatcherPriority.Send).GetAwaiter().GetResult();
+
+            if (!restored)
+            {
+                throw new InvalidOperationException("Main window restore failed in activation callback.");
+            }
+
+            AppLogger.Info("SingleInstance", "Activation callback completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("SingleInstance", "Activation callback failed while restoring the desktop shell.", ex);
+            throw;
+        }
     }
 
     private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                return;
-            }
-
-            try
-            {
-                if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
-                {
-                    _transparentOverlayWindow.Hide();
-                }
-
-                var mainWindow = GetOrCreateMainWindow(desktop, source);
-                mainWindow.PrepareEnterAnimation();
-
-                mainWindow.ShowInTaskbar = true;
-
-                if (!mainWindow.IsVisible)
-                {
-                    mainWindow.Show();
-                }
-
-                if (mainWindow.WindowState == WindowState.Minimized)
-                {
-                    mainWindow.WindowState = WindowState.Normal;
-                }
-
-                if (mainWindow.WindowState != WindowState.FullScreen)
-                {
-                    mainWindow.WindowState = WindowState.FullScreen;
-                }
-
-                mainWindow.Activate();
-                mainWindow.Topmost = true;
-                mainWindow.Topmost = false;
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    mainWindow.PlayEnterAnimation();
-                }, DispatcherPriority.Background);
-
-                SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
-                AppLogger.Info(
-                    "DesktopShell",
-                    $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
-
-                if (showSingleInstanceNotice)
-                {
-                    mainWindow.ShowSingleInstanceNotice();
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
-            }
+            _ = RestoreOrCreateMainWindowCore(showSingleInstanceNotice, source);
         }, DispatcherPriority.Send);
+    }
+
+    private bool RestoreOrCreateMainWindowCore(bool showSingleInstanceNotice, string source)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            AppLogger.Warn("DesktopShell", $"Restore skipped because desktop lifetime is unavailable. Source='{source}'.");
+            return false;
+        }
+
+        try
+        {
+            AppLogger.Info("DesktopShell", $"Restoring desktop shell started. Source='{source}'.");
+
+            if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
+            {
+                _transparentOverlayWindow.Hide();
+            }
+
+            var mainWindow = GetOrCreateMainWindow(desktop, source);
+            mainWindow.PrepareEnterAnimation();
+
+            mainWindow.ShowInTaskbar = true;
+
+            if (!mainWindow.IsVisible)
+            {
+                mainWindow.Show();
+            }
+
+            if (mainWindow.WindowState == WindowState.Minimized)
+            {
+                mainWindow.WindowState = WindowState.Normal;
+            }
+
+            if (mainWindow.WindowState != WindowState.FullScreen)
+            {
+                mainWindow.WindowState = WindowState.FullScreen;
+            }
+
+            mainWindow.Activate();
+            mainWindow.Topmost = true;
+            mainWindow.Topmost = false;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                mainWindow.PlayEnterAnimation();
+            }, DispatcherPriority.Background);
+
+            SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
+            AppLogger.Info(
+                "DesktopShell",
+                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
+
+            if (showSingleInstanceNotice)
+            {
+                mainWindow.ShowSingleInstanceNotice();
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
+            return false;
+        }
     }
     
     private void EnsureTransparentOverlayWindow()
@@ -885,6 +923,57 @@ public partial class App : Application
                stackTrace.Contains("AvaloniaWebView.WebView.OnAttachedToVisualTree", StringComparison.Ordinal);
     }
 
+    private void ReleaseSingleInstanceAfterExit(string source)
+    {
+        if (_singleInstanceReleased)
+        {
+            return;
+        }
+
+        _singleInstanceReleased = true;
+        var singleInstance = CurrentSingleInstanceService;
+        CurrentSingleInstanceService = null;
+        if (singleInstance is null)
+        {
+            AppLogger.Info("SingleInstance", $"No single-instance handle to release. Source='{source}'.");
+            return;
+        }
+
+        try
+        {
+            singleInstance.Dispose();
+            AppLogger.Info("SingleInstance", $"Released single-instance handle. Source='{source}'.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("SingleInstance", $"Failed to release single-instance handle. Source='{source}'.", ex);
+        }
+    }
+
+    private void ScheduleForcedProcessTermination(string source)
+    {
+        if (Interlocked.Exchange(ref _forcedExitScheduled, 1) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+                AppLogger.Warn(
+                    "DesktopShell",
+                    $"Process did not terminate after desktop exit cleanup. Forcing process exit. Source='{source}'; ShutdownIntent='{_shutdownIntent}'.");
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("DesktopShell", $"Forced process termination scheduler failed. Source='{source}'.", ex);
+            }
+        });
+    }
+
     private void PerformExitCleanup()
     {
         if (_exitCleanupCompleted)
@@ -933,6 +1022,22 @@ public partial class App : Application
         if (_settingsPageRegistry is IDisposable disposableRegistry)
         {
             disposableRegistry.Dispose();
+        }
+
+        if (_transparentOverlayWindow is not null)
+        {
+            try
+            {
+                _transparentOverlayWindow.Close();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("DesktopShell", "Failed to close transparent overlay during exit cleanup.", ex);
+            }
+            finally
+            {
+                _transparentOverlayWindow = null;
+            }
         }
 
         AudioRecorderServiceFactory.DisposeSharedServices();
@@ -1154,11 +1259,9 @@ public partial class App : Application
                 "DesktopShell",
                 $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
             
-            // 检查三指滑动功能是否启用
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-            if (appSnapshot.EnableThreeFingerSwipe)
+            if (appSnapshot.EnableThreeFingerSwipe && appSnapshot.EnableFusedDesktop)
             {
-                // 显示透明覆盖层窗口
                 EnsureTransparentOverlayWindow();
                 _transparentOverlayWindow?.Show();
             }
