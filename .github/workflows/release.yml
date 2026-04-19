@@ -382,7 +382,8 @@ jobs:
             --mainExe LanMountainDesktop.exe `
             --outputDir $outputDir `
             --channel win `
-            --noPortable
+            --noPortable `
+            --skipVeloAppCheck
 
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Velopack packaging failed."
