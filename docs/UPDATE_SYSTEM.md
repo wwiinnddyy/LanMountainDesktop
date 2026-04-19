@@ -442,3 +442,10 @@ private static void EnsurePathWithinRoot(string targetPath, string rootPath)
 - [Launcher 架构文档](LAUNCHER.md)
 - [构建和部署指南](BUILD_AND_DEPLOY.md)
 - [故障排除指南](TROUBLESHOOTING.md)
+
+## VeloPack Packaging (Current)
+
+- Release pipeline now produces VeloPack native assets (eleases.win.json, *.nupkg, RELEASES).
+- Launcher remains the installer and rollback authority; only package generation moved to VeloPack.
+- Legacy iles.json + update.zip generation remains available only as a disabled fallback path in CI.
+

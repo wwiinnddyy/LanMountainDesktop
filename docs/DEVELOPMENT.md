@@ -166,3 +166,10 @@ Use `LanMountainDesktop.slnx` as the workspace entry point. The standard loop is
 For packaging, see `LanMountainDesktop/PACKAGING.md`. For plugin package generation or local feed workflows, use `scripts/Pack-PluginPackages.ps1`.
 
 **Launcher Architecture**: LanMountainDesktop uses a Launcher as the single entry point, responsible for version management, updates, and launching the main application. See the Chinese section above for detailed architecture documentation.
+
+## VeloPack Release Assets
+
+- Windows incremental release packaging now uses VeloPack native outputs (eleases.win.json, *.nupkg).
+- Launcher still performs update apply/rollback; VeloPack is used for package generation.
+- Legacy delta script flow is retained behind a disabled fallback switch in CI.
+

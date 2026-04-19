@@ -52,9 +52,7 @@ public sealed class UpdateWorkflowService
     private const string LauncherDirectoryName = ".launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
-    private const string DeltaManifestFileName = "files.json";
-    private const string DeltaSignatureFileName = "files.json.sig";
-    private const string DeltaArchiveFileName = "update.zip";
+    private const string VelopackReleasesFileName = "releases.win.json";
 
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
@@ -81,8 +79,7 @@ public sealed class UpdateWorkflowService
     }
 
     /// <summary>
-    /// Checks whether a GitHub Release contains delta update assets (files.json, files.json.sig, update.zip).
-    /// Also supports versioned filenames like files-{version}.json, delta-{old}-to-{new}.zip
+    /// Checks whether a GitHub Release contains Velopack assets needed for incremental updates.
     /// </summary>
     public static bool IsDeltaUpdateAvailable(GitHubReleaseInfo release)
     {
@@ -91,73 +88,13 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        var assetNames = release.Assets.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        
-        // Check for exact matches first (preferred)
-        var hasExactManifest = assetNames.Contains(DeltaManifestFileName);
-        var hasExactSignature = assetNames.Contains(DeltaSignatureFileName);
-        var hasExactArchive = assetNames.Contains(DeltaArchiveFileName);
-        
-        if (hasExactManifest && hasExactSignature && hasExactArchive)
-        {
-            return true;
-        }
-        
-        // Check for versioned filenames (e.g., files-1.0.0.json, delta-0.9.9-to-1.0.0.zip)
-        var hasVersionedManifest = assetNames.Any(n => n.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
-            && n.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-        var hasVersionedSignature = assetNames.Any(n => n.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
-            && n.EndsWith(".sig", StringComparison.OrdinalIgnoreCase));
-        var hasVersionedArchive = assetNames.Any(n => n.StartsWith("delta-", StringComparison.OrdinalIgnoreCase) 
-            && n.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
-        
-        return hasVersionedManifest && hasVersionedSignature && hasVersionedArchive;
-    }
-    
-    /// <summary>
-    /// Finds the best matching delta asset name from the release assets.
-    /// Prefers exact matches, falls back to versioned filenames.
-    /// </summary>
-    private static string? FindDeltaAssetName(GitHubReleaseInfo release, string baseName)
-    {
-        if (release?.Assets is null)
-        {
-            return null;
-        }
-        
-        // Try exact match first
-        var exactMatch = release.Assets.FirstOrDefault(a => 
-            string.Equals(a.Name, baseName, StringComparison.OrdinalIgnoreCase));
-        if (exactMatch != null)
-        {
-            return exactMatch.Name;
-        }
-        
-        // Fall back to pattern matching
-        return baseName.ToLowerInvariant() switch
-        {
-            "files.json" => release.Assets
-                .Where(a => a.Name.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
-                    && a.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(a => a.Name.Length)
-                .FirstOrDefault()?.Name,
-            "files.json.sig" => release.Assets
-                .Where(a => a.Name.StartsWith("files-", StringComparison.OrdinalIgnoreCase) 
-                    && a.Name.EndsWith(".sig", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(a => a.Name.Length)
-                .FirstOrDefault()?.Name,
-            "update.zip" => release.Assets
-                .Where(a => a.Name.StartsWith("delta-", StringComparison.OrdinalIgnoreCase) 
-                    && a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(a => a.Name.Length)
-                .FirstOrDefault()?.Name,
-            _ => null
-        };
+        var hasFeed = release.Assets.Any(a => string.Equals(a.Name, VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase));
+        var hasFull = release.Assets.Any(a => a.Name.EndsWith("-full.nupkg", StringComparison.OrdinalIgnoreCase));
+        return hasFeed && hasFull;
     }
 
     /// <summary>
-    /// Downloads the delta update package (files.json, files.json.sig, update.zip) from a GitHub Release
-    /// and places them in the Launcher's incoming directory for the Launcher to apply on next startup.
+    /// Downloads Velopack release feed and package files to the Launcher's incoming directory.
     /// </summary>
     public async Task<UpdateDownloadResult> DownloadDeltaUpdateAsync(
         UpdateCheckResult checkResult,
@@ -171,9 +108,11 @@ public sealed class UpdateWorkflowService
             return new UpdateDownloadResult(false, null, "No update available for delta download.");
         }
 
-        if (!IsDeltaUpdateAvailable(checkResult.Release))
+        var releasesFeedAsset = checkResult.Release.Assets.FirstOrDefault(a =>
+            string.Equals(a.Name, VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase));
+        if (releasesFeedAsset is null)
         {
-            return new UpdateDownloadResult(false, null, "Release does not contain delta update assets.");
+            return new UpdateDownloadResult(false, null, "Release does not contain releases.win.json.");
         }
 
         var incomingDir = GetLauncherIncomingDirectory();
@@ -191,55 +130,29 @@ public sealed class UpdateWorkflowService
         var downloadSource = state.UpdateDownloadSource;
         var downloadThreads = state.UpdateDownloadThreads;
 
-        // Find the actual asset names (support both exact and versioned filenames)
-        var manifestAssetName = FindDeltaAssetName(checkResult.Release, DeltaManifestFileName);
-        var signatureAssetName = FindDeltaAssetName(checkResult.Release, DeltaSignatureFileName);
-        var archiveAssetName = FindDeltaAssetName(checkResult.Release, DeltaArchiveFileName);
-        
-        if (manifestAssetName is null || signatureAssetName is null || archiveAssetName is null)
-        {
-            return new UpdateDownloadResult(false, null, "One or more delta assets not found in release.");
-        }
-        
-        // Build asset map with actual names from release
-        var assetMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [DeltaManifestFileName] = manifestAssetName,
-            [DeltaSignatureFileName] = signatureAssetName,
-            [DeltaArchiveFileName] = archiveAssetName
-        };
-        
-        var requiredAssets = new Dictionary<string, GitHubReleaseAsset>(StringComparer.OrdinalIgnoreCase)
-        {
-            [DeltaManifestFileName] = null!,
-            [DeltaSignatureFileName] = null!,
-            [DeltaArchiveFileName] = null!
-        };
+        var latestVersionText = checkResult.LatestVersionText.Trim();
+        var targetPackages = checkResult.Release.Assets
+            .Where(a => a.Name.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
+            .Where(a => a.Name.Contains(latestVersionText, StringComparison.OrdinalIgnoreCase))
+            .Where(a =>
+                a.Name.EndsWith("-full.nupkg", StringComparison.OrdinalIgnoreCase) ||
+                a.Name.EndsWith("-delta.nupkg", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        foreach (var asset in checkResult.Release.Assets)
+        if (targetPackages.Count == 0)
         {
-            // Match by actual asset name
-            foreach (var (key, actualName) in assetMap)
-            {
-                if (string.Equals(asset.Name, actualName, StringComparison.OrdinalIgnoreCase))
-                {
-                    requiredAssets[key] = asset;
-                    break;
-                }
-            }
+            return new UpdateDownloadResult(false, null, "No Velopack nupkg asset found for the target version.");
         }
 
-        if (requiredAssets.Any(kvp => kvp.Value is null))
-        {
-            return new UpdateDownloadResult(false, null, "One or more delta assets not found in release.");
-        }
+        var requiredAssets = new List<GitHubReleaseAsset> { releasesFeedAsset };
+        requiredAssets.AddRange(targetPackages);
 
         var totalAssets = requiredAssets.Count;
         var completedAssets = 0;
 
-        foreach (var (name, asset) in requiredAssets)
+        foreach (var asset in requiredAssets)
         {
-            var destinationPath = Path.Combine(incomingDir, name);
+            var destinationPath = Path.Combine(incomingDir, asset.Name);
 
             // Skip if already downloaded and file exists
             if (File.Exists(destinationPath))
@@ -247,7 +160,7 @@ public sealed class UpdateWorkflowService
                 var existingHash = await GitHubReleaseUpdateService.ComputeFileSha256Async(destinationPath, cancellationToken);
                 if (asset.Sha256 is not null && string.Equals(existingHash, asset.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
-                    AppLogger.Info("UpdateWorkflow", $"Delta asset {name} already downloaded with matching hash, skipping.");
+                    AppLogger.Info("UpdateWorkflow", $"Velopack asset {asset.Name} already downloaded with matching hash, skipping.");
                     completedAssets++;
                     progress?.Report((double)completedAssets / totalAssets);
                     continue;
@@ -271,21 +184,21 @@ public sealed class UpdateWorkflowService
             if (!result.Success)
             {
                 // Clean up partially downloaded files
-                foreach (var file in requiredAssets.Keys)
+                foreach (var file in requiredAssets.Select(a => a.Name))
                 {
                     try { File.Delete(Path.Combine(incomingDir, file)); } catch { }
                 }
-                return new UpdateDownloadResult(false, null, $"Failed to download delta asset {name}: {result.ErrorMessage}");
+                return new UpdateDownloadResult(false, null, $"Failed to download Velopack asset {asset.Name}: {result.ErrorMessage}");
             }
 
             completedAssets++;
             progress?.Report((double)completedAssets / totalAssets);
         }
 
-        // Save state indicating a delta update is pending
+        // Save state indicating a Velopack update is pending.
         SaveState(state with
         {
-            PendingUpdateInstallerPath = Path.Combine(incomingDir, DeltaManifestFileName),
+            PendingUpdateInstallerPath = Path.Combine(incomingDir, VelopackReleasesFileName),
             PendingUpdateVersion = checkResult.LatestVersionText,
             PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
                 ? null
@@ -294,13 +207,13 @@ public sealed class UpdateWorkflowService
             PendingUpdateSha256 = null
         });
 
-        AppLogger.Info("UpdateWorkflow", $"Delta update package downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
+        AppLogger.Info("UpdateWorkflow", $"Velopack update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
 
-        return new UpdateDownloadResult(true, Path.Combine(incomingDir, DeltaManifestFileName), null);
+        return new UpdateDownloadResult(true, Path.Combine(incomingDir, VelopackReleasesFileName), null);
     }
 
     /// <summary>
-    /// Checks whether the pending update is a delta update (files.json in incoming dir) vs a full installer.
+    /// Checks whether the pending update is managed by Launcher incoming payload.
     /// </summary>
     public bool IsPendingDeltaUpdate()
     {
@@ -311,8 +224,8 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        // Delta updates are identified by the manifest file path
-        return pendingPath.EndsWith(DeltaManifestFileName, StringComparison.OrdinalIgnoreCase)
+        // Velopack updates are identified by the releases feed path.
+        return pendingPath.EndsWith(VelopackReleasesFileName, StringComparison.OrdinalIgnoreCase)
             || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
     }
 

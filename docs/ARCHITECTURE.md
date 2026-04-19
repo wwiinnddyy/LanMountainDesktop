@@ -194,3 +194,9 @@ This repository is organized around a desktop host app plus a host-side plugin e
 **Launcher Architecture**: `LanMountainDesktop.Launcher/` serves as the single entry point, managing OOBE, splash screen, multi-version deployment, incremental updates, and plugin installation. It uses a version directory structure (`app-{version}/`) with marker files (`.current`, `.partial`, `.destroy`) to enable atomic updates and rollback capabilities. See the Chinese section above for detailed architecture documentation.
 
 The runtime flow starts with the Launcher selecting the best version, then proceeds into `Program.cs`, into `App.axaml.cs`, initializes settings/theme/localization services, then boots the desktop shell, tray, windows, and plugin runtime. The most important behavior boundaries are component registration, plugin activation, appearance resources, and settings persistence.
+
+## VeloPack Integration Note
+
+- Incremental package build/publish has moved to VeloPack native assets (eleases.win.json + *.nupkg).
+- Launcher runtime responsibilities are unchanged: OOBE, startup orchestration, update apply, and rollback.
+

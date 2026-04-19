@@ -11,6 +11,8 @@ public sealed class ReleaseInfo
     public required DateTime PublishedAt { get; init; }
     public required List<ReleaseAsset> Assets { get; init; }
     public string? Body { get; init; }
+    public string? VelopackFeedUrl { get; init; }
+    public string? VelopackLegacyReleasesUrl { get; init; }
 }
 
 /// <summary>

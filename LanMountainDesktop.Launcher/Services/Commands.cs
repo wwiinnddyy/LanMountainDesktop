@@ -91,11 +91,7 @@ internal static class Commands
             "check" => updateEngine.CheckPendingUpdate(),
             "apply" => await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false),
             "rollback" => updateEngine.RollbackLatest(),
-            "download" => await updateEngine.DownloadAsync(
-                context.GetOption("manifest-url") ?? throw new InvalidOperationException("Missing --manifest-url."),
-                context.GetOption("signature-url") ?? throw new InvalidOperationException("Missing --signature-url."),
-                context.GetOption("archive-url") ?? throw new InvalidOperationException("Missing --archive-url."),
-                CancellationToken.None).ConfigureAwait(false),
+            "download" => await DownloadUpdatePayloadAsync(context, updateEngine).ConfigureAwait(false),
             _ => new LauncherResult
             {
                 Success = false,
@@ -104,6 +100,35 @@ internal static class Commands
                 Message = $"Unsupported update sub-command '{context.SubCommand}'."
             }
         };
+    }
+
+    private static async Task<LauncherResult> DownloadUpdatePayloadAsync(CommandContext context, UpdateEngineService updateEngine)
+    {
+        var releasesUrl = context.GetOption("releases-url");
+        if (!string.IsNullOrWhiteSpace(releasesUrl))
+        {
+            var packageUrls = new List<string>();
+            var packageUrl = context.GetOption("package-url");
+            if (!string.IsNullOrWhiteSpace(packageUrl))
+            {
+                packageUrls.Add(packageUrl);
+            }
+
+            var packageUrlsCsv = context.GetOption("package-urls");
+            if (!string.IsNullOrWhiteSpace(packageUrlsCsv))
+            {
+                packageUrls.AddRange(packageUrlsCsv
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+
+            return await updateEngine.DownloadVelopackAsync(releasesUrl, packageUrls, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        return await updateEngine.DownloadAsync(
+            context.GetOption("manifest-url") ?? throw new InvalidOperationException("Missing --manifest-url."),
+            context.GetOption("signature-url") ?? throw new InvalidOperationException("Missing --signature-url."),
+            context.GetOption("archive-url") ?? throw new InvalidOperationException("Missing --archive-url."),
+            CancellationToken.None).ConfigureAwait(false);
     }
 
     private static LauncherResult ExecutePluginCommand(

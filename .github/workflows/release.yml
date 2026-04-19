@@ -20,6 +20,7 @@ env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
   DOTNET_gcServer: 1
+  ENABLE_LEGACY_DELTA_FALLBACK: 'false'
 
 jobs:
   prepare:
@@ -109,7 +110,7 @@ jobs:
 
           Write-Host "Publishing Launcher with AOT for Windows $arch..."
 
-          # AOT 单文件发布
+          # AOT publish
           dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
             -c Release `
             -o ./$launcherPublishDir `
@@ -127,7 +128,7 @@ jobs:
             exit 1
           }
 
-          # 显示发布结果
+          # 鏄剧ず鍙戝竷缁撴灉
           Write-Host "Launcher published to: $launcherPublishDir"
           $exeFile = Get-ChildItem -Path $launcherPublishDir -Filter "*.exe" | Select-Object -First 1
           if ($exeFile) {
@@ -135,7 +136,7 @@ jobs:
             Write-Host "Launcher executable: $($exeFile.Name) ($size MB)"
           }
 
-          # 清理不必要的文件（AOT 单文件应该只有一个 exe）
+          # Warn if unexpected extra files are produced
           $files = Get-ChildItem -Path $launcherPublishDir -File
           if ($files.Count -gt 1) {
             Write-Host "Warning: Expected single file but found $($files.Count) files"
@@ -317,7 +318,42 @@ jobs:
           Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Create App Package
+      - name: Install vpk
+        if: matrix.self_contained == true && matrix.arch == 'x64'
+        run: |
+          dotnet tool install --global vpk
+          echo "$env:USERPROFILE\\.dotnet\\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          vpk --version
+        shell: pwsh
+
+      - name: Prepare Previous Velopack Full Package
+        if: matrix.self_contained == true && matrix.arch == 'x64'
+        run: |
+          $outputDir = "velopack-output"
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+
+          try {
+            $headers = @{ "User-Agent" = "LanMountainDesktop-CI"; "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}" }
+            $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases?per_page=10" -Headers $headers
+            $previousRelease = $releases | Where-Object { -not $_.prerelease -and -not $_.draft } | Select-Object -First 1
+            if ($previousRelease) {
+              $previousFull = $previousRelease.assets |
+                Where-Object { $_.name -like "*-full.nupkg" } |
+                Select-Object -First 1
+              if ($previousFull) {
+                $dest = Join-Path $outputDir $previousFull.name
+                Invoke-WebRequest -Uri $previousFull.browser_download_url -OutFile $dest -Headers $headers
+                Write-Host "Downloaded previous package for Velopack delta generation."
+              } else {
+                Write-Host "No previous full package found. Velopack will generate full package only."
+              }
+            }
+          } catch {
+            Write-Host "Could not fetch previous release package: $_"
+          }
+        shell: pwsh
+
+      - name: Build Velopack Packages
         if: matrix.self_contained == true && matrix.arch == 'x64'
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
@@ -325,21 +361,33 @@ jobs:
           $publishDir = "publish/windows-$arch"
           $appDir = "app-$version"
           $currentAppPath = Join-Path $publishDir $appDir
-          $outputDir = "delta-output"
+          $outputDir = "velopack-output"
+
+          if (-not (Test-Path $currentAppPath)) {
+            Write-Error "Expected app directory not found: $currentAppPath"
+            exit 1
+          }
 
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          vpk pack `
+            --packId LanMountainDesktop `
+            --packVersion $version `
+            --packDir $currentAppPath `
+            --mainExe LanMountainDesktop.exe `
+            --outputDir $outputDir `
+            --channel win `
+            --noPortable
 
-          # 创建 app-{version}-win-{arch}.zip 供后续版本作为旧版本对比
-          $appZipPath = Join-Path $outputDir "app-$version-win-$arch.zip"
-          Write-Host "Creating app-$version-win-$arch.zip..."
-          Compress-Archive -Path "$currentAppPath\*" -DestinationPath $appZipPath -CompressionLevel Optimal
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Velopack packaging failed."
+            exit 1
+          }
 
-          $sizeMB = [Math]::Round((Get-Item $appZipPath).Length / 1MB, 2)
-          Write-Host "Created app-$version-win-$arch.zip: $sizeMB MB"
+          Get-ChildItem -Path $outputDir -File | Select-Object Name,Length
         shell: pwsh
 
-      - name: Generate Delta Package
-        if: matrix.self_contained == true && matrix.arch == 'x64'
+      - name: Legacy Delta Fallback (disabled by default)
+        if: matrix.self_contained == true && matrix.arch == 'x64' && env.ENABLE_LEGACY_DELTA_FALLBACK == 'true'
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
@@ -350,143 +398,26 @@ jobs:
           $scriptPath = "scripts/Generate-DeltaPackage.ps1"
 
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-
-          # --- Determine previous version and download its app package for diff ---
-          $previousVersion = $null
-          $previousAppPath = $null
-          try {
-            $headers = @{ "User-Agent" = "LanMountainDesktop-CI"; "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}" }
-            $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases?per_page=10" -Headers $headers
-            $previousRelease = $releases | Where-Object { -not $_.prerelease -and -not $_.draft } | Select-Object -First 1
-            if ($previousRelease) {
-              $previousVersion = $previousRelease.tag_name.TrimStart('v','V')
-              Write-Host "Previous release version: $previousVersion"
-
-              # 下载旧版本的 app-{version}-win-{arch}.zip
-              $prevAppZip = $previousRelease.assets | Where-Object { $_.name -eq "app-$previousVersion-win-$arch.zip" } | Select-Object -First 1
-              if ($prevAppZip) {
-                Write-Host "Found app-$previousVersion-win-$arch.zip in previous release - downloading for diff..."
-                $prevAppZipDest = Join-Path $outputDir "prev-app.zip"
-                Invoke-WebRequest -Uri $prevAppZip.browser_download_url -OutFile $prevAppZipDest -Headers $headers
-
-                # 解压 app-{version}.zip
-                $previousAppPath = Join-Path $outputDir "prev-app"
-                New-Item -ItemType Directory -Path $previousAppPath -Force | Out-Null
-                Expand-Archive -Path $prevAppZipDest -DestinationPath $previousAppPath -Force
-                Remove-Item -Path $prevAppZipDest -Force -ErrorAction SilentlyContinue
-
-                if ($previousAppPath -and (Test-Path $previousAppPath)) {
-                  $prevFileCount = (Get-ChildItem -Path $previousAppPath -Recurse -File).Count
-                  Write-Host "Extracted $prevFileCount files from previous version for diff"
-                }
-              } else {
-                Write-Host "No app-$previousVersion-win-$arch.zip found in previous release - will generate full package"
-                Write-Host "This is expected for the first release after this fix."
-              }
-            }
-          } catch {
-            Write-Host "Could not fetch previous release: $_"
-          }
-
-          # --- Generate delta package using the script ---
-          if ($previousAppPath -and (Test-Path $previousAppPath) -and $previousVersion) {
-            Write-Host "Generating delta package from $previousVersion to $version..."
-            & $scriptPath `
-              -PreviousVersion $previousVersion `
-              -CurrentVersion $version `
-              -PreviousDir $previousAppPath `
-              -CurrentDir $currentAppPath `
-              -OutputDir $outputDir
-
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "Generate-DeltaPackage.ps1 failed"
-              exit 1
-            }
-          } else {
-            Write-Host "No previous version available - generating full package..."
-            # Generate a "full" delta package (all files as "add")
-            & $scriptPath `
-              -PreviousVersion "0.0.0" `
-              -CurrentVersion $version `
-              -PreviousDir $currentAppPath `
-              -CurrentDir $currentAppPath `
-              -OutputDir $outputDir
-
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "Generate-DeltaPackage.ps1 failed"
-              exit 1
-            }
-          }
-
-          # Clean up previous version extraction
-          if ($previousAppPath -and (Test-Path $previousAppPath)) {
-            Remove-Item -Path $previousAppPath -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-          # Display results
-          $updateZipPath = Join-Path $outputDir "update.zip"
-          if (Test-Path $updateZipPath) {
-            $sizeMB = [Math]::Round((Get-Item $updateZipPath).Length / 1MB, 2)
-            Write-Host "Created update.zip: $sizeMB MB"
-          }
+          & $scriptPath `
+            -PreviousVersion "0.0.0" `
+            -CurrentVersion $version `
+            -PreviousDir $currentAppPath `
+            -CurrentDir $currentAppPath `
+            -OutputDir $outputDir
         shell: pwsh
 
-      - name: Sign File Map
-        if: matrix.self_contained == true && matrix.arch == 'x64'
-        run: |
-          $outputDir = "delta-output"
-          $filesJsonPath = Join-Path $outputDir "files.json"
-          $signaturePath = Join-Path $outputDir "files.json.sig"
-
-          if (-not (Test-Path $filesJsonPath)) {
-            Write-Error "files.json not found at $filesJsonPath"
-            exit 1
-          }
-
-          $privateKeyPem = "${{ secrets.UPDATE_PRIVATE_KEY_PEM }}"
-          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
-            Write-Warning "UPDATE_PRIVATE_KEY_PEM secret not configured - generating unsigned placeholder"
-            Set-Content -Path $signaturePath -Value "" -Encoding ASCII
-            exit 0
-          }
-
-          $privateKeyPath = Join-Path $env:RUNNER_TEMP "signing-key.pem"
-          Set-Content -Path $privateKeyPath -Value $privateKeyPem -Encoding ASCII
-
-          Add-Type -ReferencedAssemblies @("System.Security.Cryptography", "System.IO") -TypeDefinition @"
-          using System;
-          using System.IO;
-          using System.Security.Cryptography;
-          public class RsaSigner {
-              public static void Sign(string jsonPath, string keyPath, string sigPath) {
-                  var jsonBytes = File.ReadAllBytes(jsonPath);
-                  var rsa = RSA.Create();
-                  rsa.ImportFromPem(File.ReadAllText(keyPath));
-                  var sig = rsa.SignData(jsonBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                  File.WriteAllText(sigPath, Convert.ToBase64String(sig));
-              }
-          }
-          "@
-
-          [RsaSigner]::Sign($filesJsonPath, $privateKeyPath, $signaturePath)
-          Remove-Item -Path $privateKeyPath -Force
-
-          Write-Host "Signed files.json -> files.json.sig"
-        shell: pwsh
-
-      - name: Upload Delta Package
+      - name: Upload Velopack Package
         if: matrix.self_contained == true && matrix.arch == 'x64'
         uses: actions/upload-artifact@v4
         with:
-          name: release-delta-windows-x64
+          name: release-velopack-windows-x64
           path: |
-            delta-output/files.json
-            delta-output/files.json.sig
-            delta-output/update.zip
-            delta-output/app-*.zip
+            velopack-output/*.nupkg
+            velopack-output/releases.win.json
+            velopack-output/assets.win.json
+            velopack-output/RELEASES
           if-no-files-found: error
           retention-days: 90
-
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
@@ -889,10 +820,8 @@ jobs:
           mkdir -p release-files
           # Copy installers and packages
           find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
-          # Copy delta update files (files.json, files.json.sig, update.zip)
-          find artifacts -type f \( -name "files.json" -o -name "files.json.sig" -o -name "update.zip" \) -exec cp -v {} release-files/ \;
-          # Copy app package for future delta generation (app-{version}-win-{arch}.zip)
-          find artifacts -type f -name "app-*.zip" -exec cp -v {} release-files/ \;
+          # Copy Velopack release feed and update packages
+          find artifacts -type f \( -name "releases.win.json" -o -name "assets.win.json" -o -name "RELEASES" -o -name "*.nupkg" \) -exec cp -v {} release-files/ \;
           echo ""
           echo "Files ready for release:"
           ls -lh release-files/ || echo "No files found in release-files"
@@ -927,9 +856,9 @@ jobs:
             Installation: Double-click the .exe file and follow the wizard.
 
             ### Incremental Update (Windows x64)
-            - **files.json** - Update manifest listing changed files
-            - **files.json.sig** - RSA signature of the manifest
-            - **update.zip** - Archive containing changed files
+            - **releases.win.json** - Velopack release feed consumed by the launcher update flow
+            - **LanMountainDesktop-<version>-full.nupkg** - full package
+            - **LanMountainDesktop-<version>-delta.nupkg** - delta package (when available)
 
             Existing users: The app will automatically detect and apply the incremental update on next launch.
 
