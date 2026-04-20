@@ -980,6 +980,7 @@ jobs:
           $payloadRoot = Join-Path $PWD "payload-artifacts"
           $installerRoot = Join-Path $PWD "installer-artifacts"
           $outRoot = Join-Path $PWD "pdc-output"
+          $publishRoot = Join-Path $outRoot "published"
           $client = Join-Path $PWD "pdcc/PhainonDistributionCenter.Client"
           $config = Join-Path $PWD "pdc-work/phainon.resolved.yml"
 
@@ -991,6 +992,7 @@ jobs:
           }
           New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
           New-Item -ItemType Directory -Path $outRoot -Force | Out-Null
+          New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
 
           $payloadArtifacts = Get-ChildItem -LiteralPath $payloadRoot -Directory
           if (-not $payloadArtifacts) {
@@ -1012,8 +1014,6 @@ jobs:
             $stagedPayloadDir = Join-Path $stageRoot "payloads/$platformKey"
             ./scripts/Prepare-PdccOut.ps1 -SourceDir $payloadArtifact.FullName -OutputDir $stagedPayloadDir
 
-            $publishRoot = Join-Path $outRoot "published/$platformKey"
-            New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
             $parts = $platformKey.Split('-', 2)
             if ($parts.Count -lt 2) {
               throw "Invalid platform key format: $platformKey"
@@ -1023,6 +1023,7 @@ jobs:
             $packageName = "LanMountainDesktop_app_${os}_${arch}_release_folder.zip"
             $packagePath = Join-Path $publishRoot $packageName
 
+            Write-Host "Preparing PDCC subchannel package for $platformKey..."
             & $client $config GenerateFileMap $stagedPayloadDir
             if ($LASTEXITCODE -ne 0) {
               throw "PDCC GenerateFileMap failed for $platformKey."
@@ -1032,17 +1033,27 @@ jobs:
               Remove-Item -LiteralPath $packagePath -Force
             }
             Compress-Archive -Path (Join-Path $stagedPayloadDir '*') -DestinationPath $packagePath -Force
+            $packageSizeMb = [Math]::Round((Get-Item -LiteralPath $packagePath).Length / 1MB, 2)
+            Write-Host "Prepared package: $packageName ($packageSizeMb MB)"
+          }
 
-            Push-Location $publishRoot
-            try {
-              & $client $config Publish $env:PRIMARY_VERSION $env:VERSION $publishRoot
-              if ($LASTEXITCODE -ne 0) {
-                throw "PDCC Publish failed for $platformKey."
-              }
+          $subchannelPackages = Get-ChildItem -LiteralPath $publishRoot -File -Filter "LanMountainDesktop_app_*_release_folder.zip"
+          if (-not $subchannelPackages) {
+            throw "No PDCC subchannel packages were prepared."
+          }
+
+          Write-Host "Publishing $($subchannelPackages.Count) subchannels in a single PDCC Publish run..."
+          $subchannelPackages | Sort-Object Name | ForEach-Object { Write-Host " - $($_.Name)" }
+
+          Push-Location $publishRoot
+          try {
+            & $client $config Publish $env:PRIMARY_VERSION $env:VERSION $publishRoot
+            if ($LASTEXITCODE -ne 0) {
+              throw "PDCC Publish failed."
             }
-            finally {
-              Pop-Location
-            }
+          }
+          finally {
+            Pop-Location
           }
 
           if (Test-Path (Join-Path $stageRoot "installers")) {
