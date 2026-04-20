@@ -976,13 +976,22 @@ jobs:
           }
           $env:PDC_SigningKey = $signingKey
 
+          $workDir = Join-Path $PWD "pdc-work"
           $stageRoot = Join-Path $PWD "pdc-stage"
           $payloadRoot = Join-Path $PWD "payload-artifacts"
           $installerRoot = Join-Path $PWD "installer-artifacts"
           $outRoot = Join-Path $PWD "pdc-output"
           $publishRoot = Join-Path $outRoot "published"
           $client = Join-Path $PWD "pdcc/PhainonDistributionCenter.Client"
-          $config = Join-Path $PWD "pdc-work/phainon.resolved.yml"
+          $config = Join-Path $workDir "phainon.resolved.yml"
+
+          New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+          if (-not (Test-Path -LiteralPath $config)) {
+            throw "Resolved PDCC config was not found: $config"
+          }
+          if (-not (Test-Path -LiteralPath $client)) {
+            throw "PDCC client was not found: $client"
+          }
 
           if (Test-Path $stageRoot) {
             Remove-Item -LiteralPath $stageRoot -Recurse -Force
