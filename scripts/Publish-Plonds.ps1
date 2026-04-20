@@ -80,7 +80,13 @@ function Invoke-AwsSyncIfPossible {
         return
     }
 
-    & aws @Arguments
+    if ($IgnoreFailure) {
+        & aws @Arguments 2>$null
+    }
+    else {
+        & aws @Arguments
+    }
+
     if ($LASTEXITCODE -ne 0 -and -not $IgnoreFailure) {
         throw "aws command failed: aws $($Arguments -join ' ')"
     }

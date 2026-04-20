@@ -759,15 +759,42 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $key = $env:PLONDS_SIGNING_KEY
-          if ([string]::IsNullOrWhiteSpace($key)) {
-            $key = $env:PDC_SIGNING_KEY
+          function Test-PemKey {
+            param([string]$PemText)
+
+            if ([string]::IsNullOrWhiteSpace($PemText)) {
+              return $false
+            }
+
+            $rsa = [System.Security.Cryptography.RSA]::Create()
+            try {
+              $rsa.ImportFromPem($PemText)
+              return $true
+            }
+            catch {
+              return $false
+            }
+            finally {
+              $rsa.Dispose()
+            }
           }
-          if ([string]::IsNullOrWhiteSpace($key)) {
-            $key = $env:UPDATE_PRIVATE_KEY_PEM
+
+          $candidates = @(
+            $env:PLONDS_SIGNING_KEY,
+            $env:UPDATE_PRIVATE_KEY_PEM,
+            $env:PDC_SIGNING_KEY
+          )
+
+          $key = $null
+          foreach ($candidate in $candidates) {
+            if (Test-PemKey $candidate) {
+              $key = $candidate
+              break
+            }
           }
+
           if ([string]::IsNullOrWhiteSpace($key)) {
-            throw "Missing PLONDS_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM."
+            throw "Missing a valid PEM signing key in PLONDS_SIGNING_KEY, UPDATE_PRIVATE_KEY_PEM, or PDC_SIGNING_KEY."
           }
 
           $keyPath = Join-Path $PWD "update-private-key.pem"
