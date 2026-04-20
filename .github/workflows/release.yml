@@ -372,12 +372,12 @@ jobs:
           Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
 
           $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
-          $repoPublicKey = (Get-Content -Path $repoPublicKeyPath -Raw)
-          $normalizePem = {
-            param([string]$pem)
-            return (($pem -replace "`r`n", "`n" -replace "`r", "`n").Trim())
-          }
-          if (& $normalizePem $repoPublicKey -ne (& $normalizePem $derivedPublicKey)) {
+          $repoPublicKeyPem = Get-Content -Path $repoPublicKeyPath -Raw
+          $repoRsa = [System.Security.Cryptography.RSA]::Create()
+          $repoRsa.ImportFromPem($repoPublicKeyPem)
+          $repoSpki = [Convert]::ToBase64String($repoRsa.ExportSubjectPublicKeyInfo())
+          $derivedSpki = [Convert]::ToBase64String($rsa.ExportSubjectPublicKeyInfo())
+          if ($repoSpki -ne $derivedSpki) {
             Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
             exit 1
           }
@@ -662,12 +662,12 @@ jobs:
           Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
 
           $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
-          $repoPublicKey = (Get-Content -Path $repoPublicKeyPath -Raw)
-          $normalizePem = {
-            param([string]$pem)
-            return (($pem -replace "`r`n", "`n" -replace "`r", "`n").Trim())
-          }
-          if (& $normalizePem $repoPublicKey -ne (& $normalizePem $derivedPublicKey)) {
+          $repoPublicKeyPem = Get-Content -Path $repoPublicKeyPath -Raw
+          $repoRsa = [System.Security.Cryptography.RSA]::Create()
+          $repoRsa.ImportFromPem($repoPublicKeyPem)
+          $repoSpki = [Convert]::ToBase64String($repoRsa.ExportSubjectPublicKeyInfo())
+          $derivedSpki = [Convert]::ToBase64String($rsa.ExportSubjectPublicKeyInfo())
+          if ($repoSpki -ne $derivedSpki) {
             Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
             exit 1
           }
