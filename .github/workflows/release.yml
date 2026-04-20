@@ -728,6 +728,7 @@ jobs:
       PDC_ENDPOINT: ${{ vars.PDC_ENDPOINT }}
       PDC_TOKEN: ${{ secrets.PDC_TOKEN }}
       PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
+      PDC_SIGNING_KEY_PS: ${{ secrets.PDC_SIGNING_KEY_PS }}
       UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
       S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -899,7 +900,12 @@ jobs:
           $env:PDC_Token = $env:PDC_TOKEN
           $env:S3_AccessKey = $env:S3_ACCESS_KEY
           $env:S3_SecretKey = $env:S3_SECRET_KEY
-          $env:PDC_SigningKeyPs = ""
+          $signingKeyPs = $env:PDC_SIGNING_KEY_PS
+          if ([string]::IsNullOrWhiteSpace($signingKeyPs)) {
+            # Keep a non-empty value so PDCC required-env check passes on Linux runners.
+            $signingKeyPs = " "
+          }
+          $env:PDC_SigningKeyPs = $signingKeyPs
           $signingKey = $env:PDC_SIGNING_KEY
           if ([string]::IsNullOrWhiteSpace($signingKey)) {
             $signingKey = $env:UPDATE_PRIVATE_KEY_PEM
