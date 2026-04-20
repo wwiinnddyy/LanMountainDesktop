@@ -18,9 +18,9 @@ components:
 variables:
   number: 0
 fileRepoRoot: "__FILE_REPO_ROOT__"
-archiveRoot: "__ARCHIVE_ROOT__"
+archiveRoot: "__ARCHIVE_ROOT__/$(primaryVersion)/$(version)/"
 bucketKeyRoot: "lanmountain/update/repo/"
-archiveBucketKeyRoot: "lanmountain/update/installers/"
+archiveBucketKeyRoot: "lanmountain/update/archive/$(primaryVersion)/$(version)/"
 appChangeLogPath: "$(thisFileDir)/../CHANGELOG.md"
 appChangeLogTemplate: |
   $(changeLog)

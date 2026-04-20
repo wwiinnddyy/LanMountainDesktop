@@ -721,7 +721,8 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
       PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
-      PDCC_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
+      PDCC_version: ${{ needs.prepare.outputs.version }}
+      PDC_CLIENT_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
       S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       S3_REGION: ${{ vars.S3_REGION }}
@@ -757,18 +758,44 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          function Resolve-PgpPrivateKey([string]$value) {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              return $null
+            }
+
+            $trimmed = $value.Trim()
+            if ($trimmed -match '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
+              return $trimmed
+            }
+
+            try {
+              $decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($trimmed)).Trim()
+              if ($decoded -match '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
+                return $decoded
+              }
+            }
+            catch {
+            }
+
+            return $trimmed
+          }
+
           if ([string]::IsNullOrWhiteSpace($env:S3_ENDPOINT) -or
               [string]::IsNullOrWhiteSpace($env:S3_BUCKET)) {
             throw "Missing required S3 variables."
           }
 
-          if ([string]::IsNullOrWhiteSpace($env:PDC_SIGNING_KEY)) {
-            if ([string]::IsNullOrWhiteSpace($env:UPDATE_PRIVATE_KEY_PEM)) {
-              throw "Missing UPDATE_PRIVATE_KEY_PEM or PDC_SIGNING_KEY."
-            }
-
-            $env:PDC_SIGNING_KEY = $env:UPDATE_PRIVATE_KEY_PEM
+          $resolvedSigningKey = Resolve-PgpPrivateKey $env:PDC_SIGNING_KEY
+          if ([string]::IsNullOrWhiteSpace($resolvedSigningKey)) {
+            $resolvedSigningKey = Resolve-PgpPrivateKey $env:UPDATE_PRIVATE_KEY_PEM
           }
+          if ([string]::IsNullOrWhiteSpace($resolvedSigningKey)) {
+            throw "Missing PDC_SIGNING_KEY (PGP private key)."
+          }
+          if ($resolvedSigningKey -notmatch '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
+            throw "PDC signing key format is invalid. Please provide armored OpenPGP private key in PDC_SIGNING_KEY."
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "PDC_SIGNING_KEY<<EOF`n$resolvedSigningKey`nEOF"
 
           $workRoot = Join-Path $PWD "pdc-work"
           if (Test-Path $workRoot) {
@@ -779,12 +806,27 @@ jobs:
           $template = Get-Content -Path "phainon.yml" -Raw
           $resolved = $template `
             -replace '__FILE_REPO_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/repo/" `
-            -replace '__ARCHIVE_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/installers/"
+            -replace '__ARCHIVE_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/archive"
 
           Set-Content -Path (Join-Path $workRoot "phainon.resolved.yml") -Value $resolved -NoNewline
 
           python3 -m pip install --user --upgrade awscli
           Add-Content -Path $env:GITHUB_PATH -Value "$HOME/.local/bin"
+
+      - name: Verify S3 credentials and endpoint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $probeDir = Join-Path $PWD "pdc-work"
+          New-Item -ItemType Directory -Path $probeDir -Force | Out-Null
+
+          $probeFile = Join-Path $probeDir "s3-probe.txt"
+          Set-Content -Path $probeFile -Value "lanmountain pdc probe $(Get-Date -Format o)" -NoNewline
+
+          $probeKey = "lanmountain/update/probe/$($env:GITHUB_RUN_ID)-$($env:GITHUB_RUN_ATTEMPT).txt"
+          aws --endpoint-url "$env:S3_ENDPOINT" s3 cp $probeFile "s3://$env:S3_BUCKET/$probeKey" --only-show-errors
+          aws --endpoint-url "$env:S3_ENDPOINT" s3 rm "s3://$env:S3_BUCKET/$probeKey" --only-show-errors
+          Write-Host "S3 probe succeeded."
 
       - name: Bootstrap PDC Endpoint and Token
         shell: pwsh
@@ -906,14 +948,18 @@ jobs:
             $signingKeyPs = " "
           }
           $env:PDC_SigningKeyPs = $signingKeyPs
-          # Ensure PDCC config variable VERSION is set for publish-time templates/changelogs.
-          $env:PDCC_VERSION = $env:VERSION
+          # Map config variables with exact names required by phainon placeholders.
+          $env:PDCC_version = $env:VERSION
+          $env:PDCC_primaryVersion = $env:PRIMARY_VERSION
           $signingKey = $env:PDC_SIGNING_KEY
           if ([string]::IsNullOrWhiteSpace($signingKey)) {
             $signingKey = $env:UPDATE_PRIVATE_KEY_PEM
           }
           if ([string]::IsNullOrWhiteSpace($signingKey)) {
             throw "Missing PDC signing key: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM."
+          }
+          if ($signingKey -notmatch '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
+            throw "PDC signing key is not an armored OpenPGP private key."
           }
           $env:PDC_SigningKey = $signingKey
 
