@@ -722,7 +722,7 @@ jobs:
       PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
       PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
       PDCC_version: ${{ needs.prepare.outputs.version }}
-      PDC_CLIENT_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
+      PDC_CLIENT_VERSION: ${{ vars.PDC_CLIENT_VERSION || '1.0.1.0' }}
       S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       S3_REGION: ${{ vars.S3_REGION }}
@@ -941,7 +941,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./scripts/Install-Pdcc.ps1 -Repository "ClassIsland/PhainonDistributionCenter" -OutputDir "./pdcc"
+          ./scripts/Install-Pdcc.ps1 -Repository "ClassIsland/PhainonDistributionCenter" -Version "$env:PDC_CLIENT_VERSION" -OutputDir "./pdcc"
 
       - name: Publish with PDCC
         shell: pwsh

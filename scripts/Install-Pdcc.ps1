@@ -36,10 +36,6 @@ if ([string]::IsNullOrWhiteSpace($releaseTag)) {
     $releaseTag = $env:PDCC_VERSION
 }
 
-if ([string]::IsNullOrWhiteSpace($releaseTag)) {
-    $releaseTag = $env:PDCC_version
-}
-
 $tempDir = Join-Path $env:RUNNER_TEMP "pdcc-install"
 if (Test-Path -LiteralPath $tempDir) {
     Remove-Item -LiteralPath $tempDir -Recurse -Force
