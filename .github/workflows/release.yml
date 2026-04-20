@@ -1061,6 +1061,39 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Dump PDC Diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path "pdc-work/pdc-mock.out.log") {
+            Write-Host "===== pdc-mock stdout ====="
+            Get-Content "pdc-work/pdc-mock.out.log" -ErrorAction SilentlyContinue | Write-Host
+          }
+
+          if (Test-Path "pdc-work/pdc-mock.err.log") {
+            Write-Host "===== pdc-mock stderr ====="
+            Get-Content "pdc-work/pdc-mock.err.log" -ErrorAction SilentlyContinue | Write-Host
+          }
+
+          if (Test-Path "pdc-output/mock-pdc") {
+            Write-Host "===== pdc-mock captured payloads ====="
+            Get-ChildItem "pdc-output/mock-pdc" -Recurse -File | ForEach-Object {
+              Write-Host "--- $($_.FullName) ---"
+              Get-Content $_.FullName -ErrorAction SilentlyContinue | Write-Host
+            }
+          }
+
+      - name: Upload PDC Diagnostics Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdc-diagnostics
+          path: |
+            pdc-work/pdc-mock*.log
+            pdc-output/mock-pdc/**
+          if-no-files-found: ignore
+          retention-days: 30
+
   github-release:
     needs: [ prepare, build-windows, build-linux, build-macos, publish-pdc ]
     runs-on: ubuntu-latest
