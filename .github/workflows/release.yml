@@ -757,9 +757,8 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           if ([string]::IsNullOrWhiteSpace($env:S3_ENDPOINT) -or
-              [string]::IsNullOrWhiteSpace($env:S3_BUCKET) -or
-              [string]::IsNullOrWhiteSpace($env:PDC_ENDPOINT)) {
-            throw "Missing required PDC/S3 variables."
+              [string]::IsNullOrWhiteSpace($env:S3_BUCKET)) {
+            throw "Missing required S3 variables."
           }
 
           if ([string]::IsNullOrWhiteSpace($env:PDC_SIGNING_KEY)) {
