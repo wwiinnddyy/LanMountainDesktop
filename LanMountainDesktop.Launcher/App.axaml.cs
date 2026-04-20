@@ -214,14 +214,12 @@ public partial class App : Application
             var deploymentLocator = new DeploymentLocator(appRoot);
             
             // TODO: 从配置读取 GitHub 仓库信息
-            var updateCheckService = new UpdateCheckService("ClassIsland", "LanMountainDesktop");
             
             coordinator = new LauncherFlowCoordinator(
                 context,
                 deploymentLocator,
                 new OobeStateService(appRoot),
                 new UpdateEngineService(deploymentLocator),
-                updateCheckService,
                 new PluginInstallerService());
 
             result = await coordinator.RunAsync(splashWindow).ConfigureAwait(false);

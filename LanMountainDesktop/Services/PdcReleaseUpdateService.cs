@@ -148,7 +148,8 @@ public sealed class PdcReleaseUpdateService : IDisposable
             var distributionNode = await GetContentNodeAsync(distributionUrl, cancellationToken).ConfigureAwait(false);
 
             var assets = ResolveAssets(distributionNode);
-            if (assets.Count == 0)
+            var pdcPayload = ResolvePdcPayload(distributionNode, distributionId, channelId, subChannel);
+            if (assets.Count == 0 && !HasPdcPayload(pdcPayload))
             {
                 return new UpdateCheckResult(
                     Success: false,
@@ -168,6 +169,7 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 IsDraft: false,
                 PublishedAt: DateTimeOffset.UtcNow,
                 Assets: assets);
+            var preferredAsset = SelectPreferredInstallerAsset(assets);
 
             return new UpdateCheckResult(
                 Success: true,
@@ -175,9 +177,10 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 CurrentVersionText: normalizedCurrentVersionText,
                 LatestVersionText: latestVersionText,
                 Release: release,
-                PreferredAsset: null,
+                PreferredAsset: preferredAsset,
                 ErrorMessage: null,
-                ForceMode: isForce);
+                ForceMode: isForce,
+                PdcPayload: pdcPayload);
         }
         catch (OperationCanceledException)
         {
@@ -287,6 +290,119 @@ public sealed class PdcReleaseUpdateService : IDisposable
         }
 
         return assets;
+    }
+
+    private static PdcUpdatePayload ResolvePdcPayload(
+        JsonElement distributionNode,
+        string distributionId,
+        string channelId,
+        string subChannel)
+    {
+        var fileMapJson = ReadString(distributionNode, "fileMapJson");
+        var fileMapSignature = ReadString(distributionNode, "fileMapSignature");
+        var fileMapJsonUrl = ReadString(distributionNode, "fileMapJsonUrl")
+                             ?? ReadString(distributionNode, "fileMapUrl")
+                             ?? ReadString(distributionNode, "manifestUrl");
+        var fileMapSignatureUrl = ReadString(distributionNode, "fileMapSignatureUrl")
+                                  ?? ReadString(distributionNode, "signatureUrl");
+        return new PdcUpdatePayload(
+            DistributionId: distributionId,
+            ChannelId: channelId,
+            SubChannel: subChannel,
+            FileMapJson: fileMapJson,
+            FileMapSignature: fileMapSignature,
+            FileMapJsonUrl: fileMapJsonUrl,
+            FileMapSignatureUrl: fileMapSignatureUrl);
+    }
+
+    private static bool HasPdcPayload(PdcUpdatePayload payload)
+    {
+        return !string.IsNullOrWhiteSpace(payload.FileMapJson)
+               || !string.IsNullOrWhiteSpace(payload.FileMapJsonUrl);
+    }
+
+    private static GitHubReleaseAsset? SelectPreferredInstallerAsset(IReadOnlyList<GitHubReleaseAsset> assets)
+    {
+        if (assets is null || assets.Count == 0)
+        {
+            return null;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            var archToken = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.Arm64 => "arm64",
+                Architecture.X86 => "x86",
+                _ => "x64"
+            };
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreInstallerAsset(asset.Name, ".exe", ".msi", archToken)))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreInstallerAsset(asset.Name, ".deb", ".rpm", "x64")))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var archToken = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreInstallerAsset(asset.Name, ".dmg", ".pkg", archToken)))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
+
+        return null;
+    }
+
+    private static int ScoreInstallerAsset(string name, string ext1, string ext2, string archToken)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return 0;
+        }
+
+        var score = 0;
+        if (name.EndsWith(ext1, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 200;
+        }
+        else if (name.EndsWith(ext2, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 160;
+        }
+        else
+        {
+            return 0;
+        }
+
+        if (name.Contains("setup", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("installer", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 50;
+        }
+
+        if (name.Contains(archToken, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+
+        if (name.Contains("portable", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 30;
+        }
+
+        return score;
     }
 
     private static string ResolveChannelId(JsonElement metadataNode, bool includePrerelease)

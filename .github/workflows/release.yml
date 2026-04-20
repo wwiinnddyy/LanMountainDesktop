@@ -317,96 +317,19 @@ jobs:
           Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Build Signed FileMap Update Package
-        if: matrix.self_contained == true
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $version = "${{ needs.prepare.outputs.version }}"
-          $arch = "${{ matrix.arch }}"
-          $platform = "windows-$arch"
-          $publishDir = "publish/windows-$arch"
-          $appDir = "app-$version"
-          $currentAppPath = Join-Path $publishDir $appDir
-          $outputDir = Join-Path "delta-output" $platform
-          $generateScript = "scripts/Generate-DeltaPackage.ps1"
-          $signScript = "scripts/Sign-FileMap.ps1"
-
-          if (-not (Test-Path $currentAppPath)) {
-            Write-Error "Expected app directory not found: $currentAppPath"
-            exit 1
-          }
-
-          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          & $generateScript `
-            -PreviousVersion "0.0.0" `
-            -CurrentVersion $version `
-            -PreviousDir $currentAppPath `
-            -CurrentDir $currentAppPath `
-            -OutputDir $outputDir
-
-          $privateKeyPem = @'
-          ${{ secrets.PDC_SIGNING_KEY }}
-          '@.Trim()
-          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
-            $privateKeyPem = @'
-          ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
-          '@.Trim()
-          }
-          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
-            Write-Error "Missing required secret: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM"
-            exit 1
-          }
-
-          $privateKeyPem = $privateKeyPem -replace '\\n', "`n"
-          $tempDir = Join-Path $env:RUNNER_TEMP "update-signing"
-          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-
-          $privateKeyPath = Join-Path $tempDir "private-key.pem"
-          $publicKeyPath = Join-Path $tempDir "public-key.pem"
-
-          Set-Content -Path $privateKeyPath -Value $privateKeyPem -NoNewline
-          $rsa = [System.Security.Cryptography.RSA]::Create()
-          $rsa.ImportFromPem($privateKeyPem)
-          $derivedPublicKey = $rsa.ExportRSAPublicKeyPem()
-          Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
-
-          $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
-          $repoPublicKeyPem = Get-Content -Path $repoPublicKeyPath -Raw
-          $repoRsa = [System.Security.Cryptography.RSA]::Create()
-          $repoRsa.ImportFromPem($repoPublicKeyPem)
-          $repoSpki = [Convert]::ToBase64String($repoRsa.ExportSubjectPublicKeyInfo())
-          $derivedSpki = [Convert]::ToBase64String($rsa.ExportSubjectPublicKeyInfo())
-          if ($repoSpki -ne $derivedSpki) {
-            Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
-            exit 1
-          }
-
-          & $signScript `
-            -FilesJsonPath (Join-Path $outputDir "files.json") `
-            -PrivateKeyPath $privateKeyPath `
-            -OutputPath (Join-Path $outputDir "files.json.sig")
-
-          Copy-Item (Join-Path $outputDir "files.json") (Join-Path $outputDir "files-$platform.json") -Force
-          Copy-Item (Join-Path $outputDir "files.json.sig") (Join-Path $outputDir "files-$platform.json.sig") -Force
-          Copy-Item (Join-Path $outputDir "update.zip") (Join-Path $outputDir "update-$platform.zip") -Force
-        shell: pwsh
-
-      - name: Upload Signed FileMap Update Package
-        if: matrix.self_contained == true
+      - name: Upload App Payload
         uses: actions/upload-artifact@v4
         with:
-          name: release-update-windows-${{ matrix.arch }}
+          name: app-payload-windows-${{ matrix.arch }}
           path: |
-            delta-output/windows-${{ matrix.arch }}/files-windows-${{ matrix.arch }}.json
-            delta-output/windows-${{ matrix.arch }}/files-windows-${{ matrix.arch }}.json.sig
-            delta-output/windows-${{ matrix.arch }}/update-windows-${{ matrix.arch }}.zip
+            publish/windows-${{ matrix.arch }}/**
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
+
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: release-windows-${{ matrix.arch }}${{ matrix.suffix }}
+          name: installer-windows-${{ matrix.arch }}
           path: build-installer/*.exe
           if-no-files-found: error
           retention-days: 30
@@ -608,94 +531,19 @@ jobs:
             exit 1
           fi
 
-      - name: Build Signed FileMap Update Package
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $version = "${{ needs.prepare.outputs.version }}"
-          $platform = "linux-x64"
-          $publishDir = "publish/linux-x64"
-          $appDir = "app-$version"
-          $currentAppPath = Join-Path $publishDir $appDir
-          $outputDir = Join-Path "delta-output" $platform
-          $generateScript = "scripts/Generate-DeltaPackage.ps1"
-          $signScript = "scripts/Sign-FileMap.ps1"
-
-          if (-not (Test-Path $currentAppPath)) {
-            Write-Error "Expected app directory not found: $currentAppPath"
-            exit 1
-          }
-
-          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          & $generateScript `
-            -PreviousVersion "0.0.0" `
-            -CurrentVersion $version `
-            -PreviousDir $currentAppPath `
-            -CurrentDir $currentAppPath `
-            -OutputDir $outputDir
-
-          $privateKeyPem = @'
-          ${{ secrets.PDC_SIGNING_KEY }}
-          '@.Trim()
-          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
-            $privateKeyPem = @'
-          ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
-          '@.Trim()
-          }
-          if ([string]::IsNullOrWhiteSpace($privateKeyPem)) {
-            Write-Error "Missing required secret: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM"
-            exit 1
-          }
-
-          $privateKeyPem = $privateKeyPem -replace '\\n', "`n"
-          $tempDir = Join-Path $env:RUNNER_TEMP "update-signing"
-          New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-
-          $privateKeyPath = Join-Path $tempDir "private-key.pem"
-          $publicKeyPath = Join-Path $tempDir "public-key.pem"
-
-          Set-Content -Path $privateKeyPath -Value $privateKeyPem -NoNewline
-          $rsa = [System.Security.Cryptography.RSA]::Create()
-          $rsa.ImportFromPem($privateKeyPem)
-          $derivedPublicKey = $rsa.ExportRSAPublicKeyPem()
-          Set-Content -Path $publicKeyPath -Value $derivedPublicKey -NoNewline
-
-          $repoPublicKeyPath = "LanMountainDesktop.Launcher/Assets/public-key.pem"
-          $repoPublicKeyPem = Get-Content -Path $repoPublicKeyPath -Raw
-          $repoRsa = [System.Security.Cryptography.RSA]::Create()
-          $repoRsa.ImportFromPem($repoPublicKeyPem)
-          $repoSpki = [Convert]::ToBase64String($repoRsa.ExportSubjectPublicKeyInfo())
-          $derivedSpki = [Convert]::ToBase64String($rsa.ExportSubjectPublicKeyInfo())
-          if ($repoSpki -ne $derivedSpki) {
-            Write-Error "Configured signing private key does not match $repoPublicKeyPath. Keep keypair consistent before publishing."
-            exit 1
-          }
-
-          & $signScript `
-            -FilesJsonPath (Join-Path $outputDir "files.json") `
-            -PrivateKeyPath $privateKeyPath `
-            -OutputPath (Join-Path $outputDir "files.json.sig")
-
-          Copy-Item (Join-Path $outputDir "files.json") (Join-Path $outputDir "files-$platform.json") -Force
-          Copy-Item (Join-Path $outputDir "files.json.sig") (Join-Path $outputDir "files-$platform.json.sig") -Force
-          Copy-Item (Join-Path $outputDir "update.zip") (Join-Path $outputDir "update-$platform.zip") -Force
-
-      - name: Upload Signed FileMap Update Package
+      - name: Upload App Payload
         uses: actions/upload-artifact@v4
         with:
-          name: release-update-linux-x64
+          name: app-payload-linux-x64
           path: |
-            delta-output/linux-x64/files-linux-x64.json
-            delta-output/linux-x64/files-linux-x64.json.sig
-            delta-output/linux-x64/update-linux-x64.zip
+            publish/linux-x64/**
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
 
-      - name: Upload
+      - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: release-linux
+          name: installer-linux-x64
           path: "*.deb"
           if-no-files-found: error
           retention-days: 30
@@ -859,23 +707,185 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: release-macos-${{ matrix.arch }}
+          name: installer-macos-${{ matrix.arch }}
           path: "*.dmg"
           if-no-files-found: error
           retention-days: 30
 
-  github-release:
+  publish-pdc:
     needs: [ prepare, build-windows, build-linux, build-macos ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
+      PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
+      PDCC_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
+      PDCC_version: ${{ vars.PDC_CLIENT_VERSION }}
+      S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+      S3_BUCKET: ${{ vars.S3_BUCKET }}
+      S3_REGION: ${{ vars.S3_REGION }}
+      PDC_ENDPOINT: ${{ vars.PDC_ENDPOINT }}
+      PDC_TOKEN: ${{ secrets.PDC_TOKEN }}
+      PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
+      UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+      S3_Endpoint: ${{ vars.S3_ENDPOINT }}
+      S3_Bucket: ${{ vars.S3_BUCKET }}
+      S3_Region: ${{ vars.S3_REGION }}
+      PDC_Endpoint: ${{ vars.PDC_ENDPOINT }}
+      PDC_Token: ${{ secrets.PDC_TOKEN }}
+      PDC_SigningKey: ${{ secrets.PDC_SIGNING_KEY }}
+      S3_AccessKey: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SecretKey: ${{ secrets.S3_SECRET_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+
+      - name: Download payload artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: payload-artifacts
+          pattern: app-payload-*
+
+      - name: Download installer artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: installer-artifacts
+          pattern: installer-*
+
+      - name: Prepare PDC environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:S3_ENDPOINT) -or
+              [string]::IsNullOrWhiteSpace($env:S3_BUCKET) -or
+              [string]::IsNullOrWhiteSpace($env:PDC_ENDPOINT)) {
+            throw "Missing required PDC/S3 variables."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:PDC_SIGNING_KEY)) {
+            if ([string]::IsNullOrWhiteSpace($env:UPDATE_PRIVATE_KEY_PEM)) {
+              throw "Missing UPDATE_PRIVATE_KEY_PEM or PDC_SIGNING_KEY."
+            }
+
+            $env:PDC_SIGNING_KEY = $env:UPDATE_PRIVATE_KEY_PEM
+          }
+
+          $workRoot = Join-Path $PWD "pdc-work"
+          if (Test-Path $workRoot) {
+            Remove-Item -LiteralPath $workRoot -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
+
+          $template = Get-Content -Path "phainon.yml" -Raw
+          $resolved = $template `
+            -replace '__FILE_REPO_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/repo/" `
+            -replace '__ARCHIVE_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/installers/"
+
+          Set-Content -Path (Join-Path $workRoot "phainon.resolved.yml") -Value $resolved -NoNewline
+
+          python3 -m pip install --user --upgrade awscli
+          Add-Content -Path $env:GITHUB_PATH -Value "$HOME/.local/bin"
+
+      - name: Install PDCC
+        shell: pwsh
+        run: |
+          ./scripts/Install-Pdcc.ps1 -Repository "ClassIsland/PhainonDistributionCenter" -OutputDir "./pdcc"
+
+      - name: Publish with PDCC
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $stageRoot = Join-Path $PWD "pdc-stage"
+          $payloadRoot = Join-Path $PWD "payload-artifacts"
+          $installerRoot = Join-Path $PWD "installer-artifacts"
+          $outRoot = Join-Path $PWD "pdc-output"
+          $client = Join-Path $PWD "pdcc/PhainonDistributionCenter.Client"
+          $config = Join-Path $PWD "pdc-work/phainon.resolved.yml"
+
+          if (Test-Path $stageRoot) {
+            Remove-Item -LiteralPath $stageRoot -Recurse -Force
+          }
+          if (Test-Path $outRoot) {
+            Remove-Item -LiteralPath $outRoot -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
+          New-Item -ItemType Directory -Path $outRoot -Force | Out-Null
+
+          $payloadArtifacts = Get-ChildItem -LiteralPath $payloadRoot -Directory
+          if (-not $payloadArtifacts) {
+            throw "No payload artifacts were downloaded."
+          }
+
+          $installerArtifacts = Get-ChildItem -LiteralPath $installerRoot -Directory
+          if (-not $installerArtifacts) {
+            throw "No installer artifacts were downloaded."
+          }
+
+          foreach ($installerArtifact in $installerArtifacts) {
+            $stagedInstallerDir = Join-Path $stageRoot "installers/$($installerArtifact.Name)"
+            ./scripts/Prepare-PdccOut.ps1 -SourceDir $installerArtifact.FullName -OutputDir $stagedInstallerDir
+          }
+
+          foreach ($payloadArtifact in $payloadArtifacts) {
+            $platformKey = $payloadArtifact.Name -replace '^app-payload-', ''
+            $stagedPayloadDir = Join-Path $stageRoot "payloads/$platformKey"
+            ./scripts/Prepare-PdccOut.ps1 -SourceDir $payloadArtifact.FullName -OutputDir $stagedPayloadDir
+
+            $subChannel = ($platformKey -replace '-', '_') + "_release_folderClassic"
+            $env:PDC_SUBCHANNEL = $subChannel
+
+            Push-Location $stagedPayloadDir
+            try {
+              & $client $config Publish $env:PRIMARY_VERSION $env:VERSION (Join-Path $outRoot "published/$platformKey")
+              if ($LASTEXITCODE -ne 0) {
+                throw "PDCC Publish failed for $platformKey."
+              }
+            }
+            finally {
+              Pop-Location
+            }
+          }
+
+          if (Test-Path (Join-Path $stageRoot "installers")) {
+            aws --endpoint-url "$env:S3_ENDPOINT" s3 sync (Join-Path $stageRoot "installers") "s3://$env:S3_BUCKET/lanmountain/update/installers/" --only-show-errors
+          }
+
+      - name: Upload PDC Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdc-assets
+          path: |
+            pdc-output/published/**
+          if-no-files-found: error
+          retention-days: 90
+
+  github-release:
+    needs: [ prepare, build-windows, build-linux, build-macos, publish-pdc ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Download artifacts
+      - name: Download installer artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          pattern: release-*
+          path: artifacts/installers
+          pattern: installer-*
+
+      - name: Download PDC artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/pdc
+          pattern: pdc-assets
 
       - name: List artifacts structure
         run: |
@@ -892,10 +902,8 @@ jobs:
         run: |
           echo "Organizing artifacts..."
           mkdir -p release-files
-          # Copy installers and packages
-          find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
-          # Copy signed file-map incremental update assets
-          find artifacts -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-files/ \;
+          find artifacts/installers -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
+          find artifacts/pdc -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-files/ \;
           echo ""
           echo "Files ready for release:"
           ls -lh release-files/ || echo "No files found in release-files"
@@ -907,44 +915,6 @@ jobs:
             echo "Error: No release files found"
             exit 1
           fi
-
-      - name: Upload Incremental Assets to S3 (optional)
-        if: ${{ vars.S3_ENDPOINT != '' && vars.S3_BUCKET != '' }}
-        env:
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-          S3_REGION: ${{ vars.S3_REGION != '' && vars.S3_REGION || 'cn-nb1' }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_OBJECT_PREFIX: lanmountain/distribution-v1
-        run: |
-          set -euo pipefail
-
-          if [ -z "${S3_ACCESS_KEY:-}" ] || [ -z "${S3_SECRET_KEY:-}" ]; then
-            echo "S3 credentials are not configured. Skipping optional S3 upload step."
-            exit 0
-          fi
-
-          python3 -m pip install --upgrade awscli
-
-          mkdir -p release-update-assets
-          find release-files -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-update-assets/ \;
-
-          asset_count=$(find release-update-assets -type f | wc -l)
-          if [ "$asset_count" -eq 0 ]; then
-            echo "Error: no incremental update assets found for S3 upload."
-            exit 1
-          fi
-
-          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY"
-          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY"
-          export AWS_DEFAULT_REGION="$S3_REGION"
-
-          version_prefix="${S3_OBJECT_PREFIX}/${{ needs.prepare.outputs.version }}/"
-          latest_prefix="${S3_OBJECT_PREFIX}/latest/"
-
-          aws --endpoint-url "$S3_ENDPOINT" s3 sync release-update-assets "s3://${S3_BUCKET}/${version_prefix}" --only-show-errors
-          aws --endpoint-url "$S3_ENDPOINT" s3 sync release-update-assets "s3://${S3_BUCKET}/${latest_prefix}" --delete --only-show-errors
 
       - name: Create Release
         uses: ncipollo/release-action@v1

@@ -1,12 +1,15 @@
 # Tasks
 
 - [x] Remove VeloPack packaging from release workflow.
-- [x] Promote signed FileMap generation to release primary path.
-- [x] Output platform-scoped incremental assets for Windows x64/x86 and Linux x64.
-- [x] Remove launcher/runtime VeloPack branches.
-- [x] Update host asset discovery to platform-scoped signed FileMap naming.
-- [x] Add optional S3 sync for incremental assets.
-- [x] Extend update source values with `pdc`.
-- [x] Add PDC check fallback service skeleton in settings domain.
-- [ ] Add full PDC FileMap object-hash download/deploy path.
-- [ ] Add PDCC publish integration and `phainon.yml` CI publishing flow.
+- [x] Keep signed FileMap path as interim compatibility fallback.
+- [x] Remove launcher/runtime Velopack branching.
+- [ ] Add `phainon.yml` for PDCC publish configuration.
+- [ ] Add PDCC installation + publish steps in `release.yml`.
+- [ ] Upload app payload artifacts for PDCC consumption in release build jobs.
+- [ ] Publish PDC metadata + object repo to S3 path root `lanmountain/update/`.
+- [ ] Mirror installers to `lanmountain/update/installers/<platform>/<arch>/`.
+- [ ] Replace update source canonical value with `stcn` (keep legacy `pdc` compatibility).
+- [ ] Add PDC payload model into host update check result.
+- [ ] Add host download path for PDC payload (`pdc-filemap.json` + signature + metadata).
+- [ ] Add launcher PDC FileMap apply path with rollback-compatible semantics.
+- [ ] Keep old `files.json + update.zip` path behind compatibility fallback.

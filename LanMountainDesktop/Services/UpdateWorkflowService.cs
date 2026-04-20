@@ -5,7 +5,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.PluginSdk;
@@ -53,9 +57,20 @@ public sealed class UpdateWorkflowService
     private const string LauncherDirectoryName = ".launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
+    private const string IncomingObjectsDirectoryName = "objects";
     private const string SignedFileMapName = "files.json";
     private const string SignedFileMapSignatureName = "files.json.sig";
     private const string UpdateArchiveName = "update.zip";
+    private const string PdcFileMapName = "pdc-filemap.json";
+    private const string PdcFileMapSignatureName = "pdc-filemap.sig";
+    private const string PdcUpdateStateName = "pdc-update.json";
+
+    private static readonly HttpClient PdcHttpClient = new()
+    {
+        Timeout = TimeSpan.FromMinutes(5)
+    };
+
+    private static readonly ResumableDownloadService PdcDownloadService = new(PdcHttpClient);
 
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
@@ -81,6 +96,11 @@ public sealed class UpdateWorkflowService
         return Path.Combine(launcherRoot, LauncherDirectoryName, UpdateDirectoryName, IncomingDirectoryName);
     }
 
+    public static string GetLauncherIncomingObjectsDirectory()
+    {
+        return Path.Combine(GetLauncherIncomingDirectory(), IncomingObjectsDirectoryName);
+    }
+
     /// <summary>
     /// Checks whether a GitHub Release contains signed file-map assets needed for incremental updates.
     /// </summary>
@@ -94,6 +114,16 @@ public sealed class UpdateWorkflowService
         return TryResolveDeltaAssets(release.Assets, out _, out _, out _);
     }
 
+    public static bool IsDeltaUpdateAvailable(UpdateCheckResult checkResult)
+    {
+        if (checkResult.PdcPayload is not null)
+        {
+            return true;
+        }
+
+        return checkResult.Release is not null && IsDeltaUpdateAvailable(checkResult.Release);
+    }
+
     /// <summary>
     /// Downloads signed file-map assets to the Launcher's incoming directory.
     /// </summary>
@@ -104,12 +134,24 @@ public sealed class UpdateWorkflowService
     {
         ArgumentNullException.ThrowIfNull(checkResult);
 
-        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null)
+        if (!checkResult.Success || !checkResult.IsUpdateAvailable)
         {
             return new UpdateDownloadResult(false, null, "No update available for delta download.");
         }
 
-        if (!TryResolveDeltaAssets(checkResult.Release.Assets, out var manifestAsset, out var signatureAsset, out var archiveAsset))
+        if (checkResult.PdcPayload is null && checkResult.Release is null)
+        {
+            return new UpdateDownloadResult(false, null, "No update payload is available for delta download.");
+        }
+
+        if (checkResult.PdcPayload is not null)
+        {
+            return await DownloadPdcDeltaUpdateAsync(checkResult, progress, cancellationToken);
+        }
+
+        var release = checkResult.Release;
+        if (release is null ||
+            !TryResolveDeltaAssets(release.Assets, out var manifestAsset, out var signatureAsset, out var archiveAsset))
         {
             return new UpdateDownloadResult(false, null, "Release does not contain compatible signed file-map assets.");
         }
@@ -189,9 +231,9 @@ public sealed class UpdateWorkflowService
         {
             PendingUpdateInstallerPath = Path.Combine(incomingDir, SignedFileMapName),
             PendingUpdateVersion = checkResult.LatestVersionText,
-            PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
-                ? null
-                : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+            PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
+                ? publishedAt.ToUnixTimeMilliseconds()
+                : null,
             LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             PendingUpdateSha256 = null
         });
@@ -200,6 +242,163 @@ public sealed class UpdateWorkflowService
 
         return new UpdateDownloadResult(true, Path.Combine(incomingDir, SignedFileMapName), null);
     }
+
+    private async Task<UpdateDownloadResult> DownloadPdcDeltaUpdateAsync(
+        UpdateCheckResult checkResult,
+        IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = checkResult.PdcPayload;
+        if (payload is null)
+        {
+            return new UpdateDownloadResult(false, null, "PDC payload is missing.");
+        }
+
+        var incomingDir = GetLauncherIncomingDirectory();
+        var objectsDir = GetLauncherIncomingObjectsDirectory();
+
+        try
+        {
+            Directory.CreateDirectory(incomingDir);
+            Directory.CreateDirectory(objectsDir);
+        }
+        catch (Exception ex)
+        {
+            return new UpdateDownloadResult(false, null, $"Failed to create incoming directory: {ex.Message}");
+        }
+
+        try
+        {
+            var state = _settingsFacade.Update.Get();
+            var downloadThreads = Math.Max(1, state.UpdateDownloadThreads);
+            var fileMapPath = Path.Combine(incomingDir, PdcFileMapName);
+            var signaturePath = Path.Combine(incomingDir, PdcFileMapSignatureName);
+            var updateStatePath = Path.Combine(incomingDir, PdcUpdateStateName);
+
+            var fileMapJson = await EnsurePdcTextResourceAsync(
+                payload.FileMapJson,
+                payload.FileMapJsonUrl,
+                fileMapPath,
+                cancellationToken);
+
+            var fileMapSignature = await EnsurePdcTextResourceAsync(
+                payload.FileMapSignature,
+                payload.FileMapSignatureUrl,
+                signaturePath,
+                cancellationToken);
+
+            var downloadEntries = ParsePdcDownloadEntries(fileMapJson);
+            if (downloadEntries.Count == 0)
+            {
+                return new UpdateDownloadResult(false, null, "PDC file map does not contain downloadable objects.");
+            }
+
+            var expectedObjectCount = downloadEntries.Count;
+            var completedItems = 2;
+            progress?.Report(expectedObjectCount == 0 ? 1d : (double)completedItems / (expectedObjectCount + 2));
+
+            var objectResults = new List<PdcDownloadedObjectInfo>(expectedObjectCount);
+            var objectTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var totalSteps = expectedObjectCount + 2;
+
+            foreach (var entry in downloadEntries)
+            {
+                if (!objectTargets.Add(entry.ObjectHashHex))
+                {
+                    completedItems++;
+                    progress?.Report((double)completedItems / totalSteps);
+                    continue;
+                }
+
+                var destinationPath = GetPdcObjectDestinationPath(objectsDir, entry.ObjectHashHex);
+                var destinationDirectory = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrWhiteSpace(destinationDirectory))
+                {
+                    Directory.CreateDirectory(destinationDirectory);
+                }
+
+                if (File.Exists(destinationPath))
+                {
+                    var existingHash = await ComputeFileSha512HexAsync(destinationPath, cancellationToken);
+                    if (string.Equals(existingHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
+                    {
+                        objectResults.Add(new PdcDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
+                        completedItems++;
+                        progress?.Report((double)completedItems / totalSteps);
+                        continue;
+                    }
+                }
+
+                var downloadOptions = new DownloadOptions(MaxParallelSegments: downloadThreads);
+                var downloadResult = await PdcDownloadService.DownloadAsync(
+                    entry.DownloadUrl,
+                    destinationPath,
+                    downloadOptions,
+                    null,
+                    cancellationToken);
+
+                if (!downloadResult.Success)
+                {
+                    return new UpdateDownloadResult(false, null, $"Failed to download PDC object {entry.RelativePath}: {downloadResult.ErrorMessage}");
+                }
+
+                var actualHash = await ComputeFileSha512HexAsync(destinationPath, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(actualHash) &&
+                    !string.Equals(actualHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new UpdateDownloadResult(false, null, $"PDC object hash mismatch for {entry.RelativePath}. Expected: {entry.ObjectHashHex}, Actual: {actualHash}");
+                }
+
+                objectResults.Add(new PdcDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
+                completedItems++;
+                progress?.Report((double)completedItems / totalSteps);
+            }
+
+            var updateState = new PdcUpdateState(
+                checkResult.LatestVersionText,
+                payload.DistributionId,
+                payload.ChannelId,
+                payload.SubChannel,
+                fileMapPath,
+                signaturePath,
+                objectsDir,
+                DateTimeOffset.UtcNow,
+                fileMapJson,
+                fileMapSignature,
+                objectResults);
+
+            await File.WriteAllTextAsync(updateStatePath, JsonSerializer.Serialize(updateState, UpdateJsonOptions), cancellationToken);
+
+            SaveState(state with
+            {
+                PendingUpdateInstallerPath = updateStatePath,
+                PendingUpdateVersion = checkResult.LatestVersionText,
+                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
+                    ? publishedAt.ToUnixTimeMilliseconds()
+                    : null,
+                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                PendingUpdateSha256 = null
+            });
+
+            progress?.Report(1d);
+            AppLogger.Info("UpdateWorkflow", $"PDC update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
+            return new UpdateDownloadResult(true, updateStatePath, null);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("UpdateWorkflow", "Failed to download PDC incremental payload.", ex);
+            return new UpdateDownloadResult(false, null, ex.Message);
+        }
+    }
+
+    private static readonly JsonSerializerOptions UpdateJsonOptions = new()
+    {
+        WriteIndented = true
+    };
 
     /// <summary>
     /// Checks whether the pending update is managed by Launcher incoming payload.
@@ -213,10 +412,260 @@ public sealed class UpdateWorkflowService
             return false;
         }
 
-        // Incoming payload updates are identified by files.json or incoming directory path.
+        // Incoming payload updates are identified by the local manifest or incoming directory path.
         return pendingPath.EndsWith(SignedFileMapName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PdcUpdateStateName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PdcFileMapName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PdcFileMapSignatureName, StringComparison.OrdinalIgnoreCase)
             || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string GetPdcObjectDestinationPath(string objectsDirectory, string objectHashHex)
+    {
+        var normalizedHash = objectHashHex.Trim().ToLowerInvariant();
+        var shard = normalizedHash.Length >= 2 ? normalizedHash[..2] : normalizedHash;
+        return Path.Combine(objectsDirectory, shard, normalizedHash);
+    }
+
+    private static async Task<string> EnsurePdcTextResourceAsync(
+        string? inlineContent,
+        string? sourceUrl,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(inlineContent))
+        {
+            await File.WriteAllTextAsync(destinationPath, inlineContent, cancellationToken);
+            return inlineContent;
+        }
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
+            throw new InvalidOperationException("PDC payload does not contain a file map source.");
+        }
+
+        var downloadResult = await PdcDownloadService.DownloadAsync(
+            sourceUrl,
+            destinationPath,
+            cancellationToken: cancellationToken);
+
+        if (!downloadResult.Success)
+        {
+            throw new InvalidOperationException($"Failed to download PDC file map resource: {downloadResult.ErrorMessage}");
+        }
+
+        return await File.ReadAllTextAsync(destinationPath, cancellationToken);
+    }
+
+    private static IReadOnlyList<PdcDownloadEntry> ParsePdcDownloadEntries(string fileMapJson)
+    {
+        var entries = new List<PdcDownloadEntry>();
+        if (string.IsNullOrWhiteSpace(fileMapJson))
+        {
+            return entries;
+        }
+
+        using var document = JsonDocument.Parse(fileMapJson);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return entries;
+        }
+
+        if (!TryGetPropertyIgnoreCase(root, "components", out var componentsNode) ||
+            componentsNode.ValueKind != JsonValueKind.Object)
+        {
+            return entries;
+        }
+
+        foreach (var component in componentsNode.EnumerateObject())
+        {
+            if (component.Value.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!TryGetPropertyIgnoreCase(component.Value, "files", out var filesNode) ||
+                filesNode.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            foreach (var fileEntry in filesNode.EnumerateObject())
+            {
+                if (fileEntry.Value.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var downloadUrl = ReadStringIgnoreCase(fileEntry.Value, "archivedownloadurl")
+                                  ?? ReadStringIgnoreCase(fileEntry.Value, "downloadurl")
+                                  ?? ReadStringIgnoreCase(fileEntry.Value, "url");
+                var hashBytes = ReadByteArrayIgnoreCase(fileEntry.Value, "archivesha512")
+                                ?? ReadByteArrayIgnoreCase(fileEntry.Value, "filesha512");
+
+                if (string.IsNullOrWhiteSpace(downloadUrl) || hashBytes is null || hashBytes.Length == 0)
+                {
+                    continue;
+                }
+
+                var hashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
+                entries.Add(new PdcDownloadEntry(
+                    component.Name,
+                    fileEntry.Name,
+                    downloadUrl,
+                    hashHex));
+            }
+        }
+
+        return entries;
+    }
+
+    private static async Task<string?> ComputeFileSha512HexAsync(string filePath, CancellationToken cancellationToken)
+    {
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var hashBytes = await SHA512.HashDataAsync(stream, cancellationToken);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement node, string propertyName, out JsonElement value)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in node.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static string? ReadStringIgnoreCase(JsonElement node, string propertyName)
+    {
+        return TryGetPropertyIgnoreCase(node, propertyName, out var value)
+            ? value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : value.ToString()
+            : null;
+    }
+
+    private static byte[]? ReadByteArrayIgnoreCase(JsonElement node, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(node, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return ReadByteArray(value);
+    }
+
+    private static byte[]? ReadByteArray(JsonElement value)
+    {
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.String:
+            {
+                var text = value.GetString()?.Trim();
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return null;
+                }
+
+                if (IsHexString(text))
+                {
+                    try
+                    {
+                        return Convert.FromHexString(text);
+                    }
+                    catch
+                    {
+                        // fall through to base64
+                    }
+                }
+
+                try
+                {
+                    return Convert.FromBase64String(text);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            case JsonValueKind.Array:
+            {
+                var bytes = new List<byte>();
+                foreach (var item in value.EnumerateArray())
+                {
+                    if (!item.TryGetInt32(out var number) || number is < byte.MinValue or > byte.MaxValue)
+                    {
+                        return null;
+                    }
+
+                    bytes.Add((byte)number);
+                }
+
+                return bytes.ToArray();
+            }
+            default:
+                return null;
+        }
+    }
+
+    private static bool IsHexString(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length % 2 != 0)
+        {
+            return false;
+        }
+
+        foreach (var ch in value)
+        {
+            if (!Uri.IsHexDigit(ch))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private sealed record PdcDownloadEntry(
+        string ComponentId,
+        string RelativePath,
+        string DownloadUrl,
+        string ObjectHashHex);
+
+    private sealed record PdcDownloadedObjectInfo(
+        string ComponentId,
+        string RelativePath,
+        string SourceUrl,
+        string ObjectHashHex,
+        string LocalPath);
+
+    private sealed record PdcUpdateState(
+        string VersionText,
+        string DistributionId,
+        string ChannelId,
+        string SubChannel,
+        string FileMapPath,
+        string FileMapSignaturePath,
+        string ObjectsDirectory,
+        DateTimeOffset DownloadedAtUtc,
+        string FileMapJson,
+        string FileMapSignature,
+        IReadOnlyList<PdcDownloadedObjectInfo> Objects);
 
     private static bool TryResolveDeltaAssets(
         IReadOnlyList<GitHubReleaseAsset> assets,
@@ -327,6 +776,11 @@ public sealed class UpdateWorkflowService
     {
         ArgumentNullException.ThrowIfNull(checkResult);
 
+        if (checkResult.PdcPayload is not null)
+        {
+            return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
+        }
+
         if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
         {
             return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
@@ -365,9 +819,9 @@ public sealed class UpdateWorkflowService
             {
                 PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
                 PendingUpdateVersion = checkResult.LatestVersionText,
-                PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
-                    ? null
-                    : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
+                    ? publishedAt.ToUnixTimeMilliseconds()
+                    : null,
                 LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 PendingUpdateSha256 = result.ActualHash
             });
@@ -382,6 +836,12 @@ public sealed class UpdateWorkflowService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(checkResult);
+
+        if (checkResult.PdcPayload is not null)
+        {
+            ClearPendingUpdate();
+            return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
+        }
 
         if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
         {
@@ -426,9 +886,9 @@ public sealed class UpdateWorkflowService
             {
                 PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
                 PendingUpdateVersion = checkResult.LatestVersionText,
-                PendingUpdatePublishedAtUtcMs = checkResult.Release.PublishedAt == DateTimeOffset.MinValue
-                    ? null
-                    : checkResult.Release.PublishedAt.ToUnixTimeMilliseconds(),
+                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
+                    ? publishedAt.ToUnixTimeMilliseconds()
+                    : null,
                 LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 PendingUpdateSha256 = result.ActualHash
             });
@@ -449,7 +909,25 @@ public sealed class UpdateWorkflowService
 
         if (!File.Exists(pending.InstallerPath))
         {
+            if (IsPendingDeltaUpdate())
+            {
+                var pdcUpdatePath = pending.InstallerPath;
+                var pdcFileMapPath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PdcFileMapName);
+                var pdcSignaturePath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PdcFileMapSignatureName);
+                if (File.Exists(pdcUpdatePath) && File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
+                {
+                    return new UpdateVerifyResult(true, true, null, null, null);
+                }
+
+                return new UpdateVerifyResult(false, false, null, null, "PDC update payload is incomplete.");
+            }
+
             return new UpdateVerifyResult(false, false, null, null, "Installer file does not exist.");
+        }
+
+        if (IsPendingDeltaUpdate())
+        {
+            return new UpdateVerifyResult(true, true, null, null, null);
         }
 
         var expectedHash = pending.Sha256;
@@ -483,7 +961,7 @@ public sealed class UpdateWorkflowService
         {
             // Always check for updates on startup (removed AutoCheckUpdates check)
             var result = await CheckForUpdatesAsync(currentVersion, isForce: false, cancellationToken);
-            if (!result.Success || !result.IsUpdateAvailable || result.Release is null)
+            if (!result.Success || !result.IsUpdateAvailable || (result.Release is null && result.PdcPayload is null))
             {
                 return;
             }
@@ -495,7 +973,7 @@ public sealed class UpdateWorkflowService
                 string.Equals(normalizedMode, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase))
             {
                 // Prefer delta update if available (smaller download, faster)
-                if (IsDeltaUpdateAvailable(result.Release))
+                if (IsDeltaUpdateAvailable(result))
                 {
                     AppLogger.Info("UpdateWorkflow", "Delta update available, downloading incremental package.");
                     await DownloadDeltaUpdateAsync(result, cancellationToken: cancellationToken);
@@ -519,6 +997,14 @@ public sealed class UpdateWorkflowService
 
     public UpdateInstallerLaunchResult LaunchPendingInstallerNow()
     {
+        if (IsPendingDeltaUpdate())
+        {
+            var launchResult = LaunchLauncherForApplyUpdate();
+            return launchResult
+                ? new UpdateInstallerLaunchResult(true, false, null)
+                : new UpdateInstallerLaunchResult(false, false, "Failed to launch updater for incremental update.");
+        }
+
         return LaunchPendingInstaller(silent: false, exitApplicationAfterLaunch: true);
     }
 

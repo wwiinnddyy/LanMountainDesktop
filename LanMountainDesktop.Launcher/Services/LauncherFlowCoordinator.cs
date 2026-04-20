@@ -22,7 +22,6 @@ internal sealed class LauncherFlowCoordinator
     private readonly DeploymentLocator _deploymentLocator;
     private readonly OobeStateService _oobeStateService;
     private readonly UpdateEngineService _updateEngine;
-    private readonly UpdateCheckService _updateCheckService;
     private readonly PluginInstallerService _pluginInstallerService;
     private readonly IReadOnlyList<IOobeStep> _oobeSteps;
 
@@ -31,14 +30,12 @@ internal sealed class LauncherFlowCoordinator
         DeploymentLocator deploymentLocator,
         OobeStateService oobeStateService,
         UpdateEngineService updateEngine,
-        UpdateCheckService updateCheckService,
         PluginInstallerService pluginInstallerService)
     {
         _context = context;
         _deploymentLocator = deploymentLocator;
         _oobeStateService = oobeStateService;
         _updateEngine = updateEngine;
-        _updateCheckService = updateCheckService;
         _pluginInstallerService = pluginInstallerService;
         _oobeSteps = [new WelcomeOobeStep(_oobeStateService)];
     }

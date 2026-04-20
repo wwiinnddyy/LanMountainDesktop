@@ -842,6 +842,18 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         return CheckForUpdatesCoreAsync(currentVersion, includePrerelease, isForce: true, cancellationToken);
     }
 
+    public async Task<PdcUpdatePayload?> GetPdcUpdatePayloadAsync(
+        Version currentVersion,
+        bool includePrerelease,
+        bool isForce = false,
+        CancellationToken cancellationToken = default)
+    {
+        var result = isForce
+            ? await _pdcReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _pdcReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        return result.Success ? result.PdcPayload : null;
+    }
+
     public Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,

@@ -11,7 +11,10 @@ public static class UpdateSettingsValues
     public const string ModeDownloadThenConfirm = "download_then_confirm";
     public const string ModeSilentOnExit = "silent_on_exit";
 
-    public const string DownloadSourcePdc = "pdc";
+    // NOTE: keep constant name for compatibility with existing call sites.
+    public const string DownloadSourcePdc = "stcn";
+    public const string DownloadSourceStcn = DownloadSourcePdc;
+    public const string LegacyDownloadSourcePdc = "pdc";
     public const string DownloadSourceGitHub = "github";
     public const string DownloadSourceGhProxy = "gh-proxy";
 
@@ -52,6 +55,11 @@ public static class UpdateSettingsValues
 
     public static string NormalizeDownloadSource(string? value)
     {
+        if (string.Equals(value, LegacyDownloadSourcePdc, StringComparison.OrdinalIgnoreCase))
+        {
+            return DownloadSourceStcn;
+        }
+
         if (string.Equals(value, DownloadSourcePdc, StringComparison.OrdinalIgnoreCase))
         {
             return DownloadSourcePdc;
@@ -67,8 +75,8 @@ public static class UpdateSettingsValues
             return DownloadSourceGitHub;
         }
 
-        // Default to PDC. Runtime will fallback to GitHub if PDC is unavailable.
-        return DownloadSourcePdc;
+        // Default to STCN(PDC/S3). Runtime will fallback to GitHub if STCN is unavailable.
+        return DownloadSourceStcn;
     }
 
     public static int NormalizeDownloadThreads(int value)

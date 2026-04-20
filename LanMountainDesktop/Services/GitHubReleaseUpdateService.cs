@@ -34,7 +34,17 @@ public sealed record UpdateCheckResult(
     GitHubReleaseInfo? Release,
     GitHubReleaseAsset? PreferredAsset,
     string? ErrorMessage,
-    bool ForceMode = false);
+    bool ForceMode = false,
+    PdcUpdatePayload? PdcPayload = null);
+
+public sealed record PdcUpdatePayload(
+    string DistributionId,
+    string ChannelId,
+    string SubChannel,
+    string? FileMapJson,
+    string? FileMapSignature,
+    string? FileMapJsonUrl,
+    string? FileMapSignatureUrl);
 
 public sealed record UpdateDownloadResult(
     bool Success,
