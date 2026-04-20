@@ -29,17 +29,29 @@ function Get-NormalizedRelativePath {
         [string]$FullPath
     )
 
-    $root = [System.IO.Path]::GetFullPath($RootDir)
-    $path = [System.IO.Path]::GetFullPath($FullPath)
+    $separator = [System.IO.Path]::DirectorySeparatorChar
+    $altSeparator = [System.IO.Path]::AltDirectorySeparatorChar
 
-    if (-not $root.EndsWith([System.IO.Path]::DirectorySeparatorChar.ToString()) -and
-        -not $root.EndsWith([System.IO.Path]::AltDirectorySeparatorChar.ToString())) {
-        $root += [System.IO.Path]::DirectorySeparatorChar
+    $root = [System.IO.Path]::GetFullPath($RootDir).Replace($altSeparator, $separator).TrimEnd($separator)
+    $path = [System.IO.Path]::GetFullPath($FullPath).Replace($altSeparator, $separator)
+
+    $comparison = if ($separator -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    }
+    else {
+        [System.StringComparison]::Ordinal
     }
 
-    $rootUri = [System.Uri]$root
-    $pathUri = [System.Uri]$path
-    $relative = [System.Uri]::UnescapeDataString($rootUri.MakeRelativeUri($pathUri).ToString())
+    $rootWithSeparator = "$root$separator"
+    if ($path.StartsWith($rootWithSeparator, $comparison)) {
+        $relative = $path.Substring($rootWithSeparator.Length)
+    }
+    elseif ($path.Equals($root, $comparison)) {
+        $relative = ""
+    }
+    else {
+        throw "File path '$path' is not under root '$root'."
+    }
 
     return $relative.Replace('\', '/')
 }
@@ -87,8 +99,9 @@ function New-DeltaArchive {
         [Parameter(Mandatory = $true)]
         [string]$CurrentRoot,
 
-        [Parameter(Mandatory = $true)]
-        [object[]]$ChangedFiles
+        [Parameter(Mandatory = $false)]
+        [AllowEmptyCollection()]
+        [object[]]$ChangedFiles = @()
     )
 
     if (Test-Path -LiteralPath $ZipPath) {
