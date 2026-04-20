@@ -721,7 +721,7 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
       PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
-      PDCC_VERSION: ${{ needs.prepare.outputs.version }}
+      PDCC_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
       S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       S3_REGION: ${{ vars.S3_REGION }}
@@ -906,6 +906,8 @@ jobs:
             $signingKeyPs = " "
           }
           $env:PDC_SigningKeyPs = $signingKeyPs
+          # Ensure PDCC config variable VERSION is set for publish-time templates/changelogs.
+          $env:PDCC_VERSION = $env:VERSION
           $signingKey = $env:PDC_SIGNING_KEY
           if ([string]::IsNullOrWhiteSpace($signingKey)) {
             $signingKey = $env:UPDATE_PRIVATE_KEY_PEM
