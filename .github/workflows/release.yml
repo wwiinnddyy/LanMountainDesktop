@@ -953,12 +953,28 @@ jobs:
             $stagedPayloadDir = Join-Path $stageRoot "payloads/$platformKey"
             ./scripts/Prepare-PdccOut.ps1 -SourceDir $payloadArtifact.FullName -OutputDir $stagedPayloadDir
 
-            $subChannel = ($platformKey -replace '-', '_') + "_release_folderClassic"
-            $env:PDC_SUBCHANNEL = $subChannel
             $publishRoot = Join-Path $outRoot "published/$platformKey"
             New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
+            $parts = $platformKey.Split('-', 2)
+            if ($parts.Count -lt 2) {
+              throw "Invalid platform key format: $platformKey"
+            }
+            $os = $parts[0]
+            $arch = $parts[1]
+            $packageName = "LanMountainDesktop_app_${os}_${arch}_release_folder.zip"
+            $packagePath = Join-Path $publishRoot $packageName
 
-            Push-Location $stagedPayloadDir
+            & $client $config GenerateFileMap $stagedPayloadDir
+            if ($LASTEXITCODE -ne 0) {
+              throw "PDCC GenerateFileMap failed for $platformKey."
+            }
+
+            if (Test-Path $packagePath) {
+              Remove-Item -LiteralPath $packagePath -Force
+            }
+            Compress-Archive -Path (Join-Path $stagedPayloadDir '*') -DestinationPath $packagePath -Force
+
+            Push-Location $publishRoot
             try {
               & $client $config Publish $env:PRIMARY_VERSION $env:VERSION $publishRoot
               if ($LASTEXITCODE -ne 0) {

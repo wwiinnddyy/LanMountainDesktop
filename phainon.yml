@@ -21,3 +21,12 @@ fileRepoRoot: "__FILE_REPO_ROOT__"
 archiveRoot: "__ARCHIVE_ROOT__"
 bucketKeyRoot: "lanmountain/update/repo/"
 archiveBucketKeyRoot: "lanmountain/update/installers/"
+appChangeLogPath: "$(thisFileDir)/../CHANGELOG.md"
+appChangeLogTemplate: |
+  $(changeLog)
+
+  ---
+
+  ## Checksums And Downloads
+
+  $(hashes)
