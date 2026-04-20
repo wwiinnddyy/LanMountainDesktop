@@ -356,7 +356,7 @@ public interface IUpdateSettingsService
     void Save(UpdateSettingsState state);
     Task<UpdateCheckResult> CheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
     Task<UpdateCheckResult> ForceCheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
-    Task<PdcUpdatePayload?> GetPdcUpdatePayloadAsync(Version currentVersion, bool includePrerelease, bool isForce = false, CancellationToken cancellationToken = default);
+    Task<PlondsUpdatePayload?> GetPlondsUpdatePayloadAsync(Version currentVersion, bool includePrerelease, bool isForce = false, CancellationToken cancellationToken = default);
     Task<UpdateDownloadResult> DownloadAssetAsync(
         GitHubReleaseAsset asset,
         string destinationFilePath,

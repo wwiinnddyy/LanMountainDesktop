@@ -752,7 +752,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 {
     private readonly ISettingsService _settingsService;
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
-    private readonly PdcReleaseUpdateService _pdcReleaseUpdateService = new();
+    private readonly PlondsReleaseUpdateService _plondsReleaseUpdateService = new();
 
     public UpdateSettingsService(ISettingsService settingsService)
     {
@@ -842,16 +842,16 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         return CheckForUpdatesCoreAsync(currentVersion, includePrerelease, isForce: true, cancellationToken);
     }
 
-    public async Task<PdcUpdatePayload?> GetPdcUpdatePayloadAsync(
+    public async Task<PlondsUpdatePayload?> GetPlondsUpdatePayloadAsync(
         Version currentVersion,
         bool includePrerelease,
         bool isForce = false,
         CancellationToken cancellationToken = default)
     {
         var result = isForce
-            ? await _pdcReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _pdcReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-        return result.Success ? result.PdcPayload : null;
+            ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        return result.Success ? result.PlondsPayload : null;
     }
 
     public Task<UpdateDownloadResult> DownloadAssetAsync(
@@ -891,7 +891,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public void Dispose()
     {
         _githubReleaseUpdateService.Dispose();
-        _pdcReleaseUpdateService.Dispose();
+        _plondsReleaseUpdateService.Dispose();
     }
 
     private async Task<UpdateCheckResult> CheckForUpdatesCoreAsync(
@@ -901,20 +901,20 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         CancellationToken cancellationToken)
     {
         var source = UpdateSettingsValues.NormalizeDownloadSource(_settingsService.Load().UpdateDownloadSource);
-        if (string.Equals(source, UpdateSettingsValues.DownloadSourcePdc, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(source, UpdateSettingsValues.DownloadSourcePlonds, StringComparison.OrdinalIgnoreCase))
         {
-            var pdcResult = isForce
-                ? await _pdcReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-                : await _pdcReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+            var plondsResult = isForce
+                ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+                : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
 
-            if (pdcResult.Success)
+            if (plondsResult.Success)
             {
-                return pdcResult;
+                return plondsResult;
             }
 
             AppLogger.Warn(
                 "UpdateSettings",
-                $"PDC update check failed and will fallback to GitHub. Error: {pdcResult.ErrorMessage}");
+                $"PLONDS update check failed and will fallback to GitHub. Error: {plondsResult.ErrorMessage}");
         }
 
         return isForce
@@ -1271,14 +1271,14 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 
     public string GetAppVersionText()
     {
-        // 优先从环境变量读取（Launcher 传递）
+        // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
         var envVersion = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.VersionEnvVar);
         if (!string.IsNullOrWhiteSpace(envVersion))
         {
             return envVersion;
         }
 
-        // 回退：从程序集读取
+        // Fallback: read from application assembly.
         var assembly = typeof(App).Assembly;
         var informationalVersion = assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
@@ -1318,14 +1318,14 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 
     public string GetAppCodenameText()
     {
-        // 优先从环境变量读取（Launcher 传递）
+        // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
         var envCodename = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.CodenameEnvVar);
         if (!string.IsNullOrWhiteSpace(envCodename))
         {
             return envCodename;
         }
 
-        // 回退：使用默认开发代号
+        // Fallback: use default codename.
         return DefaultCodename;
     }
 

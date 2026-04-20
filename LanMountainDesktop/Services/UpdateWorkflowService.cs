@@ -61,16 +61,16 @@ public sealed class UpdateWorkflowService
     private const string SignedFileMapName = "files.json";
     private const string SignedFileMapSignatureName = "files.json.sig";
     private const string UpdateArchiveName = "update.zip";
-    private const string PdcFileMapName = "pdc-filemap.json";
-    private const string PdcFileMapSignatureName = "pdc-filemap.sig";
-    private const string PdcUpdateStateName = "pdc-update.json";
+    private const string PlondsFileMapName = "plonds-filemap.json";
+    private const string PlondsFileMapSignatureName = "plonds-filemap.sig";
+    private const string PlondsUpdateStateName = "plonds-update.json";
 
-    private static readonly HttpClient PdcHttpClient = new()
+    private static readonly HttpClient PlondsHttpClient = new()
     {
         Timeout = TimeSpan.FromMinutes(5)
     };
 
-    private static readonly ResumableDownloadService PdcDownloadService = new(PdcHttpClient);
+    private static readonly ResumableDownloadService PlondsDownloadService = new(PlondsHttpClient);
 
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
@@ -116,7 +116,7 @@ public sealed class UpdateWorkflowService
 
     public static bool IsDeltaUpdateAvailable(UpdateCheckResult checkResult)
     {
-        if (checkResult.PdcPayload is not null)
+        if (checkResult.PlondsPayload is not null)
         {
             return true;
         }
@@ -139,14 +139,14 @@ public sealed class UpdateWorkflowService
             return new UpdateDownloadResult(false, null, "No update available for delta download.");
         }
 
-        if (checkResult.PdcPayload is null && checkResult.Release is null)
+        if (checkResult.PlondsPayload is null && checkResult.Release is null)
         {
             return new UpdateDownloadResult(false, null, "No update payload is available for delta download.");
         }
 
-        if (checkResult.PdcPayload is not null)
+        if (checkResult.PlondsPayload is not null)
         {
-            return await DownloadPdcDeltaUpdateAsync(checkResult, progress, cancellationToken);
+            return await DownloadPlondsDeltaUpdateAsync(checkResult, progress, cancellationToken);
         }
 
         var release = checkResult.Release;
@@ -243,15 +243,15 @@ public sealed class UpdateWorkflowService
         return new UpdateDownloadResult(true, Path.Combine(incomingDir, SignedFileMapName), null);
     }
 
-    private async Task<UpdateDownloadResult> DownloadPdcDeltaUpdateAsync(
+    private async Task<UpdateDownloadResult> DownloadPlondsDeltaUpdateAsync(
         UpdateCheckResult checkResult,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var payload = checkResult.PdcPayload;
+        var payload = checkResult.PlondsPayload;
         if (payload is null)
         {
-            return new UpdateDownloadResult(false, null, "PDC payload is missing.");
+            return new UpdateDownloadResult(false, null, "PLONDS payload is missing.");
         }
 
         var incomingDir = GetLauncherIncomingDirectory();
@@ -271,33 +271,33 @@ public sealed class UpdateWorkflowService
         {
             var state = _settingsFacade.Update.Get();
             var downloadThreads = Math.Max(1, state.UpdateDownloadThreads);
-            var fileMapPath = Path.Combine(incomingDir, PdcFileMapName);
-            var signaturePath = Path.Combine(incomingDir, PdcFileMapSignatureName);
-            var updateStatePath = Path.Combine(incomingDir, PdcUpdateStateName);
+            var fileMapPath = Path.Combine(incomingDir, PlondsFileMapName);
+            var signaturePath = Path.Combine(incomingDir, PlondsFileMapSignatureName);
+            var updateStatePath = Path.Combine(incomingDir, PlondsUpdateStateName);
 
-            var fileMapJson = await EnsurePdcTextResourceAsync(
+            var fileMapJson = await EnsurePlondsTextResourceAsync(
                 payload.FileMapJson,
                 payload.FileMapJsonUrl,
                 fileMapPath,
                 cancellationToken);
 
-            var fileMapSignature = await EnsurePdcTextResourceAsync(
+            var fileMapSignature = await EnsurePlondsTextResourceAsync(
                 payload.FileMapSignature,
                 payload.FileMapSignatureUrl,
                 signaturePath,
                 cancellationToken);
 
-            var downloadEntries = ParsePdcDownloadEntries(fileMapJson);
+            var downloadEntries = ParsePlondsDownloadEntries(fileMapJson);
             if (downloadEntries.Count == 0)
             {
-                return new UpdateDownloadResult(false, null, "PDC file map does not contain downloadable objects.");
+                return new UpdateDownloadResult(false, null, "PLONDS file map does not contain downloadable objects.");
             }
 
             var expectedObjectCount = downloadEntries.Count;
             var completedItems = 2;
             progress?.Report(expectedObjectCount == 0 ? 1d : (double)completedItems / (expectedObjectCount + 2));
 
-            var objectResults = new List<PdcDownloadedObjectInfo>(expectedObjectCount);
+            var objectResults = new List<PlondsDownloadedObjectInfo>(expectedObjectCount);
             var objectTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var totalSteps = expectedObjectCount + 2;
 
@@ -310,7 +310,7 @@ public sealed class UpdateWorkflowService
                     continue;
                 }
 
-                var destinationPath = GetPdcObjectDestinationPath(objectsDir, entry.ObjectHashHex);
+                var destinationPath = GetPlondsObjectDestinationPath(objectsDir, entry.ObjectHashHex);
                 var destinationDirectory = Path.GetDirectoryName(destinationPath);
                 if (!string.IsNullOrWhiteSpace(destinationDirectory))
                 {
@@ -319,10 +319,10 @@ public sealed class UpdateWorkflowService
 
                 if (File.Exists(destinationPath))
                 {
-                    var existingHash = await ComputeFileSha512HexAsync(destinationPath, cancellationToken);
+                    var existingHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
                     if (string.Equals(existingHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
                     {
-                        objectResults.Add(new PdcDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
+                        objectResults.Add(new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
                         completedItems++;
                         progress?.Report((double)completedItems / totalSteps);
                         continue;
@@ -330,7 +330,7 @@ public sealed class UpdateWorkflowService
                 }
 
                 var downloadOptions = new DownloadOptions(MaxParallelSegments: downloadThreads);
-                var downloadResult = await PdcDownloadService.DownloadAsync(
+                var downloadResult = await PlondsDownloadService.DownloadAsync(
                     entry.DownloadUrl,
                     destinationPath,
                     downloadOptions,
@@ -339,22 +339,22 @@ public sealed class UpdateWorkflowService
 
                 if (!downloadResult.Success)
                 {
-                    return new UpdateDownloadResult(false, null, $"Failed to download PDC object {entry.RelativePath}: {downloadResult.ErrorMessage}");
+                    return new UpdateDownloadResult(false, null, $"Failed to download PLONDS object {entry.RelativePath}: {downloadResult.ErrorMessage}");
                 }
 
-                var actualHash = await ComputeFileSha512HexAsync(destinationPath, cancellationToken);
+                var actualHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(actualHash) &&
                     !string.Equals(actualHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
                 {
-                    return new UpdateDownloadResult(false, null, $"PDC object hash mismatch for {entry.RelativePath}. Expected: {entry.ObjectHashHex}, Actual: {actualHash}");
+                    return new UpdateDownloadResult(false, null, $"PLONDS object hash mismatch for {entry.RelativePath}. Expected: {entry.ObjectHashHex}, Actual: {actualHash}");
                 }
 
-                objectResults.Add(new PdcDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
+                objectResults.Add(new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
                 completedItems++;
                 progress?.Report((double)completedItems / totalSteps);
             }
 
-            var updateState = new PdcUpdateState(
+            var updateState = new PlondsUpdateState(
                 checkResult.LatestVersionText,
                 payload.DistributionId,
                 payload.ChannelId,
@@ -381,7 +381,7 @@ public sealed class UpdateWorkflowService
             });
 
             progress?.Report(1d);
-            AppLogger.Info("UpdateWorkflow", $"PDC update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
+            AppLogger.Info("UpdateWorkflow", $"PLONDS update payload downloaded to {incomingDir}. Will be applied by Launcher on next startup.");
             return new UpdateDownloadResult(true, updateStatePath, null);
         }
         catch (OperationCanceledException)
@@ -390,7 +390,7 @@ public sealed class UpdateWorkflowService
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("UpdateWorkflow", "Failed to download PDC incremental payload.", ex);
+            AppLogger.Warn("UpdateWorkflow", "Failed to download PLONDS incremental payload.", ex);
             return new UpdateDownloadResult(false, null, ex.Message);
         }
     }
@@ -414,20 +414,20 @@ public sealed class UpdateWorkflowService
 
         // Incoming payload updates are identified by the local manifest or incoming directory path.
         return pendingPath.EndsWith(SignedFileMapName, StringComparison.OrdinalIgnoreCase)
-            || pendingPath.EndsWith(PdcUpdateStateName, StringComparison.OrdinalIgnoreCase)
-            || pendingPath.EndsWith(PdcFileMapName, StringComparison.OrdinalIgnoreCase)
-            || pendingPath.EndsWith(PdcFileMapSignatureName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PlondsUpdateStateName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PlondsFileMapName, StringComparison.OrdinalIgnoreCase)
+            || pendingPath.EndsWith(PlondsFileMapSignatureName, StringComparison.OrdinalIgnoreCase)
             || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GetPdcObjectDestinationPath(string objectsDirectory, string objectHashHex)
+    private static string GetPlondsObjectDestinationPath(string objectsDirectory, string objectHashHex)
     {
         var normalizedHash = objectHashHex.Trim().ToLowerInvariant();
         var shard = normalizedHash.Length >= 2 ? normalizedHash[..2] : normalizedHash;
         return Path.Combine(objectsDirectory, shard, normalizedHash);
     }
 
-    private static async Task<string> EnsurePdcTextResourceAsync(
+    private static async Task<string> EnsurePlondsTextResourceAsync(
         string? inlineContent,
         string? sourceUrl,
         string destinationPath,
@@ -441,25 +441,25 @@ public sealed class UpdateWorkflowService
 
         if (string.IsNullOrWhiteSpace(sourceUrl))
         {
-            throw new InvalidOperationException("PDC payload does not contain a file map source.");
+            throw new InvalidOperationException("PLONDS payload does not contain a file map source.");
         }
 
-        var downloadResult = await PdcDownloadService.DownloadAsync(
+        var downloadResult = await PlondsDownloadService.DownloadAsync(
             sourceUrl,
             destinationPath,
             cancellationToken: cancellationToken);
 
         if (!downloadResult.Success)
         {
-            throw new InvalidOperationException($"Failed to download PDC file map resource: {downloadResult.ErrorMessage}");
+            throw new InvalidOperationException($"Failed to download PLONDS file map resource: {downloadResult.ErrorMessage}");
         }
 
         return await File.ReadAllTextAsync(destinationPath, cancellationToken);
     }
 
-    private static IReadOnlyList<PdcDownloadEntry> ParsePdcDownloadEntries(string fileMapJson)
+    private static IReadOnlyList<PlondsDownloadEntry> ParsePlondsDownloadEntries(string fileMapJson)
     {
-        var entries = new List<PdcDownloadEntry>();
+        var entries = new List<PlondsDownloadEntry>();
         if (string.IsNullOrWhiteSpace(fileMapJson))
         {
             return entries;
@@ -472,25 +472,56 @@ public sealed class UpdateWorkflowService
             return entries;
         }
 
-        if (!TryGetPropertyIgnoreCase(root, "components", out var componentsNode) ||
-            componentsNode.ValueKind != JsonValueKind.Object)
+        if (!TryGetPropertyIgnoreCase(root, "components", out var componentsNode))
         {
             return entries;
         }
 
-        foreach (var component in componentsNode.EnumerateObject())
+        if (componentsNode.ValueKind == JsonValueKind.Object)
         {
-            if (component.Value.ValueKind != JsonValueKind.Object)
+            foreach (var component in componentsNode.EnumerateObject())
             {
-                continue;
-            }
+                if (component.Value.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
 
-            if (!TryGetPropertyIgnoreCase(component.Value, "files", out var filesNode) ||
-                filesNode.ValueKind != JsonValueKind.Object)
+                if (!TryGetPropertyIgnoreCase(component.Value, "files", out var filesNode))
+                {
+                    continue;
+                }
+
+                AppendDownloadEntries(entries, component.Name, filesNode);
+            }
+        }
+        else if (componentsNode.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var component in componentsNode.EnumerateArray())
             {
-                continue;
-            }
+                if (component.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
 
+                var componentId = ReadStringIgnoreCase(component, "id")
+                                  ?? ReadStringIgnoreCase(component, "name")
+                                  ?? "app";
+                if (!TryGetPropertyIgnoreCase(component, "files", out var filesNode))
+                {
+                    continue;
+                }
+
+                AppendDownloadEntries(entries, componentId, filesNode);
+            }
+        }
+
+        return entries;
+    }
+
+    private static void AppendDownloadEntries(ICollection<PlondsDownloadEntry> entries, string componentId, JsonElement filesNode)
+    {
+        if (filesNode.ValueKind == JsonValueKind.Object)
+        {
             foreach (var fileEntry in filesNode.EnumerateObject())
             {
                 if (fileEntry.Value.ValueKind != JsonValueKind.Object)
@@ -498,30 +529,82 @@ public sealed class UpdateWorkflowService
                     continue;
                 }
 
-                var downloadUrl = ReadStringIgnoreCase(fileEntry.Value, "archivedownloadurl")
-                                  ?? ReadStringIgnoreCase(fileEntry.Value, "downloadurl")
-                                  ?? ReadStringIgnoreCase(fileEntry.Value, "url");
-                var hashBytes = ReadByteArrayIgnoreCase(fileEntry.Value, "archivesha512")
-                                ?? ReadByteArrayIgnoreCase(fileEntry.Value, "filesha512");
-
-                if (string.IsNullOrWhiteSpace(downloadUrl) || hashBytes is null || hashBytes.Length == 0)
+                if (TryCreateDownloadEntry(componentId, fileEntry.Name, fileEntry.Value, out var entry))
                 {
-                    continue;
+                    entries.Add(entry);
                 }
+            }
 
-                var hashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
-                entries.Add(new PdcDownloadEntry(
-                    component.Name,
-                    fileEntry.Name,
-                    downloadUrl,
-                    hashHex));
+            return;
+        }
+
+        if (filesNode.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var fileEntry in filesNode.EnumerateArray())
+        {
+            if (fileEntry.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var relativePath = ReadStringIgnoreCase(fileEntry, "path");
+            if (TryCreateDownloadEntry(componentId, relativePath, fileEntry, out var entry))
+            {
+                entries.Add(entry);
+            }
+        }
+    }
+
+    private static bool TryCreateDownloadEntry(
+        string componentId,
+        string? relativePath,
+        JsonElement fileNode,
+        out PlondsDownloadEntry entry)
+    {
+        entry = default!;
+
+        var normalizedPath = string.IsNullOrWhiteSpace(relativePath)
+            ? null
+            : relativePath.Trim();
+        var downloadUrl = ReadStringIgnoreCase(fileNode, "objecturl")
+                          ?? ReadStringIgnoreCase(fileNode, "downloadurl")
+                          ?? ReadStringIgnoreCase(fileNode, "archivedownloadurl")
+                          ?? ReadStringIgnoreCase(fileNode, "url");
+        var hashHex = ReadStringIgnoreCase(fileNode, "sha256")
+                      ?? ReadStringIgnoreCase(fileNode, "filesha256")
+                      ?? ReadStringIgnoreCase(fileNode, "contenthash");
+
+        if ((string.IsNullOrWhiteSpace(hashHex) || string.IsNullOrWhiteSpace(downloadUrl)) &&
+            TryGetPropertyIgnoreCase(fileNode, "hash", out var hashNode) &&
+            hashNode.ValueKind == JsonValueKind.Object)
+        {
+            var algorithm = ReadStringIgnoreCase(hashNode, "algorithm");
+            if (string.IsNullOrWhiteSpace(algorithm) ||
+                algorithm.Contains("sha256", StringComparison.OrdinalIgnoreCase))
+            {
+                hashHex ??= ReadStringIgnoreCase(hashNode, "value");
             }
         }
 
-        return entries;
+        if (string.IsNullOrWhiteSpace(normalizedPath) ||
+            string.IsNullOrWhiteSpace(downloadUrl) ||
+            string.IsNullOrWhiteSpace(hashHex))
+        {
+            return false;
+        }
+
+        entry = new PlondsDownloadEntry(
+            componentId,
+            normalizedPath,
+            downloadUrl,
+            NormalizeHashText(hashHex));
+        return true;
     }
 
-    private static async Task<string?> ComputeFileSha512HexAsync(string filePath, CancellationToken cancellationToken)
+    private static async Task<string?> ComputeFileSha256HexAsync(string filePath, CancellationToken cancellationToken)
     {
         if (!File.Exists(filePath))
         {
@@ -529,8 +612,20 @@ public sealed class UpdateWorkflowService
         }
 
         await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var hashBytes = await SHA512.HashDataAsync(stream, cancellationToken);
+        var hashBytes = await SHA256.HashDataAsync(stream, cancellationToken);
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
+    private static string NormalizeHashText(string hash)
+    {
+        var normalized = hash.Trim();
+        var separator = normalized.IndexOf(':');
+        if (separator >= 0 && separator < normalized.Length - 1)
+        {
+            normalized = normalized[(separator + 1)..];
+        }
+
+        return normalized.Replace("-", string.Empty).Trim().ToLowerInvariant();
     }
 
     private static bool TryGetPropertyIgnoreCase(JsonElement node, string propertyName, out JsonElement value)
@@ -641,20 +736,20 @@ public sealed class UpdateWorkflowService
         return true;
     }
 
-    private sealed record PdcDownloadEntry(
+    private sealed record PlondsDownloadEntry(
         string ComponentId,
         string RelativePath,
         string DownloadUrl,
         string ObjectHashHex);
 
-    private sealed record PdcDownloadedObjectInfo(
+    private sealed record PlondsDownloadedObjectInfo(
         string ComponentId,
         string RelativePath,
         string SourceUrl,
         string ObjectHashHex,
         string LocalPath);
 
-    private sealed record PdcUpdateState(
+    private sealed record PlondsUpdateState(
         string VersionText,
         string DistributionId,
         string ChannelId,
@@ -665,7 +760,7 @@ public sealed class UpdateWorkflowService
         DateTimeOffset DownloadedAtUtc,
         string FileMapJson,
         string FileMapSignature,
-        IReadOnlyList<PdcDownloadedObjectInfo> Objects);
+        IReadOnlyList<PlondsDownloadedObjectInfo> Objects);
 
     private static bool TryResolveDeltaAssets(
         IReadOnlyList<GitHubReleaseAsset> assets,
@@ -776,7 +871,7 @@ public sealed class UpdateWorkflowService
     {
         ArgumentNullException.ThrowIfNull(checkResult);
 
-        if (checkResult.PdcPayload is not null)
+        if (checkResult.PlondsPayload is not null)
         {
             return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
         }
@@ -837,7 +932,7 @@ public sealed class UpdateWorkflowService
     {
         ArgumentNullException.ThrowIfNull(checkResult);
 
-        if (checkResult.PdcPayload is not null)
+        if (checkResult.PlondsPayload is not null)
         {
             ClearPendingUpdate();
             return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
@@ -912,14 +1007,14 @@ public sealed class UpdateWorkflowService
             if (IsPendingDeltaUpdate())
             {
                 var pdcUpdatePath = pending.InstallerPath;
-                var pdcFileMapPath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PdcFileMapName);
-                var pdcSignaturePath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PdcFileMapSignatureName);
+                var pdcFileMapPath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PlondsFileMapName);
+                var pdcSignaturePath = Path.Combine(Path.GetDirectoryName(pdcUpdatePath) ?? string.Empty, PlondsFileMapSignatureName);
                 if (File.Exists(pdcUpdatePath) && File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
                 {
                     return new UpdateVerifyResult(true, true, null, null, null);
                 }
 
-                return new UpdateVerifyResult(false, false, null, null, "PDC update payload is incomplete.");
+                return new UpdateVerifyResult(false, false, null, null, "PLONDS update payload is incomplete.");
             }
 
             return new UpdateVerifyResult(false, false, null, null, "Installer file does not exist.");
@@ -961,7 +1056,7 @@ public sealed class UpdateWorkflowService
         {
             // Always check for updates on startup (removed AutoCheckUpdates check)
             var result = await CheckForUpdatesAsync(currentVersion, isForce: false, cancellationToken);
-            if (!result.Success || !result.IsUpdateAvailable || (result.Release is null && result.PdcPayload is null))
+            if (!result.Success || !result.IsUpdateAvailable || (result.Release is null && result.PlondsPayload is null))
             {
                 return;
             }

@@ -1,4 +1,4 @@
-name: Release
+﻿name: Release
 
 on:
   push:
@@ -127,7 +127,7 @@ jobs:
             exit 1
           }
 
-          # 鏄剧ず鍙戝竷缁撴灉
+          # 閺勫墽銇氶崣鎴濈缂佹挻鐏?
           Write-Host "Launcher published to: $launcherPublishDir"
           $exeFile = Get-ChildItem -Path $launcherPublishDir -Filter "*.exe" | Select-Object -First 1
           if ($exeFile) {
@@ -712,25 +712,18 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  publish-pdc:
-    needs: [ prepare, build-windows, build-linux, build-macos ]
+  publish-plonds:
+    needs: [ prepare, build-windows, build-linux ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
-      PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
-      PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
-      PDCC_version: ${{ needs.prepare.outputs.version }}
-      PDC_CLIENT_VERSION: ${{ vars.PDC_CLIENT_VERSION || '1.0.1.0' }}
       S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       S3_REGION: ${{ vars.S3_REGION }}
-      PDC_ENDPOINT: ${{ vars.PDC_ENDPOINT }}
-      PDC_TOKEN: ${{ secrets.PDC_TOKEN }}
-      PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
-      PDC_SIGNING_KEY_PS: ${{ secrets.PDC_SIGNING_KEY_PS }}
       UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+      PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
       S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
       AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
@@ -738,461 +731,80 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
       AWS_REGION: ${{ vars.S3_REGION }}
       AWS_EC2_METADATA_DISABLED: "true"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-          ref: ${{ needs.prepare.outputs.checkout_ref }}
 
-      - name: Download payload artifacts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
+
+      - name: Download app payload artifacts
         uses: actions/download-artifact@v4
         with:
-          path: payload-artifacts
+          path: artifacts/app-payload
           pattern: app-payload-*
 
       - name: Download installer artifacts
         uses: actions/download-artifact@v4
         with:
-          path: installer-artifacts
+          path: artifacts/installers
           pattern: installer-*
 
-      - name: Prepare PDC environment
+      - name: Prepare signing key
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          function Resolve-PgpPrivateKey([string]$value) {
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              return $null
-            }
-
-            $trimmed = $value.Trim()
-            if ($trimmed -match '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
-              return $trimmed
-            }
-
-            try {
-              $decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($trimmed)).Trim()
-              if ($decoded -match '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
-                return $decoded
-              }
-            }
-            catch {
-            }
-
-            return $trimmed
+          $key = $env:PLONDS_SIGNING_KEY
+          if ([string]::IsNullOrWhiteSpace($key)) {
+            $key = $env:UPDATE_PRIVATE_KEY_PEM
+          }
+          if ([string]::IsNullOrWhiteSpace($key)) {
+            throw "Missing PLONDS_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM."
           }
 
-          if ([string]::IsNullOrWhiteSpace($env:S3_ENDPOINT) -or
-              [string]::IsNullOrWhiteSpace($env:S3_BUCKET)) {
-            throw "Missing required S3 variables."
-          }
+          $keyPath = Join-Path $PWD "update-private-key.pem"
+          [System.IO.File]::WriteAllText($keyPath, $key, [System.Text.Encoding]::ASCII)
+          Add-Content -Path $env:GITHUB_ENV -Value "UPDATE_PRIVATE_KEY_PATH=$keyPath"
 
-          $resolvedSigningKey = Resolve-PgpPrivateKey $env:PDC_SIGNING_KEY
-          if ([string]::IsNullOrWhiteSpace($resolvedSigningKey)) {
-            $resolvedSigningKey = Resolve-PgpPrivateKey $env:UPDATE_PRIVATE_KEY_PEM
-          }
-          if ([string]::IsNullOrWhiteSpace($resolvedSigningKey)) {
-            throw "Missing PDC_SIGNING_KEY (PGP private key)."
-          }
-          if ($resolvedSigningKey -notmatch '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
-            throw "PDC signing key format is invalid. Please provide armored OpenPGP private key in PDC_SIGNING_KEY."
-          }
-          Add-Content -Path $env:GITHUB_ENV -Value "PDC_SIGNING_KEY<<EOF`n$resolvedSigningKey`nEOF"
+      - name: Probe S3 access
+        if: ${{ env.S3_ENDPOINT != '' && env.S3_BUCKET != '' && env.S3_ACCESS_KEY != '' && env.S3_SECRET_KEY != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws --endpoint-url "$S3_ENDPOINT" --region "$S3_REGION" s3 ls "s3://$S3_BUCKET" --only-show-errors >/dev/null
+          echo "S3 access probe succeeded for $S3_BUCKET"
 
-          $workRoot = Join-Path $PWD "pdc-work"
-          if (Test-Path $workRoot) {
-            Remove-Item -LiteralPath $workRoot -Recurse -Force
-          }
-          New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
-
-          $template = Get-Content -Path "phainon.yml" -Raw
-          $resolved = $template `
-            -replace '__FILE_REPO_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/repo/" `
-            -replace '__ARCHIVE_ROOT__', "$($env:S3_ENDPOINT.TrimEnd('/'))/$($env:S3_BUCKET)/lanmountain/update/archive"
-
-          Set-Content -Path (Join-Path $workRoot "phainon.resolved.yml") -Value $resolved -NoNewline
-
-          python3 -m pip install --user --upgrade awscli
-          Add-Content -Path $env:GITHUB_PATH -Value "$HOME/.local/bin"
-
-      - name: Verify S3 credentials and endpoint
+      - name: Build PLONDS assets
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          function Invoke-AwsChecked([string[]]$Arguments) {
-            & aws @Arguments
-            if ($LASTEXITCODE -ne 0) {
-              throw "aws command failed: aws $($Arguments -join ' ')"
-            }
-          }
+          ./scripts/Publish-Plonds.ps1 `
+            -Version $env:VERSION `
+            -AppArtifactsRoot (Join-Path $PWD "artifacts/app-payload") `
+            -InstallerArtifactsRoot (Join-Path $PWD "artifacts/installers") `
+            -OutputDir (Join-Path $PWD "plonds-output") `
+            -PrivateKeyPath $env:UPDATE_PRIVATE_KEY_PATH `
+            -Channel "stable" `
+            -S3Endpoint $env:S3_ENDPOINT `
+            -S3Bucket $env:S3_BUCKET `
+            -S3Region $env:S3_REGION
 
-          $probeDir = Join-Path $PWD "pdc-work"
-          New-Item -ItemType Directory -Path $probeDir -Force | Out-Null
-
-          $probeFile = Join-Path $probeDir "s3-probe.txt"
-          Set-Content -Path $probeFile -Value "lanmountain pdc probe $(Get-Date -Format o)" -NoNewline
-
-          $probeKey = "lanmountain/update/probe/$($env:GITHUB_RUN_ID)-$($env:GITHUB_RUN_ATTEMPT).txt"
-          Invoke-AwsChecked @("--endpoint-url", "$env:S3_ENDPOINT", "--region", "$env:S3_REGION", "s3", "cp", $probeFile, "s3://$env:S3_BUCKET/$probeKey", "--only-show-errors")
-          Invoke-AwsChecked @("--endpoint-url", "$env:S3_ENDPOINT", "--region", "$env:S3_REGION", "s3", "rm", "s3://$env:S3_BUCKET/$probeKey", "--only-show-errors")
-          Write-Host "S3 probe succeeded."
-
-      - name: Bootstrap PDC Endpoint and Token
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $endpoint = $env:PDC_ENDPOINT
-          if ([string]::IsNullOrWhiteSpace($endpoint)) {
-            $endpoint = "http://127.0.0.1:18765"
-          }
-
-          $token = $env:PDC_TOKEN
-          if ([string]::IsNullOrWhiteSpace($token)) {
-            $token = "lmd-pdc-local-token"
-          }
-
-          Add-Content -Path $env:GITHUB_ENV -Value "PDC_ENDPOINT=$endpoint"
-          Add-Content -Path $env:GITHUB_ENV -Value "PDC_TOKEN=$token"
-          Write-Host "Using PDC endpoint: $endpoint"
-
-      - name: Start Local PDC Mock (Fallback)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          if ([string]::IsNullOrWhiteSpace($env:PDC_ENDPOINT)) {
-            throw "PDC_ENDPOINT is empty after bootstrap."
-          }
-
-          $uri = [Uri]$env:PDC_ENDPOINT
-          $isLocalHost = $uri.Host -eq "127.0.0.1" -or $uri.Host -eq "localhost"
-          if (-not $isLocalHost) {
-            Write-Host "Using external PDC endpoint: $($env:PDC_ENDPOINT)"
-            exit 0
-          }
-
-          if ([string]::IsNullOrWhiteSpace($env:PDC_TOKEN)) {
-            throw "PDC_TOKEN is empty after bootstrap."
-          }
-
-          $port = if ($uri.Port -gt 0) { $uri.Port } else { 18765 }
-          $dataDir = Join-Path $PWD "pdc-output/mock-pdc"
-          $workDir = Join-Path $PWD "pdc-work"
-          $logPath = Join-Path $workDir "pdc-mock.out.log"
-          $errLogPath = Join-Path $workDir "pdc-mock.err.log"
-
-          New-Item -ItemType Directory -Path $workDir -Force | Out-Null
-          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
-          if (Test-Path $logPath) {
-            Remove-Item -LiteralPath $logPath -Force
-          }
-          if (Test-Path $errLogPath) {
-            Remove-Item -LiteralPath $errLogPath -Force
-          }
-
-          $args = @(
-            "scripts/pdc-mock-server.py",
-            "--host", "127.0.0.1",
-            "--port", $port.ToString(),
-            "--token", $env:PDC_TOKEN,
-            "--data-dir", $dataDir
-          )
-          $process = Start-Process -FilePath "python3" -ArgumentList $args -PassThru -RedirectStandardOutput $logPath -RedirectStandardError $errLogPath
-          if (-not $process) {
-            throw "Failed to launch PDC mock server."
-          }
-
-          $healthUrl = "http://127.0.0.1:$port/healthz"
-          $ready = $false
-          for ($i = 0; $i -lt 20; $i++) {
-            Start-Sleep -Seconds 1
-            try {
-              $response = Invoke-WebRequest -Uri $healthUrl -Method Get -TimeoutSec 2
-              if ($response.StatusCode -eq 200) {
-                $ready = $true
-                break
-              }
-            }
-            catch {
-            }
-          }
-
-          if (-not $ready) {
-            if (Test-Path $logPath) {
-              Write-Host "===== pdc-mock stdout ====="
-              Get-Content -LiteralPath $logPath -ErrorAction SilentlyContinue | Write-Host
-            }
-            if (Test-Path $errLogPath) {
-              Write-Host "===== pdc-mock stderr ====="
-              Get-Content -LiteralPath $errLogPath -ErrorAction SilentlyContinue | Write-Host
-            }
-            throw "PDC mock server did not become ready in time. See $logPath and $errLogPath."
-          }
-
-          Write-Host "Local PDC mock is running at http://127.0.0.1:$port"
-
-      - name: Install PDCC
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ./scripts/Install-Pdcc.ps1 -Repository "ClassIsland/PhainonDistributionCenter" -Version "$env:PDC_CLIENT_VERSION" -OutputDir "./pdcc"
-
-      - name: Publish with PDCC
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          # Map CI vars to the naming convention expected by PDCC tooling.
-          $env:S3_Endpoint = $env:S3_ENDPOINT
-          $env:S3_Bucket = $env:S3_BUCKET
-          $env:S3_Region = $env:S3_REGION
-          $env:PDC_Endpoint = $env:PDC_ENDPOINT
-          $env:PDC_Token = $env:PDC_TOKEN
-          $env:S3_AccessKey = $env:S3_ACCESS_KEY
-          $env:S3_SecretKey = $env:S3_SECRET_KEY
-          $signingKeyPs = $env:PDC_SIGNING_KEY_PS
-          if ([string]::IsNullOrWhiteSpace($signingKeyPs)) {
-            # Keep a non-empty value so PDCC required-env check passes on Linux runners.
-            $signingKeyPs = " "
-          }
-          $env:PDC_SigningKeyPs = $signingKeyPs
-          # Map config variables with exact names required by phainon placeholders.
-          $env:PDCC_version = $env:VERSION
-          $env:PDCC_primaryVersion = $env:PRIMARY_VERSION
-          $signingKey = $env:PDC_SIGNING_KEY
-          if ([string]::IsNullOrWhiteSpace($signingKey)) {
-            $signingKey = $env:UPDATE_PRIVATE_KEY_PEM
-          }
-          if ([string]::IsNullOrWhiteSpace($signingKey)) {
-            throw "Missing PDC signing key: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM."
-          }
-          if ($signingKey -notmatch '-----BEGIN PGP PRIVATE KEY BLOCK-----') {
-            throw "PDC signing key is not an armored OpenPGP private key."
-          }
-          $env:PDC_SigningKey = $signingKey
-
-          $workDir = Join-Path $PWD "pdc-work"
-          $stageRoot = Join-Path $PWD "pdc-stage"
-          $payloadRoot = Join-Path $PWD "payload-artifacts"
-          $installerRoot = Join-Path $PWD "installer-artifacts"
-          $outRoot = Join-Path $PWD "pdc-output"
-          $publishRoot = Join-Path $outRoot "published"
-          $client = Join-Path $PWD "pdcc/PhainonDistributionCenter.Client"
-          $config = Join-Path $workDir "phainon.resolved.yml"
-
-          New-Item -ItemType Directory -Path $workDir -Force | Out-Null
-          if (-not (Test-Path -LiteralPath $config)) {
-            throw "Resolved PDCC config was not found: $config"
-          }
-          if (-not (Test-Path -LiteralPath $client)) {
-            throw "PDCC client was not found: $client"
-          }
-
-          if (Test-Path $stageRoot) {
-            Remove-Item -LiteralPath $stageRoot -Recurse -Force
-          }
-          if (Test-Path $outRoot) {
-            Remove-Item -LiteralPath $outRoot -Recurse -Force
-          }
-          New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
-          New-Item -ItemType Directory -Path $outRoot -Force | Out-Null
-          New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
-
-          $payloadArtifacts = Get-ChildItem -LiteralPath $payloadRoot -Directory
-          if (-not $payloadArtifacts) {
-            throw "No payload artifacts were downloaded."
-          }
-
-          $installerArtifacts = Get-ChildItem -LiteralPath $installerRoot -Directory
-          if (-not $installerArtifacts) {
-            throw "No installer artifacts were downloaded."
-          }
-
-          foreach ($installerArtifact in $installerArtifacts) {
-            $stagedInstallerDir = Join-Path $stageRoot "installers/$($installerArtifact.Name)"
-            ./scripts/Prepare-PdccOut.ps1 -SourceDir $installerArtifact.FullName -OutputDir $stagedInstallerDir
-          }
-
-          foreach ($payloadArtifact in $payloadArtifacts) {
-            $platformKey = $payloadArtifact.Name -replace '^app-payload-', ''
-            $stagedPayloadDir = Join-Path $stageRoot "payloads/$platformKey"
-            ./scripts/Prepare-PdccOut.ps1 -SourceDir $payloadArtifact.FullName -OutputDir $stagedPayloadDir
-
-            $parts = $platformKey.Split('-', 2)
-            if ($parts.Count -lt 2) {
-              throw "Invalid platform key format: $platformKey"
-            }
-            $os = $parts[0]
-            $arch = $parts[1]
-            $packageName = "LanMountainDesktop_app_${os}_${arch}_release_folder.zip"
-            $packagePath = Join-Path $publishRoot $packageName
-
-            Write-Host "Preparing PDCC subchannel package for $platformKey..."
-            & $client $config GenerateFileMap $stagedPayloadDir
-            if ($LASTEXITCODE -ne 0) {
-              throw "PDCC GenerateFileMap failed for $platformKey."
-            }
-
-            if (Test-Path $packagePath) {
-              Remove-Item -LiteralPath $packagePath -Force
-            }
-            Compress-Archive -Path (Join-Path $stagedPayloadDir '*') -DestinationPath $packagePath -Force
-            $packageSizeMb = [Math]::Round((Get-Item -LiteralPath $packagePath).Length / 1MB, 2)
-            Write-Host "Prepared package: $packageName ($packageSizeMb MB)"
-          }
-
-          $subchannelPackages = Get-ChildItem -LiteralPath $publishRoot -File -Filter "LanMountainDesktop_app_*_release_folder.zip"
-          if (-not $subchannelPackages) {
-            throw "No PDCC subchannel packages were prepared."
-          }
-
-          Write-Host "Publishing $($subchannelPackages.Count) subchannels in a single PDCC Publish run..."
-          $subchannelPackages | Sort-Object Name | ForEach-Object { Write-Host " - $($_.Name)" }
-
-          $publishStdOut = Join-Path $workDir "pdcc-publish.stdout.log"
-          $publishStdErr = Join-Path $workDir "pdcc-publish.stderr.log"
-          if (Test-Path $publishStdOut) {
-            Remove-Item -LiteralPath $publishStdOut -Force
-          }
-          if (Test-Path $publishStdErr) {
-            Remove-Item -LiteralPath $publishStdErr -Force
-          }
-
-          function Write-NewLogLines([string]$path, [ref]$lineCount, [string]$prefix) {
-            if (-not (Test-Path -LiteralPath $path)) {
-              return
-            }
-
-            $lines = Get-Content -LiteralPath $path -ErrorAction SilentlyContinue
-            if ($null -eq $lines) {
-              return
-            }
-
-            if ($lines -is [string]) {
-              $lines = @($lines)
-            }
-
-            if ($lines.Count -le $lineCount.Value) {
-              return
-            }
-
-            for ($i = $lineCount.Value; $i -lt $lines.Count; $i++) {
-              Write-Host "[$prefix] $($lines[$i])"
-            }
-
-            $lineCount.Value = $lines.Count
-          }
-
-          $publishArgs = @(
-            $config,
-            "Publish",
-            $env:PRIMARY_VERSION,
-            $env:VERSION,
-            $publishRoot
-          )
-          $publishTimeoutMinutes = 20
-          if (-not [string]::IsNullOrWhiteSpace($env:PDC_PUBLISH_TIMEOUT_MINUTES)) {
-            $parsedTimeout = 0
-            if ([int]::TryParse($env:PDC_PUBLISH_TIMEOUT_MINUTES, [ref]$parsedTimeout) -and $parsedTimeout -gt 0) {
-              $publishTimeoutMinutes = $parsedTimeout
-            }
-          }
-
-          $publishProcess = Start-Process `
-            -FilePath $client `
-            -ArgumentList $publishArgs `
-            -WorkingDirectory $publishRoot `
-            -RedirectStandardOutput $publishStdOut `
-            -RedirectStandardError $publishStdErr `
-            -PassThru
-          if (-not $publishProcess) {
-            throw "Failed to start PDCC Publish process."
-          }
-
-          Write-Host "PDCC Publish process started. PID=$($publishProcess.Id), timeout=${publishTimeoutMinutes}m"
-          $publishStart = Get-Date
-          $stdoutLineCount = 0
-          $stderrLineCount = 0
-
-          while (-not $publishProcess.HasExited) {
-            Start-Sleep -Seconds 15
-            $publishProcess.Refresh()
-            Write-NewLogLines -path $publishStdOut -lineCount ([ref]$stdoutLineCount) -prefix "pdcc"
-            Write-NewLogLines -path $publishStdErr -lineCount ([ref]$stderrLineCount) -prefix "pdcc-err"
-
-            $elapsed = (Get-Date) - $publishStart
-            Write-Host ("PDCC Publish heartbeat: elapsed={0:mm\\:ss}, pid={1}" -f $elapsed, $publishProcess.Id)
-
-            if ($elapsed.TotalMinutes -ge $publishTimeoutMinutes) {
-              Stop-Process -Id $publishProcess.Id -Force -ErrorAction SilentlyContinue
-              throw "PDCC Publish exceeded timeout of ${publishTimeoutMinutes} minutes."
-            }
-          }
-
-          Write-NewLogLines -path $publishStdOut -lineCount ([ref]$stdoutLineCount) -prefix "pdcc"
-          Write-NewLogLines -path $publishStdErr -lineCount ([ref]$stderrLineCount) -prefix "pdcc-err"
-
-          if ($publishProcess.ExitCode -ne 0) {
-            throw "PDCC Publish failed with exit code $($publishProcess.ExitCode)."
-          }
-
-          if (Test-Path (Join-Path $stageRoot "installers")) {
-            & aws --endpoint-url "$env:S3_ENDPOINT" --region "$env:S3_REGION" s3 sync (Join-Path $stageRoot "installers") "s3://$env:S3_BUCKET/lanmountain/update/installers/" --only-show-errors
-            if ($LASTEXITCODE -ne 0) {
-              throw "aws s3 sync failed for installer mirror upload."
-            }
-          }
-
-      - name: Upload PDC Assets
+      - name: Upload PLONDS assets
         uses: actions/upload-artifact@v4
         with:
-          name: pdc-assets
+          name: plonds-assets
           path: |
-            pdc-output/published/**
+            plonds-output/release-assets/**
+            plonds-output/published/**
           if-no-files-found: error
           retention-days: 90
-
-      - name: Dump PDC Diagnostics
-        if: failure()
-        shell: pwsh
-        run: |
-          if (Test-Path "pdc-work/pdc-mock.out.log") {
-            Write-Host "===== pdc-mock stdout ====="
-            Get-Content "pdc-work/pdc-mock.out.log" -ErrorAction SilentlyContinue | Write-Host
-          }
-
-          if (Test-Path "pdc-work/pdc-mock.err.log") {
-            Write-Host "===== pdc-mock stderr ====="
-            Get-Content "pdc-work/pdc-mock.err.log" -ErrorAction SilentlyContinue | Write-Host
-          }
-
-          if (Test-Path "pdc-output/mock-pdc") {
-            Write-Host "===== pdc-mock captured payloads ====="
-            Get-ChildItem "pdc-output/mock-pdc" -Recurse -File | ForEach-Object {
-              Write-Host "--- $($_.FullName) ---"
-              Get-Content $_.FullName -ErrorAction SilentlyContinue | Write-Host
-            }
-          }
-
-      - name: Upload PDC Diagnostics Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pdc-diagnostics
-          path: |
-            pdc-work/pdc-mock*.log
-            pdc-work/pdcc-publish*.log
-            pdc-output/mock-pdc/**
-          if-no-files-found: ignore
-          retention-days: 30
-
   github-release:
-    needs: [ prepare, build-windows, build-linux, build-macos, publish-pdc ]
+    needs: [ prepare, build-windows, build-linux, build-macos, publish-plonds ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -1204,11 +816,11 @@ jobs:
           path: artifacts/installers
           pattern: installer-*
 
-      - name: Download PDC artifacts
+      - name: Download PLONDS artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/pdc
-          pattern: pdc-assets
+          path: artifacts/plonds
+          pattern: plonds-assets
 
       - name: List artifacts structure
         run: |
@@ -1226,7 +838,7 @@ jobs:
           echo "Organizing artifacts..."
           mkdir -p release-files
           find artifacts/installers -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
-          find artifacts/pdc -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" \) -exec cp -v {} release-files/ \;
+          find artifacts/plonds -type f \( -name "files-*.json" -o -name "files-*.json.sig" -o -name "update-*.zip" -o -name "plonds-*.json" -o -name "plonds-*.json.sig" \) -exec cp -v {} release-files/ \;
           echo ""
           echo "Files ready for release:"
           ls -lh release-files/ || echo "No files found in release-files"
@@ -1260,12 +872,12 @@ jobs:
 
             Installation: Double-click the .exe file and follow the wizard.
 
-            ### Incremental Update Assets
+            ### Incremental Update Assets`n            - **plonds-filemap-windows-x64.json / plonds-filemap-windows-x64.json.sig**`n            - **plonds-filemap-windows-x86.json / plonds-filemap-windows-x86.json.sig**`n            - **plonds-filemap-linux-x64.json / plonds-filemap-linux-x64.json.sig**`n`n            ### Legacy Fallback Assets
             - **files-windows-x64.json / files-windows-x64.json.sig / update-windows-x64.zip**
             - **files-windows-x86.json / files-windows-x86.json.sig / update-windows-x86.zip**
             - **files-linux-x64.json / files-linux-x64.json.sig / update-linux-x64.zip**
 
-            Existing users: Launcher will detect platform-matching signed assets and apply update on next startup.
+            Existing users: Host will prefer staged PLONDS payloads and keep the Launcher responsible for apply + rollback. Legacy signed file-map assets remain attached as a fallback path.
 
             ### Linux
             - **LanMountainDesktop-${{ needs.prepare.outputs.version }}-linux-x64.deb** - Debian package (x64)
@@ -1276,3 +888,4 @@ jobs:
 
             See commits for changes.
           token: ${{ secrets.GITHUB_TOKEN }}
+

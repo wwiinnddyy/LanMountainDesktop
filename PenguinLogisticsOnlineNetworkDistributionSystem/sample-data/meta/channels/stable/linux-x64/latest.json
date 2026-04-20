@@ -1,0 +1,10 @@
+{
+  "channel": "stable",
+  "platform": "linux-x64",
+  "distributionId": "plonds-0.8.5.2-linux-x64",
+  "version": "0.8.5.2",
+  "publishedAt": "2026-04-20T00:00:00Z",
+  "distributionPath": "meta/distributions/plonds-0.8.5.2-linux-x64.json",
+  "fileMapPath": "meta/distributions/plonds-0.8.5.2-linux-x64.json"
+}
+

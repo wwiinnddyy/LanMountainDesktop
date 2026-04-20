@@ -14,10 +14,10 @@ internal sealed class UpdateEngineService
     private const string SignedFileMapName = "files.json";
     private const string SignatureFileName = "files.json.sig";
     private const string ArchiveFileName = "update.zip";
-    private const string PdcFileMapName = "pdc-filemap.json";
-    private const string PdcSignatureFileName = "pdc-filemap.sig";
-    private const string PdcUpdateMetadataName = "pdc-update.json";
-    private const string PdcObjectsDirectoryName = "objects";
+    private const string PlondsFileMapName = "plonds-filemap.json";
+    private const string PlondsSignatureFileName = "plonds-filemap.sig";
+    private const string PlondsUpdateMetadataName = "plonds-update.json";
+    private const string PlondsObjectsDirectoryName = "objects";
     private const string PublicKeyFileName = "public-key.pem";
 
     private readonly DeploymentLocator _deploymentLocator;
@@ -37,33 +37,33 @@ internal sealed class UpdateEngineService
 
     public LauncherResult CheckPendingUpdate()
     {
-        var pdcFileMapPath = Path.Combine(_incomingRoot, PdcFileMapName);
-        var pdcSignaturePath = Path.Combine(_incomingRoot, PdcSignatureFileName);
-        var pdcUpdatePath = Path.Combine(_incomingRoot, PdcUpdateMetadataName);
+        var pdcFileMapPath = Path.Combine(_incomingRoot, PlondsFileMapName);
+        var pdcSignaturePath = Path.Combine(_incomingRoot, PlondsSignatureFileName);
+        var pdcUpdatePath = Path.Combine(_incomingRoot, PlondsUpdateMetadataName);
         if (File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
         {
             var pdcFileMapText = File.ReadAllText(pdcFileMapPath);
-            var pdcFileMap = JsonSerializer.Deserialize(pdcFileMapText, AppJsonContext.Default.PdcFileMap);
+            var pdcFileMap = JsonSerializer.Deserialize(pdcFileMapText, AppJsonContext.Default.PlondsFileMap);
             if (pdcFileMap is null)
             {
-                return Failed("update.check", "invalid_manifest", "pdc-filemap.json is invalid.");
+                return Failed("update.check", "invalid_manifest", "plonds-filemap.json is invalid.");
             }
 
-            var pdcVerified = VerifySignature(pdcFileMapPath, pdcSignaturePath, PdcSignatureFileName);
+            var pdcVerified = VerifySignature(pdcFileMapPath, pdcSignaturePath, PlondsSignatureFileName);
             if (!pdcVerified.Success)
             {
                 return Failed("update.check", "signature_failed", pdcVerified.Message);
             }
 
-            var pdcMetadata = LoadPdcUpdateMetadata(pdcUpdatePath);
+            var pdcMetadata = LoadPlondsUpdateMetadata(pdcUpdatePath);
             return new LauncherResult
             {
                 Success = true,
                 Stage = "update.check",
                 Code = "available",
-                Message = "Pending PDC update is available.",
+                Message = "Pending PLONDS update is available.",
                 CurrentVersion = _deploymentLocator.GetCurrentVersion(),
-                TargetVersion = ResolvePdcTargetVersion(pdcFileMap, pdcMetadata)
+                TargetVersion = ResolvePlondsTargetVersion(pdcFileMap, pdcMetadata)
             };
         }
 
@@ -126,12 +126,12 @@ internal sealed class UpdateEngineService
         Directory.CreateDirectory(_incomingRoot);
         Directory.CreateDirectory(_snapshotsRoot);
 
-        var pdcFileMapPath = Path.Combine(_incomingRoot, PdcFileMapName);
-        var pdcSignaturePath = Path.Combine(_incomingRoot, PdcSignatureFileName);
-        var pdcUpdatePath = Path.Combine(_incomingRoot, PdcUpdateMetadataName);
+        var pdcFileMapPath = Path.Combine(_incomingRoot, PlondsFileMapName);
+        var pdcSignaturePath = Path.Combine(_incomingRoot, PlondsSignatureFileName);
+        var pdcUpdatePath = Path.Combine(_incomingRoot, PlondsUpdateMetadataName);
         if (File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
         {
-            return await ApplyPendingPdcUpdateAsync(pdcFileMapPath, pdcSignaturePath, pdcUpdatePath);
+            return await ApplyPendingPlondsUpdateAsync(pdcFileMapPath, pdcSignaturePath, pdcUpdatePath);
         }
 
         var fileMapPath = Path.Combine(_incomingRoot, SignedFileMapName);
@@ -165,9 +165,7 @@ internal sealed class UpdateEngineService
         var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
         if (string.IsNullOrWhiteSpace(currentDeployment))
         {
-            // 全新安装场景：没有当前部署目录，但有更新包
-            // 这种情况下应该直接应用更新作为首次安装
-            return await ApplyInitialDeploymentAsync(fileMap, archivePath, fileMapPath, signaturePath);
+            // Initial install path: no current deployment exists, so apply the staged package directly.
         }
 
         var currentVersion = _deploymentLocator.GetCurrentVersion();
@@ -236,7 +234,7 @@ internal sealed class UpdateEngineService
             snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
-            // 清理旧版本，但保留最近3个版本以支持回滚
+            // 婵炴挸鎳愰幃濠囧籍瑜忔晶妤呭嫉椤掑﹦绀夊ù锝呮缁绘岸鎮惧▎鎰粯閺?濞戞搩浜炴晶妤呭嫉椤戝じ绨伴柡鈧娑樼槷闁搞儳鍋炵划?
             CleanupDestroyedDeployments();
 
             return new LauncherResult
@@ -280,46 +278,46 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private async Task<LauncherResult> ApplyPendingPdcUpdateAsync(
+    private async Task<LauncherResult> ApplyPendingPlondsUpdateAsync(
         string pdcFileMapPath,
         string pdcSignaturePath,
         string pdcUpdatePath)
     {
-        var verifyResult = VerifySignature(pdcFileMapPath, pdcSignaturePath, PdcSignatureFileName);
+        var verifyResult = VerifySignature(pdcFileMapPath, pdcSignaturePath, PlondsSignatureFileName);
         if (!verifyResult.Success)
         {
             return Failed("update.apply", "signature_failed", verifyResult.Message);
         }
 
         var fileMapText = await File.ReadAllTextAsync(pdcFileMapPath).ConfigureAwait(false);
-        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.PdcFileMap) ?? new PdcFileMap();
-        var fileEntries = CollectPdcFileEntries(fileMap);
+        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.PlondsFileMap) ?? new PlondsFileMap();
+        var fileEntries = CollectPlondsFileEntries(fileMap);
         if (fileEntries.Count == 0)
         {
-            PopulatePdcManifestFromRawJson(fileMapText, fileMap, fileEntries);
+            PopulatePlondsManifestFromRawJson(fileMapText, fileMap, fileEntries);
         }
 
         if (fileEntries.Count == 0)
         {
-            return Failed("update.apply", "invalid_manifest", "No PDC file entries were found.");
+            return Failed("update.apply", "invalid_manifest", "No PLONDS file entries were found.");
         }
 
-        var pdcMetadata = LoadPdcUpdateMetadata(pdcUpdatePath);
+        var pdcMetadata = LoadPlondsUpdateMetadata(pdcUpdatePath);
 
         var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
         var currentVersion = _deploymentLocator.GetCurrentVersion();
         var sourceVersion = string.IsNullOrWhiteSpace(currentVersion) ? "0.0.0" : currentVersion;
-        var expectedSourceVersion = ResolvePdcSourceVersion(fileMap, pdcMetadata);
+        var expectedSourceVersion = ResolvePlondsSourceVersion(fileMap, pdcMetadata);
         if (!string.IsNullOrWhiteSpace(expectedSourceVersion) &&
             !string.Equals(expectedSourceVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
         {
             return Failed(
                 "update.apply",
                 "version_mismatch",
-                $"PDC update requires source version {expectedSourceVersion} but current is {sourceVersion}.");
+                $"PLONDS update requires source version {expectedSourceVersion} but current is {sourceVersion}.");
         }
 
-        var targetVersion = ResolvePdcTargetVersion(fileMap, pdcMetadata);
+        var targetVersion = ResolvePlondsTargetVersion(fileMap, pdcMetadata);
         if (string.IsNullOrWhiteSpace(targetVersion))
         {
             targetVersion = sourceVersion;
@@ -354,12 +352,12 @@ internal sealed class UpdateEngineService
 
             foreach (var entry in fileEntries)
             {
-                ApplyPdcFileEntry(entry, currentDeployment, targetDeployment);
+                ApplyPlondsFileEntry(entry, currentDeployment, targetDeployment);
             }
 
             foreach (var entry in fileEntries)
             {
-                VerifyPdcFileEntry(entry, targetDeployment);
+                VerifyPlondsFileEntry(entry, targetDeployment);
             }
 
             if (isInitialDeployment)
@@ -412,7 +410,7 @@ internal sealed class UpdateEngineService
                     Success = false,
                     Stage = "update.apply",
                     Code = "initial_deploy_failed",
-                    Message = "Failed to apply initial PDC deployment.",
+                    Message = "Failed to apply initial PLONDS deployment.",
                     ErrorMessage = ex.Message,
                     CurrentVersion = "0.0.0",
                     TargetVersion = targetVersion
@@ -427,7 +425,7 @@ internal sealed class UpdateEngineService
                 Success = false,
                 Stage = "update.apply",
                 Code = "apply_failed",
-                Message = "Failed to apply PDC update. Rolled back to previous version.",
+                Message = "Failed to apply PLONDS update. Rolled back to previous version.",
                 ErrorMessage = ex.Message,
                 CurrentVersion = sourceVersion,
                 RolledBackTo = sourceVersion
@@ -435,7 +433,7 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private void ApplyPdcFileEntry(PdcFileEntry file, string? currentDeployment, string targetDeployment)
+    private void ApplyPlondsFileEntry(PlondsFileEntry file, string? currentDeployment, string targetDeployment)
     {
         var normalizedPath = NormalizeRelativePath(file.Path);
         var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
@@ -470,13 +468,13 @@ internal sealed class UpdateEngineService
             return;
         }
 
-        var objectPath = ResolvePdcObjectPath(file);
+        var objectPath = ResolvePlondsObjectPath(file);
         var objectBytes = File.ReadAllBytes(objectPath);
         var restoredBytes = TryInflateGzip(objectBytes) ?? objectBytes;
         File.WriteAllBytes(targetPath, restoredBytes);
     }
 
-    private void VerifyPdcFileEntry(PdcFileEntry file, string targetDeployment)
+    private void VerifyPlondsFileEntry(PlondsFileEntry file, string targetDeployment)
     {
         var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
         if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase))
@@ -512,26 +510,26 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private string ResolvePdcObjectPath(PdcFileEntry file)
+    private string ResolvePlondsObjectPath(PlondsFileEntry file)
     {
         var candidates = new List<string>();
-        AddPdcPathCandidates(candidates, file.ObjectPath);
-        AddPdcPathCandidates(candidates, file.ObjectKey);
-        AddPdcPathCandidates(candidates, file.ArchivePath);
-        AddPdcPathCandidates(candidates, file.ObjectUrl);
-        AddPdcPathCandidates(candidates, file.Url);
+        AddPlondsPathCandidates(candidates, file.ObjectPath);
+        AddPlondsPathCandidates(candidates, file.ObjectKey);
+        AddPlondsPathCandidates(candidates, file.ArchivePath);
+        AddPlondsPathCandidates(candidates, file.ObjectUrl);
+        AddPlondsPathCandidates(candidates, file.Url);
 
         if (TryGetExpectedObjectSha512(file, out var expectedSha512) || TryGetExpectedSha512(file, out expectedSha512))
         {
             var hashHex = Convert.ToHexString(expectedSha512).ToLowerInvariant();
-            AddPdcPathCandidates(candidates, Path.Combine(PdcObjectsDirectoryName, hashHex));
+            AddPlondsPathCandidates(candidates, Path.Combine(PlondsObjectsDirectoryName, hashHex));
             if (hashHex.Length > 2)
             {
-                AddPdcPathCandidates(candidates, Path.Combine(PdcObjectsDirectoryName, hashHex[..2], hashHex));
+                AddPlondsPathCandidates(candidates, Path.Combine(PlondsObjectsDirectoryName, hashHex[..2], hashHex));
                 // Backward compatibility for previously staged paths.
-                AddPdcPathCandidates(candidates, Path.Combine(PdcObjectsDirectoryName, hashHex[..2], hashHex[2..]));
+                AddPlondsPathCandidates(candidates, Path.Combine(PlondsObjectsDirectoryName, hashHex[..2], hashHex[2..]));
             }
-            AddPdcPathCandidates(candidates, Path.Combine(PdcObjectsDirectoryName, $"{hashHex}.gz"));
+            AddPlondsPathCandidates(candidates, Path.Combine(PlondsObjectsDirectoryName, $"{hashHex}.gz"));
         }
 
         foreach (var relativePath in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -567,7 +565,7 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private void AddPdcPathCandidates(ICollection<string> candidates, string? value)
+    private void AddPlondsPathCandidates(ICollection<string> candidates, string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -589,19 +587,19 @@ internal sealed class UpdateEngineService
         normalized = normalized.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         candidates.Add(normalized);
 
-        if (!normalized.StartsWith($"{PdcObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith($"{PlondsObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
         {
-            candidates.Add(Path.Combine(PdcObjectsDirectoryName, normalized));
+            candidates.Add(Path.Combine(PlondsObjectsDirectoryName, normalized));
         }
 
         var fileName = Path.GetFileName(normalized);
         if (!string.IsNullOrWhiteSpace(fileName))
         {
-            candidates.Add(Path.Combine(PdcObjectsDirectoryName, fileName));
+            candidates.Add(Path.Combine(PlondsObjectsDirectoryName, fileName));
         }
     }
 
-    private static bool TryGetExpectedSha512(PdcFileEntry file, out byte[] expected)
+    private static bool TryGetExpectedSha512(PlondsFileEntry file, out byte[] expected)
     {
         expected = [];
         if (file.Sha512Bytes is { Length: > 0 })
@@ -636,7 +634,7 @@ internal sealed class UpdateEngineService
         return TryParseHashBytes(file.Sha512Base64, out expected);
     }
 
-    private static bool TryGetExpectedObjectSha512(PdcFileEntry file, out byte[] expected)
+    private static bool TryGetExpectedObjectSha512(PlondsFileEntry file, out byte[] expected)
     {
         expected = [];
         if (file.Hash is null)
@@ -724,9 +722,9 @@ internal sealed class UpdateEngineService
         return normalized.Replace("-", string.Empty).Trim().ToLowerInvariant();
     }
 
-    private static List<PdcFileEntry> CollectPdcFileEntries(PdcFileMap fileMap)
+    private static List<PlondsFileEntry> CollectPlondsFileEntries(PlondsFileMap fileMap)
     {
-        var files = new List<PdcFileEntry>();
+        var files = new List<PlondsFileEntry>();
         if (fileMap.Files is { Count: > 0 })
         {
             files.AddRange(fileMap.Files);
@@ -748,7 +746,7 @@ internal sealed class UpdateEngineService
         return files;
     }
 
-    private static void PopulatePdcManifestFromRawJson(string fileMapJson, PdcFileMap fileMap, ICollection<PdcFileEntry> files)
+    private static void PopulatePlondsManifestFromRawJson(string fileMapJson, PlondsFileMap fileMap, ICollection<PlondsFileEntry> files)
     {
         if (string.IsNullOrWhiteSpace(fileMapJson))
         {
@@ -794,7 +792,7 @@ internal sealed class UpdateEngineService
 
         if (TryGetJsonPropertyIgnoreCase(root, "files", out var rootFilesNode))
         {
-            ParsePdcFilesNode(rootFilesNode, null, files);
+            ParsePlondsFilesNode(rootFilesNode, null, files);
         }
 
         if (!TryGetJsonPropertyIgnoreCase(root, "components", out var componentsNode))
@@ -813,7 +811,7 @@ internal sealed class UpdateEngineService
 
                 if (TryGetJsonPropertyIgnoreCase(component.Value, "files", out var componentFilesNode))
                 {
-                    ParsePdcFilesNode(componentFilesNode, component.Name, files);
+                    ParsePlondsFilesNode(componentFilesNode, component.Name, files);
                 }
             }
 
@@ -835,12 +833,12 @@ internal sealed class UpdateEngineService
             var componentName = ReadJsonStringIgnoreCase(component, "name");
             if (TryGetJsonPropertyIgnoreCase(component, "files", out var componentFilesNode))
             {
-                ParsePdcFilesNode(componentFilesNode, componentName, files);
+                ParsePlondsFilesNode(componentFilesNode, componentName, files);
             }
         }
     }
 
-    private static void ParsePdcFilesNode(JsonElement filesNode, string? componentName, ICollection<PdcFileEntry> files)
+    private static void ParsePlondsFilesNode(JsonElement filesNode, string? componentName, ICollection<PlondsFileEntry> files)
     {
         if (filesNode.ValueKind == JsonValueKind.Object)
         {
@@ -851,7 +849,7 @@ internal sealed class UpdateEngineService
                     continue;
                 }
 
-                if (TryCreatePdcFileEntry(fileEntry.Name, componentName, fileEntry.Value, out var parsed))
+                if (TryCreatePlondsFileEntry(fileEntry.Name, componentName, fileEntry.Value, out var parsed))
                 {
                     files.Add(parsed);
                 }
@@ -873,16 +871,16 @@ internal sealed class UpdateEngineService
             }
 
             var fallbackPath = ReadJsonStringIgnoreCase(fileEntry, "path");
-            if (TryCreatePdcFileEntry(fallbackPath, componentName, fileEntry, out var parsed))
+            if (TryCreatePlondsFileEntry(fallbackPath, componentName, fileEntry, out var parsed))
             {
                 files.Add(parsed);
             }
         }
     }
 
-    private static bool TryCreatePdcFileEntry(string? fallbackPath, string? componentName, JsonElement node, out PdcFileEntry entry)
+    private static bool TryCreatePlondsFileEntry(string? fallbackPath, string? componentName, JsonElement node, out PlondsFileEntry entry)
     {
-        entry = new PdcFileEntry();
+        entry = new PlondsFileEntry();
         var path = ReadJsonStringIgnoreCase(node, "path");
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -916,7 +914,7 @@ internal sealed class UpdateEngineService
             metadata["component"] = componentName;
         }
 
-        entry = new PdcFileEntry
+        entry = new PlondsFileEntry
         {
             Path = path,
             Action = string.IsNullOrWhiteSpace(action) ? "replace" : action,
@@ -934,7 +932,7 @@ internal sealed class UpdateEngineService
 
         if (archiveSha512 is { Length: > 0 } || !string.IsNullOrWhiteSpace(archiveSha512Text))
         {
-            entry.Hash = new PdcHashDescriptor
+            entry.Hash = new PlondsHashDescriptor
             {
                 Algorithm = "sha512",
                 Bytes = archiveSha512,
@@ -945,7 +943,7 @@ internal sealed class UpdateEngineService
         }
         else if (TryGetJsonPropertyIgnoreCase(node, "hash", out var hashNode) && hashNode.ValueKind == JsonValueKind.Object)
         {
-            entry.Hash = new PdcHashDescriptor
+            entry.Hash = new PlondsHashDescriptor
             {
                 Algorithm = ReadJsonStringIgnoreCase(hashNode, "algorithm"),
                 Value = ReadJsonStringIgnoreCase(hashNode, "value"),
@@ -1028,7 +1026,7 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private static PdcUpdateMetadata? LoadPdcUpdateMetadata(string path)
+    private static PlondsUpdateMetadata? LoadPlondsUpdateMetadata(string path)
     {
         if (!File.Exists(path))
         {
@@ -1043,7 +1041,7 @@ internal sealed class UpdateEngineService
                 return null;
             }
 
-            return JsonSerializer.Deserialize(text, AppJsonContext.Default.PdcUpdateMetadata);
+            return JsonSerializer.Deserialize(text, AppJsonContext.Default.PlondsUpdateMetadata);
         }
         catch
         {
@@ -1051,7 +1049,7 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private static string? ResolvePdcSourceVersion(PdcFileMap fileMap, PdcUpdateMetadata? metadata)
+    private static string? ResolvePlondsSourceVersion(PlondsFileMap fileMap, PlondsUpdateMetadata? metadata)
     {
         return FirstNonEmpty(
             metadata?.FromVersion,
@@ -1060,7 +1058,7 @@ internal sealed class UpdateEngineService
             TryGetMetadataValue(fileMap.Metadata, "sourceVersion"));
     }
 
-    private static string? ResolvePdcTargetVersion(PdcFileMap fileMap, PdcUpdateMetadata? metadata)
+    private static string? ResolvePlondsTargetVersion(PlondsFileMap fileMap, PlondsUpdateMetadata? metadata)
     {
         return FirstNonEmpty(
             metadata?.ToVersion,
@@ -1107,7 +1105,7 @@ internal sealed class UpdateEngineService
     }
 
     /// <summary>
-    /// 全新安装场景：直接应用更新包作为首次部署
+    /// 闁稿繈鍔嶉弻濠勨偓鐟邦槼椤ュ﹪宕烽悜妯荤彲闁挎稒姘ㄥú鍧楀箳閵夈儳瀹夐柣顫妽濞插潡寮弶鍨樁濞达絾绮堢拹鐔革純閺嶎煈鍋ч梺顔哄妿鐠?
     /// </summary>
     private async Task<LauncherResult> ApplyInitialDeploymentAsync(
         SignedFileMap fileMap,
@@ -1123,7 +1121,7 @@ internal sealed class UpdateEngineService
         var extractRoot = Path.Combine(_incomingRoot, "extracted");
         try
         {
-            // 保存快照（用于回滚，虽然首次安装回滚意义不大）
+            // Save a snapshot for diagnostics and future rollback consistency.
             var snapshot = new SnapshotMetadata
             {
                 SnapshotId = Guid.NewGuid().ToString("N"),
@@ -1136,7 +1134,7 @@ internal sealed class UpdateEngineService
             };
             SaveSnapshot(snapshotPath, snapshot);
 
-            // 清理并解压更新包
+            // 婵炴挸鎳愰幃濠囩嵁閹澏鎺楀储鐎ｎ偅绾柡鍌涙緲鐎?
             if (Directory.Exists(extractRoot))
             {
                 Directory.Delete(extractRoot, true);
@@ -1144,17 +1142,17 @@ internal sealed class UpdateEngineService
             Directory.CreateDirectory(extractRoot);
             ZipFile.ExtractToDirectory(archivePath, extractRoot, overwriteFiles: true);
 
-            // 创建目标部署目录
+            // 闁告帗绋戠紓鎾绘儎椤旂晫鍨奸梺顔哄妿鐠佹煡鎯勯鑲╃Э
             Directory.CreateDirectory(targetDeployment);
             File.WriteAllText(partialMarker, string.Empty);
 
-            // 应用所有文件（全新安装时，所有文件都是新增或替换）
+            // Apply all files from the extracted payload into the first deployment directory.
             foreach (var file in fileMap.Files)
             {
                 ApplyInitialFileEntry(file, targetDeployment, extractRoot);
             }
 
-            // 验证文件哈希
+            // 濡ょ姴鐭侀惁澶愬棘閸ワ附顐介柛婵嗙墕缁?
             foreach (var file in fileMap.Files)
             {
                 if (!NeedsVerification(file))
@@ -1170,7 +1168,7 @@ internal sealed class UpdateEngineService
                 }
             }
 
-            // 激活部署（创建 .current 标记，删除 .partial 标记）
+            // Mark the deployment as current and remove the partial marker.
             var currentMarker = Path.Combine(targetDeployment, ".current");
             File.WriteAllText(currentMarker, string.Empty);
             if (File.Exists(partialMarker))
@@ -1178,8 +1176,7 @@ internal sealed class UpdateEngineService
                 File.Delete(partialMarker);
             }
 
-            // 清理更新包
-            snapshot.Status = "applied";
+            // 婵炴挸鎳愰幃濠囧即鐎涙ɑ鐓€闁?            snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
 
@@ -1195,7 +1192,7 @@ internal sealed class UpdateEngineService
         }
         catch (Exception ex)
         {
-            // 清理失败的目标目录
+            // Clean up the failed target deployment before returning the error result.
             try
             {
                 if (Directory.Exists(targetDeployment))
@@ -1234,13 +1231,12 @@ internal sealed class UpdateEngineService
     }
 
     /// <summary>
-    /// 应用初始部署文件（全新安装场景，不需要源目录）
-    /// </summary>
+    /// 閹煎瓨姊婚弫銈夊礆濠靛棭娼楅梺顔哄妿鐠佹煡寮崶锔筋偨闁挎稑鐗嗛崣蹇涘棘閺夎法鏆旈悷浣告噹濠р偓闁哄拋鍨界槐婵囩▔瀹ュ浠橀悷鏇氱劍缁噣鎯勯鑲╃Э闁?    /// </summary>
     private void ApplyInitialFileEntry(UpdateFileEntry file, string targetDeployment, string extractRoot)
     {
         var normalizedPath = NormalizeRelativePath(file.Path);
 
-        // 删除操作在全新安装时忽略
+        // 闁告帞濞€濞呭酣骞欏鍕▕闁革负鍔岄崣蹇涘棘閺夎法鏆旈悷浣告噺濡炲倽绠涢悾灞炬
         if (string.Equals(file.Action, "delete", StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -1254,7 +1250,7 @@ internal sealed class UpdateEngineService
             Directory.CreateDirectory(targetDir);
         }
 
-        // 无论是 add 还是 replace，都从压缩包复制
+        // 闁哄啰濮鹃鎴﹀及?add 閺夆晜蓱濡?replace闁挎稑鐭傞崗妯荤鎼粹€崇缂傚倵鏅涚€垫ɑ寰勫鍛厬
         var archiveRelative = string.IsNullOrWhiteSpace(file.ArchivePath) ? normalizedPath : NormalizeRelativePath(file.ArchivePath);
         var extractedPath = Path.Combine(extractRoot, archiveRelative);
         EnsurePathWithinRoot(extractedPath, extractRoot);
@@ -1419,9 +1415,9 @@ internal sealed class UpdateEngineService
                      Path.Combine(_incomingRoot, SignedFileMapName),
                      Path.Combine(_incomingRoot, SignatureFileName),
                      Path.Combine(_incomingRoot, ArchiveFileName),
-                     Path.Combine(_incomingRoot, PdcFileMapName),
-                     Path.Combine(_incomingRoot, PdcSignatureFileName),
-                     Path.Combine(_incomingRoot, PdcUpdateMetadataName)
+                     Path.Combine(_incomingRoot, PlondsFileMapName),
+                     Path.Combine(_incomingRoot, PlondsSignatureFileName),
+                     Path.Combine(_incomingRoot, PlondsUpdateMetadataName)
                  })
         {
             try
@@ -1438,7 +1434,7 @@ internal sealed class UpdateEngineService
 
         foreach (var directory in new[]
                  {
-                     Path.Combine(_incomingRoot, PdcObjectsDirectoryName)
+                     Path.Combine(_incomingRoot, PlondsObjectsDirectoryName)
                  })
         {
             try

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Plonds.Shared</RootNamespace>
+  </PropertyGroup>
+</Project>
+

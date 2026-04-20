@@ -35,9 +35,9 @@ public sealed record UpdateCheckResult(
     GitHubReleaseAsset? PreferredAsset,
     string? ErrorMessage,
     bool ForceMode = false,
-    PdcUpdatePayload? PdcPayload = null);
+    PlondsUpdatePayload? PlondsPayload = null);
 
-public sealed record PdcUpdatePayload(
+public sealed record PlondsUpdatePayload(
     string DistributionId,
     string ChannelId,
     string SubChannel,

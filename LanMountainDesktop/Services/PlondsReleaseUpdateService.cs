@@ -11,15 +11,17 @@ using System.Threading.Tasks;
 namespace LanMountainDesktop.Services;
 
 /// <summary>
-/// Best-effort PDC client that maps PDC responses to the existing update result model.
-/// This keeps launcher update contracts stable while allowing a gradual migration.
+/// Thin PLONDS client used by the host app.
+/// The host keeps responsibility for checking and downloading updates; Launcher only applies staged payloads.
 /// </summary>
-public sealed class PdcReleaseUpdateService : IDisposable
+public sealed class PlondsReleaseUpdateService : IDisposable
 {
+    private const string DefaultApiBasePath = "/api/plonds/v1";
+
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
 
-    public PdcReleaseUpdateService(HttpClient? httpClient = null)
+    public PlondsReleaseUpdateService(HttpClient? httpClient = null)
     {
         if (httpClient is null)
         {
@@ -79,25 +81,40 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 LatestVersionText: "-",
                 Release: null,
                 PreferredAsset: null,
-                ErrorMessage: "PDC endpoint is not configured.",
+                ErrorMessage: "PLONDS endpoint is not configured.",
                 ForceMode: isForce);
         }
 
         try
         {
-            var metadataUrl = BuildUri(endpoint, "api/v1/public/distributions/metadata");
-            var metadata = await GetContentNodeAsync(metadataUrl, cancellationToken).ConfigureAwait(false);
+            var apiBasePath = ResolveApiBasePath();
+            var metadataUrl = BuildApiUrl(endpoint, apiBasePath, "metadata");
+            var metadata = await GetJsonNodeAsync(metadataUrl, cancellationToken).ConfigureAwait(false);
 
-            var channelId = ResolveChannelId(metadata, includePrerelease);
-            if (string.IsNullOrWhiteSpace(channelId))
-            {
-                channelId = includePrerelease ? "preview" : "stable";
-            }
-
-            var latestUrl = BuildUri(
+            var channelId = ResolveChannelId(includePrerelease);
+            var platform = ResolvePlatform();
+            var latestUrl = BuildApiUrl(
                 endpoint,
-                $"api/v1/public/distributions/latest/{Uri.EscapeDataString(channelId)}?appVersion={Uri.EscapeDataString(normalizedCurrentVersionText)}");
-            var latestNode = await GetContentNodeAsync(latestUrl, cancellationToken).ConfigureAwait(false);
+                apiBasePath,
+                $"channels/{Uri.EscapeDataString(channelId)}/{Uri.EscapeDataString(platform)}/latest?currentVersion={Uri.EscapeDataString(normalizedCurrentVersionText)}");
+
+            JsonElement latestNode;
+            try
+            {
+                latestNode = await GetJsonNodeAsync(latestUrl, cancellationToken).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.StartsWith("HTTP 204", StringComparison.OrdinalIgnoreCase))
+            {
+                return new UpdateCheckResult(
+                    Success: true,
+                    IsUpdateAvailable: false,
+                    CurrentVersionText: normalizedCurrentVersionText,
+                    LatestVersionText: normalizedCurrentVersionText,
+                    Release: null,
+                    PreferredAsset: null,
+                    ErrorMessage: null,
+                    ForceMode: isForce);
+            }
 
             var latestVersionText = ReadString(latestNode, "version") ?? "-";
             if (!TryParseVersion(latestVersionText, out var latestVersion) || latestVersion is null)
@@ -109,7 +126,7 @@ public sealed class PdcReleaseUpdateService : IDisposable
                     LatestVersionText: latestVersionText,
                     Release: null,
                     PreferredAsset: null,
-                    ErrorMessage: "PDC latest distribution version is invalid.",
+                    ErrorMessage: "PLONDS latest distribution version is invalid.",
                     ForceMode: isForce);
             }
 
@@ -123,7 +140,7 @@ public sealed class PdcReleaseUpdateService : IDisposable
                     LatestVersionText: latestVersionText,
                     Release: null,
                     PreferredAsset: null,
-                    ErrorMessage: "PDC latest distribution id is missing.",
+                    ErrorMessage: "PLONDS latest distribution id is missing.",
                     ForceMode: isForce);
             }
 
@@ -141,15 +158,15 @@ public sealed class PdcReleaseUpdateService : IDisposable
                     ForceMode: false);
             }
 
-            var subChannel = ResolveSubChannel();
-            var distributionUrl = BuildUri(
+            var distributionUrl = BuildApiUrl(
                 endpoint,
-                $"api/v1/public/distributions/{Uri.EscapeDataString(distributionId)}/{Uri.EscapeDataString(subChannel)}");
-            var distributionNode = await GetContentNodeAsync(distributionUrl, cancellationToken).ConfigureAwait(false);
+                apiBasePath,
+                $"distributions/{Uri.EscapeDataString(distributionId)}");
+            var distributionNode = await GetJsonNodeAsync(distributionUrl, cancellationToken).ConfigureAwait(false);
 
-            var assets = ResolveAssets(distributionNode);
-            var pdcPayload = ResolvePdcPayload(distributionNode, distributionId, channelId, subChannel);
-            if (assets.Count == 0 && !HasPdcPayload(pdcPayload))
+            var assets = ResolveInstallerAssets(distributionNode);
+            var payload = ResolvePlondsPayload(distributionNode, distributionId, channelId, platform);
+            if (assets.Count == 0 && !HasPlondsPayload(payload))
             {
                 return new UpdateCheckResult(
                     Success: false,
@@ -158,18 +175,18 @@ public sealed class PdcReleaseUpdateService : IDisposable
                     LatestVersionText: latestVersionText,
                     Release: null,
                     PreferredAsset: null,
-                    ErrorMessage: "PDC distribution response does not expose downloadable update assets.",
+                    ErrorMessage: "PLONDS distribution response does not expose downloadable update assets.",
                     ForceMode: isForce);
             }
 
+            var publishedAt = ParsePublishedAt(distributionNode) ?? DateTimeOffset.UtcNow;
             var release = new GitHubReleaseInfo(
                 TagName: $"v{latestVersionText}",
-                Name: $"PDC Distribution {latestVersionText}",
+                Name: $"PLONDS Distribution {latestVersionText}",
                 IsPrerelease: includePrerelease,
                 IsDraft: false,
-                PublishedAt: DateTimeOffset.UtcNow,
+                PublishedAt: publishedAt,
                 Assets: assets);
-            var preferredAsset = SelectPreferredInstallerAsset(assets);
 
             return new UpdateCheckResult(
                 Success: true,
@@ -177,10 +194,10 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 CurrentVersionText: normalizedCurrentVersionText,
                 LatestVersionText: latestVersionText,
                 Release: release,
-                PreferredAsset: preferredAsset,
+                PreferredAsset: SelectPreferredInstallerAsset(assets),
                 ErrorMessage: null,
                 ForceMode: isForce,
-                PdcPayload: pdcPayload);
+                PlondsPayload: payload);
         }
         catch (OperationCanceledException)
         {
@@ -195,12 +212,12 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 LatestVersionText: "-",
                 Release: null,
                 PreferredAsset: null,
-                ErrorMessage: $"PDC request failed: {ex.Message}",
+                ErrorMessage: $"PLONDS request failed: {ex.Message}",
                 ForceMode: isForce);
         }
     }
 
-    private async Task<JsonElement> GetContentNodeAsync(string url, CancellationToken cancellationToken)
+    private async Task<JsonElement> GetJsonNodeAsync(string url, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         var token = ResolveToken();
@@ -227,15 +244,39 @@ public sealed class PdcReleaseUpdateService : IDisposable
         return root.Clone();
     }
 
-    private static IReadOnlyList<GitHubReleaseAsset> ResolveAssets(JsonElement distributionNode)
+    private static IReadOnlyList<GitHubReleaseAsset> ResolveInstallerAssets(JsonElement distributionNode)
     {
         var assets = new List<GitHubReleaseAsset>();
-        if (distributionNode.ValueKind != JsonValueKind.Object)
+
+        if (TryGetPropertyIgnoreCase(distributionNode, "installerMirrors", out var installersNode) &&
+            installersNode.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var installerNode in installersNode.EnumerateArray())
+            {
+                if (installerNode.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var name = ReadString(installerNode, "name");
+                var url = ReadString(installerNode, "url") ?? ReadString(installerNode, "downloadUrl");
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                {
+                    continue;
+                }
+
+                var size = ReadInt64(installerNode, "size") ?? 0L;
+                var sha256 = ReadString(installerNode, "sha256");
+                assets.Add(new GitHubReleaseAsset(name, url, size, sha256));
+            }
+        }
+
+        if (assets.Count > 0)
         {
             return assets;
         }
 
-        if (distributionNode.TryGetProperty("assets", out var assetsNode) &&
+        if (TryGetPropertyIgnoreCase(distributionNode, "assets", out var assetsNode) &&
             assetsNode.ValueKind == JsonValueKind.Array)
         {
             foreach (var assetNode in assetsNode.EnumerateArray())
@@ -246,9 +287,9 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 }
 
                 var name = ReadString(assetNode, "name");
-                var url = ReadString(assetNode, "url") ??
-                          ReadString(assetNode, "downloadUrl") ??
-                          ReadString(assetNode, "browserDownloadUrl");
+                var url = ReadString(assetNode, "url")
+                          ?? ReadString(assetNode, "downloadUrl")
+                          ?? ReadString(assetNode, "browserDownloadUrl");
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
                 {
                     continue;
@@ -260,43 +301,14 @@ public sealed class PdcReleaseUpdateService : IDisposable
             }
         }
 
-        if (assets.Count > 0)
-        {
-            return assets;
-        }
-
-        // Field-level fallback for service-side URL projection.
-        var manifestUrl = ReadString(distributionNode, "manifestUrl")
-                          ?? ReadString(distributionNode, "fileMapUrl");
-        var signatureUrl = ReadString(distributionNode, "signatureUrl")
-                           ?? ReadString(distributionNode, "fileMapSignatureUrl");
-        var archiveUrl = ReadString(distributionNode, "archiveUrl")
-                         ?? ReadString(distributionNode, "updateArchiveUrl")
-                         ?? ReadString(distributionNode, "payloadUrl");
-
-        if (!string.IsNullOrWhiteSpace(manifestUrl))
-        {
-            assets.Add(new GitHubReleaseAsset("files.json", manifestUrl, 0, null));
-        }
-
-        if (!string.IsNullOrWhiteSpace(signatureUrl))
-        {
-            assets.Add(new GitHubReleaseAsset("files.json.sig", signatureUrl, 0, null));
-        }
-
-        if (!string.IsNullOrWhiteSpace(archiveUrl))
-        {
-            assets.Add(new GitHubReleaseAsset("update.zip", archiveUrl, 0, null));
-        }
-
         return assets;
     }
 
-    private static PdcUpdatePayload ResolvePdcPayload(
+    private static PlondsUpdatePayload ResolvePlondsPayload(
         JsonElement distributionNode,
         string distributionId,
         string channelId,
-        string subChannel)
+        string platform)
     {
         var fileMapJson = ReadString(distributionNode, "fileMapJson");
         var fileMapSignature = ReadString(distributionNode, "fileMapSignature");
@@ -305,17 +317,18 @@ public sealed class PdcReleaseUpdateService : IDisposable
                              ?? ReadString(distributionNode, "manifestUrl");
         var fileMapSignatureUrl = ReadString(distributionNode, "fileMapSignatureUrl")
                                   ?? ReadString(distributionNode, "signatureUrl");
-        return new PdcUpdatePayload(
+
+        return new PlondsUpdatePayload(
             DistributionId: distributionId,
             ChannelId: channelId,
-            SubChannel: subChannel,
+            SubChannel: platform,
             FileMapJson: fileMapJson,
             FileMapSignature: fileMapSignature,
             FileMapJsonUrl: fileMapJsonUrl,
             FileMapSignatureUrl: fileMapSignatureUrl);
     }
 
-    private static bool HasPdcPayload(PdcUpdatePayload payload)
+    private static bool HasPlondsPayload(PlondsUpdatePayload payload)
     {
         return !string.IsNullOrWhiteSpace(payload.FileMapJson)
                || !string.IsNullOrWhiteSpace(payload.FileMapJsonUrl);
@@ -336,6 +349,7 @@ public sealed class PdcReleaseUpdateService : IDisposable
                 Architecture.X86 => "x86",
                 _ => "x64"
             };
+
             return assets
                 .Select(asset => (Asset: asset, Score: ScoreInstallerAsset(asset.Name, ".exe", ".msi", archToken)))
                 .OrderByDescending(x => x.Score)
@@ -405,59 +419,15 @@ public sealed class PdcReleaseUpdateService : IDisposable
         return score;
     }
 
-    private static string ResolveChannelId(JsonElement metadataNode, bool includePrerelease)
+    private static string ResolveChannelId(bool includePrerelease)
     {
-        if (metadataNode.ValueKind != JsonValueKind.Object ||
-            !metadataNode.TryGetProperty("channels", out var channelsNode))
-        {
-            return includePrerelease ? "preview" : "stable";
-        }
-
-        var defaultChannelId = ReadString(metadataNode, "defaultChannelId") ?? string.Empty;
-        if (channelsNode.ValueKind != JsonValueKind.Object)
-        {
-            return defaultChannelId;
-        }
-
-        string? matchedPreview = null;
-        string? matchedStable = null;
-
-        foreach (var channel in channelsNode.EnumerateObject())
-        {
-            var name = ReadString(channel.Value, "name") ?? channel.Name;
-            if (string.IsNullOrWhiteSpace(matchedPreview) &&
-                (name.Contains("preview", StringComparison.OrdinalIgnoreCase) ||
-                 name.Contains("beta", StringComparison.OrdinalIgnoreCase) ||
-                 name.Contains("dev", StringComparison.OrdinalIgnoreCase)))
-            {
-                matchedPreview = channel.Name;
-            }
-
-            if (string.IsNullOrWhiteSpace(matchedStable) &&
-                (name.Contains("stable", StringComparison.OrdinalIgnoreCase) ||
-                 name.Contains("release", StringComparison.OrdinalIgnoreCase)))
-            {
-                matchedStable = channel.Name;
-            }
-        }
-
-        if (includePrerelease)
-        {
-            return matchedPreview ?? defaultChannelId ?? "preview";
-        }
-
-        return matchedStable ?? defaultChannelId ?? "stable";
+        return includePrerelease
+            ? UpdateSettingsValues.ChannelPreview
+            : UpdateSettingsValues.ChannelStable;
     }
 
-    private static string ResolveSubChannel()
+    private static string ResolvePlatform()
     {
-        var configured = Environment.GetEnvironmentVariable("LANMOUNTAIN_PDC_SUBCHANNEL")
-                         ?? Environment.GetEnvironmentVariable("PDC_SUBCHANNEL");
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            return configured.Trim();
-        }
-
         var os = OperatingSystem.IsWindows()
             ? "windows"
             : OperatingSystem.IsLinux()
@@ -474,43 +444,58 @@ public sealed class PdcReleaseUpdateService : IDisposable
             _ => "x64"
         };
 
-        return $"{os}_{arch}_release_folderClassic";
+        return $"{os}-{arch}";
     }
 
     private static string? ResolveEndpoint()
     {
-        var endpoint = Environment.GetEnvironmentVariable("LANMOUNTAIN_PDC_ENDPOINT")
-                      ?? Environment.GetEnvironmentVariable("PDC_ENDPOINT");
+        var endpoint = Environment.GetEnvironmentVariable("LANMOUNTAIN_PLONDS_ENDPOINT")
+                      ?? Environment.GetEnvironmentVariable("PLONDS_ENDPOINT");
         return string.IsNullOrWhiteSpace(endpoint) ? null : endpoint.Trim().TrimEnd('/');
     }
 
     private static string? ResolveToken()
     {
-        var token = Environment.GetEnvironmentVariable("LANMOUNTAIN_PDC_TOKEN")
-                    ?? Environment.GetEnvironmentVariable("PDC_TOKEN");
+        var token = Environment.GetEnvironmentVariable("LANMOUNTAIN_PLONDS_TOKEN")
+                    ?? Environment.GetEnvironmentVariable("PLONDS_TOKEN");
         return string.IsNullOrWhiteSpace(token) ? null : token.Trim();
     }
 
-    private static string BuildUri(string endpoint, string relativePath)
+    private static string ResolveApiBasePath()
     {
-        return $"{endpoint.TrimEnd('/')}/{relativePath.TrimStart('/')}";
+        var configured = Environment.GetEnvironmentVariable("LANMOUNTAIN_PLONDS_API_BASE_PATH")
+                         ?? Environment.GetEnvironmentVariable("PLONDS_API_BASE_PATH");
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return DefaultApiBasePath;
+        }
+
+        var normalized = configured.Trim();
+        return normalized.StartsWith("/", StringComparison.Ordinal) ? normalized : "/" + normalized;
+    }
+
+    private static string BuildApiUrl(string endpoint, string apiBasePath, string relativePath)
+    {
+        return $"{endpoint.TrimEnd('/')}/{apiBasePath.Trim('/').TrimEnd('/')}/{relativePath.TrimStart('/')}";
     }
 
     private static string? ReadString(JsonElement node, string propertyName)
     {
-        if (node.ValueKind != JsonValueKind.Object || !node.TryGetProperty(propertyName, out var value))
+        if (!TryGetPropertyIgnoreCase(node, propertyName, out var value))
         {
             return null;
         }
 
         return value.ValueKind == JsonValueKind.String
             ? value.GetString()
-            : value.ToString();
+            : value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
+                ? null
+                : value.ToString();
     }
 
     private static long? ReadInt64(JsonElement node, string propertyName)
     {
-        if (node.ValueKind != JsonValueKind.Object || !node.TryGetProperty(propertyName, out var value))
+        if (!TryGetPropertyIgnoreCase(node, propertyName, out var value))
         {
             return null;
         }
@@ -524,6 +509,37 @@ public sealed class PdcReleaseUpdateService : IDisposable
         return long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : null;
+    }
+
+    private static DateTimeOffset? ParsePublishedAt(JsonElement node)
+    {
+        var text = ReadString(node, "publishedAt");
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value)
+            ? value
+            : null;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement node, string propertyName, out JsonElement value)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in node.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = default;
+        return false;
     }
 
     private static bool TryParseVersion(string? value, out Version? version)

@@ -54,7 +54,7 @@ internal sealed class UpdateApplyResult
     public string? RolledBackTo { get; init; }
 }
 
-internal sealed class PdcUpdateMetadata
+internal sealed class PlondsUpdateMetadata
 {
     public string? DistributionId { get; set; }
 
@@ -73,7 +73,7 @@ internal sealed class PdcUpdateMetadata
     public Dictionary<string, string> Metadata { get; set; } = [];
 }
 
-internal sealed class PdcFileMap
+internal sealed class PlondsFileMap
 {
     public string? DistributionId { get; set; }
 
@@ -89,12 +89,12 @@ internal sealed class PdcFileMap
 
     public Dictionary<string, string> Metadata { get; set; } = [];
 
-    public List<PdcComponentEntry> Components { get; set; } = [];
+    public List<PlondsComponentEntry> Components { get; set; } = [];
 
-    public List<PdcFileEntry> Files { get; set; } = [];
+    public List<PlondsFileEntry> Files { get; set; } = [];
 }
 
-internal sealed class PdcComponentEntry
+internal sealed class PlondsComponentEntry
 {
     public string Name { get; set; } = string.Empty;
 
@@ -102,10 +102,10 @@ internal sealed class PdcComponentEntry
 
     public Dictionary<string, string> Metadata { get; set; } = [];
 
-    public List<PdcFileEntry> Files { get; set; } = [];
+    public List<PlondsFileEntry> Files { get; set; } = [];
 }
 
-internal sealed class PdcFileEntry
+internal sealed class PlondsFileEntry
 {
     public string Path { get; set; } = string.Empty;
 
@@ -129,12 +129,12 @@ internal sealed class PdcFileEntry
 
     public byte[]? Sha512Bytes { get; set; }
 
-    public PdcHashDescriptor? Hash { get; set; }
+    public PlondsHashDescriptor? Hash { get; set; }
 
     public Dictionary<string, string> Metadata { get; set; } = [];
 }
 
-internal sealed class PdcHashDescriptor
+internal sealed class PlondsHashDescriptor
 {
     public string? Algorithm { get; set; }
 

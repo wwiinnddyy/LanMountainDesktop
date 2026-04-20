@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Plonds.Core\Plonds.Core.csproj" />
+    <ProjectReference Include="..\Plonds.Shared\Plonds.Shared.csproj" />
+  </ItemGroup>
+</Project>

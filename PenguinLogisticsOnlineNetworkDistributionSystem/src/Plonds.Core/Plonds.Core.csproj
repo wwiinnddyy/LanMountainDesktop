@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Plonds.Shared\Plonds.Shared.csproj" />
+  </ItemGroup>
+</Project>
