@@ -1085,6 +1085,12 @@ public partial class App : Application
         // 延迟报告 Ready 直到窗口实际打开并可见
         // 使用 Opened 事件确保所有资源已加载完毕
         mainWindow.Opened += OnMainWindowOpened;
+
+        // 手动显示窗口，因为在 ShutdownMode.OnExplicitShutdown 模式下框架不会自动调用 Show
+        if (!mainWindow.IsVisible)
+        {
+            mainWindow.Show();
+        }
         
         // 兜底机制：如果 Opened 事件 10 秒内未触发，强制发送 Ready 信号
         // 防止因渲染问题导致 Opened 不触发，启动器 Splash 窗口一直显示
