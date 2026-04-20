@@ -900,9 +900,14 @@ jobs:
           $env:S3_AccessKey = $env:S3_ACCESS_KEY
           $env:S3_SecretKey = $env:S3_SECRET_KEY
           $env:PDC_SigningKeyPs = ""
-          if ([string]::IsNullOrWhiteSpace($env:PDC_SigningKey)) {
-            $env:PDC_SigningKey = $env:PDC_SIGNING_KEY
+          $signingKey = $env:PDC_SIGNING_KEY
+          if ([string]::IsNullOrWhiteSpace($signingKey)) {
+            $signingKey = $env:UPDATE_PRIVATE_KEY_PEM
           }
+          if ([string]::IsNullOrWhiteSpace($signingKey)) {
+            throw "Missing PDC signing key: PDC_SIGNING_KEY or UPDATE_PRIVATE_KEY_PEM."
+          }
+          $env:PDC_SigningKey = $signingKey
 
           $stageRoot = Join-Path $PWD "pdc-stage"
           $payloadRoot = Join-Path $PWD "payload-artifacts"
