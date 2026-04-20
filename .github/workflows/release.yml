@@ -1045,15 +1045,91 @@ jobs:
           Write-Host "Publishing $($subchannelPackages.Count) subchannels in a single PDCC Publish run..."
           $subchannelPackages | Sort-Object Name | ForEach-Object { Write-Host " - $($_.Name)" }
 
-          Push-Location $publishRoot
-          try {
-            & $client $config Publish $env:PRIMARY_VERSION $env:VERSION $publishRoot
-            if ($LASTEXITCODE -ne 0) {
-              throw "PDCC Publish failed."
+          $publishStdOut = Join-Path $workDir "pdcc-publish.stdout.log"
+          $publishStdErr = Join-Path $workDir "pdcc-publish.stderr.log"
+          if (Test-Path $publishStdOut) {
+            Remove-Item -LiteralPath $publishStdOut -Force
+          }
+          if (Test-Path $publishStdErr) {
+            Remove-Item -LiteralPath $publishStdErr -Force
+          }
+
+          function Write-NewLogLines([string]$path, [ref]$lineCount, [string]$prefix) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              return
+            }
+
+            $lines = Get-Content -LiteralPath $path -ErrorAction SilentlyContinue
+            if ($null -eq $lines) {
+              return
+            }
+
+            if ($lines -is [string]) {
+              $lines = @($lines)
+            }
+
+            if ($lines.Count -le $lineCount.Value) {
+              return
+            }
+
+            for ($i = $lineCount.Value; $i -lt $lines.Count; $i++) {
+              Write-Host "[$prefix] $($lines[$i])"
+            }
+
+            $lineCount.Value = $lines.Count
+          }
+
+          $publishArgs = @(
+            $config,
+            "Publish",
+            $env:PRIMARY_VERSION,
+            $env:VERSION,
+            $publishRoot
+          )
+          $publishTimeoutMinutes = 20
+          if (-not [string]::IsNullOrWhiteSpace($env:PDC_PUBLISH_TIMEOUT_MINUTES)) {
+            $parsedTimeout = 0
+            if ([int]::TryParse($env:PDC_PUBLISH_TIMEOUT_MINUTES, [ref]$parsedTimeout) -and $parsedTimeout -gt 0) {
+              $publishTimeoutMinutes = $parsedTimeout
             }
           }
-          finally {
-            Pop-Location
+
+          $publishProcess = Start-Process `
+            -FilePath $client `
+            -ArgumentList $publishArgs `
+            -WorkingDirectory $publishRoot `
+            -RedirectStandardOutput $publishStdOut `
+            -RedirectStandardError $publishStdErr `
+            -PassThru
+          if (-not $publishProcess) {
+            throw "Failed to start PDCC Publish process."
+          }
+
+          Write-Host "PDCC Publish process started. PID=$($publishProcess.Id), timeout=${publishTimeoutMinutes}m"
+          $publishStart = Get-Date
+          $stdoutLineCount = 0
+          $stderrLineCount = 0
+
+          while (-not $publishProcess.HasExited) {
+            Start-Sleep -Seconds 15
+            $publishProcess.Refresh()
+            Write-NewLogLines -path $publishStdOut -lineCount ([ref]$stdoutLineCount) -prefix "pdcc"
+            Write-NewLogLines -path $publishStdErr -lineCount ([ref]$stderrLineCount) -prefix "pdcc-err"
+
+            $elapsed = (Get-Date) - $publishStart
+            Write-Host ("PDCC Publish heartbeat: elapsed={0:mm\\:ss}, pid={1}" -f $elapsed, $publishProcess.Id)
+
+            if ($elapsed.TotalMinutes -ge $publishTimeoutMinutes) {
+              Stop-Process -Id $publishProcess.Id -Force -ErrorAction SilentlyContinue
+              throw "PDCC Publish exceeded timeout of ${publishTimeoutMinutes} minutes."
+            }
+          }
+
+          Write-NewLogLines -path $publishStdOut -lineCount ([ref]$stdoutLineCount) -prefix "pdcc"
+          Write-NewLogLines -path $publishStdErr -lineCount ([ref]$stderrLineCount) -prefix "pdcc-err"
+
+          if ($publishProcess.ExitCode -ne 0) {
+            throw "PDCC Publish failed with exit code $($publishProcess.ExitCode)."
           }
 
           if (Test-Path (Join-Path $stageRoot "installers")) {
@@ -1101,6 +1177,7 @@ jobs:
           name: pdc-diagnostics
           path: |
             pdc-work/pdc-mock*.log
+            pdc-work/pdcc-publish*.log
             pdc-output/mock-pdc/**
           if-no-files-found: ignore
           retention-days: 30
