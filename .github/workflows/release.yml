@@ -953,10 +953,12 @@ jobs:
 
             $subChannel = ($platformKey -replace '-', '_') + "_release_folderClassic"
             $env:PDC_SUBCHANNEL = $subChannel
+            $publishRoot = Join-Path $outRoot "published/$platformKey"
+            New-Item -ItemType Directory -Path $publishRoot -Force | Out-Null
 
             Push-Location $stagedPayloadDir
             try {
-              & $client $config Publish $env:PRIMARY_VERSION $env:VERSION (Join-Path $outRoot "published/$platformKey")
+              & $client $config Publish $env:PRIMARY_VERSION $env:VERSION $publishRoot
               if ($LASTEXITCODE -ne 0) {
                 throw "PDCC Publish failed for $platformKey."
               }
