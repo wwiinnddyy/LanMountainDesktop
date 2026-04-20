@@ -826,11 +826,17 @@ jobs:
 
           $port = if ($uri.Port -gt 0) { $uri.Port } else { 18765 }
           $dataDir = Join-Path $PWD "pdc-output/mock-pdc"
-          $logPath = Join-Path $PWD "pdc-work/pdc-mock.log"
+          $workDir = Join-Path $PWD "pdc-work"
+          $logPath = Join-Path $workDir "pdc-mock.out.log"
+          $errLogPath = Join-Path $workDir "pdc-mock.err.log"
 
+          New-Item -ItemType Directory -Path $workDir -Force | Out-Null
           New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
           if (Test-Path $logPath) {
             Remove-Item -LiteralPath $logPath -Force
+          }
+          if (Test-Path $errLogPath) {
+            Remove-Item -LiteralPath $errLogPath -Force
           }
 
           $args = @(
@@ -840,7 +846,7 @@ jobs:
             "--token", $env:PDC_TOKEN,
             "--data-dir", $dataDir
           )
-          $process = Start-Process -FilePath "python3" -ArgumentList $args -PassThru -RedirectStandardOutput $logPath -RedirectStandardError $logPath
+          $process = Start-Process -FilePath "python3" -ArgumentList $args -PassThru -RedirectStandardOutput $logPath -RedirectStandardError $errLogPath
           if (-not $process) {
             throw "Failed to launch PDC mock server."
           }
@@ -861,7 +867,15 @@ jobs:
           }
 
           if (-not $ready) {
-            throw "PDC mock server did not become ready in time. See $logPath."
+            if (Test-Path $logPath) {
+              Write-Host "===== pdc-mock stdout ====="
+              Get-Content -LiteralPath $logPath -ErrorAction SilentlyContinue | Write-Host
+            }
+            if (Test-Path $errLogPath) {
+              Write-Host "===== pdc-mock stderr ====="
+              Get-Content -LiteralPath $errLogPath -ErrorAction SilentlyContinue | Write-Host
+            }
+            throw "PDC mock server did not become ready in time. See $logPath and $errLogPath."
           }
 
           Write-Host "Local PDC mock is running at http://127.0.0.1:$port"
