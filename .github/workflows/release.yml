@@ -722,7 +722,6 @@ jobs:
       PRIMARY_VERSION: ${{ needs.prepare.outputs.version }}
       PDCC_primaryVersion: ${{ needs.prepare.outputs.version }}
       PDCC_VERSION: ${{ vars.PDC_CLIENT_VERSION }}
-      PDCC_version: ${{ vars.PDC_CLIENT_VERSION }}
       S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       S3_REGION: ${{ vars.S3_REGION }}
@@ -732,14 +731,6 @@ jobs:
       UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
       S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-      S3_Endpoint: ${{ vars.S3_ENDPOINT }}
-      S3_Bucket: ${{ vars.S3_BUCKET }}
-      S3_Region: ${{ vars.S3_REGION }}
-      PDC_Endpoint: ${{ vars.PDC_ENDPOINT }}
-      PDC_Token: ${{ secrets.PDC_TOKEN }}
-      PDC_SigningKey: ${{ secrets.PDC_SIGNING_KEY }}
-      S3_AccessKey: ${{ secrets.S3_ACCESS_KEY }}
-      S3_SecretKey: ${{ secrets.S3_SECRET_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -804,6 +795,18 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+          # Map CI vars to the naming convention expected by PDCC tooling.
+          $env:S3_Endpoint = $env:S3_ENDPOINT
+          $env:S3_Bucket = $env:S3_BUCKET
+          $env:S3_Region = $env:S3_REGION
+          $env:PDC_Endpoint = $env:PDC_ENDPOINT
+          $env:PDC_Token = $env:PDC_TOKEN
+          $env:S3_AccessKey = $env:S3_ACCESS_KEY
+          $env:S3_SecretKey = $env:S3_SECRET_KEY
+          if ([string]::IsNullOrWhiteSpace($env:PDC_SigningKey)) {
+            $env:PDC_SigningKey = $env:PDC_SIGNING_KEY
+          }
+
           $stageRoot = Join-Path $PWD "pdc-stage"
           $payloadRoot = Join-Path $PWD "payload-artifacts"
           $installerRoot = Join-Path $PWD "installer-artifacts"
