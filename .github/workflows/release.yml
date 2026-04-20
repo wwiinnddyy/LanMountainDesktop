@@ -787,6 +787,8 @@ jobs:
 
       - name: Install PDCC
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./scripts/Install-Pdcc.ps1 -Repository "ClassIsland/PhainonDistributionCenter" -OutputDir "./pdcc"
 
