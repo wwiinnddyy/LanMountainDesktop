@@ -76,12 +76,16 @@ class PdcMockHandler(BaseHTTPRequestHandler):
             items = payload.get("items") if isinstance(payload, dict) else {}
             keys = sorted(items.keys()) if isinstance(items, dict) else []
             self._save_payload("filemaps-diff-request", payload)
+            # CI fallback mode: return empty diff to avoid long object uploads
+            # against a local mock endpoint. Real PDC endpoint will return
+            # actual missing object hashes.
             result = {
                 "success": True,
                 "code": 0,
                 "message": "ok",
-                "content": keys,
-                "Content": keys,
+                "content": [],
+                "Content": [],
+                "requestedCount": len(keys),
             }
             self._write_json(200, result)
             return
