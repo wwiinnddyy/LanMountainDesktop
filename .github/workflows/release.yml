@@ -785,6 +785,87 @@ jobs:
           python3 -m pip install --user --upgrade awscli
           Add-Content -Path $env:GITHUB_PATH -Value "$HOME/.local/bin"
 
+      - name: Bootstrap PDC Endpoint and Token
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $endpoint = $env:PDC_ENDPOINT
+          if ([string]::IsNullOrWhiteSpace($endpoint)) {
+            $endpoint = "http://127.0.0.1:18765"
+          }
+
+          $token = $env:PDC_TOKEN
+          if ([string]::IsNullOrWhiteSpace($token)) {
+            $token = "lmd-pdc-local-token"
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Value "PDC_ENDPOINT=$endpoint"
+          Add-Content -Path $env:GITHUB_ENV -Value "PDC_TOKEN=$token"
+          Write-Host "Using PDC endpoint: $endpoint"
+
+      - name: Start Local PDC Mock (Fallback)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:PDC_ENDPOINT)) {
+            throw "PDC_ENDPOINT is empty after bootstrap."
+          }
+
+          $uri = [Uri]$env:PDC_ENDPOINT
+          $isLocalHost = $uri.Host -eq "127.0.0.1" -or $uri.Host -eq "localhost"
+          if (-not $isLocalHost) {
+            Write-Host "Using external PDC endpoint: $($env:PDC_ENDPOINT)"
+            exit 0
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:PDC_TOKEN)) {
+            throw "PDC_TOKEN is empty after bootstrap."
+          }
+
+          $port = if ($uri.Port -gt 0) { $uri.Port } else { 18765 }
+          $dataDir = Join-Path $PWD "pdc-output/mock-pdc"
+          $logPath = Join-Path $PWD "pdc-work/pdc-mock.log"
+
+          New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+          if (Test-Path $logPath) {
+            Remove-Item -LiteralPath $logPath -Force
+          }
+
+          $args = @(
+            "scripts/pdc-mock-server.py",
+            "--host", "127.0.0.1",
+            "--port", $port.ToString(),
+            "--token", $env:PDC_TOKEN,
+            "--data-dir", $dataDir
+          )
+          $process = Start-Process -FilePath "python3" -ArgumentList $args -PassThru -RedirectStandardOutput $logPath -RedirectStandardError $logPath
+          if (-not $process) {
+            throw "Failed to launch PDC mock server."
+          }
+
+          $healthUrl = "http://127.0.0.1:$port/healthz"
+          $ready = $false
+          for ($i = 0; $i -lt 20; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $response = Invoke-WebRequest -Uri $healthUrl -Method Get -TimeoutSec 2
+              if ($response.StatusCode -eq 200) {
+                $ready = $true
+                break
+              }
+            }
+            catch {
+            }
+          }
+
+          if (-not $ready) {
+            throw "PDC mock server did not become ready in time. See $logPath."
+          }
+
+          Write-Host "Local PDC mock is running at http://127.0.0.1:$port"
+
       - name: Install PDCC
         shell: pwsh
         env:
@@ -804,6 +885,7 @@ jobs:
           $env:PDC_Token = $env:PDC_TOKEN
           $env:S3_AccessKey = $env:S3_ACCESS_KEY
           $env:S3_SecretKey = $env:S3_SECRET_KEY
+          $env:PDC_SigningKeyPs = ""
           if ([string]::IsNullOrWhiteSpace($env:PDC_SigningKey)) {
             $env:PDC_SigningKey = $env:PDC_SIGNING_KEY
           }
