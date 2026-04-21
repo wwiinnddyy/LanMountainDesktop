@@ -1,0 +1,235 @@
+﻿name: PLONDS
+
+on:
+  release:
+    types:
+      - published
+      - prereleased
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+      baseline_tag:
+        description: 'Optional baseline tag'
+        required: false
+        type: string
+      channel:
+        description: 'Update channel'
+        required: false
+        type: choice
+        default: stable
+        options:
+          - stable
+          - preview
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Resolve release context
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+              CHANNEL="preview"
+            else
+              CHANNEL="stable"
+            fi
+            BASELINE_TAG=""
+          else
+            RAW_TAG="${{ github.event.inputs.tag }}"
+            if [[ "${RAW_TAG}" == v* ]]; then
+              TAG="${RAW_TAG}"
+            else
+              TAG="v${RAW_TAG}"
+            fi
+            CHANNEL="${{ github.event.inputs.channel }}"
+            BASELINE_TAG="${{ github.event.inputs.baseline_tag }}"
+          fi
+
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
+          echo "BASELINE_TAG_INPUT=${BASELINE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: preview
+
+      - name: Prepare signing key
+        env:
+          UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+          PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
+          PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY="${PLONDS_SIGNING_KEY:-}"
+          if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
+          if [[ -z "$KEY" ]]; then KEY="${PDC_SIGNING_KEY:-}"; fi
+          if [[ -z "$KEY" ]]; then
+            echo "No signing key is configured."
+            exit 1
+          fi
+          printf '%s' "$KEY" > update-private-key.pem
+          echo "UPDATE_PRIVATE_KEY_PATH=$PWD/update-private-key.pem" >> "$GITHUB_ENV"
+
+      - name: Build PLONDS tool
+        run: dotnet build PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj -c Release
+
+      - name: Resolve baseline plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = '${{ github.repository }}'
+          $tag = $env:RELEASE_TAG
+          $baselineInput = $env:BASELINE_TAG_INPUT
+          $currentRelease = gh release view $tag --repo $repo --json tagName,isPrerelease,assets,publishedAt | ConvertFrom-Json
+          $allReleases = gh api "repos/$repo/releases?per_page=100" | ConvertFrom-Json
+          $platforms = @('windows-x64', 'windows-x86', 'linux-x64')
+
+          $entries = foreach ($platform in $platforms) {
+            $assetName = "files-$platform.zip"
+            $currentAsset = $currentRelease.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
+            if (-not $currentAsset) {
+              throw "Current release $tag does not contain required asset $assetName"
+            }
+
+            $baselineRelease = $null
+            if (-not [string]::IsNullOrWhiteSpace($baselineInput)) {
+              $normalizedBaseline = if ($baselineInput.StartsWith('v')) { $baselineInput } else { "v$baselineInput" }
+              $baselineRelease = $allReleases | Where-Object { $_.tag_name -eq $normalizedBaseline } | Select-Object -First 1
+              if (-not $baselineRelease) {
+                throw "Specified baseline tag not found: $normalizedBaseline"
+              }
+            }
+            else {
+              $baselineRelease = $allReleases |
+                Where-Object {
+                  $_.tag_name -ne $tag -and
+                  -not $_.draft -and
+                  [bool]$_.prerelease -eq [bool]$currentRelease.isPrerelease -and
+                  ($_.assets | Where-Object { $_.name -eq $assetName } | Measure-Object).Count -gt 0
+                } |
+                Select-Object -First 1
+            }
+
+            [pscustomobject]@{
+              platform = $platform
+              assetName = $assetName
+              baselineTag = if ($baselineRelease) { $baselineRelease.tag_name } else { $null }
+              baselineVersion = if ($baselineRelease) { ($baselineRelease.tag_name -replace '^v', '') } else { $null }
+              isFullPayload = -not $baselineRelease
+            }
+          }
+
+          $plan = [pscustomobject]@{
+            tag = $tag
+            version = $env:RELEASE_VERSION
+            channel = $env:RELEASE_CHANNEL
+            platforms = $entries
+          }
+
+          $plan | ConvertTo-Json -Depth 8 | Set-Content plonds-plan.json -Encoding utf8
+          Get-Content plonds-plan.json
+
+      - name: Download payload zips
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = '${{ github.repository }}'
+          $plan = Get-Content plonds-plan.json | ConvertFrom-Json
+
+          foreach ($entry in $plan.platforms) {
+            $currentDir = Join-Path $PWD "plonds-input/current/$($entry.platform)"
+            New-Item -ItemType Directory -Path $currentDir -Force | Out-Null
+            gh release download $plan.tag --repo $repo -p $entry.assetName -D $currentDir
+
+            if (-not [string]::IsNullOrWhiteSpace($entry.baselineTag)) {
+              $baselineDir = Join-Path $PWD "plonds-input/baseline/$($entry.platform)"
+              New-Item -ItemType Directory -Path $baselineDir -Force | Out-Null
+              gh release download $entry.baselineTag --repo $repo -p $entry.assetName -D $baselineDir
+            }
+          }
+
+      - name: Build delta assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $plan = Get-Content plonds-plan.json | ConvertFrom-Json
+          foreach ($entry in $plan.platforms) {
+            $currentZip = Join-Path $PWD "plonds-input/current/$($entry.platform)/$($entry.assetName)"
+            $args = @(
+              'run', '--project', 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj', '--configuration', 'Release', '--',
+              'build-delta',
+              '--platform', $entry.platform,
+              '--current-version', $plan.version,
+              '--current-tag', $plan.tag,
+              '--current-zip', $currentZip,
+              '--output-dir', 'plonds-output',
+              '--private-key', $env:UPDATE_PRIVATE_KEY_PATH,
+              '--channel', $plan.channel
+            )
+
+            if ([bool]$entry.isFullPayload) {
+              $args += @('--is-full-payload', 'true')
+            }
+            else {
+              $baselineZip = Join-Path $PWD "plonds-input/baseline/$($entry.platform)/$($entry.assetName)"
+              $args += @('--baseline-tag', $entry.baselineTag, '--baseline-version', $entry.baselineVersion, '--baseline-zip', $baselineZip)
+            }
+
+            dotnet @args
+          }
+
+          dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- `
+            build-index `
+            --release-tag $plan.tag `
+            --version $plan.version `
+            --channel $plan.channel `
+            --platform-summaries-dir plonds-output/platform-summaries `
+            --output-dir plonds-output `
+            --private-key $env:UPDATE_PRIVATE_KEY_PATH
+
+      - name: Upload PLONDS assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" plonds-output/release-assets/* --clobber
+
+      - name: Persist run metadata
+        shell: bash
+        run: |
+          mkdir -p plonds-run-metadata
+          printf '%s' "$RELEASE_TAG" > plonds-run-metadata/tag.txt
+
+      - name: Upload run metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plonds-run-metadata
+          path: plonds-run-metadata/tag.txt
+          if-no-files-found: error
+          retention-days: 7

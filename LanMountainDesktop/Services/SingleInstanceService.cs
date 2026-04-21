@@ -9,6 +9,10 @@ namespace LanMountainDesktop.Services;
 
 public sealed class SingleInstanceService : IDisposable
 {
+    private const byte ActivationRequestCode = 0x41; // 'A'
+    private const byte ActivationAckCode = 0x4B; // 'K'
+    private const byte ActivationNackCode = 0x4E; // 'N'
+
     private readonly Mutex _mutex;
     private readonly string _pipeName;
     private readonly CancellationTokenSource _listenCts = new();
@@ -56,13 +60,24 @@ public sealed class SingleInstanceService : IDisposable
             return;
         }
 
+        AppLogger.Info(
+            "SingleInstance",
+            $"Starting activation listener. Pipe='{_pipeName}'; Pid={Environment.ProcessId}; OwnsMutex={_ownsMutex}.");
         _listenTask = Task.Run(() => ListenForActivationAsync(onActivationRequested, _listenCts.Token));
     }
 
     public bool TryNotifyPrimaryInstance(TimeSpan timeout)
     {
+        return TryNotifyPrimaryInstance(timeout, out _);
+    }
+
+    public bool TryNotifyPrimaryInstance(TimeSpan timeout, out string? failureReason)
+    {
         if (_ownsMutex || _disposed)
         {
+            failureReason = _ownsMutex
+                ? "current_instance_is_primary"
+                : "single_instance_service_disposed";
             return false;
         }
 
@@ -71,16 +86,38 @@ public sealed class SingleInstanceService : IDisposable
             using var client = new NamedPipeClientStream(
                 serverName: ".",
                 pipeName: _pipeName,
-                direction: PipeDirection.Out,
+                direction: PipeDirection.InOut,
                 options: PipeOptions.Asynchronous);
 
             client.Connect((int)Math.Max(1, timeout.TotalMilliseconds));
-            client.WriteByte(1);
+            client.WriteByte(ActivationRequestCode);
             client.Flush();
+
+            var ack = client.ReadByte();
+            var acknowledged = ack == ActivationAckCode;
+            if (!acknowledged)
+            {
+                failureReason = ack switch
+                {
+                    ActivationNackCode => "primary_rejected_activation",
+                    -1 => "ack_not_received",
+                    _ => $"unexpected_ack_code_{ack}"
+                };
+                AppLogger.Warn(
+                    "SingleInstance",
+                    $"Primary activation handshake failed. AckCode={ack}; Reason='{failureReason}'; Pipe='{_pipeName}'; Pid={Environment.ProcessId}.");
+                return false;
+            }
+
+            failureReason = null;
+            AppLogger.Info(
+                "SingleInstance",
+                $"Primary activation acknowledged. Pipe='{_pipeName}'; Pid={Environment.ProcessId}.");
             return true;
         }
         catch (Exception ex)
         {
+            failureReason = "primary_activation_handshake_exception";
             AppLogger.Warn("SingleInstance", "Failed to notify the primary instance.", ex);
             return false;
         }
@@ -128,14 +165,40 @@ public sealed class SingleInstanceService : IDisposable
             {
                 using var server = new NamedPipeServerStream(
                     _pipeName,
-                    PipeDirection.In,
+                    PipeDirection.InOut,
                     1,
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
 
                 await server.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
-                await server.ReadAsync(new byte[1], cancellationToken).ConfigureAwait(false);
-                onActivationRequested();
+                var buffer = new byte[1];
+                var readBytes = await server.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                var isActivationRequest = readBytes == 1 && buffer[0] == ActivationRequestCode;
+                var ackCode = ActivationAckCode;
+
+                if (!isActivationRequest)
+                {
+                    ackCode = ActivationNackCode;
+                    AppLogger.Warn(
+                        "SingleInstance",
+                        $"Received malformed activation request. ReadBytes={readBytes}; Value={(readBytes == 1 ? buffer[0] : -1)}; Pipe='{_pipeName}'.");
+                }
+                else
+                {
+                    try
+                    {
+                        onActivationRequested();
+                    }
+                    catch (Exception ex)
+                    {
+                        ackCode = ActivationNackCode;
+                        AppLogger.Warn("SingleInstance", "Activation callback failed.", ex);
+                    }
+                }
+
+                var ackBuffer = new[] { ackCode };
+                await server.WriteAsync(ackBuffer, cancellationToken).ConfigureAwait(false);
+                await server.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

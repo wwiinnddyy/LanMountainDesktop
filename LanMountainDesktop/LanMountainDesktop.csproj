@@ -36,7 +36,7 @@
     <ProjectReference Include="..\LanMountainDesktop.DesktopComponents.Runtime\LanMountainDesktop.DesktopComponents.Runtime.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopHost\LanMountainDesktop.DesktopHost.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
-    <ProjectReference Include="..\LanMountainDesktop.PluginsInstallHelper\LanMountainDesktop.PluginsInstallHelper.csproj" ReferenceOutputAssembly="false" />
+    <!-- Launcher 引用已移除 - Launcher 现在是独立应用 -->
   </ItemGroup>
 
   <ItemGroup>
@@ -76,20 +76,31 @@
     <PackageReference Include="WebView.Avalonia" Version="11.0.0.1" />
     <PackageReference Include="WebView.Avalonia.Desktop" Version="11.0.0.1" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    <PackageReference Include="Tmds.DBus.Protocol" Version="0.22.0" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+    <PackageReference Include="log4net" Version="3.3.0" />
   </ItemGroup>
 
-  <Target Name="CopyPluginsInstallHelperToOutput" AfterTargets="Build">
-    <ItemGroup>
-      <PluginsInstallHelperFiles Include="..\LanMountainDesktop.PluginsInstallHelper\bin\$(Configuration)\net10.0\**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(PluginsInstallHelperFiles)" DestinationFiles="@(PluginsInstallHelperFiles->'$(OutDir)PluginsInstallHelper\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  <!-- Launcher 构建目标已移除 - Launcher 现在是独立应用，由 CI/CD 单独构建 -->
+
+  <!-- 生成版本信息文件 -->
+  <Target Name="GenerateVersionFile" AfterTargets="Build">
+    <PropertyGroup>
+      <VersionFilePath>$(OutDir)version.json</VersionFilePath>
+      <AppVersion>$(Version)</AppVersion>
+      <AppCodename>Administrate</AppCodename>
+    </PropertyGroup>
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
 
-  <Target Name="CopyPluginsInstallHelperToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
-    <ItemGroup>
-      <PluginsInstallHelperPublishFiles Include="..\LanMountainDesktop.PluginsInstallHelper\bin\$(Configuration)\net10.0\**\*.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(PluginsInstallHelperPublishFiles)" DestinationFiles="@(PluginsInstallHelperPublishFiles->'$(PublishDir)PluginsInstallHelper\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  <!-- 发布时也生成版本信息文件 -->
+  <Target Name="GenerateVersionFilePublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <VersionFilePath>$(PublishDir)version.json</VersionFilePath>
+      <AppVersion>$(Version)</AppVersion>
+      <AppCodename>Administrate</AppCodename>
+    </PropertyGroup>
+    <Exec Command="powershell -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="pwsh -ExecutionPolicy Bypass -File $(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1 -OutputPath '$(VersionFilePath)' -Version '$(AppVersion)' -Codename '$(AppCodename)'" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
 </Project>

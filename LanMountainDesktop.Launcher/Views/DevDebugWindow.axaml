@@ -1,0 +1,182 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:LanMountainDesktop.Launcher.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
+        x:Class="LanMountainDesktop.Launcher.Views.DevDebugWindow"
+        x:DataType="vm:DevDebugWindowViewModel"
+        Title="开发调试窗口 - Launcher"
+        Width="500"
+        Height="600"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Assets/logo.ico">
+
+  <Design.DataContext>
+    <vm:DevDebugWindowViewModel />
+  </Design.DataContext>
+
+  <Border Padding="20"
+          Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+      
+      <!-- 标题 -->
+      <StackPanel Grid.Row="0" Margin="0,0,0,20">
+        <TextBlock Text="🛠️ 开发调试窗口"
+                   FontSize="24"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        <TextBlock Text="用于开发和调试 Launcher 的各个页面"
+                   FontSize="12"
+                   Opacity="0.7"
+                   Margin="0,5,0,0"
+                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+      </StackPanel>
+
+      <!-- 页面列表 -->
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="15">
+          
+          <!-- 启动画面 -->
+          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                  CornerRadius="8"
+                  Padding="15">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="🚀 启动画面 (SplashWindow)"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="显示启动进度和状态"
+                           FontSize="11"
+                           Opacity="0.6"
+                           Margin="0,3,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8">
+                <ToggleSwitch Content="启用功能"
+                              IsChecked="{Binding IsSplashEnabled}"
+                              OnContent="功能"
+                              OffContent="查看" />
+                <Button Content="打开"
+                        Command="{Binding OpenSplashCommand}"
+                        HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- 错误页面 -->
+          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                  CornerRadius="8"
+                  Padding="15">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="❌ 错误页面 (ErrorWindow)"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="显示错误信息和重试选项"
+                           FontSize="11"
+                           Opacity="0.6"
+                           Margin="0,3,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8">
+                <ToggleSwitch Content="启用功能"
+                              IsChecked="{Binding IsErrorEnabled}"
+                              OnContent="功能"
+                              OffContent="查看" />
+                <Button Content="打开"
+                        Command="{Binding OpenErrorCommand}"
+                        HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- 更新页面 -->
+          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                  CornerRadius="8"
+                  Padding="15">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="⬆️ 更新页面 (UpdateWindow)"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="显示更新进度和状态"
+                           FontSize="11"
+                           Opacity="0.6"
+                           Margin="0,3,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8">
+                <ToggleSwitch Content="启用功能"
+                              IsChecked="{Binding IsUpdateEnabled}"
+                              OnContent="功能"
+                              OffContent="查看" />
+                <Button Content="打开"
+                        Command="{Binding OpenUpdateCommand}"
+                        HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- OOBE页面 -->
+          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                  CornerRadius="8"
+                  Padding="15">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="👋 OOBE页面 (OobeWindow)"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="首次运行引导页面"
+                           FontSize="11"
+                           Opacity="0.6"
+                           Margin="0,3,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8">
+                <ToggleSwitch Content="启用功能"
+                              IsChecked="{Binding IsOobeEnabled}"
+                              OnContent="功能"
+                              OffContent="查看" />
+                <Button Content="打开"
+                        Command="{Binding OpenOobeCommand}"
+                        HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- 批量操作 -->
+      <StackPanel Grid.Row="2" 
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Spacing="10"
+                  Margin="0,15">
+        <Button Content="全部设为查看模式"
+                Command="{Binding SetAllViewOnlyCommand}"
+                Background="{DynamicResource SystemControlBackgroundAltMediumBrush}" />
+        <Button Content="全部设为功能模式"
+                Command="{Binding SetAllFunctionalCommand}"
+                Background="{DynamicResource SystemControlHighlightAccentBrush}"
+                Foreground="White" />
+      </StackPanel>
+
+      <!-- 底部状态栏 -->
+      <Border Grid.Row="3"
+              Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+              CornerRadius="4"
+              Padding="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0"
+                     Text="{Binding StatusMessage}"
+                     FontSize="11"
+                     Opacity="0.8"
+                     TextTrimming="CharacterEllipsis" />
+          <Button Grid.Column="1"
+                  Content="关闭"
+                  Command="{Binding CloseCommand}"
+                  Padding="15,5" />
+        </Grid>
+      </Border>
+
+    </Grid>
+  </Border>
+</Window>

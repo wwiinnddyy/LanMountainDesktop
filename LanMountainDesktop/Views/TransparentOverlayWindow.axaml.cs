@@ -23,6 +23,8 @@ namespace LanMountainDesktop.Views;
 public partial class TransparentOverlayWindow : Window
 {
     private readonly IFusedDesktopLayoutService _layoutService = FusedDesktopLayoutServiceProvider.GetOrCreate();
+    private readonly IWindowBottomMostService _bottomMostService = WindowBottomMostServiceFactory.GetOrCreate();
+    private readonly IRegionPassthroughService _regionPassthroughService = RegionPassthroughServiceFactory.GetOrCreate();
     
     // 滑动状态
     private bool _isSwipeActive;
@@ -77,6 +79,11 @@ public partial class TransparentOverlayWindow : Window
         _weatherDataService = facade.Weather.GetWeatherInfoService();
         _timeZoneService = facade.Region.GetTimeZoneService();
         _settingsFacade = facade;
+
+        if (OperatingSystem.IsWindows())
+        {
+            _bottomMostService.SetupBottomMost(this);
+        }
     }
     
     private readonly ISettingsFacadeService _settingsFacade;
@@ -84,6 +91,7 @@ public partial class TransparentOverlayWindow : Window
     public void SaveLayoutAndHide()
     {
         SaveLayout();
+        _regionPassthroughService.ClearInteractiveRegions(this);
         Hide();
         
         // Remove all components so that next time we open it builds fresh from snapshot
@@ -131,6 +139,11 @@ public partial class TransparentOverlayWindow : Window
         RenderAllComponents();
         
         AppLogger.Info("TransparentOverlay", $"Opened with {_layout.ComponentPlacements.Count} components.");
+
+        if (OperatingSystem.IsWindows())
+        {
+            _bottomMostService.SendToBottom(this);
+        }
     }
     
     /// <summary>
@@ -185,7 +198,25 @@ public partial class TransparentOverlayWindow : Window
     /// </summary>
     private void UpdateInteractiveRegions()
     {
-        // 编辑模式下不再需要底层穿透功能计算，这里留空或移除
+        _interactiveRegions.Clear();
+
+        foreach (var host in _componentHosts.Values)
+        {
+            var left = Canvas.GetLeft(host);
+            var top = Canvas.GetTop(host);
+            var width = host.Width > 0 ? host.Width : host.Bounds.Width;
+            var height = host.Height > 0 ? host.Height : host.Bounds.Height;
+
+            if (width <= 0 || height <= 0)
+            {
+                continue;
+            }
+
+            // 稍微向外扩一圈，确保拖拽和右下角缩放手柄也能命中。
+            _interactiveRegions.Add(new Rect(left - 12, top - 12, width + 24, height + 24));
+        }
+
+        _regionPassthroughService.SetInteractiveRegions(this, _interactiveRegions);
     }
     
     /// <summary>

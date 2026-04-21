@@ -1,5 +1,30 @@
 # 更新日志 / Changelog
 
+## [0.8.4](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.4) - 2026-04-12
+
+### 新增 (Added)
+
+- ✨ **全新淡入淡出动画系统**: 引入了一套全新的淡入淡出动画效果
+  - 提升界面切换和元素显示的视觉流畅度
+  - 为用户带来更加自然优雅的交互体验
+
+### 变更 (Changed)
+
+- ♻️ **SDK 更新**: 更新插件 SDK，优化插件开发接口和兼容性
+- 🎨 **网速显示组件优化**: 优化了网速显示组件的显示效果
+  - 改进数据展示方式，提升可读性
+  - 优化视觉样式，与整体设计语言更加协调
+
+### 修复 (Fixed)
+
+- 无
+
+### 移除 (Removed)
+
+- 无
+
+***
+
 ## [0.8.3.5](https://github.com/yourorg/LanMountainDesktop/releases/tag/v0.8.3.5) - 2026-04-12
 
 ### 新增 (Added)

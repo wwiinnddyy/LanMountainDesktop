@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        mc:Ignorable="d"
+        d:DesignWidth="480"
+        d:DesignHeight="320"
+        x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
+        x:DataType="views:SplashWindow"
+        Title="LanMountain Desktop"
+        Width="480"
+        Height="320"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+  <Design.DataContext>
+    <views:SplashWindow />
+  </Design.DataContext>
+
+  <Grid>
+    <!-- 左上角：应用名称 -->
+    <TextBlock x:Name="AppNameText"
+               Text="LanMountain Desktop"
+               FontSize="24"
+               FontWeight="SemiBold"
+               VerticalAlignment="Top"
+               HorizontalAlignment="Left"
+               Margin="24,24,0,0"
+               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+    <!-- 底部区域：进度条和状态 -->
+    <Grid VerticalAlignment="Bottom" Margin="24,0,24,24">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      
+      <!-- 第一行：左下角版本信息，右下角阶段文字 -->
+      <Grid Grid.Row="0" Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- 左下角：版本和开发代号 - 可点击打开开发者界面（隐藏功能） -->
+        <Border x:Name="VersionTextBorder"
+                Grid.Column="0"
+                Background="Transparent"
+                Cursor="Hand"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom">
+          <TextBlock x:Name="VersionText"
+                     FontSize="11"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     Opacity="0.8"
+                     Text="1.0.0 (Administrate)" />
+        </Border>
+        
+        <!-- 右下角：阶段文字 -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Column="1"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Bottom"
+                   Opacity="0.8"
+                   Text="Initializing..." />
+      </Grid>
+      
+      <!-- 底部：进度条 -->
+      <ProgressBar x:Name="ProgressIndicator"
+                   Grid.Row="1"
+                   Minimum="0"
+                   Maximum="100"
+                   Value="0"
+                   Height="4"
+                   IsIndeterminate="False"
+                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                   Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+    </Grid>
+  </Grid>
+</Window>

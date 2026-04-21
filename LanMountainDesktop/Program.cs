@@ -9,6 +9,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop;
 
@@ -32,11 +33,26 @@ public sealed class Program
                 AppLogger.Warn(
                     "Startup",
                     $"Restart relaunch could not acquire the single-instance lock. pid={restartParentProcessId.Value}. Suppressing multi-open activation prompt.");
+                Environment.ExitCode = HostExitCodes.RestartLockNotAcquired;
                 return;
             }
 
-            AppLogger.Warn("Startup", "A secondary launch was blocked because another instance is already running.");
-            _ = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2));
+            var activationAcknowledged = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2), out var failureReason);
+            if (activationAcknowledged)
+            {
+                AppLogger.Info(
+                    "Startup",
+                    $"Secondary launch forwarded to primary instance successfully. Acked={activationAcknowledged}; Pid={Environment.ProcessId}.");
+                Environment.ExitCode = HostExitCodes.SecondaryActivationSucceeded;
+            }
+            else
+            {
+                AppLogger.Warn(
+                    "Startup",
+                    $"Secondary launch failed to activate the primary instance. Acked={activationAcknowledged}; Reason='{failureReason ?? "unknown"}'; Pid={Environment.ProcessId}.");
+                Environment.ExitCode = HostExitCodes.SecondaryActivationFailed;
+            }
+
             return;
         }
 

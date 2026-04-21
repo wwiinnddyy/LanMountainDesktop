@@ -512,3 +512,5 @@ nul
 /*.deb
 /*.dmg
 /*.AppImage
+/velopack-output-local-verify
+/velopack-output-local

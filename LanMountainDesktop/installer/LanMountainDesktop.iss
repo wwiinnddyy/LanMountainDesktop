@@ -1,6 +1,6 @@
 #define MyAppName "LanMountainDesktop"
 #define MyAppPublisher "LanMountainDesktop Team"
-#define MyAppExeName "LanMountainDesktop.exe"
+#define MyAppExeName "LanMountainDesktop.Launcher.exe"
 #define MyAppId "{{5A058B0D-F95D-4A18-B9A0-93F843655DDB}"
 #define MyAppRegistryId "{5A058B0D-F95D-4A18-B9A0-93F843655DDB}"
 
@@ -654,11 +654,37 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  LauncherPath: String;
+  AppDirPath: String;
 begin
   if CurStep = ssInstall then
   begin
     if not RemoveExistingInstallation() then
     begin
+      Abort;
+    end;
+  end;
+  
+  if CurStep = ssPostInstall then
+  begin
+    // 验证 Launcher 是否存在
+    LauncherPath := ExpandConstant('{app}\{#MyAppExeName}');
+    if not FileExists(LauncherPath) then
+    begin
+      MsgBox('安装验证失败: Launcher 可执行文件不存在。' + #13#10 + 
+             '预期路径: ' + LauncherPath + #13#10 + #13#10 +
+             '请联系开发者报告此问题。', mbError, MB_OK);
+      Abort;
+    end;
+    
+    // 验证至少存在一个 app-* 目录
+    AppDirPath := ExpandConstant('{app}\app-{#MyAppVersion}');
+    if not DirExists(AppDirPath) then
+    begin
+      MsgBox('安装验证失败: 应用版本目录不存在。' + #13#10 + 
+             '预期路径: ' + AppDirPath + #13#10 + #13#10 +
+             '请联系开发者报告此问题。', mbError, MB_OK);
       Abort;
     end;
   end;

@@ -1,0 +1,66 @@
+{
+  "distributionId": "plonds-0.8.5.2-linux-x64",
+  "version": "0.8.5.2",
+  "channel": "stable",
+  "platform": "linux-x64",
+  "publishedAt": "2026-04-20T00:00:00Z",
+  "components": [
+    {
+      "id": "app",
+      "root": "app-0.8.5.2/",
+      "mode": "file-object",
+      "metadata": {
+        "allowDiffUpdate": "true"
+      },
+      "files": [
+        {
+          "path": "LanMountainDesktop",
+          "op": "replace",
+          "contentHash": "sha256-placeholder-lanmountain-linux",
+          "size": 2048000,
+          "mode": "file-object",
+          "objectKey": "repo/sha256/sha256-placeholder-lanmountain-linux"
+        }
+      ]
+    },
+    {
+      "id": "installers",
+      "root": "installers/linux-x64/",
+      "mode": "file-object",
+      "files": [
+        {
+          "path": "LanMountainDesktop-0.8.5.2-linux-x64.deb",
+          "op": "add",
+          "contentHash": "sha256-placeholder-linux-x64-installer",
+          "size": 3096576,
+          "mode": "file-object",
+          "objectKey": "installers/linux-x64/LanMountainDesktop-0.8.5.2-linux-x64.deb"
+        }
+      ]
+    }
+  ],
+  "installerMirrors": [
+    {
+      "platform": "linux",
+      "arch": "x64",
+      "url": "https://downloads.example.invalid/lanmountain/linux-x64/LanMountainDesktop-0.8.5.2-linux-x64.deb",
+      "fileName": "LanMountainDesktop-0.8.5.2-linux-x64.deb"
+    }
+  ],
+  "capabilities": [
+    "file-object",
+    "compressed-object",
+    "binary-patch"
+  ],
+  "signatures": [
+    {
+      "algorithm": "rsa-sha256",
+      "keyId": "lanmountain-main",
+      "signature": "placeholder-signature"
+    }
+  ],
+  "metadata": {
+    "notes": "sample distribution for PLONDS skeleton"
+  }
+}
+

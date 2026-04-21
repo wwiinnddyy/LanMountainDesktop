@@ -34,7 +34,20 @@ public sealed record UpdateCheckResult(
     GitHubReleaseInfo? Release,
     GitHubReleaseAsset? PreferredAsset,
     string? ErrorMessage,
-    bool ForceMode = false);
+    bool ForceMode = false,
+    PlondsUpdatePayload? PlondsPayload = null);
+
+public sealed record PlondsUpdatePayload(
+    string DistributionId,
+    string ChannelId,
+    string SubChannel,
+    string? FileMapJson,
+    string? FileMapSignature,
+    string? FileMapJsonUrl,
+    string? FileMapSignatureUrl,
+    string? UpdateArchiveUrl = null,
+    string? UpdateArchiveSha256 = null,
+    long? UpdateArchiveSizeBytes = null);
 
 public sealed record UpdateDownloadResult(
     bool Success,
@@ -149,6 +162,9 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             var preferredAsset = isUpdateAvailable
                 ? SelectPreferredInstallerAsset(release.Assets)
                 : null;
+            var plondsPayload = isUpdateAvailable
+                ? TryResolvePlondsPayload(release)
+                : null;
 
             return new UpdateCheckResult(
                 Success: true,
@@ -157,7 +173,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 LatestVersionText: latestVersionText,
                 Release: release,
                 PreferredAsset: preferredAsset,
-                ErrorMessage: null);
+                ErrorMessage: null,
+                PlondsPayload: plondsPayload);
         }
         catch (OperationCanceledException)
         {
@@ -222,6 +239,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 : release.TagName;
 
             var preferredAsset = SelectPreferredInstallerAsset(release.Assets);
+            var plondsPayload = TryResolvePlondsPayload(release);
 
             return new UpdateCheckResult(
                 Success: true,
@@ -231,7 +249,8 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 Release: release,
                 PreferredAsset: preferredAsset,
                 ErrorMessage: null,
-                ForceMode: true);
+                ForceMode: true,
+                PlondsPayload: plondsPayload);
         }
         catch (OperationCanceledException)
         {
@@ -642,7 +661,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
 
     private static GitHubReleaseAsset? SelectPreferredInstallerAsset(IReadOnlyList<GitHubReleaseAsset> assets)
     {
-        if (assets is null || assets.Count == 0 || !OperatingSystem.IsWindows())
+        if (assets is null || assets.Count == 0)
         {
             return null;
         }
@@ -654,12 +673,95 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             _ => "x64"
         };
 
-        var ranked = assets
-            .Select(asset => (Asset: asset, Score: ScoreWindowsInstallerAsset(asset.Name, architectureToken)))
-            .OrderByDescending(x => x.Score)
-            .ToList();
+        if (OperatingSystem.IsWindows())
+        {
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreWindowsInstallerAsset(asset.Name, architectureToken)))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
 
-        return ranked.FirstOrDefault(x => x.Score > 0).Asset;
+        if (OperatingSystem.IsLinux())
+        {
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreLinuxInstallerAsset(asset.Name, architectureToken)))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return assets
+                .Select(asset => (Asset: asset, Score: ScoreMacInstallerAsset(asset.Name, architectureToken)))
+                .OrderByDescending(x => x.Score)
+                .FirstOrDefault(x => x.Score > 0)
+                .Asset;
+        }
+
+        return null;
+    }
+
+    private static PlondsUpdatePayload? TryResolvePlondsPayload(GitHubReleaseInfo release)
+    {
+        if (release.Assets is null || release.Assets.Count == 0)
+        {
+            return null;
+        }
+
+        var platformSuffix = GetPlatformAssetSuffix();
+        var fileMapAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json");
+        var signatureAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json.sig")
+                             ?? FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.sig");
+        var archiveAsset = FindAsset(release.Assets, $"update-{platformSuffix}.zip");
+        if (fileMapAsset is null || signatureAsset is null || archiveAsset is null)
+        {
+            return null;
+        }
+
+        var distributionId = $"plonds-{release.TagName.Trim().TrimStart('v')}-{platformSuffix}";
+        var channelId = release.IsPrerelease
+            ? UpdateSettingsValues.ChannelPreview
+            : UpdateSettingsValues.ChannelStable;
+
+        return new PlondsUpdatePayload(
+            DistributionId: distributionId,
+            ChannelId: channelId,
+            SubChannel: platformSuffix,
+            FileMapJson: null,
+            FileMapSignature: null,
+            FileMapJsonUrl: fileMapAsset.BrowserDownloadUrl,
+            FileMapSignatureUrl: signatureAsset.BrowserDownloadUrl,
+            UpdateArchiveUrl: archiveAsset.BrowserDownloadUrl,
+            UpdateArchiveSha256: archiveAsset.Sha256,
+            UpdateArchiveSizeBytes: archiveAsset.SizeBytes > 0 ? archiveAsset.SizeBytes : null);
+    }
+
+    private static GitHubReleaseAsset? FindAsset(IReadOnlyList<GitHubReleaseAsset> assets, string assetName)
+    {
+        return assets.FirstOrDefault(asset => string.Equals(asset.Name, assetName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetPlatformAssetSuffix()
+    {
+        var os = OperatingSystem.IsWindows()
+            ? "windows"
+            : OperatingSystem.IsLinux()
+                ? "linux"
+                : OperatingSystem.IsMacOS()
+                    ? "macos"
+                    : "unknown";
+
+        var arch = RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.X86 => "x86",
+            Architecture.Arm => "arm",
+            Architecture.Arm64 => "arm64",
+            _ => "x64"
+        };
+
+        return $"{os}-{arch}";
     }
 
     private static int ScoreWindowsInstallerAsset(string assetName, string architectureToken)
@@ -704,6 +806,94 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         if (assetName.Contains("portable", StringComparison.OrdinalIgnoreCase))
         {
             score -= 40;
+        }
+
+        return score;
+    }
+
+    private static int ScoreLinuxInstallerAsset(string assetName, string architectureToken)
+    {
+        if (string.IsNullOrWhiteSpace(assetName))
+        {
+            return 0;
+        }
+
+        var score = 0;
+
+        if (assetName.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 220;
+        }
+        else if (assetName.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 180;
+        }
+        else if (assetName.EndsWith(".AppImage", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 160;
+        }
+        else
+        {
+            return 0;
+        }
+
+        if (assetName.Contains("linux", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+
+        if (assetName.Contains(architectureToken, StringComparison.OrdinalIgnoreCase) ||
+            (architectureToken == "x64" && assetName.Contains("amd64", StringComparison.OrdinalIgnoreCase)))
+        {
+            score += 40;
+        }
+        else if (assetName.Contains("x64", StringComparison.OrdinalIgnoreCase) ||
+                 assetName.Contains("amd64", StringComparison.OrdinalIgnoreCase) ||
+                 assetName.Contains("x86", StringComparison.OrdinalIgnoreCase) ||
+                 assetName.Contains("arm64", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 30;
+        }
+
+        return score;
+    }
+
+    private static int ScoreMacInstallerAsset(string assetName, string architectureToken)
+    {
+        if (string.IsNullOrWhiteSpace(assetName))
+        {
+            return 0;
+        }
+
+        var score = 0;
+
+        if (assetName.EndsWith(".dmg", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 220;
+        }
+        else if (assetName.EndsWith(".pkg", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 180;
+        }
+        else
+        {
+            return 0;
+        }
+
+        if (assetName.Contains("mac", StringComparison.OrdinalIgnoreCase) ||
+            assetName.Contains("osx", StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+
+        if (assetName.Contains(architectureToken, StringComparison.OrdinalIgnoreCase))
+        {
+            score += 40;
+        }
+        else if (assetName.Contains("x64", StringComparison.OrdinalIgnoreCase) ||
+                 assetName.Contains("arm64", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= 30;
         }
 
         return score;

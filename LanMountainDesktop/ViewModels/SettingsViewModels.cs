@@ -1496,7 +1496,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
 
     [ObservableProperty]
-    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
+    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
 
     [ObservableProperty]
     private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
@@ -1562,6 +1562,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _lastCheckedLabel = string.Empty;
 
     [ObservableProperty]
+    private string _updateTypeLabel = string.Empty;
+
+    [ObservableProperty]
     private string _checkForUpdatesButtonText = string.Empty;
 
     [ObservableProperty]
@@ -1595,6 +1598,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private bool _hasPendingInstaller;
 
     [ObservableProperty]
+    private string _pendingUpdateTypeText = string.Empty;
+
+    [ObservableProperty]
     private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
     [ObservableProperty]
@@ -1623,6 +1629,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _previewChannelText = string.Empty;
+
+    [ObservableProperty]
+    private string _pdcSourceText = string.Empty;
 
     [ObservableProperty]
     private string _gitHubSourceText = string.Empty;
@@ -1659,6 +1668,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     public bool IsPreviewChannelSelected =>
         string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPdcSourceSelected =>
+        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourcePdc, StringComparison.OrdinalIgnoreCase);
 
     public bool IsGitHubSourceSelected =>
         string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase);
@@ -1853,6 +1865,12 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void SelectPdcSource()
+    {
+        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
+    }
+
+    [RelayCommand]
     private void SelectGitHubSource()
     {
         SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
@@ -1923,8 +1941,8 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
             UpdateStatus = isForce
-                ? L("settings.update.status_force_checking", "Force checking GitHub releases...")
-                : L("settings.update.status_checking", "Checking GitHub releases...");
+                ? L("settings.update.status_force_checking", "Force checking update source...")
+                : L("settings.update.status_checking", "Checking update source...");
 
             var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce);
             _lastCheckResult = result.Success ? result : null;
@@ -1947,7 +1965,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                 return;
             }
 
-            if (result.PreferredAsset is null)
+            if (result.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(result))
             {
                 UpdateStatus = isForce
                     ? L("settings.update.status_force_no_asset", "Release found but no compatible installer available.")
@@ -1987,6 +2005,26 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanInstallPendingUpdate))]
     private void InstallPendingUpdate()
     {
+        // For delta updates, launch the Launcher with apply-update command
+        if (_updateWorkflowService.IsPendingDeltaUpdate())
+        {
+            var launchResult = _updateWorkflowService.LaunchLauncherForApplyUpdate();
+            if (launchResult)
+            {
+                UpdateStatus = L(
+                    "settings.update.status_delta_applying",
+                    "Applying incremental update. The app will close for update.");
+                HasPendingInstaller = false;
+                return;
+            }
+
+            UpdateStatus = L(
+                "settings.update.status_delta_launch_failed",
+                "Failed to launch updater for incremental update.");
+            return;
+        }
+
+        // For full installer, launch the installer executable
         var result = _updateWorkflowService.LaunchPendingInstallerNow();
         if (result.Success)
         {
@@ -2012,7 +2050,10 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRedownloadUpdate))]
     private async Task RedownloadUpdateAsync()
     {
-        if (_lastCheckResult is null || !_lastCheckResult.Success || !_lastCheckResult.IsUpdateAvailable || _lastCheckResult.PreferredAsset is null)
+        if (_lastCheckResult is null ||
+            !_lastCheckResult.Success ||
+            !_lastCheckResult.IsUpdateAvailable ||
+            (_lastCheckResult.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(_lastCheckResult)))
         {
             UpdateStatus = L("settings.update.status_redownload_no_check", "Please check for updates first before redownloading.");
             return;
@@ -2074,7 +2115,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
         DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
         ForceCheckUpdateLabel = L("settings.update.force_check_label", "Force Check Update");
-        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates from GitHub, ignoring version comparison.");
+        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates, ignoring version comparison.");
         CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
         DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
         InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
@@ -2083,8 +2124,10 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
         PublishedAtLabel = L("settings.update.published_at_label", "Published At");
         LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
+        UpdateTypeLabel = L("settings.update.type_label", "Update Type");
         StableChannelText = L("settings.update.channel_stable", "Stable");
         PreviewChannelText = L("settings.update.channel_preview", "Preview");
+        PdcSourceText = L("settings.update.source_pdc", "PDC");
         GitHubSourceText = L("settings.update.source_github", "GitHub");
         GhProxySourceText = L("settings.update.source_ghproxy", "gh-proxy");
         ManualModeText = L("settings.update.mode_manual", "Manual Update");
@@ -2130,6 +2173,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         HasPendingInstaller = pending is not null;
         if (pending is null)
         {
+            PendingUpdateTypeText = string.Empty;
             return;
         }
 
@@ -2137,6 +2181,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
         PublishedAtText = pending.PublishedAt is null ? string.Empty : FormatTimestamp(pending.PublishedAt.Value.ToUnixTimeMilliseconds());
         IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
+        PendingUpdateTypeText = _updateWorkflowService.IsPendingDeltaUpdate()
+            ? L("settings.update.type_delta", "Incremental Update")
+            : L("settings.update.type_full", "Full Installer");
         UpdateStatus = BuildPendingReadyStatus();
     }
 
@@ -2165,7 +2212,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     private async Task DownloadLatestReleaseCoreAsync(UpdateCheckResult? result, bool invokedFromCheck)
     {
-        if (result is null || !result.Success || !result.IsUpdateAvailable || result.PreferredAsset is null)
+        if (result is null || !result.Success || !result.IsUpdateAvailable)
         {
             return;
         }
@@ -2176,7 +2223,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             IsDownloadProgressVisible = true;
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
 
             var progress = new Progress<double>(value =>
             {
@@ -2187,7 +2233,35 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                     DownloadProgressValue);
             });
 
-            var downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+            UpdateDownloadResult downloadResult;
+
+            // Prefer delta update if available (smaller download, faster)
+            if (UpdateWorkflowService.IsDeltaUpdateAvailable(result))
+            {
+                UpdateStatus = L("settings.update.status_downloading_delta", "Downloading incremental update...");
+                downloadResult = await _updateWorkflowService.DownloadDeltaUpdateAsync(result, progress);
+                if (!downloadResult.Success && result.PlondsPayload is null)
+                {
+                    // Delta download failed, fall back to full installer
+                    AppLogger.Warn("UpdateSettings", $"Delta update download failed: {downloadResult.ErrorMessage}. Falling back to full installer.");
+                    if (result.PreferredAsset is not null)
+                    {
+                        UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
+                        downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+                    }
+                }
+            }
+            else if (result.PreferredAsset is not null)
+            {
+                UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
+                downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
+            }
+            else
+            {
+                UpdateStatus = L("settings.update.status_asset_missing", "A new release is available, but no compatible installer was found.");
+                return;
+            }
+
             if (!downloadResult.Success)
             {
                 UpdateStatus = string.Format(
@@ -2251,6 +2325,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         return UpdateSettingsValues.NormalizeDownloadSource(value) switch
         {
+            UpdateSettingsValues.DownloadSourcePdc => L(
+                "settings.update.source_pdc_desc",
+                "Prefer PDC metadata and distribution endpoints, then automatically fallback to GitHub."),
             UpdateSettingsValues.DownloadSourceGhProxy => L(
                 "settings.update.source_ghproxy_desc",
                 "Use the gh-proxy mirror when downloading GitHub release assets."),
@@ -2302,6 +2379,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         return
         [
+            new SelectionOption(UpdateSettingsValues.DownloadSourcePdc, PdcSourceText),
             new SelectionOption(UpdateSettingsValues.DownloadSourceGitHub, GitHubSourceText),
             new SelectionOption(UpdateSettingsValues.DownloadSourceGhProxy, GhProxySourceText)
         ];

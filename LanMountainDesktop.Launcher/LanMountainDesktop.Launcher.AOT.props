@@ -1,0 +1,66 @@
+<!-- AOT 发布配置文件 -->
+<Project>
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 启用 Native AOT -->
+    <PublishAot>true</PublishAot>
+    
+    <!-- 启用修剪以减小体积 -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    
+    <!-- 自包含（不依赖系统 .NET Runtime） -->
+    <SelfContained>true</SelfContained>
+    
+    <!-- 单文件发布 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    
+    <!-- 包含 native 库到单文件中 -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    
+    <!-- 压缩单文件 -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    
+    <!-- 优化大小 -->
+    <OptimizationPreference>Size</OptimizationPreference>
+    
+    <!-- 禁用 ReadyToRun（AOT 不需要） -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+    
+    <!-- 注意：RuntimeIdentifier 由 CI/CD 工作流通过 -r 参数传入，不在此处硬编码 -->
+    <!-- 支持的平台：win-x64, win-x86, linux-x64, osx-x64, osx-arm64 -->
+  </PropertyGroup>
+  
+  <!-- AOT 兼容性设置 -->
+  <PropertyGroup>
+    <!-- 允许不安全代码（某些 AOT 场景需要） -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    
+    <!-- 启用编译时绑定（Avalonia 需要） -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  
+  <!-- AOT 修剪配置 -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 保留 Avalonia 必要的类型 -->
+    <TrimmerRootAssembly Include="Avalonia" />
+    <TrimmerRootAssembly Include="Avalonia.Desktop" />
+    
+    <!-- 保留动态序列化类型 -->
+    <TrimmerRootAssembly Include="System.Text.Json" />
+  </ItemGroup>
+  
+  <!-- AOT 兼容性：某些包可能需要特殊处理 -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <!-- 忽略某些警告 -->
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <!-- 允许 IL 警告 -->
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    
+    <!-- AOT 模式下禁用反射式 JSON 序列化，强制使用 Source Generator -->
+    <!-- 之前设置为 true 与 AOT 矛盾，导致 IL2026/IL3050 警告和运行时失败 -->
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    
+    <!-- 启用 ISerializable 支持（部分库需要） -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>

@@ -16,7 +16,7 @@
 | `LanMountainDesktop.DesktopHost/` | 桌面宿主流程 | 生命周期、宿主流程支撑 |
 | `LanMountainDesktop.DesktopComponents.Runtime/` | 组件运行时 | 组件宿主运行时支撑 |
 | `LanMountainDesktop.Host.Abstractions/` | 宿主抽象 | 宿主接口与抽象层 |
-| `LanMountainDesktop.PluginsInstallHelper/` | 插件安装辅助 | 发布输出和插件安装辅助程序 |
+| `LanMountainDesktop.Launcher/` | 启动器 | 发布输出、OOBE、启动页、更新与插件安装/更新 |
 | `LanMountainDesktop.PluginTemplate/` | 插件模板 | `dotnet new lmd-plugin` 模板内容 |
 | `LanMountainDesktop.Tests/` | 测试 | 行为回归、契约验证、基础能力校验 |
 

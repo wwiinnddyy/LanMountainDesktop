@@ -14,10 +14,10 @@ namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketInstallService : IDisposable
 {
-    private const string HelperExecutableName = "LanMountainDesktop.PluginsInstallHelper.exe";
+    private const string LauncherExecutableName = "LanMountainDesktop.Launcher.exe";
 
     private readonly PluginRuntimeService _runtime;
-    private readonly PluginsInstallHelperClient _helperClient = new();
+    private readonly LauncherClient _launcherClient = new();
     private readonly HttpClient _httpClient;
     private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
@@ -83,13 +83,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
     {
         if (OperatingSystem.IsWindows())
         {
-            var helperPath = ResolveHelperPath();
-            if (!File.Exists(helperPath))
+            var launcherPath = ResolveLauncherPath();
+            if (!File.Exists(launcherPath))
             {
                 return new AirAppMarketInstallResult(
                     false,
                     null,
-                    $"Plugins install helper was not found at '{helperPath}'.");
+                    $"Launcher executable was not found at '{launcherPath}'.");
             }
         }
 
@@ -234,16 +234,16 @@ internal sealed class AirAppMarketInstallService : IDisposable
             PluginManifest manifest;
             if (OperatingSystem.IsWindows())
             {
-                var helperResult = await _helperClient.InstallPackageAsync(
+                var helperResult = await _launcherClient.InstallPackageAsync(
                     attemptPath,
                     _runtime.PluginsDirectory,
                     cancellationToken).ConfigureAwait(false);
                 if (!helperResult.Success || string.IsNullOrWhiteSpace(helperResult.InstalledPackagePath))
                 {
-                    var helperMessage = helperResult.ErrorMessage ?? "Plugins install helper failed.";
+                    var helperMessage = helperResult.ErrorMessage ?? "Launcher plugin install failed.";
                     AppLogger.Error(
                         "PluginMarket",
-                        $"Windows install helper failed for plugin '{plugin.Id}' from source '{source.SourceKind}'. Message='{helperMessage}'.");
+                        $"Windows launcher install failed for plugin '{plugin.Id}' from source '{source.SourceKind}'. Message='{helperMessage}'.");
                     return new AirAppMarketInstallAttemptResult(false, true, null, helperMessage);
                 }
 
@@ -363,9 +363,9 @@ internal sealed class AirAppMarketInstallService : IDisposable
         return new AirAppMarketVerificationResult(true, null);
     }
 
-    private static string ResolveHelperPath()
+    private static string ResolveLauncherPath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "PluginsInstallHelper", HelperExecutableName);
+        return Path.Combine(AppContext.BaseDirectory, "Launcher", LauncherExecutableName);
     }
 
     private static void TryDeleteFile(string path)

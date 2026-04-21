@@ -1,0 +1,149 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="520"
+        d:DesignHeight="360"
+        x:Class="LanMountainDesktop.Launcher.Views.MigrationPromptWindow"
+        x:DataType="views:MigrationPromptWindow"
+        Title="阑山桌面 - 版本迁移"
+        Width="520"
+        Height="360"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+  <Design.DataContext>
+    <views:MigrationPromptWindow />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="*,Auto">
+    <!-- 主内容区域 -->
+    <Grid Grid.Row="0" Margin="24,24,24,16" ColumnDefinitions="Auto,*">
+
+      <!-- 左侧：信息图标 -->
+      <Border Grid.Column="0"
+              Width="48"
+              Height="48"
+              Margin="0,4,16,0"
+              Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+              CornerRadius="24"
+              VerticalAlignment="Top">
+        <TextBlock Text="&#xE7BA;"
+                   FontSize="24"
+                   FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+      </Border>
+
+      <!-- 右侧：内容 -->
+      <StackPanel Grid.Column="1" Spacing="12">
+        <!-- 标题 -->
+        <TextBlock Text="检测到旧版本"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                   TextWrapping="Wrap"/>
+
+        <!-- 说明文字 -->
+        <TextBlock x:Name="DescriptionText"
+                   Text="检测到您的系统中安装了旧版本的阑山桌面（0.8.4）。新版本采用了全新的架构，建议卸载旧版本以获得更好的体验。"
+                   FontSize="14"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   LineHeight="20"/>
+
+        <!-- 老版本信息卡片 -->
+        <Border Margin="0,8,0,0"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="16,12">
+          <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+            <!-- 版本号 -->
+            <TextBlock Grid.Row="0" Grid.Column="0"
+                       Text="版本："
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+            <TextBlock x:Name="VersionText"
+                       Grid.Row="0" Grid.Column="1"
+                       Text="0.8.4"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="8,0,0,0"/>
+
+            <!-- 安装路径 -->
+            <TextBlock Grid.Row="1" Grid.Column="0"
+                       Text="位置："
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Margin="0,4,0,0"/>
+            <TextBlock x:Name="PathText"
+                       Grid.Row="1" Grid.Column="1"
+                       Text="C:\Program Files\LanMountainDesktop"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       Margin="8,4,0,0"/>
+
+            <!-- 安装类型 -->
+            <TextBlock Grid.Row="2" Grid.Column="0"
+                       Text="类型："
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                       Margin="0,4,0,0"/>
+            <TextBlock x:Name="TypeText"
+                       Grid.Row="2" Grid.Column="1"
+                       Text="安装版"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="8,4,0,0"/>
+          </Grid>
+        </Border>
+
+        <!-- 提示信息 -->
+        <TextBlock Text="卸载旧版本不会影响新版本的使用，您的个人数据将保留。"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                   TextWrapping="Wrap"
+                   Margin="0,4,0,0"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- 底部：按钮区域 -->
+    <Border Grid.Row="1"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            Padding="24,16">
+      <Grid ColumnDefinitions="*,Auto">
+        <!-- 左侧：查看位置按钮 -->
+        <Button x:Name="ShowLocationButton"
+                Grid.Column="0"
+                Content="查看位置"
+                Width="100"
+                Height="32"
+                FontSize="13"
+                HorizontalAlignment="Left"/>
+
+        <!-- 右侧：操作按钮 -->
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <Button x:Name="SkipButton"
+                  Content="暂不处理"
+                  Width="100"
+                  Height="32"
+                  FontSize="13"/>
+          <Button x:Name="UninstallButton"
+                  Content="卸载旧版本"
+                  Width="100"
+                  Height="32"
+                  FontSize="13"
+                  Theme="{DynamicResource AccentButtonTheme}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

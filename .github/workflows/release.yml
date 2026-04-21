@@ -19,6 +19,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   Solution_Name: LanMountainDesktop.slnx
+  DOTNET_gcServer: 1
 
 jobs:
   prepare:
@@ -29,14 +30,22 @@ jobs:
       informational_version: ${{ steps.version.outputs.informational_version }}
       tag: ${{ steps.version.outputs.tag }}
       checkout_ref: ${{ steps.version.outputs.checkout_ref }}
-    
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      release_channel: ${{ steps.version.outputs.release_channel }}
+
     steps:
+      - name: Checkout repository metadata
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Get release info
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
             CHECKOUT_REF="${GITHUB_REF}"
+            IS_PRERELEASE="false"
           else
             RAW_TAG="${{ github.event.inputs.tag }}"
             if [[ "${RAW_TAG}" == refs/tags/* ]]; then
@@ -46,19 +55,40 @@ jobs:
             else
               TAG="v${RAW_TAG}"
             fi
-            CHECKOUT_REF="${GITHUB_SHA}"
+
+            if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+              CHECKOUT_REF="refs/tags/${TAG}"
+            else
+              CHECKOUT_REF="${GITHUB_SHA}"
+            fi
+
+            if [[ "${{ github.event.inputs.is_prerelease }}" == "true" ]]; then
+              IS_PRERELEASE="true"
+            else
+              IS_PRERELEASE="false"
+            fi
           fi
+
           VERSION="${TAG#v}"
           IFS='.' read -r -a VERSION_PARTS <<< "${VERSION}"
           while [ "${#VERSION_PARTS[@]}" -lt 4 ]; do
             VERSION_PARTS+=("0")
           done
           ASSEMBLY_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.${VERSION_PARTS[2]}.${VERSION_PARTS[3]}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "assembly_version=${ASSEMBLY_VERSION}" >> $GITHUB_OUTPUT
-          echo "informational_version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "checkout_ref=${CHECKOUT_REF}" >> $GITHUB_OUTPUT
+
+          if [[ "${IS_PRERELEASE}" == "true" ]]; then
+            RELEASE_CHANNEL="preview"
+          else
+            RELEASE_CHANNEL="stable"
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "assembly_version=${ASSEMBLY_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "informational_version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=${CHECKOUT_REF}" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+          echo "release_channel=${RELEASE_CHANNEL}" >> "$GITHUB_OUTPUT"
 
   build-windows:
     needs: prepare
@@ -67,7 +97,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 完整版（自包含 .NET 运行时）
           - arch: x64
             self_contained: true
             suffix: ''
@@ -75,7 +104,7 @@ jobs:
             self_contained: true
             suffix: ''
     name: Build_Windows_${{ matrix.arch }}${{ matrix.suffix }}
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,6 +117,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -100,7 +130,35 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish
+      - name: Publish Launcher (AOT)
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $launcherPublishDir = "publish/launcher-win-$arch"
+
+          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj `
+            -c Release `
+            -o ./$launcherPublishDir `
+            --self-contained `
+            -r win-$arch `
+            -p:PublishAot=true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:Version=${{ needs.prepare.outputs.version }} `
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Launcher AOT publish failed"
+            exit 1
+          }
+        shell: pwsh
+
+      - name: Publish Main App
         run: |
           $selfContained = "${{ matrix.self_contained }}" -eq "true"
           $publishDir = if ($selfContained) { "publish/windows-${{ matrix.arch }}" } else { "publish/windows-${{ matrix.arch }}-lite" }
@@ -135,79 +193,69 @@ jobs:
               -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
               -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
           }
-
-          Write-Host "Published to: $publishDir"
-          Write-Host "Self-contained: $selfContained"
         shell: pwsh
 
-      - name: Install Inno Setup
-        run: choco install innosetup -y --no-progress
+      - name: Restructure for Launcher
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+          $launcherPublishDir = "publish/launcher-win-$arch"
+          $appDir = "app-$version"
+          $newStructure = "publish-launcher/windows-$arch"
+
+          New-Item -ItemType Directory -Path $newStructure -Force | Out-Null
+          $appPath = Join-Path $newStructure $appDir
+          Move-Item -Path $publishDir -Destination $appPath -Force
+
+          if (Test-Path $launcherPublishDir) {
+            Copy-Item -Path "$launcherPublishDir\*" -Destination $newStructure -Recurse -Force
+          }
+
+          New-Item -ItemType File -Path (Join-Path $appPath ".current") -Force | Out-Null
+
+          Remove-Item -Path $publishDir -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path $launcherPublishDir -Recurse -Force -ErrorAction SilentlyContinue
+          Move-Item -Path $newStructure -Destination $publishDir -Force
+        shell: pwsh
+
+      - name: Install Inno Setup and 7z
+        run: |
+          choco install innosetup -y --no-progress
+          choco install 7zip -y --no-progress
         shell: pwsh
 
       - name: Build Installer
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
           $suffix = "${{ matrix.suffix }}"
-          $publishDir = if ($selfContained) { "publish\windows-$arch" } else { "publish\windows-$arch-lite" }
-          $installerScript = "LanMountainDesktop\installer\LanMountainDesktop.iss"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
           $outputDir = "build-installer"
-          
-          # Verify source directory exists
-          if (-not (Test-Path -Path $publishDir)) {
-            Write-Error "Publish directory not found: $publishDir"
-            Get-ChildItem -Path "publish" -Directory -ErrorAction SilentlyContinue | Select-Object Name
-            exit 1
-          }
-          
-          # Create output directory
+          $installerScript = "LanMountainDesktop/installer/LanMountainDesktop.iss"
+
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-          
-          # Verify installer script exists
-          if (-not (Test-Path -Path $installerScript)) {
-            Write-Error "Installer script not found: $installerScript"
-            exit 1
-          }
-          
-          # Find Inno Setup compiler (choco may install a shim in PATH)
-          $isccPath = $null
-          $isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-          if ($isccCommand) {
-            $isccPath = $isccCommand.Source
-          }
 
           $candidatePaths = @(
-            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
-            "C:\Program Files\Inno Setup 6\ISCC.exe",
-            "$env:ChocolateyInstall\bin\ISCC.exe",
+            (Get-Command iscc.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+            "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
             "$env:ChocolateyInstall\lib\innosetup\tools\ISCC.exe"
-          )
+          ) | Where-Object { $_ -and (Test-Path $_) }
 
+          $isccPath = $candidatePaths | Select-Object -First 1
           if (-not $isccPath) {
-            foreach ($candidate in $candidatePaths) {
-              if ($candidate -and (Test-Path -Path $candidate)) {
-                $isccPath = $candidate
-                break
-              }
-            }
-          }
-
-          if (-not $isccPath) {
-            Write-Host "ISCC.exe was not found in PATH or known locations."
-            Write-Host "Checked locations:"
-            $candidatePaths | ForEach-Object { Write-Host " - $_" }
-            Write-Host "Chocolatey bin listing (if exists):"
-            Get-ChildItem "$env:ChocolateyInstall\bin" -Filter "*iscc*" -ErrorAction SilentlyContinue | Select-Object FullName
             Write-Error "Inno Setup compiler not found."
             exit 1
           }
-          
-          Write-Host "Found Inno Setup at: $isccPath"
-          
-          # Build installer with iscc.exe
-          Write-Host "Building installer for Windows $arch with version $version..."
-          
+
+          if (-not (Test-Path $installerScript)) {
+            Write-Error "Installer script not found: $(Join-Path $PWD $installerScript)"
+            exit 1
+          }
+
           $publishDir = (Resolve-Path $publishDir).Path
           $outputDir = (Resolve-Path $outputDir).Path
           $installerScript = (Resolve-Path $installerScript).Path
@@ -221,32 +269,65 @@ jobs:
             "/DIsSelfContained=$selfContained",
             $installerScript
           )
-          
-          Write-Host "Compile command: `"$isccPath`" $($compileArgs -join ' ')"
-          
-          # Execute the compiler
+
           & $isccPath @compileArgs
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Inno Setup compiler exited with code $LASTEXITCODE"
             exit 1
           }
-          
-          # Check if build was successful
+
           $installerFile = Get-ChildItem -Path $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $installerFile) {
             Write-Error "Failed to create installer"
             exit 1
           }
-          
-          Write-Host "✅ Successfully created: $($installerFile.Name)"
-          Write-Host "Installer size: $([Math]::Round($installerFile.Length / 1MB, 2)) MB"
         shell: pwsh
 
-      - name: Upload Installer
+      - name: Package Payload Zip
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $payloadRoot = Join-Path (Join-Path $PWD "publish/windows-$arch") "app-$version"
+          if (-not (Test-Path $payloadRoot)) {
+            Write-Error "Payload root not found: $payloadRoot"
+            exit 1
+          }
+
+          $stageDir = Join-Path $PWD "payload-stage/windows-$arch"
+          $releaseDir = Join-Path $PWD "release-assets"
+          Remove-Item -Path $stageDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
+
+          Get-ChildItem -Path $payloadRoot -Recurse -File | ForEach-Object {
+            $relative = [System.IO.Path]::GetRelativePath($payloadRoot, $_.FullName).Replace('\', '/')
+            if ($relative -eq '.current' -or $relative -eq '.partial' -or $relative -eq '.destroy' -or $relative.StartsWith('.current/') -or $relative.StartsWith('.partial/') -or $relative.StartsWith('.destroy/')) {
+              return
+            }
+
+            $destination = Join-Path $stageDir ($relative -replace '/', [System.IO.Path]::DirectorySeparatorChar)
+            $destinationDir = Split-Path -Path $destination -Parent
+            if (-not [string]::IsNullOrWhiteSpace($destinationDir)) {
+              New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+            }
+
+            Copy-Item -Path $_.FullName -Destination $destination -Force
+          }
+
+          $payloadZip = Join-Path $releaseDir "files-windows-$arch.zip"
+          if (Test-Path $payloadZip) {
+            Remove-Item $payloadZip -Force
+          }
+          Compress-Archive -Path (Join-Path $stageDir '*') -DestinationPath $payloadZip -Force
+        shell: pwsh
+
+      - name: Upload Release Assets
         uses: actions/upload-artifact@v4
         with:
-          name: release-windows-${{ matrix.arch }}${{ matrix.suffix }}
-          path: build-installer/*.exe
+          name: release-windows-${{ matrix.arch }}
+          path: |
+            release-assets/files-windows-${{ matrix.arch }}.zip
+            build-installer/*.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -254,7 +335,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     name: Build_Linux
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -270,12 +351,18 @@ jobs:
             libfontconfig1 libfreetype6 \
             libx11-6 libxrandr2 libxinerama1 \
             libxi6 libxcursor1 libxext6 \
-            libxrender1 libxkbcommon-x11-0
+            libxrender1 libxkbcommon-x11-0 \
+            clang zlib1g-dev zip rsync
+
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
+          sudo apt-get install -y libportaudio2t64 || sudo apt-get install -y libportaudio2
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -288,11 +375,29 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish
+      - name: Publish Launcher (AOT)
+        run: |
+          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+            -c Release \
+            -o ./publish/launcher-linux-x64 \
+            --self-contained \
+            -r linux-x64 \
+            -p:PublishAot=true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
+      - name: Publish Main App
         run: |
           dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
             -c Release \
-            -o ./publish/linux-x64 \
+            -o ./publish/linux-x64-app \
             --self-contained \
             -r linux-x64 \
             -p:PublishSingleFile=false \
@@ -306,6 +411,24 @@ jobs:
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
+      - name: Restructure for Launcher
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          publishDir="publish/linux-x64"
+          appDir="app-$version"
+          launcherDir="publish/launcher-linux-x64"
+
+          mkdir -p "$publishDir"
+          mv "publish/linux-x64-app" "$publishDir/$appDir"
+
+          if [ -d "$launcherDir" ]; then
+            cp -r "$launcherDir"/* "$publishDir/"
+            chmod +x "$publishDir/LanMountainDesktop.Launcher" 2>/dev/null || true
+          fi
+
+          touch "$publishDir/$appDir/.current"
+          rm -rf "$launcherDir"
+
       - name: Package as DEB
         run: |
           version="${{ needs.prepare.outputs.version }}"
@@ -315,41 +438,17 @@ jobs:
           arch="amd64"
           desktop_template="LanMountainDesktop/packaging/linux/LanMountainDesktop.desktop"
           icon_source="LanMountainDesktop/packaging/linux/lanmountaindesktop.png"
-          
-          # Verify source directory exists
-          if [ ! -d "$source" ]; then
-            echo "Error: Source directory not found: $source"
-            ls -la publish/ || echo "publish directory not found"
-            exit 1
-          fi
-          
-          # Create DEB package structure
+
           mkdir -p "build-deb/DEBIAN"
           mkdir -p "build-deb/usr/local/bin"
           mkdir -p "build-deb/usr/share/applications"
           mkdir -p "build-deb/usr/share/pixmaps"
           mkdir -p "build-deb/usr/share/icons/hicolor/256x256/apps"
-          
-          # Copy application files
-          cp -r "$source"/* "build-deb/usr/local/bin/"
-          
-          # Verify copy was successful
-          item_count=$(find build-deb/usr/local/bin -type f 2>/dev/null | wc -l)
-          echo "DEB package contains $item_count files"
-          
-          if [ "$item_count" -eq 0 ]; then
-            echo "Error: DEB package is empty after copy"
-            exit 1
-          fi
 
-          if [ ! -f "$desktop_template" ] || [ ! -f "$icon_source" ]; then
-            echo "Error: Linux desktop resources are missing"
-            ls -la "LanMountainDesktop/packaging/linux" || true
-            exit 1
-          fi
+          cp -r "$source"/* "build-deb/usr/local/bin/"
 
           sed \
-            -e "s|@@EXEC@@|/usr/local/bin/LanMountainDesktop|g" \
+            -e "s|@@EXEC@@|/usr/local/bin/LanMountainDesktop.Launcher|g" \
             -e "s|@@ICON@@|lanmountaindesktop|g" \
             "$desktop_template" > "build-deb/usr/share/applications/LanMountainDesktop.desktop"
 
@@ -366,49 +465,69 @@ jobs:
             printf '%s\n' '  gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true'
             printf '%s\n' 'fi'
           } > "build-deb/DEBIAN/postinst"
-          
-          # Create control file (NOTE: No leading spaces in control file)
+
           {
             printf '%s\n' "Package: $package_name"
             printf '%s\n' "Version: $package_version"
             printf '%s\n' "Architecture: $arch"
-            printf '%s\n' "Maintainer: LanMountain Team <dev@example.com>"
-            printf '%s\n' "Description: LanMountain Desktop Application"
-            printf '%s\n' " A desktop application for LanMountain."
+            printf '%s\n' 'Maintainer: LanMountain Team <dev@example.com>'
+            printf '%s\n' 'Description: LanMountain Desktop Application'
+            printf '%s\n' ' A desktop application for LanMountain.'
           } > "build-deb/DEBIAN/control"
-          
-          # Set proper permissions
-          chmod 755 "build-deb/usr/local/bin/LanMountainDesktop" || chmod 755 "build-deb/usr/local/bin"/*
+
+          chmod 755 "build-deb/usr/local/bin/LanMountainDesktop.Launcher" 2>/dev/null || chmod 755 "build-deb/usr/local/bin"/*
           chmod 644 "build-deb/usr/share/applications/LanMountainDesktop.desktop"
           chmod 644 "build-deb/usr/share/pixmaps/lanmountaindesktop.png"
           chmod 644 "build-deb/usr/share/icons/hicolor/256x256/apps/lanmountaindesktop.png"
           chmod 755 "build-deb/DEBIAN/postinst"
-          
-          # Create DEB file
-          if dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"; then
-            echo "Successfully created: ${package_name}_${package_version}_${arch}.deb"
-            ls -lh "${package_name}_${package_version}_${arch}.deb"
-          else
-            echo "Error: Failed to build DEB package"
+
+          dpkg-deb --build "build-deb" "${package_name}_${package_version}_${arch}.deb"
+
+      - name: Package Payload Zip
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          payload_root="publish/linux-x64/app-$version"
+          release_dir="$PWD/release-assets"
+          stage_dir="$PWD/payload-stage/linux-x64"
+
+          if [ ! -d "$payload_root" ]; then
+            echo "Payload root not found: $payload_root"
             exit 1
           fi
 
-      - name: Upload
+          rm -rf "$stage_dir"
+          mkdir -p "$stage_dir" "$release_dir"
+          rsync -a \
+            --exclude '.current' \
+            --exclude '.partial' \
+            --exclude '.destroy' \
+            "$payload_root/" "$stage_dir/"
+
+          (
+            cd "$stage_dir"
+            zip -qr "$release_dir/files-linux-x64.zip" .
+          )
+
+      - name: Upload Release Assets
         uses: actions/upload-artifact@v4
         with:
-          name: release-linux
-          path: "*.deb"
+          name: release-linux-x64
+          path: |
+            release-assets/files-linux-x64.zip
+            *.deb
           if-no-files-found: error
           retention-days: 30
 
   build-macos:
     needs: prepare
     runs-on: macos-latest
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         arch: [x64, arm64]
     name: Build_macOS_${{ matrix.arch }}
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -417,10 +536,14 @@ jobs:
           submodules: recursive
           ref: ${{ needs.prepare.outputs.checkout_ref }}
 
+      - name: Install dependencies
+        run: brew install portaudio
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
@@ -433,11 +556,29 @@ jobs:
           -p:FileVersion=${{ needs.prepare.outputs.assembly_version }}
           -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Publish
+      - name: Publish Launcher (AOT)
+        run: |
+          dotnet publish LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj \
+            -c Release \
+            -o ./publish/launcher-macos-${{ matrix.arch }} \
+            --self-contained \
+            -r osx-${{ matrix.arch }} \
+            -p:PublishAot=true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
+      - name: Publish Main App
         run: |
           dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
             -c Release \
-            -o ./publish/macos-${{ matrix.arch }} \
+            -o ./publish/macos-${{ matrix.arch }}-app \
             --self-contained \
             -r osx-${{ matrix.arch }} \
             -p:PublishSingleFile=false \
@@ -451,45 +592,50 @@ jobs:
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
-      - name: Package as DMG
+      - name: Package Payload Zip
+        run: |
+          release_dir="$PWD/release-assets"
+          stage_dir="$PWD/payload-stage/macos-${{ matrix.arch }}"
+          payload_root="publish/macos-${{ matrix.arch }}-app"
+
+          rm -rf "$stage_dir"
+          mkdir -p "$stage_dir" "$release_dir"
+          rsync -a "$payload_root/" "$stage_dir/"
+          (
+            cd "$stage_dir"
+            zip -qr "$release_dir/files-macos-${{ matrix.arch }}.zip" .
+          )
+
+      - name: Restructure and Package as DMG
+        continue-on-error: true
         run: |
           version="${{ needs.prepare.outputs.version }}"
           arch="${{ matrix.arch }}"
-          source="publish/macos-$arch"
           app_name="LanMountainDesktop"
           package_name="${app_name}-${version}-macos-${arch}"
-          
-          # Verify source directory exists
-          if [ ! -d "$source" ]; then
-            echo "Error: Source directory not found: $source"
-            ls -la publish/ || echo "publish directory not found"
-            exit 1
-          fi
-          
-          # Create app bundle structure
+          launcherDir="publish/launcher-macos-$arch"
+          appSourceDir="publish/macos-$arch-app"
+
           mkdir -p "${app_name}.app/Contents/MacOS"
-          mkdir -p "${app_name}.app/Contents/Resources"
-          
-          # Copy application files
-          cp -r "$source"/* "${app_name}.app/Contents/MacOS/"
-          
-          # Verify copy was successful
-          item_count=$(find "${app_name}.app/Contents/MacOS" -type f | wc -l)
-          echo "App bundle contains $item_count files"
-          
-          if [ "$item_count" -eq 0 ]; then
-            echo "Error: App bundle is empty after copy"
-            exit 1
+          appDir="app-$version"
+          mkdir -p "${app_name}.app/Contents/MacOS/$appDir"
+
+          cp -r "$appSourceDir"/* "${app_name}.app/Contents/MacOS/$appDir/"
+          if [ -d "$launcherDir" ]; then
+            cp -r "$launcherDir"/* "${app_name}.app/Contents/MacOS/"
+            chmod +x "${app_name}.app/Contents/MacOS/LanMountainDesktop.Launcher" 2>/dev/null || true
           fi
 
-          # Create Info.plist
+          touch "${app_name}.app/Contents/MacOS/$appDir/.current"
+          mkdir -p "${app_name}.app/Contents/Resources"
+
           {
             printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>'
             printf '%s\n' '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
             printf '%s\n' '<plist version="1.0">'
             printf '%s\n' '<dict>'
             printf '%s\n' '  <key>CFBundleExecutable</key>'
-            printf '%s\n' '  <string>LanMountainDesktop</string>'
+            printf '%s\n' '  <string>LanMountainDesktop.Launcher</string>'
             printf '%s\n' '  <key>CFBundleName</key>'
             printf '%s\n' '  <string>LanMountain Desktop</string>'
             printf '%s\n' '  <key>CFBundleVersion</key>'
@@ -503,96 +649,76 @@ jobs:
             printf '%s\n' '</dict>'
             printf '%s\n' '</plist>'
           } > "${app_name}.app/Contents/Info.plist"
-          
-          # Create DMG
+
           mkdir -p dmg-temp
           cp -r "${app_name}.app" dmg-temp/
-          
-          if hdiutil create -volname "${app_name}" -srcfolder dmg-temp -ov -format UDZO "${package_name}.dmg" 2>&1; then
-            echo "Successfully created: ${package_name}.dmg"
-            ls -lh "${package_name}.dmg"
-          else
-            echo "Error: Failed to create DMG"
-            exit 1
-          fi
-          
-          # Cleanup
-          rm -rf dmg-temp "${app_name}.app"
+          hdiutil create -volname "${app_name}" -srcfolder dmg-temp -ov -format UDZO "${package_name}.dmg"
 
-      - name: Upload
+      - name: Upload Release Assets
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: "*.dmg"
-          if-no-files-found: error
+          path: |
+            release-assets/files-macos-${{ matrix.arch }}.zip
+            *.dmg
+          if-no-files-found: ignore
           retention-days: 30
 
   github-release:
-    needs: [ prepare, build-windows, build-linux, build-macos ]
+    needs: [prepare, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
-      - name: Download artifacts
+      - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: release-files
           pattern: release-*
+          merge-multiple: true
 
-      - name: List artifacts structure
+      - name: Validate release files
         run: |
-          echo "🔍 Artifact directory structure:"
-          find artifacts -type f -o -type d | sort
-          echo ""
-          echo "📊 Files found:"
-          find artifacts -type f -exec ls -lh {} \;
-          echo ""
-          echo "📁 Full tree:"
-          tree artifacts || find artifacts -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
+          echo "Release files:"
+          find release-files -maxdepth 1 -type f -exec ls -lh {} \;
 
-      - name: Flatten artifacts for release
-        run: |
-          echo "📦 Organizing artifacts..."
-          mkdir -p release-files
-          find artifacts -type f \( -name "*.exe" -o -name "*.deb" -o -name "*.dmg" \) -exec cp -v {} release-files/ \;
-          echo ""
-          echo "✅ Files ready for release:"
-          ls -lh release-files/ || echo "⚠️ No files found in release-files"
-          echo ""
-          echo "📋 Total files:"
-          file_count=$(find release-files -type f | wc -l)
-          echo "$file_count"
-          if [ "$file_count" -eq 0 ]; then
-            echo "Error: No installer/package files found for release"
+          if [ ! -f release-files/files-windows-x64.zip ] || [ ! -f release-files/files-windows-x86.zip ] || [ ! -f release-files/files-linux-x64.zip ]; then
+            echo "Required payload zips are missing."
             exit 1
           fi
 
-      - name: Create Release
+          file_count=$(find release-files -maxdepth 1 -type f | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "No release files were produced."
+            exit 1
+          fi
+
+      - name: Create or Update Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.prepare.outputs.tag }}
           name: ${{ needs.prepare.outputs.tag }}
-          commit: ${{ github.sha }}
           allowUpdates: true
           draft: false
-          prerelease: ${{ github.event.inputs.is_prerelease == 'true' }}
-          artifacts: "release-files/**"
+          prerelease: ${{ needs.prepare.outputs.is_prerelease == 'true' }}
+          artifacts: 'release-files/**'
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
 
-            ### Windows
-            - **LanMountainDesktop-Setup-{version}-x64.exe** - 64-bit installer (包含 .NET 运行时)
-            - **LanMountainDesktop-Setup-{version}-x86.exe** - 32-bit installer (包含 .NET 运行时)
+            ### Installers
+            - `LanMountainDesktop-Setup-${{ needs.prepare.outputs.version }}-x64.exe`
+            - `LanMountainDesktop-Setup-${{ needs.prepare.outputs.version }}-x86.exe`
+            - `LanMountainDesktop_${{ needs.prepare.outputs.version }}_amd64.deb`
 
-            Installation: Double-click the .exe file and follow the wizard.
-
-            ### Linux
-            - **LanMountainDesktop-{version}-linux-x64.deb** - Debian package (x64)
+            ### Payload Archives
+            - `files-windows-x64.zip`
+            - `files-windows-x86.zip`
+            - `files-linux-x64.zip`
 
             ### macOS
-            - **LanMountainDesktop-{version}-macos-x64.dmg** - Intel processor
-            - **LanMountainDesktop-{version}-macos-arm64.dmg** - Apple Silicon (M1/M2/M3)
+            - macOS assets are best-effort and will not block the release.
 
-            See commits for changes.
+            Release keeps only the stable installer and payload outputs. PLONDS delta assets and external mirror metadata are generated by follow-up workflows.
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,234 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="600"
+        d:DesignHeight="500"
+        x:Class="LanMountainDesktop.Launcher.Views.LoadingDetailsWindow"
+        Title="LanMountain Desktop - Loading Details"
+        Width="600"
+        Height="500"
+        WindowStartupLocation="CenterScreen"
+        CanResize="True"
+        MinWidth="500"
+        MinHeight="400"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        Icon="/Assets/logo.ico">
+
+  <Grid RowDefinitions="Auto,*,Auto,Auto">
+    <Border Grid.Row="0"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            Padding="20,16">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Grid.Column="0" Spacing="4">
+          <TextBlock Text="Starting LanMountain Desktop"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+          <TextBlock x:Name="SubtitleText"
+                     Text="Initializing..."
+                     FontSize="13"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+        <Border Grid.Column="1"
+                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                CornerRadius="12"
+                Padding="12,6"
+                VerticalAlignment="Center">
+          <TextBlock x:Name="PercentText"
+                     Text="0%"
+                     FontSize="16"
+                     FontWeight="Bold"
+                     Foreground="White"/>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" Margin="16,12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <ProgressBar x:Name="OverallProgressBar"
+                   Grid.Row="0"
+                   Height="8"
+                   Minimum="0"
+                   Maximum="100"
+                   Value="0"
+                   CornerRadius="4"
+                   Margin="0,0,0,16"/>
+
+      <Border Grid.Row="1"
+              Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+              CornerRadius="8"
+              Padding="16,12"
+              Margin="0,0,0,12">
+        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
+          <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0"
+                  Width="40"
+                  Height="40"
+                  CornerRadius="20"
+                  Background="{DynamicResource AccentFillColorDefaultBrush}"
+                  Margin="0,0,12,0"
+                  VerticalAlignment="Center">
+            <TextBlock x:Name="CurrentItemIcon"
+                       Text="&#xE768;"
+                       FontSize="20"
+                       FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+          </Border>
+
+          <TextBlock x:Name="CurrentItemName"
+                     Grid.Row="0" Grid.Column="1"
+                     Text="Initializing..."
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+
+          <TextBlock x:Name="CurrentItemDescription"
+                     Grid.Row="1" Grid.Column="1"
+                     Text="Preparing components"
+                     FontSize="13"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     Margin="0,4,0,0"/>
+
+          <Grid Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+            <ProgressBar x:Name="CurrentItemProgress"
+                         Height="4"
+                         Minimum="0"
+                         Maximum="100"
+                         Value="0"
+                         CornerRadius="2"/>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <Border Grid.Row="2"
+              Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+              CornerRadius="8">
+        <Grid RowDefinitions="Auto,*">
+          <Grid Grid.Row="0" Margin="12,8" ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Loading Items"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+            <TextBlock x:Name="CompletedCountText"
+                       Grid.Column="1"
+                       Text="0"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Margin="0,0,4,0"/>
+            <TextBlock Grid.Column="2"
+                       Text="Done"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+          </Grid>
+
+          <ScrollViewer Grid.Row="1"
+                        VerticalScrollBarVisibility="Auto"
+                        Margin="8,0,8,8">
+            <ItemsControl x:Name="LoadingItemsList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="views:LoadingItemViewModel">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                        Margin="4,3"
+                        Opacity="{Binding Opacity}">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding StatusIcon}"
+                               FontSize="14"
+                               FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                               Foreground="{Binding StatusColor}"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding ProgressText}"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="8,0"
+                               VerticalAlignment="Center"/>
+
+                    <Border Grid.Column="3"
+                            Background="{Binding TypeBackground}"
+                            CornerRadius="4"
+                            Padding="6,2"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="{Binding TypeLabel}"
+                                 FontSize="11"
+                                 Foreground="{Binding TypeForeground}"/>
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border x:Name="ErrorPanel"
+            Grid.Row="2"
+            Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+            BorderBrush="{DynamicResource SystemFillColorCriticalBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12,10"
+            Margin="16,0,16,12"
+            IsVisible="False">
+      <Grid ColumnDefinitions="Auto,*">
+        <TextBlock Grid.Column="0"
+                   Text="&#xE783;"
+                   FontSize="16"
+                   FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   Margin="0,0,8,0"
+                   VerticalAlignment="Center"/>
+        <TextBlock x:Name="ErrorText"
+                   Grid.Column="1"
+                   Text="An error occurred while loading."
+                   FontSize="13"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                   TextWrapping="Wrap"/>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="3"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            Padding="16,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="VersionText"
+                   Grid.Column="0"
+                   Text="v1.0.0"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                   VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+          <Button x:Name="DetailsButton"
+                  Content="Details"
+                  Width="90"
+                  Height="32"
+                  FontSize="13"/>
+          <Button x:Name="CancelButton"
+                  Content="Cancel"
+                  Width="90"
+                  Height="32"
+                  FontSize="13"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

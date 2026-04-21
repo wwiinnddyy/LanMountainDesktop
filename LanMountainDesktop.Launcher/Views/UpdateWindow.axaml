@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        d:DesignWidth="480"
+        d:DesignHeight="320"
+        x:Class="LanMountainDesktop.Launcher.Views.UpdateWindow"
+        x:DataType="views:UpdateWindow"
+        Title="阑山桌面 - 更新"
+        Width="480"
+        Height="320"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+  <Design.DataContext>
+    <views:UpdateWindow />
+  </Design.DataContext>
+
+  <Grid>
+    <!-- 顶部：应用名称和最小化按钮 -->
+    <Grid VerticalAlignment="Top" Margin="24,24,24,0">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+        <TextBlock x:Name="TitleText"
+                   Text="阑山桌面"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                CornerRadius="4"
+                Padding="6,2"
+                VerticalAlignment="Center">
+          <TextBlock Text="Update"
+                     FontSize="11"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Border>
+      </StackPanel>
+
+      <!-- 最小化按钮 -->
+      <Button x:Name="MinimizeButton"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Center"
+              Width="32"
+              Height="32"
+              Background="Transparent"
+              BorderThickness="0">
+        <TextBlock Text="&#xE921;"
+                   FontSize="12"
+                   FontFamily="{DynamicResource SymbolThemeFontFamily}"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+      </Button>
+    </Grid>
+
+    <!-- 底部区域：进度条和状态 -->
+    <Grid VerticalAlignment="Bottom" Margin="24,0,24,24">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      
+      <!-- 第一行：左下角状态，右下角百分比 -->
+      <Grid Grid.Row="0" Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- 左下角：状态文字 -->
+        <TextBlock x:Name="StatusText"
+                   Grid.Column="0"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Opacity="0.8"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Bottom"
+                   Text="正在更新，请稍候..." />
+        
+        <!-- 右下角：百分比 -->
+        <TextBlock x:Name="PercentText"
+                   Grid.Column="1"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Opacity="0.8"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Bottom"
+                   Text="0%" />
+      </Grid>
+      
+      <!-- 底部：进度条 -->
+      <ProgressBar x:Name="ProgressIndicator"
+                   Grid.Row="1"
+                   Minimum="0"
+                   Maximum="100"
+                   Value="0"
+                   Height="4"
+                   IsIndeterminate="True"
+                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                   Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+    </Grid>
+  </Grid>
+</Window>

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "LanMountainDesktop (Direct)": {
+      "commandName": "Project",
+      "commandLineArgs": "",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "LanMountainDesktop (via Launcher)": {
+      "commandName": "Executable",
+      "executablePath": "$(SolutionDir)LanMountainDesktop.Launcher\\bin\\$(Configuration)\\net10.0\\LanMountainDesktop.Launcher.exe",
+      "commandLineArgs": "launch",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "distributionId": "plonds-0.8.5.2-windows-x86",
+  "version": "0.8.5.2",
+  "channel": "stable",
+  "platform": "windows-x86",
+  "publishedAt": "2026-04-20T00:00:00Z",
+  "components": [
+    {
+      "id": "app",
+      "root": "app-0.8.5.2/",
+      "mode": "file-object",
+      "metadata": {
+        "allowDiffUpdate": "true"
+      },
+      "files": [
+        {
+          "path": "LanMountainDesktop.exe",
+          "op": "replace",
+          "contentHash": "sha256-placeholder-lanmountain-exe-x86",
+          "size": 983040,
+          "mode": "file-object",
+          "objectKey": "repo/sha256/sha256-placeholder-lanmountain-exe-x86"
+        }
+      ]
+    },
+    {
+      "id": "installers",
+      "root": "installers/windows-x86/",
+      "mode": "file-object",
+      "files": [
+        {
+          "path": "LanMountainDesktop-Setup-0.8.5.2-x86.exe",
+          "op": "add",
+          "contentHash": "sha256-placeholder-windows-x86-installer",
+          "size": 1982464,
+          "mode": "file-object",
+          "objectKey": "installers/windows-x86/LanMountainDesktop-Setup-0.8.5.2-x86.exe"
+        }
+      ]
+    }
+  ],
+  "installerMirrors": [
+    {
+      "platform": "windows",
+      "arch": "x86",
+      "url": "https://downloads.example.invalid/lanmountain/windows-x86/LanMountainDesktop-Setup-0.8.5.2-x86.exe",
+      "fileName": "LanMountainDesktop-Setup-0.8.5.2-x86.exe"
+    }
+  ],
+  "capabilities": [
+    "file-object",
+    "compressed-object",
+    "binary-patch"
+  ],
+  "signatures": [
+    {
+      "algorithm": "rsa-sha256",
+      "keyId": "lanmountain-main",
+      "signature": "placeholder-signature"
+    }
+  ],
+  "metadata": {
+    "notes": "sample distribution for PLONDS skeleton"
+  }
+}
+

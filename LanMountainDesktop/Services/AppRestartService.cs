@@ -100,12 +100,15 @@ public static class AppRestartService
         var startInfo = new ProcessStartInfo
         {
             FileName = executablePath,
-            UseShellExecute = false,
+            UseShellExecute = true,
             WorkingDirectory = ResolveWorkingDirectory(executablePath, entryAssemblyPath)
         };
 
-        AppendArguments(startInfo, commandLineArgs);
-        AppendRestartParentProcessArgument(startInfo);
+        // UseShellExecute=true 时使用 Arguments 字符串而非 ArgumentList
+        var args = new System.Text.StringBuilder();
+        AppendArgumentsToString(args, commandLineArgs);
+        AppendRestartParentProcessArgumentToString(args);
+        startInfo.Arguments = args.ToString();
         return startInfo;
     }
 
@@ -122,13 +125,16 @@ public static class AppRestartService
         var startInfo = new ProcessStartInfo
         {
             FileName = dotnetHostPath,
-            UseShellExecute = false,
+            UseShellExecute = true,
             WorkingDirectory = ResolveWorkingDirectory(dotnetHostPath, entryAssemblyPath)
         };
 
-        startInfo.ArgumentList.Add(entryAssemblyPath);
-        AppendArguments(startInfo, commandLineArgs);
-        AppendRestartParentProcessArgument(startInfo);
+        // UseShellExecute=true 时使用 Arguments 字符串
+        var args = new System.Text.StringBuilder();
+        args.Append(QuoteArgument(entryAssemblyPath));
+        AppendArgumentsToString(args, commandLineArgs);
+        AppendRestartParentProcessArgumentToString(args);
+        startInfo.Arguments = args.ToString();
         return startInfo;
     }
 
@@ -145,9 +151,59 @@ public static class AppRestartService
         }
     }
 
+    private static void AppendArgumentsToString(System.Text.StringBuilder builder, IReadOnlyList<string> commandLineArgs)
+    {
+        for (var i = 1; i < commandLineArgs.Count; i++)
+        {
+            if (TryParseRestartParentProcessId(commandLineArgs[i], out _))
+            {
+                continue;
+            }
+
+            if (builder.Length > 0) builder.Append(' ');
+            builder.Append(QuoteArgument(commandLineArgs[i]));
+        }
+    }
+
     private static void AppendRestartParentProcessArgument(ProcessStartInfo startInfo)
     {
         startInfo.ArgumentList.Add($"{RestartParentPidArgumentPrefix}{Environment.ProcessId}");
+    }
+
+    private static void AppendRestartParentProcessArgumentToString(System.Text.StringBuilder builder)
+    {
+        if (builder.Length > 0) builder.Append(' ');
+        builder.Append($"{RestartParentPidArgumentPrefix}{Environment.ProcessId}");
+    }
+
+    private static string QuoteArgument(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "\"\"";
+        }
+
+        if (!value.Contains('"') && !value.Contains(' ') && !value.Contains('\t'))
+        {
+            return value;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        builder.Append('"');
+        foreach (var ch in value)
+        {
+            if (ch == '"')
+            {
+                builder.Append("\\\"");
+            }
+            else
+            {
+                builder.Append(ch);
+            }
+        }
+
+        builder.Append('"');
+        return builder.ToString();
     }
 
     private static bool TryParseRestartParentProcessId(string? argument, out int processId)

@@ -19,7 +19,10 @@ using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Launcher;
+using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -71,6 +74,11 @@ public partial class App : Application
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
+    private LauncherIpcClient? _launcherIpcClient;
+    private LoadingStateManager? _loadingStateManager;
+    private LoadingStateReporter? _loadingStateReporter;
+    private bool _singleInstanceReleased;
+    private int _forcedExitScheduled;
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -145,6 +153,7 @@ public partial class App : Application
         }
 
         AppLogger.Info("App", "Framework initialization completed.");
+        
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
@@ -155,6 +164,104 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+        
+        // IPC 初始化移到窗口创建之后，避免 async void 中的 await 导致窗口创建延迟
+        // 使用 fire-and-forget 模式，不阻塞主流程
+        _ = InitializeLauncherIpcAsync();
+    }
+    
+    private async Task InitializeLauncherIpcAsync()
+    {
+        if (!LauncherIpcClient.IsLaunchedByLauncher())
+            return;
+        
+        try
+        {
+            _launcherIpcClient = new LauncherIpcClient();
+            var connected = await _launcherIpcClient.ConnectAsync();
+            
+            if (connected)
+            {
+                AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
+                
+                // 初始化加载状态管理器
+                _loadingStateManager = new LoadingStateManager();
+                _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _launcherIpcClient);
+                _loadingStateReporter.Start();
+                
+                // 注册系统初始化加载项
+                _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "系统初始化", "初始化系统核心组件");
+                _loadingStateManager.StartItem("system.init", "已连接启动器");
+                
+                ReportStartupProgress(StartupStage.Initializing, 10, "正在初始化...");
+                ReportStartupProgress(StartupStage.LoadingSettings, 20, "正在加载设置...");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Failed to initialize Launcher IPC: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 向 Launcher 报告启动进度（fire-and-forget，不阻塞主流程）
+    /// </summary>
+    private void ReportStartupProgress(StartupStage stage, int percent, string message)
+    {
+        if (_launcherIpcClient is null)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                {
+                    Stage = stage,
+                    ProgressPercent = percent,
+                    Message = message
+                });
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// 向 Launcher 报告关键启动进度，使用后台线程避免阻塞 UI
+    /// 用于 Ready 等关键状态报告
+    /// </summary>
+    private void ReportStartupProgressSync(StartupStage stage, int percent, string message)
+    {
+        if (_launcherIpcClient is null)
+            return;
+
+        try
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                    {
+                        Stage = stage,
+                        ProgressPercent = percent,
+                        Message = message
+                    });
+                    AppLogger.Info("LauncherIpc", $"Successfully reported stage: {stage}");
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Failed to launch progress report task: {ex.Message}");
+        }
     }
 
     private void ApplyDesignTimeTheme()
@@ -182,16 +289,21 @@ public partial class App : Application
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
+                ReportStartupProgress(StartupStage.InitializingUI, 60, "正在初始化界面...");
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
-            () =>
-            {
-                AppLogger.Info("App", "Desktop lifetime exit triggered.");
-                PerformExitCleanup();
-            },
+            OnDesktopLifetimeExit,
             () => CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow),
             StartWeatherLocationRefreshIfNeeded);
         _desktopShellHost.Initialize(this);
+    }
+
+    private void OnDesktopLifetimeExit()
+    {
+        AppLogger.Info("App", "Desktop lifetime exit triggered.");
+        PerformExitCleanup();
+        ReleaseSingleInstanceAfterExit("DesktopLifetimeExit");
+        ScheduleForcedProcessTermination("DesktopLifetimeExit");
     }
 
     private void OnTrayExitClick(object? sender, EventArgs e)
@@ -322,6 +434,7 @@ public partial class App : Application
 
     private void InitializePluginRuntime()
     {
+        ReportStartupProgress(StartupStage.LoadingPlugins, 30, "正在加载插件...");
         try
         {
             _pluginRuntimeService?.Dispose();
@@ -552,69 +665,101 @@ public partial class App : Application
 
     private void ActivateMainWindow()
     {
-        RestoreOrCreateMainWindow(showSingleInstanceNotice: true, source: "SingleInstance");
+        AppLogger.Info("SingleInstance", $"Activation callback received. Pid={Environment.ProcessId}.");
+
+        try
+        {
+            var restored = Dispatcher.UIThread.CheckAccess()
+                ? RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance")
+                : Dispatcher.UIThread.InvokeAsync(
+                    () => RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance"),
+                    DispatcherPriority.Send).GetAwaiter().GetResult();
+
+            if (!restored)
+            {
+                throw new InvalidOperationException("Main window restore failed in activation callback.");
+            }
+
+            AppLogger.Info("SingleInstance", "Activation callback completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("SingleInstance", "Activation callback failed while restoring the desktop shell.", ex);
+            throw;
+        }
     }
 
     private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
     {
         Dispatcher.UIThread.Post(() =>
         {
-            if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                return;
-            }
-
-            try
-            {
-                if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
-                {
-                    _transparentOverlayWindow.Hide();
-                }
-
-                var mainWindow = GetOrCreateMainWindow(desktop, source);
-                mainWindow.PrepareEnterAnimation();
-
-                mainWindow.ShowInTaskbar = true;
-
-                if (!mainWindow.IsVisible)
-                {
-                    mainWindow.Show();
-                }
-
-                if (mainWindow.WindowState == WindowState.Minimized)
-                {
-                    mainWindow.WindowState = WindowState.Normal;
-                }
-
-                if (mainWindow.WindowState != WindowState.FullScreen)
-                {
-                    mainWindow.WindowState = WindowState.FullScreen;
-                }
-
-                mainWindow.Activate();
-                mainWindow.Topmost = true;
-                mainWindow.Topmost = false;
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    mainWindow.PlayEnterAnimation();
-                }, DispatcherPriority.Background);
-
-                SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
-                AppLogger.Info(
-                    "DesktopShell",
-                    $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
-
-                if (showSingleInstanceNotice)
-                {
-                    mainWindow.ShowSingleInstanceNotice();
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
-            }
+            _ = RestoreOrCreateMainWindowCore(showSingleInstanceNotice, source);
         }, DispatcherPriority.Send);
+    }
+
+    private bool RestoreOrCreateMainWindowCore(bool showSingleInstanceNotice, string source)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            AppLogger.Warn("DesktopShell", $"Restore skipped because desktop lifetime is unavailable. Source='{source}'.");
+            return false;
+        }
+
+        try
+        {
+            AppLogger.Info("DesktopShell", $"Restoring desktop shell started. Source='{source}'.");
+
+            if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
+            {
+                _transparentOverlayWindow.Hide();
+            }
+
+            var mainWindow = GetOrCreateMainWindow(desktop, source);
+            mainWindow.PrepareEnterAnimation();
+
+            mainWindow.ShowInTaskbar = true;
+
+            if (!mainWindow.IsVisible)
+            {
+                mainWindow.Show();
+            }
+
+            if (mainWindow.WindowState == WindowState.Minimized)
+            {
+                mainWindow.WindowState = WindowState.Normal;
+            }
+
+            if (mainWindow.WindowState != WindowState.FullScreen)
+            {
+                mainWindow.WindowState = WindowState.FullScreen;
+            }
+
+            mainWindow.Activate();
+            mainWindow.Topmost = true;
+            mainWindow.Topmost = false;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                mainWindow.PlayEnterAnimation();
+            }, DispatcherPriority.Background);
+
+            SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
+            AppLogger.Info(
+                "DesktopShell",
+                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
+
+            if (showSingleInstanceNotice)
+            {
+                mainWindow.ShowSingleInstanceNotice();
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
+            return false;
+        }
     }
     
     private void EnsureTransparentOverlayWindow()
@@ -778,6 +923,57 @@ public partial class App : Application
                stackTrace.Contains("AvaloniaWebView.WebView.OnAttachedToVisualTree", StringComparison.Ordinal);
     }
 
+    private void ReleaseSingleInstanceAfterExit(string source)
+    {
+        if (_singleInstanceReleased)
+        {
+            return;
+        }
+
+        _singleInstanceReleased = true;
+        var singleInstance = CurrentSingleInstanceService;
+        CurrentSingleInstanceService = null;
+        if (singleInstance is null)
+        {
+            AppLogger.Info("SingleInstance", $"No single-instance handle to release. Source='{source}'.");
+            return;
+        }
+
+        try
+        {
+            singleInstance.Dispose();
+            AppLogger.Info("SingleInstance", $"Released single-instance handle. Source='{source}'.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("SingleInstance", $"Failed to release single-instance handle. Source='{source}'.", ex);
+        }
+    }
+
+    private void ScheduleForcedProcessTermination(string source)
+    {
+        if (Interlocked.Exchange(ref _forcedExitScheduled, 1) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8)).ConfigureAwait(false);
+                AppLogger.Warn(
+                    "DesktopShell",
+                    $"Process did not terminate after desktop exit cleanup. Forcing process exit. Source='{source}'; ShutdownIntent='{_shutdownIntent}'.");
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("DesktopShell", $"Forced process termination scheduler failed. Source='{source}'.", ex);
+            }
+        });
+    }
+
     private void PerformExitCleanup()
     {
         if (_exitCleanupCompleted)
@@ -828,6 +1024,22 @@ public partial class App : Application
             disposableRegistry.Dispose();
         }
 
+        if (_transparentOverlayWindow is not null)
+        {
+            try
+            {
+                _transparentOverlayWindow.Close();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("DesktopShell", "Failed to close transparent overlay during exit cleanup.", ex);
+            }
+            finally
+            {
+                _transparentOverlayWindow = null;
+            }
+        }
+
         AudioRecorderServiceFactory.DisposeSharedServices();
         StudyAnalyticsServiceFactory.DisposeSharedService();
         DisposeTrayIcon();
@@ -869,7 +1081,61 @@ public partial class App : Application
         AppLogger.Info("App", $"Main window created. Reason='{reason}'. LogFile={AppLogger.LogFilePath}");
         LogBrowserStartupDiagnostics();
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"MainWindowCreated:{reason}");
+        
+        // 延迟报告 Ready 直到窗口实际打开并可见
+        // 使用 Opened 事件确保所有资源已加载完毕
+        mainWindow.Opened += OnMainWindowOpened;
+
+        // 手动显示窗口，因为在 ShutdownMode.OnExplicitShutdown 模式下框架不会自动调用 Show
+        if (!mainWindow.IsVisible)
+        {
+            mainWindow.Show();
+        }
+        
+        // 兜底机制：如果 Opened 事件 10 秒内未触发，强制发送 Ready 信号
+        // 防止因渲染问题导致 Opened 不触发，启动器 Splash 窗口一直显示
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            if (_launcherIpcClient is not null && _launcherIpcClient.IsConnected)
+            {
+                try
+                {
+                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+                    {
+                        Stage = StartupStage.Ready,
+                        ProgressPercent = 100,
+                        Message = "就绪"
+                    });
+                    AppLogger.Warn("App", "Ready signal sent via fallback (Opened event did not fire within 10s)");
+                }
+                catch { }
+            }
+        });
+        
         return mainWindow;
+    }
+
+    /// <summary>
+    /// 主窗口打开完成事件 - 此时所有组件、资源及功能模块均已完全加载
+    /// </summary>
+    private void OnMainWindowOpened(object? sender, EventArgs e)
+    {
+        if (sender is MainWindow mainWindow)
+        {
+            mainWindow.Opened -= OnMainWindowOpened;
+            
+            AppLogger.Info("App", "Main window opened and ready. Reporting Ready to Launcher...");
+            
+            // 完成系统初始化加载项
+            _loadingStateManager?.CompleteItem("system.init", "系统初始化完成");
+            
+            // 报告 Ready 状态，启动器可以安全关闭 Splash 窗口
+            ReportStartupProgressSync(StartupStage.Ready, 100, "就绪");
+            
+            // 停止加载状态上报
+            _loadingStateReporter?.Stop();
+        }
     }
 
     private MainWindow GetOrCreateMainWindow(
@@ -999,11 +1265,9 @@ public partial class App : Application
                 "DesktopShell",
                 $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
             
-            // 检查三指滑动功能是否启用
             var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-            if (appSnapshot.EnableThreeFingerSwipe)
+            if (appSnapshot.EnableThreeFingerSwipe && appSnapshot.EnableFusedDesktop)
             {
-                // 显示透明覆盖层窗口
                 EnsureTransparentOverlayWindow();
                 _transparentOverlayWindow?.Show();
             }

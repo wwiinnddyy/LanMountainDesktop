@@ -1,0 +1,10 @@
+{
+  "channel": "stable",
+  "platform": "windows-x86",
+  "distributionId": "plonds-0.8.5.2-windows-x86",
+  "version": "0.8.5.2",
+  "publishedAt": "2026-04-20T00:00:00Z",
+  "distributionPath": "meta/distributions/plonds-0.8.5.2-windows-x86.json",
+  "fileMapPath": "meta/distributions/plonds-0.8.5.2-windows-x86.json"
+}
+

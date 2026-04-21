@@ -1,0 +1,166 @@
+﻿name: DDSS
+
+on:
+  workflow_run:
+    workflows:
+      - PLONDS
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  publish:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Resolve release tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            RAW_TAG="${{ github.event.inputs.tag }}"
+            if [[ "$RAW_TAG" == v* ]]; then
+              TAG="$RAW_TAG"
+            else
+              TAG="v$RAW_TAG"
+            fi
+          else
+            gh run download "${{ github.event.workflow_run.id }}" -n plonds-run-metadata -D plonds-run-metadata
+            TAG="$(tr -d '\r\n' < plonds-run-metadata/tag.txt)"
+          fi
+
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "S3_BASE_URL=${{ vars.S3_ENDPOINT }}/${{ vars.S3_BUCKET }}/lanmountain/update/releases/${TAG}/assets" >> "$GITHUB_ENV"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: preview
+
+      - name: Prepare signing key
+        env:
+          UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
+          PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
+          PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY="${PLONDS_SIGNING_KEY:-}"
+          if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
+          if [[ -z "$KEY" ]]; then KEY="${PDC_SIGNING_KEY:-}"; fi
+          if [[ -z "$KEY" ]]; then
+            echo "No signing key is configured."
+            exit 1
+          fi
+          printf '%s' "$KEY" > update-private-key.pem
+          echo "UPDATE_PRIVATE_KEY_PATH=$PWD/update-private-key.pem" >> "$GITHUB_ENV"
+
+      - name: Build PLONDS tool
+        run: dotnet build PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj -c Release
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh release download "$RELEASE_TAG" -D release-assets
+          find release-assets -maxdepth 1 -type f | sort
+
+      - name: Upload release assets to Rainyun S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws --version
+          for file in release-assets/*; do
+            [[ -f "$file" ]] || continue
+            name="$(basename "$file")"
+            if [[ "$name" == "ddss.json" || "$name" == "ddss.json.sig" ]]; then
+              continue
+            fi
+            key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
+            sha256="$(sha256sum "$file" | awk '{print $1}')"
+            existing_sha="$(aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object --bucket "$S3_BUCKET" --key "$key" --query 'Metadata.sha256' --output text 2>/dev/null || true)"
+            if [[ "$existing_sha" == "$sha256" ]]; then
+              echo "Skip existing asset: $name"
+              continue
+            fi
+            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
+              --bucket "$S3_BUCKET" \
+              --key "$key" \
+              --body "$file" \
+              --metadata "sha256=$sha256"
+          done
+
+      - name: Build DDSS manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ddss-output
+          dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- \
+            build-ddss \
+            --release-tag "$RELEASE_TAG" \
+            --assets-dir release-assets \
+            --output-dir ddss-output \
+            --private-key "$UPDATE_PRIVATE_KEY_PATH" \
+            --repository "${{ github.repository }}" \
+            --s3-base-url "$S3_BASE_URL"
+
+      - name: Upload DDSS manifest to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" ddss-output/ddss.json ddss-output/ddss.json.sig --clobber
+
+      - name: Upload DDSS manifest to Rainyun S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in ddss-output/ddss.json ddss-output/ddss.json.sig; do
+            name="$(basename "$file")"
+            key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
+            sha256="$(sha256sum "$file" | awk '{print $1}')"
+            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
+              --bucket "$S3_BUCKET" \
+              --key "$key" \
+              --body "$file" \
+              --metadata "sha256=$sha256"
+          done

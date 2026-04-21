@@ -1,0 +1,32 @@
+# Phainon Distribution Center Client Configuration
+name: "LanMountainDesktop"
+components:
+  app:
+    allowDiffUpdate: true
+    root: "app-$(version)/"
+    includes:
+      - "**"
+  launcher:
+    root: ""
+    includes:
+      - "**"
+    excludes:
+      - "app*/**"
+      - "files*.json"
+      - "files*.json.sig"
+      - "update*.zip"
+variables:
+  number: 0
+fileRepoRoot: "__FILE_REPO_ROOT__"
+archiveRoot: "__ARCHIVE_ROOT__/$(primaryVersion)/$(version)/"
+bucketKeyRoot: "lanmountain/update/repo/"
+archiveBucketKeyRoot: "lanmountain/update/archive/$(primaryVersion)/$(version)/"
+appChangeLogPath: "$(thisFileDir)/../CHANGELOG.md"
+appChangeLogTemplate: |
+  $(changeLog)
+
+  ---
+
+  ## Checksums And Downloads
+
+  $(hashes)
