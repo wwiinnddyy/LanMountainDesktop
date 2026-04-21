@@ -234,7 +234,7 @@ jobs:
           $selfContained = "${{ matrix.self_contained }}" -eq "true"
           $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
           $outputDir = "build-installer"
-          $installerScript = "LanMountainDesktop/packaging/windows/LanMountainDesktop.iss"
+          $installerScript = "LanMountainDesktop/installer/LanMountainDesktop.iss"
 
           New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
@@ -248,6 +248,11 @@ jobs:
           $isccPath = $candidatePaths | Select-Object -First 1
           if (-not $isccPath) {
             Write-Error "Inno Setup compiler not found."
+            exit 1
+          }
+
+          if (-not (Test-Path $installerScript)) {
+            Write-Error "Installer script not found: $(Join-Path $PWD $installerScript)"
             exit 1
           }
 
