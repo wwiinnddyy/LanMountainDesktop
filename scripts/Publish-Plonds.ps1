@@ -363,9 +363,11 @@ foreach ($config in $supportedPlatforms) {
         "0.0.0"
     }
 
-    $baselineHasContent = Get-ChildItem -LiteralPath $baselineCurrentDir -Force -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($baselineHasContent) {
-        Copy-Item -LiteralPath (Join-Path $baselineCurrentDir '*') -Destination $snapshotRoot -Recurse -Force
+    $baselineItems = @(Get-ChildItem -LiteralPath $baselineCurrentDir -Force -ErrorAction SilentlyContinue)
+    if ($baselineItems.Count -gt 0) {
+        foreach ($baselineItem in $baselineItems) {
+            Copy-Item -LiteralPath $baselineItem.FullName -Destination $snapshotRoot -Recurse -Force
+        }
         $snapshotDir = $snapshotRoot
     }
     else {
