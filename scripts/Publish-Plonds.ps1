@@ -67,7 +67,7 @@ function Resolve-AppDirectory {
     return $fallback?.FullName
 }
 
-function Invoke-AwsSyncIfPossible {
+function Invoke-AwsCommandIfPossible {
     param(
         [Parameter(Mandatory = $true)]
         [string[]]$Arguments,
@@ -117,6 +117,171 @@ function Invoke-AwsSyncIfPossible {
     }
 }
 
+function Get-S3Key {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Prefix,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath
+    )
+
+    $trimmedPrefix = $Prefix.Trim('/').Replace('\', '/')
+    $trimmedRelativePath = $RelativePath.TrimStart('\', '/').Replace('\', '/')
+    return "$trimmedPrefix/$trimmedRelativePath"
+}
+
+function Get-RelativePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Root,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $rootPath = [System.IO.Path]::GetFullPath($Root)
+    if (-not $rootPath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+        $rootPath += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    $pathValue = [System.IO.Path]::GetFullPath($Path)
+    return [System.IO.Path]::GetRelativePath($rootPath, $pathValue)
+}
+
+function Get-RemoteS3Keys {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Prefix
+    )
+
+    $keys = [System.Collections.Generic.List[string]]::new()
+    $continuationToken = $null
+
+    do {
+        $arguments = @(
+            "--endpoint-url", $S3Endpoint,
+            "--region", $S3Region,
+            "s3api", "list-objects-v2",
+            "--bucket", $S3Bucket,
+            "--prefix", $Prefix,
+            "--output", "json"
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($continuationToken)) {
+            $arguments += @("--continuation-token", $continuationToken)
+        }
+
+        $json = Invoke-AwsCommandIfPossible -Arguments $arguments
+
+        if ([string]::IsNullOrWhiteSpace($json)) {
+            break
+        }
+
+        $response = $json | ConvertFrom-Json
+        if ($response.Contents) {
+            foreach ($item in $response.Contents) {
+                if (-not [string]::IsNullOrWhiteSpace($item.Key)) {
+                    $keys.Add($item.Key)
+                }
+            }
+        }
+
+        if ($response.IsTruncated -and -not [string]::IsNullOrWhiteSpace($response.NextContinuationToken)) {
+            $continuationToken = $response.NextContinuationToken
+        }
+        else {
+            $continuationToken = $null
+        }
+    } while (-not [string]::IsNullOrWhiteSpace($continuationToken))
+
+    return $keys
+}
+
+function Upload-DirectoryToS3 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LocalRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RemotePrefix,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$DeleteExtraRemoteObjects
+    )
+
+    if (-not (Test-Path -LiteralPath $LocalRoot)) {
+        throw "Local upload root not found: $LocalRoot"
+    }
+
+    $files = Get-ChildItem -LiteralPath $LocalRoot -Recurse -File | Sort-Object FullName
+    $uploadedKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+
+    if ($files.Count -eq 0) {
+        Write-Host "No files found under $LocalRoot; skipping upload."
+    }
+
+    $index = 0
+    foreach ($file in $files) {
+        $index++
+        $relativePath = Get-RelativePath -Root $LocalRoot -Path $file.FullName
+        $key = Get-S3Key -Prefix $RemotePrefix -RelativePath $relativePath
+        $null = $uploadedKeys.Add($key)
+
+        if ($index -eq 1 -or $index % 25 -eq 0 -or $index -eq $files.Count) {
+            Write-Host "Uploading $index/$($files.Count): $key"
+        }
+
+        Invoke-AwsCommandIfPossible -Arguments @(
+            "--endpoint-url", $S3Endpoint,
+            "--region", $S3Region,
+            "s3api", "put-object",
+            "--bucket", $S3Bucket,
+            "--key", $key,
+            "--body", $file.FullName
+        )
+    }
+
+    if ($DeleteExtraRemoteObjects) {
+        $remoteKeys = Get-RemoteS3Keys -Prefix $RemotePrefix.Trim('/').Replace('\', '/')
+        foreach ($remoteKey in $remoteKeys) {
+            if (-not $uploadedKeys.Contains($remoteKey)) {
+                Write-Host "Deleting stale remote object: $remoteKey"
+                Invoke-AwsCommandIfPossible -Arguments @(
+                    "--endpoint-url", $S3Endpoint,
+                    "--region", $S3Region,
+                    "s3api", "delete-object",
+                    "--bucket", $S3Bucket,
+                    "--key", $remoteKey
+                )
+            }
+        }
+    }
+}
+
+function Upload-FileToS3 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$LocalPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$RemoteKey
+    )
+
+    if (-not (Test-Path -LiteralPath $LocalPath)) {
+        throw "Local upload file not found: $LocalPath"
+    }
+
+    Invoke-AwsCommandIfPossible -Arguments @(
+        "--endpoint-url", $S3Endpoint,
+        "--region", $S3Region,
+        "s3api", "put-object",
+        "--bucket", $S3Bucket,
+        "--key", $RemoteKey.Trim('/').Replace('\', '/'),
+        "--body", $LocalPath
+    )
+}
+
 if (-not (Test-Path -LiteralPath $PrivateKeyPath)) {
     throw "Private key file not found: $PrivateKeyPath"
 }
@@ -144,7 +309,7 @@ foreach ($config in $supportedPlatforms) {
     New-Item -ItemType Directory -Path $baselineCurrentDir -Force | Out-Null
 
     if (-not [string]::IsNullOrWhiteSpace($S3Endpoint) -and -not [string]::IsNullOrWhiteSpace($S3Bucket)) {
-        Invoke-AwsSyncIfPossible -Arguments @(
+        Invoke-AwsCommandIfPossible -Arguments @(
             "--endpoint-url", $S3Endpoint,
             "--region", $S3Region,
             "s3", "sync",
@@ -153,7 +318,7 @@ foreach ($config in $supportedPlatforms) {
             "--only-show-errors"
         ) -IgnoreFailure
 
-        Invoke-AwsSyncIfPossible -Arguments @(
+        Invoke-AwsCommandIfPossible -Arguments @(
             "--endpoint-url", $S3Endpoint,
             "--region", $S3Region,
             "s3", "cp",
@@ -291,14 +456,7 @@ foreach ($config in $supportedPlatforms) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($S3Endpoint) -and -not [string]::IsNullOrWhiteSpace($S3Bucket)) {
-    Invoke-AwsSyncIfPossible -Arguments @(
-        "--endpoint-url", $S3Endpoint,
-        "--region", $S3Region,
-        "s3", "sync",
-        $publishedRoot,
-        "s3://$S3Bucket/lanmountain/update/",
-        "--only-show-errors"
-    )
+    Upload-DirectoryToS3 -LocalRoot $publishedRoot -RemotePrefix "lanmountain/update"
 
     foreach ($config in $supportedPlatforms) {
         $platform = $config.Platform
@@ -306,24 +464,14 @@ if (-not [string]::IsNullOrWhiteSpace($S3Endpoint) -and -not [string]::IsNullOrW
         $baselineCurrentDir = Join-Path $platformBaselineRoot "current"
         $baselineVersionPath = Join-Path $platformBaselineRoot "version.txt"
 
-        Invoke-AwsSyncIfPossible -Arguments @(
-            "--endpoint-url", $S3Endpoint,
-            "--region", $S3Region,
-            "s3", "sync",
-            $baselineCurrentDir,
-            "s3://$S3Bucket/lanmountain/update/baselines/$platform/current/",
-            "--delete",
-            "--only-show-errors"
-        )
+        Upload-DirectoryToS3 `
+            -LocalRoot $baselineCurrentDir `
+            -RemotePrefix "lanmountain/update/baselines/$platform/current" `
+            -DeleteExtraRemoteObjects
 
-        Invoke-AwsSyncIfPossible -Arguments @(
-            "--endpoint-url", $S3Endpoint,
-            "--region", $S3Region,
-            "s3", "cp",
-            $baselineVersionPath,
-            "s3://$S3Bucket/lanmountain/update/baselines/$platform/version.txt",
-            "--only-show-errors"
-        )
+        Upload-FileToS3 `
+            -LocalPath $baselineVersionPath `
+            -RemoteKey "lanmountain/update/baselines/$platform/version.txt"
     }
 }
 
