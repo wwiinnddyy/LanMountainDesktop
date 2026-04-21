@@ -10,32 +10,54 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var commandContext = CommandContext.FromArgs(args);
+        Logger.Initialize();
+        Logger.Info(
+            $"Program entry. Command='{commandContext.Command}'; SubCommand='{commandContext.SubCommand}'; " +
+            $"IsGuiMode={commandContext.IsGuiCommand}; IsDebugMode={commandContext.IsDebugMode}; " +
+            $"HasResultPath={!string.IsNullOrWhiteSpace(commandContext.GetOption("result"))}; " +
+            $"ExplicitAppRoot='{commandContext.ExplicitAppRoot ?? "<none>"}'.");
 
-        // 处理遗留插件安装命令
-        if (commandContext.IsLegacyPluginInstall)
+        try
         {
-            var installer = new PluginInstallerService();
-            return await Commands.RunLegacyPluginInstallAsync(commandContext, installer).ConfigureAwait(false);
-        }
+            if (commandContext.IsLegacyPluginInstall)
+            {
+                var installer = new PluginInstallerService();
+                return await Commands.RunLegacyPluginInstallAsync(commandContext, installer).ConfigureAwait(false);
+            }
 
-        // apply-update 命令：启动 Avalonia GUI 显示更新进度窗口
-        if (string.Equals(commandContext.Command, "apply-update", StringComparison.OrdinalIgnoreCase))
-        {
+            if (!commandContext.IsGuiCommand)
+            {
+                return await Commands.RunCliCommandAsync(commandContext).ConfigureAwait(false);
+            }
+
             LauncherRuntimeContext.Current = commandContext;
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return Environment.ExitCode;
         }
-
-        // 处理其他 CLI 命令 (update, plugin, rollback 等)
-        if (!string.Equals(commandContext.Command, "launch", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex)
         {
-            return await Commands.RunCliCommandAsync(commandContext).ConfigureAwait(false);
-        }
+            Logger.Error("Launcher failed before GUI flow completed.", ex);
 
-        // 主启动流程: OOBE -> Splash -> 版本选择 -> 启动主程序
-        LauncherRuntimeContext.Current = commandContext;
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        return Environment.ExitCode;
+            var result = new LauncherResult
+            {
+                Success = false,
+                Stage = "launcher",
+                Code = "launcher_bootstrap_failed",
+                Message = ex.Message,
+                ErrorMessage = ex.ToString(),
+                Details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["command"] = commandContext.Command,
+                    ["subCommand"] = commandContext.SubCommand,
+                    ["isGuiMode"] = commandContext.IsGuiCommand.ToString(),
+                    ["isDebugMode"] = commandContext.IsDebugMode.ToString(),
+                    ["explicitAppRoot"] = commandContext.ExplicitAppRoot ?? string.Empty
+                }
+            };
+
+            await Commands.WriteResultIfNeededAsync(commandContext.GetOption("result"), result).ConfigureAwait(false);
+            return 1;
+        }
     }
 
     private static AppBuilder BuildAvaloniaApp()

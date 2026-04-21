@@ -13,10 +13,13 @@ public partial class App : Application
 {
     public override void Initialize()
     {
-        // 初始化日志记录器
         Logger.Initialize();
-        Logger.Info("Launcher starting...");
-        
+        var context = LauncherRuntimeContext.Current;
+        Logger.Info(
+            $"Launcher App initialize. Command='{context.Command}'; IsGuiMode={context.IsGuiCommand}; " +
+            $"IsPreview={context.IsPreviewCommand}; IsDebugMode={context.IsDebugMode}; " +
+            $"ExplicitAppRoot='{context.ExplicitAppRoot ?? "<none>"}'.");
+
         AvaloniaXamlLoader.Load(this);
     }
 
@@ -24,41 +27,29 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             var context = LauncherRuntimeContext.Current;
+            Logger.Info(
+                $"Framework initialization completed. Command='{context.Command}'; IsPreview={context.IsPreviewCommand}; " +
+                $"IsDebugMode={context.IsDebugMode}.");
 
-            // 调试模式：显示开发调试窗口
-            if (context.IsDebugMode)
-            {
-                var devDebugWindow = new DevDebugWindow();
-                devDebugWindow.Show();
-                
-                // 调试模式下不自动启动正常流程，由开发者通过调试窗口控制
-                base.OnFrameworkInitializationCompleted();
-                return;
-            }
-
-            // 处理各界面的预览命令
             if (HandlePreviewCommand(context, desktop))
             {
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
 
-            // apply-update 模式：显示 UpdateWindow，执行增量更新 + 插件升级
             if (string.Equals(context.Command, "apply-update", StringComparison.OrdinalIgnoreCase))
             {
-                // 先显示窗口，再启动后台任务
                 var updateWindow = new UpdateWindow();
                 updateWindow.Show();
                 _ = RunApplyUpdateWithWindowAsync(desktop, context, updateWindow);
             }
             else
             {
-                // 先显示 Splash 窗口，确保应用程序不会立即退出
                 var splashWindow = new SplashWindow();
                 splashWindow.Show();
-                
-                // 在 try-catch 块中实例化所有服务，确保任何异常都能被捕获
                 _ = RunCoordinatorWithSplashAsync(desktop, context, splashWindow);
             }
         }
@@ -66,156 +57,127 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <summary>
-    /// 处理界面预览命令
-    /// </summary>
     private bool HandlePreviewCommand(CommandContext context, IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var command = context.Command.ToLowerInvariant();
-        
-        switch (command)
+        switch (context.Command.ToLowerInvariant())
         {
             case "preview-splash":
-                Console.WriteLine("[Launcher] Preview mode: SplashWindow");
+            {
+                Logger.Info("Preview command: splash.");
                 var splashWindow = new SplashWindow();
                 splashWindow.SetDebugMode(true);
                 splashWindow.Show();
                 _ = SimulateSplashPreviewAsync(desktop, splashWindow);
                 return true;
-                
+            }
             case "preview-error":
-                Console.WriteLine("[Launcher] Preview mode: ErrorWindow");
+            {
+                Logger.Info("Preview command: error.");
                 var errorWindow = new ErrorWindow();
-                errorWindow.SetErrorMessage("[预览模式] 这是一个错误页面预览。\n\n用于查看错误页面的样式和布局。");
+                errorWindow.SetErrorMessage("[Preview] This is the launcher error window preview.");
                 errorWindow.Show();
                 _ = WaitForWindowCloseAsync(desktop, errorWindow);
                 return true;
-                
+            }
             case "preview-update":
-                Console.WriteLine("[Launcher] Preview mode: UpdateWindow");
+            {
+                Logger.Info("Preview command: update.");
                 var updateWindow = new UpdateWindow();
                 updateWindow.SetDebugMode(true);
                 updateWindow.Show();
                 _ = SimulateUpdatePreviewAsync(desktop, updateWindow);
                 return true;
-                
+            }
             case "preview-oobe":
-                Console.WriteLine("[Launcher] Preview mode: OobeWindow");
+            {
+                Logger.Info("Preview command: oobe.");
                 var oobeWindow = new OobeWindow();
                 oobeWindow.Show();
                 _ = SimulateOobePreviewAsync(desktop, oobeWindow);
                 return true;
-                
+            }
             case "preview-debug":
-                Console.WriteLine("[Launcher] Preview mode: DevDebugWindow");
+            {
+                Logger.Info("Preview command: debug window.");
                 var devDebugWindow = new DevDebugWindow();
                 devDebugWindow.Show();
                 return true;
-                
+            }
             default:
                 return false;
         }
     }
 
-    /// <summary>
-    /// 模拟 Splash 窗口预览
-    /// </summary>
     private async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
     {
         var stages = new[] { "initializing", "update", "plugins", "launch", "ready" };
-        var messages = new[] { "初始化...", "检查更新...", "检查插件...", "正在启动...", "就绪" };
+        var messages = new[] { "Initializing...", "Checking updates...", "Checking plugins...", "Launching host...", "Ready" };
         var reporter = (ISplashStageReporter)window;
-        
-        for (int i = 0; i < stages.Length; i++)
+
+        for (var i = 0; i < stages.Length; i++)
         {
             reporter.Report(stages[i], messages[i]);
-            await Task.Delay(800);
+            await Task.Delay(800).ConfigureAwait(false);
         }
-        
-        // 等待5秒后自动关闭
-        await Task.Delay(5000);
+
+        await Task.Delay(5000).ConfigureAwait(false);
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
     }
 
-    /// <summary>
-    /// 模拟 Update 窗口预览
-    /// </summary>
     private async Task SimulateUpdatePreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, UpdateWindow window)
     {
         var stages = new[] { "verify", "extract", "apply", "plugins", "cleanup" };
-        
-        for (int i = 0; i < stages.Length; i++)
+
+        for (var i = 0; i < stages.Length; i++)
         {
-            window.Report(stages[i], $"正在{GetStageName(stages[i])}...", (i + 1) * 20);
-            await Task.Delay(600);
+            window.Report(stages[i], $"Processing {stages[i]}...", (i + 1) * 20);
+            await Task.Delay(600).ConfigureAwait(false);
         }
-        
+
         window.ReportComplete(true, null);
-        
-        // 等待3秒后自动关闭
-        await Task.Delay(3000);
+        await Task.Delay(3000).ConfigureAwait(false);
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
-        
-        string GetStageName(string stage) => stage switch
-        {
-            "verify" => "验证",
-            "extract" => "解压",
-            "apply" => "应用",
-            "plugins" => "升级插件",
-            "cleanup" => "清理",
-            _ => stage
-        };
     }
 
-    /// <summary>
-    /// 模拟 OOBE 窗口预览
-    /// </summary>
     private async Task SimulateOobePreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, OobeWindow window)
     {
         try
         {
-            // 等待用户点击开始按钮
-            await window.WaitForEnterAsync();
-            Console.WriteLine("[Launcher] OOBE preview completed by user");
+            await window.WaitForEnterAsync().ConfigureAwait(false);
+            Logger.Info("OOBE preview completed by user.");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Launcher] OOBE preview error: {ex.Message}");
+            Logger.Error("OOBE preview failed.", ex);
         }
-        
-        // 用户点击后关闭应用程序
+
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
     }
 
-    /// <summary>
-    /// 等待窗口关闭
-    /// </summary>
     private async Task WaitForWindowCloseAsync(IClassicDesktopStyleApplicationLifetime desktop, Window window)
     {
-        var tcs = new TaskCompletionSource();
-        window.Closed += (s, e) => tcs.TrySetResult();
-        await tcs.Task;
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.Closed += (_, _) => tcs.TrySetResult();
+        await tcs.Task.ConfigureAwait(false);
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0));
     }
-    
+
     private static async Task RunCoordinatorWithSplashAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
         CommandContext context,
         SplashWindow splashWindow)
     {
         LauncherResult result;
-        ErrorWindow? errorWindow = null;
-        LauncherFlowCoordinator? coordinator = null;
-        
+
         try
         {
-            // 在 try-catch 块中实例化所有服务，确保异常被捕获
             var appRoot = Commands.ResolveAppRoot(context);
+            Logger.Info(
+                $"Coordinator start. Command='{context.Command}'; AppRoot='{appRoot}'; " +
+                $"IsDebugMode={context.IsDebugMode}; ResultPath='{context.GetOption("result") ?? "<none>"}'.");
+
             var deploymentLocator = new DeploymentLocator(appRoot);
-            
-            // TODO: 从配置读取 GitHub 仓库信息
-            
-            coordinator = new LauncherFlowCoordinator(
+            var coordinator = new LauncherFlowCoordinator(
                 context,
                 deploymentLocator,
                 new OobeStateService(appRoot),
@@ -226,88 +188,85 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            // 捕获异常并显示错误窗口
+            Logger.Error("Coordinator threw an unhandled exception.", ex);
             result = new LauncherResult
             {
                 Success = false,
                 Stage = "launch",
                 Code = "exception",
-                Message = $"启动器发生错误: {ex.Message}",
+                Message = $"Launcher failed: {ex.Message}",
                 ErrorMessage = ex.ToString()
             };
-            
-            Console.Error.WriteLine($"[Launcher] Exception caught: {ex}");
-            
-            // 在 UI 线程显示错误窗口 - 使用更健壮的方式
-            try
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        // 安全关闭 Splash 窗口
-                        if (splashWindow.IsVisible && splashWindow.IsLoaded)
-                        {
-                            splashWindow.Close();
-                        }
-                    }
-                    catch (Exception closeEx)
-                    {
-                        Console.Error.WriteLine($"[Launcher] Error closing splash window: {closeEx.Message}");
-                    }
-                    
-                    // 创建并显示错误窗口
-                    try
-                    {
-                        errorWindow = new ErrorWindow();
-                        errorWindow.SetErrorMessage($"启动器发生错误:\n{ex.Message}\n\n请检查应用安装是否完整，或尝试重新安装。");
-                        errorWindow.Show();
-                        Console.WriteLine("[Launcher] ErrorWindow shown successfully");
-                    }
-                    catch (Exception windowEx)
-                    {
-                        Console.Error.WriteLine($"[Launcher] Failed to show ErrorWindow: {windowEx.Message}");
-                    }
-                });
-                
-                // 如果错误窗口成功显示，等待它关闭
-                if (errorWindow != null)
-                {
-                    try
-                    {
-                        // 等待用户选择或窗口关闭
-                        var errorResult = await errorWindow.WaitForChoiceAsync();
-                        Console.WriteLine($"[Launcher] ErrorWindow result: {errorResult}");
-                    }
-                    catch (Exception waitEx)
-                    {
-                        Console.Error.WriteLine($"[Launcher] Error waiting for ErrorWindow: {waitEx.Message}");
-                        // 如果等待失败，至少给用户5秒时间看到错误信息
-                        await Task.Delay(5000);
-                    }
-                }
-                else
-                {
-                    // 错误窗口未能显示，等待5秒让用户看到控制台输出
-                    await Task.Delay(5000);
-                }
-            }
-            catch (Exception uiEx)
-            {
-                // 最后的兜底：记录到控制台
-                Console.Error.WriteLine($"[Launcher] Critical error in UI thread: {uiEx.Message}");
-                await Task.Delay(3000);
-            }
         }
-        
-        await Commands.WriteResultIfNeededAsync(LauncherRuntimeContext.Current.GetOption("result"), result).ConfigureAwait(false);
+
+        Logger.Info($"Coordinator completed. Success={result.Success}; Stage='{result.Stage}'; Code='{result.Code}'.");
+        await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
+
+        if (!result.Success &&
+            result.Code is not "host_not_found" &&
+            (string.Equals(result.Stage, "launch", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(result.Stage, "launchHost", StringComparison.OrdinalIgnoreCase)))
+        {
+            await ShowFailureWindowAsync(result).ConfigureAwait(false);
+        }
+
         Environment.ExitCode = result.Success ? 0 : 1;
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
     }
 
-    /// <summary>
-    /// apply-update 模式：执行增量更新和插件升级，完成后自动退出
-    /// </summary>
+    private static async Task WriteLauncherResultAsync(CommandContext context, LauncherResult result)
+    {
+        var resultPath = context.GetOption("result");
+        if (string.IsNullOrWhiteSpace(resultPath))
+        {
+            return;
+        }
+
+        try
+        {
+            await Commands.WriteResultIfNeededAsync(resultPath, result).ConfigureAwait(false);
+            Logger.Info($"Launcher result written to '{Path.GetFullPath(resultPath)}'.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to write launcher result to '{resultPath}'.", ex);
+        }
+    }
+
+    private static async Task ShowFailureWindowAsync(LauncherResult result)
+    {
+        ErrorWindow? errorWindow = null;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            try
+            {
+                errorWindow = new ErrorWindow();
+                errorWindow.SetErrorMessage(
+                    $"Failed to start LanMountainDesktop.\n\nStage: {result.Stage}\nCode: {result.Code}\n\n{result.Message}");
+                errorWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Failed to show launcher failure window.", ex);
+            }
+        });
+
+        if (errorWindow is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await errorWindow.WaitForChoiceAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Failure window closed unexpectedly.", ex);
+        }
+    }
+
     private static async Task RunApplyUpdateWithWindowAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
         CommandContext context,
@@ -324,8 +283,7 @@ public partial class App : Application
 
         try
         {
-            // 1. 应用增量更新
-            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", "正在验证更新...", 10));
+            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", "Verifying update...", 10));
             var updateResult = await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
             if (!updateResult.Success)
             {
@@ -333,24 +291,20 @@ public partial class App : Application
                 errorMessage = updateResult.Message;
             }
 
-            // 2. 应用待处理的插件升级
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", "正在升级插件...", 60));
-                var pluginsDir = context.GetOption("plugins-dir")
-                                 ?? Path.Combine(appRoot, "plugins");
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", "Applying plugin upgrades...", 60));
+                var pluginsDir = context.GetOption("plugins-dir") ?? Path.Combine(appRoot, "plugins");
                 var queueResult = pluginUpgrades.ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success && queueResult.Code != "noop")
                 {
-                    // 插件升级失败不阻断整体流程，仅记录到控制台
-                    Console.Error.WriteLine($"Plugin upgrade had failures: {queueResult.Message}");
+                    Logger.Error($"Plugin upgrade failed during apply-update: {queueResult.Message}");
                 }
             }
 
-            // 3. 清理旧版本，保留至少3个版本以支持回滚
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", "正在清理...", 90));
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", "Cleaning up old deployments...", 90));
                 deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
             }
         }
@@ -358,21 +312,11 @@ public partial class App : Application
         {
             success = false;
             errorMessage = ex.Message;
+            Logger.Error("Apply-update flow failed.", ex);
         }
 
-        // 显示完成状态，短暂停留后关闭
         await Dispatcher.UIThread.InvokeAsync(() => window.ReportComplete(success, errorMessage));
-
-        if (success)
-        {
-            // 成功：停留 1.5 秒让用户看到"更新完成"
-            await Task.Delay(1500);
-        }
-        else
-        {
-            // 失败：停留 5 秒让用户看到错误信息
-            await Task.Delay(5000);
-        }
+        await Task.Delay(success ? 1500 : 5000).ConfigureAwait(false);
 
         await Commands.WriteResultIfNeededAsync(context.GetOption("result"), new LauncherResult
         {
@@ -385,6 +329,4 @@ public partial class App : Application
         Environment.ExitCode = success ? 0 : 1;
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
     }
-
-
 }

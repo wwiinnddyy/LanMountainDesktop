@@ -8,6 +8,7 @@ using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -33,6 +34,7 @@ public sealed class Program
                 AppLogger.Warn(
                     "Startup",
                     $"Restart relaunch could not acquire the single-instance lock. pid={restartParentProcessId.Value}. Suppressing multi-open activation prompt.");
+                ReportLauncherStageBeforeExit(StartupStage.ActivationFailed, "Restart relaunch could not acquire the single-instance lock.");
                 Environment.ExitCode = HostExitCodes.RestartLockNotAcquired;
                 return;
             }
@@ -43,6 +45,7 @@ public sealed class Program
                 AppLogger.Info(
                     "Startup",
                     $"Secondary launch forwarded to primary instance successfully. Acked={activationAcknowledged}; Pid={Environment.ProcessId}.");
+                ReportLauncherStageBeforeExit(StartupStage.ActivationRedirected, "Secondary launch forwarded to the primary instance.");
                 Environment.ExitCode = HostExitCodes.SecondaryActivationSucceeded;
             }
             else
@@ -50,6 +53,9 @@ public sealed class Program
                 AppLogger.Warn(
                     "Startup",
                     $"Secondary launch failed to activate the primary instance. Acked={activationAcknowledged}; Reason='{failureReason ?? "unknown"}'; Pid={Environment.ProcessId}.");
+                ReportLauncherStageBeforeExit(
+                    StartupStage.ActivationFailed,
+                    $"Secondary launch failed to activate the primary instance. Reason='{failureReason ?? "unknown"}'.");
                 Environment.ExitCode = HostExitCodes.SecondaryActivationFailed;
             }
 
@@ -245,6 +251,35 @@ public sealed class Program
 
             eventArgs.SetObserved();
         };
+    }
+
+    private static void ReportLauncherStageBeforeExit(StartupStage stage, string message)
+    {
+        if (!LauncherIpcClient.IsLaunchedByLauncher())
+        {
+            return;
+        }
+
+        try
+        {
+            using var launcherIpcClient = new LauncherIpcClient();
+            var connected = launcherIpcClient.ConnectAsync().GetAwaiter().GetResult();
+            if (!connected)
+            {
+                return;
+            }
+
+            launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
+            {
+                Stage = stage,
+                ProgressPercent = 100,
+                Message = message
+            }).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("LauncherIpc", $"Failed to report early launcher stage '{stage}'.", ex);
+        }
     }
 
     private static void InitializeTelemetryIdentity()

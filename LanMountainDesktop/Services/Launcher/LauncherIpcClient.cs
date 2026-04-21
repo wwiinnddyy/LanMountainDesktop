@@ -13,6 +13,11 @@ namespace LanMountainDesktop.Services.Launcher;
 /// </summary>
 public class LauncherIpcClient : IDisposable
 {
+    private static readonly JsonSerializerOptions StartupProgressJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private NamedPipeClientStream? _pipeClient;
     private bool _isConnected;
     private readonly object _writeLock = new();
@@ -65,7 +70,7 @@ public class LauncherIpcClient : IDisposable
 
         try
         {
-            var json = JsonSerializer.Serialize(message);
+            var json = JsonSerializer.Serialize(message, StartupProgressJsonOptions);
             var payload = System.Text.Encoding.UTF8.GetBytes(json);
 
             // 长度前缀协议：[4字节长度][消息正文]

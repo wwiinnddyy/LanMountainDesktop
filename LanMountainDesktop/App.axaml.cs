@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -79,6 +80,10 @@ public partial class App : Application
     private LoadingStateReporter? _loadingStateReporter;
     private bool _singleInstanceReleased;
     private int _forcedExitScheduled;
+    private bool _mainWindowOpened;
+    private bool _trayInitialized;
+    private readonly object _launcherProgressLock = new();
+    private readonly List<StartupProgressMessage> _pendingLauncherProgressMessages = [];
 
     internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
@@ -86,10 +91,9 @@ public partial class App : Application
     internal static INotificationService? CurrentNotificationService =>
         (Current as App)?._notificationService;
 
-    // 隐私政策查看事件
+    // 闅愮鏀跨瓥鏌ョ湅浜嬩欢
     public static event Action? CurrentPrivacyPolicyViewRequested;
 
-    // 触发隐私政策查看事件的方法
     public static void RaisePrivacyPolicyViewRequested()
     {
         CurrentPrivacyPolicyViewRequested?.Invoke();
@@ -156,6 +160,7 @@ public partial class App : Application
         
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
+        _ = InitializeLauncherIpcAsync();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
         if (!Design.IsDesignMode && OperatingSystem.IsWindows())
@@ -164,37 +169,43 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
-        
-        // IPC 初始化移到窗口创建之后，避免 async void 中的 await 导致窗口创建延迟
-        // 使用 fire-and-forget 模式，不阻塞主流程
-        _ = InitializeLauncherIpcAsync();
     }
     
     private async Task InitializeLauncherIpcAsync()
     {
         if (!LauncherIpcClient.IsLaunchedByLauncher())
             return;
-        
+
         try
         {
             _launcherIpcClient = new LauncherIpcClient();
             var connected = await _launcherIpcClient.ConnectAsync();
-            
-            if (connected)
+            if (!connected)
             {
-                AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
-                
-                // 初始化加载状态管理器
-                _loadingStateManager = new LoadingStateManager();
-                _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _launcherIpcClient);
-                _loadingStateReporter.Start();
-                
-                // 注册系统初始化加载项
-                _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "系统初始化", "初始化系统核心组件");
-                _loadingStateManager.StartItem("system.init", "已连接启动器");
-                
-                ReportStartupProgress(StartupStage.Initializing, 10, "正在初始化...");
-                ReportStartupProgress(StartupStage.LoadingSettings, 20, "正在加载设置...");
+                return;
+            }
+
+            AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
+
+            bool hadBufferedMessages;
+            lock (_launcherProgressLock)
+            {
+                hadBufferedMessages = _pendingLauncherProgressMessages.Count > 0;
+            }
+
+            await FlushPendingLauncherProgressAsync();
+
+            _loadingStateManager = new LoadingStateManager();
+            _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _launcherIpcClient);
+            _loadingStateReporter.Start();
+
+            _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "System Initialization", "Initialize core application services.");
+            _loadingStateManager.StartItem("system.init", "Launcher IPC connected.");
+
+            if (!hadBufferedMessages)
+            {
+                ReportStartupProgress(StartupStage.Initializing, 10, "Initializing application...");
+                ReportStartupProgress(StartupStage.LoadingSettings, 20, "Loading settings...");
             }
         }
         catch (Exception ex)
@@ -203,67 +214,86 @@ public partial class App : Application
         }
     }
 
-    /// <summary>
-    /// 向 Launcher 报告启动进度（fire-and-forget，不阻塞主流程）
-    /// </summary>
     private void ReportStartupProgress(StartupStage stage, int percent, string message)
     {
-        if (_launcherIpcClient is null)
-            return;
-
-        _ = Task.Run(async () =>
+        QueueOrSendLauncherProgress(new StartupProgressMessage
         {
-            try
-            {
-                await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
-                {
-                    Stage = stage,
-                    ProgressPercent = percent,
-                    Message = message
-                });
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
-            }
-        });
+            Stage = stage,
+            ProgressPercent = percent,
+            Message = message,
+            Timestamp = DateTimeOffset.UtcNow
+        }, logSuccess: false);
     }
 
-    /// <summary>
-    /// 向 Launcher 报告关键启动进度，使用后台线程避免阻塞 UI
-    /// 用于 Ready 等关键状态报告
-    /// </summary>
     private void ReportStartupProgressSync(StartupStage stage, int percent, string message)
     {
-        if (_launcherIpcClient is null)
-            return;
+        QueueOrSendLauncherProgress(new StartupProgressMessage
+        {
+            Stage = stage,
+            ProgressPercent = percent,
+            Message = message,
+            Timestamp = DateTimeOffset.UtcNow
+        }, logSuccess: true);
+    }
 
+    private void QueueOrSendLauncherProgress(StartupProgressMessage message, bool logSuccess)
+    {
+        var ipcClient = _launcherIpcClient;
+        if (ipcClient is null || !ipcClient.IsConnected)
+        {
+            lock (_launcherProgressLock)
+            {
+                _pendingLauncherProgressMessages.Add(message);
+            }
+
+            AppLogger.Info("LauncherIpc", $"Buffered launcher stage '{message.Stage}' because IPC is not connected yet.");
+            return;
+        }
+
+        _ = SendLauncherProgressAsync(ipcClient, message, logSuccess);
+    }
+
+    private async Task FlushPendingLauncherProgressAsync()
+    {
+        var ipcClient = _launcherIpcClient;
+        if (ipcClient is null || !ipcClient.IsConnected)
+        {
+            return;
+        }
+
+        StartupProgressMessage[] pendingMessages;
+        lock (_launcherProgressLock)
+        {
+            pendingMessages = _pendingLauncherProgressMessages.ToArray();
+            _pendingLauncherProgressMessages.Clear();
+        }
+
+        foreach (var pendingMessage in pendingMessages)
+        {
+            await SendLauncherProgressAsync(ipcClient, pendingMessage, logSuccess: false);
+        }
+    }
+
+    private async Task SendLauncherProgressAsync(LauncherIpcClient ipcClient, StartupProgressMessage message, bool logSuccess)
+    {
         try
         {
-            _ = Task.Run(async () =>
+            await ipcClient.ReportProgressAsync(message);
+            if (logSuccess)
             {
-                try
-                {
-                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
-                    {
-                        Stage = stage,
-                        ProgressPercent = percent,
-                        Message = message
-                    });
-                    AppLogger.Info("LauncherIpc", $"Successfully reported stage: {stage}");
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
-                }
-            });
+                AppLogger.Info("LauncherIpc", $"Successfully reported stage: {message.Stage}");
+            }
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("LauncherIpc", $"Failed to launch progress report task: {ex.Message}");
+            AppLogger.Warn("LauncherIpc", $"Failed to report progress: {ex.Message}");
+
+            lock (_launcherProgressLock)
+            {
+                _pendingLauncherProgressMessages.Add(message);
+            }
         }
     }
-
     private void ApplyDesignTimeTheme()
     {
         RequestedThemeVariant = ThemeVariant.Light;
@@ -289,7 +319,7 @@ public partial class App : Application
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnExplicitShutdown;
-                ReportStartupProgress(StartupStage.InitializingUI, 60, "正在初始化界面...");
+                ReportStartupProgress(StartupStage.InitializingUI, 60, "姝ｅ湪鍒濆鍖栫晫闈?..");
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
             OnDesktopLifetimeExit,
@@ -337,25 +367,21 @@ public partial class App : Application
         _ = sender;
         _ = e;
         
-        // 仅在 Windows 上支持融合桌面功能
         if (!OperatingSystem.IsWindows())
         {
             AppLogger.Warn("FusedDesktop", "Fused desktop is only supported on Windows.");
             return;
         }
 
-        // 切换进入编辑模式，隐藏常态零散的小部件
         FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
         
-        // 确保透明覆盖层窗口存在并显示
+        // 纭繚閫忔槑瑕嗙洊灞傜獥鍙ｅ瓨鍦ㄥ苟鏄剧ず
         EnsureTransparentOverlayWindow();
         
-        // 打开融合桌面组件库窗口
         Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                // 确保覆盖层窗口已显示（组件要渲染在上面，必须先 Show）
                 if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
                 {
                     _transparentOverlayWindow.Show();
@@ -368,16 +394,15 @@ public partial class App : Application
                     window.SetOverlayWindow(_transparentOverlayWindow);
                 }
                 
-                // 当组件库关闭时，退出编辑态
-                window.Closed += (s, ev) => 
+                window.Closed += (s, ev) =>
                 {
                     if (_transparentOverlayWindow is not null)
                     {
-                        // 触发画布保存，并隐藏画布
+                        // 瑙﹀彂鐢诲竷淇濆瓨锛屽苟闅愯棌鐢诲竷
                         _transparentOverlayWindow.SaveLayoutAndHide();
                     }
                     
-                    // 让管理器根据已存储的最新快照重建生成所有实体小组件
+                    // 璁╃鐞嗗櫒鏍规嵁宸插瓨鍌ㄧ殑鏈€鏂板揩鐓ч噸寤虹敓鎴愭墍鏈夊疄浣撳皬缁勪欢
                     FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
                 };
 
@@ -434,7 +459,7 @@ public partial class App : Application
 
     private void InitializePluginRuntime()
     {
-        ReportStartupProgress(StartupStage.LoadingPlugins, 30, "正在加载插件...");
+        ReportStartupProgress(StartupStage.LoadingPlugins, 30, "姝ｅ湪鍔犺浇鎻掍欢...");
         try
         {
             _pluginRuntimeService?.Dispose();
@@ -489,9 +514,12 @@ public partial class App : Application
             }
 
             RefreshTrayIconContent();
+            _trayInitialized = true;
+            AppLogger.Info("TrayIcon", $"Tray initialized successfully. Pid={Environment.ProcessId}.");
         }
         catch (Exception ex)
         {
+            _trayInitialized = false;
             AppLogger.Warn("TrayIcon", "Failed to initialize tray icon.", ex);
         }
     }
@@ -537,14 +565,12 @@ public partial class App : Application
             return;
         }
 
-        // 仅在 Windows 上支持融合桌面功能
         if (!OperatingSystem.IsWindows())
         {
             _trayComponentLibraryMenuItem.IsVisible = false;
             return;
         }
 
-        // 检查融合桌面功能是否启用
         var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         _trayComponentLibraryMenuItem.IsVisible = appSnapshot.EnableFusedDesktop;
 
@@ -855,13 +881,12 @@ public partial class App : Application
 
             if (languageChanged)
             {
-                // 清除本地化缓存，强制重新加载语言文件
+                // 娓呴櫎鏈湴鍖栫紦瀛橈紝寮哄埗閲嶆柊鍔犺浇璇█鏂囦欢
                 _localizationService.ClearCache();
                 ApplyCurrentCultureFromSettings();
                 RefreshTrayIconContent();
             }
 
-            // 检查融合桌面设置是否变更
             var fusedDesktopChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.EnableFusedDesktop), StringComparer.OrdinalIgnoreCase);
@@ -1076,64 +1101,49 @@ public partial class App : Application
             ShowInTaskbar = true
         };
 
+        _mainWindowOpened = false;
         AttachMainWindow(mainWindow);
         desktop.MainWindow = mainWindow;
         AppLogger.Info("App", $"Main window created. Reason='{reason}'. LogFile={AppLogger.LogFilePath}");
         LogBrowserStartupDiagnostics();
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"MainWindowCreated:{reason}");
-        
-        // 延迟报告 Ready 直到窗口实际打开并可见
-        // 使用 Opened 事件确保所有资源已加载完毕
+        ReportStartupProgress(StartupStage.ShellInitialized, 85, "Desktop shell initialized.");
+        AppLogger.Info(
+            "App",
+            $"Shell initialized. Reason='{reason}'; TrayInitialized={_trayInitialized}; MainWindowVisible={mainWindow.IsVisible}.");
+
         mainWindow.Opened += OnMainWindowOpened;
 
-        // 手动显示窗口，因为在 ShutdownMode.OnExplicitShutdown 模式下框架不会自动调用 Show
         if (!mainWindow.IsVisible)
         {
             mainWindow.Show();
         }
-        
-        // 兜底机制：如果 Opened 事件 10 秒内未触发，强制发送 Ready 信号
-        // 防止因渲染问题导致 Opened 不触发，启动器 Splash 窗口一直显示
+
         _ = Task.Run(async () =>
         {
-            await Task.Delay(TimeSpan.FromSeconds(10));
-            if (_launcherIpcClient is not null && _launcherIpcClient.IsConnected)
+            await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            if (!_mainWindowOpened)
             {
-                try
-                {
-                    await _launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
-                    {
-                        Stage = StartupStage.Ready,
-                        ProgressPercent = 100,
-                        Message = "就绪"
-                    });
-                    AppLogger.Warn("App", "Ready signal sent via fallback (Opened event did not fire within 10s)");
-                }
-                catch { }
+                AppLogger.Warn("App", "Main window Opened event did not fire within 10 seconds. DesktopVisible was not reported.");
             }
         });
-        
+
         return mainWindow;
     }
-
-    /// <summary>
-    /// 主窗口打开完成事件 - 此时所有组件、资源及功能模块均已完全加载
-    /// </summary>
     private void OnMainWindowOpened(object? sender, EventArgs e)
     {
         if (sender is MainWindow mainWindow)
         {
             mainWindow.Opened -= OnMainWindowOpened;
-            
-            AppLogger.Info("App", "Main window opened and ready. Reporting Ready to Launcher...");
-            
-            // 完成系统初始化加载项
-            _loadingStateManager?.CompleteItem("system.init", "系统初始化完成");
-            
-            // 报告 Ready 状态，启动器可以安全关闭 Splash 窗口
-            ReportStartupProgressSync(StartupStage.Ready, 100, "就绪");
-            
-            // 停止加载状态上报
+            _mainWindowOpened = true;
+
+            AppLogger.Info(
+                "App",
+                $"Main window opened. Reporting DesktopVisible. TrayInitialized={_trayInitialized}; ShellState='{_desktopShellState}'.");
+
+            _loadingStateManager?.CompleteItem("system.init", "System initialization completed.");
+            ReportStartupProgressSync(StartupStage.DesktopVisible, 100, "Desktop visible.");
+            ReportStartupProgressSync(StartupStage.Ready, 100, "Ready.");
             _loadingStateReporter?.Stop();
         }
     }
@@ -1327,3 +1337,5 @@ public partial class App : Application
         return _localizationService.GetString(languageCode, key, fallback);
     }
 }
+
+

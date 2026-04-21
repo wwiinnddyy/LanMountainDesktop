@@ -12,6 +12,7 @@ internal sealed class LauncherFlowCoordinator
     private static readonly string[] LauncherOnlyOptions =
     [
         "debug", "show-loading-details", "plugins-dir", "source", "result",
+        "app-root",
         LauncherIpcConstants.LauncherPidEnvVar,
         LauncherIpcConstants.PackageRootEnvVar,
         LauncherIpcConstants.VersionEnvVar,
@@ -44,32 +45,26 @@ internal sealed class LauncherFlowCoordinator
     {
         try
         {
-            // 清理旧版本，保留至少3个版本
             _deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
 
-            // 检测老版本安装（首次运行时）
             if (_oobeStateService.IsFirstRun())
             {
                 var legacyInfo = LegacyVersionDetector.DetectLegacyInstallation();
-                if (legacyInfo != null)
+                if (legacyInfo is not null)
                 {
-                    var migrationResult = await ShowMigrationPromptAsync(legacyInfo);
-                    // 无论用户选择什么，都继续启动流程
-                    Console.WriteLine($"[LauncherFlowCoordinator] Migration prompt result: {migrationResult}");
+                    var migrationResult = await ShowMigrationPromptAsync(legacyInfo).ConfigureAwait(false);
+                    Logger.Info($"Migration prompt completed. Result='{migrationResult}'.");
                 }
             }
 
-            // 使用传入的 Splash 窗口或创建新的
             var splashWindow = existingSplashWindow ?? await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 var window = new SplashWindow();
                 window.Show();
                 return window;
             });
-
             var reporter = (ISplashStageReporter)splashWindow;
-            
-            // 创建加载详情窗口（可选，用于显示详细加载状态）
+
             LoadingDetailsWindow? loadingDetailsWindow = null;
             if (_context.IsDebugMode || _context.GetOption("show-loading-details") == "true")
             {
@@ -79,49 +74,48 @@ internal sealed class LauncherFlowCoordinator
                     loadingDetailsWindow.Show();
                 });
             }
-            
-            // 跟踪主程序是否已就绪，就绪后自动关闭 Splash 窗口
-            var hostReadyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            // 加载状态管理
+
+            var visibilityTcs = new TaskCompletionSource<StartupStage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var activationFailedTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var lastStage = StartupStage.Initializing;
+            var lastStageMessage = "launcher-started";
+
             var loadingState = new LoadingStateMessage();
-            
-            // 启动 IPC 服务端监听主程序进度
-            using var ipcServer = new LauncherIpcServer(msg =>
+            using var ipcServer = new LauncherIpcServer(message =>
             {
                 Dispatcher.UIThread.Post(() =>
                 {
                     try
                     {
-                        // 更新加载状态
+                        lastStage = message.Stage;
+                        lastStageMessage = message.Message ?? string.Empty;
+                        Logger.Info($"IPC stage received. Stage='{message.Stage}'; Message='{message.Message ?? string.Empty}'.");
+
                         loadingState = loadingState with
                         {
-                            Stage = msg.Stage,
-                            OverallProgressPercent = msg.ProgressPercent,
-                            Message = msg.Message,
+                            Stage = message.Stage,
+                            OverallProgressPercent = message.ProgressPercent,
+                            Message = message.Message,
                             Timestamp = DateTimeOffset.UtcNow
                         };
-                        
-                        // 报告到 Splash 窗口
-                        reporter.Report(msg.Stage.ToString().ToLower(), msg.Message ?? "");
-                        
-                        // 更新加载详情窗口
+
+                        reporter.Report(MapStartupStageToSplashStage(message.Stage), message.Message ?? message.Stage.ToString());
                         loadingDetailsWindow?.UpdateLoadingState(loadingState);
-                        
-                        // 主程序报告就绪后，关闭 Splash 窗口和加载详情窗口
-                        if (msg.Stage == StartupStage.Ready)
+
+                        switch (message.Stage)
                         {
-                            if (splashWindow.IsVisible && splashWindow.IsLoaded)
-                            {
-                                splashWindow.Close();
-                            }
-                            loadingDetailsWindow?.Close();
-                            hostReadyTcs.TrySetResult();
+                            case StartupStage.DesktopVisible:
+                            case StartupStage.ActivationRedirected:
+                                visibilityTcs.TrySetResult(message.Stage);
+                                break;
+                            case StartupStage.ActivationFailed:
+                                activationFailedTcs.TrySetResult(message.Message ?? "activation_failed");
+                                break;
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Error in IPC callback: {ex.Message}");
+                        Logger.Error("IPC progress callback failed.", ex);
                     }
                 });
             });
@@ -129,25 +123,21 @@ internal sealed class LauncherFlowCoordinator
 
             try
             {
-                // 检查并安装待处理的更新（主程序下载的）
-                reporter.Report("update", "检查更新...");
+                reporter.Report("update", "Checking updates...");
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
                     return updateResult;
                 }
 
-                // 检查并安装待处理的插件更新
-                reporter.Report("plugins", "检查插件更新...");
-                var pluginsDir = _context.GetOption("plugins-dir")
-                                 ?? Path.Combine(_deploymentLocator.GetAppRoot(), "plugins");
+                reporter.Report("plugins", "Applying plugin upgrades...");
+                var pluginsDir = _context.GetOption("plugins-dir") ?? Path.Combine(_deploymentLocator.GetAppRoot(), "plugins");
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success)
                 {
                     return queueResult;
                 }
 
-                // OOBE（首次运行引导）
                 if (_oobeStateService.IsFirstRun())
                 {
                     await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Hide());
@@ -155,116 +145,108 @@ internal sealed class LauncherFlowCoordinator
                     {
                         await step.RunAsync(CancellationToken.None).ConfigureAwait(false);
                     }
+
                     await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Show());
                 }
 
-                // 启动主程序
-                reporter.Report("launch", "正在启动...");
-                var (hostResult, hostProcess) = await LaunchHostWithIpcAsync(splashWindow);
-                if (!hostResult.Success)
+                reporter.Report("launch", "Launching desktop...");
+                var launchOutcome = await LaunchHostWithIpcAsync().ConfigureAwait(false);
+                if (!launchOutcome.Result.Success)
                 {
-                    return hostResult;
+                    return launchOutcome.Result;
                 }
 
-                // 等待主程序进程退出。Launcher 作为后台守护进程保持运行，
-                // 维持 IPC 管道服务端供主程序报告启动进度。
-                if (hostProcess is not null)
+                if (launchOutcome.ImmediateResult is not null)
                 {
-                    var processExitTask = hostProcess.WaitForExitAsync();
-                    
-                    // 等待主程序就绪或进程退出（取先发生者）
-                    // 30 秒超时，宿主端有 10 秒兜底机制确保 Ready 信号发送
-                    var readyOrTimeoutOrExit = Task.WhenAny(
-                        hostReadyTcs.Task,
-                        processExitTask,
-                        Task.Delay(TimeSpan.FromSeconds(30)));
-                    
-                    var completedTask = await readyOrTimeoutOrExit;
-                    
-                    // Host process exited before reporting Ready.
-                    if (completedTask == processExitTask)
-                    {
-                        var exitCode = hostProcess.ExitCode;
-                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Host process exited before Ready. ExitCode={exitCode}.");
+                    await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                    return launchOutcome.ImmediateResult;
+                }
 
-                        var recoveryResult = await TryRecoverFromEarlyHostExitAsync(
-                            exitCode,
-                            hostReadyTcs,
-                            splashWindow,
-                            loadingDetailsWindow).ConfigureAwait(false);
-                        if (recoveryResult is not null)
+                if (launchOutcome.Process is null)
+                {
+                    return BuildResult(
+                        success: false,
+                        stage: "launch",
+                        code: "host_start_failed",
+                        message: "Host launch did not create a process.",
+                        details: launchOutcome.Details);
+                }
+
+                var processExitTask = launchOutcome.Process.WaitForExitAsync();
+                var completedTask = await Task.WhenAny(
+                    visibilityTcs.Task,
+                    activationFailedTcs.Task,
+                    processExitTask,
+                    Task.Delay(TimeSpan.FromSeconds(30))).ConfigureAwait(false);
+
+                if (completedTask == visibilityTcs.Task)
+                {
+                    var stage = await visibilityTcs.Task.ConfigureAwait(false);
+                    await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                    return BuildResult(
+                        success: true,
+                        stage: "launch",
+                        code: stage == StartupStage.ActivationRedirected ? "activation_redirected" : "ok",
+                        message: stage == StartupStage.ActivationRedirected
+                            ? "Launcher activation was redirected to the existing desktop instance."
+                            : "Desktop is visible and ready.",
+                        details: launchOutcome.Details);
+                }
+
+                if (completedTask == activationFailedTcs.Task)
+                {
+                    Logger.Warn($"Activation failure received before desktop visibility. Reason='{await activationFailedTcs.Task.ConfigureAwait(false)}'.");
+                    var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
+                    if (retryOutcome is not null)
+                    {
+                        await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                        return retryOutcome;
+                    }
+                }
+
+                if (completedTask == processExitTask)
+                {
+                    var exitCode = launchOutcome.Process.ExitCode;
+                    Logger.Warn($"Host exited before desktop became visible. ExitCode={exitCode}.");
+
+                    if (exitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired)
+                    {
+                        var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
+                        if (retryOutcome is not null)
                         {
-                            return recoveryResult;
+                            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                            return retryOutcome;
                         }
+                    }
 
-                        // Close Splash window for unrecoverable early exits.
-                        await Dispatcher.UIThread.InvokeAsync(() =>
+                    await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                    return BuildResult(
+                        success: false,
+                        stage: "launch",
+                        code: exitCode == HostExitCodes.SecondaryActivationSucceeded ? "activation_redirected" : "host_exited_early",
+                        message: exitCode == HostExitCodes.SecondaryActivationSucceeded
+                            ? "Host redirected activation to the existing desktop instance."
+                            : $"Host exited before the desktop became visible. ExitCode={exitCode}.",
+                        details: MergeDetails(launchOutcome.Details, new Dictionary<string, string>
                         {
-                            try
-                            {
-                                if (splashWindow.IsVisible && splashWindow.IsLoaded)
-                                {
-                                    splashWindow.Close();
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing splash window: {ex.Message}");
-                            }
-                        });
-                            
-                        return new LauncherResult
-                        {
-                            Success = false,
-                            Stage = "launch",
-                            Code = "host_crashed",
-                            Message = $"主程序异常退出，退出代码: {exitCode}"
-                        };
-                    }
-                    
-                    // 如果 Splash 窗口仍然打开（超时情况），关闭它
-                    if (splashWindow.IsVisible)
-                    {
-                        Console.WriteLine("[LauncherFlowCoordinator] Timeout waiting for Ready signal, closing splash window...");
-                        await Dispatcher.UIThread.InvokeAsync(() =>
-                        {
-                            try
-                            {
-                                if (splashWindow.IsVisible && splashWindow.IsLoaded)
-                                {
-                                    splashWindow.Close();
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing splash window on timeout: {ex.Message}");
-                            }
-                        });
-                    }
-                    
-                    // 继续等待主程序进程退出（如果它还在运行）
-                    if (!hostProcess.HasExited)
-                    {
-                        await processExitTask;
-                    }
-                }
-                else
-                {
-                    // 如果无法获取进程引用，退回到有限等待
-                    await Task.Delay(TimeSpan.FromSeconds(30));
+                            ["exitCode"] = exitCode.ToString()
+                        }));
                 }
 
-                return new LauncherResult
-                {
-                    Success = true,
-                    Stage = "exit",
-                    Code = "ok",
-                    Message = "Launcher completed successfully."
-                };
+                await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                return BuildResult(
+                    success: false,
+                    stage: "launch",
+                    code: "desktop_not_visible",
+                    message: "Host process started, but the desktop never became visible within 30 seconds.",
+                    details: MergeDetails(launchOutcome.Details, new Dictionary<string, string>
+                    {
+                        ["ipcStage"] = lastStage.ToString(),
+                        ["ipcMessage"] = lastStageMessage
+                    }));
             }
             finally
             {
-                // Splash 窗口可能已由 IPC Ready 回调关闭，这里做安全清理
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     try
@@ -272,124 +254,74 @@ internal sealed class LauncherFlowCoordinator
                         if (splashWindow.IsVisible && splashWindow.IsLoaded)
                         {
                             splashWindow.Close();
-                            Console.WriteLine("[LauncherFlowCoordinator] Splash window closed in finally block");
+                            Logger.Info("Splash window closed in coordinator cleanup.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing splash window in finally: {ex.Message}");
+                        Logger.Error("Failed to close splash window during coordinator cleanup.", ex);
                     }
                 });
             }
         }
         catch (Exception ex)
         {
-            return new LauncherResult
-            {
-                Success = false,
-                Stage = "launch",
-                Code = "exception",
-                Message = ex.Message,
-                ErrorMessage = ex.ToString()
-            };
+            Logger.Error("Launcher coordinator failed.", ex);
+            return BuildResult(
+                success: false,
+                stage: "launch",
+                code: "exception",
+                message: ex.Message,
+                errorMessage: ex.ToString());
         }
     }
 
-    private async Task<LauncherResult?> TryRecoverFromEarlyHostExitAsync(
-        int exitCode,
-        TaskCompletionSource hostReadyTcs,
-        SplashWindow splashWindow,
-        LoadingDetailsWindow? loadingDetailsWindow)
+    private async Task<LauncherResult?> RetryActivationAfterEarlyFailureAsync()
     {
-        if (exitCode == HostExitCodes.SecondaryActivationSucceeded)
+        Logger.Warn("Attempting one explicit activation retry after host early failure.");
+        var retryOutcome = await LaunchHostWithIpcAsync(forceDirectMode: true, retryTag: "explicit-activation-retry").ConfigureAwait(false);
+        if (!retryOutcome.Result.Success)
         {
-            Console.WriteLine("[LauncherFlowCoordinator] Host redirected activation to an existing primary instance.");
-            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-            return new LauncherResult
+            return retryOutcome.Result;
+        }
+
+        if (retryOutcome.ImmediateResult is not null)
+        {
+            return retryOutcome.ImmediateResult;
+        }
+
+        if (retryOutcome.Process is not null)
+        {
+            var retryExitTask = retryOutcome.Process.WaitForExitAsync();
+            var completed = await Task.WhenAny(retryExitTask, Task.Delay(TimeSpan.FromSeconds(15))).ConfigureAwait(false);
+
+            if (completed != retryExitTask)
             {
-                Success = true,
-                Stage = "launch",
-                Code = "activated_existing_instance",
-                Message = "Detected existing running instance and activation was acknowledged."
-            };
-        }
-
-        if (exitCode is not HostExitCodes.SecondaryActivationFailed and not HostExitCodes.RestartLockNotAcquired)
-        {
-            return null;
-        }
-
-        Console.Error.WriteLine(
-            $"[LauncherFlowCoordinator] Activation handshake failed with exit code {exitCode}. Retrying explicit activation once...");
-
-        var (retryLaunchResult, retryProcess) = await LaunchHostWithIpcAsync(splashWindow).ConfigureAwait(false);
-        if (!retryLaunchResult.Success)
-        {
-            return retryLaunchResult;
-        }
-
-        if (retryProcess is null)
-        {
-            return new LauncherResult
-            {
-                Success = false,
-                Stage = "launch",
-                Code = "activation_retry_start_failed",
-                Message = "Explicit activation retry failed because no host process was created."
-            };
-        }
-
-        Console.WriteLine($"[LauncherFlowCoordinator] Explicit activation retry started. RetryPid={retryProcess.Id}.");
-        var retryExitTask = retryProcess.WaitForExitAsync();
-        var retryCompleted = await Task.WhenAny(
-            hostReadyTcs.Task,
-            retryExitTask,
-            Task.Delay(TimeSpan.FromSeconds(15))).ConfigureAwait(false);
-
-        if (retryCompleted == hostReadyTcs.Task)
-        {
-            Console.WriteLine("[LauncherFlowCoordinator] Host reported Ready after explicit activation retry.");
-            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-            return new LauncherResult
-            {
-                Success = true,
-                Stage = "launch",
-                Code = "activation_retry_ready",
-                Message = "Explicit activation retry succeeded and host reported Ready."
-            };
-        }
-
-        if (retryCompleted == retryExitTask)
-        {
-            var retryExitCode = retryProcess.ExitCode;
-            if (retryExitCode == HostExitCodes.SecondaryActivationSucceeded)
-            {
-                await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-                return new LauncherResult
-                {
-                    Success = true,
-                    Stage = "launch",
-                    Code = "activation_retry_redirected",
-                    Message = "Explicit activation retry redirected to the existing primary instance."
-                };
+                return BuildResult(
+                    success: true,
+                    stage: "launch",
+                    code: "activation_retry_started",
+                    message: "Activation retry started the host successfully.",
+                    details: retryOutcome.Details);
             }
 
-            return new LauncherResult
+            if (retryOutcome.Process.ExitCode == HostExitCodes.SecondaryActivationSucceeded)
             {
-                Success = false,
-                Stage = "launch",
-                Code = "activation_retry_failed",
-                Message = $"Explicit activation retry failed. ExitCode={retryExitCode}. 请结束残留后台进程后重试。"
-            };
+                return BuildResult(
+                    success: true,
+                    stage: "launch",
+                    code: "activation_redirected",
+                    message: "Activation retry redirected to the existing desktop instance.",
+                    details: retryOutcome.Details);
+            }
         }
 
-        return new LauncherResult
-        {
-            Success = false,
-            Stage = "launch",
-            Code = "activation_retry_timeout",
-            Message = "Explicit activation retry timed out before host became ready. 请结束残留后台进程后重试。"
-        };
+        return BuildResult(
+            success: false,
+            stage: "launch",
+            code: "activation_failed",
+            message: "Activation retry failed to make the desktop visible.",
+            details: retryOutcome.Details);
     }
 
     private static async Task CloseWindowsAsync(SplashWindow splashWindow, LoadingDetailsWindow? loadingDetailsWindow)
@@ -405,7 +337,7 @@ internal sealed class LauncherFlowCoordinator
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to close splash window: {ex.Message}");
+                Logger.Error("Failed to close splash window.", ex);
             }
 
             try
@@ -417,159 +349,307 @@ internal sealed class LauncherFlowCoordinator
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to close loading details window: {ex.Message}");
+                Logger.Error("Failed to close loading details window.", ex);
             }
         });
     }
 
-    private async Task<(LauncherResult Result, Process? Process)> LaunchHostWithIpcAsync(SplashWindow? splashWindow = null, string? customHostPath = null)
+    private async Task<HostLaunchOutcome> LaunchHostWithIpcAsync(bool forceDirectMode = false, string? retryTag = null)
     {
-        // 优先使用自定义路径（调试模式选择的路径）
-        var hostPath = customHostPath ?? _deploymentLocator.ResolveHostExecutablePath();
-        
-        if (string.IsNullOrWhiteSpace(hostPath))
+        var resolution = _deploymentLocator.ResolveHostExecutable(_context);
+        if (!resolution.Success || string.IsNullOrWhiteSpace(resolution.ResolvedHostPath))
         {
-            // 关闭 Splash 窗口
-            // 显示错误窗口而不是直接退出
-            var (errorResult, selectedPath) = await ShowHostNotFoundErrorAsync();
-            
+            var (errorResult, selectedPath) = await ShowHostNotFoundErrorAsync().ConfigureAwait(false);
             if (errorResult == ErrorWindowResult.Retry)
             {
-                // 用户选择重试，如果有选择路径则使用，否则重新尝试
-                if (!string.IsNullOrWhiteSpace(selectedPath))
+                if (!string.IsNullOrWhiteSpace(selectedPath) && File.Exists(selectedPath))
                 {
-                    return await LaunchHostWithIpcAsync(splashWindow, selectedPath);
+                    return await LaunchHostWithExplicitPathAsync(selectedPath, forceDirectMode, retryTag).ConfigureAwait(false);
                 }
-                return await LaunchHostWithIpcAsync(splashWindow);
+
+                return await LaunchHostWithIpcAsync(forceDirectMode, retryTag).ConfigureAwait(false);
             }
-            
-            // 用户选择退出
-            return (new LauncherResult
-            {
-                Success = false,
-                Stage = "launchHost",
-                Code = "host_not_found",
-                Message = "LanMountainDesktop host executable not found."
-            }, null);
+
+            return HostLaunchOutcome.FromResult(BuildResult(
+                success: false,
+                stage: "launchHost",
+                code: "host_not_found",
+                message: "LanMountainDesktop host executable was not found.",
+                details: BuildResolutionDetails(resolution, null, null, "resolve")));
         }
 
+        return await LaunchHostWithResolvedPathAsync(resolution, forceDirectMode, retryTag).ConfigureAwait(false);
+    }
+
+    private Task<HostLaunchOutcome> LaunchHostWithExplicitPathAsync(string hostPath, bool forceDirectMode, string? retryTag)
+    {
+        var resolution = new HostResolutionResult
+        {
+            Success = true,
+            ResolvedHostPath = Path.GetFullPath(hostPath),
+            ResolutionSource = "user_selected_path",
+            AppRoot = _deploymentLocator.GetAppRoot(),
+            ExplicitAppRoot = Path.GetDirectoryName(hostPath),
+            SearchedPaths = [Path.GetFullPath(hostPath)]
+        };
+
+        return LaunchHostWithResolvedPathAsync(resolution, forceDirectMode, retryTag);
+    }
+
+    private async Task<HostLaunchOutcome> LaunchHostWithResolvedPathAsync(
+        HostResolutionResult resolution,
+        bool forceDirectMode,
+        string? retryTag)
+    {
+        var hostPath = resolution.ResolvedHostPath!;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
             EnsureExecutable(hostPath);
         }
 
-        var hostWorkingDir = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot();
+        var hostWorkingDirectory = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot();
         var versionInfo = _deploymentLocator.GetVersionInfo();
+        var forwardedArguments = BuildForwardedArguments(versionInfo);
 
-        // 构建命令行参数：转发用户参数 + IPC 环境信息通过命令行传递
-        // UseShellExecute = true 确保 Shell 启动子进程，使其正确关联到交互式桌面窗口站(WinSta0)，
-        // 避免子进程窗口创建成功但不可见的问题。
+        var primaryMode = forceDirectMode || !OperatingSystem.IsWindows()
+            ? HostStartMode.Direct
+            : HostStartMode.ShellExecute;
+        var fallbackMode = primaryMode == HostStartMode.ShellExecute
+            ? HostStartMode.Direct
+            : (HostStartMode?)null;
+
+        var firstAttempt = await StartHostProcessAsync(hostPath, hostWorkingDirectory, forwardedArguments, versionInfo, primaryMode, retryTag).ConfigureAwait(false);
+        if (firstAttempt.ProcessCreated && !firstAttempt.ExitedEarly && firstAttempt.Process is not null)
+        {
+            var firstDetails = BuildResolutionDetails(resolution, firstAttempt, null, null);
+            return HostLaunchOutcome.FromProcess(
+                firstAttempt.Process,
+                BuildResult(true, "launchHost", "ok", "Host launched.", firstDetails),
+                firstDetails);
+        }
+
+        if (fallbackMode is null)
+        {
+            return BuildOutcomeFromAttempt(resolution, firstAttempt, null);
+        }
+
+        Logger.Warn(
+            $"Primary host start attempt failed. Retrying with fallback mode '{fallbackMode}'. " +
+            $"FailureReason='{firstAttempt.FailureReason ?? "unknown"}'; ExitCode='{firstAttempt.ExitCode?.ToString() ?? "<none>"}'.");
+
+        var secondAttempt = await StartHostProcessAsync(hostPath, hostWorkingDirectory, forwardedArguments, versionInfo, fallbackMode.Value, retryTag).ConfigureAwait(false);
+        if (secondAttempt.ProcessCreated && !secondAttempt.ExitedEarly && secondAttempt.Process is not null)
+        {
+            var details = BuildResolutionDetails(resolution, firstAttempt, secondAttempt, null);
+            return HostLaunchOutcome.FromProcess(
+                secondAttempt.Process,
+                BuildResult(true, "launchHost", "ok", "Host launched.", details),
+                details);
+        }
+
+        return BuildOutcomeFromAttempt(resolution, secondAttempt, firstAttempt);
+    }
+
+    private static HostLaunchOutcome BuildOutcomeFromAttempt(
+        HostResolutionResult resolution,
+        HostStartAttempt finalAttempt,
+        HostStartAttempt? previousAttempt)
+    {
+        var details = BuildResolutionDetails(
+            resolution,
+            previousAttempt ?? finalAttempt,
+            previousAttempt is null ? null : finalAttempt,
+            !finalAttempt.ProcessCreated
+                ? "start"
+                : finalAttempt.ExitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired
+                    ? "activation"
+                    : "early-exit");
+
+        if (!finalAttempt.ProcessCreated)
+        {
+            return HostLaunchOutcome.FromResult(BuildResult(
+                false,
+                "launchHost",
+                "host_start_failed",
+                $"Failed to start host using start mode '{finalAttempt.StartMode}'.",
+                details));
+        }
+
+        if (finalAttempt.ExitCode == HostExitCodes.SecondaryActivationSucceeded)
+        {
+            return HostLaunchOutcome.FromImmediateResult(BuildResult(
+                true,
+                "launch",
+                "activation_redirected",
+                "Launcher activation was redirected to the existing desktop instance.",
+                details));
+        }
+
+        if (finalAttempt.ExitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired)
+        {
+            return HostLaunchOutcome.FromResult(BuildResult(
+                false,
+                "launch",
+                "activation_failed",
+                $"Host activation handshake failed using start mode '{finalAttempt.StartMode}'.",
+                details));
+        }
+
+        return HostLaunchOutcome.FromResult(BuildResult(
+            false,
+            "launchHost",
+            "host_exited_early",
+            $"Host exited early using start mode '{finalAttempt.StartMode}'.",
+            details));
+    }
+
+    private async Task<HostStartAttempt> StartHostProcessAsync(
+        string hostPath,
+        string hostWorkingDirectory,
+        string arguments,
+        AppVersionInfo versionInfo,
+        HostStartMode startMode,
+        string? retryTag)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = hostPath,
+            WorkingDirectory = hostWorkingDirectory,
+            Arguments = arguments,
+            UseShellExecute = startMode == HostStartMode.ShellExecute
+        };
+
+        if (startMode == HostStartMode.Direct)
+        {
+            startInfo.EnvironmentVariables[LauncherIpcConstants.LauncherPidEnvVar] = Environment.ProcessId.ToString();
+            startInfo.EnvironmentVariables[LauncherIpcConstants.PackageRootEnvVar] = _deploymentLocator.GetAppRoot();
+            startInfo.EnvironmentVariables[LauncherIpcConstants.VersionEnvVar] = versionInfo.Version;
+            startInfo.EnvironmentVariables[LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename;
+        }
+
+        try
+        {
+            var process = Process.Start(startInfo);
+            Logger.Info(
+                $"Host launch requested. Mode='{startMode}'; RetryTag='{retryTag ?? "<none>"}'; Path='{hostPath}'; " +
+                $"WorkingDir='{hostWorkingDirectory}'; Pid={(process is null ? -1 : process.Id)}; Args='{startInfo.Arguments}'.");
+
+            if (process is null)
+            {
+                return HostStartAttempt.StartFailed(startMode, "process_start_returned_null");
+            }
+
+            var exitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(exitTask, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
+            if (completed == exitTask)
+            {
+                return HostStartAttempt.EarlyExit(startMode, process, process.ExitCode);
+            }
+
+            return HostStartAttempt.Started(startMode, process);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Host start failed. Mode='{startMode}'.", ex);
+            return HostStartAttempt.StartFailed(startMode, ex.GetType().Name);
+        }
+    }
+
+    private string BuildForwardedArguments(AppVersionInfo versionInfo)
+    {
         var arguments = new System.Text.StringBuilder();
 
-        // 转发命令行参数给主程序（排除 Launcher 自己的命令和选项）
-        // 只过滤 Launcher 专属的选项，保留宿主程序需要的参数（如 --restart-parent-pid）
-        foreach (var arg in _context.RawArgs)
+        for (var index = 0; index < _context.RawArgs.Count; index++)
         {
+            var arg = _context.RawArgs[index];
+
             if (arg == _context.Command || arg == _context.SubCommand)
+            {
                 continue;
-            
-            if (arg.StartsWith("--"))
+            }
+
+            if (arg.StartsWith("--", StringComparison.Ordinal))
             {
                 var key = arg[2..];
                 var equalsIndex = key.IndexOf('=');
-                if (equalsIndex >= 0) key = key[..equalsIndex];
-                
+                if (equalsIndex >= 0)
+                {
+                    key = key[..equalsIndex];
+                }
+
                 if (LauncherOnlyOptions.Contains(key, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (equalsIndex < 0 &&
+                        index + 1 < _context.RawArgs.Count &&
+                        !_context.RawArgs[index + 1].StartsWith("--", StringComparison.Ordinal))
+                    {
+                        index++;
+                    }
+
                     continue;
+                }
             }
-            
-            if (arguments.Length > 0) arguments.Append(' ');
+
+            if (arguments.Length > 0)
+            {
+                arguments.Append(' ');
+            }
+
             arguments.Append(QuoteArgument(arg));
         }
 
-        // 通过命令行参数传递 IPC 连接信息（UseShellExecute=true 时不支持 EnvironmentVariables）
-        if (arguments.Length > 0) arguments.Append(' ');
+        if (arguments.Length > 0)
+        {
+            arguments.Append(' ');
+        }
+
         arguments.Append($"--{LauncherIpcConstants.LauncherPidEnvVar}={Environment.ProcessId}");
         arguments.Append($" --{LauncherIpcConstants.PackageRootEnvVar}={QuoteArgument(_deploymentLocator.GetAppRoot())}");
         arguments.Append($" --{LauncherIpcConstants.VersionEnvVar}={versionInfo.Version}");
-        arguments.Append($" --{LauncherIpcConstants.CodenameEnvVar}={versionInfo.Codename}");
+        arguments.Append($" --{LauncherIpcConstants.CodenameEnvVar}={QuoteArgument(versionInfo.Codename)}");
 
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = hostPath,
-            UseShellExecute = true,
-            WorkingDirectory = hostWorkingDir,
-            Arguments = arguments.ToString()
-        };
-
-        // 同时设置环境变量作为备选（当 UseShellExecute=true 时 EnvironmentVariables 仍会被子进程继承）
-        processStartInfo.EnvironmentVariables[LauncherIpcConstants.LauncherPidEnvVar] = 
-            Environment.ProcessId.ToString();
-        processStartInfo.EnvironmentVariables[LauncherIpcConstants.PackageRootEnvVar] = 
-            _deploymentLocator.GetAppRoot();
-        processStartInfo.EnvironmentVariables[LauncherIpcConstants.VersionEnvVar] = versionInfo.Version;
-        processStartInfo.EnvironmentVariables[LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename;
-
-        var hostProcess = Process.Start(processStartInfo);
-        Console.WriteLine(
-            $"[LauncherFlowCoordinator] Host launch requested. Path='{hostPath}'; WorkingDir='{hostWorkingDir}'; " +
-            $"Pid={(hostProcess is null ? -1 : hostProcess.Id)}; Args='{processStartInfo.Arguments}'.");
-        return (new LauncherResult
-        {
-            Success = true,
-            Stage = "launchHost",
-            Code = "ok",
-            Message = "Host launched."
-        }, hostProcess);
+        return arguments.ToString();
     }
 
-    /// <summary>
-    /// 显示找不到主程序的错误窗口
-    /// </summary>
     private async Task<(ErrorWindowResult Result, string? CustomPath)> ShowHostNotFoundErrorAsync()
     {
         ErrorWindow? errorWindow = null;
-        
-        // 在 UI 线程创建并显示错误窗口
+
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
             {
                 errorWindow = new ErrorWindow();
-                errorWindow.SetErrorMessage("找不到阑山桌面应用程序。");
+                errorWindow.SetErrorMessage("LanMountainDesktop host executable was not found.");
                 errorWindow.Show();
-                Console.WriteLine("[LauncherFlowCoordinator] ErrorWindow shown for host not found");
+                Logger.Warn("Host not found. Showing error window.");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to show ErrorWindow: {ex.Message}");
+                Logger.Error("Failed to show host-not-found error window.", ex);
             }
         });
-        
+
         if (errorWindow is null)
         {
-            Console.Error.WriteLine("[LauncherFlowCoordinator] ErrorWindow is null, cannot wait for choice");
             return (ErrorWindowResult.Exit, null);
         }
-        
-        // 等待用户选择
+
         ErrorWindowResult result;
         string? customPath;
-        
         try
         {
-            result = await errorWindow.WaitForChoiceAsync();
+            result = await errorWindow.WaitForChoiceAsync().ConfigureAwait(false);
             customPath = errorWindow.GetCustomHostPath();
-            Console.WriteLine($"[LauncherFlowCoordinator] ErrorWindow result: {result}, customPath: {customPath != null}");
+            Logger.Info($"Host-not-found window result='{result}'; HasCustomPath={!string.IsNullOrWhiteSpace(customPath)}.");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[LauncherFlowCoordinator] Error waiting for choice: {ex.Message}");
+            Logger.Error("Failed while waiting for host-not-found window result.", ex);
             result = ErrorWindowResult.Exit;
             customPath = null;
         }
-        
-        // 安全关闭错误窗口
+
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
@@ -577,26 +657,21 @@ internal sealed class LauncherFlowCoordinator
                 if (errorWindow.IsVisible && errorWindow.IsLoaded)
                 {
                     errorWindow.Close();
-                    Console.WriteLine("[LauncherFlowCoordinator] ErrorWindow closed successfully");
                 }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing ErrorWindow: {ex.Message}");
+                Logger.Error("Failed to close host-not-found error window.", ex);
             }
         });
-        
+
         return (result, customPath);
     }
 
-    /// <summary>
-    /// 显示迁移提示窗口
-    /// </summary>
     private async Task<MigrationResult> ShowMigrationPromptAsync(LegacyVersionInfo legacyInfo)
     {
         MigrationPromptWindow? migrationWindow = null;
 
-        // 在 UI 线程创建并显示迁移提示窗口
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
@@ -604,35 +679,29 @@ internal sealed class LauncherFlowCoordinator
                 migrationWindow = new MigrationPromptWindow();
                 migrationWindow.SetLegacyInfo(legacyInfo);
                 migrationWindow.Show();
-                Console.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow shown");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Failed to show MigrationPromptWindow: {ex.Message}");
+                Logger.Error("Failed to show migration prompt window.", ex);
             }
         });
 
         if (migrationWindow is null)
         {
-            Console.Error.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow is null, skipping migration prompt");
             return MigrationResult.Skipped;
         }
 
-        // 等待用户选择
         MigrationResult result;
-
         try
         {
-            result = await migrationWindow.WaitForChoiceAsync();
-            Console.WriteLine($"[LauncherFlowCoordinator] MigrationPromptWindow result: {result}");
+            result = await migrationWindow.WaitForChoiceAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[LauncherFlowCoordinator] Error waiting for migration choice: {ex.Message}");
+            Logger.Error("Failed while waiting for migration prompt result.", ex);
             result = MigrationResult.Skipped;
         }
 
-        // 安全关闭窗口
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
@@ -640,16 +709,100 @@ internal sealed class LauncherFlowCoordinator
                 if (migrationWindow.IsVisible && migrationWindow.IsLoaded)
                 {
                     migrationWindow.Close();
-                    Console.WriteLine("[LauncherFlowCoordinator] MigrationPromptWindow closed successfully");
                 }
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[LauncherFlowCoordinator] Error closing MigrationPromptWindow: {ex.Message}");
+                Logger.Error("Failed to close migration prompt window.", ex);
             }
         });
 
         return result;
+    }
+
+    private static string MapStartupStageToSplashStage(StartupStage stage) => stage switch
+    {
+        StartupStage.Initializing => "initializing",
+        StartupStage.LoadingSettings => "settings",
+        StartupStage.LoadingPlugins => "plugins",
+        StartupStage.InitializingUI => "ui",
+        StartupStage.ShellInitialized => "shell",
+        StartupStage.DesktopVisible => "ready",
+        StartupStage.ActivationRedirected => "activation",
+        StartupStage.ActivationFailed => "error",
+        StartupStage.Ready => "ready",
+        _ => "launch"
+    };
+
+    private static LauncherResult BuildResult(
+        bool success,
+        string stage,
+        string code,
+        string message,
+        Dictionary<string, string>? details = null,
+        string? errorMessage = null)
+    {
+        Logger.Info($"Launcher result prepared. Success={success}; Stage='{stage}'; Code='{code}'.");
+        return new LauncherResult
+        {
+            Success = success,
+            Stage = stage,
+            Code = code,
+            Message = message,
+            ErrorMessage = errorMessage,
+            Details = details ?? []
+        };
+    }
+
+    private static Dictionary<string, string> BuildResolutionDetails(
+        HostResolutionResult resolution,
+        HostStartAttempt? firstAttempt,
+        HostStartAttempt? secondAttempt,
+        string? failureStage)
+    {
+        var details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["resolvedAppRoot"] = resolution.AppRoot,
+            ["explicitAppRoot"] = resolution.ExplicitAppRoot ?? string.Empty,
+            ["resolvedHostPath"] = resolution.ResolvedHostPath ?? string.Empty,
+            ["resolutionSource"] = resolution.ResolutionSource ?? string.Empty,
+            ["devModeConfigIgnored"] = resolution.DevModeConfigIgnored.ToString(),
+            ["searchedPaths"] = string.Join(" | ", resolution.SearchedPaths),
+            ["failureStage"] = failureStage ?? string.Empty
+        };
+
+        if (firstAttempt is not null)
+        {
+            details["startMode"] = firstAttempt.StartMode.ToString();
+            details["processCreated"] = firstAttempt.ProcessCreated.ToString();
+            details["hostPid"] = firstAttempt.ProcessId?.ToString() ?? string.Empty;
+            details["firstAttemptFailureReason"] = firstAttempt.FailureReason ?? string.Empty;
+            details["firstAttemptExitCode"] = firstAttempt.ExitCode?.ToString() ?? string.Empty;
+        }
+
+        if (secondAttempt is not null)
+        {
+            details["fallbackStartMode"] = secondAttempt.StartMode.ToString();
+            details["fallbackProcessCreated"] = secondAttempt.ProcessCreated.ToString();
+            details["fallbackHostPid"] = secondAttempt.ProcessId?.ToString() ?? string.Empty;
+            details["fallbackFailureReason"] = secondAttempt.FailureReason ?? string.Empty;
+            details["fallbackExitCode"] = secondAttempt.ExitCode?.ToString() ?? string.Empty;
+        }
+
+        return details;
+    }
+
+    private static Dictionary<string, string> MergeDetails(
+        Dictionary<string, string> left,
+        Dictionary<string, string> right)
+    {
+        var merged = new Dictionary<string, string>(left, StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in right)
+        {
+            merged[pair.Key] = pair.Value;
+        }
+
+        return merged;
     }
 
     private static string QuoteArgument(string value)
@@ -700,84 +853,45 @@ internal sealed class LauncherFlowCoordinator
         }
     }
 
-    private sealed class WelcomeOobeStep : IOobeStep
+    private enum HostStartMode
     {
-        private readonly OobeStateService _stateService;
+        ShellExecute,
+        Direct
+    }
 
-        public WelcomeOobeStep(OobeStateService stateService)
-        {
-            _stateService = stateService;
-        }
+    private sealed record HostStartAttempt(
+        HostStartMode StartMode,
+        bool ProcessCreated,
+        Process? Process,
+        bool ExitedEarly,
+        int? ExitCode,
+        string? FailureReason)
+    {
+        public int? ProcessId => Process?.Id;
 
-        public async Task RunAsync(CancellationToken cancellationToken)
-        {
-            OobeWindow? window = null;
-            
-            try
-            {
-                window = await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    try
-                    {
-                        var oobeWindow = new OobeWindow();
-                        oobeWindow.Show();
-                        Console.WriteLine("[WelcomeOobeStep] OOBE window shown");
-                        return oobeWindow;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"[WelcomeOobeStep] Failed to show OOBE window: {ex.Message}");
-                        return null;
-                    }
-                });
+        public static HostStartAttempt Started(HostStartMode startMode, Process process) =>
+            new(startMode, true, process, false, null, null);
 
-                if (window is null)
-                {
-                    Console.Error.WriteLine("[WelcomeOobeStep] OOBE window is null, skipping OOBE");
-                    _stateService.MarkCompleted();
-                    return;
-                }
+        public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode) =>
+            new(startMode, true, process, true, exitCode, null);
 
-                using var _ = cancellationToken.Register(() =>
-                {
-                    try
-                    {
-                        if (window.IsVisible && window.IsLoaded)
-                        {
-                            window.Close();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"[WelcomeOobeStep] Error closing OOBE window on cancel: {ex.Message}");
-                    }
-                });
-                
-                await window.WaitForEnterAsync().ConfigureAwait(false);
-                Console.WriteLine("[WelcomeOobeStep] OOBE completed by user");
-                _stateService.MarkCompleted();
-            }
-            finally
-            {
-                if (window is not null)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        try
-                        {
-                            if (window.IsVisible && window.IsLoaded)
-                            {
-                                window.Close();
-                                Console.WriteLine("[WelcomeOobeStep] OOBE window closed in finally");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.Error.WriteLine($"[WelcomeOobeStep] Error closing OOBE window in finally: {ex.Message}");
-                        }
-                    });
-                }
-            }
-        }
+        public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason) =>
+            new(startMode, false, null, false, null, failureReason);
+    }
+
+    private sealed record HostLaunchOutcome(
+        LauncherResult Result,
+        Process? Process,
+        LauncherResult? ImmediateResult,
+        Dictionary<string, string> Details)
+    {
+        public static HostLaunchOutcome FromResult(LauncherResult result) =>
+            new(result, null, result.Success ? result : null, result.Details);
+
+        public static HostLaunchOutcome FromImmediateResult(LauncherResult result) =>
+            new(result, null, result, result.Details);
+
+        public static HostLaunchOutcome FromProcess(Process process, LauncherResult result, Dictionary<string, string> details) =>
+            new(result, process, null, details);
     }
 }

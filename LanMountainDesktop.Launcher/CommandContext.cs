@@ -4,6 +4,17 @@ namespace LanMountainDesktop.Launcher;
 
 internal sealed class CommandContext
 {
+    private static readonly string[] GuiCommands =
+    [
+        "launch",
+        "apply-update",
+        "preview-splash",
+        "preview-error",
+        "preview-update",
+        "preview-oobe",
+        "preview-debug"
+    ];
+
     public string Command { get; }
 
     public string SubCommand { get; }
@@ -27,6 +38,14 @@ internal sealed class CommandContext
     public bool IsDebugMode =>
         Options.ContainsKey("debug") ||
         System.Diagnostics.Debugger.IsAttached;
+
+    public bool IsPreviewCommand =>
+        Command.StartsWith("preview-", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsGuiCommand =>
+        GuiCommands.Contains(Command, StringComparer.OrdinalIgnoreCase);
+
+    public string? ExplicitAppRoot => GetOption("app-root");
 
     private CommandContext(string command, string subCommand, Dictionary<string, string> options, string[] rawArgs)
     {
