@@ -465,6 +465,7 @@ internal sealed class UpdateEngineService
             }
 
             File.Copy(sourcePath, targetPath, overwrite: true);
+            ApplyUnixFileModeIfPresent(targetPath, file);
             return;
         }
 
@@ -472,6 +473,7 @@ internal sealed class UpdateEngineService
         var objectBytes = File.ReadAllBytes(objectPath);
         var restoredBytes = TryInflateGzip(objectBytes) ?? objectBytes;
         File.WriteAllBytes(targetPath, restoredBytes);
+        ApplyUnixFileModeIfPresent(targetPath, file);
     }
 
     private void VerifyPlondsFileEntry(PlondsFileEntry file, string targetDeployment)
@@ -914,6 +916,29 @@ internal sealed class UpdateEngineService
             metadata["component"] = componentName;
         }
 
+        if (TryGetJsonPropertyIgnoreCase(node, "metadata", out var metadataNode) &&
+            metadataNode.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in metadataNode.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.Null ||
+                    property.Value.ValueKind == JsonValueKind.Undefined)
+                {
+                    continue;
+                }
+
+                var value = property.Value.ValueKind == JsonValueKind.String
+                    ? property.Value.GetString()
+                    : property.Value.ToString();
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                metadata[property.Name] = value;
+            }
+        }
+
         entry = new PlondsFileEntry
         {
             Path = path,
@@ -952,6 +977,31 @@ internal sealed class UpdateEngineService
         }
 
         return true;
+    }
+
+    private static void ApplyUnixFileModeIfPresent(string targetPath, PlondsFileEntry file)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        if (!file.Metadata.TryGetValue("unixFileMode", out var rawMode) ||
+            string.IsNullOrWhiteSpace(rawMode))
+        {
+            return;
+        }
+
+        try
+        {
+            var normalized = rawMode.Trim();
+            var modeValue = Convert.ToInt32(normalized, 8);
+            File.SetUnixFileMode(targetPath, (UnixFileMode)modeValue);
+        }
+        catch
+        {
+            // Best-effort only. A bad mode should not break the entire update.
+        }
     }
 
     private static bool TryGetJsonPropertyIgnoreCase(JsonElement node, string propertyName, out JsonElement value)

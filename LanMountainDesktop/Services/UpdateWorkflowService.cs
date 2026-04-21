@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -64,6 +65,7 @@ public sealed class UpdateWorkflowService
     private const string PlondsFileMapName = "plonds-filemap.json";
     private const string PlondsFileMapSignatureName = "plonds-filemap.sig";
     private const string PlondsUpdateStateName = "plonds-update.json";
+    private const string PlondsUpdateArchiveName = "plonds-update.zip";
 
     private static readonly HttpClient PlondsHttpClient = new()
     {
@@ -302,47 +304,65 @@ public sealed class UpdateWorkflowService
                 "filemap-download",
                 cancellationToken);
 
-            IReadOnlyList<PlondsDownloadEntry> downloadEntries;
-            try
+            IReadOnlyList<PlondsDownloadedObjectInfo> objectResults;
+            if (!string.IsNullOrWhiteSpace(payload.UpdateArchiveUrl))
             {
-                downloadEntries = ParsePlondsDownloadEntries(fileMapJson);
+                progress?.Report(2d / 3d);
+                objectResults = await EnsurePlondsArchiveObjectsAsync(
+                    payload,
+                    incomingDir,
+                    objectsDir,
+                    state.UpdateDownloadSource,
+                    downloadThreads,
+                    progress,
+                    cancellationToken);
             }
-            catch (JsonException ex)
+            else
             {
-                throw new PlondsDownloadException("payload-parse", $"PLONDS file map JSON is invalid: {ex.Message}", ex);
-            }
-
-            if (downloadEntries.Count == 0)
-            {
-                throw new PlondsDownloadException("payload-parse", "PLONDS file map does not contain downloadable objects.");
-            }
-
-            var expectedObjectCount = downloadEntries.Count;
-            var completedItems = 2;
-            progress?.Report(expectedObjectCount == 0 ? 1d : (double)completedItems / (expectedObjectCount + 2));
-
-            var objectResults = new List<PlondsDownloadedObjectInfo>(expectedObjectCount);
-            var objectTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var totalSteps = expectedObjectCount + 2;
-
-            foreach (var entry in downloadEntries)
-            {
-                if (!objectTargets.Add(entry.ObjectHashHex))
+                IReadOnlyList<PlondsDownloadEntry> downloadEntries;
+                try
                 {
-                    completedItems++;
-                    progress?.Report((double)completedItems / totalSteps);
-                    continue;
+                    downloadEntries = ParsePlondsDownloadEntries(fileMapJson);
+                }
+                catch (JsonException ex)
+                {
+                    throw new PlondsDownloadException("payload-parse", $"PLONDS file map JSON is invalid: {ex.Message}", ex);
                 }
 
-                var objectInfo = await EnsurePlondsObjectAsync(
-                    entry,
-                    objectsDir,
-                    downloadThreads,
-                    cancellationToken);
+                if (downloadEntries.Count == 0)
+                {
+                    throw new PlondsDownloadException("payload-parse", "PLONDS file map does not contain downloadable objects.");
+                }
 
-                objectResults.Add(objectInfo);
-                completedItems++;
-                progress?.Report((double)completedItems / totalSteps);
+                var expectedObjectCount = downloadEntries.Count;
+                var completedItems = 2;
+                progress?.Report(expectedObjectCount == 0 ? 1d : (double)completedItems / (expectedObjectCount + 2));
+
+                var downloadResults = new List<PlondsDownloadedObjectInfo>(expectedObjectCount);
+                var objectTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var totalSteps = expectedObjectCount + 2;
+
+                foreach (var entry in downloadEntries)
+                {
+                    if (!objectTargets.Add(entry.ObjectHashHex))
+                    {
+                        completedItems++;
+                        progress?.Report((double)completedItems / totalSteps);
+                        continue;
+                    }
+
+                    var objectInfo = await EnsurePlondsObjectAsync(
+                        entry,
+                        objectsDir,
+                        downloadThreads,
+                        cancellationToken);
+
+                    downloadResults.Add(objectInfo);
+                    completedItems++;
+                    progress?.Report((double)completedItems / totalSteps);
+                }
+
+                objectResults = downloadResults;
             }
 
             var updateState = new PlondsUpdateState(
@@ -690,6 +710,91 @@ public sealed class UpdateWorkflowService
             "object-download",
             $"Failed to download PLONDS object {entry.RelativePath}.",
             lastError);
+    }
+
+    private async Task<IReadOnlyList<PlondsDownloadedObjectInfo>> EnsurePlondsArchiveObjectsAsync(
+        PlondsUpdatePayload payload,
+        string incomingDirectory,
+        string objectsDirectory,
+        string downloadSource,
+        int downloadThreads,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(payload.UpdateArchiveUrl))
+        {
+            throw new PlondsDownloadException("payload-parse", "PLONDS payload does not contain an update archive URL.");
+        }
+
+        var archiveAsset = new GitHubReleaseAsset(
+            Name: Path.GetFileName(payload.UpdateArchiveUrl) ?? PlondsUpdateArchiveName,
+            BrowserDownloadUrl: payload.UpdateArchiveUrl,
+            SizeBytes: payload.UpdateArchiveSizeBytes ?? 0,
+            Sha256: payload.UpdateArchiveSha256);
+        var archivePath = Path.Combine(incomingDirectory, PlondsUpdateArchiveName);
+        var archiveProgress = progress is null
+            ? null
+            : new Progress<double>(p => progress.Report((2d + p) / 3d));
+
+        var downloadResult = await _settingsFacade.Update.DownloadAssetAsync(
+            archiveAsset,
+            archivePath,
+            downloadSource,
+            downloadThreads,
+            archiveProgress,
+            cancellationToken);
+
+        if (!downloadResult.Success)
+        {
+            downloadResult = await _settingsFacade.Update.RedownloadAssetAsync(
+                archiveAsset,
+                archivePath,
+                downloadSource,
+                downloadThreads,
+                archiveProgress,
+                cancellationToken);
+        }
+
+        if (!downloadResult.Success)
+        {
+            throw new PlondsDownloadException(
+                "object-download",
+                $"Failed to download PLONDS update archive: {downloadResult.ErrorMessage}");
+        }
+
+        try
+        {
+            if (Directory.Exists(objectsDirectory))
+            {
+                Directory.Delete(objectsDirectory, recursive: true);
+            }
+
+            Directory.CreateDirectory(objectsDirectory);
+            ZipFile.ExtractToDirectory(archivePath, objectsDirectory, overwriteFiles: true);
+        }
+        catch (Exception ex)
+        {
+            throw new PlondsDownloadException(
+                "payload-parse",
+                $"Failed to extract PLONDS update archive: {ex.Message}",
+                ex);
+        }
+        finally
+        {
+            DeleteFileIfExists(archivePath);
+        }
+
+        var objectResults = Directory.EnumerateFiles(objectsDirectory, "*", SearchOption.AllDirectories)
+            .Select(path => new PlondsDownloadedObjectInfo(
+                ComponentId: "app",
+                RelativePath: Path.GetRelativePath(objectsDirectory, path).Replace('\\', '/'),
+                SourceUrl: payload.UpdateArchiveUrl,
+                ObjectHashHex: Path.GetFileName(path),
+                LocalPath: path))
+            .ToArray();
+
+        progress?.Report(1d);
+        return objectResults;
     }
 
     private static IReadOnlyList<PlondsDownloadEntry> ParsePlondsDownloadEntries(string fileMapJson)
