@@ -679,17 +679,40 @@ jobs:
           pattern: release-*
           merge-multiple: true
 
+      - name: Normalize release files
+        run: |
+          mkdir -p release-bundle
+
+          mapfile -t downloaded_files < <(find release-files -type f)
+          if [ "${#downloaded_files[@]}" -eq 0 ]; then
+            echo "No downloaded release artifacts were found."
+            exit 1
+          fi
+
+          for file in "${downloaded_files[@]}"; do
+            base_name="$(basename "$file")"
+            target_path="release-bundle/$base_name"
+
+            if [ -e "$target_path" ]; then
+              echo "Duplicate release asset name detected: $base_name"
+              echo "Conflicting file: $file"
+              exit 1
+            fi
+
+            cp "$file" "$target_path"
+          done
+
       - name: Validate release files
         run: |
           echo "Release files:"
-          find release-files -maxdepth 1 -type f -exec ls -lh {} \;
+          find release-bundle -maxdepth 1 -type f -exec ls -lh {} \;
 
-          if [ ! -f release-files/files-windows-x64.zip ] || [ ! -f release-files/files-windows-x86.zip ] || [ ! -f release-files/files-linux-x64.zip ]; then
+          if [ ! -f release-bundle/files-windows-x64.zip ] || [ ! -f release-bundle/files-windows-x86.zip ] || [ ! -f release-bundle/files-linux-x64.zip ]; then
             echo "Required payload zips are missing."
             exit 1
           fi
 
-          file_count=$(find release-files -maxdepth 1 -type f | wc -l)
+          file_count=$(find release-bundle -maxdepth 1 -type f | wc -l)
           if [ "$file_count" -eq 0 ]; then
             echo "No release files were produced."
             exit 1
@@ -703,7 +726,7 @@ jobs:
           allowUpdates: true
           draft: false
           prerelease: ${{ needs.prepare.outputs.is_prerelease == 'true' }}
-          artifacts: 'release-files/**'
+          artifacts: 'release-bundle/*'
           body: |
             ## Release ${{ needs.prepare.outputs.version }}
 
