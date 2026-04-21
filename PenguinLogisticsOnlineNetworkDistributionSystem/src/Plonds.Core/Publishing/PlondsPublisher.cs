@@ -82,7 +82,7 @@ public sealed class PlondsPublisher
                 CurrentDirectory: currentAppDirectory,
                 Platform: config.Platform,
                 OutputRoot: options.OutputRoot,
-                PreviousVersion: previousVersion,
+                PreviousVersion: string.IsNullOrWhiteSpace(options.BaselineVersion) ? previousVersion : options.BaselineVersion,
                 PreviousDirectory: previousDirectory,
                 Channel: options.Channel,
                 DistributionId: distributionId,
@@ -90,7 +90,14 @@ public sealed class PlondsPublisher
                 FileMapUrl: fileMapUrl,
                 FileMapSignatureUrl: fileMapSignatureUrl,
                 InstallerDirectory: installerSourceDirectory,
-                InstallerBaseUrl: installerBaseUrl));
+                InstallerBaseUrl: installerBaseUrl,
+                IncrementalStrategy: options.IncrementalStrategy,
+                BaselineVersion: string.IsNullOrWhiteSpace(options.BaselineVersion) ? previousVersion : options.BaselineVersion,
+                BaselineRef: options.BaselineRef,
+                SourceCommit: options.SourceCommit,
+                IsFullPayloadRelease: options.IsFullPayloadRelease,
+                CommitRangeStart: options.CommitRangeStart,
+                CommitRangeEnd: options.CommitRangeEnd));
 
             _signer.SignFile(result.FileMapPath, options.PrivateKeyPath, result.SignaturePath);
 

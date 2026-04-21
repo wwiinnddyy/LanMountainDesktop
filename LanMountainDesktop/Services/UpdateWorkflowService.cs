@@ -71,6 +71,7 @@ public sealed class UpdateWorkflowService
     };
 
     private static readonly ResumableDownloadService PlondsDownloadService = new(PlondsHttpClient);
+    private const int MaxPlondsOuterRetryAttempts = 3;
 
     public UpdateWorkflowService(ISettingsFacadeService settingsFacade)
     {
@@ -251,7 +252,12 @@ public sealed class UpdateWorkflowService
         var payload = checkResult.PlondsPayload;
         if (payload is null)
         {
-            return new UpdateDownloadResult(false, null, "PLONDS payload is missing.");
+            return await HandlePlondsDeltaFailureAsync(
+                checkResult,
+                "payload-parse",
+                "PLONDS payload is missing.",
+                progress,
+                cancellationToken);
         }
 
         var incomingDir = GetLauncherIncomingDirectory();
@@ -264,7 +270,12 @@ public sealed class UpdateWorkflowService
         }
         catch (Exception ex)
         {
-            return new UpdateDownloadResult(false, null, $"Failed to create incoming directory: {ex.Message}");
+            return await HandlePlondsDeltaFailureAsync(
+                checkResult,
+                "payload-parse",
+                $"Failed to create incoming directory: {ex.Message}",
+                progress,
+                cancellationToken);
         }
 
         try
@@ -279,18 +290,31 @@ public sealed class UpdateWorkflowService
                 payload.FileMapJson,
                 payload.FileMapJsonUrl,
                 fileMapPath,
+                "file map",
+                "filemap-download",
                 cancellationToken);
 
             var fileMapSignature = await EnsurePlondsTextResourceAsync(
                 payload.FileMapSignature,
                 payload.FileMapSignatureUrl,
                 signaturePath,
+                "file map signature",
+                "filemap-download",
                 cancellationToken);
 
-            var downloadEntries = ParsePlondsDownloadEntries(fileMapJson);
+            IReadOnlyList<PlondsDownloadEntry> downloadEntries;
+            try
+            {
+                downloadEntries = ParsePlondsDownloadEntries(fileMapJson);
+            }
+            catch (JsonException ex)
+            {
+                throw new PlondsDownloadException("payload-parse", $"PLONDS file map JSON is invalid: {ex.Message}", ex);
+            }
+
             if (downloadEntries.Count == 0)
             {
-                return new UpdateDownloadResult(false, null, "PLONDS file map does not contain downloadable objects.");
+                throw new PlondsDownloadException("payload-parse", "PLONDS file map does not contain downloadable objects.");
             }
 
             var expectedObjectCount = downloadEntries.Count;
@@ -310,46 +334,13 @@ public sealed class UpdateWorkflowService
                     continue;
                 }
 
-                var destinationPath = GetPlondsObjectDestinationPath(objectsDir, entry.ObjectHashHex);
-                var destinationDirectory = Path.GetDirectoryName(destinationPath);
-                if (!string.IsNullOrWhiteSpace(destinationDirectory))
-                {
-                    Directory.CreateDirectory(destinationDirectory);
-                }
-
-                if (File.Exists(destinationPath))
-                {
-                    var existingHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
-                    if (string.Equals(existingHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
-                    {
-                        objectResults.Add(new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
-                        completedItems++;
-                        progress?.Report((double)completedItems / totalSteps);
-                        continue;
-                    }
-                }
-
-                var downloadOptions = new DownloadOptions(MaxParallelSegments: downloadThreads);
-                var downloadResult = await PlondsDownloadService.DownloadAsync(
-                    entry.DownloadUrl,
-                    destinationPath,
-                    downloadOptions,
-                    null,
+                var objectInfo = await EnsurePlondsObjectAsync(
+                    entry,
+                    objectsDir,
+                    downloadThreads,
                     cancellationToken);
 
-                if (!downloadResult.Success)
-                {
-                    return new UpdateDownloadResult(false, null, $"Failed to download PLONDS object {entry.RelativePath}: {downloadResult.ErrorMessage}");
-                }
-
-                var actualHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(actualHash) &&
-                    !string.Equals(actualHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
-                {
-                    return new UpdateDownloadResult(false, null, $"PLONDS object hash mismatch for {entry.RelativePath}. Expected: {entry.ObjectHashHex}, Actual: {actualHash}");
-                }
-
-                objectResults.Add(new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath));
+                objectResults.Add(objectInfo);
                 completedItems++;
                 progress?.Report((double)completedItems / totalSteps);
             }
@@ -390,8 +381,20 @@ public sealed class UpdateWorkflowService
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("UpdateWorkflow", "Failed to download PLONDS incremental payload.", ex);
-            return new UpdateDownloadResult(false, null, ex.Message);
+            var stage = ex is PlondsDownloadException plondsException
+                ? plondsException.Stage
+                : "payload-parse";
+            var message = ex is PlondsDownloadException
+                ? ex.Message
+                : $"PLONDS incremental payload failed unexpectedly: {ex.Message}";
+
+            AppLogger.Warn("UpdateWorkflow", $"Failed to download PLONDS incremental payload at stage '{stage}'.", ex);
+            return await HandlePlondsDeltaFailureAsync(
+                checkResult,
+                stage,
+                message,
+                progress,
+                cancellationToken);
         }
     }
 
@@ -420,6 +423,125 @@ public sealed class UpdateWorkflowService
             || pendingPath.Contains(IncomingDirectoryName, StringComparison.OrdinalIgnoreCase);
     }
 
+    private async Task<UpdateDownloadResult> DownloadFullInstallerAsync(
+        UpdateCheckResult checkResult,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken,
+        bool forceRedownload)
+    {
+        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
+        {
+            return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
+        }
+
+        var state = _settingsFacade.Update.Get();
+        var existingPending = GetPendingUpdate(state);
+
+        if (!forceRedownload &&
+            existingPending is not null &&
+            string.Equals(existingPending.VersionText, checkResult.LatestVersionText, StringComparison.OrdinalIgnoreCase) &&
+            File.Exists(existingPending.InstallerPath))
+        {
+            var verifyResult = await VerifyPendingUpdateAsync();
+            if (verifyResult.Success)
+            {
+                return new UpdateDownloadResult(
+                    true,
+                    existingPending.InstallerPath,
+                    null,
+                    verifyResult.HashMatched,
+                    verifyResult.ExpectedHash,
+                    verifyResult.ActualHash);
+            }
+
+            AppLogger.Warn(
+                "UpdateWorkflow",
+                $"Existing installer hash verification failed, will redownload. Expected: {verifyResult.ExpectedHash}, Actual: {verifyResult.ActualHash}");
+        }
+
+        if (forceRedownload && existingPending is not null && File.Exists(existingPending.InstallerPath))
+        {
+            try
+            {
+                File.Delete(existingPending.InstallerPath);
+                AppLogger.Info("UpdateWorkflow", $"Deleted existing installer for redownload: {existingPending.InstallerPath}");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("UpdateWorkflow", $"Failed to delete existing installer: {existingPending.InstallerPath}", ex);
+            }
+
+            ClearPendingUpdate();
+            state = _settingsFacade.Update.Get();
+        }
+
+        Directory.CreateDirectory(_updatesDirectory);
+        var fileName = SanitizeFileName(checkResult.PreferredAsset.Name);
+        var destinationPath = Path.Combine(_updatesDirectory, fileName);
+
+        var result = await _settingsFacade.Update.DownloadAssetAsync(
+            checkResult.PreferredAsset,
+            destinationPath,
+            state.UpdateDownloadSource,
+            state.UpdateDownloadThreads,
+            progress,
+            cancellationToken);
+
+        if (result.Success)
+        {
+            SaveState(state with
+            {
+                PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
+                PendingUpdateVersion = checkResult.LatestVersionText,
+                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
+                    ? publishedAt.ToUnixTimeMilliseconds()
+                    : null,
+                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                PendingUpdateSha256 = result.ActualHash
+            });
+        }
+
+        return result;
+    }
+
+    private async Task<UpdateDownloadResult> HandlePlondsDeltaFailureAsync(
+        UpdateCheckResult checkResult,
+        string stage,
+        string errorMessage,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
+        var normalizedMessage = string.IsNullOrWhiteSpace(errorMessage)
+            ? $"PLONDS {stage} failed."
+            : $"PLONDS {stage} failed: {errorMessage}";
+
+        if (checkResult.Release is null || checkResult.PreferredAsset is null)
+        {
+            return new UpdateDownloadResult(false, null, normalizedMessage);
+        }
+
+        AppLogger.Warn(
+            "UpdateWorkflow",
+            $"PLONDS delta download failed at stage '{stage}'. Falling back to full installer download. Details: {errorMessage}");
+
+        var fallbackResult = await DownloadFullInstallerAsync(
+            checkResult,
+            progress,
+            cancellationToken,
+            forceRedownload: false);
+
+        if (fallbackResult.Success)
+        {
+            return fallbackResult;
+        }
+
+        var combinedMessage = string.IsNullOrWhiteSpace(fallbackResult.ErrorMessage)
+            ? normalizedMessage
+            : $"{normalizedMessage} Full installer fallback failed: {fallbackResult.ErrorMessage}";
+
+        return new UpdateDownloadResult(false, null, combinedMessage);
+    }
+
     private static string GetPlondsObjectDestinationPath(string objectsDirectory, string objectHashHex)
     {
         var normalizedHash = objectHashHex.Trim().ToLowerInvariant();
@@ -431,6 +553,8 @@ public sealed class UpdateWorkflowService
         string? inlineContent,
         string? sourceUrl,
         string destinationPath,
+        string resourceName,
+        string stage,
         CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(inlineContent))
@@ -441,20 +565,131 @@ public sealed class UpdateWorkflowService
 
         if (string.IsNullOrWhiteSpace(sourceUrl))
         {
-            throw new InvalidOperationException("PLONDS payload does not contain a file map source.");
+            throw new PlondsDownloadException(stage, $"PLONDS payload does not contain a {resourceName} source.");
         }
 
-        var downloadResult = await PlondsDownloadService.DownloadAsync(
-            sourceUrl,
-            destinationPath,
-            cancellationToken: cancellationToken);
-
-        if (!downloadResult.Success)
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= MaxPlondsOuterRetryAttempts; attempt++)
         {
-            throw new InvalidOperationException($"Failed to download PLONDS file map resource: {downloadResult.ErrorMessage}");
+            var downloadResult = await PlondsDownloadService.DownloadAsync(
+                sourceUrl,
+                destinationPath,
+                cancellationToken: cancellationToken);
+
+            if (downloadResult.Success)
+            {
+                try
+                {
+                    return await File.ReadAllTextAsync(destinationPath, cancellationToken);
+                }
+                catch (Exception ex) when (attempt < MaxPlondsOuterRetryAttempts)
+                {
+                    lastError = ex;
+                }
+            }
+            else
+            {
+                lastError = new InvalidOperationException(downloadResult.ErrorMessage ?? $"Failed to download PLONDS {resourceName}.");
+            }
+
+            if (attempt < MaxPlondsOuterRetryAttempts)
+            {
+                AppLogger.Warn(
+                    "UpdateWorkflow",
+                    $"PLONDS {resourceName} download attempt {attempt}/{MaxPlondsOuterRetryAttempts} failed. Retrying same URL.");
+                await Task.Delay(GetPlondsRetryDelay(attempt), cancellationToken);
+            }
         }
 
-        return await File.ReadAllTextAsync(destinationPath, cancellationToken);
+        throw new PlondsDownloadException(
+            stage,
+            $"Failed to download PLONDS {resourceName} from {sourceUrl}.",
+            lastError);
+    }
+
+    private static async Task<PlondsDownloadedObjectInfo> EnsurePlondsObjectAsync(
+        PlondsDownloadEntry entry,
+        string objectsDirectory,
+        int downloadThreads,
+        CancellationToken cancellationToken)
+    {
+        var destinationPath = GetPlondsObjectDestinationPath(objectsDirectory, entry.ObjectHashHex);
+        var destinationDirectory = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrWhiteSpace(destinationDirectory))
+        {
+            Directory.CreateDirectory(destinationDirectory);
+        }
+
+        var existingHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
+        if (string.Equals(existingHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
+        {
+            return new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(existingHash))
+        {
+            DeleteFileIfExists(destinationPath);
+        }
+
+        var downloadOptions = new DownloadOptions(MaxParallelSegments: downloadThreads);
+        var allowForcedRedownload = true;
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= MaxPlondsOuterRetryAttempts; attempt++)
+        {
+            var downloadResult = await PlondsDownloadService.DownloadAsync(
+                entry.DownloadUrl,
+                destinationPath,
+                downloadOptions,
+                null,
+                cancellationToken);
+
+            if (!downloadResult.Success)
+            {
+                lastError = new InvalidOperationException(downloadResult.ErrorMessage ?? $"Failed to download PLONDS object {entry.RelativePath}.");
+                if (attempt < MaxPlondsOuterRetryAttempts)
+                {
+                    AppLogger.Warn(
+                        "UpdateWorkflow",
+                        $"PLONDS object download attempt {attempt}/{MaxPlondsOuterRetryAttempts} failed for {entry.RelativePath}. Retrying.");
+                    await Task.Delay(GetPlondsRetryDelay(attempt), cancellationToken);
+                    continue;
+                }
+
+                throw new PlondsDownloadException(
+                    "object-download",
+                    $"Failed to download PLONDS object {entry.RelativePath}.",
+                    lastError);
+            }
+
+            var actualHash = await ComputeFileSha256HexAsync(destinationPath, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(actualHash) &&
+                string.Equals(actualHash, entry.ObjectHashHex, StringComparison.OrdinalIgnoreCase))
+            {
+                return new PlondsDownloadedObjectInfo(entry.ComponentId, entry.RelativePath, entry.DownloadUrl, entry.ObjectHashHex, destinationPath);
+            }
+
+            DeleteFileIfExists(destinationPath);
+            var mismatchMessage = $"PLONDS object hash mismatch for {entry.RelativePath}. Expected: {entry.ObjectHashHex}, Actual: {actualHash ?? "<missing>"}";
+            lastError = new InvalidOperationException(mismatchMessage);
+
+            if (allowForcedRedownload)
+            {
+                allowForcedRedownload = false;
+                AppLogger.Warn(
+                    "UpdateWorkflow",
+                    $"{mismatchMessage}. Removing the bad object and forcing one clean re-download.");
+                await Task.Delay(GetPlondsRetryDelay(attempt), cancellationToken);
+                continue;
+            }
+
+            throw new PlondsDownloadException("object-verify", mismatchMessage, lastError);
+        }
+
+        throw new PlondsDownloadException(
+            "object-download",
+            $"Failed to download PLONDS object {entry.RelativePath}.",
+            lastError);
     }
 
     private static IReadOnlyList<PlondsDownloadEntry> ParsePlondsDownloadEntries(string fileMapJson)
@@ -628,6 +863,31 @@ public sealed class UpdateWorkflowService
         return normalized.Replace("-", string.Empty).Trim().ToLowerInvariant();
     }
 
+    private static void DeleteFileIfExists(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only. The caller still verifies the resulting payload before it is applied.
+        }
+    }
+
+    private static TimeSpan GetPlondsRetryDelay(int attempt)
+    {
+        return attempt switch
+        {
+            1 => TimeSpan.FromMilliseconds(350),
+            2 => TimeSpan.FromMilliseconds(900),
+            _ => TimeSpan.FromMilliseconds(1500)
+        };
+    }
+
     private static bool TryGetPropertyIgnoreCase(JsonElement node, string propertyName, out JsonElement value)
     {
         if (node.ValueKind == JsonValueKind.Object)
@@ -741,6 +1001,17 @@ public sealed class UpdateWorkflowService
         string RelativePath,
         string DownloadUrl,
         string ObjectHashHex);
+
+    private sealed class PlondsDownloadException : Exception
+    {
+        public PlondsDownloadException(string stage, string message, Exception? innerException = null)
+            : base(message, innerException)
+        {
+            Stage = stage;
+        }
+
+        public string Stage { get; }
+    }
 
     private sealed record PlondsDownloadedObjectInfo(
         string ComponentId,
@@ -876,53 +1147,11 @@ public sealed class UpdateWorkflowService
             return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
         }
 
-        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
-        {
-            return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
-        }
-
-        var state = _settingsFacade.Update.Get();
-        var existingPending = GetPendingUpdate(state);
-        if (existingPending is not null &&
-            string.Equals(existingPending.VersionText, checkResult.LatestVersionText, StringComparison.OrdinalIgnoreCase) &&
-            File.Exists(existingPending.InstallerPath))
-        {
-            var verifyResult = await VerifyPendingUpdateAsync();
-            if (verifyResult.Success)
-            {
-                return new UpdateDownloadResult(true, existingPending.InstallerPath, null, verifyResult.HashMatched, verifyResult.ExpectedHash, verifyResult.ActualHash);
-            }
-
-            AppLogger.Warn("UpdateWorkflow", $"Existing installer hash verification failed, will redownload. Expected: {verifyResult.ExpectedHash}, Actual: {verifyResult.ActualHash}");
-        }
-
-        Directory.CreateDirectory(_updatesDirectory);
-        var fileName = SanitizeFileName(checkResult.PreferredAsset.Name);
-        var destinationPath = Path.Combine(_updatesDirectory, fileName);
-
-        var result = await _settingsFacade.Update.DownloadAssetAsync(
-            checkResult.PreferredAsset,
-            destinationPath,
-            state.UpdateDownloadSource,
-            state.UpdateDownloadThreads,
+        return await DownloadFullInstallerAsync(
+            checkResult,
             progress,
-            cancellationToken);
-
-        if (result.Success)
-        {
-            SaveState(state with
-            {
-                PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
-                PendingUpdateVersion = checkResult.LatestVersionText,
-                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
-                    ? publishedAt.ToUnixTimeMilliseconds()
-                    : null,
-                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                PendingUpdateSha256 = result.ActualHash
-            });
-        }
-
-        return result;
+            cancellationToken,
+            forceRedownload: false);
     }
 
     public async Task<UpdateDownloadResult> RedownloadReleaseAsync(
@@ -938,58 +1167,11 @@ public sealed class UpdateWorkflowService
             return await DownloadDeltaUpdateAsync(checkResult, progress, cancellationToken);
         }
 
-        if (!checkResult.Success || !checkResult.IsUpdateAvailable || checkResult.Release is null || checkResult.PreferredAsset is null)
-        {
-            return new UpdateDownloadResult(false, null, "No compatible update asset is available.");
-        }
-
-        var state = _settingsFacade.Update.Get();
-        var existingPending = GetPendingUpdate(state);
-
-        if (existingPending is not null && File.Exists(existingPending.InstallerPath))
-        {
-            try
-            {
-                File.Delete(existingPending.InstallerPath);
-                AppLogger.Info("UpdateWorkflow", $"Deleted existing installer for redownload: {existingPending.InstallerPath}");
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("UpdateWorkflow", $"Failed to delete existing installer: {existingPending.InstallerPath}", ex);
-            }
-        }
-
-        ClearPendingUpdate();
-
-        Directory.CreateDirectory(_updatesDirectory);
-        var fileName = SanitizeFileName(checkResult.PreferredAsset.Name);
-        var destinationPath = Path.Combine(_updatesDirectory, fileName);
-
-        state = _settingsFacade.Update.Get();
-
-        var result = await _settingsFacade.Update.DownloadAssetAsync(
-            checkResult.PreferredAsset,
-            destinationPath,
-            state.UpdateDownloadSource,
-            state.UpdateDownloadThreads,
+        return await DownloadFullInstallerAsync(
+            checkResult,
             progress,
-            cancellationToken);
-
-        if (result.Success)
-        {
-            SaveState(state with
-            {
-                PendingUpdateInstallerPath = result.FilePath ?? destinationPath,
-                PendingUpdateVersion = checkResult.LatestVersionText,
-                PendingUpdatePublishedAtUtcMs = checkResult.Release?.PublishedAt is DateTimeOffset publishedAt && publishedAt != DateTimeOffset.MinValue
-                    ? publishedAt.ToUnixTimeMilliseconds()
-                    : null,
-                LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                PendingUpdateSha256 = result.ActualHash
-            });
-        }
-
-        return result;
+            cancellationToken,
+            forceRedownload: true);
     }
 
     public async Task<UpdateVerifyResult> VerifyPendingUpdateAsync()

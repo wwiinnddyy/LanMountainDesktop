@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -17,6 +18,7 @@ namespace LanMountainDesktop.Services;
 public sealed class PlondsReleaseUpdateService : IDisposable
 {
     private const string DefaultApiBasePath = "/api/plonds/v1";
+    private const int MaxTransientRetryAttempts = 3;
 
     private readonly HttpClient _httpClient;
     private readonly bool _ownsHttpClient;
@@ -71,6 +73,7 @@ public sealed class PlondsReleaseUpdateService : IDisposable
         var normalizedCurrentVersion = NormalizeVersion(currentVersion);
         var normalizedCurrentVersionText = FormatVersionText(normalizedCurrentVersion);
         var endpoint = ResolveEndpoint();
+        var latestVersionText = "-";
 
         if (string.IsNullOrWhiteSpace(endpoint))
         {
@@ -78,7 +81,7 @@ public sealed class PlondsReleaseUpdateService : IDisposable
                 Success: false,
                 IsUpdateAvailable: false,
                 CurrentVersionText: normalizedCurrentVersionText,
-                LatestVersionText: "-",
+                LatestVersionText: latestVersionText,
                 Release: null,
                 PreferredAsset: null,
                 ErrorMessage: "PLONDS endpoint is not configured.",
@@ -89,8 +92,6 @@ public sealed class PlondsReleaseUpdateService : IDisposable
         {
             var apiBasePath = ResolveApiBasePath();
             var metadataUrl = BuildApiUrl(endpoint, apiBasePath, "metadata");
-            var metadata = await GetJsonNodeAsync(metadataUrl, cancellationToken).ConfigureAwait(false);
-
             var channelId = ResolveChannelId(includePrerelease);
             var platform = ResolvePlatform();
             var latestUrl = BuildApiUrl(
@@ -98,12 +99,14 @@ public sealed class PlondsReleaseUpdateService : IDisposable
                 apiBasePath,
                 $"channels/{Uri.EscapeDataString(channelId)}/{Uri.EscapeDataString(platform)}/latest?currentVersion={Uri.EscapeDataString(normalizedCurrentVersionText)}");
 
-            JsonElement latestNode;
-            try
-            {
-                latestNode = await GetJsonNodeAsync(latestUrl, cancellationToken).ConfigureAwait(false);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.StartsWith("HTTP 204", StringComparison.OrdinalIgnoreCase))
+            _ = await GetJsonNodeWithRetryAsync(metadataUrl, PlondsCheckStage.Metadata, cancellationToken).ConfigureAwait(false);
+
+            var latestDescriptor = await GetLatestDescriptorAsync(
+                latestUrl,
+                allowNoUpdateResponse: true,
+                cancellationToken).ConfigureAwait(false);
+
+            if (latestDescriptor is null)
             {
                 return new UpdateCheckResult(
                     Success: true,
@@ -116,35 +119,8 @@ public sealed class PlondsReleaseUpdateService : IDisposable
                     ForceMode: isForce);
             }
 
-            var latestVersionText = ReadString(latestNode, "version") ?? "-";
-            if (!TryParseVersion(latestVersionText, out var latestVersion) || latestVersion is null)
-            {
-                return new UpdateCheckResult(
-                    Success: false,
-                    IsUpdateAvailable: false,
-                    CurrentVersionText: normalizedCurrentVersionText,
-                    LatestVersionText: latestVersionText,
-                    Release: null,
-                    PreferredAsset: null,
-                    ErrorMessage: "PLONDS latest distribution version is invalid.",
-                    ForceMode: isForce);
-            }
-
-            var distributionId = ReadString(latestNode, "distributionId");
-            if (string.IsNullOrWhiteSpace(distributionId))
-            {
-                return new UpdateCheckResult(
-                    Success: false,
-                    IsUpdateAvailable: false,
-                    CurrentVersionText: normalizedCurrentVersionText,
-                    LatestVersionText: latestVersionText,
-                    Release: null,
-                    PreferredAsset: null,
-                    ErrorMessage: "PLONDS latest distribution id is missing.",
-                    ForceMode: isForce);
-            }
-
-            var hasUpdate = latestVersion > normalizedCurrentVersion;
+            latestVersionText = latestDescriptor.VersionText;
+            var hasUpdate = latestDescriptor.Version > normalizedCurrentVersion;
             if (!isForce && !hasUpdate)
             {
                 return new UpdateCheckResult(
@@ -158,58 +134,67 @@ public sealed class PlondsReleaseUpdateService : IDisposable
                     ForceMode: false);
             }
 
-            var distributionUrl = BuildApiUrl(
+            var distribution = await ResolveDistributionAsync(
                 endpoint,
                 apiBasePath,
-                $"distributions/{Uri.EscapeDataString(distributionId)}");
-            var distributionNode = await GetJsonNodeAsync(distributionUrl, cancellationToken).ConfigureAwait(false);
+                latestUrl,
+                latestDescriptor,
+                channelId,
+                platform,
+                cancellationToken).ConfigureAwait(false);
 
-            var assets = ResolveInstallerAssets(distributionNode);
-            var payload = ResolvePlondsPayload(distributionNode, distributionId, channelId, platform);
-            if (assets.Count == 0 && !HasPlondsPayload(payload))
-            {
-                return new UpdateCheckResult(
-                    Success: false,
-                    IsUpdateAvailable: false,
-                    CurrentVersionText: normalizedCurrentVersionText,
-                    LatestVersionText: latestVersionText,
-                    Release: null,
-                    PreferredAsset: null,
-                    ErrorMessage: "PLONDS distribution response does not expose downloadable update assets.",
-                    ForceMode: isForce);
-            }
+            latestVersionText = distribution.Latest.VersionText;
 
-            var publishedAt = ParsePublishedAt(distributionNode) ?? DateTimeOffset.UtcNow;
+            var publishedAt = ParsePublishedAt(distribution.DistributionNode) ?? DateTimeOffset.UtcNow;
             var release = new GitHubReleaseInfo(
-                TagName: $"v{latestVersionText}",
-                Name: $"PLONDS Distribution {latestVersionText}",
+                TagName: $"v{distribution.Latest.VersionText}",
+                Name: $"PLONDS Distribution {distribution.Latest.VersionText}",
                 IsPrerelease: includePrerelease,
                 IsDraft: false,
                 PublishedAt: publishedAt,
-                Assets: assets);
+                Assets: distribution.Assets);
 
             return new UpdateCheckResult(
                 Success: true,
                 IsUpdateAvailable: true,
                 CurrentVersionText: normalizedCurrentVersionText,
-                LatestVersionText: latestVersionText,
+                LatestVersionText: distribution.Latest.VersionText,
                 Release: release,
-                PreferredAsset: SelectPreferredInstallerAsset(assets),
+                PreferredAsset: SelectPreferredInstallerAsset(distribution.Assets),
                 ErrorMessage: null,
                 ForceMode: isForce,
-                PlondsPayload: payload);
+                PlondsPayload: distribution.Payload);
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch (Exception ex)
+        catch (PlondsRequestException ex)
         {
+            AppLogger.Warn(
+                "PLONDS",
+                $"PLONDS {GetStageName(ex.Stage)} stage failed. {ex.Message}",
+                ex);
+
             return new UpdateCheckResult(
                 Success: false,
                 IsUpdateAvailable: false,
                 CurrentVersionText: normalizedCurrentVersionText,
-                LatestVersionText: "-",
+                LatestVersionText: latestVersionText,
+                Release: null,
+                PreferredAsset: null,
+                ErrorMessage: $"PLONDS {GetStageName(ex.Stage)} failed: {ex.Message}",
+                ForceMode: isForce);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PLONDS", "PLONDS request failed with an unexpected error.", ex);
+
+            return new UpdateCheckResult(
+                Success: false,
+                IsUpdateAvailable: false,
+                CurrentVersionText: normalizedCurrentVersionText,
+                LatestVersionText: latestVersionText,
                 Release: null,
                 PreferredAsset: null,
                 ErrorMessage: $"PLONDS request failed: {ex.Message}",
@@ -217,7 +202,125 @@ public sealed class PlondsReleaseUpdateService : IDisposable
         }
     }
 
-    private async Task<JsonElement> GetJsonNodeAsync(string url, CancellationToken cancellationToken)
+    private async Task<LatestDescriptor?> GetLatestDescriptorAsync(
+        string latestUrl,
+        bool allowNoUpdateResponse,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var latestNode = await GetJsonNodeWithRetryAsync(
+                latestUrl,
+                PlondsCheckStage.Latest,
+                cancellationToken).ConfigureAwait(false);
+
+            return ParseLatestDescriptor(latestNode);
+        }
+        catch (PlondsRequestException ex)
+            when (allowNoUpdateResponse &&
+                  ex.Stage == PlondsCheckStage.Latest &&
+                  ex.StatusCode == HttpStatusCode.NoContent)
+        {
+            return null;
+        }
+    }
+
+    private async Task<DistributionDescriptor> ResolveDistributionAsync(
+        string endpoint,
+        string apiBasePath,
+        string latestUrl,
+        LatestDescriptor latest,
+        string channelId,
+        string platform,
+        CancellationToken cancellationToken)
+    {
+        var currentLatest = latest;
+        var hasRefreshedLatest = false;
+
+        while (true)
+        {
+            var distributionUrl = BuildApiUrl(
+                endpoint,
+                apiBasePath,
+                $"distributions/{Uri.EscapeDataString(currentLatest.DistributionId)}");
+
+            try
+            {
+                var distributionNode = await GetJsonNodeWithRetryAsync(
+                    distributionUrl,
+                    PlondsCheckStage.Distribution,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (TryCreateDistributionDescriptor(
+                        distributionNode,
+                        currentLatest,
+                        channelId,
+                        platform,
+                        out var descriptor,
+                        out var descriptorError))
+                {
+                    return descriptor;
+                }
+
+                if (hasRefreshedLatest || descriptorError is null || !IsRecoverableDistributionError(descriptorError))
+                {
+                    throw descriptorError ?? new PlondsRequestException(
+                        PlondsCheckStage.PayloadParse,
+                        "PLONDS distribution payload is incomplete.");
+                }
+
+                AppLogger.Warn(
+                    "PLONDS",
+                    $"PLONDS distribution '{currentLatest.DistributionId}' is incomplete. Refreshing latest pointer once before failing.");
+            }
+            catch (PlondsRequestException ex) when (!hasRefreshedLatest && IsRecoverableDistributionError(ex))
+            {
+                AppLogger.Warn(
+                    "PLONDS",
+                    $"PLONDS distribution fetch for '{currentLatest.DistributionId}' failed during {GetStageName(ex.Stage)}. Refreshing latest pointer once. Details: {ex.Message}");
+            }
+
+            hasRefreshedLatest = true;
+            currentLatest = await GetLatestDescriptorAsync(
+                latestUrl,
+                allowNoUpdateResponse: false,
+                cancellationToken).ConfigureAwait(false)
+                ?? throw new PlondsRequestException(
+                    PlondsCheckStage.Latest,
+                    "PLONDS latest pointer disappeared while recovering the distribution payload.");
+        }
+    }
+
+    private async Task<JsonElement> GetJsonNodeWithRetryAsync(
+        string url,
+        PlondsCheckStage stage,
+        CancellationToken cancellationToken)
+    {
+        PlondsRequestException? lastError = null;
+
+        for (var attempt = 1; attempt <= MaxTransientRetryAttempts; attempt++)
+        {
+            try
+            {
+                return await GetJsonNodeAsync(url, stage, cancellationToken).ConfigureAwait(false);
+            }
+            catch (PlondsRequestException ex) when (attempt < MaxTransientRetryAttempts && ex.IsTransient)
+            {
+                lastError = ex;
+                AppLogger.Warn(
+                    "PLONDS",
+                    $"PLONDS {GetStageName(stage)} attempt {attempt}/{MaxTransientRetryAttempts} failed. Retrying shortly. Details: {ex.Message}");
+                await Task.Delay(GetRetryDelay(attempt), cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        throw lastError ?? new PlondsRequestException(stage, "PLONDS request failed before a response was returned.");
+    }
+
+    private async Task<JsonElement> GetJsonNodeAsync(
+        string url,
+        PlondsCheckStage stage,
+        CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         var token = ResolveToken();
@@ -226,22 +329,127 @@ public sealed class PlondsReleaseUpdateService : IDisposable
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
+        HttpResponseMessage response;
+        try
         {
-            throw new InvalidOperationException($"HTTP {(int)response.StatusCode}: {Truncate(body, 180)}");
+            response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new PlondsRequestException(stage, "Request timed out.", isTransient: true, innerException: ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new PlondsRequestException(stage, $"Network error: {ex.Message}", isTransient: true, innerException: ex);
         }
 
-        using var document = JsonDocument.Parse(body);
-        var root = document.RootElement;
-        if (root.ValueKind == JsonValueKind.Object &&
-            root.TryGetProperty("content", out var content))
+        using (response)
         {
-            return content.Clone();
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                throw new PlondsRequestException(
+                    stage,
+                    "HTTP 204: no content.",
+                    statusCode: response.StatusCode,
+                    isTransient: false);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new PlondsRequestException(
+                    stage,
+                    $"HTTP {(int)response.StatusCode}: {Truncate(body, 180)}",
+                    statusCode: response.StatusCode,
+                    isTransient: IsTransientStatusCode(response.StatusCode));
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(body);
+                var root = document.RootElement;
+                if (root.ValueKind == JsonValueKind.Object &&
+                    root.TryGetProperty("content", out var content))
+                {
+                    return content.Clone();
+                }
+
+                return root.Clone();
+            }
+            catch (JsonException ex)
+            {
+                throw new PlondsRequestException(
+                    stage,
+                    $"Invalid JSON response: {ex.Message}",
+                    isTransient: IsLikelyIncompleteJson(body),
+                    innerException: ex);
+            }
+        }
+    }
+
+    private static LatestDescriptor ParseLatestDescriptor(JsonElement latestNode)
+    {
+        var latestVersionText = ReadString(latestNode, "version") ?? "-";
+        if (!TryParseVersion(latestVersionText, out var latestVersion) || latestVersion is null)
+        {
+            throw new PlondsRequestException(
+                PlondsCheckStage.Latest,
+                $"PLONDS latest distribution version is invalid: '{latestVersionText}'.");
         }
 
-        return root.Clone();
+        var distributionId = ReadString(latestNode, "distributionId");
+        if (string.IsNullOrWhiteSpace(distributionId))
+        {
+            throw new PlondsRequestException(
+                PlondsCheckStage.Latest,
+                "PLONDS latest distribution id is missing.");
+        }
+
+        return new LatestDescriptor(distributionId, latestVersionText, latestVersion);
+    }
+
+    private static bool TryCreateDistributionDescriptor(
+        JsonElement distributionNode,
+        LatestDescriptor latest,
+        string channelId,
+        string platform,
+        out DistributionDescriptor descriptor,
+        out PlondsRequestException? error)
+    {
+        descriptor = default!;
+        error = null;
+
+        var assets = ResolveInstallerAssets(distributionNode);
+        var payload = ResolvePlondsPayload(
+            distributionNode,
+            latest.DistributionId,
+            channelId,
+            platform);
+
+        if (assets.Count == 0 && !HasPlondsPayload(payload))
+        {
+            error = new PlondsRequestException(
+                PlondsCheckStage.PayloadParse,
+                "PLONDS distribution response does not expose downloadable update assets.");
+            return false;
+        }
+
+        descriptor = new DistributionDescriptor(latest, distributionNode, assets, payload);
+        return true;
+    }
+
+    private static bool IsRecoverableDistributionError(PlondsRequestException error)
+    {
+        if (error.Stage == PlondsCheckStage.PayloadParse)
+        {
+            return true;
+        }
+
+        return error.Stage == PlondsCheckStage.Distribution &&
+               (error.StatusCode == HttpStatusCode.NotFound ||
+                error.StatusCode == HttpStatusCode.RequestTimeout ||
+                error.StatusCode == HttpStatusCode.TooManyRequests ||
+                error.StatusCode is >= HttpStatusCode.InternalServerError);
     }
 
     private static IReadOnlyList<GitHubReleaseAsset> ResolveInstallerAssets(JsonElement distributionNode)
@@ -258,7 +466,8 @@ public sealed class PlondsReleaseUpdateService : IDisposable
                     continue;
                 }
 
-                var name = ReadString(installerNode, "name");
+                var name = ReadString(installerNode, "name")
+                           ?? ReadString(installerNode, "fileName");
                 var url = ReadString(installerNode, "url") ?? ReadString(installerNode, "downloadUrl");
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
                 {
@@ -592,5 +801,92 @@ public sealed class PlondsReleaseUpdateService : IDisposable
         }
 
         return value[..maxLength];
+    }
+
+    private static bool IsTransientStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.RequestTimeout ||
+               statusCode == HttpStatusCode.TooManyRequests ||
+               statusCode >= HttpStatusCode.InternalServerError;
+    }
+
+    private static bool IsLikelyIncompleteJson(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return true;
+        }
+
+        var trimmed = body.TrimEnd();
+        if (trimmed.Length == 0)
+        {
+            return true;
+        }
+
+        var last = trimmed[^1];
+        return last != '}' && last != ']';
+    }
+
+    private static TimeSpan GetRetryDelay(int attempt)
+    {
+        return attempt switch
+        {
+            1 => TimeSpan.FromMilliseconds(350),
+            2 => TimeSpan.FromMilliseconds(900),
+            _ => TimeSpan.FromMilliseconds(1500)
+        };
+    }
+
+    private static string GetStageName(PlondsCheckStage stage)
+    {
+        return stage switch
+        {
+            PlondsCheckStage.Metadata => "metadata",
+            PlondsCheckStage.Latest => "latest",
+            PlondsCheckStage.Distribution => "distribution",
+            PlondsCheckStage.PayloadParse => "payload-parse",
+            _ => "unknown"
+        };
+    }
+
+    private enum PlondsCheckStage
+    {
+        Metadata,
+        Latest,
+        Distribution,
+        PayloadParse
+    }
+
+    private sealed record LatestDescriptor(
+        string DistributionId,
+        string VersionText,
+        Version Version);
+
+    private sealed record DistributionDescriptor(
+        LatestDescriptor Latest,
+        JsonElement DistributionNode,
+        IReadOnlyList<GitHubReleaseAsset> Assets,
+        PlondsUpdatePayload Payload);
+
+    private sealed class PlondsRequestException : Exception
+    {
+        public PlondsRequestException(
+            PlondsCheckStage stage,
+            string message,
+            HttpStatusCode? statusCode = null,
+            bool isTransient = false,
+            Exception? innerException = null)
+            : base(message, innerException)
+        {
+            Stage = stage;
+            StatusCode = statusCode;
+            IsTransient = isTransient;
+        }
+
+        public PlondsCheckStage Stage { get; }
+
+        public HttpStatusCode? StatusCode { get; }
+
+        public bool IsTransient { get; }
     }
 }

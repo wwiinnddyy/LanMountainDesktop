@@ -42,11 +42,16 @@ public sealed class PlondsGenerator
         Directory.CreateDirectory(metaDistributionRoot);
         Directory.CreateDirectory(metaChannelRoot);
 
-        var previousManifest = ScanDirectory(previousDirectory);
+        var previousManifest = options.IsFullPayloadRelease
+            ? new Dictionary<string, FileFingerprint>(StringComparer.OrdinalIgnoreCase)
+            : ScanDirectory(previousDirectory);
         var currentManifest = ScanDirectory(currentDirectory);
         var fileEntries = BuildFileEntries(previousManifest, currentManifest, repoRoot, options.RepoBaseUrl);
         var installerMirrors = BuildInstallerMirrors(options.Platform, installerMirrorRoot, options.InstallerDirectory, options.InstallerBaseUrl);
         var publishedAt = DateTimeOffset.UtcNow;
+        var baselineVersion = string.IsNullOrWhiteSpace(options.BaselineVersion)
+            ? options.PreviousVersion
+            : options.BaselineVersion;
 
         var fileMap = new FileMapDocument(
             FormatVersion: "1.0",
@@ -69,7 +74,14 @@ public sealed class PlondsGenerator
             Metadata: new Dictionary<string, string>
             {
                 ["protocol"] = "PLONDS",
-                ["mode"] = "file-object"
+                ["mode"] = "file-object",
+                ["baselineVersion"] = baselineVersion,
+                ["incrementalStrategy"] = options.IncrementalStrategy,
+                ["isFullPayloadRelease"] = options.IsFullPayloadRelease ? "true" : "false",
+                ["sourceCommit"] = options.SourceCommit ?? string.Empty,
+                ["baselineRef"] = options.BaselineRef ?? string.Empty,
+                ["commitRangeStart"] = options.CommitRangeStart ?? string.Empty,
+                ["commitRangeEnd"] = options.CommitRangeEnd ?? string.Empty
             });
 
         var distribution = new DistributionDocument(
@@ -83,7 +95,17 @@ public sealed class PlondsGenerator
             Components: fileMap.Components,
             InstallerMirrors: installerMirrors,
             Capabilities: ["file-object"],
-            Metadata: new Dictionary<string, string> { ["protocol"] = "PLONDS" });
+            Metadata: new Dictionary<string, string>
+            {
+                ["protocol"] = "PLONDS",
+                ["baselineVersion"] = baselineVersion,
+                ["incrementalStrategy"] = options.IncrementalStrategy,
+                ["isFullPayloadRelease"] = options.IsFullPayloadRelease ? "true" : "false",
+                ["sourceCommit"] = options.SourceCommit ?? string.Empty,
+                ["baselineRef"] = options.BaselineRef ?? string.Empty,
+                ["commitRangeStart"] = options.CommitRangeStart ?? string.Empty,
+                ["commitRangeEnd"] = options.CommitRangeEnd ?? string.Empty
+            });
 
         var latest = new LatestPointerDocument(
             DistributionId: distributionId,
@@ -225,6 +247,7 @@ public sealed class PlondsGenerator
                 Platform: platform,
                 Arch: ResolveArch(platform),
                 Url: url,
+                Name: fileName,
                 FileName: fileName,
                 Sha256: ComputeSha256(destinationPath),
                 Size: new FileInfo(destinationPath).Length));
@@ -345,6 +368,7 @@ public sealed class PlondsGenerator
         string Platform,
         string Arch,
         string? Url,
+        string? Name,
         string? FileName,
         string? Sha256,
         long Size);

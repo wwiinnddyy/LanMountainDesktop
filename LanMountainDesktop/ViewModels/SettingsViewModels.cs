@@ -1965,7 +1965,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                 return;
             }
 
-            if (result.PreferredAsset is null)
+            if (result.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(result))
             {
                 UpdateStatus = isForce
                     ? L("settings.update.status_force_no_asset", "Release found but no compatible installer available.")
@@ -2050,7 +2050,10 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRedownloadUpdate))]
     private async Task RedownloadUpdateAsync()
     {
-        if (_lastCheckResult is null || !_lastCheckResult.Success || !_lastCheckResult.IsUpdateAvailable || _lastCheckResult.PreferredAsset is null)
+        if (_lastCheckResult is null ||
+            !_lastCheckResult.Success ||
+            !_lastCheckResult.IsUpdateAvailable ||
+            (_lastCheckResult.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(_lastCheckResult)))
         {
             UpdateStatus = L("settings.update.status_redownload_no_check", "Please check for updates first before redownloading.");
             return;
@@ -2233,11 +2236,11 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             UpdateDownloadResult downloadResult;
 
             // Prefer delta update if available (smaller download, faster)
-            if (result.Release is not null && UpdateWorkflowService.IsDeltaUpdateAvailable(result.Release))
+            if (UpdateWorkflowService.IsDeltaUpdateAvailable(result))
             {
                 UpdateStatus = L("settings.update.status_downloading_delta", "Downloading incremental update...");
                 downloadResult = await _updateWorkflowService.DownloadDeltaUpdateAsync(result, progress);
-                if (!downloadResult.Success)
+                if (!downloadResult.Success && result.PlondsPayload is null)
                 {
                     // Delta download failed, fall back to full installer
                     AppLogger.Warn("UpdateSettings", $"Delta update download failed: {downloadResult.ErrorMessage}. Falling back to full installer.");

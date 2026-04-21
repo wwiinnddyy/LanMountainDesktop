@@ -915,6 +915,25 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             AppLogger.Warn(
                 "UpdateSettings",
                 $"PLONDS update check failed and will fallback to GitHub. Error: {plondsResult.ErrorMessage}");
+
+            var githubFallbackResult = isForce
+                ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+                : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+
+            if (githubFallbackResult.Success)
+            {
+                AppLogger.Info(
+                    "UpdateSettings",
+                    $"GitHub fallback succeeded after PLONDS failure. Original PLONDS error: {plondsResult.ErrorMessage}");
+            }
+            else
+            {
+                AppLogger.Warn(
+                    "UpdateSettings",
+                    $"GitHub fallback also failed after PLONDS failure. PLONDS error: {plondsResult.ErrorMessage}; GitHub error: {githubFallbackResult.ErrorMessage}");
+            }
+
+            return githubFallbackResult;
         }
 
         return isForce

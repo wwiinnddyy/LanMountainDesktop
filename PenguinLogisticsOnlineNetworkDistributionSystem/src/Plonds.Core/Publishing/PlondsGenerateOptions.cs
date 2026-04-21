@@ -13,4 +13,11 @@ public sealed record PlondsGenerateOptions(
     string? FileMapUrl = null,
     string? FileMapSignatureUrl = null,
     string? InstallerDirectory = null,
-    string? InstallerBaseUrl = null);
+    string? InstallerBaseUrl = null,
+    string IncrementalStrategy = "release-payload",
+    string? BaselineVersion = null,
+    string? BaselineRef = null,
+    string? SourceCommit = null,
+    bool IsFullPayloadRelease = false,
+    string? CommitRangeStart = null,
+    string? CommitRangeEnd = null);

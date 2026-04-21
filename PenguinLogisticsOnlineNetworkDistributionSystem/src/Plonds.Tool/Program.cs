@@ -86,7 +86,14 @@ internal static class PlondsCli
             Channel: Get(options, "channel", "stable") ?? "stable",
             BaselineRoot: Get(options, "baseline-root"),
             RepoBaseUrl: Get(options, "repo-base-url"),
-            InstallerBaseUrl: Get(options, "installer-base-url")));
+            InstallerBaseUrl: Get(options, "installer-base-url"),
+            IncrementalStrategy: Get(options, "incremental-strategy", "release-payload") ?? "release-payload",
+            BaselineVersion: Get(options, "baseline-version"),
+            BaselineRef: Get(options, "baseline-ref"),
+            SourceCommit: Get(options, "source-commit"),
+            IsFullPayloadRelease: bool.TryParse(Get(options, "is-full-payload-release", "false"), out var isFullPayloadRelease) && isFullPayloadRelease,
+            CommitRangeStart: Get(options, "commit-range-start"),
+            CommitRangeEnd: Get(options, "commit-range-end")));
 
         foreach (var result in results)
         {
