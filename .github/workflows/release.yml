@@ -732,6 +732,8 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
       AWS_REGION: ${{ vars.S3_REGION }}
       AWS_EC2_METADATA_DISABLED: "true"
+      AWS_REQUEST_CHECKSUM_CALCULATION: "WHEN_REQUIRED"
+      AWS_RESPONSE_CHECKSUM_VALIDATION: "WHEN_REQUIRED"
 
     steps:
       - uses: actions/checkout@v4
@@ -806,6 +808,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          aws --version
           aws --endpoint-url "$S3_ENDPOINT" --region "$S3_REGION" s3 ls "s3://$S3_BUCKET" >/dev/null
           echo "S3 access probe succeeded for $S3_BUCKET"
 

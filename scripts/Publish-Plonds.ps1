@@ -80,11 +80,36 @@ function Invoke-AwsSyncIfPossible {
         return
     }
 
-    if ($IgnoreFailure) {
-        & aws @Arguments 2>$null
+    $previousRequestChecksumCalculation = $env:AWS_REQUEST_CHECKSUM_CALCULATION
+    $previousResponseChecksumValidation = $env:AWS_RESPONSE_CHECKSUM_VALIDATION
+
+    # Rainyun's S3-compatible endpoint rejects AWS CLI v2's default checksum headers
+    # during multipart uploads. Restrict checksum behavior to API-required cases only.
+    $env:AWS_REQUEST_CHECKSUM_CALCULATION = "WHEN_REQUIRED"
+    $env:AWS_RESPONSE_CHECKSUM_VALIDATION = "WHEN_REQUIRED"
+
+    try {
+        if ($IgnoreFailure) {
+            & aws @Arguments 2>$null
+        }
+        else {
+            & aws @Arguments
+        }
     }
-    else {
-        & aws @Arguments
+    finally {
+        if ($null -eq $previousRequestChecksumCalculation) {
+            Remove-Item Env:AWS_REQUEST_CHECKSUM_CALCULATION -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:AWS_REQUEST_CHECKSUM_CALCULATION = $previousRequestChecksumCalculation
+        }
+
+        if ($null -eq $previousResponseChecksumValidation) {
+            Remove-Item Env:AWS_RESPONSE_CHECKSUM_VALIDATION -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:AWS_RESPONSE_CHECKSUM_VALIDATION = $previousResponseChecksumValidation
+        }
     }
 
     if ($LASTEXITCODE -ne 0 -and -not $IgnoreFailure) {
