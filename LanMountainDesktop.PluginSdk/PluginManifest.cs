@@ -10,7 +10,8 @@ public sealed record PluginManifest(
     string? Author = null,
     string? Version = null,
     string? ApiVersion = null,
-    IReadOnlyList<PluginSharedContractReference>? SharedContracts = null)
+    IReadOnlyList<PluginSharedContractReference>? SharedContracts = null,
+    PluginRuntimeConfiguration? Runtime = null)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -56,9 +57,13 @@ public sealed record PluginManifest(
         return Path.GetFullPath(Path.Combine(manifestDirectory, EntranceAssembly));
     }
 
+    public PluginRuntimeMode RuntimeMode =>
+        PluginRuntimeModes.TryParse(Runtime?.Mode, out var mode) ? mode : PluginRuntimeMode.InProcess;
+
     private PluginManifest NormalizeAndValidate(string manifestPath)
     {
         var normalizedSharedContracts = NormalizeSharedContracts(manifestPath, SharedContracts);
+        var normalizedRuntime = (Runtime ?? new PluginRuntimeConfiguration()).NormalizeAndValidate(manifestPath);
         var normalized = this with
         {
             Id = RequireValue(Id, nameof(Id), manifestPath),
@@ -68,7 +73,8 @@ public sealed record PluginManifest(
             Author = NormalizeOptionalValue(Author),
             Version = NormalizeOptionalValue(Version),
             ApiVersion = NormalizeOptionalValue(ApiVersion) ?? PluginSdkInfo.ApiVersion,
-            SharedContracts = normalizedSharedContracts
+            SharedContracts = normalizedSharedContracts,
+            Runtime = normalizedRuntime
         };
 
         if (!System.Version.TryParse(normalized.ApiVersion, out var requestedVersion))

@@ -145,3 +145,38 @@ Update plugin manifests to API `4.x`:
 - component registration migrated to options model
 - runtime appearance access uses `IPluginAppearanceContext`
 - plugin package rebuilt and republished as `.laapp`
+
+## Process Isolation Additions
+
+SDK `4.x` now also reserves manifest and API surface for process isolation without breaking existing plugins.
+
+### Manifest
+
+`plugin.json` can declare the desired runtime mode:
+
+```json
+{
+  "runtime": {
+    "mode": "in-proc"
+  }
+}
+```
+
+Supported values:
+
+- `in-proc`
+- `isolated-background`
+- `isolated-window`
+
+If `runtime` is omitted, the host normalizes it to `in-proc` for backward compatibility.
+
+### Worker Entry
+
+Plugins that opt into isolated execution can prepare a worker-side entry by implementing:
+
+- `IPluginWorker`
+- `PluginWorkerBase`
+- `IPluginWorkerContext`
+- `[PluginWorkerEntrance]`
+
+The first phase only targets `isolated-background`: background services, timers, network calls, and risky native integrations move into the worker process, while UI remains a host-side shell driven over IPC.

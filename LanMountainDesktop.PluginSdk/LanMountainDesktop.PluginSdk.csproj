@@ -25,6 +25,7 @@
     <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="2.0.320" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <ProjectReference Include="..\LanMountainDesktop.PluginIsolation.Contracts\LanMountainDesktop.PluginIsolation.Contracts.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
   </ItemGroup>
 

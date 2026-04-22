@@ -197,9 +197,26 @@ The runtime flow starts with the Launcher selecting the best version, then proce
 
 ## VeloPack Integration Note
 
-- Incremental package build/publish has moved to VeloPack native assets (eleases.win.json + *.nupkg).
+- Incremental package build/publish has moved to VeloPack native assets (
+eleases.win.json + *.nupkg).
 - Launcher runtime responsibilities are unchanged: OOBE, startup orchestration, update apply, and rollback.
 
+## Plugin Isolation Modes
+
+The current plugin runtime is still in-process. `PluginRuntimeService` and `PluginLoader` load plugin code inside the Host process, while `PluginLoadContext` only provides assembly isolation, not process isolation.
+
+The repository now reserves three runtime modes:
+
+- `in-proc`: current default and compatibility mode
+- `isolated-background`: phase-1 mode, where background logic moves into a dedicated worker process and Host UI becomes a thin IPC-driven shell
+- `isolated-window`: phase-2 mode, where plugin UI renders out of process and Host embeds a platform window handle
+
+Two new supporting packages define the isolation boundary:
+
+- `LanMountainDesktop.PluginIsolation.Contracts/`: transport-neutral DTOs, route constants, error codes, capabilities, and JSON context
+- `LanMountainDesktop.PluginIsolation.Ipc/`: ClassIsland-inspired IPC facade that centralizes startup constants, routed notify IDs, and client/server wrappers over the future `dotnetCampus.Ipc` transport binding
+
+For the detailed design, migration path, UI strategy, and residual risks, see `docs/PLUGIN_PROCESS_ISOLATION_ARCHITECTURE.md`.
 
 ## Launcher OOBE / Elevation Contract
 

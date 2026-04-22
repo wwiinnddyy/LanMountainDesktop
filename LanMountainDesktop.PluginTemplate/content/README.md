@@ -22,3 +22,4 @@ Update `plugin.json` fields as needed before release:
 - `description`
 - `author`
 - `version`
+- `runtime.mode` (`in-proc` by default, `isolated-background` for phase-1 worker mode)
