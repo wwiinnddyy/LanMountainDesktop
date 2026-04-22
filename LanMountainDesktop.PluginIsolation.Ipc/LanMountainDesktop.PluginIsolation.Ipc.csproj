@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>1.0.0</Version>
+    <PackageId>LanMountainDesktop.PluginIsolation.Ipc</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>ClassIsland-style IPC facade for LanMountainDesktop plugin process isolation, backed by dotnetCampus.Ipc.</Description>
+    <PackageTags>LanMountainDesktop;Plugin;IPC;Isolation;dotnetCampus.Ipc</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (c) LanMountainDesktop Contributors</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dotnetCampus.Ipc" Version="2.0.0-alpha434" />
+    <ProjectReference Include="..\LanMountainDesktop.PluginIsolation.Contracts\LanMountainDesktop.PluginIsolation.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

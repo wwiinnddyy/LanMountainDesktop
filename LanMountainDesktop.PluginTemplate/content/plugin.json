@@ -6,5 +6,8 @@
   "version": "1.0.0",
   "apiVersion": "4.0.2",
   "entranceAssembly": "LanMountainDesktop.PluginTemplate.dll",
-  "sharedContracts": []
+  "sharedContracts": [],
+  "runtime": {
+    "mode": "in-proc"
+  }
 }

@@ -5,7 +5,9 @@ Official SDK package for LanMountainDesktop plugins.
 ## Includes
 
 - `IPlugin`/`PluginBase` entry abstractions
+- `IPluginWorker`/`PluginWorkerBase` worker-side entry abstractions for isolated background mode
 - `PluginManifest` and shared contract declarations
+- `runtime.mode` manifest support for `in-proc`, `isolated-background`, and `isolated-window`
 - desktop component registration extensions
 - plugin runtime context and host service abstractions
 - build-transitive packaging targets for `.laapp` output

@@ -5,6 +5,8 @@
   <Project Path="LanMountainDesktop.Appearance/LanMountainDesktop.Appearance.csproj" />
   <Project Path="LanMountainDesktop.DesktopComponents.Runtime/LanMountainDesktop.DesktopComponents.Runtime.csproj" />
   <Project Path="LanMountainDesktop.DesktopHost/LanMountainDesktop.DesktopHost.csproj" />
+  <Project Path="LanMountainDesktop.PluginIsolation.Contracts/LanMountainDesktop.PluginIsolation.Contracts.csproj" />
+  <Project Path="LanMountainDesktop.PluginIsolation.Ipc/LanMountainDesktop.PluginIsolation.Ipc.csproj" />
   <Project Path="LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
   <Project Path="LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
   <Project Path="LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
