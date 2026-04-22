@@ -13,6 +13,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.IPC;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -31,6 +32,7 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly IPluginPackageManager _packageManager;
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly SettingsCatalogService _settingsCatalogService;
+    private readonly PublicIpcHostService? _publicIpcHostService;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
     private readonly List<PluginLoadResult> _loadResults = [];
     private readonly List<PluginCatalogEntry> _catalog = [];
@@ -39,13 +41,16 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly List<PluginDesktopComponentEditorContribution> _desktopComponentEditors = [];
     private readonly object _packageMutationGate = new();
 
-    public PluginRuntimeService(ISettingsFacadeService? settingsFacade = null)
+    public PluginRuntimeService(
+        ISettingsFacadeService? settingsFacade = null,
+        PublicIpcHostService? publicIpcHostService = null)
     {
         PluginsDirectory = Path.Combine(GetUserDataRootDirectory(), "Extensions", "Plugins");
         _sharedContractManager = new PluginSharedContractManager(
             Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
         _packageManager = new PluginRuntimePackageManager(this);
         _settingsFacade = settingsFacade ?? new SettingsFacadeService();
+        _publicIpcHostService = publicIpcHostService;
         _settingsCatalogService = _settingsFacade.Catalog as SettingsCatalogService
             ?? new SettingsCatalogService();
         if (_settingsFacade is SettingsFacadeService concreteFacade)
@@ -58,7 +63,8 @@ public sealed class PluginRuntimeService : IDisposable
             _exportRegistry,
             _settingsFacade,
             _settingsFacade.Settings,
-            _settingsFacade.Catalog);
+            _settingsFacade.Catalog,
+            _publicIpcHostService);
         _loaderOptions = CreateOptions();
         _loader = new PluginLoader(_loaderOptions);
     }
@@ -675,6 +681,8 @@ public sealed class PluginRuntimeService : IDisposable
         AddSharedAssembly(options, typeof(App).Assembly);
         AddSharedAssembly(options, typeof(IServiceCollection).Assembly);
         AddSharedAssembly(options, typeof(HostBuilderContext).Assembly);
+        AddSharedAssembly(options, typeof(IExternalIpcNotificationPublisher).Assembly);
+        AddSharedAssembly(options, typeof(dotnetCampus.Ipc.Pipes.IpcProvider).Assembly);
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
@@ -760,6 +768,19 @@ public sealed class PluginRuntimeService : IDisposable
         foreach (var desktopComponentEditor in loadedPlugin.DesktopComponentEditors)
         {
             _desktopComponentEditors.Add(new PluginDesktopComponentEditorContribution(loadedPlugin, desktopComponentEditor));
+        }
+
+        if (_publicIpcHostService is not null)
+        {
+            foreach (var publicIpcService in loadedPlugin.PublicIpcServices)
+            {
+                _publicIpcHostService.RegisterPublicService(
+                    publicIpcService.ContractType,
+                    publicIpcService.Implementation,
+                    publicIpcService.ObjectId,
+                    loadedPlugin.Manifest.Id,
+                    publicIpcService.NotifyIds);
+            }
         }
     }
 
@@ -990,11 +1011,12 @@ public sealed class PluginRuntimeService : IDisposable
     {
         private readonly IPluginPackageManager _packageManager;
         private readonly IHostApplicationLifecycle _applicationLifecycle;
-    private readonly IPluginExportRegistry _exportRegistry;
-    private readonly ISettingsFacadeService _settingsFacade;
-    private readonly ISettingsService _settingsService;
-    private readonly ISettingsCatalog _settingsCatalog;
-    private readonly IAppearanceThemeService _appearanceThemeService;
+        private readonly IPluginExportRegistry _exportRegistry;
+        private readonly ISettingsFacadeService _settingsFacade;
+        private readonly ISettingsService _settingsService;
+        private readonly ISettingsCatalog _settingsCatalog;
+        private readonly IAppearanceThemeService _appearanceThemeService;
+        private readonly IExternalIpcNotificationPublisher? _externalIpcNotificationPublisher;
 
         public PluginHostServiceProvider(
             IPluginPackageManager packageManager,
@@ -1002,7 +1024,8 @@ public sealed class PluginRuntimeService : IDisposable
             IPluginExportRegistry exportRegistry,
             ISettingsFacadeService settingsFacade,
             ISettingsService settingsService,
-            ISettingsCatalog settingsCatalog)
+            ISettingsCatalog settingsCatalog,
+            IExternalIpcNotificationPublisher? externalIpcNotificationPublisher)
         {
             _packageManager = packageManager;
             _applicationLifecycle = applicationLifecycle;
@@ -1011,6 +1034,7 @@ public sealed class PluginRuntimeService : IDisposable
             _settingsService = settingsService;
             _settingsCatalog = settingsCatalog;
             _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
+            _externalIpcNotificationPublisher = externalIpcNotificationPublisher;
         }
 
         public object? GetService(Type serviceType)
@@ -1048,6 +1072,11 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(IAppearanceThemeService))
             {
                 return _appearanceThemeService;
+            }
+
+            if (serviceType == typeof(IExternalIpcNotificationPublisher))
+            {
+                return _externalIpcNotificationPublisher;
             }
 
             return null;

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>1.0.0</Version>
+    <PackageId>LanMountainDesktop.Shared.IPC</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>LanMountainDesktop</Authors>
+    <Description>Public IPC abstractions and host/client infrastructure for LanMountainDesktop, backed by dotnetCampus.Ipc.</Description>
+    <PackageTags>LanMountainDesktop;IPC;dotnetCampus.Ipc;Integration</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/wwiinnddyy/LanMountainDesktop</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (c) LanMountainDesktop Contributors</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dotnetCampus.Ipc" Version="2.0.0-alpha434" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

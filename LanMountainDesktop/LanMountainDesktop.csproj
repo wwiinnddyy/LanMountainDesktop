@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LanMountainDesktop.Host.Abstractions\LanMountainDesktop.Host.Abstractions.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Shared.IPC\LanMountainDesktop.Shared.IPC.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Settings.Core\LanMountainDesktop.Settings.Core.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Appearance\LanMountainDesktop.Appearance.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopComponents.Runtime\LanMountainDesktop.DesktopComponents.Runtime.csproj" />

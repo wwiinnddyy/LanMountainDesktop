@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="LanMountainDesktop.Host.Abstractions/LanMountainDesktop.Host.Abstractions.csproj" />
   <Project Path="LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj" />
+  <Project Path="LanMountainDesktop.Shared.IPC/LanMountainDesktop.Shared.IPC.csproj" />
   <Project Path="LanMountainDesktop.Settings.Core/LanMountainDesktop.Settings.Core.csproj" />
   <Project Path="LanMountainDesktop.Appearance/LanMountainDesktop.Appearance.csproj" />
   <Project Path="LanMountainDesktop.DesktopComponents.Runtime/LanMountainDesktop.DesktopComponents.Runtime.csproj" />

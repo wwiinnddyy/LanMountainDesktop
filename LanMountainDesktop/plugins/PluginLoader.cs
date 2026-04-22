@@ -14,8 +14,10 @@ using System.Threading.Tasks;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Shared.IPC;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using dotnetCampus.Ipc.CompilerServices.Attributes;
 
 namespace LanMountainDesktop.Plugins;
 
@@ -187,9 +189,10 @@ public sealed class PluginLoader
                 .OrderBy(editor => editor.ComponentId, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             var exportedServices = ResolveExports(manifest, pluginServices);
+            var publicIpcServices = ResolvePublicIpcServices(manifest, pluginServices);
             AppLogger.Info(
                 "PluginLoader",
-                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Editors={desktopComponentEditors.Length}; Exports={exportedServices.Count}."); 
+                $"Plugin contributions resolved. PluginId='{manifest.Id}'; SettingsSections={settingsSections.Length}; Widgets={desktopComponents.Length}; Editors={desktopComponentEditors.Length}; Exports={exportedServices.Count}; PublicIpcServices={publicIpcServices.Count}."); 
             hostedServices = pluginServices.GetServices<IHostedService>().ToArray();
             StartHostedServices(hostedServices);
             AppLogger.Info("PluginLoader", $"Hosted services started. PluginId='{manifest.Id}'; HostedServices={hostedServices.Count}."); 
@@ -206,6 +209,7 @@ public sealed class PluginLoader
                 desktopComponents,
                 desktopComponentEditors,
                 exportedServices,
+                publicIpcServices,
                 hostedServices,
                 loadContext);
 
@@ -332,6 +336,7 @@ public sealed class PluginLoader
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
         RegisterHostService<IAppearanceThemeService>(services, hostServices);
+        RegisterHostService<IExternalIpcNotificationPublisher>(services, hostServices);
 
         return services;
     }
@@ -411,6 +416,68 @@ public sealed class PluginLoader
                             $"Plugin '{manifest.Id}' exported contract '{registration.ContractType.FullName}', but no singleton service instance was registered."));
             })
             .ToArray();
+    }
+
+    private static IReadOnlyList<PluginPublicIpcServiceDescriptor> ResolvePublicIpcServices(
+        PluginManifest manifest,
+        IServiceProvider services)
+    {
+        var descriptors = new List<PluginPublicIpcServiceDescriptor>();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var registration in services.GetServices<PluginPublicIpcServiceRegistration>())
+        {
+            var implementation = services.GetService(registration.ContractType)
+                ?? throw new InvalidOperationException(
+                    $"Plugin '{manifest.Id}' registered public IPC contract '{registration.ContractType.FullName}', but no singleton service instance was found.");
+
+            AddDescriptor(registration.ContractType, implementation, registration.ObjectId, registration.NotifyIds);
+        }
+
+        var builder = new RuntimePluginPublicIpcBuilder(services, AddDescriptor);
+        foreach (var contributor in services.GetServices<IPluginPublicIpcContributor>())
+        {
+            contributor.ConfigurePublicIpc(builder);
+        }
+
+        return descriptors;
+
+        void AddDescriptor(Type contractType, object implementation, string? objectId, IEnumerable<string>? notifyIds)
+        {
+            EnsurePublicIpcContract(manifest, contractType);
+
+            var normalizedObjectId = objectId ?? string.Empty;
+            var dedupeKey = $"{contractType.AssemblyQualifiedName}::{normalizedObjectId}";
+            if (!seenKeys.Add(dedupeKey))
+            {
+                throw new InvalidOperationException(
+                    $"Plugin '{manifest.Id}' registered duplicate public IPC contract '{contractType.FullName}' with object id '{normalizedObjectId}'.");
+            }
+
+            descriptors.Add(new PluginPublicIpcServiceDescriptor(
+                contractType,
+                implementation,
+                string.IsNullOrEmpty(normalizedObjectId) ? null : normalizedObjectId,
+                notifyIds?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray() ?? []));
+        }
+    }
+
+    private static void EnsurePublicIpcContract(PluginManifest manifest, Type contractType)
+    {
+        if (!contractType.IsInterface)
+        {
+            throw new InvalidOperationException(
+                $"Plugin '{manifest.Id}' public IPC contract '{contractType.FullName}' must be an interface.");
+        }
+
+        if (!Attribute.IsDefined(contractType, typeof(IpcPublicAttribute), inherit: false))
+        {
+            throw new InvalidOperationException(
+                $"Plugin '{manifest.Id}' public IPC contract '{contractType.FullName}' must be marked with '{nameof(IpcPublicAttribute)}'.");
+        }
     }
 
     private static bool IsSupportedExportContract(PluginManifest manifest, Type contractType)
@@ -1074,4 +1141,42 @@ public sealed class PluginLoader
         string SourcePath,
         PluginManifest Manifest,
         PluginSourceKind SourceKind);
+
+    private sealed class RuntimePluginPublicIpcBuilder : IPluginPublicIpcBuilder
+    {
+        private readonly IServiceProvider _services;
+        private readonly Action<Type, object, string?, IEnumerable<string>?> _register;
+
+        public RuntimePluginPublicIpcBuilder(
+            IServiceProvider services,
+            Action<Type, object, string?, IEnumerable<string>?> register)
+        {
+            _services = services;
+            _register = register;
+        }
+
+        public IPluginPublicIpcBuilder AddService<TContract>(
+            string? objectId = null,
+            IEnumerable<string>? notifyIds = null)
+            where TContract : class
+        {
+            var implementation = _services.GetService(typeof(TContract))
+                ?? throw new InvalidOperationException(
+                    $"Plugin public IPC contributor requested contract '{typeof(TContract).FullName}', but no singleton service was registered.");
+            _register(typeof(TContract), implementation, objectId, notifyIds);
+            return this;
+        }
+
+        public IPluginPublicIpcBuilder AddService(
+            Type contractType,
+            object implementation,
+            string? objectId = null,
+            IEnumerable<string>? notifyIds = null)
+        {
+            ArgumentNullException.ThrowIfNull(contractType);
+            ArgumentNullException.ThrowIfNull(implementation);
+            _register(contractType, implementation, objectId, notifyIds);
+            return this;
+        }
+    }
 }

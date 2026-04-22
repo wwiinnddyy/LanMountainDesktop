@@ -20,10 +20,13 @@ using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.ExternalIpc;
 using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IPC;
+using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views;
@@ -55,6 +58,7 @@ public partial class App : Application
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
+    private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
     private ISettingsPageRegistry? _settingsPageRegistry;
     private ISettingsWindowService? _settingsWindowService;
     private WeatherLocationRefreshService? _weatherLocationRefreshService;
@@ -75,7 +79,7 @@ public partial class App : Application
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
-    private LauncherIpcClient? _launcherIpcClient;
+    private PublicIpcHostService? _publicIpcHostService;
     private LoadingStateManager? _loadingStateManager;
     private LoadingStateReporter? _loadingStateReporter;
     private bool _singleInstanceReleased;
@@ -160,6 +164,7 @@ public partial class App : Application
         
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
+        InitializePublicIpc();
         _ = InitializeLauncherIpcAsync();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
@@ -173,34 +178,24 @@ public partial class App : Application
     
     private async Task InitializeLauncherIpcAsync()
     {
-        if (!LauncherIpcClient.IsLaunchedByLauncher())
+        if (_loadingStateManager is not null)
             return;
 
         try
         {
-            _launcherIpcClient = new LauncherIpcClient();
-            var connected = await _launcherIpcClient.ConnectAsync();
-            if (!connected)
-            {
-                return;
-            }
-
-            AppLogger.Info("LauncherIpc", "Connected to Launcher IPC server.");
-
             bool hadBufferedMessages;
             lock (_launcherProgressLock)
             {
                 hadBufferedMessages = _pendingLauncherProgressMessages.Count > 0;
             }
 
-            await FlushPendingLauncherProgressAsync();
-
             _loadingStateManager = new LoadingStateManager();
-            _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _launcherIpcClient);
+            _loadingStateReporter = new LoadingStateReporter(_loadingStateManager, _publicIpcHostService);
             _loadingStateReporter.Start();
 
             _loadingStateManager.RegisterItem("system.init", LoadingItemType.System, "System Initialization", "Initialize core application services.");
-            _loadingStateManager.StartItem("system.init", "Launcher IPC connected.");
+            _loadingStateManager.StartItem("system.init", "Public IPC host ready.");
+            await FlushPendingLauncherProgressAsync();
 
             if (!hadBufferedMessages)
             {
@@ -238,8 +233,8 @@ public partial class App : Application
 
     private void QueueOrSendLauncherProgress(StartupProgressMessage message, bool logSuccess)
     {
-        var ipcClient = _launcherIpcClient;
-        if (ipcClient is null || !ipcClient.IsConnected)
+        var publicIpcHostService = _publicIpcHostService;
+        if (publicIpcHostService is null)
         {
             lock (_launcherProgressLock)
             {
@@ -250,13 +245,13 @@ public partial class App : Application
             return;
         }
 
-        _ = SendLauncherProgressAsync(ipcClient, message, logSuccess);
+        _ = SendLauncherProgressAsync(publicIpcHostService, message, logSuccess);
     }
 
     private async Task FlushPendingLauncherProgressAsync()
     {
-        var ipcClient = _launcherIpcClient;
-        if (ipcClient is null || !ipcClient.IsConnected)
+        var publicIpcHostService = _publicIpcHostService;
+        if (publicIpcHostService is null)
         {
             return;
         }
@@ -270,15 +265,15 @@ public partial class App : Application
 
         foreach (var pendingMessage in pendingMessages)
         {
-            await SendLauncherProgressAsync(ipcClient, pendingMessage, logSuccess: false);
+            await SendLauncherProgressAsync(publicIpcHostService, pendingMessage, logSuccess: false);
         }
     }
 
-    private async Task SendLauncherProgressAsync(LauncherIpcClient ipcClient, StartupProgressMessage message, bool logSuccess)
+    private async Task SendLauncherProgressAsync(PublicIpcHostService publicIpcHostService, StartupProgressMessage message, bool logSuccess)
     {
         try
         {
-            await ipcClient.ReportProgressAsync(message);
+            await publicIpcHostService.PublishStartupProgressAsync(message);
             if (logSuccess)
             {
                 AppLogger.Info("LauncherIpc", $"Successfully reported stage: {message.Stage}");
@@ -463,7 +458,7 @@ public partial class App : Application
         try
         {
             _pluginRuntimeService?.Dispose();
-            _pluginRuntimeService = new PluginRuntimeService(_settingsFacade);
+            _pluginRuntimeService = new PluginRuntimeService(_settingsFacade, _publicIpcHostService);
             HostSettingsFacadeProvider.BindPluginRuntime(_pluginRuntimeService);
             _pluginRuntimeService.LoadInstalledPlugins();
         }
@@ -1043,6 +1038,19 @@ public partial class App : Application
             _pluginRuntimeService = null;
         }
 
+        try
+        {
+            _publicIpcHostService?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PublicIpc", "Failed to dispose public IPC host during shutdown.", ex);
+        }
+        finally
+        {
+            _publicIpcHostService = null;
+        }
+
         _settingsWindowService?.Close();
         if (_settingsPageRegistry is IDisposable disposableRegistry)
         {
@@ -1335,6 +1343,56 @@ public partial class App : Application
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         var languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
         return _localizationService.GetString(languageCode, key, fallback);
+    }
+
+    internal bool TryActivateMainWindowFromExternalIpc(string source)
+    {
+        return RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
+    }
+
+    private void InitializePublicIpc()
+    {
+        if (_publicIpcHostService is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            var version = typeof(App).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+            _publicIpcHostService = new PublicIpcHostService();
+            _publicIpcHostService.PluginDescriptorProvider = BuildPublicPluginDescriptors;
+            _publicIpcHostService.RegisterPublicService<IPublicAppInfoService>(
+                new PublicAppInfoService(version, "Administrate", _startupAt));
+            _publicIpcHostService.RegisterPublicService<IPublicShellControlService>(
+                new PublicShellControlService());
+            _publicIpcHostService.RegisterPublicService<IPublicPluginCatalogService>(
+                new PublicPluginCatalogService(_publicIpcHostService));
+            _publicIpcHostService.Start();
+            AppLogger.Info("PublicIpc", $"Public IPC host started. PipeName='{IpcConstants.DefaultPipeName}'.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("PublicIpc", "Failed to initialize public IPC host.", ex);
+        }
+    }
+
+    private IReadOnlyList<PublicPluginDescriptor> BuildPublicPluginDescriptors()
+    {
+        var runtime = _pluginRuntimeService;
+        if (runtime is null)
+        {
+            return Array.Empty<PublicPluginDescriptor>();
+        }
+
+        return runtime.Catalog
+            .Select(entry => new PublicPluginDescriptor(
+                entry.Manifest.Id,
+                entry.Manifest.Name,
+                entry.Manifest.Version,
+                entry.IsLoaded,
+                entry.IsEnabled))
+            .ToArray();
     }
 }
 

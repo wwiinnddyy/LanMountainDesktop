@@ -559,3 +559,13 @@ var updateCheckService = new UpdateCheckService(
 - `apply-update`, `plugin-install`, and `debug-preview` must not auto-enter OOBE.
 - Allowed elevation paths are limited to the installer itself, full installer update application, and user-confirmed legacy uninstall.
 - Default plugin installation targets the current user's LocalAppData scope and must not request elevation by default.
+
+## Public IPC Baseline
+
+Launcher now consumes Host startup telemetry from the unified public IPC stack:
+
+- Host publishes `StartupProgressMessage` via `lanmountain.launcher.startup-progress`
+- Host publishes `LoadingStateMessage` via `lanmountain.launcher.loading-state`
+- Launcher connects through `LanMountainDesktopIpcClient`
+
+The previous custom length-prefixed named-pipe transport is no longer the primary startup communication path.

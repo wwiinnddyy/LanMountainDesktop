@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IPC;
 
 namespace LanMountainDesktop.Launcher.Services;
 
@@ -83,7 +83,8 @@ internal sealed class LauncherFlowCoordinator
             var lastStageMessage = "launcher-started";
 
             var loadingState = new LoadingStateMessage();
-            using var ipcServer = new LauncherIpcServer(message =>
+            using var ipcClient = new LanMountainDesktopIpcClient();
+            ipcClient.RegisterNotifyHandler<StartupProgressMessage>(IpcRoutedNotifyIds.LauncherStartupProgress, message =>
             {
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -121,7 +122,21 @@ internal sealed class LauncherFlowCoordinator
                     }
                 });
             });
-            ipcServer.Start();
+            ipcClient.RegisterNotifyHandler<LoadingStateMessage>(IpcRoutedNotifyIds.LauncherLoadingState, message =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        loadingState = message;
+                        loadingDetailsWindow?.UpdateLoadingState(loadingState);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("IPC loading-state callback failed.", ex);
+                    }
+                });
+            });
 
             try
             {
@@ -172,6 +187,12 @@ internal sealed class LauncherFlowCoordinator
                         code: "host_start_failed",
                         message: "Host launch did not create a process.",
                         details: MergeDetails(launcherContextDetails, launchOutcome.Details));
+                }
+
+                var connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                if (!connected)
+                {
+                    Logger.Warn("Timed out waiting for host public IPC. Launcher will continue without live startup notifications.");
                 }
 
                 var processExitTask = launchOutcome.Process.WaitForExitAsync();
@@ -898,6 +919,21 @@ internal sealed class LauncherFlowCoordinator
         catch
         {
         }
+    }
+
+    private static async Task<bool> TryConnectToPublicIpcAsync(
+        LanMountainDesktopIpcClient ipcClient,
+        TimeSpan timeout)
+    {
+        var connectTask = ipcClient.ConnectAsync();
+        var completedTask = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
+        if (completedTask != connectTask)
+        {
+            return false;
+        }
+
+        await connectTask.ConfigureAwait(false);
+        return true;
     }
 
     private enum HostStartMode

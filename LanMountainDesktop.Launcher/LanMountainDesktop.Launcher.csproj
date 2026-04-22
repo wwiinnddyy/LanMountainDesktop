@@ -18,6 +18,7 @@
   <ItemGroup>
     <!-- 只引用 Shared.Contracts（IPC 协议） -->
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Shared.IPC\LanMountainDesktop.Shared.IPC.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -684,3 +684,34 @@ if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
 - [组件开发指南](COMPONENT_DEVELOPMENT.md)
 - [API 参考](API_REFERENCE.md)
 - [架构文档](ARCHITECTURE.md)
+## Public IPC Extension
+
+Plugins can now contribute external IPC capabilities through the Host public IPC entry point.
+
+Recommended registration styles:
+
+```csharp
+services.AddPluginPublicIpc<IMyPluginPublicService, MyPluginPublicService>(
+    objectId: "default",
+    notifyIds: ["lanmountain.plugin.my-plugin.status.changed"]);
+```
+
+Or use the advanced contributor model:
+
+```csharp
+public sealed class MyPluginPublicIpcContributor : IPluginPublicIpcContributor
+{
+    public void ConfigurePublicIpc(IPluginPublicIpcBuilder builder)
+    {
+        builder.AddService<IMyPluginPublicService>(
+            objectId: "default",
+            notifyIds: ["lanmountain.plugin.my-plugin.status.changed"]);
+    }
+}
+```
+
+Additional notes:
+
+- Public IPC contracts must be interfaces marked with `[IpcPublic]`.
+- External .NET clients can reference the plugin contract assembly and create strong-typed proxies through the Host public pipe.
+- Plugins can inject `IExternalIpcNotificationPublisher` to push live events outward through routed notifications.

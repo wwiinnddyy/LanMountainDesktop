@@ -1,6 +1,6 @@
 using System.Timers;
-using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IPC;
 
 namespace LanMountainDesktop.Services.Loading;
 
@@ -10,7 +10,7 @@ namespace LanMountainDesktop.Services.Loading;
 public class LoadingStateReporter : IDisposable
 {
     private readonly LoadingStateManager _manager;
-    private readonly LauncherIpcClient? _ipcClient;
+    private readonly IExternalIpcNotificationPublisher? _notificationPublisher;
     private readonly System.Timers.Timer _reportTimer;
     private readonly object _lock = new();
     private bool _isDisposed;
@@ -36,10 +36,10 @@ public class LoadingStateReporter : IDisposable
 
     public LoadingStateReporter(
         LoadingStateManager manager, 
-        LauncherIpcClient? ipcClient = null)
+        IExternalIpcNotificationPublisher? notificationPublisher = null)
     {
         _manager = manager ?? throw new ArgumentNullException(nameof(manager));
-        _ipcClient = ipcClient;
+        _notificationPublisher = notificationPublisher;
         
         // 创建定时上报定时器
         _reportTimer = new System.Timers.Timer(ReportIntervalMs);
@@ -80,7 +80,7 @@ public class LoadingStateReporter : IDisposable
     /// </summary>
     public async Task ReportImmediatelyAsync()
     {
-        if (_isDisposed || _ipcClient == null) return;
+        if (_isDisposed || _notificationPublisher == null) return;
         
         var message = CreateDetailedProgressMessage();
         await SendMessageAsync(message);
@@ -91,7 +91,7 @@ public class LoadingStateReporter : IDisposable
     /// </summary>
     public async Task ReportItemProgressAsync(string itemId, int percent, string? message = null)
     {
-        if (_isDisposed || _ipcClient == null) return;
+        if (_isDisposed || _notificationPublisher == null) return;
         
         var item = _manager.GetAllItems().FirstOrDefault(i => i.Id == itemId);
         if (item == null) return;
@@ -121,7 +121,7 @@ public class LoadingStateReporter : IDisposable
     /// </summary>
     public async Task ReportStageChangeAsync(StartupStage stage, string? message = null)
     {
-        if (_isDisposed || _ipcClient == null) return;
+        if (_isDisposed || _notificationPublisher == null) return;
         
         var progressMessage = new DetailedProgressMessage
         {
@@ -140,7 +140,7 @@ public class LoadingStateReporter : IDisposable
     /// </summary>
     public async Task ReportErrorAsync(string errorMessage, string? details = null)
     {
-        if (_isDisposed || _ipcClient == null) return;
+        if (_isDisposed || _notificationPublisher == null) return;
         
         var fullMessage = string.IsNullOrEmpty(details) 
             ? errorMessage 
@@ -280,7 +280,7 @@ public class LoadingStateReporter : IDisposable
     /// </summary>
     private async Task SendMessageAsync(DetailedProgressMessage message)
     {
-        if (_ipcClient == null) return;
+        if (_notificationPublisher == null) return;
         
         // 检查最小上报间隔
         var now = DateTimeOffset.UtcNow;
@@ -293,15 +293,15 @@ public class LoadingStateReporter : IDisposable
         try
         {
             // 转换为 StartupProgressMessage 以保持兼容性
-            var baseMessage = new StartupProgressMessage
+            var loadingStateMessage = _manager.GetLoadingStateMessage() with
             {
                 Stage = message.Stage,
-                ProgressPercent = message.ProgressPercent,
+                OverallProgressPercent = message.ProgressPercent,
                 Message = FormatMessage(message),
                 Timestamp = DateTimeOffset.UtcNow
             };
-            
-            await _ipcClient.ReportProgressAsync(baseMessage);
+
+            await _notificationPublisher.NotifyAsync(IpcRoutedNotifyIds.LauncherLoadingState, loadingStateMessage);
             _lastReportTime = DateTimeOffset.UtcNow;
         }
         catch (Exception ex)

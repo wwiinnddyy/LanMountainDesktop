@@ -218,6 +218,16 @@ Two new supporting packages define the isolation boundary:
 
 For the detailed design, migration path, UI strategy, and residual risks, see `docs/PLUGIN_PROCESS_ISOLATION_ARCHITECTURE.md`.
 
+## External IPC Public API
+
+- The current IPC mainline is external integration, not plugin process isolation.
+- `LanMountainDesktop.Shared.IPC` is the unified IPC base for Host public services, Launcher/OOBE startup notifications, and plugin-contributed public services.
+- Strongly typed command/query access uses `[IpcPublic]` contracts plus `dotnetCampus.Ipc` generated proxy/joint support.
+- One-way events use `JsonIpcDirectRoutedProvider.NotifyAsync` with fixed top-level notify IDs.
+- Host remains the single external IPC entry point even when a capability is contributed by a plugin.
+
+See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration model.
+
 ## Launcher OOBE / Elevation Contract
 
 - Launcher OOBE state is owned by a per-user JSON file under `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.

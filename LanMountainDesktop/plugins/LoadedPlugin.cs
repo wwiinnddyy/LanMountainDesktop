@@ -25,6 +25,7 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         IReadOnlyList<PluginDesktopComponentRegistration> desktopComponents,
         IReadOnlyList<PluginDesktopComponentEditorRegistration> desktopComponentEditors,
         IReadOnlyList<PluginServiceExportDescriptor> exportedServices,
+        IReadOnlyList<PluginPublicIpcServiceDescriptor> publicIpcServices,
         IReadOnlyList<IHostedService> hostedServices,
         PluginLoadContext loadContext)
     {
@@ -39,6 +40,7 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
         DesktopComponents = desktopComponents;
         DesktopComponentEditors = desktopComponentEditors;
         ExportedServices = exportedServices;
+        PublicIpcServices = publicIpcServices;
         HostedServices = hostedServices;
         LoadContext = loadContext;
     }
@@ -66,6 +68,8 @@ public sealed class LoadedPlugin : IDisposable, IAsyncDisposable
     public IReadOnlyList<PluginDesktopComponentEditorRegistration> DesktopComponentEditors { get; }
 
     public IReadOnlyList<PluginServiceExportDescriptor> ExportedServices { get; }
+
+    public IReadOnlyList<PluginPublicIpcServiceDescriptor> PublicIpcServices { get; }
 
     public PluginLoadContext LoadContext { get; }
 

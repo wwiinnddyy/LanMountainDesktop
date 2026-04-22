@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using dotnetCampus.Ipc.CompilerServices.Attributes;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LanMountainDesktop.PluginSdk;
@@ -110,6 +111,55 @@ public static class PluginServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    public static IServiceCollection AddPluginPublicIpc<TContract, TImplementation>(
+        this IServiceCollection services,
+        string? objectId = null,
+        params string[] notifyIds)
+        where TContract : class
+        where TImplementation : class, TContract
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        EnsurePublicIpcContract(typeof(TContract));
+        EnsureSingletonRegistration<TContract, TImplementation>(services);
+
+        if (!services.Any(descriptor =>
+                descriptor.ServiceType == typeof(PluginPublicIpcServiceRegistration) &&
+                descriptor.ImplementationInstance is PluginPublicIpcServiceRegistration existing &&
+                existing.ContractType == typeof(TContract) &&
+                string.Equals(existing.ObjectId, objectId, StringComparison.Ordinal)))
+        {
+            services.AddSingleton(new PluginPublicIpcServiceRegistration(
+                typeof(TContract),
+                objectId,
+                notifyIds ?? []));
+        }
+
+        return services;
+    }
+
+    public static IServiceCollection AddPluginPublicIpcContributor<TContributor>(this IServiceCollection services)
+        where TContributor : class, IPluginPublicIpcContributor
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddSingleton<IPluginPublicIpcContributor, TContributor>();
+        return services;
+    }
+
+    private static void EnsurePublicIpcContract(Type contractType)
+    {
+        if (!contractType.IsInterface)
+        {
+            throw new InvalidOperationException(
+                $"Public IPC contract '{contractType.FullName}' must be an interface.");
+        }
+
+        if (!Attribute.IsDefined(contractType, typeof(IpcPublicAttribute), inherit: false))
+        {
+            throw new InvalidOperationException(
+                $"Public IPC contract '{contractType.FullName}' must be marked with '{nameof(IpcPublicAttribute)}'.");
+        }
     }
 
     private static void EnsureSingletonRegistration<TContract, TImplementation>(IServiceCollection services)
