@@ -243,7 +243,8 @@ internal sealed class AirAppMarketInstallService : IDisposable
                     var helperMessage = helperResult.ErrorMessage ?? "Launcher plugin install failed.";
                     AppLogger.Error(
                         "PluginMarket",
-                        $"Windows launcher install failed for plugin '{plugin.Id}' from source '{source.SourceKind}'. Message='{helperMessage}'.");
+                        $"Windows launcher install failed for plugin '{plugin.Id}' from source '{source.SourceKind}'. " +
+                        $"Code='{helperResult.Code}'; Message='{helperMessage}'.");
                     return new AirAppMarketInstallAttemptResult(false, true, null, helperMessage);
                 }
 

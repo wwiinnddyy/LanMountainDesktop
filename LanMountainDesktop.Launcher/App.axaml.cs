@@ -15,10 +15,12 @@ public partial class App : Application
     {
         Logger.Initialize();
         var context = LauncherRuntimeContext.Current;
+        var execution = LauncherExecutionContext.Capture();
         Logger.Info(
             $"Launcher App initialize. Command='{context.Command}'; IsGuiMode={context.IsGuiCommand}; " +
             $"IsPreview={context.IsPreviewCommand}; IsDebugMode={context.IsDebugMode}; " +
-            $"ExplicitAppRoot='{context.ExplicitAppRoot ?? "<none>"}'.");
+            $"LaunchSource='{context.LaunchSource}'; IsElevated={execution.IsElevated}; " +
+            $"UserSid='{execution.UserSid ?? string.Empty}'; ExplicitAppRoot='{context.ExplicitAppRoot ?? "<none>"}'.");
 
         AvaloniaXamlLoader.Load(this);
     }
@@ -30,9 +32,11 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var context = LauncherRuntimeContext.Current;
+            var execution = LauncherExecutionContext.Capture();
             Logger.Info(
                 $"Framework initialization completed. Command='{context.Command}'; IsPreview={context.IsPreviewCommand}; " +
-                $"IsDebugMode={context.IsDebugMode}.");
+                $"IsDebugMode={context.IsDebugMode}; LaunchSource='{context.LaunchSource}'; " +
+                $"IsElevated={execution.IsElevated}; UserSid='{execution.UserSid ?? string.Empty}'.");
 
             if (HandlePreviewCommand(context, desktop))
             {
@@ -174,7 +178,8 @@ public partial class App : Application
             var appRoot = Commands.ResolveAppRoot(context);
             Logger.Info(
                 $"Coordinator start. Command='{context.Command}'; AppRoot='{appRoot}'; " +
-                $"IsDebugMode={context.IsDebugMode}; ResultPath='{context.GetOption("result") ?? "<none>"}'.");
+                $"IsDebugMode={context.IsDebugMode}; LaunchSource='{context.LaunchSource}'; " +
+                $"ResultPath='{context.GetOption("result") ?? "<none>"}'.");
 
             var deploymentLocator = new DeploymentLocator(appRoot);
             var coordinator = new LauncherFlowCoordinator(
@@ -323,7 +328,12 @@ public partial class App : Application
             Success = success,
             Stage = "apply-update",
             Code = success ? "ok" : "failed",
-            Message = success ? "Update applied successfully." : (errorMessage ?? "Unknown error")
+            Message = success ? "Update applied successfully." : (errorMessage ?? "Unknown error"),
+            Details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["command"] = context.Command,
+                ["launchSource"] = context.LaunchSource
+            }
         }).ConfigureAwait(false);
 
         Environment.ExitCode = success ? 0 : 1;

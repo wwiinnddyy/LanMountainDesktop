@@ -1454,7 +1454,7 @@ public sealed class UpdateWorkflowService
             var startInfo = new ProcessStartInfo
             {
                 FileName = launcherPath,
-                Arguments = $"apply-update --app-root \"{launcherRoot}\"",
+                Arguments = $"apply-update --app-root \"{launcherRoot}\" --launch-source apply-update",
                 UseShellExecute = false,
                 WorkingDirectory = launcherRoot
             };
@@ -1493,6 +1493,7 @@ public sealed class UpdateWorkflowService
 
         try
         {
+            AppLogger.Info("UpdateWorkflow", "Launching pending full installer with elevation reason 'full_update_apply'.");
             var startInfo = new ProcessStartInfo
             {
                 FileName = pending.InstallerPath,

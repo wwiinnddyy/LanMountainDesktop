@@ -18,5 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LanMountainDesktop\LanMountainDesktop.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj" />
   </ItemGroup>
 </Project>

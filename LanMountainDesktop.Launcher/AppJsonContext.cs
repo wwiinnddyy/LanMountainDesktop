@@ -25,6 +25,7 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(PluginManifest))]
 [JsonSerializable(typeof(PendingUpgrade))]
 [JsonSerializable(typeof(List<PendingUpgrade>))]
+[JsonSerializable(typeof(OobeStateFile))]
 [JsonSerializable(typeof(GitHubRelease))]
 [JsonSerializable(typeof(GitHubAsset))]
 [JsonSerializable(typeof(List<GitHubRelease>))]

@@ -10,10 +10,13 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var commandContext = CommandContext.FromArgs(args);
+        var execution = LauncherExecutionContext.Capture();
         Logger.Initialize();
         Logger.Info(
             $"Program entry. Command='{commandContext.Command}'; SubCommand='{commandContext.SubCommand}'; " +
             $"IsGuiMode={commandContext.IsGuiCommand}; IsDebugMode={commandContext.IsDebugMode}; " +
+            $"LaunchSource='{commandContext.LaunchSource}'; IsElevated={execution.IsElevated}; " +
+            $"UserSid='{execution.UserSid ?? string.Empty}'; " +
             $"HasResultPath={!string.IsNullOrWhiteSpace(commandContext.GetOption("result"))}; " +
             $"ExplicitAppRoot='{commandContext.ExplicitAppRoot ?? "<none>"}'.");
 
@@ -49,8 +52,11 @@ internal static class Program
                 {
                     ["command"] = commandContext.Command,
                     ["subCommand"] = commandContext.SubCommand,
+                    ["launchSource"] = commandContext.LaunchSource,
                     ["isGuiMode"] = commandContext.IsGuiCommand.ToString(),
                     ["isDebugMode"] = commandContext.IsDebugMode.ToString(),
+                    ["isElevated"] = execution.IsElevated.ToString(),
+                    ["userSid"] = execution.UserSid ?? string.Empty,
                     ["explicitAppRoot"] = commandContext.ExplicitAppRoot ?? string.Empty
                 }
             };

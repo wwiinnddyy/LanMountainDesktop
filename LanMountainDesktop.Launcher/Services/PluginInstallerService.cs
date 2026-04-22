@@ -30,6 +30,11 @@ internal sealed class PluginInstallerService
             throw new FileNotFoundException($"Plugin package '{fullSourcePath}' was not found.", fullSourcePath);
         }
 
+        if (TryBuildElevationRequiredResult(fullPluginsDirectory) is { } elevationRequiredResult)
+        {
+            return elevationRequiredResult;
+        }
+
         var manifest = ReadManifestFromPackage(fullSourcePath);
         Directory.CreateDirectory(fullPluginsDirectory);
         var destinationPath = Path.Combine(fullPluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
@@ -48,6 +53,46 @@ internal sealed class PluginInstallerService
             InstalledPackagePath = destinationPath,
             ManifestId = manifest.Id,
             ManifestName = manifest.Name
+        };
+    }
+
+    private static LauncherResult? TryBuildElevationRequiredResult(string pluginsDirectory)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localAppData))
+        {
+            return null;
+        }
+
+        var allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), "LanMountainDesktop"));
+        var normalizedPluginsDirectory = EnsureTrailingSeparator(Path.GetFullPath(pluginsDirectory));
+        if (normalizedPluginsDirectory.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        Logger.Warn(
+            $"Plugin installation requires explicit elevation. Reason='plugin_requires_elevation'; " +
+            $"PluginsDirectory='{pluginsDirectory}'; AllowedRoot='{allowedRoot}'.");
+
+        return new LauncherResult
+        {
+            Success = false,
+            Stage = "plugin.install",
+            Code = "plugin_elevation_required",
+            Message = "Plugin installation outside the current user's LanMountainDesktop data directory requires explicit elevation.",
+            ErrorMessage = "Plugin installation target is outside the current user's LanMountainDesktop data directory.",
+            Details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["pluginsDirectory"] = pluginsDirectory,
+                ["allowedRoot"] = allowedRoot,
+                ["elevationReason"] = "outside_user_scope"
+            }
         };
     }
 

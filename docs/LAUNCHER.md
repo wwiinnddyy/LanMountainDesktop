@@ -547,3 +547,15 @@ var updateCheckService = new UpdateCheckService(
 - [构建和部署指南](BUILD_AND_DEPLOY.md)
 - [架构文档](ARCHITECTURE.md)
 - [开发文档](DEVELOPMENT.md)
+
+## Current OOBE and Elevation Contract
+
+- OOBE state is a per-user truth source stored at `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
+- Same-user reinstall or upgrade must not re-enter OOBE.
+- `first_run_completed` is legacy compatibility data only and should not remain the long-term primary format.
+- Launch source values are `normal`, `postinstall`, `apply-update`, `plugin-install`, and `debug-preview`.
+- Auto-OOBE is allowed only for normal user-mode startup.
+- `postinstall` may open OOBE only when the launcher is not elevated and the user state path is available.
+- `apply-update`, `plugin-install`, and `debug-preview` must not auto-enter OOBE.
+- Allowed elevation paths are limited to the installer itself, full installer update application, and user-confirmed legacy uninstall.
+- Default plugin installation targets the current user's LocalAppData scope and must not request elevation by default.

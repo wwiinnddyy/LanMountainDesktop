@@ -197,7 +197,8 @@ The runtime flow starts with the Launcher selecting the best version, then proce
 
 ## VeloPack Integration Note
 
-- Incremental package build/publish has moved to VeloPack native assets (eleases.win.json + *.nupkg).
+- Incremental package build/publish has moved to VeloPack native assets (
+eleases.win.json + *.nupkg).
 - Launcher runtime responsibilities are unchanged: OOBE, startup orchestration, update apply, and rollback.
 
 ## Plugin Isolation Modes
@@ -216,3 +217,15 @@ Two new supporting packages define the isolation boundary:
 - `LanMountainDesktop.PluginIsolation.Ipc/`: ClassIsland-inspired IPC facade that centralizes startup constants, routed notify IDs, and client/server wrappers over the future `dotnetCampus.Ipc` transport binding
 
 For the detailed design, migration path, UI strategy, and residual risks, see `docs/PLUGIN_PROCESS_ISOLATION_ARCHITECTURE.md`.
+
+## Launcher OOBE / Elevation Contract
+
+- Launcher OOBE state is owned by a per-user JSON file under `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
+- Same-user reinstall or upgrade should keep OOBE completed.
+- `first_run_completed` is legacy migration-only data.
+- The recognized launch sources are `normal`, `postinstall`, `apply-update`, `plugin-install`, and `debug-preview`.
+- Auto-OOBE is only allowed for normal user-mode startup.
+- `postinstall` may show OOBE only when the launcher is not elevated.
+- `apply-update`, `plugin-install`, and `debug-preview` must not auto-open OOBE.
+- Elevation is allowed only for the installer, full installer update application, and user-confirmed legacy uninstall.
+- Default plugin install should stay inside the user's LocalAppData scope and should not ask for UAC.

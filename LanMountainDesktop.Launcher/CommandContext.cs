@@ -4,6 +4,8 @@ namespace LanMountainDesktop.Launcher;
 
 internal sealed class CommandContext
 {
+    private const string LaunchSourceOptionName = "launch-source";
+
     private static readonly string[] GuiCommands =
     [
         "launch",
@@ -31,6 +33,8 @@ internal sealed class CommandContext
         Options.ContainsKey("plugins-dir") &&
         Options.ContainsKey("result");
 
+    public string LaunchSource => NormalizeLaunchSource(GetOption(LaunchSourceOptionName)) ?? InferLaunchSource();
+
     /// <summary>
     /// 是否处于调试模式（从 Rider/VS 等 IDE 启动）
     /// 仅当明确指定 --debug 参数或调试器附加时才启用
@@ -44,6 +48,12 @@ internal sealed class CommandContext
 
     public bool IsGuiCommand =>
         GuiCommands.Contains(Command, StringComparer.OrdinalIgnoreCase);
+
+    public bool IsMaintenanceCommand =>
+        string.Equals(LaunchSource, "apply-update", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(LaunchSource, "plugin-install", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Command, "update", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase);
 
     public string? ExplicitAppRoot => GetOption("app-root");
 
@@ -79,6 +89,44 @@ internal sealed class CommandContext
         return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
             ? value
             : fallback;
+    }
+
+    private string InferLaunchSource()
+    {
+        if (IsPreviewCommand)
+        {
+            return "debug-preview";
+        }
+
+        if (string.Equals(Command, "apply-update", StringComparison.OrdinalIgnoreCase))
+        {
+            return "apply-update";
+        }
+
+        if (IsLegacyPluginInstall || string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase))
+        {
+            return "plugin-install";
+        }
+
+        return "normal";
+    }
+
+    private static string? NormalizeLaunchSource(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        return raw.Trim().ToLowerInvariant() switch
+        {
+            "normal" => "normal",
+            "postinstall" => "postinstall",
+            "apply-update" => "apply-update",
+            "plugin-install" => "plugin-install",
+            "debug-preview" => "debug-preview",
+            _ => null
+        };
     }
 
     private static Dictionary<string, string> ParseOptions(string[] args)
