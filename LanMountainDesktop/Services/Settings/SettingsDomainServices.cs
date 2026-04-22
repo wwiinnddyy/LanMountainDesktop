@@ -1290,6 +1290,10 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 
     public string GetAppVersionText()
     {
+        return LanMountainDesktop.Shared.Contracts.Launcher.AppVersionProvider
+            .ResolveForCurrentProcess()
+            .Version;
+
         // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
         var envVersion = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.VersionEnvVar);
         if (!string.IsNullOrWhiteSpace(envVersion))
@@ -1337,6 +1341,10 @@ internal sealed class ApplicationInfoService : IApplicationInfoService
 
     public string GetAppCodenameText()
     {
+        return LanMountainDesktop.Shared.Contracts.Launcher.AppVersionProvider
+            .ResolveForCurrentProcess()
+            .Codename;
+
         // 浼樺厛浠庣幆澧冨彉閲忚鍙栵紙Launcher 浼犻€掞級
         var envCodename = Environment.GetEnvironmentVariable(LanMountainDesktop.Shared.Contracts.Launcher.LauncherIpcConstants.CodenameEnvVar);
         if (!string.IsNullOrWhiteSpace(envCodename))

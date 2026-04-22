@@ -1,16 +1,13 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Reflection;
+using System.Text;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Services;
 
 public static class AppRestartService
 {
-    private const string RestartParentPidArgumentPrefix = "--restart-parent-pid=";
-
     public static bool TryRestartApplication()
     {
         return App.CurrentHostApplicationLifecycle?.TryRestart(new HostApplicationLifecycleRequest(
@@ -42,19 +39,34 @@ public static class AppRestartService
     public static ProcessStartInfo? CreateRestartStartInfo(
         string[]? commandLineArgs = null,
         string? processPath = null,
-        string? entryAssemblyLocation = null)
+        string? entryAssemblyLocation = null,
+        RestartPresentationMode? restartPresentationMode = null)
     {
         var args = commandLineArgs ?? Environment.GetCommandLineArgs();
-        var resolvedProcessPath = NormalizeExistingPath(processPath ?? Environment.ProcessPath);
-        var resolvedEntryAssemblyPath = NormalizeExistingPath(
+        var resolvedProcessPath = NormalizeExistingFile(processPath ?? Environment.ProcessPath);
+        var resolvedEntryAssemblyPath = NormalizeExistingFile(
             entryAssemblyLocation ?? Assembly.GetEntryAssembly()?.Location);
+        var normalizedRestartPresentation = restartPresentationMode
+            ?? LauncherRuntimeMetadata.GetRestartPresentationMode(args)
+            ?? RestartPresentationMode.Foreground;
+
+        var launcherStartInfo = TryCreateLauncherStartInfo(
+            args,
+            resolvedProcessPath,
+            resolvedEntryAssemblyPath,
+            normalizedRestartPresentation);
+        if (launcherStartInfo is not null)
+        {
+            return launcherStartInfo;
+        }
 
         if (IsDotnetHost(resolvedProcessPath))
         {
             return CreateDotnetStartInfo(
                 resolvedProcessPath!,
                 resolvedEntryAssemblyPath,
-                args);
+                args,
+                normalizedRestartPresentation);
         }
 
         if (!string.IsNullOrWhiteSpace(resolvedProcessPath))
@@ -62,7 +74,8 @@ public static class AppRestartService
             return CreateExecutableStartInfo(
                 resolvedProcessPath,
                 resolvedEntryAssemblyPath,
-                args);
+                args,
+                normalizedRestartPresentation);
         }
 
         if (!string.IsNullOrWhiteSpace(resolvedEntryAssemblyPath) &&
@@ -71,7 +84,8 @@ public static class AppRestartService
             return CreateDotnetStartInfo(
                 "dotnet",
                 resolvedEntryAssemblyPath,
-                args);
+                args,
+                normalizedRestartPresentation);
         }
 
         return null;
@@ -80,22 +94,20 @@ public static class AppRestartService
     public static int? TryGetRestartParentProcessId(IReadOnlyList<string> commandLineArgs)
     {
         ArgumentNullException.ThrowIfNull(commandLineArgs);
+        return LauncherRuntimeMetadata.GetRestartParentProcessId(commandLineArgs);
+    }
 
-        foreach (var argument in commandLineArgs)
-        {
-            if (TryParseRestartParentProcessId(argument, out var processId))
-            {
-                return processId;
-            }
-        }
-
-        return null;
+    public static RestartPresentationMode? TryGetRestartPresentationMode(IReadOnlyList<string> commandLineArgs)
+    {
+        ArgumentNullException.ThrowIfNull(commandLineArgs);
+        return LauncherRuntimeMetadata.GetRestartPresentationMode(commandLineArgs);
     }
 
     private static ProcessStartInfo CreateExecutableStartInfo(
         string executablePath,
         string? entryAssemblyPath,
-        IReadOnlyList<string> commandLineArgs)
+        IReadOnlyList<string> commandLineArgs,
+        RestartPresentationMode restartPresentationMode)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -104,18 +116,17 @@ public static class AppRestartService
             WorkingDirectory = ResolveWorkingDirectory(executablePath, entryAssemblyPath)
         };
 
-        // UseShellExecute=true 时使用 Arguments 字符串而非 ArgumentList
-        var args = new System.Text.StringBuilder();
-        AppendArgumentsToString(args, commandLineArgs);
-        AppendRestartParentProcessArgumentToString(args);
-        startInfo.Arguments = args.ToString();
+        var arguments = new StringBuilder();
+        AppendForwardedArguments(arguments, commandLineArgs, restartPresentationMode);
+        startInfo.Arguments = arguments.ToString();
         return startInfo;
     }
 
     private static ProcessStartInfo? CreateDotnetStartInfo(
         string dotnetHostPath,
         string? entryAssemblyPath,
-        IReadOnlyList<string> commandLineArgs)
+        IReadOnlyList<string> commandLineArgs,
+        RestartPresentationMode restartPresentationMode)
     {
         if (string.IsNullOrWhiteSpace(entryAssemblyPath))
         {
@@ -129,51 +140,182 @@ public static class AppRestartService
             WorkingDirectory = ResolveWorkingDirectory(dotnetHostPath, entryAssemblyPath)
         };
 
-        // UseShellExecute=true 时使用 Arguments 字符串
-        var args = new System.Text.StringBuilder();
-        args.Append(QuoteArgument(entryAssemblyPath));
-        AppendArgumentsToString(args, commandLineArgs);
-        AppendRestartParentProcessArgumentToString(args);
-        startInfo.Arguments = args.ToString();
+        var arguments = new StringBuilder();
+        arguments.Append(QuoteArgument(entryAssemblyPath));
+        AppendForwardedArguments(arguments, commandLineArgs, restartPresentationMode);
+        startInfo.Arguments = arguments.ToString();
         return startInfo;
     }
 
-    private static void AppendArguments(ProcessStartInfo startInfo, IReadOnlyList<string> commandLineArgs)
+    private static ProcessStartInfo? TryCreateLauncherStartInfo(
+        IReadOnlyList<string> commandLineArgs,
+        string? processPath,
+        string? entryAssemblyPath,
+        RestartPresentationMode restartPresentationMode)
     {
-        for (var i = 1; i < commandLineArgs.Count; i++)
+        var launcherPath = ResolveLauncherPath(commandLineArgs, processPath, entryAssemblyPath);
+        if (string.IsNullOrWhiteSpace(launcherPath))
         {
-            if (TryParseRestartParentProcessId(commandLineArgs[i], out _))
+            return null;
+        }
+
+        var arguments = new StringBuilder();
+        AppendFilteredArguments(arguments, commandLineArgs);
+        AppendRestartArguments(arguments, restartPresentationMode);
+
+        return new ProcessStartInfo
+        {
+            FileName = launcherPath,
+            UseShellExecute = true,
+            WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
+            Arguments = arguments.ToString()
+        };
+    }
+
+    private static string? ResolveLauncherPath(
+        IReadOnlyList<string> commandLineArgs,
+        string? processPath,
+        string? entryAssemblyPath)
+    {
+        var launcherFileName = OperatingSystem.IsWindows()
+            ? "LanMountainDesktop.Launcher.exe"
+            : "LanMountainDesktop.Launcher";
+
+        foreach (var packageRootCandidate in GetPackageRootCandidates(commandLineArgs, processPath, entryAssemblyPath))
+        {
+            var normalizedRoot = NormalizeExistingDirectory(packageRootCandidate);
+            if (string.IsNullOrWhiteSpace(normalizedRoot))
             {
                 continue;
             }
 
-            startInfo.ArgumentList.Add(commandLineArgs[i]);
+            var directCandidate = Path.Combine(normalizedRoot, launcherFileName);
+            if (File.Exists(directCandidate))
+            {
+                return directCandidate;
+            }
         }
+
+        return null;
     }
 
-    private static void AppendArgumentsToString(System.Text.StringBuilder builder, IReadOnlyList<string> commandLineArgs)
+    private static IEnumerable<string?> GetPackageRootCandidates(
+        IReadOnlyList<string> commandLineArgs,
+        string? processPath,
+        string? entryAssemblyPath)
     {
-        for (var i = 1; i < commandLineArgs.Count; i++)
+        yield return LauncherRuntimeMetadata.GetPackageRoot(commandLineArgs);
+
+        foreach (var path in new[] { entryAssemblyPath, processPath, AppContext.BaseDirectory })
         {
-            if (TryParseRestartParentProcessId(commandLineArgs[i], out _))
+            var directory = GetDirectoryFromPath(path);
+            if (string.IsNullOrWhiteSpace(directory))
             {
                 continue;
             }
 
-            if (builder.Length > 0) builder.Append(' ');
-            builder.Append(QuoteArgument(commandLineArgs[i]));
+            yield return directory;
+            yield return Path.GetDirectoryName(directory);
         }
     }
 
-    private static void AppendRestartParentProcessArgument(ProcessStartInfo startInfo)
+    private static string? GetDirectoryFromPath(string? path)
     {
-        startInfo.ArgumentList.Add($"{RestartParentPidArgumentPrefix}{Environment.ProcessId}");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath))
+            {
+                return fullPath;
+            }
+
+            return File.Exists(fullPath)
+                ? Path.GetDirectoryName(fullPath)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
-    private static void AppendRestartParentProcessArgumentToString(System.Text.StringBuilder builder)
+    private static void AppendForwardedArguments(
+        StringBuilder builder,
+        IReadOnlyList<string> commandLineArgs,
+        RestartPresentationMode restartPresentationMode)
     {
-        if (builder.Length > 0) builder.Append(' ');
-        builder.Append($"{RestartParentPidArgumentPrefix}{Environment.ProcessId}");
+        AppendFilteredArguments(builder, commandLineArgs);
+        AppendRestartArguments(builder, restartPresentationMode);
+    }
+
+    private static void AppendFilteredArguments(StringBuilder builder, IReadOnlyList<string> commandLineArgs)
+    {
+        for (var index = 1; index < commandLineArgs.Count; index++)
+        {
+            if (ShouldSkipArgument(commandLineArgs, ref index))
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(QuoteArgument(commandLineArgs[index]));
+        }
+    }
+
+    private static bool ShouldSkipArgument(IReadOnlyList<string> commandLineArgs, ref int index)
+    {
+        var argument = commandLineArgs[index];
+        if (!argument.StartsWith("--", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var key = argument[2..];
+        var equalsIndex = key.IndexOf('=');
+        if (equalsIndex >= 0)
+        {
+            key = key[..equalsIndex];
+        }
+
+        var shouldSkip = string.Equals(key, LauncherIpcConstants.LaunchSourceOptionName, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.RestartParentPidOptionName, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.RestartPresentationOptionName, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.LauncherPidEnvVar, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.PackageRootEnvVar, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.VersionEnvVar, StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(key, LauncherIpcConstants.CodenameEnvVar, StringComparison.OrdinalIgnoreCase);
+
+        if (shouldSkip &&
+            equalsIndex < 0 &&
+            index + 1 < commandLineArgs.Count &&
+            !commandLineArgs[index + 1].StartsWith("--", StringComparison.Ordinal))
+        {
+            index++;
+        }
+
+        return shouldSkip;
+    }
+
+    private static void AppendRestartArguments(StringBuilder builder, RestartPresentationMode restartPresentationMode)
+    {
+        if (builder.Length > 0)
+        {
+            builder.Append(' ');
+        }
+
+        builder.Append($"--{LauncherIpcConstants.LaunchSourceOptionName}=restart");
+        builder.Append($" --{LauncherIpcConstants.RestartParentPidOptionName}={Environment.ProcessId}");
+        builder.Append(
+            $" --{LauncherIpcConstants.RestartPresentationOptionName}={LauncherRuntimeMetadata.FormatRestartPresentation(restartPresentationMode)}");
     }
 
     private static string QuoteArgument(string value)
@@ -188,7 +330,7 @@ public static class AppRestartService
             return value;
         }
 
-        var builder = new System.Text.StringBuilder();
+        var builder = new StringBuilder();
         builder.Append('"');
         foreach (var ch in value)
         {
@@ -206,21 +348,7 @@ public static class AppRestartService
         return builder.ToString();
     }
 
-    private static bool TryParseRestartParentProcessId(string? argument, out int processId)
-    {
-        processId = 0;
-        if (string.IsNullOrWhiteSpace(argument) ||
-            !argument.StartsWith(RestartParentPidArgumentPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return int.TryParse(
-            argument[RestartParentPidArgumentPrefix.Length..],
-            out processId) && processId > 0;
-    }
-
-    private static string? NormalizeExistingPath(string? path)
+    private static string? NormalizeExistingFile(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -231,6 +359,24 @@ public static class AppRestartService
         {
             var fullPath = Path.GetFullPath(path);
             return File.Exists(fullPath) ? fullPath : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? NormalizeExistingDirectory(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            return Directory.Exists(fullPath) ? fullPath : null;
         }
         catch
         {

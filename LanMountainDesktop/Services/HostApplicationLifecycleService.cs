@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using LanMountainDesktop.PluginSdk;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Services;
 
@@ -105,7 +106,9 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
             "Extensions",
             "Plugins");
 
-        var startInfo = AppRestartService.CreateRestartStartInfo();
+        var app = Application.Current as App;
+        var restartPresentationMode = app?.GetCurrentRestartPresentationMode() ?? RestartPresentationMode.Foreground;
+        var startInfo = AppRestartService.CreateRestartStartInfo(restartPresentationMode: restartPresentationMode);
         var launchCommand = startInfo?.FileName ?? Process.GetCurrentProcess().MainModule?.FileName ?? AppContext.BaseDirectory;
         var launchArgs = startInfo?.Arguments ?? "";
 
@@ -121,7 +124,6 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
 
         Process.Start(helperStartInfo);
 
-        var app = Application.Current as App;
         app?.PrepareForShutdown(isRestart: true, request?.Source ?? "Unknown");
 
         return TryExit(request);
@@ -129,7 +131,9 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
 
     private bool TryRestartDirectly(HostApplicationLifecycleRequest? request)
     {
-        var startInfo = AppRestartService.CreateRestartStartInfo();
+        var app = Application.Current as App;
+        var restartPresentationMode = app?.GetCurrentRestartPresentationMode() ?? RestartPresentationMode.Foreground;
+        var startInfo = AppRestartService.CreateRestartStartInfo(restartPresentationMode: restartPresentationMode);
         if (startInfo is null)
         {
             AppLogger.Warn(
@@ -139,7 +143,6 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
         }
 
         Process.Start(startInfo);
-        var app = Application.Current as App;
         app?.PrepareForShutdown(isRestart: true, request?.Source ?? "Unknown");
         var exitRequest = request is null
             ? new HostApplicationLifecycleRequest(Reason: "Restart accepted.")

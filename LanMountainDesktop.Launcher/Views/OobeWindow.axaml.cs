@@ -9,26 +9,18 @@ using Avalonia.Styling;
 
 namespace LanMountainDesktop.Launcher.Views;
 
-/// <summary>
-/// OOBE（首次使用体验）窗口 - 欢迎页面
-/// </summary>
 public partial class OobeWindow : Window
 {
     private readonly TaskCompletionSource<bool> _completionSource = new();
-    private bool _isTransitioning = false;
+    private bool _isTransitioning;
 
     public OobeWindow()
     {
         AvaloniaXamlLoader.Load(this);
-
-        // 延迟到窗口加载完成后再初始化
-        this.Loaded += OnWindowLoaded;
-        this.Opened += OnWindowOpened;
+        Loaded += OnWindowLoaded;
+        Opened += OnWindowOpened;
     }
 
-    /// <summary>
-    /// 窗口加载完成事件
-    /// </summary>
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         Console.WriteLine("[OobeWindow] Window loaded, initializing components...");
@@ -45,31 +37,29 @@ public partial class OobeWindow : Window
         }
     }
 
-    /// <summary>
-    /// 窗口打开事件 - 播放入场动画
-    /// </summary>
     private async void OnWindowOpened(object? sender, EventArgs e)
     {
         Console.WriteLine("[OobeWindow] Window opened, playing entrance animation...");
         await PlayEntranceAnimationAsync();
     }
 
-    /// <summary>
-    /// 播放入场动画
-    /// </summary>
     private async Task PlayEntranceAnimationAsync()
     {
         try
         {
-            // 获取内容元素
             var contentGrid = this.FindControl<Grid>("ContentGrid");
             if (contentGrid is null)
             {
-                // 如果没有命名网格，直接返回
                 return;
             }
 
-            // 创建淡入动画
+            var translateTransform = contentGrid.RenderTransform as TranslateTransform ?? new TranslateTransform();
+            contentGrid.RenderTransform = translateTransform;
+
+            var offset = ResolveEntranceOffset();
+            contentGrid.Opacity = 0;
+            translateTransform.Y = offset;
+
             var fadeInAnimation = new Animation
             {
                 Duration = TimeSpan.FromMilliseconds(600),
@@ -89,7 +79,6 @@ public partial class OobeWindow : Window
                 }
             };
 
-            // 创建向上滑动动画
             var slideUpAnimation = new Animation
             {
                 Duration = TimeSpan.FromMilliseconds(600),
@@ -98,7 +87,7 @@ public partial class OobeWindow : Window
                 {
                     new KeyFrame
                     {
-                        Setters = { new Setter(TranslateTransform.YProperty, 30.0) },
+                        Setters = { new Setter(TranslateTransform.YProperty, offset) },
                         KeyTime = TimeSpan.FromMilliseconds(0)
                     },
                     new KeyFrame
@@ -109,9 +98,9 @@ public partial class OobeWindow : Window
                 }
             };
 
-            // 应用动画
-            await fadeInAnimation.RunAsync(contentGrid);
-            await slideUpAnimation.RunAsync(contentGrid);
+            await Task.WhenAll(
+                fadeInAnimation.RunAsync(contentGrid),
+                slideUpAnimation.RunAsync(translateTransform));
 
             Console.WriteLine("[OobeWindow] Entrance animation completed");
         }
@@ -121,27 +110,21 @@ public partial class OobeWindow : Window
         }
     }
 
-    /// <summary>
-    /// 等待用户点击开始按钮
-    /// </summary>
     public Task WaitForEnterAsync() => _completionSource.Task;
 
-    /// <summary>
-    /// 进入按钮点击事件
-    /// </summary>
     private async void OnEnterClick(object? sender, RoutedEventArgs e)
     {
-        if (_isTransitioning) return;
-        _isTransitioning = true;
+        if (_isTransitioning)
+        {
+            return;
+        }
 
+        _isTransitioning = true;
         Console.WriteLine("[OobeWindow] Enter button clicked, starting transition...");
 
         try
         {
-            // 播放退出动画
             await PlayExitAnimationAsync();
-
-            // 完成 OOBE
             _completionSource.TrySetResult(true);
         }
         catch (Exception ex)
@@ -151,9 +134,6 @@ public partial class OobeWindow : Window
         }
     }
 
-    /// <summary>
-    /// 播放退出动画
-    /// </summary>
     private async Task PlayExitAnimationAsync()
     {
         try
@@ -161,12 +141,10 @@ public partial class OobeWindow : Window
             var contentGrid = this.FindControl<Grid>("ContentGrid");
             if (contentGrid is null)
             {
-                // 如果没有命名网格，直接延迟后返回
                 await Task.Delay(200);
                 return;
             }
 
-            // 创建淡出动画
             var fadeOutAnimation = new Animation
             {
                 Duration = TimeSpan.FromMilliseconds(200),
@@ -193,5 +171,12 @@ public partial class OobeWindow : Window
         {
             Console.Error.WriteLine($"[OobeWindow] Error playing exit animation: {ex.Message}");
         }
+    }
+
+    private double ResolveEntranceOffset()
+    {
+        var boundsHeight = Bounds.Height > 0 ? Bounds.Height : Height;
+        var scaledOffset = boundsHeight * 0.05;
+        return Math.Clamp(scaledOffset, 20, 48);
     }
 }

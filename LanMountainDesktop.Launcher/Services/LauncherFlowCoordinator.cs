@@ -4,6 +4,7 @@ using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
+using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Launcher.Services;
 
@@ -12,7 +13,7 @@ internal sealed class LauncherFlowCoordinator
     private static readonly string[] LauncherOnlyOptions =
     [
         "debug", "show-loading-details", "plugins-dir", "source", "result",
-        "app-root", "launch-source",
+        "app-root",
         LauncherIpcConstants.LauncherPidEnvVar,
         LauncherIpcConstants.PackageRootEnvVar,
         LauncherIpcConstants.VersionEnvVar,
@@ -65,6 +66,8 @@ internal sealed class LauncherFlowCoordinator
                 window.Show();
                 return window;
             });
+            var versionInfo = _deploymentLocator.GetVersionInfo();
+            splashWindow.SetVersionInfo(versionInfo.Version, versionInfo.Codename);
             var reporter = (ISplashStageReporter)splashWindow;
 
             LoadingDetailsWindow? loadingDetailsWindow = null;
@@ -77,10 +80,11 @@ internal sealed class LauncherFlowCoordinator
                 });
             }
 
-            var visibilityTcs = new TaskCompletionSource<StartupStage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var successTcs = new TaskCompletionSource<StartupSuccessState>(TaskCreationOptions.RunContinuationsAsynchronously);
             var activationFailedTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             var lastStage = StartupStage.Initializing;
             var lastStageMessage = "launcher-started";
+            var startupSuccessTracker = new StartupSuccessTracker(_context);
 
             var loadingState = new LoadingStateMessage();
             using var ipcClient = new LanMountainDesktopIpcClient();
@@ -105,15 +109,14 @@ internal sealed class LauncherFlowCoordinator
                         reporter.Report(MapStartupStageToSplashStage(message.Stage), message.Message ?? message.Stage.ToString());
                         loadingDetailsWindow?.UpdateLoadingState(loadingState);
 
-                        switch (message.Stage)
+                        if (startupSuccessTracker.TryResolve(message.Stage, out var successState))
                         {
-                            case StartupStage.DesktopVisible:
-                            case StartupStage.ActivationRedirected:
-                                visibilityTcs.TrySetResult(message.Stage);
-                                break;
-                            case StartupStage.ActivationFailed:
-                                activationFailedTcs.TrySetResult(message.Message ?? "activation_failed");
-                                break;
+                            successTcs.TrySetResult(successState);
+                        }
+
+                        if (message.Stage == StartupStage.ActivationFailed)
+                        {
+                            activationFailedTcs.TrySetResult(message.Message ?? "activation_failed");
                         }
                     }
                     catch (Exception ex)
@@ -197,22 +200,20 @@ internal sealed class LauncherFlowCoordinator
 
                 var processExitTask = launchOutcome.Process.WaitForExitAsync();
                 var completedTask = await Task.WhenAny(
-                    visibilityTcs.Task,
+                    successTcs.Task,
                     activationFailedTcs.Task,
                     processExitTask,
                     Task.Delay(TimeSpan.FromSeconds(30))).ConfigureAwait(false);
 
-                if (completedTask == visibilityTcs.Task)
+                if (completedTask == successTcs.Task)
                 {
-                    var stage = await visibilityTcs.Task.ConfigureAwait(false);
+                    var successState = await successTcs.Task.ConfigureAwait(false);
                     await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                     return BuildResult(
                         success: true,
                         stage: "launch",
-                        code: stage == StartupStage.ActivationRedirected ? "activation_redirected" : "ok",
-                        message: stage == StartupStage.ActivationRedirected
-                            ? "Launcher activation was redirected to the existing desktop instance."
-                            : "Desktop is visible and ready.",
+                        code: successState.Code,
+                        message: successState.Message,
                         details: MergeDetails(launcherContextDetails, launchOutcome.Details));
                 }
 
@@ -230,7 +231,7 @@ internal sealed class LauncherFlowCoordinator
                 if (completedTask == processExitTask)
                 {
                     var exitCode = launchOutcome.Process.ExitCode;
-                    Logger.Warn($"Host exited before desktop became visible. ExitCode={exitCode}.");
+                    Logger.Warn($"Host exited before startup success criteria were met. ExitCode={exitCode}.");
 
                     if (exitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired)
                     {
@@ -249,11 +250,33 @@ internal sealed class LauncherFlowCoordinator
                         code: exitCode == HostExitCodes.SecondaryActivationSucceeded ? "activation_redirected" : "host_exited_early",
                         message: exitCode == HostExitCodes.SecondaryActivationSucceeded
                             ? "Host redirected activation to the existing desktop instance."
-                            : $"Host exited before the desktop became visible. ExitCode={exitCode}.",
+                            : $"Host exited before the required startup state was reported. ExitCode={exitCode}.",
                         details: MergeDetails(launcherContextDetails, MergeDetails(launchOutcome.Details, new Dictionary<string, string>
                         {
                             ["exitCode"] = exitCode.ToString()
                         })));
+                }
+
+                if (connected && !launchOutcome.Process.HasExited)
+                {
+                    var recoveryOutcome = await TryRecoverWithPublicActivationAsync(
+                        ipcClient,
+                        launchOutcome.Process,
+                        successTcs.Task,
+                        startupSuccessTracker).ConfigureAwait(false);
+                    if (recoveryOutcome is not null)
+                    {
+                        await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                        return BuildResult(
+                            success: true,
+                            stage: "launch",
+                            code: recoveryOutcome.Code,
+                            message: recoveryOutcome.Message,
+                            details: MergeDetails(launcherContextDetails, MergeDetails(launchOutcome.Details, new Dictionary<string, string>
+                            {
+                                ["recoveryActivationAttempted"] = bool.TrueString
+                            })));
+                    }
                 }
 
                 await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
@@ -261,7 +284,7 @@ internal sealed class LauncherFlowCoordinator
                     success: false,
                     stage: "launch",
                     code: "desktop_not_visible",
-                    message: "Host process started, but the desktop never became visible within 30 seconds.",
+                    message: "Host process started, but it never reached the required startup state within 30 seconds.",
                     details: MergeDetails(launcherContextDetails, MergeDetails(launchOutcome.Details, new Dictionary<string, string>
                     {
                         ["ipcStage"] = lastStage.ToString(),
@@ -450,6 +473,11 @@ internal sealed class LauncherFlowCoordinator
                 firstAttempt.Process,
                 BuildResult(true, "launchHost", "ok", "Host launched.", firstDetails),
                 firstDetails);
+        }
+
+        if (firstAttempt.ExitCode == HostExitCodes.SecondaryActivationSucceeded)
+        {
+            return BuildOutcomeFromAttempt(resolution, firstAttempt, null);
         }
 
         if (fallbackMode is null)
@@ -749,8 +777,10 @@ internal sealed class LauncherFlowCoordinator
         StartupStage.Initializing => "initializing",
         StartupStage.LoadingSettings => "settings",
         StartupStage.LoadingPlugins => "plugins",
+        StartupStage.TrayReady => "shell",
         StartupStage.InitializingUI => "ui",
         StartupStage.ShellInitialized => "shell",
+        StartupStage.BackgroundReady => "ready",
         StartupStage.DesktopVisible => "ready",
         StartupStage.ActivationRedirected => "activation",
         StartupStage.ActivationFailed => "error",
@@ -936,6 +966,40 @@ internal sealed class LauncherFlowCoordinator
         return true;
     }
 
+    private static async Task<StartupSuccessState?> TryRecoverWithPublicActivationAsync(
+        LanMountainDesktopIpcClient ipcClient,
+        Process hostProcess,
+        Task<StartupSuccessState> successTask,
+        StartupSuccessTracker startupSuccessTracker)
+    {
+        try
+        {
+            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
+            var activationAccepted = await shellProxy.ActivateMainWindowAsync().ConfigureAwait(false);
+            if (!activationAccepted)
+            {
+                return null;
+            }
+
+            var completedTask = await Task.WhenAny(successTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+            if (completedTask == successTask)
+            {
+                return await successTask.ConfigureAwait(false);
+            }
+
+            if (!hostProcess.HasExited)
+            {
+                return startupSuccessTracker.BuildRecoverySuccessState();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Public activation recovery failed: {ex.Message}");
+        }
+
+        return null;
+    }
+
     private enum HostStartMode
     {
         ShellExecute,
@@ -976,5 +1040,109 @@ internal sealed class LauncherFlowCoordinator
 
         public static HostLaunchOutcome FromProcess(Process process, LauncherResult result, Dictionary<string, string> details) =>
             new(result, process, null, details);
+    }
+
+    private sealed class StartupSuccessTracker
+    {
+        private readonly LaunchSuccessPolicy _policy;
+        private bool _trayReady;
+        private bool _backgroundReady;
+
+        public StartupSuccessTracker(CommandContext context)
+        {
+            var restartPresentation = LauncherRuntimeMetadata.GetRestartPresentationMode(context.RawArgs);
+            var isRestartLaunch = string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase);
+
+            _policy = !isRestartLaunch
+                ? LaunchSuccessPolicy.Foreground
+                : restartPresentation switch
+                {
+                    RestartPresentationMode.Tray => LaunchSuccessPolicy.RestartTray,
+                    RestartPresentationMode.Minimized => LaunchSuccessPolicy.RestartBackground,
+                    _ => LaunchSuccessPolicy.Foreground
+                };
+        }
+
+        public bool TryResolve(StartupStage stage, out StartupSuccessState successState)
+        {
+            switch (stage)
+            {
+                case StartupStage.ActivationRedirected:
+                    successState = new StartupSuccessState(
+                        stage,
+                        "activation_redirected",
+                        "Launcher activation was redirected to the existing desktop instance.");
+                    return true;
+
+                case StartupStage.DesktopVisible:
+                    successState = new StartupSuccessState(
+                        stage,
+                        _policy == LaunchSuccessPolicy.Foreground ? "ok" : "desktop_visible_fallback",
+                        _policy == LaunchSuccessPolicy.Foreground
+                            ? "Desktop is visible and ready."
+                            : "Desktop recovered in a visible state.");
+                    return true;
+
+                case StartupStage.TrayReady:
+                    _trayReady = true;
+                    break;
+
+                case StartupStage.BackgroundReady:
+                    _backgroundReady = true;
+                    break;
+            }
+
+            if (_policy == LaunchSuccessPolicy.RestartBackground && _backgroundReady)
+            {
+                successState = new StartupSuccessState(
+                    StartupStage.BackgroundReady,
+                    "background_ready",
+                    "Desktop restart completed in the background.");
+                return true;
+            }
+
+            if (_policy == LaunchSuccessPolicy.RestartTray && _trayReady && _backgroundReady)
+            {
+                successState = new StartupSuccessState(
+                    StartupStage.BackgroundReady,
+                    "background_ready",
+                    "Desktop restart completed with tray recovery ready.");
+                return true;
+            }
+
+            successState = default!;
+            return false;
+        }
+
+        public StartupSuccessState BuildRecoverySuccessState()
+        {
+            return _policy switch
+            {
+                LaunchSuccessPolicy.RestartTray => new StartupSuccessState(
+                    StartupStage.DesktopVisible,
+                    "recovery_activation_requested",
+                    "Launcher requested a visible recovery because the background restart never confirmed tray readiness."),
+                LaunchSuccessPolicy.RestartBackground => new StartupSuccessState(
+                    StartupStage.DesktopVisible,
+                    "recovery_activation_requested",
+                    "Launcher requested a visible recovery because the background restart never confirmed readiness."),
+                _ => new StartupSuccessState(
+                    StartupStage.DesktopVisible,
+                    "recovery_activation_requested",
+                    "Launcher requested a visible recovery from the running desktop instance.")
+            };
+        }
+    }
+
+    private sealed record StartupSuccessState(
+        StartupStage Stage,
+        string Code,
+        string Message);
+
+    private enum LaunchSuccessPolicy
+    {
+        Foreground,
+        RestartBackground,
+        RestartTray
     }
 }

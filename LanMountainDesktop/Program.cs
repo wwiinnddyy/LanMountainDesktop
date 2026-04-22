@@ -24,7 +24,7 @@ public sealed class Program
         AppLogger.Initialize();
         DevPluginOptions.Parse(args);
         RegisterGlobalExceptionLogging();
-        var restartParentProcessId = AppRestartService.TryGetRestartParentProcessId(args);
+        var restartParentProcessId = LauncherRuntimeMetadata.GetRestartParentProcessId(args);
 
         using var singleInstance = AcquireSingleInstance(restartParentProcessId);
         if (!singleInstance.IsPrimaryInstance)

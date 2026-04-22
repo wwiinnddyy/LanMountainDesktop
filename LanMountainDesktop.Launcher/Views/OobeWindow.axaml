@@ -21,7 +21,11 @@
     <views:OobeWindow />
   </Design.DataContext>
 
-  <Grid x:Name="ContentGrid">
+  <Grid x:Name="ContentGrid"
+        Opacity="0">
+    <Grid.RenderTransform>
+      <TranslateTransform Y="24" />
+    </Grid.RenderTransform>
     <!-- 主内容区域 -->
     <Grid Margin="48" RowDefinitions="*,Auto">
       <!-- 中央内容区域 -->

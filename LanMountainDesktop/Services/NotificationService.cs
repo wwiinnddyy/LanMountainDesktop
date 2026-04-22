@@ -414,7 +414,7 @@ internal sealed class NotificationWindowManager
 
         var screen = GetPrimaryScreen();
         var workingArea = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
-        var scale = 1d;
+        var scale = screen?.Scaling ?? 1d;
 
         for (var i = 0; i < windows.Count; i++)
         {
@@ -432,12 +432,19 @@ internal sealed class NotificationWindowManager
         int stackIndex)
     {
         window.Measure(Size.Infinity);
-        var windowWidth = window.DesiredSize.Width > 0 ? window.DesiredSize.Width : 320;
-        var windowHeight = window.DesiredSize.Height > 0 ? window.DesiredSize.Height : 80;
+        var windowWidthDip = window.Bounds.Width > 0
+            ? window.Bounds.Width
+            : window.DesiredSize.Width > 0 ? window.DesiredSize.Width : 320;
+        var windowHeightDip = window.Bounds.Height > 0
+            ? window.Bounds.Height
+            : window.DesiredSize.Height > 0 ? window.DesiredSize.Height : 80;
+
+        var windowWidth = (int)Math.Round(windowWidthDip * scale);
+        var windowHeight = (int)Math.Round(windowHeightDip * scale);
 
         var margin = (int)Math.Round(Margin * scale);
         var spacing = (int)Math.Round(Spacing * scale);
-        var stackedOffset = stackIndex * ((int)Math.Round(windowHeight) + spacing);
+        var stackedOffset = stackIndex * (windowHeight + spacing);
 
         return position switch
         {
@@ -446,31 +453,31 @@ internal sealed class NotificationWindowManager
                 workingArea.Y + margin + stackedOffset),
 
             NotificationPosition.TopRight => new PixelPoint(
-                workingArea.Right - (int)Math.Round(windowWidth) - margin,
+                workingArea.Right - windowWidth - margin,
                 workingArea.Y + margin + stackedOffset),
 
             NotificationPosition.TopCenter => new PixelPoint(
-                workingArea.X + (workingArea.Width - (int)Math.Round(windowWidth)) / 2,
+                workingArea.X + (workingArea.Width - windowWidth) / 2,
                 workingArea.Y + margin + stackedOffset),
 
             NotificationPosition.BottomLeft => new PixelPoint(
                 workingArea.X + margin,
-                workingArea.Bottom - (int)Math.Round(windowHeight) - margin - stackedOffset),
+                workingArea.Bottom - windowHeight - margin - stackedOffset),
 
             NotificationPosition.BottomRight => new PixelPoint(
-                workingArea.Right - (int)Math.Round(windowWidth) - margin,
-                workingArea.Bottom - (int)Math.Round(windowHeight) - margin - stackedOffset),
+                workingArea.Right - windowWidth - margin,
+                workingArea.Bottom - windowHeight - margin - stackedOffset),
 
             NotificationPosition.BottomCenter => new PixelPoint(
-                workingArea.X + (workingArea.Width - (int)Math.Round(windowWidth)) / 2,
-                workingArea.Bottom - (int)Math.Round(windowHeight) - margin - stackedOffset),
+                workingArea.X + (workingArea.Width - windowWidth) / 2,
+                workingArea.Bottom - windowHeight - margin - stackedOffset),
 
             NotificationPosition.Center => new PixelPoint(
-                workingArea.X + (workingArea.Width - (int)Math.Round(windowWidth)) / 2,
-                workingArea.Y + (workingArea.Height - (int)Math.Round(windowHeight)) / 2),
+                workingArea.X + (workingArea.Width - windowWidth) / 2,
+                workingArea.Y + (workingArea.Height - windowHeight) / 2),
 
             _ => new PixelPoint(
-                workingArea.Right - (int)Math.Round(windowWidth) - margin,
+                workingArea.Right - windowWidth - margin,
                 workingArea.Y + margin + stackedOffset)
         };
     }

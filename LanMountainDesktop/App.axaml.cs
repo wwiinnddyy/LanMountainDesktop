@@ -59,6 +59,9 @@ public partial class App : Application
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
+    private readonly string _launchSource = LauncherRuntimeMetadata.GetLaunchSource(Environment.GetCommandLineArgs()) ?? "normal";
+    private readonly RestartPresentationMode? _requestedRestartPresentationMode =
+        LauncherRuntimeMetadata.GetRestartPresentationMode(Environment.GetCommandLineArgs());
     private ISettingsPageRegistry? _settingsPageRegistry;
     private ISettingsWindowService? _settingsWindowService;
     private WeatherLocationRefreshService? _weatherLocationRefreshService;
@@ -67,12 +70,7 @@ public partial class App : Application
     private DesktopShellState _desktopShellState = DesktopShellState.ForegroundDesktop;
     private ShutdownIntent _shutdownIntent;
 
-    private TrayIcon? _trayIcon;
-    private NativeMenuItem? _trayShowDesktopMenuItem;
-    private NativeMenuItem? _traySettingsMenuItem;
-    private NativeMenuItem? _trayComponentLibraryMenuItem;
-    private NativeMenuItem? _trayRestartMenuItem;
-    private NativeMenuItem? _trayExitMenuItem;
+    private DesktopTrayService? _desktopTrayService;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private TransparentOverlayWindow? _transparentOverlayWindow;
@@ -108,6 +106,15 @@ public partial class App : Application
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
     internal INotificationService? NotificationService => _notificationService;
+    internal RestartPresentationMode GetCurrentRestartPresentationMode()
+    {
+        return _desktopShellState switch
+        {
+            DesktopShellState.TrayOnly => RestartPresentationMode.Tray,
+            DesktopShellState.MinimizedToTaskbar => RestartPresentationMode.Minimized,
+            _ => RestartPresentationMode.Foreground
+        };
+    }
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
     {
@@ -470,126 +477,88 @@ public partial class App : Application
 
     private void InitializeTrayIcon()
     {
-        try
+        EnsureDesktopTrayService();
+        _trayInitialized = _desktopTrayService?.EnsureReady("Startup") == true;
+        if (_trayInitialized)
         {
-            if (_trayIcon is null)
-            {
-                _trayShowDesktopMenuItem = new NativeMenuItem();
-                _trayShowDesktopMenuItem.Click += OnTrayShowDesktopClick;
-
-                _traySettingsMenuItem = new NativeMenuItem();
-                _traySettingsMenuItem.Click += OnTraySettingsClick;
-
-                _trayComponentLibraryMenuItem = new NativeMenuItem();
-                _trayComponentLibraryMenuItem.Click += OnTrayComponentLibraryClick;
-
-                _trayRestartMenuItem = new NativeMenuItem();
-                _trayRestartMenuItem.Click += OnTrayRestartClick;
-
-                _trayExitMenuItem = new NativeMenuItem();
-                _trayExitMenuItem.Click += OnTrayExitClick;
-
-                var trayMenu = new NativeMenu();
-                trayMenu.Items.Add(_trayShowDesktopMenuItem);
-                trayMenu.Items.Add(_traySettingsMenuItem);
-                trayMenu.Items.Add(_trayComponentLibraryMenuItem);
-                trayMenu.Items.Add(new NativeMenuItemSeparator());
-                trayMenu.Items.Add(_trayRestartMenuItem);
-                trayMenu.Items.Add(new NativeMenuItemSeparator());
-                trayMenu.Items.Add(_trayExitMenuItem);
-
-                _trayIcon = new TrayIcon
-                {
-                    Icon = _appLogoService.CreateTrayIcon(),
-                    Menu = trayMenu,
-                    IsVisible = true
-                };
-
-                TrayIcon.SetIcons(this, [_trayIcon]);
-            }
-
-            RefreshTrayIconContent();
-            _trayInitialized = true;
+            ReportStartupProgress(StartupStage.TrayReady, 75, "Tray ready.");
             AppLogger.Info("TrayIcon", $"Tray initialized successfully. Pid={Environment.ProcessId}.");
+            return;
         }
-        catch (Exception ex)
-        {
-            _trayInitialized = false;
-            AppLogger.Warn("TrayIcon", "Failed to initialize tray icon.", ex);
-        }
+
+        AppLogger.Warn("TrayIcon", "Tray initialization did not reach the ready state.");
     }
 
     private void RefreshTrayIconContent()
     {
-        if (_trayIcon is not null)
-        {
-            _trayIcon.IsVisible = true;
-            if (!OperatingSystem.IsLinux())
-            {
-                _trayIcon.ToolTipText = L("tray.tooltip", "LanMountainDesktop");
-            }
-        }
-
-        if (_trayShowDesktopMenuItem is not null)
-        {
-            _trayShowDesktopMenuItem.Header = L("tray.menu.show_desktop", "Open Desktop");
-        }
-
-        if (_traySettingsMenuItem is not null)
-        {
-            _traySettingsMenuItem.Header = L("tray.menu.settings", "Settings");
-        }
-
-        RefreshFusedDesktopMenuItemVisibility();
-
-        if (_trayRestartMenuItem is not null)
-        {
-            _trayRestartMenuItem.Header = L("tray.menu.restart", "Restart App");
-        }
-
-        if (_trayExitMenuItem is not null)
-        {
-            _trayExitMenuItem.Header = L("tray.menu.exit", "Exit App");
-        }
+        EnsureDesktopTrayService();
+        _desktopTrayService?.Refresh("RefreshTrayContent");
+        _trayInitialized = _desktopTrayService?.IsReady == true;
     }
 
     private void RefreshFusedDesktopMenuItemVisibility()
     {
-        if (_trayComponentLibraryMenuItem is null)
-        {
-            return;
-        }
-
-        if (!OperatingSystem.IsWindows())
-        {
-            _trayComponentLibraryMenuItem.IsVisible = false;
-            return;
-        }
-
-        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        _trayComponentLibraryMenuItem.IsVisible = appSnapshot.EnableFusedDesktop;
-
-        if (_trayComponentLibraryMenuItem.IsVisible)
-        {
-            _trayComponentLibraryMenuItem.Header = L("tray.menu.component_library", "Component Library");
-        }
+        RefreshTrayIconContent();
     }
 
     private void DisposeTrayIcon()
     {
-        if (_trayIcon is null)
+        _desktopTrayService?.Dispose();
+        _trayInitialized = false;
+    }
+
+    private void EnsureDesktopTrayService()
+    {
+        if (_desktopTrayService is not null)
         {
             return;
         }
 
-        try
+        _desktopTrayService = new DesktopTrayService(
+            this,
+            _appLogoService,
+            L,
+            ShouldShowTrayComponentLibraryMenuItem,
+            OnTrayShowDesktopClick,
+            OnTraySettingsClick,
+            OnTrayComponentLibraryClick,
+            OnTrayRestartClick,
+            OnTrayExitClick);
+        _desktopTrayService.StateChanged += OnTrayAvailabilityStateChanged;
+    }
+
+    private bool EnsureTrayReady(string reason)
+    {
+        EnsureDesktopTrayService();
+        var ready = _desktopTrayService?.EnsureReady(reason) == true;
+        _trayInitialized = ready;
+        if (ready)
         {
-            _trayIcon.IsVisible = false;
+            ReportStartupProgress(StartupStage.TrayReady, 75, "Tray ready.");
         }
-        catch (Exception ex)
+
+        return ready;
+    }
+
+    private void OnTrayAvailabilityStateChanged(TrayAvailabilityState state)
+    {
+        _trayInitialized = state == TrayAvailabilityState.Ready;
+
+        if (state == TrayAvailabilityState.Failed && _desktopShellState == DesktopShellState.TrayOnly)
         {
-            AppLogger.Warn("TrayIcon", "Failed to hide tray icon during cleanup.", ex);
+            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityFailed");
         }
+    }
+
+    private bool ShouldShowTrayComponentLibraryMenuItem()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        return appSnapshot.EnableFusedDesktop;
     }
 
     private void EnsureSettingsWindowService()
@@ -764,6 +733,7 @@ public partial class App : Application
                 mainWindow.PlayEnterAnimation();
             }, DispatcherPriority.Background);
 
+            _desktopTrayService?.StopWatchdog();
             SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
             AppLogger.Info(
                 "DesktopShell",
@@ -872,6 +842,7 @@ public partial class App : Application
             if (themeChanged)
             {
                 ApplyThemeFromSettings();
+                RefreshTrayIconContent();
             }
 
             if (languageChanged)
@@ -898,7 +869,11 @@ public partial class App : Application
         _ = sender;
         _ = e;
 
-        Dispatcher.UIThread.Post(ApplyThemeFromSettings, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() =>
+        {
+            ApplyThemeFromSettings();
+            RefreshTrayIconContent();
+        }, DispatcherPriority.Background);
     }
 
     private void ApplyAdaptiveThemeResources()
@@ -1144,15 +1119,53 @@ public partial class App : Application
         {
             mainWindow.Opened -= OnMainWindowOpened;
             _mainWindowOpened = true;
+            _loadingStateManager?.CompleteItem("system.init", "System initialization completed.");
+
+            if (TryApplyStartupPresentation(mainWindow))
+            {
+                AppLogger.Info(
+                    "App",
+                    $"Main window opened and startup presentation was applied. LaunchSource='{_launchSource}'; RestartPresentation='{_requestedRestartPresentationMode?.ToString() ?? "<none>"}'; ShellState='{_desktopShellState}'.");
+                ReportStartupProgressSync(StartupStage.Ready, 100, "Ready.");
+                _loadingStateReporter?.Stop();
+                return;
+            }
 
             AppLogger.Info(
                 "App",
                 $"Main window opened. Reporting DesktopVisible. TrayInitialized={_trayInitialized}; ShellState='{_desktopShellState}'.");
 
-            _loadingStateManager?.CompleteItem("system.init", "System initialization completed.");
             ReportStartupProgressSync(StartupStage.DesktopVisible, 100, "Desktop visible.");
             ReportStartupProgressSync(StartupStage.Ready, 100, "Ready.");
             _loadingStateReporter?.Stop();
+        }
+    }
+
+    private bool TryApplyStartupPresentation(MainWindow mainWindow)
+    {
+        if (!string.Equals(_launchSource, "restart", StringComparison.OrdinalIgnoreCase) ||
+            _requestedRestartPresentationMode is null ||
+            _requestedRestartPresentationMode == RestartPresentationMode.Foreground)
+        {
+            return false;
+        }
+
+        switch (_requestedRestartPresentationMode)
+        {
+            case RestartPresentationMode.Minimized:
+                mainWindow.ShowInTaskbar = true;
+                mainWindow.WindowState = WindowState.Minimized;
+                _desktopTrayService?.StopWatchdog();
+                SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, "StartupRestartPresentation");
+                ReportStartupProgressSync(StartupStage.BackgroundReady, 95, "Background ready.");
+                return true;
+
+            case RestartPresentationMode.Tray:
+                HideMainWindowToTray(mainWindow, "StartupRestartPresentation");
+                return true;
+
+            default:
+                return false;
         }
     }
 
@@ -1242,7 +1255,15 @@ public partial class App : Application
 
         if (_shutdownIntent == ShutdownIntent.None)
         {
-            SetDesktopShellState(DesktopShellState.TrayOnly, "MainWindowClosedUnexpected");
+            if (EnsureTrayReady("MainWindowClosedUnexpected"))
+            {
+                _desktopTrayService?.StartWatchdog();
+                SetDesktopShellState(DesktopShellState.TrayOnly, "MainWindowClosedUnexpected");
+            }
+            else
+            {
+                SetDesktopShellState(DesktopShellState.ForegroundDesktop, "MainWindowClosedUnexpectedWithoutTray");
+            }
         }
     }
 
@@ -1276,9 +1297,17 @@ public partial class App : Application
     {
         try
         {
+            if (!EnsureTrayReady($"HideToTray:{source}"))
+            {
+                RecoverFromTrayUnavailable(mainWindow, source);
+                return;
+            }
+
             mainWindow.ShowInTaskbar = false;
             mainWindow.Hide();
+            _desktopTrayService?.StartWatchdog();
             SetDesktopShellState(DesktopShellState.TrayOnly, source);
+            ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready.");
             AppLogger.Info(
                 "DesktopShell",
                 $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
@@ -1293,7 +1322,54 @@ public partial class App : Application
         catch (Exception ex)
         {
             AppLogger.Warn("DesktopShell", $"Failed to hide main window to tray. Source='{source}'.", ex);
+            RecoverFromTrayUnavailable(mainWindow, source);
         }
+    }
+
+    private void RecoverFromTrayUnavailable(MainWindow mainWindow, string source)
+    {
+        AppLogger.Warn(
+            "DesktopShell",
+            $"Tray was unavailable. Recovering to a visible or taskbar-backed state instead of TrayOnly. Source='{source}'.");
+
+        var showInTaskbar = ShouldShowMainWindowInTaskbar();
+        if (showInTaskbar)
+        {
+            mainWindow.ShowInTaskbar = true;
+            if (!mainWindow.IsVisible)
+            {
+                mainWindow.Show();
+            }
+
+            mainWindow.WindowState = WindowState.Minimized;
+            _desktopTrayService?.StopWatchdog();
+            SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, $"TrayFallbackTaskbar:{source}");
+            ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready via taskbar fallback.");
+            return;
+        }
+
+        mainWindow.ShowInTaskbar = true;
+        if (!mainWindow.IsVisible)
+        {
+            mainWindow.Show();
+        }
+
+        if (mainWindow.WindowState == WindowState.Minimized)
+        {
+            mainWindow.WindowState = WindowState.Normal;
+        }
+
+        if (mainWindow.WindowState != WindowState.FullScreen)
+        {
+            mainWindow.WindowState = WindowState.FullScreen;
+        }
+
+        mainWindow.Activate();
+        mainWindow.Topmost = true;
+        mainWindow.Topmost = false;
+        _desktopTrayService?.StopWatchdog();
+        SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"TrayFallbackForeground:{source}");
+        ReportStartupProgress(StartupStage.DesktopVisible, 100, "Desktop restored because tray was unavailable.");
     }
 
     private bool ShouldShowMainWindowInTaskbar()
@@ -1364,17 +1440,19 @@ public partial class App : Application
 
         try
         {
-            var version = typeof(App).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+            var versionInfo = AppVersionProvider.ResolveForCurrentProcess();
             _publicIpcHostService = new PublicIpcHostService();
             _publicIpcHostService.PluginDescriptorProvider = BuildPublicPluginDescriptors;
             _publicIpcHostService.RegisterPublicService<IPublicAppInfoService>(
-                new PublicAppInfoService(version, "Administrate", _startupAt));
+                new PublicAppInfoService(_startupAt));
             _publicIpcHostService.RegisterPublicService<IPublicShellControlService>(
                 new PublicShellControlService());
             _publicIpcHostService.RegisterPublicService<IPublicPluginCatalogService>(
                 new PublicPluginCatalogService(_publicIpcHostService));
             _publicIpcHostService.Start();
-            AppLogger.Info("PublicIpc", $"Public IPC host started. PipeName='{IpcConstants.DefaultPipeName}'.");
+            AppLogger.Info(
+                "PublicIpc",
+                $"Public IPC host started. PipeName='{IpcConstants.DefaultPipeName}'; Version='{versionInfo.Version}'; Codename='{versionInfo.Codename}'.");
         }
         catch (Exception ex)
         {

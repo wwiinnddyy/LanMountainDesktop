@@ -5,8 +5,10 @@ public enum StartupStage
     Initializing,
     LoadingSettings,
     LoadingPlugins,
+    TrayReady,
     InitializingUI,
     ShellInitialized,
+    BackgroundReady,
     DesktopVisible,
     ActivationRedirected,
     ActivationFailed,
@@ -35,4 +37,10 @@ public static class LauncherIpcConstants
     public const string VersionEnvVar = "LMD_VERSION";
 
     public const string CodenameEnvVar = "LMD_CODENAME";
+
+    public const string LaunchSourceOptionName = "launch-source";
+
+    public const string RestartParentPidOptionName = "restart-parent-pid";
+
+    public const string RestartPresentationOptionName = "restart-presentation";
 }

@@ -920,8 +920,12 @@ public partial class MainWindow : Window
 
         if (useSlide)
         {
-            var screenWidth = Screens.ScreenFromVisual(this)?.Bounds.Width ?? 3840;
-            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : screenWidth;
+            var screen = Screens.ScreenFromVisual(this);
+            var scale = screen?.Scaling ?? 1d;
+            var screenWidthDip = screen is null
+                ? 1920d
+                : screen.WorkingArea.Width / Math.Max(scale, 0.01d);
+            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : screenWidthDip;
         }
 
         DesktopPage.Transitions = savedTransitions;

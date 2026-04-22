@@ -121,6 +121,7 @@ internal sealed class CommandContext
         return raw.Trim().ToLowerInvariant() switch
         {
             "normal" => "normal",
+            "restart" => "restart",
             "postinstall" => "postinstall",
             "apply-update" => "apply-update",
             "plugin-install" => "plugin-install",
@@ -143,6 +144,13 @@ internal sealed class CommandContext
             var key = current[2..];
             if (string.IsNullOrWhiteSpace(key))
             {
+                continue;
+            }
+
+            var equalsIndex = key.IndexOf('=');
+            if (equalsIndex >= 0)
+            {
+                values[key[..equalsIndex]] = key[(equalsIndex + 1)..];
                 continue;
             }
 

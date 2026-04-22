@@ -46,8 +46,8 @@ public sealed class DesktopShellHost : IDesktopShellHost
         if (application.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.Exit += (_, _) => _performExitCleanup();
-            _createAndAssignMainWindow(desktop);
             _startActivationListener();
+            _createAndAssignMainWindow(desktop);
         }
 
         _startWeatherRefresh();

@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>0.0.0-dev</Version>
     <TargetFramework Condition="'$(TargetFramework)' == ''">net10.0</TargetFramework>
     <Nullable Condition="'$(Nullable)' == ''">enable</Nullable>
     <ImplicitUsings Condition="'$(ImplicitUsings)' == ''">enable</ImplicitUsings>

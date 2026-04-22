@@ -1,127 +1,65 @@
-﻿# 版本号自动同步说明
+# 版本同步说明
 
-## 📋 概述
+## 目标
 
-从本次更新开始，Release 工作流已配置为**自动同步版本号**，确保应用的每个版本号来源都保持一致。
+发布版的用户可见版本必须统一指向“应用版本”，不能再出现：
 
-## 🔄 版本号流转链路
+- Launcher UI 显示 `1.0.0`
+- 应用设置页显示 `0.8.x`
+- `version.json`、安装包、Release 资产名称各写各的
 
-```
-Git Tag (v1.0.1)
-    ↓
-[Release 工作流 prepare 任务]
-    ↓
-提取版本号: 1.0.1
-    ↓
-[Update version in .csproj] ✨ 新增步骤
-    ↓
-自动更新 .csproj 文件版本号
-    ↓
-dotnet restore/build
-    ↓
-构建时读取更新后的版本号
-    ↓
-应用内显示版本号 (MainWindow.Localization.cs 动态读取)
-```
+## 默认仓库状态
 
-## 🎯 工作原理
+仓库内的静态版本现在故意保留为开发占位值：
 
-### 1. 版本号提取
-当推送 Git Tag 时（如 `git tag v1.0.1`），Release 工作流的 `prepare` 任务自动提取版本号：
-- TAG: `v1.0.1` → VERSION: `1.0.1`
+- `Directory.Build.props`
+- `LanMountainDesktop/LanMountainDesktop.csproj`
+- `LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj`
+- `LanMountainDesktop.Shared.Contracts/LanMountainDesktop.Shared.Contracts.csproj`
+- `LanMountainDesktop/app.manifest`
+- `LanMountainDesktop.Launcher/app.manifest`
 
-### 2. 自动更新 .csproj
-在三个平台的构建任务中，新增了 **"Update version in .csproj"** 步骤：
+这些值只是提醒“当前不是正式注入构建”，不能代表发布版本。
 
-**Windows (PowerShell)**:
-```powershell
-$VERSION = "1.0.1"
-(Get-Content file.csproj) -replace '<Version>.*?</Version>', "<Version>$VERSION</Version>" | Set-Content file.csproj
-```
+## Release 工作流怎么做
 
-**Linux/macOS (Bash)**:
-```bash
-VERSION="1.0.1"
-sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" file.csproj
-```
+Release 工作流会先从 tag 提取版本：
 
-### 3. 构建和发布
-更新后的版本号被用于：
-- 程序集版本 (`AssemblyVersion`)
-- 包文件名 (`LanMountainDesktop-1.0.1-win-x64.zip`)
-- 应用内显示 (About 页面)
-- GitHub Release 标题
+- `v0.8.5.2` -> `0.8.5.2`
+- 程序集四段版本 -> `0.8.5.2`
 
-## 📍 涉及的文件
+随后显式执行：
 
-自动更新的文件：
-1. `LanMountainDesktop/LanMountainDesktop.csproj`
+- `scripts/Set-ReleaseVersion.ps1`
 
-## ✅ 使用流程
+这个步骤会同步更新：
 
-### 发布新版本
+- 主程序 `.csproj` 的 `Version`
+- Launcher `.csproj` 的 `Version`
+- Shared.Contracts `.csproj` 的 `Version`
+- `Directory.Build.props`
+- 主程序 `app.manifest`
+- Launcher `app.manifest`
 
-```bash
-# 1. 更新代码（可选：代码中的版本号现在会自动更新）
-git add .
-git commit -m "feat: Add new features"
+之后构建和发布阶段继续通过 MSBuild 属性注入：
 
-# 2. 创建版本标签
-git tag v1.0.1
-# 或带注释的标签
-git tag -a v1.0.1 -m "Release v1.0.1"
+- `Version`
+- `AssemblyVersion`
+- `FileVersion`
+- `InformationalVersion`
 
-# 3. 推送标签到 GitHub
-git push origin v1.0.1
+因此最终会统一落到：
 
-# 4. Release 工作流自动运行：
-#    - 自动更新 .csproj 文件
-#    - 构建所有平台
-#    - 创建 GitHub Release
-#    - 附带所有平台的发布包
-```
+- Launcher UI 读取到的应用版本
+- 应用设置页显示的版本
+- `version.json`
+- 程序集文件版本
+- Windows manifest
+- 安装包版本
+- GitHub Release 资产名称
 
-## 🔒 版本号一致性保证
+## 维护规则
 
-现在应用的三个版本号来源完全同步：
-
-| 来源 | 说明 | 自动更新 |
-|------|------|--------|
-| `.csproj` <Version> | 项目文件版本 | ✅ 是 |
-| 程序集版本 | 编译时读取 | ✅ 是 |
-| 应用内显示 | About 页面 | ✅ 是 |
-| 发布包文件名 | Release 工作流 | ✅ 是 |
-| GitHub Release | Release 工作流 | ✅ 是 |
-
-## ⚠️ 注意事项
-
-### 不需要手动更新
-- ❌ 不需要在 `.csproj` 中手动修改 Version
-- ❌ 不需要修改多个地方的版本号
-
-### 只需执行
-- ✅ 创建 Git Tag: `git tag v1.0.1`
-- ✅ 推送 Tag: `git push origin v1.0.1`
-- ✅ 其他由工作流自动处理
-
-## 📊 版本号格式
-
-支持的格式：
-- ✅ `v1.0.0` (builds -> 1.0.0)
-- ✅ `v1.2.3` (builds -> 1.2.3)
-- ✅ `v2.0.0-rc1` (builds -> 2.0.0-rc1, 如果需要)
-
-## 🛠️ 工作流文件
-
-更新的工作流文件：
-- `.github/workflows/release.yml` - Release 工作流
-
-## 📝 相关文件
-
-- [MULTIPLATFORM_RELEASE_GUIDE.md](./MULTIPLATFORM_RELEASE_GUIDE.md) - 多平台发布指南
-- [WORKFLOWS_GUIDE.md](./WORKFLOWS_GUIDE.md) - 工作流使用指南
-
----
-
-**最后更新**: 2026-03-04  
-**工作流版本**: 2.0 (自动版本同步)
+- 日常开发不要手动把仓库默认版本改成正式版本号。
+- 正式发版只需要打 tag，版本同步交给工作流。
+- 如果新增新的版本承载点，必须同时补到 `Set-ReleaseVersion.ps1` 和 Release 工作流里。

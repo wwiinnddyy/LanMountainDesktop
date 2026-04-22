@@ -119,6 +119,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Stamp release version metadata
+        shell: pwsh
+        run: |
+          ./scripts/Set-ReleaseVersion.ps1 `
+            -Version "${{ needs.prepare.outputs.version }}" `
+            -AssemblyVersion "${{ needs.prepare.outputs.assembly_version }}"
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
@@ -364,6 +371,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Stamp release version metadata
+        shell: pwsh
+        run: |
+          ./scripts/Set-ReleaseVersion.ps1 `
+            -Version "${{ needs.prepare.outputs.version }}" `
+            -AssemblyVersion "${{ needs.prepare.outputs.assembly_version }}"
+
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
 
@@ -544,6 +558,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
+
+      - name: Stamp release version metadata
+        shell: pwsh
+        run: |
+          ./scripts/Set-ReleaseVersion.ps1 `
+            -Version "${{ needs.prepare.outputs.version }}" `
+            -AssemblyVersion "${{ needs.prepare.outputs.assembly_version }}"
 
       - name: Restore
         run: dotnet restore ${{ env.Solution_Name }}
