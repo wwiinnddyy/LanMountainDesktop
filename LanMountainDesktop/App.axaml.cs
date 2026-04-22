@@ -117,8 +117,8 @@ public partial class App : Application
             $"Opening settings window. Source='{source}'; PageTag='{pageTag ?? "<default>"}'.");
         _settingsWindowService?.Open(new SettingsWindowOpenRequest(
             Source: source,
-            Owner: _mainWindow is { IsVisible: true } ? _mainWindow : null,
-            PageId: pageTag));
+            PageId: pageTag,
+            ScreenReferenceWindow: _mainWindow is { IsVisible: true } ? _mainWindow : null));
     }
 
     public App()
@@ -738,7 +738,7 @@ public partial class App : Application
             var mainWindow = GetOrCreateMainWindow(desktop, source);
             mainWindow.PrepareEnterAnimation();
 
-            mainWindow.ShowInTaskbar = true;
+            mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar();
 
             if (!mainWindow.IsVisible)
             {
@@ -1106,7 +1106,7 @@ public partial class App : Application
         var mainWindow = new MainWindow
         {
             DataContext = new MainWindowViewModel(),
-            ShowInTaskbar = true
+            ShowInTaskbar = ShouldShowMainWindowInTaskbar()
         };
 
         _mainWindowOpened = false;
@@ -1294,6 +1294,11 @@ public partial class App : Application
         {
             AppLogger.Warn("DesktopShell", $"Failed to hide main window to tray. Source='{source}'.", ex);
         }
+    }
+
+    private bool ShouldShowMainWindowInTaskbar()
+    {
+        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
     }
 
     private void SetDesktopShellState(DesktopShellState state, string source)

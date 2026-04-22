@@ -79,6 +79,7 @@ public partial class MainWindow
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadSource), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableSlideTransition), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
@@ -688,6 +689,10 @@ public partial class MainWindow
             StatusBarShadowEnabled = _statusBarShadowEnabled,
             StatusBarShadowColor = _statusBarShadowColor,
             StatusBarShadowOpacity = _statusBarShadowOpacity,
+            EnableThreeFingerSwipe = existingSnapshot.EnableThreeFingerSwipe,
+            EnableSlideTransition = existingSnapshot.EnableSlideTransition,
+            ShowInTaskbar = existingSnapshot.ShowInTaskbar,
+            EnableFusedDesktop = existingSnapshot.EnableFusedDesktop,
             DisabledPluginIds = existingSnapshot.DisabledPluginIds,
             StudyFrameMs = existingSnapshot.StudyFrameMs,
             StudyScoreThresholdDbfs = existingSnapshot.StudyScoreThresholdDbfs,

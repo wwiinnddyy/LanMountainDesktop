@@ -19,7 +19,6 @@ using LanMountainDesktop.DesktopEditing;
 using LanMountainDesktop.Host.Abstractions;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
@@ -282,16 +281,7 @@ public partial class MainWindow
             CloseComponentLibraryWindow(reopenSettings: false);
         }
 
-        var app = Application.Current as App;
-        if (app?.SettingsWindowService is { } settingsWindowService)
-        {
-            settingsWindowService.Toggle(new SettingsWindowOpenRequest(
-                Source: "MainWindowTaskbar",
-                Owner: this));
-            return;
-        }
-
-        app?.OpenIndependentSettingsModule("MainWindowTaskbar");
+        (Application.Current as App)?.OpenIndependentSettingsModule("MainWindowTaskbar");
     }
 
     private void OnPowerMenuEnterClick(object? sender, RoutedEventArgs e)
@@ -2859,34 +2849,6 @@ public partial class MainWindow
     internal void CloseDetachedComponentLibraryWindowFromService()
     {
         CloseDetachedComponentLibraryWindow();
-    }
-
-    public bool TryGetSettingsWindowAnchorBounds(out PixelRect anchorBounds)
-    {
-        anchorBounds = default;
-        if (!IsVisible || BottomTaskbarContainer is null)
-        {
-            return false;
-        }
-
-        var origin = BottomTaskbarContainer.TranslatePoint(new Point(0, 0), this);
-        if (origin is null)
-        {
-            return false;
-        }
-
-        var scale = RenderScaling > 0 ? RenderScaling : 1d;
-        var width = (int)Math.Round(BottomTaskbarContainer.Bounds.Width * scale);
-        var height = (int)Math.Round(BottomTaskbarContainer.Bounds.Height * scale);
-        if (width <= 0 || height <= 0)
-        {
-            return false;
-        }
-
-        var x = Position.X + (int)Math.Round(origin.Value.X * scale);
-        var y = Position.Y + (int)Math.Round(origin.Value.Y * scale);
-        anchorBounds = new PixelRect(x, y, width, height);
-        return true;
     }
 
     private void CollapseComponentLibraryPanel()

@@ -256,18 +256,14 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
     private void OnFindMoreComponentsClick(object? sender, RoutedEventArgs e)
     {
         // 打开设置窗口并导航到插件目录页面
-        if (Application.Current is App app && app.SettingsWindowService is { } settingsWindowService)
+        if (Application.Current is App app)
         {
-            var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
-            var request = new SettingsWindowOpenRequest(
-                Source: "FusedDesktopComponentLibrary",
-                Owner: mainWindow,
-                PageId: "plugin-catalog");
-            settingsWindowService.Open(request);
+            app.OpenIndependentSettingsModule("FusedDesktopComponentLibrary", "plugin-catalog");
         }
 
         // 关闭所在窗口
         var window = this.FindAncestorOfType<Window>();
-        window?.Close();
+        var componentLibraryWindow = this.FindAncestorOfType<Window>();
+        componentLibraryWindow?.Close();
     }
 }

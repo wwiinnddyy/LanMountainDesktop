@@ -154,6 +154,8 @@ public sealed class AppSettingsSnapshot
 
     public bool EnableSlideTransition { get; set; } = false;
 
+    public bool ShowInTaskbar { get; set; } = false;
+
     public bool EnableFusedDesktop { get; set; } = false;
 
     public List<string> DisabledPluginIds { get; set; } = [];

@@ -202,6 +202,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
         EnableSlideTransition = appSnapshot.EnableSlideTransition;
+        ShowInTaskbar = appSnapshot.ShowInTaskbar;
         _isInitializing = false;
 
         RefreshPreview();
@@ -238,6 +239,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             EnableSlideTransition = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableSlideTransition;
         }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.ShowInTaskbar)))
+        {
+            ShowInTaskbar = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
+        }
     }
 
     public event Action? RestartRequested;
@@ -259,6 +265,9 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private bool _enableSlideTransition;
+
+    [ObservableProperty]
+    private bool _showInTaskbar;
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
@@ -365,6 +374,12 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     {
         if (_isInitializing) return;
         SaveField(nameof(AppSettingsSnapshot.EnableSlideTransition), value);
+    }
+
+    partial void OnShowInTaskbarChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.ShowInTaskbar), value);
     }
 
     private void SaveField<T>(string key, T value)

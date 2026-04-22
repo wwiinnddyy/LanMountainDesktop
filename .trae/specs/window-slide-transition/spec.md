@@ -113,6 +113,15 @@
 - **AND THEN** 过渡时长使用 `FluttermotionToken.Duration.Page`（320ms）和 `FluttermotionToken.Duration.Intro`（400ms）
 - **AND THEN** 缓动函数使用 `0.05,0.75,0.10,1.00`（DecelerateBezier）
 
+### Requirement: 设置窗口不参与桌面壳过渡动画
+
+系统 SHALL 将桌面壳进出场动画限制在主窗口范围内，不影响独立设置窗口。
+
+#### Scenario: 设置窗口在桌面动画期间保持独立
+- **WHEN** 主窗口执行滑入、滑出、最小化或恢复动画
+- **THEN** 设置窗口不参与该动画
+- **AND THEN** 设置窗口不会跟随主窗口一起隐藏、最小化或重定位
+
 ## MODIFIED Requirements
 
 ### Requirement: OnMinimizeClick 行为

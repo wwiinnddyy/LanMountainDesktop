@@ -117,6 +117,16 @@
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 
+            <ui:SettingsExpander Header="桌面主窗口在任务栏显示图标"
+                                 Description="仅控制桌面主窗口在系统任务栏中的图标显示；不会影响设置窗口，设置窗口打开时始终保留独立任务栏图标">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Window" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding ShowInTaskbar}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

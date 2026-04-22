@@ -29,7 +29,7 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow : Window, ISettingsWindowAnchorProvider
+public partial class MainWindow : Window
 {
     private enum WallpaperMediaType
     {
@@ -449,6 +449,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             snapshot.GridShortSideCells > 0 ? snapshot.GridShortSideCells : CalculateDefaultShortSideCellCountFromDpi(),
             MinShortSideCells,
             MaxShortSideCells);
+
+        ShowInTaskbar = snapshot.ShowInTaskbar;
 
         _gridSpacingPreset = _gridSettingsService.NormalizeSpacingPreset(snapshot.GridSpacingPreset);
 
@@ -884,7 +886,19 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             return;
         }
 
-        WindowState = WindowState.Minimized;
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        if (snapshot.ShowInTaskbar)
+        {
+            WindowState = WindowState.Minimized;
+        }
+        else if (Application.Current is App app)
+        {
+            app.HideMainWindowToTray(this, "MinimizeAction");
+        }
+        else
+        {
+            WindowState = WindowState.Minimized;
+        }
 
         slideTransform.X = 0;
         DesktopPage.Opacity = 1;
@@ -906,7 +920,8 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
 
         if (useSlide)
         {
-            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : 1920;
+            var screenWidth = Screens.ScreenFromVisual(this)?.Bounds.Width ?? 3840;
+            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : screenWidth;
         }
 
         DesktopPage.Transitions = savedTransitions;
@@ -941,7 +956,27 @@ public partial class MainWindow : Window, ISettingsWindowAnchorProvider
             return;
         }
 
-        if (WindowState is WindowState.Minimized or WindowState.FullScreen)
+        var newState = (WindowState)e.NewValue!;
+        var oldState = (WindowState)e.OldValue!;
+
+        if (oldState == WindowState.Minimized && newState != WindowState.Minimized)
+        {
+            PrepareEnterAnimation();
+            
+            if (newState != WindowState.FullScreen)
+            {
+                WindowState = WindowState.FullScreen;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                PlayEnterAnimation();
+            }, DispatcherPriority.Background);
+            
+            return;
+        }
+
+        if (newState is WindowState.Minimized or WindowState.FullScreen)
         {
             return;
         }

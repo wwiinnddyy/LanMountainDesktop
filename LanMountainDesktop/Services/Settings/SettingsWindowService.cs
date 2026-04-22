@@ -14,28 +14,10 @@ using LanMountainDesktop.Views;
 
 namespace LanMountainDesktop.Services.Settings;
 
-public enum SettingsWindowAnchorTarget
-{
-    DesktopDockTrailingEdge = 0
-}
-
-public enum SettingsWindowFallbackMode
-{
-    None = 0,
-    ScreenBottomRight = 1
-}
-
 public readonly record struct SettingsWindowOpenRequest(
     string Source,
-    Window? Owner = null,
     string? PageId = null,
-    SettingsWindowAnchorTarget AnchorTarget = SettingsWindowAnchorTarget.DesktopDockTrailingEdge,
-    SettingsWindowFallbackMode FallbackMode = SettingsWindowFallbackMode.ScreenBottomRight);
-
-public interface ISettingsWindowAnchorProvider
-{
-    bool TryGetSettingsWindowAnchorBounds(out PixelRect anchorBounds);
-}
+    Window? ScreenReferenceWindow = null);
 
 public interface ISettingsWindowService
 {
@@ -46,8 +28,6 @@ public interface ISettingsWindowService
     void Open(SettingsWindowOpenRequest request);
 
     void Close();
-
-    void Toggle(SettingsWindowOpenRequest request);
 }
 
 internal sealed class SettingsWindowService : ISettingsWindowService
@@ -92,43 +72,30 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         var appearanceSnapshot = _appearanceThemeService.GetCurrent();
         _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
         ApplyTheme(_window);
-        _window.ReloadPages(request.PageId);
-        PositionWindow(_window, request);
+
+        var targetPageId = request.PageId ?? _window.ViewModel.CurrentPageId;
+        _window.ReloadPages(targetPageId);
 
         if (!_window.IsVisible)
         {
-            if (request.Owner is not null && request.Owner.IsVisible)
-            {
-                _window.Show(request.Owner);
-            }
-            else
-            {
-                _window.Show();
-            }
-
+            CenterWindow(_window, request);
+            _window.Show();
             NotifyStateChanged();
-            PositionWindowLater(_window, request);
+            CenterWindowLater(_window, request);
             return;
         }
 
+        if (_window.WindowState == WindowState.Minimized)
+        {
+            _window.WindowState = WindowState.Normal;
+        }
+
         _window.Activate();
-        PositionWindowLater(_window, request);
     }
 
     public void Close()
     {
         _window?.Close();
-    }
-
-    public void Toggle(SettingsWindowOpenRequest request)
-    {
-        if (IsOpen)
-        {
-            Close();
-            return;
-        }
-
-        Open(request);
     }
 
     private SettingsWindow CreateWindow()
@@ -147,7 +114,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             _hostApplicationLifecycle,
             useSystemChrome);
         ApplyTheme(window);
-        window.ShowInTaskbar = false;
+        window.ShowInTaskbar = true;
         window.Closed += (_, _) =>
         {
             _window = null;
@@ -156,104 +123,85 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         return window;
     }
 
-    private void PositionWindowLater(SettingsWindow window, SettingsWindowOpenRequest request)
+    private void CenterWindowLater(SettingsWindow window, SettingsWindowOpenRequest request)
     {
         Dispatcher.UIThread.Post(
             () =>
             {
-                if (!window.IsVisible)
+                if (!ReferenceEquals(_window, window) || !window.IsVisible)
                 {
                     return;
                 }
 
-                PositionWindow(window, request);
+                CenterWindow(window, request);
             },
             DispatcherPriority.Background);
     }
 
-    private static void PositionWindow(SettingsWindow window, SettingsWindowOpenRequest request)
+    private static void CenterWindow(SettingsWindow window, SettingsWindowOpenRequest request)
     {
-        if (request.AnchorTarget == SettingsWindowAnchorTarget.DesktopDockTrailingEdge &&
-            request.Owner is ISettingsWindowAnchorProvider anchorProvider &&
-            anchorProvider.TryGetSettingsWindowAnchorBounds(out var anchorBounds))
-        {
-            PositionWindowAboveAnchor(window, anchorBounds, request);
-            return;
-        }
-
-        if (request.FallbackMode == SettingsWindowFallbackMode.ScreenBottomRight)
-        {
-            PositionWindowNearScreenBottomRight(window, request);
-        }
+        var referenceWorkingArea =
+            request.ScreenReferenceWindow is { IsVisible: true } screenReferenceWindow &&
+            screenReferenceWindow.Screens?.ScreenFromWindow(screenReferenceWindow) is { } referenceScreen
+                ? referenceScreen.WorkingArea
+                : (PixelRect?)null;
+        var width = ResolveWindowWidth(window, request.ScreenReferenceWindow);
+        var height = ResolveWindowHeight(window, request.ScreenReferenceWindow);
+        var workingArea = SettingsWindowPlacementHelper.ResolveWorkingArea(
+            referenceWorkingArea,
+            window.Screens?.Primary?.WorkingArea,
+            width,
+            height);
+        window.Position = SettingsWindowPlacementHelper.CalculateCenteredPosition(workingArea, width, height);
     }
 
-    private static void PositionWindowAboveAnchor(Window window, PixelRect anchorBounds, SettingsWindowOpenRequest request)
+    private static int ResolveWindowWidth(Window window, Window? referenceWindow)
     {
-        var workingArea = GetWorkingArea(window, request);
-        
-        if (anchorBounds.Width <= 0 || anchorBounds.Height <= 0 ||
-            anchorBounds.Right < workingArea.X || anchorBounds.Y > workingArea.Bottom)
-        {
-            PositionWindowNearScreenBottomRight(window, request);
-            return;
-        }
-        
-        var scale = window.RenderScaling > 0 ? window.RenderScaling : 1d;
-        var width = ResolveWindowWidth(window, scale);
-        var height = ResolveWindowHeight(window, scale);
-        var inset = (int)Math.Round(24 * scale);
-        var gap = (int)Math.Round(16 * scale);
-
-        var x = anchorBounds.Right - width - inset;
-        var y = anchorBounds.Y - height - gap;
-        x = Math.Clamp(x, workingArea.X + inset, Math.Max(workingArea.X + inset, workingArea.Right - width - inset));
-        y = Math.Clamp(y, workingArea.Y + inset, Math.Max(workingArea.Y + inset, workingArea.Bottom - height - inset));
-        window.Position = new PixelPoint(x, y);
-    }
-
-    private static void PositionWindowNearScreenBottomRight(Window window, SettingsWindowOpenRequest request)
-    {
-        var workingArea = GetWorkingArea(window, request);
-        var scale = window.RenderScaling > 0 ? window.RenderScaling : 1d;
-        var width = ResolveWindowWidth(window, scale);
-        var height = ResolveWindowHeight(window, scale);
-        var inset = (int)Math.Round(24 * scale);
-
-        var x = Math.Max(workingArea.X + inset, workingArea.Right - width - inset);
-        var y = Math.Max(workingArea.Y + inset, workingArea.Bottom - height - inset);
-        window.Position = new PixelPoint(x, y);
-    }
-
-    private static PixelRect GetWorkingArea(Window window, SettingsWindowOpenRequest request)
-    {
-        if (request.Owner is not null && request.Owner.Screens?.ScreenFromWindow(request.Owner) is { } ownerScreen)
-        {
-            return ownerScreen.WorkingArea;
-        }
-
-        if (window.Screens?.ScreenFromWindow(window) is { } windowScreen)
-        {
-            return windowScreen.WorkingArea;
-        }
-
-        return window.Screens?.Primary?.WorkingArea
-               ?? new PixelRect(
-                   0,
-                   0,
-                   Math.Max(1280, ResolveWindowWidth(window, 1d) + 96),
-                   Math.Max(720, ResolveWindowHeight(window, 1d) + 96));
-    }
-
-    private static int ResolveWindowWidth(Window window, double scale)
-    {
-        var widthDip = window.Bounds.Width > 1 ? window.Bounds.Width : Math.Max(window.Width, window.MinWidth);
+        var widthDip = ResolveWindowDimensionDip(window.Bounds.Width, window.Width, window.MinWidth, 1120d);
+        var scale = ResolveWindowScale(window, referenceWindow);
         return Math.Max(320, (int)Math.Round(widthDip * scale));
     }
 
-    private static int ResolveWindowHeight(Window window, double scale)
+    private static int ResolveWindowHeight(Window window, Window? referenceWindow)
     {
-        var heightDip = window.Bounds.Height > 1 ? window.Bounds.Height : Math.Max(window.Height, window.MinHeight);
+        var heightDip = ResolveWindowDimensionDip(window.Bounds.Height, window.Height, window.MinHeight, 760d);
+        var scale = ResolveWindowScale(window, referenceWindow);
         return Math.Max(240, (int)Math.Round(heightDip * scale));
+    }
+
+    private static double ResolveWindowScale(Window window, Window? referenceWindow)
+    {
+        if (referenceWindow is not null && referenceWindow.RenderScaling > 0)
+        {
+            return referenceWindow.RenderScaling;
+        }
+
+        if (window.RenderScaling > 0)
+        {
+            return window.RenderScaling;
+        }
+
+        return 1d;
+    }
+
+    private static double ResolveWindowDimensionDip(double boundsDip, double configuredDip, double minimumDip, double fallbackDip)
+    {
+        if (boundsDip > 1)
+        {
+            return boundsDip;
+        }
+
+        if (!double.IsNaN(configuredDip) && configuredDip > 1)
+        {
+            return configuredDip;
+        }
+
+        if (!double.IsNaN(minimumDip) && minimumDip > 1)
+        {
+            return minimumDip;
+        }
+
+        return fallbackDip;
     }
 
     private void NotifyStateChanged()
@@ -361,5 +309,40 @@ internal sealed class SettingsWindowService : ISettingsWindowService
 
             ApplyTheme(_window);
         }, DispatcherPriority.Background);
+    }
+}
+
+internal static class SettingsWindowPlacementHelper
+{
+    internal static PixelRect ResolveWorkingArea(
+        PixelRect? referenceWorkingArea,
+        PixelRect? primaryWorkingArea,
+        int fallbackWindowWidth,
+        int fallbackWindowHeight)
+    {
+        if (referenceWorkingArea is { } referenceArea)
+        {
+            return referenceArea;
+        }
+
+        if (primaryWorkingArea is { } primaryArea)
+        {
+            return primaryArea;
+        }
+
+        return new PixelRect(
+            0,
+            0,
+            Math.Max(1280, fallbackWindowWidth + 96),
+            Math.Max(720, fallbackWindowHeight + 96));
+    }
+
+    internal static PixelPoint CalculateCenteredPosition(PixelRect workingArea, int windowWidth, int windowHeight)
+    {
+        var horizontalOffset = Math.Max(0, (workingArea.Width - windowWidth) / 2);
+        var verticalOffset = Math.Max(0, (workingArea.Height - windowHeight) / 2);
+        return new PixelPoint(
+            workingArea.X + horizontalOffset,
+            workingArea.Y + verticalOffset);
     }
 }
