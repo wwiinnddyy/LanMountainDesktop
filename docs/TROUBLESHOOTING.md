@@ -642,3 +642,40 @@ xattr -cr /Applications/LanMountainDesktop.app
 - [Launcher 鏋舵瀯](LAUNCHER.md)
 - [鏇存柊绯荤粺](UPDATE_SYSTEM.md)
 - [鏋勫缓鍜岄儴缃瞉(BUILD_AND_DEPLOY.md)
+
+### 问题: OOBE 窗口重复出现
+
+**原因:** OOBE 完成标记丢失、损坏，或者旧版标记文件只作为迁移兼容而不是主状态源。
+
+**当前权威状态路径:**
+```bash
+Windows: %LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json
+```
+
+**处理原则:**
+- 同一 Windows 用户重装或升级后，默认不应该再次进入 OOBE。
+- `first_run_completed` 只保留为兼容迁移数据。
+- 如果状态文件不可读，Launcher 应优先保证稳定启动并记录 `oobe_state_unavailable`，不要反复把用户拉回 OOBE。
+
+---
+
+### 问题: 启动或插件安装意外弹出管理员权限
+
+**原因:** 某些路径显式请求了 `runas`，或者流程把默认用户目录误判成需要提权。
+
+**当前允许提权的白名单:**
+- 安装器本体
+- 全量安装包更新应用
+- 用户显式确认的 legacy uninstall
+
+**不应弹 UAC 的场景:**
+- 普通冷启动
+- OOBE
+- 检查更新
+- 增量下载
+- 默认插件安装到用户 LocalAppData 路径
+
+**调试建议:**
+- 检查日志中的 `launchSource`、`isElevated`、`oobeStateStatus`、`oobeSuppressionReason`
+- 检查插件安装目标是否仍在 `%LOCALAPPDATA%\LanMountainDesktop` 下
+- 确认没有额外的 `Verb = "runas"` 被引入默认路径

@@ -200,3 +200,15 @@ The runtime flow starts with the Launcher selecting the best version, then proce
 - Incremental package build/publish has moved to VeloPack native assets (eleases.win.json + *.nupkg).
 - Launcher runtime responsibilities are unchanged: OOBE, startup orchestration, update apply, and rollback.
 
+
+## Launcher OOBE / Elevation Contract
+
+- Launcher OOBE state is owned by a per-user JSON file under `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
+- Same-user reinstall or upgrade should keep OOBE completed.
+- `first_run_completed` is legacy migration-only data.
+- The recognized launch sources are `normal`, `postinstall`, `apply-update`, `plugin-install`, and `debug-preview`.
+- Auto-OOBE is only allowed for normal user-mode startup.
+- `postinstall` may show OOBE only when the launcher is not elevated.
+- `apply-update`, `plugin-install`, and `debug-preview` must not auto-open OOBE.
+- Elevation is allowed only for the installer, full installer update application, and user-confirmed legacy uninstall.
+- Default plugin install should stay inside the user's LocalAppData scope and should not ask for UAC.

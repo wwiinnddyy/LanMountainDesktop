@@ -52,3 +52,9 @@ Upgrade `LanMountainDesktop.Launcher` into the unified Launcher for:
 
 - `IOobeStep` for future multi-step OOBE
 - `ISplashStageReporter` for future startup progress visualization
+
+## Compatibility Addendum
+
+- The current production OOBE state format is a per-user JSON file at `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
+- `first_run_completed` remains legacy compatibility data only.
+- Same-user reinstall or upgrade should not re-enter OOBE.

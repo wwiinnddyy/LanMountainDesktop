@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +29,8 @@ internal sealed class LauncherClient
             return new LauncherInstallResult(
                 false,
                 null,
-                "Elevated helper install is only supported on Windows.");
+                "Elevated helper install is only supported on Windows.",
+                "failed");
         }
 
         var launcherPath = ResolveLauncherPath();
@@ -37,7 +39,8 @@ internal sealed class LauncherClient
             return new LauncherInstallResult(
                 false,
                 null,
-                $"Launcher executable was not found at '{launcherPath}'.");
+                $"Launcher executable was not found at '{launcherPath}'.",
+                "failed");
         }
 
         var resultPath = Path.Combine(
@@ -53,14 +56,18 @@ internal sealed class LauncherClient
             using var process = StartLauncherProcess(launcherPath, packagePath, pluginsDirectory, resultPath);
             if (process is null)
             {
-                return new LauncherInstallResult(false, null, "Failed to start launcher process.");
+                return new LauncherInstallResult(false, null, "Failed to start launcher process.", "failed");
             }
 
             await process.WaitForExitAsync(cancellationToken);
             var result = await ReadResultAsync(resultPath, cancellationToken);
             if (result is not null)
             {
-                return new LauncherInstallResult(result.Success, result.InstalledPackagePath, result.ErrorMessage);
+                return new LauncherInstallResult(
+                    result.Success,
+                    result.InstalledPackagePath,
+                    result.ErrorMessage ?? result.Message,
+                    MapResultCode(result.Code));
             }
 
             if (process.ExitCode == 0)
@@ -68,7 +75,8 @@ internal sealed class LauncherClient
                 return new LauncherInstallResult(
                     false,
                     null,
-                    "Launcher exited without producing a result file.");
+                    "Launcher exited without producing a result file.",
+                    "failed");
             }
 
             return new LauncherInstallResult(
@@ -77,11 +85,12 @@ internal sealed class LauncherClient
                 string.Format(
                     CultureInfo.InvariantCulture,
                     "Launcher exited with code {0}.",
-                    process.ExitCode));
+                    process.ExitCode),
+                "failed");
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == UserCanceledUacErrorCode)
         {
-            return new LauncherInstallResult(false, null, "Administrator permission request was canceled.");
+            return new LauncherInstallResult(false, null, "Administrator permission request was canceled.", "elevation_cancelled");
         }
         finally
         {
@@ -98,12 +107,11 @@ internal sealed class LauncherClient
         var startInfo = new ProcessStartInfo
         {
             FileName = launcherPath,
-            Verb = "runas",
             UseShellExecute = true,
             WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
             Arguments = string.Create(
                 CultureInfo.InvariantCulture,
-                $"--source {QuoteArgument(Path.GetFullPath(packagePath))} --plugins-dir {QuoteArgument(Path.GetFullPath(pluginsDirectory))} --result {QuoteArgument(Path.GetFullPath(resultPath))}")
+                $"--source {QuoteArgument(Path.GetFullPath(packagePath))} --plugins-dir {QuoteArgument(Path.GetFullPath(pluginsDirectory))} --result {QuoteArgument(Path.GetFullPath(resultPath))} --launch-source plugin-install")
         };
 
         return Process.Start(startInfo);
@@ -170,12 +178,32 @@ internal sealed class LauncherClient
         }
     }
 
+    private static string MapResultCode(string? launcherCode)
+    {
+        return launcherCode switch
+        {
+            "plugin_elevation_required" => "requires_elevation",
+            "elevation_cancelled" => "elevation_cancelled",
+            "ok" => "ok",
+            _ => "failed"
+        };
+    }
+
     private sealed class HelperResultFile
     {
+        [JsonPropertyName("success")]
         public bool Success { get; init; }
 
+        [JsonPropertyName("code")]
+        public string? Code { get; init; }
+
+        [JsonPropertyName("message")]
+        public string? Message { get; init; }
+
+        [JsonPropertyName("installedPackagePath")]
         public string? InstalledPackagePath { get; init; }
 
+        [JsonPropertyName("errorMessage")]
         public string? ErrorMessage { get; init; }
     }
 }
@@ -183,4 +211,5 @@ internal sealed class LauncherClient
 internal sealed record LauncherInstallResult(
     bool Success,
     string? InstalledPackagePath,
-    string? ErrorMessage);
+    string? ErrorMessage,
+    string Code);

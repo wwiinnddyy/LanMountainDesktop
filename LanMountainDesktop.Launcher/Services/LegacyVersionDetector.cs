@@ -262,6 +262,9 @@ internal sealed class LegacyVersionDetector
                 var parts = info.UninstallCommand.Split(new[] { ' ' }, 2);
                 var fileName = parts[0].Trim('"');
                 var arguments = parts.Length > 1 ? parts[1] : "";
+                Logger.Info(
+                    $"Opening legacy uninstall interface with elevation reason 'legacy_uninstall'. " +
+                    $"InstallPath='{info.InstallPath}'; Version='{info.Version}'.");
 
                 Process.Start(new ProcessStartInfo
                 {

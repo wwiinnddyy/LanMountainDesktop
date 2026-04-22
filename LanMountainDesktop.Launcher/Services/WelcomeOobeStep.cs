@@ -5,11 +5,13 @@ namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class WelcomeOobeStep : IOobeStep
 {
+    private readonly CommandContext _context;
     private readonly OobeStateService _oobeStateService;
 
-    public WelcomeOobeStep(OobeStateService oobeStateService)
+    public WelcomeOobeStep(OobeStateService oobeStateService, CommandContext context)
     {
         _oobeStateService = oobeStateService;
+        _context = context;
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -29,7 +31,13 @@ internal sealed class WelcomeOobeStep : IOobeStep
         }
 
         await window.WaitForEnterAsync().ConfigureAwait(false);
-        _oobeStateService.MarkCompleted();
+        var completion = _oobeStateService.MarkCompleted(_context);
+        if (!completion.Success)
+        {
+            Logger.Warn(
+                $"OOBE completion state was not persisted. ResultCode='{completion.ResultCode}'; " +
+                $"Error='{completion.ErrorMessage}'.");
+        }
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {

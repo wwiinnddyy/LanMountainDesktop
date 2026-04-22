@@ -12,7 +12,7 @@ internal sealed class LauncherFlowCoordinator
     private static readonly string[] LauncherOnlyOptions =
     [
         "debug", "show-loading-details", "plugins-dir", "source", "result",
-        "app-root",
+        "app-root", "launch-source",
         LauncherIpcConstants.LauncherPidEnvVar,
         LauncherIpcConstants.PackageRootEnvVar,
         LauncherIpcConstants.VersionEnvVar,
@@ -38,7 +38,7 @@ internal sealed class LauncherFlowCoordinator
         _oobeStateService = oobeStateService;
         _updateEngine = updateEngine;
         _pluginInstallerService = pluginInstallerService;
-        _oobeSteps = [new WelcomeOobeStep(_oobeStateService)];
+        _oobeSteps = [new WelcomeOobeStep(_oobeStateService, _context)];
     }
 
     public async Task<LauncherResult> RunAsync(SplashWindow? existingSplashWindow = null)
@@ -46,8 +46,10 @@ internal sealed class LauncherFlowCoordinator
         try
         {
             _deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
+            var oobeDecision = _oobeStateService.Evaluate(_context);
+            var launcherContextDetails = BuildLauncherContextDetails(_context, oobeDecision, _deploymentLocator.GetAppRoot());
 
-            if (_oobeStateService.IsFirstRun())
+            if (oobeDecision.ShouldShowOobe)
             {
                 var legacyInfo = LegacyVersionDetector.DetectLegacyInstallation();
                 if (legacyInfo is not null)
@@ -127,7 +129,7 @@ internal sealed class LauncherFlowCoordinator
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
-                    return updateResult;
+                    return WithAdditionalDetails(updateResult, launcherContextDetails);
                 }
 
                 reporter.Report("plugins", "Applying plugin upgrades...");
@@ -135,10 +137,10 @@ internal sealed class LauncherFlowCoordinator
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success)
                 {
-                    return queueResult;
+                    return WithAdditionalDetails(queueResult, launcherContextDetails);
                 }
 
-                if (_oobeStateService.IsFirstRun())
+                if (oobeDecision.ShouldShowOobe)
                 {
                     await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Hide());
                     foreach (var step in _oobeSteps)
@@ -153,13 +155,13 @@ internal sealed class LauncherFlowCoordinator
                 var launchOutcome = await LaunchHostWithIpcAsync().ConfigureAwait(false);
                 if (!launchOutcome.Result.Success)
                 {
-                    return launchOutcome.Result;
+                    return WithAdditionalDetails(launchOutcome.Result, launcherContextDetails);
                 }
 
                 if (launchOutcome.ImmediateResult is not null)
                 {
                     await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-                    return launchOutcome.ImmediateResult;
+                    return WithAdditionalDetails(launchOutcome.ImmediateResult, launcherContextDetails);
                 }
 
                 if (launchOutcome.Process is null)
@@ -169,7 +171,7 @@ internal sealed class LauncherFlowCoordinator
                         stage: "launch",
                         code: "host_start_failed",
                         message: "Host launch did not create a process.",
-                        details: launchOutcome.Details);
+                        details: MergeDetails(launcherContextDetails, launchOutcome.Details));
                 }
 
                 var processExitTask = launchOutcome.Process.WaitForExitAsync();
@@ -190,7 +192,7 @@ internal sealed class LauncherFlowCoordinator
                         message: stage == StartupStage.ActivationRedirected
                             ? "Launcher activation was redirected to the existing desktop instance."
                             : "Desktop is visible and ready.",
-                        details: launchOutcome.Details);
+                        details: MergeDetails(launcherContextDetails, launchOutcome.Details));
                 }
 
                 if (completedTask == activationFailedTcs.Task)
@@ -200,7 +202,7 @@ internal sealed class LauncherFlowCoordinator
                     if (retryOutcome is not null)
                     {
                         await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-                        return retryOutcome;
+                        return WithAdditionalDetails(retryOutcome, launcherContextDetails);
                     }
                 }
 
@@ -215,7 +217,7 @@ internal sealed class LauncherFlowCoordinator
                         if (retryOutcome is not null)
                         {
                             await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
-                            return retryOutcome;
+                            return WithAdditionalDetails(retryOutcome, launcherContextDetails);
                         }
                     }
 
@@ -227,10 +229,10 @@ internal sealed class LauncherFlowCoordinator
                         message: exitCode == HostExitCodes.SecondaryActivationSucceeded
                             ? "Host redirected activation to the existing desktop instance."
                             : $"Host exited before the desktop became visible. ExitCode={exitCode}.",
-                        details: MergeDetails(launchOutcome.Details, new Dictionary<string, string>
+                        details: MergeDetails(launcherContextDetails, MergeDetails(launchOutcome.Details, new Dictionary<string, string>
                         {
                             ["exitCode"] = exitCode.ToString()
-                        }));
+                        })));
                 }
 
                 await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
@@ -239,11 +241,11 @@ internal sealed class LauncherFlowCoordinator
                     stage: "launch",
                     code: "desktop_not_visible",
                     message: "Host process started, but the desktop never became visible within 30 seconds.",
-                    details: MergeDetails(launchOutcome.Details, new Dictionary<string, string>
+                    details: MergeDetails(launcherContextDetails, MergeDetails(launchOutcome.Details, new Dictionary<string, string>
                     {
                         ["ipcStage"] = lastStage.ToString(),
                         ["ipcMessage"] = lastStageMessage
-                    }));
+                    })));
             }
             finally
             {
@@ -272,6 +274,7 @@ internal sealed class LauncherFlowCoordinator
                 stage: "launch",
                 code: "exception",
                 message: ex.Message,
+                details: BuildLauncherContextDetails(_context, _oobeStateService.Evaluate(_context), _deploymentLocator.GetAppRoot()),
                 errorMessage: ex.ToString());
         }
     }
@@ -751,6 +754,50 @@ internal sealed class LauncherFlowCoordinator
             Message = message,
             ErrorMessage = errorMessage,
             Details = details ?? []
+        };
+    }
+
+    private static LauncherResult WithAdditionalDetails(LauncherResult result, Dictionary<string, string> details)
+    {
+        return new LauncherResult
+        {
+            Success = result.Success,
+            Stage = result.Stage,
+            Code = result.Code,
+            Message = result.Message,
+            CurrentVersion = result.CurrentVersion,
+            TargetVersion = result.TargetVersion,
+            RolledBackTo = result.RolledBackTo,
+            Details = MergeDetails(details, result.Details),
+            InstalledPackagePath = result.InstalledPackagePath,
+            ManifestId = result.ManifestId,
+            ManifestName = result.ManifestName,
+            ErrorMessage = result.ErrorMessage
+        };
+    }
+
+    private static Dictionary<string, string> BuildLauncherContextDetails(
+        CommandContext context,
+        OobeLaunchDecision oobeDecision,
+        string appRoot)
+    {
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["command"] = context.Command,
+            ["launchSource"] = context.LaunchSource,
+            ["isGuiMode"] = context.IsGuiCommand.ToString(),
+            ["isDebugMode"] = context.IsDebugMode.ToString(),
+            ["isElevated"] = oobeDecision.IsElevated.ToString(),
+            ["resolvedAppRoot"] = appRoot,
+            ["oobeStatePath"] = oobeDecision.StatePath,
+            ["oobeStateStatus"] = oobeDecision.Status.ToString(),
+            ["oobeDecision"] = oobeDecision.ShouldShowOobe ? "show" : "skip",
+            ["oobeSuppressionReason"] = oobeDecision.SuppressionReason,
+            ["oobeResultCode"] = oobeDecision.ResultCode,
+            ["userSid"] = oobeDecision.UserSid ?? string.Empty,
+            ["usedLegacyOobeMarker"] = oobeDecision.UsedLegacyMarker.ToString(),
+            ["migratedLegacyOobeMarker"] = oobeDecision.MigratedLegacyMarker.ToString(),
+            ["oobeStateError"] = oobeDecision.ErrorMessage
         };
     }
 

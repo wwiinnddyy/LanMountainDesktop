@@ -1,104 +1,221 @@
+using System.Text.Json;
+using LanMountainDesktop.Launcher.Models;
+
 namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class OobeStateService
 {
-    private readonly string _markerPath;
+    private const int CurrentSchemaVersion = 1;
 
-    public OobeStateService(string appRoot)
+    private readonly string _stateDirectory;
+    private readonly string _statePath;
+    private readonly string _legacyMarkerPath;
+    private readonly LauncherExecutionSnapshot _executionSnapshot;
+
+    public OobeStateService(
+        string appRoot,
+        string? stateRootOverride = null,
+        LauncherExecutionSnapshot? executionSnapshot = null)
     {
-        // 优先使用 LocalApplicationData（用户目录，普通用户一定有权限）
-        string? stateDir = null;
-        Exception? lastException = null;
+        _ = Path.GetFullPath(appRoot);
+        _executionSnapshot = executionSnapshot ?? LauncherExecutionContext.Capture();
 
-        // 策略1: LocalApplicationData（首选，用户目录，普通用户一定有写权限）
-        try
-        {
-            var appDataDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop");
-            stateDir = Path.Combine(appDataDir, ".launcher", "state");
-            Directory.CreateDirectory(stateDir);
-            Console.WriteLine($"[OobeStateService] Using LocalApplicationData: {stateDir}");
-        }
-        catch (Exception ex)
-        {
-            lastException = ex;
-            Console.Error.WriteLine($"[OobeStateService] LocalApplicationData failed: {ex.Message}");
-            stateDir = null;
-        }
-
-        // 策略2: 如果LocalApplicationData不行，使用用户的临时目录
-        if (stateDir == null)
-        {
-            try
-            {
-                var tempDir = Path.Combine(Path.GetTempPath(), "LanMountainDesktop", ".launcher", "state");
-                Directory.CreateDirectory(tempDir);
-                stateDir = tempDir;
-                Console.WriteLine($"[OobeStateService] Using TempPath: {stateDir}");
-            }
-            catch (Exception ex)
-            {
-                lastException = ex;
-                Console.Error.WriteLine($"[OobeStateService] TempPath failed: {ex.Message}");
-                stateDir = null;
-            }
-        }
-
-        // 策略3: 最后的兜底：使用当前用户的应用程序数据目录（和Launcher同目录
-        if (stateDir == null)
-        {
-            try
-            {
-                var launcherDir = AppContext.BaseDirectory;
-                stateDir = Path.Combine(launcherDir, ".launcher", "state");
-                Directory.CreateDirectory(stateDir);
-                Console.WriteLine($"[OobeStateService] Using Launcher directory: {stateDir}");
-            }
-            catch (Exception ex)
-            {
-                lastException = ex;
-                Console.Error.WriteLine($"[OobeStateService] All strategies failed! Last error: {ex.Message}");
-                // 如果所有策略都失败，抛出异常让上层处理
-                throw new InvalidOperationException("无法创建 OOBE 状态存储目录失败", lastException);
-            }
-        }
-
-        _markerPath = Path.Combine(stateDir, "first_run_completed");
-        Console.WriteLine($"[OobeStateService] Initialized successfully, marker path: {_markerPath}");
+        var stateRoot = string.IsNullOrWhiteSpace(stateRootOverride)
+            ? GetDefaultStateRoot()
+            : Path.GetFullPath(stateRootOverride);
+        _stateDirectory = Path.Combine(stateRoot, ".launcher", "state");
+        _statePath = Path.Combine(_stateDirectory, "oobe-state.json");
+        _legacyMarkerPath = Path.Combine(_stateDirectory, "first_run_completed");
     }
 
-    public bool IsFirstRun()
+    public OobeLaunchDecision Evaluate(CommandContext context)
+    {
+        var decision = EvaluateCore(context);
+        Logger.Info(
+            $"OOBE decision evaluated. LaunchSource='{decision.LaunchSource}'; Status='{decision.Status}'; " +
+            $"ShouldShow={decision.ShouldShowOobe}; IsElevated={decision.IsElevated}; " +
+            $"StatePath='{decision.StatePath}'; SuppressionReason='{decision.SuppressionReason}'; " +
+            $"ResultCode='{decision.ResultCode}'; UserSid='{decision.UserSid ?? string.Empty}'.");
+        return decision;
+    }
+
+    public OobeCompletionResult MarkCompleted(CommandContext context)
     {
         try
         {
-            return !File.Exists(_markerPath);
+            Directory.CreateDirectory(_stateDirectory);
+            var payload = new OobeStateFile
+            {
+                SchemaVersion = CurrentSchemaVersion,
+                CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O"),
+                UserName = _executionSnapshot.UserName,
+                UserSid = _executionSnapshot.UserSid,
+                LaunchSource = context.LaunchSource
+            };
+
+            var tempPath = Path.Combine(_stateDirectory, $"oobe-state.{Guid.NewGuid():N}.tmp");
+            var json = JsonSerializer.Serialize(payload, AppJsonContext.Default.OobeStateFile);
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _statePath, overwrite: true);
+            TryDeleteLegacyMarker();
+
+            Logger.Info(
+                $"OOBE completion persisted. LaunchSource='{context.LaunchSource}'; StatePath='{_statePath}'; " +
+                $"UserSid='{_executionSnapshot.UserSid ?? string.Empty}'.");
+
+            return new OobeCompletionResult
+            {
+                Success = true,
+                ResultCode = "ok"
+            };
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[OobeStateService] Failed to check first run: {ex.Message}");
-            // 如果无法检查，默认视为首次运行，确保OOBE能显示
-            return true;
+            Logger.Warn(
+                $"Failed to persist OOBE state. LaunchSource='{context.LaunchSource}'; StatePath='{_statePath}'; " +
+                $"Error='{ex.Message}'.");
+            return new OobeCompletionResult
+            {
+                Success = false,
+                ResultCode = "oobe_state_unavailable",
+                ErrorMessage = ex.Message
+            };
         }
     }
 
-    public void MarkCompleted()
+    private OobeLaunchDecision EvaluateCore(CommandContext context)
     {
+        if (string.Equals(context.LaunchSource, "debug-preview", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildSuppressedDecision(context, "debug_preview", "oobe_suppressed_debug_preview");
+        }
+
+        if (context.IsMaintenanceCommand)
+        {
+            return BuildSuppressedDecision(context, "maintenance", "oobe_suppressed_maintenance");
+        }
+
         try
         {
-            var dir = Path.GetDirectoryName(_markerPath);
-            if (!string.IsNullOrWhiteSpace(dir))
+            var migratedLegacyMarker = false;
+            if (File.Exists(_statePath))
             {
-                Directory.CreateDirectory(dir);
+                using var stream = File.OpenRead(_statePath);
+                var state = JsonSerializer.Deserialize(stream, AppJsonContext.Default.OobeStateFile);
+                if (state is null || state.SchemaVersion <= 0 || string.IsNullOrWhiteSpace(state.CompletedAtUtc))
+                {
+                    return BuildUnavailableDecision(context, "OOBE state file is invalid.");
+                }
+
+                return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, migratedLegacyMarker: false);
             }
 
-            File.WriteAllText(_markerPath, DateTimeOffset.UtcNow.ToString("O"));
-            Console.WriteLine("[OobeStateService] Marked first run as completed");
+            if (File.Exists(_legacyMarkerPath))
+            {
+                migratedLegacyMarker = TryMigrateLegacyMarker(context);
+                return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, usedLegacyMarker: true, migratedLegacyMarker: migratedLegacyMarker);
+            }
+
+            if (_executionSnapshot.IsElevated)
+            {
+                return BuildSuppressedDecision(context, "elevated", "oobe_suppressed_elevated");
+            }
+
+            if (string.Equals(context.LaunchSource, "postinstall", StringComparison.OrdinalIgnoreCase))
+            {
+                return BuildDecision(context, OobeStateStatus.FirstRun, shouldShowOobe: true);
+            }
+
+            return BuildDecision(context, OobeStateStatus.FirstRun, shouldShowOobe: true);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[OobeStateService] Failed to mark completed: {ex.Message}");
-            // 如果无法写入也没关系，下次启动还会显示OOBE
+            return BuildUnavailableDecision(context, ex.Message);
         }
+    }
+
+    private bool TryMigrateLegacyMarker(CommandContext context)
+    {
+        var result = MarkCompleted(context);
+        return result.Success;
+    }
+
+    private void TryDeleteLegacyMarker()
+    {
+        try
+        {
+            if (File.Exists(_legacyMarkerPath))
+            {
+                File.Delete(_legacyMarkerPath);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private OobeLaunchDecision BuildDecision(
+        CommandContext context,
+        OobeStateStatus status,
+        bool shouldShowOobe,
+        bool usedLegacyMarker = false,
+        bool migratedLegacyMarker = false)
+    {
+        return new OobeLaunchDecision
+        {
+            Status = status,
+            ShouldShowOobe = shouldShowOobe,
+            StatePath = _statePath,
+            LaunchSource = context.LaunchSource,
+            IsElevated = _executionSnapshot.IsElevated,
+            UserName = _executionSnapshot.UserName,
+            UserSid = _executionSnapshot.UserSid,
+            UsedLegacyMarker = usedLegacyMarker,
+            MigratedLegacyMarker = migratedLegacyMarker,
+            ResultCode = "ok"
+        };
+    }
+
+    private OobeLaunchDecision BuildSuppressedDecision(CommandContext context, string reason, string resultCode)
+    {
+        return new OobeLaunchDecision
+        {
+            Status = OobeStateStatus.Suppressed,
+            ShouldShowOobe = false,
+            StatePath = _statePath,
+            LaunchSource = context.LaunchSource,
+            IsElevated = _executionSnapshot.IsElevated,
+            UserName = _executionSnapshot.UserName,
+            UserSid = _executionSnapshot.UserSid,
+            SuppressionReason = reason,
+            ResultCode = resultCode
+        };
+    }
+
+    private OobeLaunchDecision BuildUnavailableDecision(CommandContext context, string errorMessage)
+    {
+        return new OobeLaunchDecision
+        {
+            Status = OobeStateStatus.Unavailable,
+            ShouldShowOobe = false,
+            StatePath = _statePath,
+            LaunchSource = context.LaunchSource,
+            IsElevated = _executionSnapshot.IsElevated,
+            UserName = _executionSnapshot.UserName,
+            UserSid = _executionSnapshot.UserSid,
+            ResultCode = "oobe_state_unavailable",
+            ErrorMessage = errorMessage
+        };
+    }
+
+    private static string GetDefaultStateRoot()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(appData))
+        {
+            throw new InvalidOperationException("LocalApplicationData is unavailable.");
+        }
+
+        return Path.Combine(appData, "LanMountainDesktop");
     }
 }
