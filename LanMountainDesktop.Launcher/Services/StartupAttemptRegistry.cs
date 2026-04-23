@@ -309,6 +309,19 @@ internal sealed class StartupAttemptRegistry
         });
     }
 
+    public void MarkOwnedWaitingForShell(string? message)
+    {
+        UpdateOwned(record =>
+        {
+            if (record.State is StartupAttemptState.Pending or StartupAttemptState.SoftTimeout or StartupAttemptState.DetachedWaiting)
+            {
+                record.State = StartupAttemptState.WaitingForShell;
+            }
+
+            record.LastObservedMessage = message ?? record.LastObservedMessage;
+        });
+    }
+
     public void MarkOwnedDetachedWaiting()
     {
         UpdateOwned(record =>
@@ -423,7 +436,11 @@ internal sealed class StartupAttemptRegistry
 
     private static bool IsAttachable(StartupAttemptRecord record)
     {
-        if (record.State is not (StartupAttemptState.Pending or StartupAttemptState.SoftTimeout or StartupAttemptState.DetachedWaiting))
+        if (record.State is not (
+            StartupAttemptState.Pending or
+            StartupAttemptState.SoftTimeout or
+            StartupAttemptState.DetachedWaiting or
+            StartupAttemptState.WaitingForShell))
         {
             return false;
         }
@@ -433,7 +450,11 @@ internal sealed class StartupAttemptRegistry
 
     private static bool IsRecoverableCoordinatorAttempt(StartupAttemptRecord record)
     {
-        if (record.State is not (StartupAttemptState.Pending or StartupAttemptState.SoftTimeout or StartupAttemptState.DetachedWaiting))
+        if (record.State is not (
+            StartupAttemptState.Pending or
+            StartupAttemptState.SoftTimeout or
+            StartupAttemptState.DetachedWaiting or
+            StartupAttemptState.WaitingForShell))
         {
             return false;
         }
@@ -448,7 +469,11 @@ internal sealed class StartupAttemptRegistry
 
     private static bool IsCoordinatorLive(StartupAttemptRecord record)
     {
-        if (record.State is not (StartupAttemptState.Pending or StartupAttemptState.SoftTimeout or StartupAttemptState.DetachedWaiting))
+        if (record.State is not (
+            StartupAttemptState.Pending or
+            StartupAttemptState.SoftTimeout or
+            StartupAttemptState.DetachedWaiting or
+            StartupAttemptState.WaitingForShell))
         {
             return false;
         }

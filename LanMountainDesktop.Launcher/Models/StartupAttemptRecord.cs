@@ -9,7 +9,8 @@ internal enum StartupAttemptState
     SoftTimeout,
     DetachedWaiting,
     Succeeded,
-    Failed
+    Failed,
+    WaitingForShell
 }
 
 internal sealed class StartupAttemptRecord

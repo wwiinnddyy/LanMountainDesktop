@@ -120,7 +120,23 @@ public partial class App : Application
     private static SplashWindow CreateSplashWindow()
     {
         var preferences = StartupVisualPreferencesResolver.Resolve();
-        return new SplashWindow(preferences.Mode);
+        var window = new SplashWindow(preferences.Mode);
+        TrySetSplashVersionInfo(window, LauncherRuntimeContext.Current);
+        return window;
+    }
+
+    private static void TrySetSplashVersionInfo(SplashWindow window, CommandContext context)
+    {
+        try
+        {
+            var appRoot = Commands.ResolveAppRoot(context);
+            var versionInfo = new DeploymentLocator(appRoot).GetVersionInfo();
+            window.SetVersionInfo(versionInfo.Version, versionInfo.Codename);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to set splash version info before coordinator start: {ex.Message}");
+        }
     }
 
     private async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
@@ -318,12 +334,16 @@ public partial class App : Application
             {
                 reporter?.Report("activation", response.Message);
                 await DismissSplashIfNeededAsync(splashWindow).ConfigureAwait(false);
+                var success = response.Accepted ||
+                              IsRecoverableActivationFailure(response.ActivationResult, response.Status);
                 return new LauncherResult
                 {
-                    Success = response.Accepted,
+                    Success = success,
                     Stage = "launch",
-                    Code = response.Code,
-                    Message = response.Message,
+                    Code = success && !response.Accepted ? "attached_to_launcher_coordinator" : response.Code,
+                    Message = success && !response.Accepted
+                        ? "Attached to the active Launcher coordinator; desktop startup is still in progress."
+                        : response.Message,
                     Details = BuildCoordinatorResultDetails(response.Status, response.ActivationResult)
                 };
             }
@@ -334,12 +354,19 @@ public partial class App : Application
         {
             reporter?.Report("activation", activation.Message);
             await DismissSplashIfNeededAsync(splashWindow).ConfigureAwait(false);
+            var success = activation.Accepted || IsRecoverableActivationFailure(activation, null);
             return new LauncherResult
             {
-                Success = activation.Accepted,
+                Success = success,
                 Stage = "launch",
-                Code = activation.Accepted ? "existing_host_activated" : "existing_host_activation_failed",
-                Message = activation.Message,
+                Code = activation.Accepted
+                    ? "existing_host_activated"
+                    : success
+                        ? "existing_host_startup_pending"
+                        : "existing_host_activation_failed",
+                Message = success && !activation.Accepted
+                    ? "Existing desktop process is still starting; Launcher attached without starting another process."
+                    : activation.Message,
                 Details = BuildCoordinatorResultDetails(null, activation)
             };
         }
@@ -370,6 +397,18 @@ public partial class App : Application
             var activation = await TryActivateExistingInstanceWithStatusAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
             if (activation is not null)
             {
+                if (!activation.Accepted && IsRecoverableActivationFailure(activation, status))
+                {
+                    return new LauncherCoordinatorResponse
+                    {
+                        Accepted = true,
+                        Code = "attached_to_launcher_coordinator",
+                        Message = "Attached to the active Launcher coordinator; desktop startup is still in progress.",
+                        Status = status,
+                        ActivationResult = activation
+                    };
+                }
+
                 return new LauncherCoordinatorResponse
                 {
                     Accepted = activation.Accepted,
@@ -417,6 +456,32 @@ public partial class App : Application
             Succeeded = attempt.State == StartupAttemptState.Succeeded,
             UpdatedAtUtc = attempt.UpdatedAtUtc
         };
+    }
+
+    private static bool IsRecoverableActivationFailure(
+        PublicShellActivationResult? activation,
+        LauncherCoordinatorStatus? status)
+    {
+        if (activation is { Accepted: true })
+        {
+            return false;
+        }
+
+        if (status is { Completed: false, HostProcessAlive: true })
+        {
+            return true;
+        }
+
+        var shellStatus = activation?.Status;
+        if (shellStatus is null || !shellStatus.PublicIpcReady)
+        {
+            return false;
+        }
+
+        return !shellStatus.MainWindowOpened ||
+               !shellStatus.DesktopVisible ||
+               string.Equals(activation?.Code, "shell_not_ready", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(activation?.Code, "startup_pending", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<string, string> BuildCoordinatorResultDetails(

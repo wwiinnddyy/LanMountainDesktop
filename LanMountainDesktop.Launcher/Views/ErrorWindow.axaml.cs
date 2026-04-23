@@ -185,16 +185,22 @@ public partial class ErrorWindow : Window
 
         debugWindow.Closed += (_, _) =>
         {
+            if (!debugWindow.WasAccepted)
+            {
+                _isDebugMode = false;
+                _iconClickCount = 0;
+                return;
+            }
+
             _devModeEnabled = debugWindow.IsDevModeEnabled;
             _customHostPath = debugWindow.SelectedHostPath;
-            SaveDevModeStateInternal(_devModeEnabled);
-            SaveCustomHostPathInternal(_customHostPath);
 
             if (_devModeEnabled && string.IsNullOrWhiteSpace(_customHostPath))
             {
                 ScanDevPaths();
-                SaveCustomHostPathInternal(_customHostPath);
             }
+
+            LauncherDebugSettingsStore.Save(new LauncherDebugSettings(_devModeEnabled, _customHostPath));
 
             _isDebugMode = false;
             _iconClickCount = 0;
@@ -285,74 +291,17 @@ public partial class ErrorWindow : Window
 
     private static string GetConfigBaseDirectory()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (!string.IsNullOrWhiteSpace(appData))
-        {
-            return Path.Combine(appData, "LanMountainDesktop", ".launcher");
-        }
-
-        return Path.Combine(AppContext.BaseDirectory, ".launcher");
+        return LauncherDebugSettingsStore.ConfigBaseDirectory;
     }
-
-    private static string GetDevModePath() => Path.Combine(GetConfigBaseDirectory(), "dev-mode.flag");
-
-    private static string GetCustomHostPathFile() => Path.Combine(GetConfigBaseDirectory(), "custom-host-path.txt");
 
     private static bool LoadDevModeStateInternal()
     {
-        try
-        {
-            return File.Exists(GetDevModePath()) &&
-                   bool.TryParse(File.ReadAllText(GetDevModePath()).Trim(), out var enabled) &&
-                   enabled;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static void SaveDevModeStateInternal(bool enabled)
-    {
-        try
-        {
-            Directory.CreateDirectory(GetConfigBaseDirectory());
-            File.WriteAllText(GetDevModePath(), enabled.ToString());
-        }
-        catch
-        {
-        }
+        return LauncherDebugSettingsStore.IsDevModeEnabled();
     }
 
     private static string? LoadCustomHostPathInternal()
     {
-        try
-        {
-            var pathFile = GetCustomHostPathFile();
-            if (!File.Exists(pathFile))
-            {
-                return null;
-            }
-
-            var savedPath = File.ReadAllText(pathFile).Trim();
-            return string.IsNullOrWhiteSpace(savedPath) ? null : savedPath;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static void SaveCustomHostPathInternal(string? customHostPath)
-    {
-        try
-        {
-            Directory.CreateDirectory(GetConfigBaseDirectory());
-            File.WriteAllText(GetCustomHostPathFile(), customHostPath ?? string.Empty);
-        }
-        catch
-        {
-        }
+        return LauncherDebugSettingsStore.GetSavedCustomHostPath();
     }
 }
 

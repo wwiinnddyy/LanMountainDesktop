@@ -204,12 +204,16 @@ internal sealed class DeploymentLocator
             var savedCustomPath = Views.ErrorWindow.GetSavedCustomHostPath();
             if (!string.IsNullOrWhiteSpace(savedCustomPath))
             {
-                var fullSavedPath = Path.GetFullPath(savedCustomPath);
-                searchedPaths.Add(fullSavedPath);
-                if (File.Exists(fullSavedPath))
+                if (TryNormalizeSavedDebugPath(savedCustomPath, out var fullSavedPath))
                 {
-                    source = "debug_saved_custom_path";
-                    return fullSavedPath;
+                    searchedPaths.Add(fullSavedPath);
+                    if (File.Exists(fullSavedPath))
+                    {
+                        source = "debug_saved_custom_path";
+                        return fullSavedPath;
+                    }
+
+                    Logger.Warn($"Saved launcher debug host path is invalid; falling back to development paths. Path='{fullSavedPath}'.");
                 }
             }
         }
@@ -227,6 +231,21 @@ internal sealed class DeploymentLocator
 
         source = null;
         return null;
+    }
+
+    private static bool TryNormalizeSavedDebugPath(string savedPath, out string fullSavedPath)
+    {
+        try
+        {
+            fullSavedPath = Path.GetFullPath(savedPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            fullSavedPath = string.Empty;
+            Logger.Warn($"Saved launcher debug host path is invalid and cannot be normalized; falling back to development paths. Path='{savedPath}'; Error='{ex.Message}'.");
+            return false;
+        }
     }
 
     private static string? FindBestDeploymentHost(
@@ -303,9 +322,17 @@ internal sealed class DeploymentLocator
         if (Views.ErrorWindow.CheckDevModeEnabled())
         {
             var savedCustomPath = Views.ErrorWindow.GetSavedCustomHostPath();
-            if (!string.IsNullOrWhiteSpace(savedCustomPath) && File.Exists(savedCustomPath))
+            if (!string.IsNullOrWhiteSpace(savedCustomPath))
             {
-                return savedCustomPath;
+                if (TryNormalizeSavedDebugPath(savedCustomPath, out var fullSavedPath) &&
+                    File.Exists(fullSavedPath))
+                {
+                    return fullSavedPath;
+                }
+                else if (!string.IsNullOrWhiteSpace(fullSavedPath))
+                {
+                    Logger.Warn($"Saved launcher debug host path is invalid; falling back to development paths. Path='{fullSavedPath}'.");
+                }
             }
 
             var devPath = ScanDevelopmentPaths(executable);

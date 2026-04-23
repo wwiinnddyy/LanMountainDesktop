@@ -560,6 +560,11 @@ namespace LanMountainDesktop.Launcher.Services;
             }
         }
 
+        if (string.Equals(source, "saved dev mode path", StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.Warn($"Saved launcher debug host path is invalid; continuing host discovery. Path='{path}'.");
+        }
+
         return null;
     }
 

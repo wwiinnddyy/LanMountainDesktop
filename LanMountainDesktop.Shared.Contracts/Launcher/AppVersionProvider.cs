@@ -108,7 +108,9 @@ public static class AppVersionProvider
             return fallback;
         }
 
-        var normalized = rawValue.Split('+', 2, StringSplitOptions.TrimEntries)[0].Trim();
+        var normalized = TrimSurroundingQuotes(rawValue)
+            .Split('+', 2, StringSplitOptions.TrimEntries)[0]
+            .Trim();
         return string.IsNullOrWhiteSpace(normalized)
             ? fallback
             : normalized;
@@ -116,9 +118,10 @@ public static class AppVersionProvider
 
     public static string NormalizeCodename(string? rawValue, string fallback = DefaultCodename)
     {
-        return string.IsNullOrWhiteSpace(rawValue)
+        var normalized = TrimSurroundingQuotes(rawValue);
+        return string.IsNullOrWhiteSpace(normalized)
             ? fallback
-            : rawValue.Trim();
+            : normalized;
     }
 
     private static AppVersionInfo OverrideMissingParts(
@@ -158,17 +161,24 @@ public static class AppVersionProvider
 
         try
         {
-            var json = File.ReadAllText(versionFilePath);
-            var parsedInfo = JsonSerializer.Deserialize<AppVersionInfo>(json);
-            if (parsedInfo is null || string.IsNullOrWhiteSpace(parsedInfo.Version))
+            using var document = JsonDocument.Parse(File.ReadAllText(versionFilePath));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
             {
                 return false;
             }
 
+            var version = ReadStringProperty(root, nameof(AppVersionInfo.Version));
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                return false;
+            }
+
+            var codename = ReadStringProperty(root, nameof(AppVersionInfo.Codename));
             info = new AppVersionInfo
             {
-                Version = NormalizeVersionText(parsedInfo.Version),
-                Codename = NormalizeCodename(parsedInfo.Codename)
+                Version = NormalizeVersionText(version),
+                Codename = NormalizeCodename(codename)
             };
             return true;
         }
@@ -358,5 +368,44 @@ public static class AppVersionProvider
         {
             return null;
         }
+    }
+
+    private static string? ReadStringProperty(JsonElement root, string propertyName)
+    {
+        foreach (var property in root.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase) &&
+                property.Value.ValueKind == JsonValueKind.String)
+            {
+                return property.Value.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private static string TrimSurroundingQuotes(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return string.Empty;
+        }
+
+        var normalized = rawValue.Trim();
+        while (normalized.Length >= 2)
+        {
+            var first = normalized[0];
+            var last = normalized[^1];
+            if ((first == '\'' && last == '\'') ||
+                (first == '"' && last == '"'))
+            {
+                normalized = normalized[1..^1].Trim();
+                continue;
+            }
+
+            break;
+        }
+
+        return normalized;
     }
 }

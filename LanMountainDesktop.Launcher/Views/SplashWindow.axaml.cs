@@ -261,6 +261,13 @@ public partial class SplashWindow : Window, ISplashStageReporter
 
             debugWindow.Closed += (_, _) =>
             {
+                if (debugWindow.WasAccepted)
+                {
+                    LauncherDebugSettingsStore.Save(new LauncherDebugSettings(
+                        debugWindow.IsDevModeEnabled,
+                        debugWindow.SelectedHostPath));
+                }
+
                 _isDebugModeOpened = false;
                 _versionTextClickCount = 0;
             };

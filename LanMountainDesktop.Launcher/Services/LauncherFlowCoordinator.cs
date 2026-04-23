@@ -228,6 +228,7 @@ internal sealed class LauncherFlowCoordinator
                     {
                         ipcConnected = true;
                         shellStatus = existingActivation.Status;
+                        var recoverableActivationFailure = IsRecoverableActivationFailure(existingActivation);
                         lastStage = existingActivation.Accepted
                             ? StartupStage.ActivationRedirected
                             : StartupStage.ActivationFailed;
@@ -235,6 +236,10 @@ internal sealed class LauncherFlowCoordinator
                         if (existingActivation.Accepted)
                         {
                             _startupAttemptRegistry.MarkOwnedSucceeded(lastStage, lastStageMessage);
+                        }
+                        else if (recoverableActivationFailure)
+                        {
+                            _startupAttemptRegistry.MarkOwnedWaitingForShell(lastStageMessage);
                         }
                         else
                         {
@@ -244,14 +249,20 @@ internal sealed class LauncherFlowCoordinator
                         PublishCoordinatorStatus(
                             hostProcessAliveOverride: true,
                             completed: true,
-                            succeeded: existingActivation.Accepted);
+                            succeeded: existingActivation.Accepted || recoverableActivationFailure);
                         windowsClosingByCoordinator = true;
                         await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                         return BuildResult(
-                            success: existingActivation.Accepted,
+                            success: existingActivation.Accepted || recoverableActivationFailure,
                             stage: "launch",
-                            code: existingActivation.Accepted ? "existing_host_activated" : "existing_host_activation_failed",
-                            message: existingActivation.Message,
+                            code: existingActivation.Accepted
+                                ? "existing_host_activated"
+                                : recoverableActivationFailure
+                                    ? "existing_host_startup_pending"
+                                    : "existing_host_activation_failed",
+                            message: recoverableActivationFailure
+                                ? "Existing desktop process is still starting; Launcher will not start another process."
+                                : existingActivation.Message,
                             details: MergeDetails(
                                 launcherContextDetails,
                                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -438,6 +449,11 @@ internal sealed class LauncherFlowCoordinator
                     ipcConnected = true;
                     _startupAttemptRegistry.MarkOwnedIpcConnected();
                     shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                    if (shellStatus is { DesktopVisible: false })
+                    {
+                        _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC is ready; waiting for desktop shell.");
+                    }
+
                     PublishCoordinatorStatus(hostProcessAliveOverride: true);
                 }
 
@@ -464,6 +480,7 @@ internal sealed class LauncherFlowCoordinator
                 var softTimeoutAt = startedAt + StartupSoftTimeout;
                 var hardTimeoutAt = startedAt + StartupHardTimeout;
                 var nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(5);
+                var activationRetryAttempted = false;
 
                 while (true)
                 {
@@ -482,10 +499,35 @@ internal sealed class LauncherFlowCoordinator
                             details: ComposeLaunchDetails(!launchOutcome.Process.HasExited));
                     }
 
-                    if (activationFailedTcs.Task.IsCompleted && string.IsNullOrWhiteSpace(activationFailureReason))
+                    if (activationFailedTcs.Task.IsCompleted && !activationRetryAttempted)
                     {
+                        activationRetryAttempted = true;
                         activationFailureReason = await activationFailedTcs.Task.ConfigureAwait(false);
                         Logger.Warn($"Activation failure received before startup success. Reason='{activationFailureReason}'.");
+                        var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
+                        if (retryOutcome is not null)
+                        {
+                            windowsClosingByCoordinator = true;
+                            if (retryOutcome.Success)
+                            {
+                                _startupAttemptRegistry.MarkOwnedSucceeded(lastStage, retryOutcome.Message);
+                                PublishCoordinatorStatus(
+                                    hostProcessAliveOverride: !launchOutcome.Process.HasExited,
+                                    completed: true,
+                                    succeeded: true);
+                            }
+                            else
+                            {
+                                _startupAttemptRegistry.MarkOwnedFailed(lastStage, activationFailureReason);
+                                PublishCoordinatorStatus(
+                                    hostProcessAliveOverride: !launchOutcome.Process.HasExited,
+                                    completed: true,
+                                    succeeded: false);
+                            }
+
+                            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                            return WithAdditionalDetails(retryOutcome, ComposeLaunchDetails(!launchOutcome.Process.HasExited, recoveryActivationAttempted: true));
+                        }
                     }
 
                     if (processExitTask.IsCompleted)
@@ -510,6 +552,36 @@ internal sealed class LauncherFlowCoordinator
                                     {
                                         ["exitCode"] = exitCode.ToString()
                                     }));
+                        }
+
+                        if (!activationRetryAttempted &&
+                            exitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired)
+                        {
+                            activationRetryAttempted = true;
+                            var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
+                            if (retryOutcome is not null)
+                            {
+                                if (retryOutcome.Success)
+                                {
+                                    _startupAttemptRegistry.MarkOwnedSucceeded(lastStage, retryOutcome.Message);
+                                    PublishCoordinatorStatus(hostProcessAliveOverride: false, completed: true, succeeded: true);
+                                }
+                                else
+                                {
+                                    _startupAttemptRegistry.MarkOwnedFailed(lastStage, activationFailureReason);
+                                    PublishCoordinatorStatus(hostProcessAliveOverride: false, completed: true, succeeded: false);
+                                }
+
+                                await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                                return WithAdditionalDetails(
+                                    retryOutcome,
+                                    MergeDetails(
+                                        ComposeLaunchDetails(hostProcessAlive: false, recoveryActivationAttempted: true),
+                                        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                                        {
+                                            ["exitCode"] = exitCode.ToString()
+                                        }));
+                            }
                         }
 
                         _startupAttemptRegistry.MarkOwnedFailed(lastStage, activationFailureReason);
@@ -543,6 +615,11 @@ internal sealed class LauncherFlowCoordinator
                             ipcConnected = true;
                             _startupAttemptRegistry.MarkOwnedIpcConnected();
                             shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                            if (shellStatus is { DesktopVisible: false })
+                            {
+                                _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC reconnected; waiting for desktop shell.");
+                            }
+
                             PublishCoordinatorStatus(hostProcessAliveOverride: true);
                         }
 
@@ -602,6 +679,11 @@ internal sealed class LauncherFlowCoordinator
                         ipcConnected = true;
                         _startupAttemptRegistry.MarkOwnedIpcConnected();
                         shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                        if (shellStatus is { DesktopVisible: false })
+                        {
+                            _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC is ready; waiting for desktop shell.");
+                        }
+
                         PublishCoordinatorStatus(hostProcessAliveOverride: true);
                     }
                 }
@@ -630,6 +712,23 @@ internal sealed class LauncherFlowCoordinator
                                 !launchOutcome.Process.HasExited,
                                 recoveryActivationAttempted: true));
                     }
+                }
+
+                if (connected && !launchOutcome.Process.HasExited)
+                {
+                    windowsClosingByCoordinator = true;
+                    _startupAttemptRegistry.MarkOwnedWaitingForShell("Host process is still running after the launcher wait window.");
+                    shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: false, succeeded: false);
+                    await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                    return BuildResult(
+                        success: true,
+                        stage: "launch",
+                        code: "startup_pending",
+                        message: "Host process is still running; Launcher will not start another process while the desktop shell finishes startup.",
+                        details: ComposeLaunchDetails(
+                            hostProcessAlive: true,
+                            recoveryActivationAttempted));
                 }
 
                 windowsClosingByCoordinator = true;
@@ -1367,6 +1466,25 @@ internal sealed class LauncherFlowCoordinator
             Logger.Warn($"Existing host activation probe failed: {ex.Message}");
             return null;
         }
+    }
+
+    private static bool IsRecoverableActivationFailure(PublicShellActivationResult activation)
+    {
+        if (activation.Accepted)
+        {
+            return false;
+        }
+
+        if (string.Equals(activation.Code, "shutdown_in_progress", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return activation.Status.PublicIpcReady &&
+               (!activation.Status.MainWindowOpened ||
+                !activation.Status.DesktopVisible ||
+                string.Equals(activation.Code, "shell_not_ready", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(activation.Code, "startup_pending", StringComparison.OrdinalIgnoreCase));
     }
 
     private static async Task<PublicShellStatus?> TryGetPublicShellStatusAsync(

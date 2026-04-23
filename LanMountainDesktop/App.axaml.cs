@@ -1760,9 +1760,23 @@ public partial class App : Application
     {
         var restored = RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
         var status = GetPublicShellStatus();
-        return restored
-            ? new PublicShellActivationResult(true, "activated", "Desktop window activation was requested.", status)
-            : new PublicShellActivationResult(false, "activation_failed", "Desktop window activation failed.", status);
+        if (restored)
+        {
+            return new PublicShellActivationResult(true, "activated", "Desktop window activation was requested.", status);
+        }
+
+        if (IsShutdownInProgress)
+        {
+            return new PublicShellActivationResult(false, "shutdown_in_progress", "Desktop is shutting down.", status);
+        }
+
+        var code = status.PublicIpcReady && (!status.MainWindowOpened || !status.DesktopVisible)
+            ? "shell_not_ready"
+            : "activation_failed";
+        var message = code == "shell_not_ready"
+            ? "Desktop process is running, but the shell is not ready for activation yet."
+            : "Desktop window activation failed.";
+        return new PublicShellActivationResult(false, code, message, status);
     }
 
     internal PublicTrayStatus EnsureTrayReadyFromExternalIpc(string source)
