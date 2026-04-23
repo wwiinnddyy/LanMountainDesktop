@@ -85,6 +85,7 @@ public partial class App : Application
     private LoadingStateReporter? _loadingStateReporter;
     private bool _singleInstanceReleased;
     private int _forcedExitScheduled;
+    private volatile bool _desktopShellInitializationStarted;
     private bool _mainWindowOpened;
     private bool _trayInitialized;
     private readonly object _launcherProgressLock = new();
@@ -184,6 +185,7 @@ public partial class App : Application
         RegisterUiUnhandledExceptionGuard();
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePublicIpc();
+        CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         _ = InitializeLauncherIpcAsync();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
@@ -324,6 +326,7 @@ public partial class App : Application
 
     private void InitializeDesktopShell()
     {
+        _desktopShellInitializationStarted = true;
         _desktopShellHost ??= new DesktopShellHost(
             InitializePluginRuntime,
             InitializeTrayIcon,
@@ -801,9 +804,15 @@ public partial class App : Application
         Resources["AppFontFamily"] = fontFamily;
     }
 
-    private void ActivateMainWindow()
+    internal void ActivateMainWindow()
     {
         AppLogger.Info("SingleInstance", $"Activation callback received. Pid={Environment.ProcessId}.");
+
+        if (!_desktopShellInitializationStarted && _mainWindow is null)
+        {
+            AppLogger.Info("SingleInstance", "Activation acknowledged while desktop shell is still initializing.");
+            return;
+        }
 
         try
         {
@@ -815,7 +824,8 @@ public partial class App : Application
 
             if (!restored)
             {
-                throw new InvalidOperationException("Main window restore failed in activation callback.");
+                AppLogger.Warn("SingleInstance", "Activation callback could not restore the main window yet.");
+                return;
             }
 
             AppLogger.Info("SingleInstance", "Activation callback completed successfully.");
@@ -823,7 +833,6 @@ public partial class App : Application
         catch (Exception ex)
         {
             AppLogger.Warn("SingleInstance", "Activation callback failed while restoring the desktop shell.", ex);
-            throw;
         }
     }
 
@@ -1758,6 +1767,15 @@ public partial class App : Application
 
     internal PublicShellActivationResult TryActivateMainWindowWithStatusFromExternalIpc(string source)
     {
+        if (!_desktopShellInitializationStarted && _mainWindow is null)
+        {
+            return new PublicShellActivationResult(
+                false,
+                "startup_pending",
+                "Desktop process is running, but the shell has not started yet.",
+                GetPublicShellStatus());
+        }
+
         var restored = RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
         var status = GetPublicShellStatus();
         if (restored)
@@ -1770,12 +1788,17 @@ public partial class App : Application
             return new PublicShellActivationResult(false, "shutdown_in_progress", "Desktop is shutting down.", status);
         }
 
-        var code = status.PublicIpcReady && (!status.MainWindowOpened || !status.DesktopVisible)
-            ? "shell_not_ready"
-            : "activation_failed";
-        var message = code == "shell_not_ready"
-            ? "Desktop process is running, but the shell is not ready for activation yet."
-            : "Desktop window activation failed.";
+        var code = status.PublicIpcReady && (!status.MainWindowCreated || !status.MainWindowOpened)
+            ? "startup_pending"
+            : status.PublicIpcReady && !status.DesktopVisible
+                ? "shell_not_ready"
+                : "activation_failed";
+        var message = code switch
+        {
+            "startup_pending" => "Desktop process is running, but the shell is still creating the main window.",
+            "shell_not_ready" => "Desktop process is running, but the shell is not ready for activation yet.",
+            _ => "Desktop window activation failed."
+        };
         return new PublicShellActivationResult(false, code, message, status);
     }
 

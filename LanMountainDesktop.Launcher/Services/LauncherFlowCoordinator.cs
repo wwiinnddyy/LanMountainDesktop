@@ -11,20 +11,10 @@ namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class LauncherFlowCoordinator
 {
-    private static readonly TimeSpan StartupSoftTimeout = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan StartupHardTimeout = TimeSpan.FromSeconds(120);
+    private static readonly TimeSpan StartupSoftTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan StartupHardTimeout = TimeSpan.FromSeconds(30);
     private const string SoftTimeoutStatusMessage = "设备较慢，仍在启动，请稍候。";
     private const string SoftTimeoutDetailsMessage = "桌面主进程仍在运行，Launcher 会继续等待，不会重复启动。";
-
-    private static readonly string[] LauncherOnlyOptions =
-    [
-        "debug", "show-loading-details", "plugins-dir", "source", "result",
-        "app-root",
-        LauncherIpcConstants.LauncherPidEnvVar,
-        LauncherIpcConstants.PackageRootEnvVar,
-        LauncherIpcConstants.VersionEnvVar,
-        LauncherIpcConstants.CodenameEnvVar
-    ];
 
     private readonly CommandContext _context;
     private readonly DeploymentLocator _deploymentLocator;
@@ -439,24 +429,6 @@ internal sealed class LauncherFlowCoordinator
                     PublishCoordinatorStatus(hostProcessAliveOverride: true);
                 }
 
-                var connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                if (!connected)
-                {
-                    Logger.Warn("Timed out waiting for host public IPC. Launcher will continue without live startup notifications.");
-                }
-                else
-                {
-                    ipcConnected = true;
-                    _startupAttemptRegistry.MarkOwnedIpcConnected();
-                    shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
-                    if (shellStatus is { DesktopVisible: false })
-                    {
-                        _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC is ready; waiting for desktop shell.");
-                    }
-
-                    PublishCoordinatorStatus(hostProcessAliveOverride: true);
-                }
-
                 Dictionary<string, string> ComposeLaunchDetails(bool hostProcessAlive, bool recoveryActivationAttempted = false)
                 {
                     return MergeDetails(
@@ -475,11 +447,51 @@ internal sealed class LauncherFlowCoordinator
                                 recoveryActivationAttempted)));
                 }
 
+                async Task<StartupSuccessState?> RefreshShellStatusAsync(string waitingMessage)
+                {
+                    if (!ipcClient.IsConnected)
+                    {
+                        return null;
+                    }
+
+                    ipcConnected = true;
+                    _startupAttemptRegistry.MarkOwnedIpcConnected();
+                    shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                    if (startupSuccessTracker.TryResolve(shellStatus, out var successState))
+                    {
+                        return successState;
+                    }
+
+                    if (shellStatus is { DesktopVisible: false })
+                    {
+                        _startupAttemptRegistry.MarkOwnedWaitingForShell(waitingMessage);
+                    }
+
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true);
+                    return null;
+                }
+
+                var connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromMilliseconds(1200)).ConfigureAwait(false);
+                if (!connected)
+                {
+                    Logger.Warn("Timed out waiting for host public IPC. Launcher will continue without live startup notifications.");
+                }
+                else
+                {
+                    var shellSuccess = await RefreshShellStatusAsync("Host public IPC is ready; waiting for desktop shell.")
+                        .ConfigureAwait(false);
+                    if (shellSuccess is not null)
+                    {
+                        successTcs.TrySetResult(shellSuccess);
+                    }
+                }
+
                 var processExitTask = launchOutcome.Process.WaitForExitAsync();
                 var startedAt = trackedAttempt?.StartedAtUtc ?? DateTimeOffset.UtcNow;
                 var softTimeoutAt = startedAt + StartupSoftTimeout;
                 var hardTimeoutAt = startedAt + StartupHardTimeout;
-                var nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(5);
+                var nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(2);
+                var nextShellStatusPollAt = DateTimeOffset.UtcNow.AddSeconds(1);
                 var activationRetryAttempted = false;
 
                 while (true)
@@ -504,6 +516,29 @@ internal sealed class LauncherFlowCoordinator
                         activationRetryAttempted = true;
                         activationFailureReason = await activationFailedTcs.Task.ConfigureAwait(false);
                         Logger.Warn($"Activation failure received before startup success. Reason='{activationFailureReason}'.");
+                        var activationRecovery = await TryRecoverActivationThroughExistingHostAsync(
+                            ipcClient,
+                            startupSuccessTracker,
+                            TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                        if (activationRecovery is not null)
+                        {
+                            windowsClosingByCoordinator = true;
+                            _startupAttemptRegistry.MarkOwnedSucceeded(activationRecovery.Stage, activationRecovery.Message);
+                            PublishCoordinatorStatus(
+                                hostProcessAliveOverride: !launchOutcome.Process.HasExited,
+                                completed: true,
+                                succeeded: true);
+                            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                            return BuildResult(
+                                success: true,
+                                stage: "launch",
+                                code: activationRecovery.Code,
+                                message: activationRecovery.Message,
+                                details: ComposeLaunchDetails(
+                                    !launchOutcome.Process.HasExited,
+                                    recoveryActivationAttempted: true));
+                        }
+
                         var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
                         if (retryOutcome is not null)
                         {
@@ -558,6 +593,28 @@ internal sealed class LauncherFlowCoordinator
                             exitCode is HostExitCodes.SecondaryActivationFailed or HostExitCodes.RestartLockNotAcquired)
                         {
                             activationRetryAttempted = true;
+                            var activationRecovery = await TryRecoverActivationThroughExistingHostAsync(
+                                ipcClient,
+                                startupSuccessTracker,
+                                TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+                            if (activationRecovery is not null)
+                            {
+                                _startupAttemptRegistry.MarkOwnedSucceeded(activationRecovery.Stage, activationRecovery.Message);
+                                PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: true, succeeded: true);
+                                await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                                return BuildResult(
+                                    success: true,
+                                    stage: "launch",
+                                    code: activationRecovery.Code,
+                                    message: activationRecovery.Message,
+                                    details: MergeDetails(
+                                        ComposeLaunchDetails(hostProcessAlive: true, recoveryActivationAttempted: true),
+                                        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                                        {
+                                            ["exitCode"] = exitCode.ToString()
+                                        }));
+                            }
+
                             var retryOutcome = await RetryActivationAfterEarlyFailureAsync().ConfigureAwait(false);
                             if (retryOutcome is not null)
                             {
@@ -605,6 +662,21 @@ internal sealed class LauncherFlowCoordinator
                     }
 
                     var now = DateTimeOffset.UtcNow;
+                    if (ipcConnected &&
+                        !launchOutcome.Process.HasExited &&
+                        now >= nextShellStatusPollAt)
+                    {
+                        var shellSuccess = await RefreshShellStatusAsync("Host public IPC is ready; waiting for desktop shell.")
+                            .ConfigureAwait(false);
+                        if (shellSuccess is not null)
+                        {
+                            successTcs.TrySetResult(shellSuccess);
+                            continue;
+                        }
+
+                        nextShellStatusPollAt = DateTimeOffset.UtcNow.AddSeconds(1);
+                    }
+
                     if (!ipcConnected &&
                         !launchOutcome.Process.HasExited &&
                         now >= nextReconnectAttemptAt)
@@ -612,18 +684,16 @@ internal sealed class LauncherFlowCoordinator
                         connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromMilliseconds(800)).ConfigureAwait(false);
                         if (connected)
                         {
-                            ipcConnected = true;
-                            _startupAttemptRegistry.MarkOwnedIpcConnected();
-                            shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
-                            if (shellStatus is { DesktopVisible: false })
+                            var shellSuccess = await RefreshShellStatusAsync("Host public IPC reconnected; waiting for desktop shell.")
+                                .ConfigureAwait(false);
+                            if (shellSuccess is not null)
                             {
-                                _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC reconnected; waiting for desktop shell.");
+                                successTcs.TrySetResult(shellSuccess);
+                                continue;
                             }
-
-                            PublishCoordinatorStatus(hostProcessAliveOverride: true);
                         }
 
-                        nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(5);
+                        nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(2);
                     }
 
                     if (!softTimeoutShown &&
@@ -676,15 +746,21 @@ internal sealed class LauncherFlowCoordinator
                     connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                     if (connected)
                     {
-                        ipcConnected = true;
-                        _startupAttemptRegistry.MarkOwnedIpcConnected();
-                        shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
-                        if (shellStatus is { DesktopVisible: false })
+                        var shellSuccess = await RefreshShellStatusAsync("Host public IPC is ready; waiting for desktop shell.")
+                            .ConfigureAwait(false);
+                        if (shellSuccess is not null)
                         {
-                            _startupAttemptRegistry.MarkOwnedWaitingForShell("Host public IPC is ready; waiting for desktop shell.");
+                            windowsClosingByCoordinator = true;
+                            _startupAttemptRegistry.MarkOwnedSucceeded(shellSuccess.Stage, shellSuccess.Message);
+                            PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: true, succeeded: true);
+                            await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                            return BuildResult(
+                                success: true,
+                                stage: "launch",
+                                code: shellSuccess.Code,
+                                message: shellSuccess.Message,
+                                details: ComposeLaunchDetails(hostProcessAlive: true));
                         }
-
-                        PublishCoordinatorStatus(hostProcessAliveOverride: true);
                     }
                 }
 
@@ -719,13 +795,44 @@ internal sealed class LauncherFlowCoordinator
                     windowsClosingByCoordinator = true;
                     _startupAttemptRegistry.MarkOwnedWaitingForShell("Host process is still running after the launcher wait window.");
                     shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
-                    PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: false, succeeded: false);
+                    if (startupSuccessTracker.TryResolve(shellStatus, out var finalShellSuccess))
+                    {
+                        _startupAttemptRegistry.MarkOwnedSucceeded(finalShellSuccess.Stage, finalShellSuccess.Message);
+                        PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: true, succeeded: true);
+                        await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                        return BuildResult(
+                            success: true,
+                            stage: "launch",
+                            code: finalShellSuccess.Code,
+                            message: finalShellSuccess.Message,
+                            details: ComposeLaunchDetails(
+                                hostProcessAlive: true,
+                                recoveryActivationAttempted));
+                    }
+
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: true, succeeded: false);
+                    await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                    return BuildResult(
+                        success: false,
+                        stage: "launch",
+                        code: "shell_not_ready",
+                        message: "Host public IPC is connected, but the desktop shell did not create or show the main window in time.",
+                        details: ComposeLaunchDetails(
+                            hostProcessAlive: true,
+                            recoveryActivationAttempted));
+                }
+
+                if (!connected && !launchOutcome.Process.HasExited)
+                {
+                    windowsClosingByCoordinator = true;
+                    _startupAttemptRegistry.MarkOwnedWaitingForShell("Host process is still running, but public IPC is not ready yet.");
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true, completed: false, succeeded: true);
                     await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                     return BuildResult(
                         success: true,
                         stage: "launch",
                         code: "startup_pending",
-                        message: "Host process is still running; Launcher will not start another process while the desktop shell finishes startup.",
+                        message: "Host process is still running; Launcher will not start another process while public IPC finishes startup.",
                         details: ComposeLaunchDetails(
                             hostProcessAlive: true,
                             recoveryActivationAttempted));
@@ -739,7 +846,7 @@ internal sealed class LauncherFlowCoordinator
                     success: false,
                     stage: "launch",
                     code: "desktop_not_visible",
-                    message: "Host process started, but it never reached the required startup state within 120 seconds.",
+                    message: $"Host process started, but it never reached the required startup state within {StartupHardTimeout.TotalSeconds:0} seconds.",
                     details: ComposeLaunchDetails(
                         !launchOutcome.Process.HasExited,
                         recoveryActivationAttempted));
@@ -906,36 +1013,26 @@ internal sealed class LauncherFlowCoordinator
         bool forceDirectMode,
         string? retryTag)
     {
-        var hostPath = resolution.ResolvedHostPath!;
+        var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution);
+        var hostPath = plan.HostPath;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
             EnsureExecutable(hostPath);
         }
 
-        var hostWorkingDirectory = Path.GetDirectoryName(hostPath) ?? _deploymentLocator.GetAppRoot();
-        var versionInfo = _deploymentLocator.GetVersionInfo();
-        var forwardedArguments = BuildForwardedArguments(versionInfo);
-
-        var primaryMode = forceDirectMode || !OperatingSystem.IsWindows()
-            ? HostStartMode.Direct
-            : HostStartMode.ShellExecute;
-        var fallbackMode = primaryMode == HostStartMode.ShellExecute
-            ? HostStartMode.Direct
+        var primaryMode = HostStartMode.Direct;
+        var fallbackMode = !forceDirectMode && OperatingSystem.IsWindows()
+            ? HostStartMode.ShellExecute
             : (HostStartMode?)null;
 
-        var firstAttempt = await StartHostProcessAsync(hostPath, hostWorkingDirectory, forwardedArguments, versionInfo, primaryMode, retryTag).ConfigureAwait(false);
-        if (firstAttempt.ProcessCreated && !firstAttempt.ExitedEarly && firstAttempt.Process is not null)
+        var firstAttempt = await StartHostProcessAsync(plan, primaryMode, retryTag).ConfigureAwait(false);
+        if (firstAttempt.ProcessCreated && firstAttempt.Process is not null)
         {
             var firstDetails = BuildResolutionDetails(resolution, firstAttempt, null, null);
             return HostLaunchOutcome.FromProcess(
                 firstAttempt.Process,
                 BuildResult(true, "launchHost", "ok", "Host launched.", firstDetails),
                 firstDetails);
-        }
-
-        if (firstAttempt.ExitCode == HostExitCodes.SecondaryActivationSucceeded)
-        {
-            return BuildOutcomeFromAttempt(resolution, firstAttempt, null);
         }
 
         if (fallbackMode is null)
@@ -947,8 +1044,8 @@ internal sealed class LauncherFlowCoordinator
             $"Primary host start attempt failed. Retrying with fallback mode '{fallbackMode}'. " +
             $"FailureReason='{firstAttempt.FailureReason ?? "unknown"}'; ExitCode='{firstAttempt.ExitCode?.ToString() ?? "<none>"}'.");
 
-        var secondAttempt = await StartHostProcessAsync(hostPath, hostWorkingDirectory, forwardedArguments, versionInfo, fallbackMode.Value, retryTag).ConfigureAwait(false);
-        if (secondAttempt.ProcessCreated && !secondAttempt.ExitedEarly && secondAttempt.Process is not null)
+        var secondAttempt = await StartHostProcessAsync(plan, fallbackMode.Value, retryTag).ConfigureAwait(false);
+        if (secondAttempt.ProcessCreated && secondAttempt.Process is not null)
         {
             var details = BuildResolutionDetails(resolution, firstAttempt, secondAttempt, null);
             return HostLaunchOutcome.FromProcess(
@@ -1014,111 +1111,55 @@ internal sealed class LauncherFlowCoordinator
     }
 
     private async Task<HostStartAttempt> StartHostProcessAsync(
-        string hostPath,
-        string hostWorkingDirectory,
-        string arguments,
-        AppVersionInfo versionInfo,
+        HostLaunchPlan plan,
         HostStartMode startMode,
         string? retryTag)
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = hostPath,
-            WorkingDirectory = hostWorkingDirectory,
-            Arguments = arguments,
+            FileName = plan.HostPath,
+            WorkingDirectory = plan.WorkingDirectory,
             UseShellExecute = startMode == HostStartMode.ShellExecute
         };
 
         if (startMode == HostStartMode.Direct)
         {
-            startInfo.EnvironmentVariables[LauncherIpcConstants.LauncherPidEnvVar] = Environment.ProcessId.ToString();
-            startInfo.EnvironmentVariables[LauncherIpcConstants.PackageRootEnvVar] = _deploymentLocator.GetAppRoot();
-            startInfo.EnvironmentVariables[LauncherIpcConstants.VersionEnvVar] = versionInfo.Version;
-            startInfo.EnvironmentVariables[LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename;
+            foreach (var argument in plan.Arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            foreach (var pair in plan.EnvironmentVariables)
+            {
+                startInfo.EnvironmentVariables[pair.Key] = pair.Value;
+            }
+        }
+        else
+        {
+            startInfo.Arguments = HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments);
         }
 
         try
         {
             var process = Process.Start(startInfo);
             Logger.Info(
-                $"Host launch requested. Mode='{startMode}'; RetryTag='{retryTag ?? "<none>"}'; Path='{hostPath}'; " +
-                $"WorkingDir='{hostWorkingDirectory}'; Pid={(process is null ? -1 : process.Id)}; Args='{startInfo.Arguments}'.");
+                $"Host launch requested. Mode='{startMode}'; RetryTag='{retryTag ?? "<none>"}'; Path='{plan.HostPath}'; " +
+                $"PackageRoot='{plan.PackageRoot}'; WorkingDir='{plan.WorkingDirectory}'; Pid={(process is null ? -1 : process.Id)}; " +
+                $"Args='{HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments)}'.");
 
             if (process is null)
             {
-                return HostStartAttempt.StartFailed(startMode, "process_start_returned_null");
+                return HostStartAttempt.StartFailed(startMode, "process_start_returned_null", plan);
             }
 
-            var exitTask = process.WaitForExitAsync();
-            var completed = await Task.WhenAny(exitTask, Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
-            if (completed == exitTask)
-            {
-                return HostStartAttempt.EarlyExit(startMode, process, process.ExitCode);
-            }
-
-            return HostStartAttempt.Started(startMode, process);
+            await Task.Yield();
+            return HostStartAttempt.Started(startMode, process, plan);
         }
         catch (Exception ex)
         {
             Logger.Error($"Host start failed. Mode='{startMode}'.", ex);
-            return HostStartAttempt.StartFailed(startMode, ex.GetType().Name);
+            return HostStartAttempt.StartFailed(startMode, ex.GetType().Name, plan);
         }
-    }
-
-    private string BuildForwardedArguments(AppVersionInfo versionInfo)
-    {
-        var arguments = new System.Text.StringBuilder();
-
-        for (var index = 0; index < _context.RawArgs.Count; index++)
-        {
-            var arg = _context.RawArgs[index];
-
-            if (arg == _context.Command || arg == _context.SubCommand)
-            {
-                continue;
-            }
-
-            if (arg.StartsWith("--", StringComparison.Ordinal))
-            {
-                var key = arg[2..];
-                var equalsIndex = key.IndexOf('=');
-                if (equalsIndex >= 0)
-                {
-                    key = key[..equalsIndex];
-                }
-
-                if (LauncherOnlyOptions.Contains(key, StringComparer.OrdinalIgnoreCase))
-                {
-                    if (equalsIndex < 0 &&
-                        index + 1 < _context.RawArgs.Count &&
-                        !_context.RawArgs[index + 1].StartsWith("--", StringComparison.Ordinal))
-                    {
-                        index++;
-                    }
-
-                    continue;
-                }
-            }
-
-            if (arguments.Length > 0)
-            {
-                arguments.Append(' ');
-            }
-
-            arguments.Append(QuoteArgument(arg));
-        }
-
-        if (arguments.Length > 0)
-        {
-            arguments.Append(' ');
-        }
-
-        arguments.Append($"--{LauncherIpcConstants.LauncherPidEnvVar}={Environment.ProcessId}");
-        arguments.Append($" --{LauncherIpcConstants.PackageRootEnvVar}={QuoteArgument(_deploymentLocator.GetAppRoot())}");
-        arguments.Append($" --{LauncherIpcConstants.VersionEnvVar}={versionInfo.Version}");
-        arguments.Append($" --{LauncherIpcConstants.CodenameEnvVar}={QuoteArgument(versionInfo.Codename)}");
-
-        return arguments.ToString();
     }
 
     private async Task<(ErrorWindowResult Result, string? CustomPath)> ShowHostNotFoundErrorAsync()
@@ -1333,6 +1374,9 @@ internal sealed class LauncherFlowCoordinator
             details["startMode"] = firstAttempt.StartMode.ToString();
             details["processCreated"] = firstAttempt.ProcessCreated.ToString();
             details["hostPid"] = firstAttempt.ProcessId?.ToString() ?? string.Empty;
+            details["packageRoot"] = firstAttempt.PackageRoot ?? string.Empty;
+            details["workingDirectory"] = firstAttempt.WorkingDirectory ?? string.Empty;
+            details["arguments"] = firstAttempt.Arguments ?? string.Empty;
             details["firstAttemptFailureReason"] = firstAttempt.FailureReason ?? string.Empty;
             details["firstAttemptExitCode"] = firstAttempt.ExitCode?.ToString() ?? string.Empty;
         }
@@ -1342,6 +1386,9 @@ internal sealed class LauncherFlowCoordinator
             details["fallbackStartMode"] = secondAttempt.StartMode.ToString();
             details["fallbackProcessCreated"] = secondAttempt.ProcessCreated.ToString();
             details["fallbackHostPid"] = secondAttempt.ProcessId?.ToString() ?? string.Empty;
+            details["fallbackPackageRoot"] = secondAttempt.PackageRoot ?? string.Empty;
+            details["fallbackWorkingDirectory"] = secondAttempt.WorkingDirectory ?? string.Empty;
+            details["fallbackArguments"] = secondAttempt.Arguments ?? string.Empty;
             details["fallbackFailureReason"] = secondAttempt.FailureReason ?? string.Empty;
             details["fallbackExitCode"] = secondAttempt.ExitCode?.ToString() ?? string.Empty;
         }
@@ -1360,36 +1407,6 @@ internal sealed class LauncherFlowCoordinator
         }
 
         return merged;
-    }
-
-    private static string QuoteArgument(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return "\"\"";
-        }
-
-        if (!value.Contains('"') && !value.Contains(' ') && !value.Contains('\t'))
-        {
-            return value;
-        }
-
-        var builder = new System.Text.StringBuilder();
-        builder.Append('"');
-        foreach (var ch in value)
-        {
-            if (ch == '"')
-            {
-                builder.Append("\\\"");
-            }
-            else
-            {
-                builder.Append(ch);
-            }
-        }
-
-        builder.Append('"');
-        return builder.ToString();
     }
 
     private static void EnsureExecutable(string path)
@@ -1419,15 +1436,23 @@ internal sealed class LauncherFlowCoordinator
             return true;
         }
 
-        var connectTask = ipcClient.ConnectAsync();
-        var completedTask = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
-        if (completedTask != connectTask)
+        try
         {
+            var connectTask = ipcClient.ConnectAsync();
+            var completedTask = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
+            if (completedTask != connectTask)
+            {
+                return false;
+            }
+
+            await connectTask.ConfigureAwait(false);
+            return ipcClient.IsConnected;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Public IPC connect failed: {ex.Message}");
             return false;
         }
-
-        await connectTask.ConfigureAwait(false);
-        return true;
     }
 
     private static bool ShouldProbeExistingHostBeforeLaunch(CommandContext context)
@@ -1466,6 +1491,35 @@ internal sealed class LauncherFlowCoordinator
             Logger.Warn($"Existing host activation probe failed: {ex.Message}");
             return null;
         }
+    }
+
+    private static async Task<StartupSuccessState?> TryRecoverActivationThroughExistingHostAsync(
+        LanMountainDesktopIpcClient ipcClient,
+        StartupSuccessTracker startupSuccessTracker,
+        TimeSpan timeout)
+    {
+        var activation = await TryActivateExistingHostWithStatusAsync(ipcClient, timeout).ConfigureAwait(false);
+        if (activation is null)
+        {
+            return null;
+        }
+
+        if (startupSuccessTracker.TryResolve(activation.Status, out var shellSuccess))
+        {
+            return shellSuccess;
+        }
+
+        if (activation.Accepted)
+        {
+            return startupSuccessTracker.BuildRecoverySuccessState();
+        }
+
+        return IsRecoverableActivationFailure(activation)
+            ? new StartupSuccessState(
+                StartupStage.Ready,
+                "startup_pending",
+                activation.Message)
+            : null;
     }
 
     private static bool IsRecoverableActivationFailure(PublicShellActivationResult activation)
@@ -1511,10 +1565,10 @@ internal sealed class LauncherFlowCoordinator
         try
         {
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            var activationAccepted = await shellProxy.ActivateMainWindowAsync().ConfigureAwait(false);
-            if (!activationAccepted)
+            var activation = await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+            if (startupSuccessTracker.TryResolve(activation.Status, out var shellSuccess))
             {
-                return null;
+                return shellSuccess;
             }
 
             var completedTask = await Task.WhenAny(successTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
@@ -1523,7 +1577,7 @@ internal sealed class LauncherFlowCoordinator
                 return await successTask.ConfigureAwait(false);
             }
 
-            if (!hostProcess.HasExited)
+            if (!hostProcess.HasExited && (activation.Accepted || IsRecoverableActivationFailure(activation)))
             {
                 return startupSuccessTracker.BuildRecoverySuccessState();
             }
@@ -1642,18 +1696,48 @@ internal sealed class LauncherFlowCoordinator
         Process? Process,
         bool ExitedEarly,
         int? ExitCode,
-        string? FailureReason)
+        string? FailureReason,
+        string? PackageRoot,
+        string? WorkingDirectory,
+        string? Arguments)
     {
         public int? ProcessId => Process?.Id;
 
-        public static HostStartAttempt Started(HostStartMode startMode, Process process) =>
-            new(startMode, true, process, false, null, null);
+        public static HostStartAttempt Started(HostStartMode startMode, Process process, HostLaunchPlan plan) =>
+            new(
+                startMode,
+                true,
+                process,
+                false,
+                null,
+                null,
+                plan.PackageRoot,
+                plan.WorkingDirectory,
+                HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
 
-        public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode) =>
-            new(startMode, true, process, true, exitCode, null);
+        public static HostStartAttempt EarlyExit(HostStartMode startMode, Process process, int exitCode, HostLaunchPlan plan) =>
+            new(
+                startMode,
+                true,
+                process,
+                true,
+                exitCode,
+                null,
+                plan.PackageRoot,
+                plan.WorkingDirectory,
+                HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
 
-        public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason) =>
-            new(startMode, false, null, false, null, failureReason);
+        public static HostStartAttempt StartFailed(HostStartMode startMode, string failureReason, HostLaunchPlan? plan = null) =>
+            new(
+                startMode,
+                false,
+                null,
+                false,
+                null,
+                failureReason,
+                plan?.PackageRoot,
+                plan?.WorkingDirectory,
+                plan is null ? null : HostLaunchPlanBuilder.FormatArgumentsForLog(plan.Arguments));
     }
 
     private sealed record HostLaunchOutcome(
@@ -1715,6 +1799,13 @@ internal sealed class LauncherFlowCoordinator
                             : "Desktop recovered in a visible state.");
                     return true;
 
+                case StartupStage.Ready:
+                    successState = new StartupSuccessState(
+                        stage,
+                        _policy == LaunchSuccessPolicy.Foreground ? "ready" : "background_ready",
+                        "Desktop reported that startup is ready.");
+                    return true;
+
                 case StartupStage.TrayReady:
                     _trayReady = true;
                     break;
@@ -1739,6 +1830,26 @@ internal sealed class LauncherFlowCoordinator
                     StartupStage.BackgroundReady,
                     "background_ready",
                     "Desktop restart completed with tray recovery ready.");
+                return true;
+            }
+
+            successState = default!;
+            return false;
+        }
+
+        public bool TryResolve(PublicShellStatus? status, out StartupSuccessState successState)
+        {
+            if (status is not null &&
+                (status.DesktopVisible || status.MainWindowVisible || status.MainWindowOpened))
+            {
+                successState = new StartupSuccessState(
+                    status.DesktopVisible || status.MainWindowVisible
+                        ? StartupStage.DesktopVisible
+                        : StartupStage.Ready,
+                    _policy == LaunchSuccessPolicy.Foreground ? "ok" : "background_ready",
+                    status.DesktopVisible || status.MainWindowVisible
+                        ? "Desktop shell is visible and ready."
+                        : "Desktop shell window has opened.");
                 return true;
             }
 

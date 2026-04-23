@@ -166,7 +166,10 @@ internal static class Commands
             return Path.GetFullPath(configured);
         }
 
-        var baseDir = AppContext.BaseDirectory;
+        var launcherDir = Path.GetDirectoryName(Environment.ProcessPath);
+        var baseDir = Path.GetFullPath(!string.IsNullOrWhiteSpace(launcherDir)
+            ? launcherDir
+            : AppContext.BaseDirectory);
         
         // 发布版结构：Launcher 和 app-* 目录在同一目录
         // 检查当前目录是否有 app-* 子目录（发布版）

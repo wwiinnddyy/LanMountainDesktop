@@ -77,6 +77,16 @@ public sealed class Program
             StartupRenderMode = renderMode;
             AppLogger.Info("Startup", $"Resolved render mode '{renderMode}'.");
             App.CurrentSingleInstanceService = singleInstance;
+            singleInstance.StartActivationListener(() =>
+            {
+                if (Avalonia.Application.Current is App app)
+                {
+                    app.ActivateMainWindow();
+                    return;
+                }
+
+                AppLogger.Info("SingleInstance", "Activation acknowledged before Avalonia App was ready.");
+            });
             BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);
             AppLogger.Info("Startup", "Application exited normally.");
         }

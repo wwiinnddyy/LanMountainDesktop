@@ -16,6 +16,7 @@ public sealed class SingleInstanceService : IDisposable
     private readonly Mutex _mutex;
     private readonly string _pipeName;
     private readonly CancellationTokenSource _listenCts = new();
+    private readonly ManualResetEventSlim _listenerReady = new(false);
     private bool _ownsMutex;
     private bool _disposed;
     private Task? _listenTask;
@@ -64,6 +65,7 @@ public sealed class SingleInstanceService : IDisposable
             "SingleInstance",
             $"Starting activation listener. Pipe='{_pipeName}'; Pid={Environment.ProcessId}; OwnsMutex={_ownsMutex}.");
         _listenTask = Task.Run(() => ListenForActivationAsync(onActivationRequested, _listenCts.Token));
+        _listenerReady.Wait(TimeSpan.FromMilliseconds(500));
     }
 
     public bool TryNotifyPrimaryInstance(TimeSpan timeout)
@@ -142,6 +144,7 @@ public sealed class SingleInstanceService : IDisposable
         }
 
         _listenCts.Dispose();
+        _listenerReady.Dispose();
         if (_ownsMutex)
         {
             try
@@ -170,6 +173,7 @@ public sealed class SingleInstanceService : IDisposable
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
 
+                _listenerReady.Set();
                 await server.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                 var buffer = new byte[1];
                 var readBytes = await server.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
