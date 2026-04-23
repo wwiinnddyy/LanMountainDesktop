@@ -56,6 +56,7 @@ public partial class App : Application
     private readonly LocalizationService _localizationService = new();
     private readonly FontFamilyService _fontFamilyService = new();
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
+    private readonly HostShutdownGate _shutdownGate = new();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
@@ -75,6 +76,7 @@ public partial class App : Application
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private TransparentOverlayWindow? _transparentOverlayWindow;
+    private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
     private bool _mainWindowClosed;
     private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
@@ -107,6 +109,7 @@ public partial class App : Application
     public IHostApplicationLifecycle HostApplicationLifecycle => _hostApplicationLifecycle;
     internal ISettingsWindowService? SettingsWindowService => _settingsWindowService;
     internal INotificationService? NotificationService => _notificationService;
+    internal bool IsShutdownInProgress => _shutdownGate.IsShutdownRequested || _shutdownIntent != ShutdownIntent.None;
     internal RestartPresentationMode GetCurrentRestartPresentationMode()
     {
         return _desktopShellState switch
@@ -119,6 +122,14 @@ public partial class App : Application
 
     internal void OpenIndependentSettingsModule(string source, string? pageTag = null)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info(
+                "SettingsFacade",
+                $"Settings open ignored because shutdown is in progress. Source='{source}'; PageTag='{pageTag ?? "<default>"}'.");
+            return;
+        }
+
         EnsureSettingsWindowService();
         AppLogger.Info(
             "SettingsFacade",
@@ -348,11 +359,23 @@ public partial class App : Application
 
     private void OnTrayShowDesktopClick(object? sender, EventArgs e)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("DesktopShell", "Tray Open Desktop ignored because shutdown is in progress.");
+            return;
+        }
+
         RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayMenu");
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("HostLifecycle", "Tray Restart ignored because shutdown is already in progress.");
+            return;
+        }
+
         _ = _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
             Source: "TrayMenu",
             Reason: "User selected Restart App from the tray menu."));
@@ -362,6 +385,13 @@ public partial class App : Application
     {
         _ = sender;
         _ = e;
+
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("SettingsFacade", "Tray Settings ignored because shutdown is in progress.");
+            return;
+        }
+
         OpenIndependentSettingsModule("TrayMenu");
     }
 
@@ -369,28 +399,52 @@ public partial class App : Application
     {
         _ = sender;
         _ = e;
+
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("FusedDesktop", "Tray Component Library ignored because shutdown is in progress.");
+            return;
+        }
         
         if (!OperatingSystem.IsWindows())
         {
             AppLogger.Warn("FusedDesktop", "Fused desktop is only supported on Windows.");
             return;
         }
-
-        FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
-        
-        // 纭繚閫忔槑瑕嗙洊灞傜獥鍙ｅ瓨鍦ㄥ苟鏄剧ず
-        EnsureTransparentOverlayWindow();
         
         Dispatcher.UIThread.Post(() =>
         {
+            if (IsShutdownInProgress)
+            {
+                AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+                return;
+            }
+
             try
             {
+                if (_fusedComponentLibraryWindow is { } existingWindow)
+                {
+                    if (!existingWindow.IsVisible)
+                    {
+                        existingWindow.Show();
+                    }
+
+                    existingWindow.Activate();
+                    return;
+                }
+
+                var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
+                fusedDesktopManager.EnterEditMode();
+
+                // 纭繚閫忔槑瑕嗙洊灞傜獥鍙ｅ瓨鍦ㄥ苟鏄剧ず
+                EnsureTransparentOverlayWindow();
                 if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
                 {
                     _transparentOverlayWindow.Show();
                 }
                 
                 var window = new FusedDesktopComponentLibraryWindow();
+                _fusedComponentLibraryWindow = window;
                 
                 if (_transparentOverlayWindow is not null)
                 {
@@ -406,7 +460,11 @@ public partial class App : Application
                     }
                     
                     // 璁╃鐞嗗櫒鏍规嵁宸插瓨鍌ㄧ殑鏈€鏂板揩鐓ч噸寤虹敓鎴愭墍鏈夊疄浣撳皬缁勪欢
-                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+                    fusedDesktopManager.ExitEditMode();
+                    if (ReferenceEquals(_fusedComponentLibraryWindow, s))
+                    {
+                        _fusedComponentLibraryWindow = null;
+                    }
                 };
 
                 window.Show();
@@ -415,6 +473,25 @@ public partial class App : Application
             catch (Exception ex)
             {
                 AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
+                try
+                {
+                    _transparentOverlayWindow?.SaveLayoutAndHide();
+                }
+                catch (Exception overlayEx)
+                {
+                    AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay after library open failure.", overlayEx);
+                }
+
+                try
+                {
+                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+                }
+                catch (Exception exitEx)
+                {
+                    AppLogger.Warn("FusedDesktop", "Failed to exit edit mode after library open failure.", exitEx);
+                }
+
+                _fusedComponentLibraryWindow = null;
             }
         }, DispatcherPriority.Send);
     }
@@ -752,6 +829,12 @@ public partial class App : Application
 
     private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("DesktopShell", $"Restore ignored because shutdown is in progress. Source='{source}'.");
+            return;
+        }
+
         Dispatcher.UIThread.Post(() =>
         {
             _ = RestoreOrCreateMainWindowCore(showSingleInstanceNotice, source);
@@ -760,6 +843,12 @@ public partial class App : Application
 
     private bool RestoreOrCreateMainWindowCore(bool showSingleInstanceNotice, string source)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("DesktopShell", $"Restore skipped because shutdown is in progress. Source='{source}'.");
+            return false;
+        }
+
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
             AppLogger.Warn("DesktopShell", $"Restore skipped because desktop lifetime is unavailable. Source='{source}'.");
@@ -835,6 +924,62 @@ public partial class App : Application
             {
                 RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TransparentOverlay");
             };
+        }
+    }
+
+    internal bool TrySubmitShutdown(HostShutdownMode mode, HostApplicationLifecycleRequest? request)
+    {
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            AppLogger.Warn(
+                "HostLifecycle",
+                $"Shutdown request ignored because desktop lifetime is unavailable. Mode='{mode}'; Source='{request?.Source ?? "Unknown"}'.");
+            return false;
+        }
+
+        return Dispatcher.UIThread.CheckAccess()
+            ? TrySubmitShutdownCore(mode, request, desktop)
+            : Dispatcher.UIThread.InvokeAsync(
+                () => TrySubmitShutdownCore(mode, request, desktop),
+                DispatcherPriority.Send).GetAwaiter().GetResult();
+    }
+
+    private bool TrySubmitShutdownCore(
+        HostShutdownMode mode,
+        HostApplicationLifecycleRequest? request,
+        IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        var source = request?.Source ?? "Unknown";
+        var submission = _shutdownGate.Submit(mode);
+        if (!submission.IsFirstSubmission)
+        {
+            AppLogger.Warn(
+                "HostLifecycle",
+                $"Shutdown request ignored because shutdown is already in progress. Requested='{submission.RequestedMode}'; Effective='{submission.EffectiveMode}'; Source='{source}'.");
+            return submission.Accepted;
+        }
+
+        _shutdownIntent = mode == HostShutdownMode.Restart
+            ? ShutdownIntent.RestartRequested
+            : ShutdownIntent.ExitRequested;
+        AppLogger.Info(
+            "DesktopShell",
+            $"Shutdown committed. Intent='{_shutdownIntent}'; Source='{source}'; Reason='{request?.Reason ?? string.Empty}'; CurrentShellState='{_desktopShellState}'.");
+
+        ScheduleForcedProcessTermination($"ShutdownRequest:{source}");
+        StopShellRecoveryWatchdog();
+        PerformExitCleanup();
+        ReleaseSingleInstanceAfterExit($"ShutdownRequest:{source}");
+
+        try
+        {
+            desktop.Shutdown();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("HostLifecycle", $"Desktop lifetime shutdown failed. Source='{source}'.", ex);
+            return true;
         }
     }
 
@@ -1121,6 +1266,30 @@ public partial class App : Application
         if (_settingsPageRegistry is IDisposable disposableRegistry)
         {
             disposableRegistry.Dispose();
+        }
+
+        if (_fusedComponentLibraryWindow is not null)
+        {
+            try
+            {
+                _fusedComponentLibraryWindow.Close();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("FusedDesktop", "Failed to close fused desktop component library during shutdown.", ex);
+            }
+            finally
+            {
+                _fusedComponentLibraryWindow = null;
+                try
+                {
+                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode during shutdown.", ex);
+                }
+            }
         }
 
         if (_transparentOverlayWindow is not null)
@@ -1487,6 +1656,12 @@ public partial class App : Application
 
     private bool EnsureTaskbarEntry(string source)
     {
+        if (IsShutdownInProgress)
+        {
+            AppLogger.Info("DesktopShell", $"Taskbar repair skipped because shutdown is in progress. Source='{source}'.");
+            return false;
+        }
+
         if (!ShouldShowMainWindowInTaskbar())
         {
             return false;

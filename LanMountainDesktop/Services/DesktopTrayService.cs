@@ -128,6 +128,27 @@ internal sealed class DesktopTrayService : IDisposable
         {
         }
 
+        try
+        {
+            TrayIcon.SetIcons(_application, []);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (_trayIcon is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+        catch
+        {
+        }
+
+        _trayIcon = null;
+
         SetState(TrayAvailabilityState.Unavailable, "Dispose");
     }
 

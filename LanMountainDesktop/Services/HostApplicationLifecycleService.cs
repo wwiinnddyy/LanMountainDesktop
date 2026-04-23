@@ -23,23 +23,13 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
                 $"Exit requested. Source='{request?.Source ?? "Unknown"}'; Reason='{request?.Reason ?? string.Empty}'.");
 
             app = Application.Current as App;
-            if (app?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            if (app is null || app.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
             {
                 AppLogger.Warn("HostLifecycle", "Exit request ignored because desktop lifetime is unavailable.");
                 return false;
             }
 
-            app.PrepareForShutdown(isRestart: false, request?.Source ?? "Unknown");
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                desktop.Shutdown();
-            }
-            else
-            {
-                Dispatcher.UIThread.Post(() => desktop.Shutdown(), DispatcherPriority.Send);
-            }
-
-            return true;
+            return app.TrySubmitShutdown(HostShutdownMode.Exit, request);
         }
         catch (Exception ex)
         {
@@ -55,6 +45,13 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
         try
         {
             app = Application.Current as App;
+            if (app?.IsShutdownInProgress == true)
+            {
+                AppLogger.Warn(
+                    "HostLifecycle",
+                    $"Restart request ignored because shutdown is already in progress. Source='{request?.Source ?? "Unknown"}'.");
+                return false;
+            }
 
             if (HasPendingPluginUpgrades())
             {
@@ -123,10 +120,7 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
         AppLogger.Info("HostLifecycle", $"Starting upgrade helper: {helperStartInfo.FileName} {helperStartInfo.Arguments}");
 
         Process.Start(helperStartInfo);
-
-        app?.PrepareForShutdown(isRestart: true, request?.Source ?? "Unknown");
-
-        return TryExit(request);
+        return app?.TrySubmitShutdown(HostShutdownMode.Restart, request) == true;
     }
 
     private bool TryRestartDirectly(HostApplicationLifecycleRequest? request)
@@ -143,8 +137,7 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
         }
 
         Process.Start(startInfo);
-        app?.PrepareForShutdown(isRestart: true, request?.Source ?? "Unknown");
-        var exitRequest = request is null
+        var shutdownRequest = request is null
             ? new HostApplicationLifecycleRequest(Reason: "Restart accepted.")
             : request with
             {
@@ -153,7 +146,7 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
                     : request.Reason
             };
 
-        return TryExit(exitRequest);
+        return app?.TrySubmitShutdown(HostShutdownMode.Restart, shutdownRequest) == true;
     }
 
     private static string ResolveUpgradeHelperPath()
