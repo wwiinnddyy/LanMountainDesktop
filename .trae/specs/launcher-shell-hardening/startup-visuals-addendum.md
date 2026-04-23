@@ -27,3 +27,11 @@
   - `Open Logs`
   - `Exit`
 - Retry is only valid when Launcher is not about to create a duplicate desktop process.
+
+## Launcher coordinator guard
+
+- Startup attempts are now reserved before host launch, so concurrent Launchers cannot all reach `Process.Start()`.
+- A live coordinator is identified by `CoordinatorPid`, `CoordinatorPipeName`, and a heartbeat newer than `10s`.
+- Secondary Launchers send `activate-desktop` or `attach` to the coordinator pipe and then exit with the coordinator status.
+- If Host Public IPC is already available during a normal launch, Launcher activates the existing desktop and does not start a new host process.
+- Public shell status now reports tray readiness and taskbar-entry usability separately, allowing Launcher to distinguish "running but hidden" from "not recoverable".

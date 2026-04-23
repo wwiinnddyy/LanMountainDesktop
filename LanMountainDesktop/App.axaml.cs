@@ -71,6 +71,7 @@ public partial class App : Application
     private ShutdownIntent _shutdownIntent;
 
     private DesktopTrayService? _desktopTrayService;
+    private DispatcherTimer? _shellRecoveryTimer;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
     private TransparentOverlayWindow? _transparentOverlayWindow;
@@ -478,6 +479,7 @@ public partial class App : Application
     private void InitializeTrayIcon()
     {
         EnsureDesktopTrayService();
+        _desktopTrayService?.StartWatchdog();
         _trayInitialized = _desktopTrayService?.EnsureReady("Startup") == true;
         if (_trayInitialized)
         {
@@ -525,14 +527,67 @@ public partial class App : Application
             OnTrayRestartClick,
             OnTrayExitClick);
         _desktopTrayService.StateChanged += OnTrayAvailabilityStateChanged;
+        _desktopTrayService.StartWatchdog();
+        EnsureShellRecoveryWatchdog();
+    }
+
+    private void EnsureShellRecoveryWatchdog()
+    {
+        _shellRecoveryTimer ??= new DispatcherTimer(
+            TimeSpan.FromSeconds(10),
+            DispatcherPriority.Background,
+            OnShellRecoveryWatchdogTick);
+
+        if (!_shellRecoveryTimer.IsEnabled)
+        {
+            _shellRecoveryTimer.Start();
+        }
+    }
+
+    private void StopShellRecoveryWatchdog()
+    {
+        if (_shellRecoveryTimer?.IsEnabled == true)
+        {
+            _shellRecoveryTimer.Stop();
+        }
+    }
+
+    private void OnShellRecoveryWatchdogTick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_shutdownIntent != ShutdownIntent.None)
+        {
+            return;
+        }
+
+        EnsureTrayReady("ShellRecoveryWatchdog");
+
+        if (!ShouldShowMainWindowInTaskbar())
+        {
+            return;
+        }
+
+        if (_desktopShellState != DesktopShellState.ForegroundDesktop)
+        {
+            EnsureTaskbarEntry("ShellRecoveryWatchdog");
+            return;
+        }
+
+        if (_mainWindow is not null && _mainWindow.IsVisible && !_mainWindow.ShowInTaskbar)
+        {
+            _mainWindow.ShowInTaskbar = true;
+        }
     }
 
     private bool EnsureTrayReady(string reason)
     {
         EnsureDesktopTrayService();
+        var wasReady = _trayInitialized;
         var ready = _desktopTrayService?.EnsureReady(reason) == true;
         _trayInitialized = ready;
-        if (ready)
+        if (ready && !wasReady)
         {
             ReportStartupProgress(StartupStage.TrayReady, 75, "Tray ready.");
         }
@@ -544,9 +599,25 @@ public partial class App : Application
     {
         _trayInitialized = state == TrayAvailabilityState.Ready;
 
-        if (state == TrayAvailabilityState.Failed && _desktopShellState == DesktopShellState.TrayOnly)
+        if (state != TrayAvailabilityState.Failed)
+        {
+            return;
+        }
+
+        if (_desktopShellState == DesktopShellState.TrayOnly)
         {
             RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityFailed");
+            return;
+        }
+
+        var foregroundVisible = _mainWindow?.IsVisible == true &&
+                                _mainWindow.WindowState != WindowState.Minimized;
+        var taskbarUsable = BuildPublicTaskbarStatus().IsUsable;
+        if (!foregroundVisible &&
+            !taskbarUsable &&
+            (_desktopTrayService?.ConsecutiveRecoveryFailures ?? 0) >= 3)
+        {
+            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityRepeatedFailure");
         }
     }
 
@@ -736,7 +807,6 @@ public partial class App : Application
                 mainWindow.PlayEnterAnimation();
             }, DispatcherPriority.Background);
 
-            _desktopTrayService?.StopWatchdog();
             SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
             AppLogger.Info(
                 "DesktopShell",
@@ -864,6 +934,23 @@ public partial class App : Application
             {
                 RefreshFusedDesktopMenuItemVisibility();
             }
+
+            var showInTaskbarChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparer.OrdinalIgnoreCase);
+
+            if (showInTaskbarChanged)
+            {
+                EnsureTrayReady("SettingsChanged");
+                if (ShouldShowMainWindowInTaskbar())
+                {
+                    EnsureTaskbarEntry("SettingsChanged");
+                }
+                else if (_mainWindow is not null && _mainWindow.IsVisible)
+                {
+                    _mainWindow.ShowInTaskbar = false;
+                }
+            }
         }, DispatcherPriority.Background);
     }
 
@@ -980,6 +1067,7 @@ public partial class App : Application
         }
 
         _exitCleanupCompleted = true;
+        StopShellRecoveryWatchdog();
         _settingsFacade.Settings.Changed -= OnSettingsChanged;
         _appearanceThemeService.Changed -= OnAppearanceThemeChanged;
 
@@ -1158,7 +1246,6 @@ public partial class App : Application
             case RestartPresentationMode.Minimized:
                 mainWindow.ShowInTaskbar = true;
                 mainWindow.WindowState = WindowState.Minimized;
-                _desktopTrayService?.StopWatchdog();
                 SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, "StartupRestartPresentation");
                 ReportStartupProgressSync(StartupStage.BackgroundReady, 95, "Background ready.");
                 return true;
@@ -1300,6 +1387,24 @@ public partial class App : Application
     {
         try
         {
+            if (ShouldShowMainWindowInTaskbar())
+            {
+                EnsureTrayReady($"TaskbarBackground:{source}");
+                mainWindow.ShowInTaskbar = true;
+                if (!mainWindow.IsVisible)
+                {
+                    mainWindow.Show();
+                }
+
+                mainWindow.WindowState = WindowState.Minimized;
+                SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, source);
+                ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready via taskbar.");
+                AppLogger.Info(
+                    "DesktopShell",
+                    $"Main window minimized to taskbar because taskbar entry is enabled. Source='{source}'.");
+                return;
+            }
+
             if (!EnsureTrayReady($"HideToTray:{source}"))
             {
                 RecoverFromTrayUnavailable(mainWindow, source);
@@ -1308,7 +1413,6 @@ public partial class App : Application
 
             mainWindow.ShowInTaskbar = false;
             mainWindow.Hide();
-            _desktopTrayService?.StartWatchdog();
             SetDesktopShellState(DesktopShellState.TrayOnly, source);
             ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready.");
             AppLogger.Info(
@@ -1345,7 +1449,6 @@ public partial class App : Application
             }
 
             mainWindow.WindowState = WindowState.Minimized;
-            _desktopTrayService?.StopWatchdog();
             SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, $"TrayFallbackTaskbar:{source}");
             ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready via taskbar fallback.");
             return;
@@ -1373,7 +1476,6 @@ public partial class App : Application
         mainWindow.Activate();
         mainWindow.Topmost = true;
         mainWindow.Topmost = false;
-        _desktopTrayService?.StopWatchdog();
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"TrayFallbackForeground:{source}");
         ReportStartupProgress(StartupStage.DesktopVisible, 100, "Desktop restored because tray was unavailable.");
     }
@@ -1381,6 +1483,48 @@ public partial class App : Application
     private bool ShouldShowMainWindowInTaskbar()
     {
         return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
+    }
+
+    private bool EnsureTaskbarEntry(string source)
+    {
+        if (!ShouldShowMainWindowInTaskbar())
+        {
+            return false;
+        }
+
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            AppLogger.Warn("DesktopShell", $"Taskbar repair skipped because desktop lifetime is unavailable. Source='{source}'.");
+            return false;
+        }
+
+        try
+        {
+            var mainWindow = GetOrCreateMainWindow(desktop, $"TaskbarRepair:{source}");
+            mainWindow.ShowInTaskbar = true;
+
+            if (!mainWindow.IsVisible)
+            {
+                mainWindow.Show();
+            }
+
+            if (_desktopShellState != DesktopShellState.ForegroundDesktop)
+            {
+                mainWindow.WindowState = WindowState.Minimized;
+                SetDesktopShellState(DesktopShellState.MinimizedToTaskbar, $"TaskbarRepair:{source}");
+                ReportStartupProgress(StartupStage.BackgroundReady, 95, "Background ready via taskbar repair.");
+            }
+
+            AppLogger.Info(
+                "DesktopShell",
+                $"Taskbar entry ensured. Source='{source}'; IsVisible={mainWindow.IsVisible}; ShowInTaskbar={mainWindow.ShowInTaskbar}; WindowState='{mainWindow.WindowState}'.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("DesktopShell", $"Failed to ensure taskbar entry. Source='{source}'.", ex);
+            return false;
+        }
     }
 
     private void SetDesktopShellState(DesktopShellState state, string source)
@@ -1434,7 +1578,72 @@ public partial class App : Application
 
     internal bool TryActivateMainWindowFromExternalIpc(string source)
     {
-        return RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
+        return TryActivateMainWindowWithStatusFromExternalIpc(source).Accepted;
+    }
+
+    internal PublicShellActivationResult TryActivateMainWindowWithStatusFromExternalIpc(string source)
+    {
+        var restored = RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
+        var status = GetPublicShellStatus();
+        return restored
+            ? new PublicShellActivationResult(true, "activated", "Desktop window activation was requested.", status)
+            : new PublicShellActivationResult(false, "activation_failed", "Desktop window activation failed.", status);
+    }
+
+    internal PublicTrayStatus EnsureTrayReadyFromExternalIpc(string source)
+    {
+        EnsureTrayReady($"ExternalIpc:{source}");
+        return BuildPublicTrayStatus();
+    }
+
+    internal PublicTaskbarStatus EnsureTaskbarEntryFromExternalIpc(string source)
+    {
+        EnsureTaskbarEntry($"ExternalIpc:{source}");
+        return BuildPublicTaskbarStatus();
+    }
+
+    internal PublicShellStatus GetPublicShellStatus()
+    {
+        return new PublicShellStatus(
+            Environment.ProcessId,
+            _startupAt,
+            _launchSource,
+            _desktopShellState.ToString(),
+            _mainWindow is not null && !_mainWindowClosed,
+            _mainWindow?.IsVisible == true,
+            _mainWindowOpened,
+            _mainWindow?.IsVisible == true && _mainWindow.WindowState != WindowState.Minimized,
+            _publicIpcHostService is not null,
+            BuildPublicTrayStatus(),
+            BuildPublicTaskbarStatus());
+    }
+
+    private PublicTrayStatus BuildPublicTrayStatus()
+    {
+        return new PublicTrayStatus(
+            _desktopTrayService?.State.ToString() ?? TrayAvailabilityState.Unavailable.ToString(),
+            _desktopTrayService?.IsReady == true,
+            _desktopTrayService?.HasIcon == true,
+            _desktopTrayService?.HasMenu == true,
+            _desktopTrayService?.IsVisible == true,
+            _desktopTrayService?.ConsecutiveRecoveryFailures ?? 0);
+    }
+
+    private PublicTaskbarStatus BuildPublicTaskbarStatus()
+    {
+        var requested = ShouldShowMainWindowInTaskbar();
+        var mainWindowExists = _mainWindow is not null && !_mainWindowClosed;
+        var showInTaskbar = _mainWindow?.ShowInTaskbar == true;
+        var visible = _mainWindow?.IsVisible == true;
+        var minimized = _mainWindow?.WindowState == WindowState.Minimized;
+
+        return new PublicTaskbarStatus(
+            requested,
+            mainWindowExists,
+            showInTaskbar,
+            visible,
+            minimized,
+            requested && mainWindowExists && showInTaskbar && visible);
     }
 
     private void InitializePublicIpc()

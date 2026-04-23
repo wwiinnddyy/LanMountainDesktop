@@ -20,11 +20,20 @@ internal sealed class StartupAttemptRecord
     [JsonPropertyName("hostPid")]
     public int HostPid { get; set; }
 
+    [JsonPropertyName("coordinatorPid")]
+    public int CoordinatorPid { get; set; }
+
+    [JsonPropertyName("coordinatorPipeName")]
+    public string CoordinatorPipeName { get; set; } = string.Empty;
+
     [JsonPropertyName("startedAtUtc")]
     public DateTimeOffset StartedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
     [JsonPropertyName("updatedAtUtc")]
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    [JsonPropertyName("heartbeatAtUtc")]
+    public DateTimeOffset HeartbeatAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
     [JsonPropertyName("launchSource")]
     public string LaunchSource { get; set; } = string.Empty;
@@ -40,6 +49,15 @@ internal sealed class StartupAttemptRecord
 
     [JsonPropertyName("ipcConnected")]
     public bool IpcConnected { get; set; }
+
+    [JsonPropertyName("publicIpcConnected")]
+    public bool PublicIpcConnected { get; set; }
+
+    [JsonPropertyName("shellStatus")]
+    public string ShellStatus { get; set; } = string.Empty;
+
+    [JsonPropertyName("reservedBeforeHostStart")]
+    public bool ReservedBeforeHostStart { get; set; }
 
     [JsonPropertyName("state")]
     public StartupAttemptState State { get; set; } = StartupAttemptState.Pending;

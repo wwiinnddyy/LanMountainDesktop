@@ -40,7 +40,7 @@ Current built-in `[IpcPublic]` contracts:
 - `IPublicAppInfoService`
   - Returns application metadata such as version, codename, process id, pipe name, and startup time.
 - `IPublicShellControlService`
-  - Allows external .NET clients to activate the shell, open settings, request restart, and request exit.
+  - Allows external .NET clients to query shell status, activate the shell, repair tray readiness, repair taskbar entry visibility, open settings, request restart, and request exit.
 - `IPublicPluginCatalogService`
   - Returns the merged public IPC catalog snapshot exposed by Host.
 
@@ -76,6 +76,8 @@ Launcher no longer depends on the previous custom named-pipe length-prefixed pro
 - Launcher connects as a normal public IPC client and subscribes to those routed notifications.
 
 This means Splash/OOBE is now just another IPC consumer on the same base transport used by external integrators.
+
+Launcher-to-launcher de-duplication is intentionally separate from Host Public IPC. The active Launcher coordinator uses a per-user local pipe and `startup-attempt.json` heartbeat so secondary Launchers attach to the coordinator before any host process can be started twice.
 
 ## Plugin Public IPC Contribution Model
 

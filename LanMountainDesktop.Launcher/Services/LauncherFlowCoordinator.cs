@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
@@ -31,6 +32,7 @@ internal sealed class LauncherFlowCoordinator
     private readonly UpdateEngineService _updateEngine;
     private readonly PluginInstallerService _pluginInstallerService;
     private readonly StartupAttemptRegistry _startupAttemptRegistry;
+    private readonly LauncherCoordinatorIpcServer? _coordinatorIpcServer;
     private readonly IReadOnlyList<IOobeStep> _oobeSteps;
 
     public LauncherFlowCoordinator(
@@ -38,15 +40,23 @@ internal sealed class LauncherFlowCoordinator
         DeploymentLocator deploymentLocator,
         OobeStateService oobeStateService,
         UpdateEngineService updateEngine,
-        PluginInstallerService pluginInstallerService)
+        PluginInstallerService pluginInstallerService,
+        StartupAttemptRegistry? startupAttemptRegistry = null,
+        LauncherCoordinatorIpcServer? coordinatorIpcServer = null)
     {
         _context = context;
         _deploymentLocator = deploymentLocator;
         _oobeStateService = oobeStateService;
         _updateEngine = updateEngine;
         _pluginInstallerService = pluginInstallerService;
-        _startupAttemptRegistry = new StartupAttemptRegistry();
+        _startupAttemptRegistry = startupAttemptRegistry ?? new StartupAttemptRegistry();
+        _coordinatorIpcServer = coordinatorIpcServer;
         _oobeSteps = [new WelcomeOobeStep(_oobeStateService, _context)];
+    }
+
+    public static string ResolveSuccessPolicyKey(CommandContext context)
+    {
+        return new StartupSuccessTracker(context).PolicyKey;
     }
 
     public async Task<LauncherResult> RunAsync(SplashWindow? existingSplashWindow = null)
@@ -98,6 +108,44 @@ internal sealed class LauncherFlowCoordinator
             var softTimeoutShown = false;
             var attachedToExistingAttempt = false;
             StartupAttemptRecord? trackedAttempt = null;
+            PublicShellStatus? shellStatus = null;
+
+            void PublishCoordinatorStatus(bool? hostProcessAliveOverride = null, bool completed = false, bool succeeded = false)
+            {
+                if (_coordinatorIpcServer is null)
+                {
+                    return;
+                }
+
+                trackedAttempt = _startupAttemptRegistry.GetOwnedAttempt() ?? trackedAttempt;
+                var hostPid = trackedAttempt?.HostPid ?? 0;
+                var hostProcessAlive = hostProcessAliveOverride ??
+                                       (hostPid > 0 && TryGetLiveProcess(hostPid, out _));
+                var status = new LauncherCoordinatorStatus
+                {
+                    AttemptId = trackedAttempt?.AttemptId ?? string.Empty,
+                    CoordinatorPid = Environment.ProcessId,
+                    HostPid = hostPid,
+                    HostProcessAlive = hostProcessAlive,
+                    LaunchSource = trackedAttempt?.LaunchSource ?? _context.LaunchSource,
+                    SuccessPolicy = trackedAttempt?.SuccessPolicy ?? startupSuccessTracker.PolicyKey,
+                    LastObservedStage = lastStage,
+                    LastObservedMessage = lastStageMessage,
+                    PublicIpcConnected = ipcConnected,
+                    State = trackedAttempt?.State.ToString() ?? StartupAttemptState.Pending.ToString(),
+                    SoftTimeoutShown = softTimeoutShown,
+                    Completed = completed,
+                    Succeeded = succeeded,
+                    ShellStatus = shellStatus,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                };
+
+                _coordinatorIpcServer.UpdateStatus(status);
+                _startupAttemptRegistry.UpdateOwnedCoordinatorHeartbeat(status);
+            }
+
+            trackedAttempt = _startupAttemptRegistry.GetOwnedAttempt();
+            PublishCoordinatorStatus();
 
             var loadingState = new LoadingStateMessage();
             EventHandler? splashClosedHandler = null;
@@ -135,6 +183,7 @@ internal sealed class LauncherFlowCoordinator
                         reporter.Report(MapStartupStageToSplashStage(message.Stage), message.Message ?? message.Stage.ToString());
                         loadingDetailsWindow?.UpdateLoadingState(loadingState);
                         _startupAttemptRegistry.UpdateOwnedStage(message.Stage, message.Message, ipcConnected: true);
+                        PublishCoordinatorStatus();
 
                         if (startupSuccessTracker.TryResolve(message.Stage, out var successState))
                         {
@@ -171,6 +220,51 @@ internal sealed class LauncherFlowCoordinator
 
             try
             {
+                if (ShouldProbeExistingHostBeforeLaunch(_context))
+                {
+                    var existingActivation = await TryActivateExistingHostWithStatusAsync(ipcClient, TimeSpan.FromMilliseconds(900))
+                        .ConfigureAwait(false);
+                    if (existingActivation is not null)
+                    {
+                        ipcConnected = true;
+                        shellStatus = existingActivation.Status;
+                        lastStage = existingActivation.Accepted
+                            ? StartupStage.ActivationRedirected
+                            : StartupStage.ActivationFailed;
+                        lastStageMessage = existingActivation.Message;
+                        if (existingActivation.Accepted)
+                        {
+                            _startupAttemptRegistry.MarkOwnedSucceeded(lastStage, lastStageMessage);
+                        }
+                        else
+                        {
+                            _startupAttemptRegistry.MarkOwnedFailed(lastStage, lastStageMessage);
+                        }
+
+                        PublishCoordinatorStatus(
+                            hostProcessAliveOverride: true,
+                            completed: true,
+                            succeeded: existingActivation.Accepted);
+                        windowsClosingByCoordinator = true;
+                        await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
+                        return BuildResult(
+                            success: existingActivation.Accepted,
+                            stage: "launch",
+                            code: existingActivation.Accepted ? "existing_host_activated" : "existing_host_activation_failed",
+                            message: existingActivation.Message,
+                            details: MergeDetails(
+                                launcherContextDetails,
+                                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                                {
+                                    ["publicIpcConnected"] = "true",
+                                    ["existingHostPid"] = existingActivation.Status.ProcessId.ToString(),
+                                    ["existingShellState"] = existingActivation.Status.ShellState,
+                                    ["existingTrayState"] = existingActivation.Status.Tray.State,
+                                    ["existingTaskbarUsable"] = existingActivation.Status.Taskbar.IsUsable.ToString()
+                                }));
+                    }
+                }
+
                 reporter.Report("update", "Checking updates...");
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
@@ -212,6 +306,7 @@ internal sealed class LauncherFlowCoordinator
                         ? "Attached to the existing startup attempt."
                         : attachableAttempt.LastObservedMessage;
                     reporter.Report(MapStartupStageToSplashStage(lastStage), lastStageMessage);
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true);
 
                     if (startupSuccessTracker.TryResolve(lastStage, out var attachedSuccessState))
                     {
@@ -318,12 +413,19 @@ internal sealed class LauncherFlowCoordinator
 
                 if (!attachedToExistingAttempt)
                 {
-                    trackedAttempt = _startupAttemptRegistry.StartOwnedAttempt(
-                        launchOutcome.Process.Id,
-                        _context.LaunchSource,
-                        startupSuccessTracker.PolicyKey,
-                        lastStage,
-                        lastStageMessage);
+                    var reservedAttempt = _startupAttemptRegistry.GetOwnedAttempt();
+                    trackedAttempt = reservedAttempt is { ReservedBeforeHostStart: true }
+                        ? _startupAttemptRegistry.AssignOwnedHostProcess(
+                            launchOutcome.Process.Id,
+                            lastStage,
+                            lastStageMessage)
+                        : _startupAttemptRegistry.StartOwnedAttempt(
+                            launchOutcome.Process.Id,
+                            _context.LaunchSource,
+                            startupSuccessTracker.PolicyKey,
+                            lastStage,
+                            lastStageMessage);
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true);
                 }
 
                 var connected = await TryConnectToPublicIpcAsync(ipcClient, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
@@ -335,6 +437,8 @@ internal sealed class LauncherFlowCoordinator
                 {
                     ipcConnected = true;
                     _startupAttemptRegistry.MarkOwnedIpcConnected();
+                    shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                    PublishCoordinatorStatus(hostProcessAliveOverride: true);
                 }
 
                 Dictionary<string, string> ComposeLaunchDetails(bool hostProcessAlive, bool recoveryActivationAttempted = false)
@@ -368,6 +472,7 @@ internal sealed class LauncherFlowCoordinator
                         var successState = await successTcs.Task.ConfigureAwait(false);
                         windowsClosingByCoordinator = true;
                         _startupAttemptRegistry.MarkOwnedSucceeded(successState.Stage, successState.Message);
+                        PublishCoordinatorStatus(!launchOutcome.Process.HasExited, completed: true, succeeded: true);
                         await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                         return BuildResult(
                             success: true,
@@ -392,6 +497,7 @@ internal sealed class LauncherFlowCoordinator
                         if (exitCode == HostExitCodes.SecondaryActivationSucceeded)
                         {
                             _startupAttemptRegistry.MarkOwnedSucceeded(StartupStage.ActivationRedirected, "Host redirected activation to the existing desktop instance.");
+                            PublishCoordinatorStatus(hostProcessAliveOverride: false, completed: true, succeeded: true);
                             await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                             return BuildResult(
                                 success: true,
@@ -407,6 +513,7 @@ internal sealed class LauncherFlowCoordinator
                         }
 
                         _startupAttemptRegistry.MarkOwnedFailed(lastStage, activationFailureReason);
+                        PublishCoordinatorStatus(hostProcessAliveOverride: false, completed: true, succeeded: false);
                         await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                         return BuildResult(
                             success: false,
@@ -435,6 +542,8 @@ internal sealed class LauncherFlowCoordinator
                         {
                             ipcConnected = true;
                             _startupAttemptRegistry.MarkOwnedIpcConnected();
+                            shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                            PublishCoordinatorStatus(hostProcessAliveOverride: true);
                         }
 
                         nextReconnectAttemptAt = DateTimeOffset.UtcNow.AddSeconds(5);
@@ -453,6 +562,7 @@ internal sealed class LauncherFlowCoordinator
                             SoftTimeoutDetailsMessage,
                             trackedAttempt?.StartedAtUtc ?? startedAt);
                         loadingDetailsWindow?.UpdateLoadingState(loadingState);
+                        PublishCoordinatorStatus(hostProcessAliveOverride: !launchOutcome.Process.HasExited);
                     }
 
                     if (now >= hardTimeoutAt)
@@ -491,6 +601,8 @@ internal sealed class LauncherFlowCoordinator
                     {
                         ipcConnected = true;
                         _startupAttemptRegistry.MarkOwnedIpcConnected();
+                        shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                        PublishCoordinatorStatus(hostProcessAliveOverride: true);
                     }
                 }
 
@@ -506,6 +618,8 @@ internal sealed class LauncherFlowCoordinator
                     {
                         windowsClosingByCoordinator = true;
                         _startupAttemptRegistry.MarkOwnedSucceeded(recoveryOutcome.Stage, recoveryOutcome.Message);
+                        shellStatus = await TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+                        PublishCoordinatorStatus(!launchOutcome.Process.HasExited, completed: true, succeeded: true);
                         await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                         return BuildResult(
                             success: true,
@@ -520,6 +634,7 @@ internal sealed class LauncherFlowCoordinator
 
                 windowsClosingByCoordinator = true;
                 _startupAttemptRegistry.MarkOwnedFailed(lastStage, activationFailureReason);
+                PublishCoordinatorStatus(!launchOutcome.Process.HasExited, completed: true, succeeded: false);
                 await CloseWindowsAsync(splashWindow, loadingDetailsWindow).ConfigureAwait(false);
                 return BuildResult(
                     success: false,
@@ -1200,6 +1315,11 @@ internal sealed class LauncherFlowCoordinator
         LanMountainDesktopIpcClient ipcClient,
         TimeSpan timeout)
     {
+        if (ipcClient.IsConnected)
+        {
+            return true;
+        }
+
         var connectTask = ipcClient.ConnectAsync();
         var completedTask = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
         if (completedTask != connectTask)
@@ -1209,6 +1329,59 @@ internal sealed class LauncherFlowCoordinator
 
         await connectTask.ConfigureAwait(false);
         return true;
+    }
+
+    private static bool ShouldProbeExistingHostBeforeLaunch(CommandContext context)
+    {
+        if (!string.Equals(context.Command, "launch", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (context.IsPreviewCommand || context.IsMaintenanceCommand)
+        {
+            return false;
+        }
+
+        return !string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<PublicShellActivationResult?> TryActivateExistingHostWithStatusAsync(
+        LanMountainDesktopIpcClient ipcClient,
+        TimeSpan timeout)
+    {
+        try
+        {
+            var connected = ipcClient.IsConnected ||
+                            await TryConnectToPublicIpcAsync(ipcClient, timeout).ConfigureAwait(false);
+            if (!connected)
+            {
+                return null;
+            }
+
+            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
+            return await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Existing host activation probe failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static async Task<PublicShellStatus?> TryGetPublicShellStatusAsync(
+        LanMountainDesktopIpcClient ipcClient)
+    {
+        try
+        {
+            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
+            return await shellProxy.GetShellStatusAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to query public shell status: {ex.Message}");
+            return null;
+        }
     }
 
     private static async Task<StartupSuccessState?> TryRecoverWithPublicActivationAsync(
@@ -1305,8 +1478,14 @@ internal sealed class LauncherFlowCoordinator
             details["startupAttemptState"] = trackedAttempt.State.ToString();
             details["startupAttemptStartedAtUtc"] = trackedAttempt.StartedAtUtc.ToString("O");
             details["startupAttemptUpdatedAtUtc"] = trackedAttempt.UpdatedAtUtc.ToString("O");
+            details["startupAttemptHeartbeatAtUtc"] = trackedAttempt.HeartbeatAtUtc.ToString("O");
             details["successPolicy"] = trackedAttempt.SuccessPolicy;
             details["hostPid"] = trackedAttempt.HostPid.ToString();
+            details["coordinatorPid"] = trackedAttempt.CoordinatorPid.ToString();
+            details["coordinatorPipeName"] = trackedAttempt.CoordinatorPipeName;
+            details["reservedBeforeHostStart"] = trackedAttempt.ReservedBeforeHostStart.ToString();
+            details["publicIpcConnected"] = trackedAttempt.PublicIpcConnected.ToString();
+            details["shellStatus"] = trackedAttempt.ShellStatus;
         }
 
         return details;

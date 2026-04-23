@@ -34,6 +34,7 @@ internal sealed class DesktopTrayService : IDisposable
     private NativeMenuItem? _restartMenuItem;
     private NativeMenuItem? _exitMenuItem;
     private int _consecutiveRecoveryFailures;
+    private bool _disposed;
 
     public DesktopTrayService(
         Application application,
@@ -62,6 +63,14 @@ internal sealed class DesktopTrayService : IDisposable
     public TrayAvailabilityState State { get; private set; } = TrayAvailabilityState.Unavailable;
 
     public bool IsReady => State == TrayAvailabilityState.Ready;
+
+    public bool HasIcon => _trayIcon?.Icon is not null;
+
+    public bool HasMenu => _trayIcon?.Menu is not null;
+
+    public bool IsVisible => _trayIcon?.IsVisible == true;
+
+    public int ConsecutiveRecoveryFailures => _consecutiveRecoveryFailures;
 
     public event Action<TrayAvailabilityState>? StateChanged;
 
@@ -105,6 +114,7 @@ internal sealed class DesktopTrayService : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
         StopWatchdog();
 
         try
@@ -126,7 +136,7 @@ internal sealed class DesktopTrayService : IDisposable
         _ = sender;
         _ = e;
 
-        if (State == TrayAvailabilityState.Unavailable || State == TrayAvailabilityState.Failed)
+        if (_disposed || State == TrayAvailabilityState.Unavailable)
         {
             return;
         }
@@ -256,6 +266,11 @@ internal sealed class DesktopTrayService : IDisposable
     {
         if (State == state)
         {
+            if (state == TrayAvailabilityState.Failed)
+            {
+                StateChanged?.Invoke(state);
+            }
+
             return;
         }
 

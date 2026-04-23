@@ -569,3 +569,7 @@ Launcher now consumes Host startup telemetry from the unified public IPC stack:
 - Launcher connects through `LanMountainDesktopIpcClient`
 
 The previous custom length-prefixed named-pipe transport is no longer the primary startup communication path.
+
+## Coordinator Guard
+
+Launcher also owns a small per-user local coordinator used only between Launcher processes. It reserves `startup-attempt.json` before host launch, publishes a heartbeat, and exposes a local coordinator pipe for secondary Launchers. A secondary Launcher must attach to that coordinator or activate the existing Host through Public IPC instead of starting another Host process. See [Launcher Coordinator](LAUNCHER_COORDINATOR.md).

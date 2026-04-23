@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Launcher;
 
@@ -20,6 +21,13 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(SnapshotMetadata))]
 [JsonSerializable(typeof(AppVersionInfo))]
 [JsonSerializable(typeof(StartupProgressMessage))]
+[JsonSerializable(typeof(LauncherCoordinatorRequest))]
+[JsonSerializable(typeof(LauncherCoordinatorResponse))]
+[JsonSerializable(typeof(LauncherCoordinatorStatus))]
+[JsonSerializable(typeof(PublicShellStatus))]
+[JsonSerializable(typeof(PublicTrayStatus))]
+[JsonSerializable(typeof(PublicTaskbarStatus))]
+[JsonSerializable(typeof(PublicShellActivationResult))]
 [JsonSerializable(typeof(LauncherResult))]
 [JsonSerializable(typeof(HostDiscoveryConfig))]
 [JsonSerializable(typeof(PluginManifest))]

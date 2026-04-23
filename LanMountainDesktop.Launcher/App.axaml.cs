@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -5,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
@@ -183,6 +185,36 @@ public partial class App : Application
         LauncherResult result;
         SplashWindow? currentSplashWindow = splashWindow;
         var appRoot = Commands.ResolveAppRoot(context);
+        var startupAttemptRegistry = new StartupAttemptRegistry();
+        var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
+        var successPolicy = LauncherFlowCoordinator.ResolveSuccessPolicyKey(context);
+
+        if (!startupAttemptRegistry.TryReserveCoordinator(
+                context.LaunchSource,
+                successPolicy,
+                coordinatorPipeName,
+                out var reservedAttempt,
+                out var activeCoordinatorAttempt))
+        {
+            result = await AttachToExistingCoordinatorAsync(
+                context,
+                currentSplashWindow,
+                activeCoordinatorAttempt).ConfigureAwait(false);
+
+            Logger.Info($"Secondary launcher completed. Success={result.Success}; Code='{result.Code}'.");
+            await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
+
+            Environment.ExitCode = result.Success ? 0 : 1;
+            await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
+            return;
+        }
+
+        using var coordinatorServer = new LauncherCoordinatorIpcServer(
+            coordinatorPipeName,
+            BuildCoordinatorStatusFromAttempt(reservedAttempt),
+            HandleCoordinatorRequestAsync,
+            startupAttemptRegistry.UpdateOwnedCoordinatorHeartbeat);
+        coordinatorServer.Start();
 
         while (true)
         {
@@ -199,7 +231,9 @@ public partial class App : Application
                     deploymentLocator,
                     new OobeStateService(appRoot),
                     new UpdateEngineService(deploymentLocator),
-                    new PluginInstallerService());
+                    new PluginInstallerService(),
+                    startupAttemptRegistry,
+                    coordinatorServer);
 
                 result = await coordinator.RunAsync(currentSplashWindow).ConfigureAwait(false);
             }
@@ -253,6 +287,175 @@ public partial class App : Application
 
         Environment.ExitCode = result.Success ? 0 : 1;
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
+    }
+
+    private static async Task<LauncherResult> AttachToExistingCoordinatorAsync(
+        CommandContext context,
+        SplashWindow? splashWindow,
+        StartupAttemptRecord? activeCoordinatorAttempt)
+    {
+        var reporter = splashWindow as ISplashStageReporter;
+        reporter?.Report("activation", "Connecting to the active launcher...");
+
+        if (activeCoordinatorAttempt is not null &&
+            !string.IsNullOrWhiteSpace(activeCoordinatorAttempt.CoordinatorPipeName))
+        {
+            var command = string.Equals(context.LaunchSource, "restart", StringComparison.OrdinalIgnoreCase)
+                ? LauncherCoordinatorCommands.Attach
+                : LauncherCoordinatorCommands.ActivateDesktop;
+            var request = new LauncherCoordinatorRequest
+            {
+                Command = command,
+                LaunchSource = context.LaunchSource,
+                SuccessPolicy = LauncherFlowCoordinator.ResolveSuccessPolicyKey(context)
+            };
+
+            var response = await new LauncherCoordinatorIpcClient()
+                .SendAsync(activeCoordinatorAttempt.CoordinatorPipeName, request, TimeSpan.FromSeconds(2))
+                .ConfigureAwait(false);
+
+            if (response is not null)
+            {
+                reporter?.Report("activation", response.Message);
+                await DismissSplashIfNeededAsync(splashWindow).ConfigureAwait(false);
+                return new LauncherResult
+                {
+                    Success = response.Accepted,
+                    Stage = "launch",
+                    Code = response.Code,
+                    Message = response.Message,
+                    Details = BuildCoordinatorResultDetails(response.Status, response.ActivationResult)
+                };
+            }
+        }
+
+        var activation = await TryActivateExistingInstanceWithStatusAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        if (activation is not null)
+        {
+            reporter?.Report("activation", activation.Message);
+            await DismissSplashIfNeededAsync(splashWindow).ConfigureAwait(false);
+            return new LauncherResult
+            {
+                Success = activation.Accepted,
+                Stage = "launch",
+                Code = activation.Accepted ? "existing_host_activated" : "existing_host_activation_failed",
+                Message = activation.Message,
+                Details = BuildCoordinatorResultDetails(null, activation)
+            };
+        }
+
+        await DismissSplashIfNeededAsync(splashWindow).ConfigureAwait(false);
+        return new LauncherResult
+        {
+            Success = false,
+            Stage = "launch",
+            Code = "launcher_coordinator_unavailable",
+            Message = "Another Launcher is coordinating startup, but it did not respond in time.",
+            Details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["activeCoordinatorPid"] = activeCoordinatorAttempt?.CoordinatorPid.ToString() ?? string.Empty,
+                ["activeCoordinatorPipeName"] = activeCoordinatorAttempt?.CoordinatorPipeName ?? string.Empty,
+                ["activeAttemptId"] = activeCoordinatorAttempt?.AttemptId ?? string.Empty,
+                ["activeHostPid"] = activeCoordinatorAttempt?.HostPid.ToString() ?? string.Empty
+            }
+        };
+    }
+
+    private static async Task<LauncherCoordinatorResponse> HandleCoordinatorRequestAsync(
+        LauncherCoordinatorRequest request,
+        LauncherCoordinatorStatus status)
+    {
+        if (string.Equals(request.Command, LauncherCoordinatorCommands.ActivateDesktop, StringComparison.OrdinalIgnoreCase))
+        {
+            var activation = await TryActivateExistingInstanceWithStatusAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            if (activation is not null)
+            {
+                return new LauncherCoordinatorResponse
+                {
+                    Accepted = activation.Accepted,
+                    Code = activation.Accepted ? "existing_host_activated" : "existing_host_activation_failed",
+                    Message = activation.Message,
+                    Status = status,
+                    ActivationResult = activation
+                };
+            }
+
+            return new LauncherCoordinatorResponse
+            {
+                Accepted = true,
+                Code = "attached_to_launcher_coordinator",
+                Message = "Attached to the active Launcher coordinator; desktop startup is still in progress.",
+                Status = status
+            };
+        }
+
+        return new LauncherCoordinatorResponse
+        {
+            Accepted = true,
+            Code = "attached_to_launcher_coordinator",
+            Message = "Attached to the active Launcher coordinator.",
+            Status = status
+        };
+    }
+
+    private static LauncherCoordinatorStatus BuildCoordinatorStatusFromAttempt(StartupAttemptRecord attempt)
+    {
+        return new LauncherCoordinatorStatus
+        {
+            AttemptId = attempt.AttemptId,
+            CoordinatorPid = Environment.ProcessId,
+            HostPid = attempt.HostPid,
+            HostProcessAlive = TryGetLiveProcess(attempt.HostPid),
+            LaunchSource = attempt.LaunchSource,
+            SuccessPolicy = attempt.SuccessPolicy,
+            LastObservedStage = attempt.LastObservedStage,
+            LastObservedMessage = attempt.LastObservedMessage,
+            PublicIpcConnected = attempt.PublicIpcConnected || attempt.IpcConnected,
+            State = attempt.State.ToString(),
+            SoftTimeoutShown = attempt.State is StartupAttemptState.SoftTimeout or StartupAttemptState.DetachedWaiting,
+            Completed = attempt.State is StartupAttemptState.Succeeded or StartupAttemptState.Failed,
+            Succeeded = attempt.State == StartupAttemptState.Succeeded,
+            UpdatedAtUtc = attempt.UpdatedAtUtc
+        };
+    }
+
+    private static Dictionary<string, string> BuildCoordinatorResultDetails(
+        LauncherCoordinatorStatus? status,
+        PublicShellActivationResult? activation)
+    {
+        var details = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["coordinatorPid"] = status?.CoordinatorPid.ToString() ?? string.Empty,
+            ["coordinatorAttemptId"] = status?.AttemptId ?? string.Empty,
+            ["hostPid"] = status?.HostPid.ToString() ?? activation?.Status.ProcessId.ToString() ?? string.Empty,
+            ["hostProcessAlive"] = status?.HostProcessAlive.ToString() ?? string.Empty,
+            ["publicIpcConnected"] = (status?.PublicIpcConnected ?? activation is not null).ToString(),
+            ["startupStage"] = status?.LastObservedStage.ToString() ?? string.Empty,
+            ["startupState"] = status?.State ?? string.Empty,
+            ["activationAccepted"] = activation?.Accepted.ToString() ?? string.Empty,
+            ["shellState"] = activation?.Status.ShellState ?? status?.ShellStatus?.ShellState ?? string.Empty,
+            ["trayState"] = activation?.Status.Tray.State ?? status?.ShellStatus?.Tray.State ?? string.Empty,
+            ["taskbarUsable"] = activation?.Status.Taskbar.IsUsable.ToString() ?? status?.ShellStatus?.Taskbar.IsUsable.ToString() ?? string.Empty
+        };
+
+        return details;
+    }
+
+    private static async Task DismissSplashIfNeededAsync(SplashWindow? splashWindow)
+    {
+        if (splashWindow is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await splashWindow.DismissAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to dismiss splash after coordinator attach: {ex.Message}");
+        }
     }
 
     private static async Task WriteLauncherResultAsync(CommandContext context, LauncherResult result)
@@ -327,21 +530,59 @@ public partial class App : Application
 
     private static async Task<bool> TryActivateExistingInstanceAsync()
     {
+        var activation = await TryActivateExistingInstanceWithStatusAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        return activation?.Accepted == true;
+    }
+
+    private static async Task<PublicShellActivationResult?> TryActivateExistingInstanceWithStatusAsync(TimeSpan timeout)
+    {
         try
         {
             using var ipcClient = new LanMountainDesktopIpcClient();
-            await ipcClient.ConnectAsync().ConfigureAwait(false);
+            var connectTask = ipcClient.ConnectAsync();
+            var completedTask = await Task.WhenAny(connectTask, Task.Delay(timeout)).ConfigureAwait(false);
+            if (completedTask != connectTask)
+            {
+                return null;
+            }
+
+            await connectTask.ConfigureAwait(false);
             if (!ipcClient.IsConnected)
             {
-                return false;
+                return null;
             }
 
             var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            return await shellProxy.ActivateMainWindowAsync().ConfigureAwait(false);
+            var activationTask = shellProxy.ActivateMainWindowWithStatusAsync();
+            completedTask = await Task.WhenAny(activationTask, Task.Delay(timeout)).ConfigureAwait(false);
+            if (completedTask != activationTask)
+            {
+                return null;
+            }
+
+            return await activationTask.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             Logger.Warn($"Failed to activate the existing desktop instance: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool TryGetLiveProcess(int processId)
+    {
+        if (processId <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return !process.HasExited;
+        }
+        catch
+        {
             return false;
         }
     }
