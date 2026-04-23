@@ -35,6 +35,7 @@
     <None Include="Assets\public-key.pem" CopyToOutputDirectory="PreserveNewest" />
     <!-- Avalonia 资源文件 -->
     <AvaloniaResource Include="Assets\logo.ico" />
+    <AvaloniaResource Include="..\LanMountainDesktop\Assets\logo_nightly.png" Link="Assets\logo_nightly.png" />
   </ItemGroup>
 
   <Target Name="CopyPublicKeyToLauncherDir" AfterTargets="Build">

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,6 +24,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
@@ -134,6 +136,8 @@ public partial class MainWindow : Window
     private string _gridSpacingPreset = "Relaxed";
     private bool _isSlideAnimationActive;
     private TranslateTransform? _desktopPageSlideTransform;
+    private PixelPoint? _preparedWindowTargetPosition;
+    private PixelPoint? _preparedWindowHiddenPosition;
     private string _statusBarSpacingMode = "Relaxed";
     private int _statusBarCustomSpacingPercent = 12;
     private bool _statusBarClockTransparentBackground;
@@ -862,24 +866,45 @@ public partial class MainWindow : Window
         return _desktopPageSlideTransform;
     }
 
+    internal bool ShouldUseFullscreenWindow()
+    {
+        return GetStartupVisualPreferences().Mode != StartupVisualMode.SlideSplash;
+    }
+
+    internal void EnsureForegroundWindowLayout()
+    {
+        if (!IsSlideTransitionEnabled())
+        {
+            return;
+        }
+
+        var layout = ResolveWindowAnimationLayout();
+        ApplyWindowAnimationLayout(layout);
+        Position = layout.VisiblePosition;
+    }
+
     private async void SlideOutAndMinimizeAsync()
     {
         _isSlideAnimationActive = true;
         DesktopPage.IsHitTestVisible = false;
 
-        var useSlide = IsSlideTransitionEnabled();
-        var slideTransform = GetDesktopPageSlideTransform();
+        var preferences = GetStartupVisualPreferences();
+        WindowAnimationLayout? slideLayout = null;
 
-        if (useSlide)
+        if (preferences.Mode == StartupVisualMode.SlideSplash)
         {
-            slideTransform.X = Bounds.Width;
+            slideLayout = ResolveWindowAnimationLayout();
+            ApplyWindowAnimationLayout(slideLayout.Value);
+            await AnimateWindowPositionAsync(
+                Position,
+                slideLayout.Value.HiddenPosition,
+                FluttermotionToken.Intro).ConfigureAwait(false);
         }
-
-        DesktopPage.Opacity = 0;
-
-        await Task.Delay(useSlide
-            ? FluttermotionToken.Intro
-            : FluttermotionToken.Page);
+        else if (preferences.Mode == StartupVisualMode.Fade)
+        {
+            DesktopPage.Opacity = 0;
+            await Task.Delay(FluttermotionToken.Page);
+        }
 
         if (!_isSlideAnimationActive)
         {
@@ -900,44 +925,63 @@ public partial class MainWindow : Window
             WindowState = WindowState.Minimized;
         }
 
-        slideTransform.X = 0;
         DesktopPage.Opacity = 1;
         DesktopPage.IsHitTestVisible = true;
         _isSlideAnimationActive = false;
+        if (slideLayout is { } layout)
+        {
+            Position = layout.VisiblePosition;
+        }
     }
 
     public void PrepareEnterAnimation()
     {
         _isSlideAnimationActive = false;
 
-        var useSlide = IsSlideTransitionEnabled();
-        var slideTransform = GetDesktopPageSlideTransform();
+        var preferences = GetStartupVisualPreferences();
+        _preparedWindowTargetPosition = null;
+        _preparedWindowHiddenPosition = null;
 
-        var savedTransitions = DesktopPage.Transitions;
-        DesktopPage.Transitions = null;
-
-        DesktopPage.Opacity = 0;
-
-        if (useSlide)
+        if (preferences.Mode == StartupVisualMode.SlideSplash)
         {
-            var screen = Screens.ScreenFromVisual(this);
-            var scale = screen?.Scaling ?? 1d;
-            var screenWidthDip = screen is null
-                ? 1920d
-                : screen.WorkingArea.Width / Math.Max(scale, 0.01d);
-            slideTransform.X = Bounds.Width > 0 ? Bounds.Width : screenWidthDip;
+            var layout = ResolveWindowAnimationLayout();
+            _preparedWindowTargetPosition = layout.VisiblePosition;
+            _preparedWindowHiddenPosition = layout.HiddenPosition;
+            ApplyWindowAnimationLayout(layout);
+            Position = layout.HiddenPosition;
+            DesktopPage.Opacity = 1;
+            DesktopPage.IsHitTestVisible = false;
+            _isSlideAnimationActive = true;
+            return;
         }
 
-        DesktopPage.Transitions = savedTransitions;
-        DesktopPage.IsHitTestVisible = false;
-        _isSlideAnimationActive = true;
+        if (preferences.Mode == StartupVisualMode.Fade)
+        {
+            var savedTransitions = DesktopPage.Transitions;
+            DesktopPage.Transitions = null;
+            DesktopPage.Opacity = 0;
+            DesktopPage.Transitions = savedTransitions;
+            DesktopPage.IsHitTestVisible = false;
+            _isSlideAnimationActive = true;
+            return;
+        }
+
+        DesktopPage.Opacity = 1;
+        DesktopPage.IsHitTestVisible = true;
     }
 
     public void PlayEnterAnimation()
     {
-        var slideTransform = GetDesktopPageSlideTransform();
+        var preferences = GetStartupVisualPreferences();
+        if (preferences.Mode == StartupVisualMode.SlideSplash &&
+            _preparedWindowTargetPosition is { } targetPosition &&
+            _preparedWindowHiddenPosition is { } hiddenPosition)
+        {
+            _ = PlayWindowEnterAnimationAsync(hiddenPosition, targetPosition);
+            return;
+        }
+
         DesktopPage.Opacity = 1;
-        slideTransform.X = 0;
         DesktopPage.IsHitTestVisible = true;
         _isSlideAnimationActive = false;
     }
@@ -949,9 +993,66 @@ public partial class MainWindow : Window
             return false;
         }
 
-        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-        return snapshot.EnableSlideTransition;
+        return GetStartupVisualPreferences().Mode == StartupVisualMode.SlideSplash;
     }
+
+    private StartupVisualPreferences GetStartupVisualPreferences()
+    {
+        var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        return StartupVisualPreferencesResolver.FromFlags(
+            snapshot.EnableFadeTransition,
+            snapshot.EnableSlideTransition);
+    }
+
+    private WindowAnimationLayout ResolveWindowAnimationLayout()
+    {
+        var screen = Screens.ScreenFromVisual(this) ?? Screens.Primary ?? Screens.All.FirstOrDefault();
+        var workingArea = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
+        var scaling = Math.Max(screen?.Scaling ?? 1d, 0.01d);
+
+        return new WindowAnimationLayout(
+            new PixelPoint(workingArea.X, workingArea.Y),
+            new PixelPoint(workingArea.X + workingArea.Width, workingArea.Y),
+            new Size(workingArea.Width / scaling, workingArea.Height / scaling));
+    }
+
+    private void ApplyWindowAnimationLayout(WindowAnimationLayout layout)
+    {
+        WindowState = WindowState.Normal;
+        Width = layout.WindowSize.Width;
+        Height = layout.WindowSize.Height;
+    }
+
+    private async Task PlayWindowEnterAnimationAsync(PixelPoint hiddenPosition, PixelPoint targetPosition)
+    {
+        Position = hiddenPosition;
+        await AnimateWindowPositionAsync(hiddenPosition, targetPosition, FluttermotionToken.Intro);
+        DesktopPage.IsHitTestVisible = true;
+        _isSlideAnimationActive = false;
+    }
+
+    private async Task AnimateWindowPositionAsync(PixelPoint from, PixelPoint to, TimeSpan duration)
+    {
+        var totalMilliseconds = Math.Max(duration.TotalMilliseconds, 1d);
+        var stopwatch = Stopwatch.StartNew();
+
+        while (stopwatch.Elapsed < duration)
+        {
+            var progress = Math.Clamp(stopwatch.Elapsed.TotalMilliseconds / totalMilliseconds, 0d, 1d);
+            var eased = 1d - Math.Pow(1d - progress, 3d);
+            var x = (int)Math.Round(from.X + ((to.X - from.X) * eased));
+            var y = (int)Math.Round(from.Y + ((to.Y - from.Y) * eased));
+            Position = new PixelPoint(x, y);
+            await Task.Delay(16).ConfigureAwait(false);
+        }
+
+        Position = to;
+    }
+
+    private readonly record struct WindowAnimationLayout(
+        PixelPoint VisiblePosition,
+        PixelPoint HiddenPosition,
+        Size WindowSize);
 
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
@@ -966,10 +1067,17 @@ public partial class MainWindow : Window
         if (oldState == WindowState.Minimized && newState != WindowState.Minimized)
         {
             PrepareEnterAnimation();
-            
-            if (newState != WindowState.FullScreen)
+
+            if (ShouldUseFullscreenWindow())
             {
-                WindowState = WindowState.FullScreen;
+                if (newState != WindowState.FullScreen)
+                {
+                    WindowState = WindowState.FullScreen;
+                }
+            }
+            else if (newState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
             }
 
             Dispatcher.UIThread.Post(() =>
@@ -980,7 +1088,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (newState is WindowState.Minimized or WindowState.FullScreen)
+        if (newState == WindowState.Minimized ||
+            (ShouldUseFullscreenWindow() && newState == WindowState.FullScreen))
         {
             return;
         }
@@ -999,7 +1108,10 @@ public partial class MainWindow : Window
 
             if (WindowState is not (WindowState.Minimized or WindowState.FullScreen))
             {
-                WindowState = WindowState.FullScreen;
+                if (ShouldUseFullscreenWindow())
+                {
+                    WindowState = WindowState.FullScreen;
+                }
             }
         });
     }

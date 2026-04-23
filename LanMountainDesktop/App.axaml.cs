@@ -719,7 +719,10 @@ public partial class App : Application
                 mainWindow.WindowState = WindowState.Normal;
             }
 
-            if (mainWindow.WindowState != WindowState.FullScreen)
+            mainWindow.EnsureForegroundWindowLayout();
+
+            if (mainWindow.ShouldUseFullscreenWindow() &&
+                mainWindow.WindowState != WindowState.FullScreen)
             {
                 mainWindow.WindowState = WindowState.FullScreen;
             }
@@ -1359,7 +1362,10 @@ public partial class App : Application
             mainWindow.WindowState = WindowState.Normal;
         }
 
-        if (mainWindow.WindowState != WindowState.FullScreen)
+        mainWindow.EnsureForegroundWindowLayout();
+
+        if (mainWindow.ShouldUseFullscreenWindow() &&
+            mainWindow.WindowState != WindowState.FullScreen)
         {
             mainWindow.WindowState = WindowState.FullScreen;
         }

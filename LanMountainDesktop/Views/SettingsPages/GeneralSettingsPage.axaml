@@ -9,7 +9,6 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
 
-            <!-- 区域设置分组 -->
             <controls:IconText Icon="Globe"
                                Text="{Binding BasicHeader}"
                                Margin="0,0,0,4" />
@@ -76,7 +75,6 @@
 
             <Separator Classes="settings-separator" />
 
-            <!-- 运行时设置分组 -->
             <controls:IconText Icon="DeveloperBoard"
                                Text="{Binding RuntimeHeader}"
                                Margin="0,0,0,4" />
@@ -106,8 +104,20 @@
                 </ui:SettingsExpanderItem>
             </ui:SettingsExpander>
 
-            <ui:SettingsExpander Header="滑入滑出过渡效果"
-                                 Description="启用后，进入和退出桌面时使用滑入滑出动画（仅 Windows）"
+            <ui:SettingsExpander Header="淡入淡出效果"
+                                 Description="{Binding FadeTransitionDescription}"
+                                 IsVisible="{Binding IsSlideTransitionAvailable}">
+                <ui:SettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="ArrowUpload" />
+                </ui:SettingsExpander.IconSource>
+                <ui:SettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding EnableFadeTransition}"
+                                  IsEnabled="{Binding IsFadeTransitionToggleEnabled}" />
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+
+            <ui:SettingsExpander Header="启动滑入滑出效果"
+                                 Description="启用后，启动和恢复时从屏幕右侧边缘滑入或滑出，仅 Windows 可用。"
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="ArrowRight" />
@@ -118,7 +128,7 @@
             </ui:SettingsExpander>
 
             <ui:SettingsExpander Header="桌面主窗口在任务栏显示图标"
-                                 Description="仅控制桌面主窗口在系统任务栏中的图标显示；不会影响设置窗口，设置窗口打开时始终保留独立任务栏图标">
+                                 Description="仅控制桌面主窗口在系统任务栏中的图标显示，不影响设置窗口。">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Window" />
                 </ui:SettingsExpander.IconSource>

@@ -1,88 +1,266 @@
+using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Views;
 
-/// <summary>
-/// 启动画面窗口 - 简洁设计
-/// </summary>
 public partial class SplashWindow : Window, ISplashStageReporter
 {
-    private int _versionTextClickCount = 0;
     private const int DebugModeClickThreshold = 5;
-    private bool _isDebugModeOpened = false;
+    private static readonly TimeSpan FadeAnimationDuration = TimeSpan.FromMilliseconds(160);
+    private static readonly TimeSpan SlideAnimationDuration = TimeSpan.FromMilliseconds(260);
+
+    private readonly StartupVisualMode _mode;
+    private int _versionTextClickCount;
+    private bool _isDebugModeOpened;
+    private bool _isOpened;
+    private bool _layoutConfigured;
+    private bool _dismissed;
+    private PixelPoint _targetPosition;
+    private PixelPoint _slideHiddenPosition;
 
     public SplashWindow()
+        : this(StartupVisualMode.Fade)
     {
-        AvaloniaXamlLoader.Load(this);
-        
-        // 延迟到窗口加载完成后再绑定事件
-        this.Loaded += OnWindowLoaded;
     }
 
-    /// <summary>
-    /// 窗口加载完成事件
-    /// </summary>
+    public SplashWindow(StartupVisualMode mode)
+    {
+        _mode = mode;
+        AvaloniaXamlLoader.Load(this);
+        Loaded += OnWindowLoaded;
+        Opened += OnWindowOpened;
+    }
+
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
-        Console.WriteLine("[SplashWindow] Window loaded, binding events...");
-        
-        // 绑定版本文本点击事件（隐藏功能：点击5次打开开发者界面）
-        var versionTextBorder = this.FindControl<Border>("VersionTextBorder");
-        if (versionTextBorder is not null)
+        if (this.FindControl<Border>("VersionTextBorder") is { } versionBorder)
         {
-            versionTextBorder.PointerPressed += OnVersionTextClick;
-            Console.WriteLine("[SplashWindow] VersionTextBorder click event bound");
-        }
-        else
-        {
-            Console.Error.WriteLine("[SplashWindow] Failed to find VersionTextBorder!");
+            versionBorder.PointerPressed += OnVersionTextClick;
         }
     }
 
-    /// <summary>
-    /// 版本文本点击事件 - 连续点击5次打开开发者界面（隐藏功能）
-    /// </summary>
+    private async void OnWindowOpened(object? sender, EventArgs e)
+    {
+        if (_isOpened)
+        {
+            return;
+        }
+
+        _isOpened = true;
+        ConfigureForVisualMode();
+
+        if (_mode == StartupVisualMode.Fade)
+        {
+            Opacity = 0d;
+            await AnimateOpacityAsync(0d, 1d, FadeAnimationDuration).ConfigureAwait(false);
+            return;
+        }
+
+        Opacity = 1d;
+        if (_mode == StartupVisualMode.SlideSplash)
+        {
+            await AnimateWindowPositionAsync(_slideHiddenPosition, _targetPosition, SlideAnimationDuration, EaseOutCubic).ConfigureAwait(false);
+        }
+    }
+
+    public async Task DismissAsync()
+    {
+        if (_dismissed)
+        {
+            return;
+        }
+
+        _dismissed = true;
+        ConfigureForVisualMode();
+
+        if (_mode == StartupVisualMode.SlideSplash)
+        {
+            var from = Position;
+            await AnimateWindowPositionAsync(from, _slideHiddenPosition, SlideAnimationDuration, EaseInCubic).ConfigureAwait(false);
+        }
+        else if (_mode == StartupVisualMode.Fade)
+        {
+            await AnimateOpacityAsync(Opacity, 0d, FadeAnimationDuration).ConfigureAwait(false);
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (IsVisible)
+            {
+                Close();
+            }
+        });
+    }
+
+    public void Report(string stage, string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (this.FindControl<TextBlock>("StatusText") is { } statusText)
+            {
+                statusText.Text = message;
+            }
+
+            if (this.FindControl<ProgressBar>("ProgressIndicator") is { } progressIndicator)
+            {
+                var progress = ResolveProgress(stage);
+                if (progress > 0)
+                {
+                    progressIndicator.IsIndeterminate = false;
+                    progressIndicator.Value = progress;
+                }
+                else
+                {
+                    progressIndicator.IsIndeterminate = true;
+                }
+            }
+        });
+    }
+
+    public void ReportStage(string stage, int progress)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (this.FindControl<TextBlock>("StatusText") is { } statusText)
+            {
+                statusText.Text = stage;
+            }
+
+            if (this.FindControl<ProgressBar>("ProgressIndicator") is { } progressIndicator)
+            {
+                progressIndicator.IsIndeterminate = false;
+                progressIndicator.Value = Math.Clamp(progress, 0, 100);
+            }
+        });
+    }
+
+    public void UpdateProgress(int percent, string? message = null)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!string.IsNullOrWhiteSpace(message) &&
+                this.FindControl<TextBlock>("StatusText") is { } statusText)
+            {
+                statusText.Text = message;
+            }
+
+            if (this.FindControl<ProgressBar>("ProgressIndicator") is { } progressIndicator)
+            {
+                progressIndicator.IsIndeterminate = false;
+                progressIndicator.Value = Math.Clamp(percent, 0, 100);
+            }
+        });
+    }
+
+    public void UpdateStatus(string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (this.FindControl<TextBlock>("StatusText") is { } statusText)
+            {
+                statusText.Text = message;
+            }
+        });
+    }
+
+    public void SetVersionInfo(string version, string codename)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (this.FindControl<TextBlock>("VersionText") is { } versionText)
+            {
+                versionText.Text = $"{version} ({codename})";
+            }
+        });
+    }
+
+    public void SetDebugMode(bool isDebugMode)
+    {
+        if (!isDebugMode)
+        {
+            return;
+        }
+
+        UpdateStatus("[Debug Mode] Splash Preview");
+    }
+
+    private void ConfigureForVisualMode()
+    {
+        if (_layoutConfigured)
+        {
+            return;
+        }
+
+        _layoutConfigured = true;
+        var compactHero = this.FindControl<Grid>("CompactHero");
+        var fullscreenHero = this.FindControl<Grid>("FullscreenHero");
+
+        if (_mode == StartupVisualMode.Fade)
+        {
+            compactHero?.SetCurrentValue(IsVisibleProperty, true);
+            fullscreenHero?.SetCurrentValue(IsVisibleProperty, false);
+            Background = new SolidColorBrush(Color.Parse("#0B0B0B"));
+            Width = 480;
+            Height = 320;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            return;
+        }
+
+        compactHero?.SetCurrentValue(IsVisibleProperty, false);
+        fullscreenHero?.SetCurrentValue(IsVisibleProperty, true);
+        Background = Brushes.Black;
+        WindowStartupLocation = WindowStartupLocation.Manual;
+
+        var screen = Screens?.Primary ?? Screens?.All.FirstOrDefault();
+        var workingArea = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
+        var scale = Math.Max(screen?.Scaling ?? 1d, 0.01d);
+
+        Width = workingArea.Width / scale;
+        Height = workingArea.Height / scale;
+        _targetPosition = new PixelPoint(workingArea.X, workingArea.Y);
+        _slideHiddenPosition = new PixelPoint(workingArea.X + workingArea.Width, workingArea.Y);
+        Position = _mode == StartupVisualMode.SlideSplash
+            ? _slideHiddenPosition
+            : _targetPosition;
+    }
+
     private void OnVersionTextClick(object? sender, PointerPressedEventArgs e)
     {
-        if (_isDebugModeOpened) return;
-        
-        _versionTextClickCount++;
-        Console.WriteLine($"[SplashWindow] Version text clicked {_versionTextClickCount}/{DebugModeClickThreshold}");
+        if (_isDebugModeOpened)
+        {
+            return;
+        }
 
+        _versionTextClickCount++;
         if (_versionTextClickCount >= DebugModeClickThreshold)
         {
             OpenDebugWindow();
         }
     }
 
-    /// <summary>
-    /// 打开开发者调试窗口
-    /// </summary>
     private async void OpenDebugWindow()
     {
         _isDebugModeOpened = true;
-        Console.WriteLine("[SplashWindow] Opening debug window...");
 
         try
         {
-            // 加载保存的状态
-            var devModeEnabled = ErrorWindow.CheckDevModeEnabled();
-            var customHostPath = ErrorWindow.GetSavedCustomHostPath();
-
-            var debugWindow = new ErrorDebugWindow(devModeEnabled, customHostPath)
+            var debugWindow = new ErrorDebugWindow(
+                ErrorWindow.CheckDevModeEnabled(),
+                ErrorWindow.GetSavedCustomHostPath())
             {
-                WindowStartupLocation = WindowStartupLocation.CenterScreen
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            // 订阅窗口关闭事件以保存状态
-            debugWindow.Closed += (s, e) =>
+            debugWindow.Closed += (_, _) =>
             {
-                Console.WriteLine("[SplashWindow] Debug window closed");
                 _isDebugModeOpened = false;
                 _versionTextClickCount = 0;
             };
@@ -91,160 +269,75 @@ public partial class SplashWindow : Window, ISplashStageReporter
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[SplashWindow] Error opening debug window: {ex.Message}");
+            Debug.WriteLine($"[SplashWindow] Failed to open debug window: {ex}");
             _isDebugModeOpened = false;
             _versionTextClickCount = 0;
         }
     }
 
-    /// <summary>
-    /// 更新进度和状态
-    /// </summary>
-    public void Report(string stage, string message)
+    private async Task AnimateOpacityAsync(double from, double to, TimeSpan duration)
     {
-        Dispatcher.UIThread.Post(() =>
+        await AnimateAsync(progress =>
         {
-            var statusText = this.FindControl<TextBlock>("StatusText");
-            var progressIndicator = this.FindControl<ProgressBar>("ProgressIndicator");
-            
-            if (statusText is null || progressIndicator is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] Controls not found: StatusText={statusText != null}, ProgressIndicator={progressIndicator != null}");
-                return;
-            }
-
-            // 更新状态文本
-            statusText.Text = message;
-
-            // 根据阶段更新进度
-            var progress = ResolveProgress(stage);
-            if (progress > 0)
-            {
-                progressIndicator.IsIndeterminate = false;
-                progressIndicator.Value = progress;
-            }
-            else
-            {
-                progressIndicator.IsIndeterminate = true;
-            }
-        });
+            Opacity = from + ((to - from) * progress);
+        }, duration, EaseOutCubic).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// 更新进度（0-100）
-    /// </summary>
-    public void UpdateProgress(int percent, string? message = null)
+    private async Task AnimateWindowPositionAsync(
+        PixelPoint from,
+        PixelPoint to,
+        TimeSpan duration,
+        Func<double, double> easing)
     {
-        Dispatcher.UIThread.Post(() =>
+        await AnimateAsync(progress =>
         {
-            var statusText = this.FindControl<TextBlock>("StatusText");
-            var progressIndicator = this.FindControl<ProgressBar>("ProgressIndicator");
-            
-            if (statusText is null || progressIndicator is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] Controls not found in UpdateProgress");
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(message))
-            {
-                statusText.Text = message;
-            }
-
-            progressIndicator.IsIndeterminate = false;
-            progressIndicator.Value = Math.Clamp(percent, 0, 100);
-        });
+            var currentX = (int)Math.Round(from.X + ((to.X - from.X) * progress));
+            var currentY = (int)Math.Round(from.Y + ((to.Y - from.Y) * progress));
+            Position = new PixelPoint(currentX, currentY);
+        }, duration, easing).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// 更新状态文本
-    /// </summary>
-    public void UpdateStatus(string message)
+    private async Task AnimateAsync(Action<double> update, TimeSpan duration, Func<double, double> easing)
     {
-        Dispatcher.UIThread.Post(() =>
+        if (duration <= TimeSpan.Zero)
         {
-            var statusText = this.FindControl<TextBlock>("StatusText");
-            if (statusText is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] StatusText not found in UpdateStatus");
-                return;
-            }
-            statusText.Text = message;
-        });
+            await Dispatcher.UIThread.InvokeAsync(() => update(1d));
+            return;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < duration)
+        {
+            var raw = stopwatch.Elapsed.TotalMilliseconds / duration.TotalMilliseconds;
+            var progress = easing(Math.Clamp(raw, 0d, 1d));
+            await Dispatcher.UIThread.InvokeAsync(() => update(progress));
+            await Task.Delay(16).ConfigureAwait(false);
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() => update(1d));
     }
 
-    /// <summary>
-    /// 报告阶段和进度（0-100）
-    /// </summary>
-    public void ReportStage(string stage, int progress)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            var statusText = this.FindControl<TextBlock>("StatusText");
-            var progressIndicator = this.FindControl<ProgressBar>("ProgressIndicator");
-            
-            if (statusText is null || progressIndicator is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] Controls not found in ReportStage");
-                return;
-            }
-
-            statusText.Text = stage;
-            progressIndicator.IsIndeterminate = false;
-            progressIndicator.Value = Math.Clamp(progress, 0, 100);
-        });
-    }
-
-    /// <summary>
-    /// 设置版本和开发代号
-    /// </summary>
-    public void SetVersionInfo(string version, string codename)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            var versionText = this.FindControl<TextBlock>("VersionText");
-            if (versionText is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] VersionText not found in SetVersionInfo");
-                return;
-            }
-            versionText.Text = $"{version} ({codename})";
-        });
-    }
-
-    /// <summary>
-    /// 设置调试模式
-    /// </summary>
-    public void SetDebugMode(bool isDebugMode)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            var statusText = this.FindControl<TextBlock>("StatusText");
-            if (statusText is null)
-            {
-                Console.Error.WriteLine($"[SplashWindow] StatusText not found in SetDebugMode");
-                return;
-            }
-            if (isDebugMode)
-            {
-                statusText.Text = "[Debug Mode] Splash Preview";
-            }
-        });
-    }
-
-    /// <summary>
-    /// 根据阶段名称解析进度值
-    /// </summary>
     private static int ResolveProgress(string stage)
     {
         return stage.ToLowerInvariant() switch
         {
             "initializing" => 10,
+            "settings" => 25,
             "update" => 30,
             "plugins" => 50,
-            "launch" => 70,
+            "ui" => 65,
+            "shell" => 80,
+            "activation" => 90,
             "ready" => 100,
             _ => 0
         };
     }
+
+    private static double EaseOutCubic(double value)
+    {
+        var inverse = 1d - value;
+        return 1d - (inverse * inverse * inverse);
+    }
+
+    private static double EaseInCubic(double value) => value * value * value;
 }

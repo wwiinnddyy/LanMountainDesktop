@@ -3,85 +3,92 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
         mc:Ignorable="d"
-        d:DesignWidth="480"
-        d:DesignHeight="320"
         x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
         x:DataType="views:SplashWindow"
         Title="LanMountain Desktop"
         Width="480"
         Height="320"
         CanResize="False"
+        ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
-        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        Background="#0B0B0B"
         TransparencyLevelHint="None"
         Icon="/Assets/logo.ico">
   <Design.DataContext>
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Grid>
-    <!-- 左上角：应用名称 -->
-    <TextBlock x:Name="AppNameText"
-               Text="LanMountain Desktop"
-               FontSize="24"
-               FontWeight="SemiBold"
-               VerticalAlignment="Top"
-               HorizontalAlignment="Left"
-               Margin="24,24,0,0"
-               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-
-    <!-- 底部区域：进度条和状态 -->
-    <Grid VerticalAlignment="Bottom" Margin="24,0,24,24">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
-      
-      <!-- 第一行：左下角版本信息，右下角阶段文字 -->
-      <Grid Grid.Row="0" Margin="0,0,0,8">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        
-        <!-- 左下角：版本和开发代号 - 可点击打开开发者界面（隐藏功能） -->
-        <Border x:Name="VersionTextBorder"
-                Grid.Column="0"
-                Background="Transparent"
-                Cursor="Hand"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom">
-          <TextBlock x:Name="VersionText"
-                     FontSize="11"
-                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                     Opacity="0.8"
-                     Text="1.0.0 (Administrate)" />
-        </Border>
-        
-        <!-- 右下角：阶段文字 -->
-        <TextBlock x:Name="StatusText"
-                   Grid.Column="1"
-                   FontSize="11"
-                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                   HorizontalAlignment="Right"
-                   VerticalAlignment="Bottom"
-                   Opacity="0.8"
-                   Text="Initializing..." />
+  <Grid RowDefinitions="*,Auto"
+        Background="#0B0B0B">
+    <Grid Grid.Row="0">
+      <Grid x:Name="CompactHero"
+            Margin="24">
+        <TextBlock x:Name="AppNameText"
+                   Text="LanMountain Desktop"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Top"
+                   HorizontalAlignment="Left"
+                   Foreground="#F6F7FB" />
       </Grid>
-      
-      <!-- 底部：进度条 -->
-      <ProgressBar x:Name="ProgressIndicator"
-                   Grid.Row="1"
-                   Minimum="0"
-                   Maximum="100"
-                   Value="0"
-                   Height="4"
-                   IsIndeterminate="False"
-                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
-                   Background="{DynamicResource ControlStrokeColorDefaultBrush}" />
+
+      <Grid x:Name="FullscreenHero"
+            IsVisible="False">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="24">
+          <Border Width="240"
+                  Height="240"
+                  Background="Transparent">
+            <Image Source="/Assets/logo_nightly.png"
+                   Stretch="Uniform" />
+          </Border>
+
+          <TextBlock Text="LanMountain Desktop"
+                     HorizontalAlignment="Center"
+                     FontSize="26"
+                     FontWeight="SemiBold"
+                     Foreground="#F6F7FB" />
+        </StackPanel>
+      </Grid>
     </Grid>
+
+    <Border Grid.Row="1"
+            Padding="24,18,24,24"
+            Background="Transparent">
+      <Grid RowDefinitions="Auto,Auto"
+            RowSpacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <Border x:Name="VersionTextBorder"
+                  Background="Transparent"
+                  Cursor="Hand"
+                  HorizontalAlignment="Left">
+            <TextBlock x:Name="VersionText"
+                       FontSize="11"
+                       Foreground="#B9C0CC"
+                       Text="0.0.0-dev (Administrate)" />
+          </Border>
+
+          <TextBlock x:Name="StatusText"
+                     Grid.Column="1"
+                     FontSize="11"
+                     Foreground="#B9C0CC"
+                     HorizontalAlignment="Right"
+                     Text="Initializing..." />
+        </Grid>
+
+        <ProgressBar x:Name="ProgressIndicator"
+                     Grid.Row="1"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="0"
+                     Height="4"
+                     IsIndeterminate="False"
+                     Foreground="#F6F7FB"
+                     Background="#2C313D" />
+      </Grid>
+    </Border>
   </Grid>
 </Window>

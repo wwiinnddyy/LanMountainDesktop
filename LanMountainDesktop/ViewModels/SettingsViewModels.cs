@@ -13,6 +13,7 @@ using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -201,7 +202,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
-        EnableSlideTransition = appSnapshot.EnableSlideTransition;
+        ApplyTransitionPreferences(appSnapshot.EnableFadeTransition, appSnapshot.EnableSlideTransition);
         ShowInTaskbar = appSnapshot.ShowInTaskbar;
         _isInitializing = false;
 
@@ -235,9 +236,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             return;
         }
 
-        if (changedKeys.Contains(nameof(AppSettingsSnapshot.EnableSlideTransition)))
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.EnableSlideTransition)) ||
+            changedKeys.Contains(nameof(AppSettingsSnapshot.EnableFadeTransition)))
         {
-            EnableSlideTransition = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableSlideTransition;
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            ApplyTransitionPreferences(snapshot.EnableFadeTransition, snapshot.EnableSlideTransition);
         }
 
         if (changedKeys.Contains(nameof(AppSettingsSnapshot.ShowInTaskbar)))
@@ -264,12 +267,21 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     private SelectionOption _selectedRenderMode = new(AppRenderingModeHelper.Default, "Default");
 
     [ObservableProperty]
+    private bool _enableFadeTransition = true;
+
+    [ObservableProperty]
     private bool _enableSlideTransition;
 
     [ObservableProperty]
     private bool _showInTaskbar;
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
+
+    public bool IsFadeTransitionToggleEnabled => !EnableSlideTransition;
+
+    public string FadeTransitionDescription => EnableSlideTransition
+        ? "滑动模式已启用，淡入淡出不可同时使用。"
+        : "启用后，启动与恢复过程使用淡入淡出效果。";
 
     [ObservableProperty]
     private string _pageTitle = string.Empty;
@@ -372,8 +384,22 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     partial void OnEnableSlideTransitionChanged(bool value)
     {
-        if (_isInitializing) return;
-        SaveField(nameof(AppSettingsSnapshot.EnableSlideTransition), value);
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveTransitionPreferences(EnableFadeTransition, value);
+    }
+
+    partial void OnEnableFadeTransitionChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveTransitionPreferences(value, EnableSlideTransition);
     }
 
     partial void OnShowInTaskbarChanged(bool value)
@@ -392,6 +418,35 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         }
 
         _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+    }
+
+    private void SaveTransitionPreferences(bool enableFadeTransition, bool enableSlideTransition)
+    {
+        var normalized = StartupVisualPreferencesResolver.FromFlags(enableFadeTransition, enableSlideTransition);
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.EnableFadeTransition = normalized.EnableFadeTransition;
+        snapshot.EnableSlideTransition = normalized.EnableSlideTransition;
+        ApplyTransitionPreferences(normalized.EnableFadeTransition, normalized.EnableSlideTransition);
+        _settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.EnableFadeTransition),
+                nameof(AppSettingsSnapshot.EnableSlideTransition)
+            ]);
+    }
+
+    private void ApplyTransitionPreferences(bool enableFadeTransition, bool enableSlideTransition)
+    {
+        var normalized = StartupVisualPreferencesResolver.FromFlags(enableFadeTransition, enableSlideTransition);
+        var wasInitializing = _isInitializing;
+        _isInitializing = true;
+        EnableFadeTransition = normalized.EnableFadeTransition;
+        EnableSlideTransition = normalized.EnableSlideTransition;
+        _isInitializing = wasInitializing;
+        OnPropertyChanged(nameof(IsFadeTransitionToggleEnabled));
+        OnPropertyChanged(nameof(FadeTransitionDescription));
     }
 
     private IReadOnlyList<SelectionOption> CreateLanguageOptions()

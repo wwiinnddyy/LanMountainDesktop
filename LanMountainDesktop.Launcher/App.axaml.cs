@@ -6,6 +6,9 @@ using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Launcher.Views;
+using LanMountainDesktop.Shared.Contracts.Launcher;
+using LanMountainDesktop.Shared.IPC;
+using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
 namespace LanMountainDesktop.Launcher;
 
@@ -52,7 +55,7 @@ public partial class App : Application
             }
             else
             {
-                var splashWindow = new SplashWindow();
+                var splashWindow = CreateSplashWindow();
                 splashWindow.Show();
                 _ = RunCoordinatorWithSplashAsync(desktop, context, splashWindow);
             }
@@ -68,7 +71,7 @@ public partial class App : Application
             case "preview-splash":
             {
                 Logger.Info("Preview command: splash.");
-                var splashWindow = new SplashWindow();
+                var splashWindow = CreateSplashWindow();
                 splashWindow.SetDebugMode(true);
                 splashWindow.Show();
                 _ = SimulateSplashPreviewAsync(desktop, splashWindow);
@@ -110,6 +113,12 @@ public partial class App : Application
             default:
                 return false;
         }
+    }
+
+    private static SplashWindow CreateSplashWindow()
+    {
+        var preferences = StartupVisualPreferencesResolver.Resolve();
+        return new SplashWindow(preferences.Mode);
     }
 
     private async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
@@ -172,48 +181,75 @@ public partial class App : Application
         SplashWindow splashWindow)
     {
         LauncherResult result;
+        SplashWindow? currentSplashWindow = splashWindow;
+        var appRoot = Commands.ResolveAppRoot(context);
 
-        try
+        while (true)
         {
-            var appRoot = Commands.ResolveAppRoot(context);
-            Logger.Info(
-                $"Coordinator start. Command='{context.Command}'; AppRoot='{appRoot}'; " +
-                $"IsDebugMode={context.IsDebugMode}; LaunchSource='{context.LaunchSource}'; " +
-                $"ResultPath='{context.GetOption("result") ?? "<none>"}'.");
-
-            var deploymentLocator = new DeploymentLocator(appRoot);
-            var coordinator = new LauncherFlowCoordinator(
-                context,
-                deploymentLocator,
-                new OobeStateService(appRoot),
-                new UpdateEngineService(deploymentLocator),
-                new PluginInstallerService());
-
-            result = await coordinator.RunAsync(splashWindow).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Coordinator threw an unhandled exception.", ex);
-            result = new LauncherResult
+            try
             {
-                Success = false,
-                Stage = "launch",
-                Code = "exception",
-                Message = $"Launcher failed: {ex.Message}",
-                ErrorMessage = ex.ToString()
-            };
+                Logger.Info(
+                    $"Coordinator start. Command='{context.Command}'; AppRoot='{appRoot}'; " +
+                    $"IsDebugMode={context.IsDebugMode}; LaunchSource='{context.LaunchSource}'; " +
+                    $"ResultPath='{context.GetOption("result") ?? "<none>"}'.");
+
+                var deploymentLocator = new DeploymentLocator(appRoot);
+                var coordinator = new LauncherFlowCoordinator(
+                    context,
+                    deploymentLocator,
+                    new OobeStateService(appRoot),
+                    new UpdateEngineService(deploymentLocator),
+                    new PluginInstallerService());
+
+                result = await coordinator.RunAsync(currentSplashWindow).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Coordinator threw an unhandled exception.", ex);
+                result = new LauncherResult
+                {
+                    Success = false,
+                    Stage = "launch",
+                    Code = "exception",
+                    Message = $"Launcher failed: {ex.Message}",
+                    ErrorMessage = ex.ToString()
+                };
+            }
+
+            if (result.Success ||
+                result.Code == "host_not_found" ||
+                (!string.Equals(result.Stage, "launch", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(result.Stage, "launchHost", StringComparison.OrdinalIgnoreCase)))
+            {
+                break;
+            }
+
+            var failureAction = await ShowFailureWindowAsync(result).ConfigureAwait(false);
+            if (failureAction == ErrorWindowResult.Exit)
+            {
+                break;
+            }
+
+            if (failureAction == ErrorWindowResult.ActivateExisting &&
+                await TryActivateExistingInstanceAsync().ConfigureAwait(false))
+            {
+                result = new LauncherResult
+                {
+                    Success = true,
+                    Stage = "launch",
+                    Code = "activation_requested",
+                    Message = "Launcher activated the existing desktop instance.",
+                    Details = result.Details
+                };
+                break;
+            }
+
+            currentSplashWindow = CreateSplashWindow();
+            currentSplashWindow.Show();
         }
 
         Logger.Info($"Coordinator completed. Success={result.Success}; Stage='{result.Stage}'; Code='{result.Code}'.");
         await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
-
-        if (!result.Success &&
-            result.Code is not "host_not_found" &&
-            (string.Equals(result.Stage, "launch", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(result.Stage, "launchHost", StringComparison.OrdinalIgnoreCase)))
-        {
-            await ShowFailureWindowAsync(result).ConfigureAwait(false);
-        }
 
         Environment.ExitCode = result.Success ? 0 : 1;
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
@@ -238,15 +274,31 @@ public partial class App : Application
         }
     }
 
-    private static async Task ShowFailureWindowAsync(LauncherResult result)
+    private static async Task<ErrorWindowResult> ShowFailureWindowAsync(LauncherResult result)
     {
         ErrorWindow? errorWindow = null;
+        var hostProcessAlive = result.Details.TryGetValue("hostProcessAlive", out var hostProcessAliveText) &&
+                               bool.TryParse(hostProcessAliveText, out var hostProcessAliveValue) &&
+                               hostProcessAliveValue;
+        var hostPid = result.Details.TryGetValue("hostPid", out var hostPidText) &&
+                      int.TryParse(hostPidText, out var parsedPid)
+            ? parsedPid
+            : (int?)null;
 
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
             {
                 errorWindow = new ErrorWindow();
+                if (hostProcessAlive)
+                {
+                    errorWindow.ConfigureForRunningHostFailure(hostPid);
+                }
+                else
+                {
+                    errorWindow.ConfigureForGenericFailure(allowRetry: true);
+                }
+
                 errorWindow.SetErrorMessage(
                     $"Failed to start LanMountainDesktop.\n\nStage: {result.Stage}\nCode: {result.Code}\n\n{result.Message}");
                 errorWindow.Show();
@@ -259,16 +311,38 @@ public partial class App : Application
 
         if (errorWindow is null)
         {
-            return;
+            return ErrorWindowResult.Exit;
         }
 
         try
         {
-            await errorWindow.WaitForChoiceAsync().ConfigureAwait(false);
+            return await errorWindow.WaitForChoiceAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             Logger.Error("Failure window closed unexpectedly.", ex);
+            return ErrorWindowResult.Exit;
+        }
+    }
+
+    private static async Task<bool> TryActivateExistingInstanceAsync()
+    {
+        try
+        {
+            using var ipcClient = new LanMountainDesktopIpcClient();
+            await ipcClient.ConnectAsync().ConfigureAwait(false);
+            if (!ipcClient.IsConnected)
+            {
+                return false;
+            }
+
+            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
+            return await shellProxy.ActivateMainWindowAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to activate the existing desktop instance: {ex.Message}");
+            return false;
         }
     }
 

@@ -152,6 +152,8 @@ public sealed class AppSettingsSnapshot
 
     public bool EnableThreeFingerSwipe { get; set; } = false;
 
+    public bool EnableFadeTransition { get; set; } = true;
+
     public bool EnableSlideTransition { get; set; } = false;
 
     public bool ShowInTaskbar { get; set; } = false;

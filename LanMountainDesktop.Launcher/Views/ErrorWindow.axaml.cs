@@ -1,542 +1,365 @@
+using System.Diagnostics;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using LanMountainDesktop.Launcher.Services;
-using System.Diagnostics;
 
 namespace LanMountainDesktop.Launcher.Views;
 
-/// <summary>
-/// 错误窗口 - 显示启动失败信息，支持调试模式（隐藏入口）
-/// </summary>
 public partial class ErrorWindow : Window
 {
-    private readonly TaskCompletionSource<ErrorWindowResult> _completionSource = new();
-    private int _iconClickCount = 0;
     private const int DebugModeClickThreshold = 5;
-    private bool _isDebugMode = false;
-    private string? _customHostPath;
+
+    private readonly TaskCompletionSource<ErrorWindowResult> _completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _iconClickCount;
+    private bool _isDebugMode;
     private bool _devModeEnabled;
+    private string? _customHostPath;
+    private ErrorWindowResult _primaryAction = ErrorWindowResult.Retry;
+    private ErrorWindowResult? _secondaryAction;
 
     public ErrorWindow()
     {
         AvaloniaXamlLoader.Load(this);
 
-        // 先加载保存的状态
         _devModeEnabled = LoadDevModeStateInternal();
         _customHostPath = LoadCustomHostPathInternal();
 
-        // 延迟到窗口加载完成后再初始化组件，确保视觉树已准备好
-        this.Loaded += OnWindowLoaded;
-        this.Opened += OnWindowOpened;
+        Loaded += OnWindowLoaded;
+        Closed += (_, _) => _completionSource.TrySetResult(ErrorWindowResult.Exit);
+        ConfigureForGenericFailure(allowRetry: true);
     }
 
-    /// <summary>
-    /// 窗口加载完成事件 - 视觉树已准备好
-    /// </summary>
-    private void OnWindowLoaded(object? sender, RoutedEventArgs e)
-    {
-        Console.WriteLine("[ErrorWindow] Window loaded, initializing components...");
-        InitializeComponents();
-    }
-
-    /// <summary>
-    /// 窗口打开事件
-    /// </summary>
-    private void OnWindowOpened(object? sender, EventArgs e)
-    {
-        Console.WriteLine("[ErrorWindow] Window opened and visible");
-    }
-
-    private void InitializeComponents()
-    {
-        Console.WriteLine("[ErrorWindow] Initializing components...");
-        
-        // 错误图标点击事件（进入调试模式 - 隐藏功能）
-        var errorIconBorder = this.FindControl<Border>("ErrorIconBorder");
-        if (errorIconBorder is not null)
-        {
-            errorIconBorder.PointerPressed += OnErrorIconClick;
-            Console.WriteLine("[ErrorWindow] ErrorIconBorder event bound successfully");
-        }
-        else
-        {
-            Console.Error.WriteLine("[ErrorWindow] Failed to find ErrorIconBorder!");
-        }
-
-        // 按钮事件
-        var retryButton = this.FindControl<Button>("RetryButton");
-        var exitButton = this.FindControl<Button>("ExitButton");
-        var openLogButton = this.FindControl<Button>("OpenLogButton");
-
-        if (retryButton is not null)
-        {
-            retryButton.Click += OnRetryClick;
-            Console.WriteLine("[ErrorWindow] RetryButton event bound");
-        }
-        else
-        {
-            Console.Error.WriteLine("[ErrorWindow] Failed to find RetryButton!");
-        }
-
-        if (exitButton is not null)
-        {
-            exitButton.Click += OnExitClick;
-            Console.WriteLine("[ErrorWindow] ExitButton event bound");
-        }
-        else
-        {
-            Console.Error.WriteLine("[ErrorWindow] Failed to find ExitButton!");
-        }
-
-        if (openLogButton is not null)
-        {
-            openLogButton.Click += OnOpenLogClick;
-            Console.WriteLine("[ErrorWindow] OpenLogButton event bound");
-        }
-        else
-        {
-            Console.Error.WriteLine("[ErrorWindow] Failed to find OpenLogButton!");
-        }
-        
-        Console.WriteLine("[ErrorWindow] Components initialization completed");
-    }
-
-    /// <summary>
-    /// 设置错误消息
-    /// </summary>
     public void SetErrorMessage(string message)
     {
-        var errorText = this.FindControl<TextBlock>("ErrorMessageText");
-        if (errorText is not null)
+        if (this.FindControl<TextBlock>("ErrorMessageText") is { } errorText)
         {
             errorText.Text = message;
         }
     }
 
-    /// <summary>
-    /// 设置调试模式
-    /// </summary>
     public void SetDebugMode(bool isDebugMode)
     {
         _isDebugMode = isDebugMode;
-        var titleText = this.FindControl<TextBlock>("TitleText");
-        if (titleText is not null && isDebugMode)
+        if (isDebugMode && this.FindControl<TextBlock>("TitleText") is { } titleText)
         {
-            titleText.Text = "[调试模式] 错误页面";
+            titleText.Text = "[Debug] Launcher error";
         }
     }
 
-    /// <summary>
-    /// 获取用户选择的主程序路径
-    /// </summary>
-    public string? GetCustomHostPath() => _customHostPath;
-
-    /// <summary>
-    /// 是否启用了开发模式
-    /// </summary>
-    public bool IsDevModeEnabled() => _devModeEnabled;
-
-    /// <summary>
-    /// 等待用户选择
-    /// </summary>
-    public Task<ErrorWindowResult> WaitForChoiceAsync()
+    public void ConfigureForHostNotFound()
     {
-        return _completionSource.Task;
+        ApplyActionLayout(
+            title: "Launcher could not find the desktop executable",
+            suggestion: "Pick another executable in debug mode, inspect logs, or retry after fixing the deployment path.",
+            primaryLabel: "Retry",
+            primaryAction: ErrorWindowResult.Retry,
+            secondaryLabel: null,
+            secondaryAction: null);
     }
 
-    /// <summary>
-    /// 错误图标点击事件 - 连续点击 5 次进入调试模式（隐藏功能）
-    /// </summary>
-    private void OnErrorIconClick(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    public void ConfigureForGenericFailure(bool allowRetry)
+    {
+        ApplyActionLayout(
+            title: "Launcher could not confirm startup",
+            suggestion: allowRetry
+                ? "Inspect logs, then retry once the previous startup attempt has fully finished."
+                : "Inspect logs or exit. Launcher will avoid creating another desktop process while the old one is still running.",
+            primaryLabel: allowRetry ? "Retry" : "Activate",
+            primaryAction: allowRetry ? ErrorWindowResult.Retry : ErrorWindowResult.ActivateExisting,
+            secondaryLabel: allowRetry ? null : "Wait",
+            secondaryAction: allowRetry ? null : ErrorWindowResult.ContinueWaiting);
+    }
+
+    public void ConfigureForRunningHostFailure(int? hostPid)
+    {
+        var pidHint = hostPid is > 0 ? $" Current host PID: {hostPid}." : string.Empty;
+        ApplyActionLayout(
+            title: "Startup is still pending",
+            suggestion: $"The desktop process is still running, so Launcher will not start a second instance.{pidHint}",
+            primaryLabel: "Activate",
+            primaryAction: ErrorWindowResult.ActivateExisting,
+            secondaryLabel: "Wait",
+            secondaryAction: ErrorWindowResult.ContinueWaiting);
+    }
+
+    public string? GetCustomHostPath() => _customHostPath;
+
+    public bool IsDevModeEnabled() => _devModeEnabled;
+
+    public Task<ErrorWindowResult> WaitForChoiceAsync() => _completionSource.Task;
+
+    public static bool CheckDevModeEnabled() => LoadDevModeStateInternal();
+
+    public static string? GetSavedCustomHostPath() => LoadCustomHostPathInternal();
+
+    private void OnWindowLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (this.FindControl<Border>("ErrorIconBorder") is { } errorIconBorder)
+        {
+            errorIconBorder.PointerPressed += OnErrorIconClick;
+        }
+
+        if (this.FindControl<Button>("PrimaryActionButton") is { } primaryActionButton)
+        {
+            primaryActionButton.Click += OnPrimaryActionClick;
+        }
+
+        if (this.FindControl<Button>("SecondaryActionButton") is { } secondaryActionButton)
+        {
+            secondaryActionButton.Click += OnSecondaryActionClick;
+        }
+
+        if (this.FindControl<Button>("ExitButton") is { } exitButton)
+        {
+            exitButton.Click += (_, _) => _completionSource.TrySetResult(ErrorWindowResult.Exit);
+        }
+
+        if (this.FindControl<Button>("OpenLogButton") is { } openLogButton)
+        {
+            openLogButton.Click += OnOpenLogClick;
+        }
+    }
+
+    private void ApplyActionLayout(
+        string title,
+        string suggestion,
+        string primaryLabel,
+        ErrorWindowResult primaryAction,
+        string? secondaryLabel,
+        ErrorWindowResult? secondaryAction)
+    {
+        _primaryAction = primaryAction;
+        _secondaryAction = secondaryAction;
+
+        if (this.FindControl<TextBlock>("TitleText") is { } titleText && !_isDebugMode)
+        {
+            titleText.Text = title;
+        }
+
+        if (this.FindControl<TextBlock>("SuggestionText") is { } suggestionText)
+        {
+            suggestionText.Text = suggestion;
+        }
+
+        if (this.FindControl<Button>("PrimaryActionButton") is { } primaryButton)
+        {
+            primaryButton.Content = primaryLabel;
+        }
+
+        if (this.FindControl<Button>("SecondaryActionButton") is { } secondaryButton)
+        {
+            secondaryButton.IsVisible = !string.IsNullOrWhiteSpace(secondaryLabel);
+            secondaryButton.Content = secondaryLabel ?? string.Empty;
+        }
+    }
+
+    private void OnPrimaryActionClick(object? sender, RoutedEventArgs e)
+    {
+        _completionSource.TrySetResult(_primaryAction);
+    }
+
+    private void OnSecondaryActionClick(object? sender, RoutedEventArgs e)
+    {
+        _completionSource.TrySetResult(_secondaryAction ?? ErrorWindowResult.Exit);
+    }
+
+    private void OnErrorIconClick(object? sender, PointerPressedEventArgs e)
     {
         _iconClickCount++;
-
         if (_iconClickCount >= DebugModeClickThreshold && !_isDebugMode)
         {
             EnterDebugMode();
         }
     }
 
-    /// <summary>
-    /// 进入调试模式 - 显示调试窗口
-    /// </summary>
     private async void EnterDebugMode()
     {
         _isDebugMode = true;
 
-        // 创建并显示调试窗口
         var debugWindow = new ErrorDebugWindow(_devModeEnabled, _customHostPath)
         {
             WindowStartupLocation = WindowStartupLocation.CenterOwner
         };
 
-        // 订阅调试窗口关闭事件
-        debugWindow.Closed += (s, e) =>
+        debugWindow.Closed += (_, _) =>
         {
-            // 更新状态
             _devModeEnabled = debugWindow.IsDevModeEnabled;
             _customHostPath = debugWindow.SelectedHostPath;
-
-            // 保存开发模式状态和自定义路径
             SaveDevModeStateInternal(_devModeEnabled);
             SaveCustomHostPathInternal(_customHostPath);
 
-            // 如果启用了开发模式且没有选择路径，自动扫描
-            if (_devModeEnabled && string.IsNullOrEmpty(_customHostPath))
+            if (_devModeEnabled && string.IsNullOrWhiteSpace(_customHostPath))
             {
                 ScanDevPaths();
-                // 扫描到路径后也保存
-                if (!string.IsNullOrEmpty(_customHostPath))
-                {
-                    SaveCustomHostPathInternal(_customHostPath);
-                }
+                SaveCustomHostPathInternal(_customHostPath);
             }
+
+            _isDebugMode = false;
+            _iconClickCount = 0;
         };
 
         await debugWindow.ShowDialog(this);
     }
 
-    /// <summary>
-    /// 扫描开发路径
-    /// </summary>
-    private void ScanDevPaths()
-    {
-        var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
-        var possiblePaths = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
-            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
-            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
-            Path.Combine(AppContext.BaseDirectory, "..", "dev-test", "app-1.0.0-dev", executable),
-        };
-
-        foreach (var path in possiblePaths.Select(Path.GetFullPath).Distinct())
-        {
-            if (File.Exists(path))
-            {
-                _customHostPath = path;
-                break;
-            }
-        }
-    }
-
-    /// <summary>
-    /// 获取配置存储的基础目录
-    /// </summary>
-    private static string GetConfigBaseDirectory()
-    {
-        try
-        {
-            // 优先使用 LocalApplicationData（用户状态）
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (!string.IsNullOrEmpty(appData))
-            {
-                var configDir = Path.Combine(appData, "LanMountainDesktop", ".launcher");
-                return configDir;
-            }
-        }
-        catch
-        {
-            // LocalApplicationData 不可用，回退到 Launcher 所在目录
-        }
-
-        // 回退方案：使用 Launcher 所在目录
-        try
-        {
-            var launcherDir = AppContext.BaseDirectory;
-            var configDir = Path.Combine(launcherDir, ".launcher");
-            return configDir;
-        }
-        catch
-        {
-            // 最后的兜底：使用当前目录
-            return Path.Combine(Directory.GetCurrentDirectory(), ".launcher");
-        }
-    }
-
-    /// <summary>
-    /// 确保配置目录存在
-    /// </summary>
-    private static bool EnsureConfigDirectory(string dirPath)
-    {
-        try
-        {
-            if (!Directory.Exists(dirPath))
-            {
-                Directory.CreateDirectory(dirPath);
-                Console.WriteLine($"[ErrorWindow] Created config directory: {dirPath}");
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to create config directory: {ex.Message}");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 保存开发模式状态（内部方法）
-    /// </summary>
-    private static void SaveDevModeStateInternal(bool enabled)
-    {
-        try
-        {
-            var configDir = GetConfigBaseDirectory();
-            if (!EnsureConfigDirectory(configDir))
-            {
-                Console.Error.WriteLine("[ErrorWindow] Cannot save dev mode: config directory unavailable");
-                return;
-            }
-
-            var devModeFile = Path.Combine(configDir, "devmode.config");
-            File.WriteAllText(devModeFile, enabled ? "1" : "0");
-            Console.WriteLine($"[ErrorWindow] Dev mode state saved: {enabled}");
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to save dev mode state: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 加载开发模式状态（内部方法）
-    /// </summary>
-    private static bool LoadDevModeStateInternal()
-    {
-        try
-        {
-            var configDir = GetConfigBaseDirectory();
-            var devModeFile = Path.Combine(configDir, "devmode.config");
-
-            if (File.Exists(devModeFile))
-            {
-                var content = File.ReadAllText(devModeFile).Trim();
-                var enabled = content == "1";
-                Console.WriteLine($"[ErrorWindow] Dev mode state loaded: {enabled}");
-                return enabled;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to load dev mode state: {ex.Message}");
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 保存自定义主程序路径（内部方法）
-    /// </summary>
-    private static void SaveCustomHostPathInternal(string? path)
-    {
-        try
-        {
-            var configDir = GetConfigBaseDirectory();
-            if (!EnsureConfigDirectory(configDir))
-            {
-                Console.Error.WriteLine("[ErrorWindow] Cannot save custom path: config directory unavailable");
-                return;
-            }
-
-            var hostPathFile = Path.Combine(configDir, "custom-host-path.config");
-            File.WriteAllText(hostPathFile, path ?? string.Empty);
-            Console.WriteLine($"[ErrorWindow] Custom host path saved: {path}");
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to save custom host path: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 加载自定义主程序路径（内部方法）
-    /// </summary>
-    private static string? LoadCustomHostPathInternal()
-    {
-        try
-        {
-            var configDir = GetConfigBaseDirectory();
-            var hostPathFile = Path.Combine(configDir, "custom-host-path.config");
-
-            if (File.Exists(hostPathFile))
-            {
-                var content = File.ReadAllText(hostPathFile).Trim();
-                // 验证路径是否仍然有效
-                if (!string.IsNullOrEmpty(content) && File.Exists(content))
-                {
-                    Console.WriteLine($"[ErrorWindow] Custom host path loaded: {content}");
-                    return content;
-                }
-
-                // 路径已失效，清理配置文件
-                if (!string.IsNullOrEmpty(content))
-                {
-                    Console.WriteLine($"[ErrorWindow] Custom host path is no longer valid: {content}");
-                    try
-                    {
-                        File.Delete(hostPathFile);
-                        Console.WriteLine("[ErrorWindow] Cleared invalid custom host path");
-                    }
-                    catch (Exception clearEx)
-                    {
-                        Console.Error.WriteLine($"[ErrorWindow] Failed to clear invalid host path: {clearEx.Message}");
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to load custom host path: {ex.Message}");
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// 检查是否启用了开发模式（静态方法，启动时调用）
-    /// </summary>
-    public static bool CheckDevModeEnabled()
-    {
-        return LoadDevModeStateInternal();
-    }
-
-    /// <summary>
-    /// 获取保存的自定义主程序路径（静态方法，启动时调用）
-    /// </summary>
-    public static string? GetSavedCustomHostPath()
-    {
-        return LoadCustomHostPathInternal();
-    }
-
-    private void OnRetryClick(object? sender, RoutedEventArgs e)
-    {
-        _completionSource.TrySetResult(ErrorWindowResult.Retry);
-    }
-
-    private void OnExitClick(object? sender, RoutedEventArgs e)
-    {
-        _completionSource.TrySetResult(ErrorWindowResult.Exit);
-    }
-
-    /// <summary>
-    /// 打开日志文件
-    /// </summary>
     private async void OnOpenLogClick(object? sender, RoutedEventArgs e)
     {
         try
         {
             var logFilePath = Logger.GetLogFilePath();
-
-            if (string.IsNullOrEmpty(logFilePath) || !File.Exists(logFilePath))
+            if (!string.IsNullOrWhiteSpace(logFilePath) && File.Exists(logFilePath))
             {
-                // 如果没有日志文件，打开日志目录
-                var logDir = Path.GetDirectoryName(logFilePath);
-                if (!string.IsNullOrEmpty(logDir) && Directory.Exists(logDir))
-                {
-                    OpenFolder(logDir);
-                }
-                else
-                {
-                    // 尝试打开配置目录
-                    var configDir = GetConfigBaseDirectory();
-                    if (Directory.Exists(configDir))
-                    {
-                        OpenFolder(configDir);
-                    }
-                    else
-                    {
-                        Console.WriteLine("[ErrorWindow] No log file or directory available");
-                    }
-                }
+                OpenPath(logFilePath);
                 return;
             }
 
-            Console.WriteLine($"[ErrorWindow] Opening log file: {logFilePath}");
-            OpenFile(logFilePath);
+            var logDirectory = !string.IsNullOrWhiteSpace(logFilePath)
+                ? Path.GetDirectoryName(logFilePath)
+                : null;
+            if (!string.IsNullOrWhiteSpace(logDirectory) && Directory.Exists(logDirectory))
+            {
+                OpenPath(logDirectory);
+                return;
+            }
+
+            var configDirectory = GetConfigBaseDirectory();
+            if (Directory.Exists(configDirectory))
+            {
+                OpenPath(configDirectory);
+            }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to open log: {ex.Message}");
+            Debug.WriteLine($"[ErrorWindow] Failed to open log path: {ex}");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private void ScanDevPaths()
+    {
+        var executable = OperatingSystem.IsWindows() ? "LanMountainDesktop.exe" : "LanMountainDesktop";
+        var candidatePaths = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable)
+        };
+
+        foreach (var candidate in candidatePaths.Select(Path.GetFullPath).Distinct())
+        {
+            if (File.Exists(candidate))
+            {
+                _customHostPath = candidate;
+                break;
+            }
         }
     }
 
-    /// <summary>
-    /// 打开文件
-    /// </summary>
-    private static void OpenFile(string filePath)
+    private static void OpenPath(string path)
     {
-        try
+        if (OperatingSystem.IsWindows())
         {
-            if (OperatingSystem.IsWindows())
+            Process.Start(new ProcessStartInfo
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{filePath}\"",
-                    UseShellExecute = true
-                });
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                Process.Start("open", filePath);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                Process.Start("xdg-open", filePath);
-            }
+                FileName = "explorer.exe",
+                Arguments = $"\"{path}\"",
+                UseShellExecute = true
+            });
+            return;
         }
-        catch (Exception ex)
+
+        if (OperatingSystem.IsMacOS())
         {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to open file: {ex.Message}");
+            Process.Start("open", path);
+            return;
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            Process.Start("xdg-open", path);
         }
     }
 
-    /// <summary>
-    /// 打开文件夹
-    /// </summary>
-    private static void OpenFolder(string folderPath)
+    private static string GetConfigBaseDirectory()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(appData))
+        {
+            return Path.Combine(appData, "LanMountainDesktop", ".launcher");
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, ".launcher");
+    }
+
+    private static string GetDevModePath() => Path.Combine(GetConfigBaseDirectory(), "dev-mode.flag");
+
+    private static string GetCustomHostPathFile() => Path.Combine(GetConfigBaseDirectory(), "custom-host-path.txt");
+
+    private static bool LoadDevModeStateInternal()
     {
         try
         {
-            if (OperatingSystem.IsWindows())
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{folderPath}\"",
-                    UseShellExecute = true
-                });
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                Process.Start("open", folderPath);
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                Process.Start("xdg-open", folderPath);
-            }
+            return File.Exists(GetDevModePath()) &&
+                   bool.TryParse(File.ReadAllText(GetDevModePath()).Trim(), out var enabled) &&
+                   enabled;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.Error.WriteLine($"[ErrorWindow] Failed to open folder: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static void SaveDevModeStateInternal(bool enabled)
+    {
+        try
+        {
+            Directory.CreateDirectory(GetConfigBaseDirectory());
+            File.WriteAllText(GetDevModePath(), enabled.ToString());
+        }
+        catch
+        {
+        }
+    }
+
+    private static string? LoadCustomHostPathInternal()
+    {
+        try
+        {
+            var pathFile = GetCustomHostPathFile();
+            if (!File.Exists(pathFile))
+            {
+                return null;
+            }
+
+            var savedPath = File.ReadAllText(pathFile).Trim();
+            return string.IsNullOrWhiteSpace(savedPath) ? null : savedPath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void SaveCustomHostPathInternal(string? customHostPath)
+    {
+        try
+        {
+            Directory.CreateDirectory(GetConfigBaseDirectory());
+            File.WriteAllText(GetCustomHostPathFile(), customHostPath ?? string.Empty);
+        }
+        catch
+        {
         }
     }
 }
 
-/// <summary>
-/// 错误窗口用户选择结果
-/// </summary>
 public enum ErrorWindowResult
 {
-    /// <summary>
-    /// 重试
-    /// </summary>
     Retry,
-
-    /// <summary>
-    /// 退出
-    /// </summary>
-    Exit
+    Exit,
+    ActivateExisting,
+    ContinueWaiting
 }
