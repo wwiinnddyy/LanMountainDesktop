@@ -143,8 +143,7 @@ public partial class App : Application
 
     private static SplashWindow CreateSplashWindow()
     {
-        var preferences = StartupVisualPreferencesResolver.Resolve();
-        var window = new SplashWindow(preferences.Mode);
+        var window = new SplashWindow();
         TrySetSplashVersionInfo(window, LauncherRuntimeContext.Current);
         return window;
     }

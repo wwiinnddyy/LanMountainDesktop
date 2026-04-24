@@ -7,7 +7,6 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Services;
-using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -15,25 +14,14 @@ public partial class SplashWindow : Window, ISplashStageReporter
 {
     private const int DebugModeClickThreshold = 5;
     private static readonly TimeSpan FadeAnimationDuration = TimeSpan.FromMilliseconds(160);
-    private static readonly TimeSpan SlideAnimationDuration = TimeSpan.FromMilliseconds(260);
 
-    private readonly StartupVisualMode _mode;
     private int _versionTextClickCount;
     private bool _isDebugModeOpened;
     private bool _isOpened;
-    private bool _layoutConfigured;
     private bool _dismissed;
-    private PixelPoint _targetPosition;
-    private PixelPoint _slideHiddenPosition;
 
     public SplashWindow()
-        : this(StartupVisualMode.Fade)
     {
-    }
-
-    public SplashWindow(StartupVisualMode mode)
-    {
-        _mode = mode;
         AvaloniaXamlLoader.Load(this);
         Loaded += OnWindowLoaded;
         Opened += OnWindowOpened;
@@ -55,20 +43,9 @@ public partial class SplashWindow : Window, ISplashStageReporter
         }
 
         _isOpened = true;
-        ConfigureForVisualMode();
 
-        if (_mode == StartupVisualMode.Fade)
-        {
-            Opacity = 0d;
-            await AnimateOpacityAsync(0d, 1d, FadeAnimationDuration).ConfigureAwait(false);
-            return;
-        }
-
-        Opacity = 1d;
-        if (_mode == StartupVisualMode.SlideSplash)
-        {
-            await AnimateWindowPositionAsync(_slideHiddenPosition, _targetPosition, SlideAnimationDuration, EaseOutCubic).ConfigureAwait(false);
-        }
+        Opacity = 0d;
+        await AnimateOpacityAsync(0d, 1d, FadeAnimationDuration).ConfigureAwait(false);
     }
 
     public async Task DismissAsync()
@@ -80,25 +57,13 @@ public partial class SplashWindow : Window, ISplashStageReporter
 
         _dismissed = true;
 
-        // 确保在UI线程上执行
         if (!Dispatcher.UIThread.CheckAccess())
         {
             await Dispatcher.UIThread.InvokeAsync(async () => await DismissAsync());
             return;
         }
 
-        ConfigureForVisualMode();
-
-        if (_mode == StartupVisualMode.SlideSplash)
-        {
-            var from = Position;
-            await AnimateWindowPositionAsync(from, _slideHiddenPosition, SlideAnimationDuration, EaseInCubic).ConfigureAwait(false);
-        }
-        else if (_mode == StartupVisualMode.Fade)
-        {
-            await AnimateOpacityAsync(Opacity, 0d, FadeAnimationDuration).ConfigureAwait(false);
-        }
-
+        await AnimateOpacityAsync(Opacity, 0d, FadeAnimationDuration).ConfigureAwait(false);
         Close();
     }
 
@@ -194,46 +159,6 @@ public partial class SplashWindow : Window, ISplashStageReporter
         UpdateStatus("[Debug Mode] Splash Preview");
     }
 
-    private void ConfigureForVisualMode()
-    {
-        if (_layoutConfigured)
-        {
-            return;
-        }
-
-        _layoutConfigured = true;
-        var compactHero = this.FindControl<Grid>("CompactHero");
-        var fullscreenHero = this.FindControl<Grid>("FullscreenHero");
-
-        if (_mode == StartupVisualMode.Fade)
-        {
-            compactHero?.SetCurrentValue(IsVisibleProperty, true);
-            fullscreenHero?.SetCurrentValue(IsVisibleProperty, false);
-            Background = new SolidColorBrush(Color.Parse("#0B0B0B"));
-            Width = 480;
-            Height = 320;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            return;
-        }
-
-        compactHero?.SetCurrentValue(IsVisibleProperty, false);
-        fullscreenHero?.SetCurrentValue(IsVisibleProperty, true);
-        Background = Brushes.Black;
-        WindowStartupLocation = WindowStartupLocation.Manual;
-
-        var screen = Screens?.Primary ?? Screens?.All.FirstOrDefault();
-        var workingArea = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
-        var scale = Math.Max(screen?.Scaling ?? 1d, 0.01d);
-
-        Width = workingArea.Width / scale;
-        Height = workingArea.Height / scale;
-        _targetPosition = new PixelPoint(workingArea.X, workingArea.Y);
-        _slideHiddenPosition = new PixelPoint(workingArea.X + workingArea.Width, workingArea.Y);
-        Position = _mode == StartupVisualMode.SlideSplash
-            ? _slideHiddenPosition
-            : _targetPosition;
-    }
-
     private void OnVersionTextClick(object? sender, PointerPressedEventArgs e)
     {
         if (_isDebugModeOpened)
@@ -292,20 +217,6 @@ public partial class SplashWindow : Window, ISplashStageReporter
         }, duration, EaseOutCubic).ConfigureAwait(false);
     }
 
-    private async Task AnimateWindowPositionAsync(
-        PixelPoint from,
-        PixelPoint to,
-        TimeSpan duration,
-        Func<double, double> easing)
-    {
-        await AnimateAsync(progress =>
-        {
-            var currentX = (int)Math.Round(from.X + ((to.X - from.X) * progress));
-            var currentY = (int)Math.Round(from.Y + ((to.Y - from.Y) * progress));
-            Position = new PixelPoint(currentX, currentY);
-        }, duration, easing).ConfigureAwait(false);
-    }
-
     private async Task AnimateAsync(Action<double> update, TimeSpan duration, Func<double, double> easing)
     {
         if (duration <= TimeSpan.Zero)
@@ -347,6 +258,4 @@ public partial class SplashWindow : Window, ISplashStageReporter
         var inverse = 1d - value;
         return 1d - (inverse * inverse * inverse);
     }
-
-    private static double EaseInCubic(double value) => value * value * value;
 }
