@@ -20,13 +20,27 @@ internal sealed class StartupAttemptRegistry
     private string? _ownedAttemptId;
 
     public StartupAttemptRegistry()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            ".launcher",
-            "state",
-            "startup-attempt.json"))
+        : this(ResolveDefaultStatePath())
     {
+    }
+
+    private static string ResolveDefaultStatePath()
+    {
+        try
+        {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return Path.Combine(resolver.ResolveDataRoot(), ".launcher", "state", "startup-attempt.json");
+        }
+        catch
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop",
+                ".launcher",
+                "state",
+                "startup-attempt.json");
+        }
     }
 
     internal StartupAttemptRegistry(string statePath)

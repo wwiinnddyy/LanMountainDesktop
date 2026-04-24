@@ -24,8 +24,7 @@ public sealed class AppDatabaseService
 
     public AppDatabaseService()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var dataDirectory = Path.Combine(appData, "LanMountainDesktop");
+        var dataDirectory = AppDataPathProvider.GetDataRoot();
         _databasePath = Path.Combine(dataDirectory, "app.db");
     }
 

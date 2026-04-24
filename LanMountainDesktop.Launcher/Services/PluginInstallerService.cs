@@ -63,13 +63,28 @@ internal sealed class PluginInstallerService
             return null;
         }
 
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localAppData))
+        string? allowedRoot = null;
+        try
         {
-            return null;
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            allowedRoot = EnsureTrailingSeparator(resolver.ResolveDataRoot());
+        }
+        catch
+        {
         }
 
-        var allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), "LanMountainDesktop"));
+        if (string.IsNullOrWhiteSpace(allowedRoot))
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(localAppData))
+            {
+                return null;
+            }
+
+            allowedRoot = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(localAppData), "LanMountainDesktop"));
+        }
+
         var normalizedPluginsDirectory = EnsureTrailingSeparator(Path.GetFullPath(pluginsDirectory));
         if (normalizedPluginsDirectory.StartsWith(allowedRoot, StringComparison.OrdinalIgnoreCase))
         {

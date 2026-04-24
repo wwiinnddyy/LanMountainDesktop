@@ -55,6 +55,16 @@ internal static class Logger
     {
         try
         {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return Path.Combine(resolver.ResolveDataRoot(), ".launcher", "logs");
+        }
+        catch
+        {
+        }
+
+        try
+        {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrEmpty(appData))
             {

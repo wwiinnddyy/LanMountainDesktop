@@ -1,0 +1,153 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        mc:Ignorable="d"
+        d:DesignWidth="520"
+        d:DesignHeight="480"
+        x:Class="LanMountainDesktop.Launcher.Views.DataLocationPromptWindow"
+        x:DataType="views:DataLocationPromptWindow"
+        Title="选择数据保存位置"
+        Width="520"
+        Height="480"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+  <Grid x:Name="ContentGrid"
+        Opacity="0">
+    <Grid.RenderTransform>
+      <TranslateTransform Y="24" />
+    </Grid.RenderTransform>
+    <Grid Margin="36" RowDefinitions="Auto,*,Auto">
+      <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
+        <TextBlock Text="选择数据保存位置"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock Text="决定将应用数据保存在哪里，可随时在设置中更改"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      </StackPanel>
+
+      <StackPanel Grid.Row="1" Spacing="12">
+        <Border x:Name="AdminWarningBanner"
+                Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                Padding="12,10"
+                IsVisible="False">
+          <StackPanel Spacing="4">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ui:SymbolIcon Symbol="Important"
+                             FontSize="16"
+                             Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+              <TextBlock Text="无法保存到应用目录"
+                         FontWeight="SemiBold"
+                         FontSize="13"
+                         Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </StackPanel>
+            <TextBlock Text="当前安装目录需要管理员权限才能写入，数据将自动保存到系统用户目录。"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="SystemOptionBorder"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                BorderThickness="2"
+                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                Padding="16,14">
+          <Grid ColumnDefinitions="Auto,*">
+            <RadioButton x:Name="SystemRadio"
+                         Grid.Column="0"
+                         VerticalAlignment="Top"
+                         Margin="0,2,12,0"
+                         GroupName="DataLocation"
+                         IsChecked="True" />
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="保存在系统用户目录（推荐）"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <TextBlock Text="数据与当前 Windows 用户绑定，重装应用或更新后数据不会丢失"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock x:Name="SystemPathText"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="PortableOptionBorder"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                Padding="16,14">
+          <Grid ColumnDefinitions="Auto,*">
+            <RadioButton x:Name="PortableRadio"
+                         Grid.Column="0"
+                         VerticalAlignment="Top"
+                         Margin="0,2,12,0"
+                         GroupName="DataLocation"
+                         IsEnabled="False" />
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="保存在应用安装目录"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <TextBlock Text="便于携带，可随应用文件夹整体移动到其他电脑"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock x:Name="PortablePathText"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="MigrationInfoBorder"
+                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                Padding="12,10"
+                IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ui:SymbolIcon Symbol="Message"
+                           FontSize="16"
+                           Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+            <TextBlock x:Name="MigrationInfoText"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="10"
+                  Margin="0,20,0,0">
+        <Button x:Name="CancelButton"
+                Content="取消"
+                Theme="{DynamicResource ButtonTheme}"
+                IsVisible="False" />
+        <Button x:Name="ConfirmButton"
+                Content="确认"
+                Theme="{DynamicResource AccentButtonTheme}" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

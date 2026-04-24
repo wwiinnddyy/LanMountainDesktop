@@ -102,6 +102,16 @@ internal static class LauncherDebugSettingsStore
     {
         try
         {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return Path.Combine(resolver.ResolveDataRoot(), ".launcher");
+        }
+        catch
+        {
+        }
+
+        try
+        {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrWhiteSpace(appData))
             {

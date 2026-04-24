@@ -12,10 +12,12 @@ internal sealed record HostLaunchPlan(
 
 internal static class HostLaunchPlanBuilder
 {
+    public const string DataRootOptionName = "data-root";
+
     private static readonly string[] LauncherOnlyOptions =
     [
         "debug", "show-loading-details", "plugins-dir", "source", "result",
-        "app-root",
+        "app-root", DataRootOptionName,
         LauncherIpcConstants.LauncherPidEnvVar,
         LauncherIpcConstants.PackageRootEnvVar,
         LauncherIpcConstants.VersionEnvVar,
@@ -25,7 +27,8 @@ internal static class HostLaunchPlanBuilder
     public static HostLaunchPlan Build(
         CommandContext context,
         DeploymentLocator deploymentLocator,
-        HostResolutionResult resolution)
+        HostResolutionResult resolution,
+        string? dataRoot = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(deploymentLocator);
@@ -39,7 +42,7 @@ internal static class HostLaunchPlanBuilder
         var hostPath = Path.GetFullPath(resolution.ResolvedHostPath);
         var packageRoot = ResolvePackageRoot(hostPath, resolution.AppRoot, resolution.ResolutionSource);
         var versionInfo = deploymentLocator.GetVersionInfo();
-        var arguments = BuildForwardedArguments(context, packageRoot, versionInfo);
+        var arguments = BuildForwardedArguments(context, packageRoot, versionInfo, dataRoot);
         var environment = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [LauncherIpcConstants.LauncherPidEnvVar] = Environment.ProcessId.ToString(),
@@ -47,6 +50,11 @@ internal static class HostLaunchPlanBuilder
             [LauncherIpcConstants.VersionEnvVar] = versionInfo.Version,
             [LauncherIpcConstants.CodenameEnvVar] = versionInfo.Codename
         };
+
+        if (!string.IsNullOrWhiteSpace(dataRoot))
+        {
+            environment["LMD_DATA_ROOT"] = dataRoot;
+        }
 
         return new HostLaunchPlan(
             hostPath,
@@ -92,7 +100,8 @@ internal static class HostLaunchPlanBuilder
     private static IReadOnlyList<string> BuildForwardedArguments(
         CommandContext context,
         string packageRoot,
-        AppVersionInfo versionInfo)
+        AppVersionInfo versionInfo,
+        string? dataRoot = null)
     {
         var arguments = new List<string>();
 
@@ -143,6 +152,11 @@ internal static class HostLaunchPlanBuilder
         arguments.Add($"--{LauncherIpcConstants.PackageRootEnvVar}={packageRoot}");
         arguments.Add($"--{LauncherIpcConstants.VersionEnvVar}={versionInfo.Version}");
         arguments.Add($"--{LauncherIpcConstants.CodenameEnvVar}={versionInfo.Codename}");
+
+        if (!string.IsNullOrWhiteSpace(dataRoot))
+        {
+            arguments.Add($"--{DataRootOptionName}={dataRoot}");
+        }
 
         return arguments;
     }

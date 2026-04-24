@@ -167,10 +167,7 @@ internal sealed class WallpaperMediaService : IWallpaperMediaService
 
     public WallpaperMediaService()
     {
-        var appDataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
-        _wallpapersDirectory = Path.Combine(appDataRoot, "Wallpapers");
+        _wallpapersDirectory = AppDataPathProvider.GetWallpapersDirectory();
     }
 
     public WallpaperMediaType DetectMediaType(string? path)
@@ -1026,10 +1023,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
     {
         _pluginRuntimeService = pluginRuntimeService;
 
-        var dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "PluginMarket");
+        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
         var cacheService = new AirAppMarketCacheService(dataRoot);
         _indexService = new AirAppMarketIndexService(cacheService);
         if (_pluginRuntimeService is not null)
@@ -1049,10 +1043,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             return;
         }
 
-        var dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "PluginMarket");
+        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
         _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
     }
 

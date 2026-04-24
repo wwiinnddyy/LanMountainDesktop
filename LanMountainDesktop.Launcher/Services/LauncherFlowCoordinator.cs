@@ -23,6 +23,7 @@ internal sealed class LauncherFlowCoordinator
     private readonly PluginInstallerService _pluginInstallerService;
     private readonly StartupAttemptRegistry _startupAttemptRegistry;
     private readonly LauncherCoordinatorIpcServer? _coordinatorIpcServer;
+    private readonly DataLocationResolver _dataLocationResolver;
     private readonly IReadOnlyList<IOobeStep> _oobeSteps;
 
     public LauncherFlowCoordinator(
@@ -41,7 +42,12 @@ internal sealed class LauncherFlowCoordinator
         _pluginInstallerService = pluginInstallerService;
         _startupAttemptRegistry = startupAttemptRegistry ?? new StartupAttemptRegistry();
         _coordinatorIpcServer = coordinatorIpcServer;
-        _oobeSteps = [new WelcomeOobeStep(_oobeStateService, _context)];
+        _dataLocationResolver = new DataLocationResolver(deploymentLocator.GetAppRoot());
+        _oobeSteps =
+        [
+            new WelcomeOobeStep(_oobeStateService, _context),
+            new DataLocationOobeStep(_dataLocationResolver)
+        ];
     }
 
     public static string ResolveSuccessPolicyKey(CommandContext context)
@@ -1025,7 +1031,8 @@ internal sealed class LauncherFlowCoordinator
         bool forceDirectMode,
         string? retryTag)
     {
-        var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution);
+        var dataRoot = _dataLocationResolver.ResolveDataRoot();
+        var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution, dataRoot);
         var hostPath = plan.HostPath;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {

@@ -22,6 +22,7 @@ public sealed class Program
     public static void Main(string[] args)
     {
         AppLogger.Initialize();
+        AppDataPathProvider.Initialize(args);
         DevPluginOptions.Parse(args);
         RegisterGlobalExceptionLogging();
         var restartParentProcessId = LauncherRuntimeMetadata.GetRestartParentProcessId(args);
