@@ -1458,7 +1458,7 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private void CleanupIncomingArtifacts()
+    internal void CleanupIncomingArtifacts()
     {
         foreach (var path in new[]
                  {

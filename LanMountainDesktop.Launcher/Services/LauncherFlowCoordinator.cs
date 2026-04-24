@@ -270,7 +270,18 @@ internal sealed class LauncherFlowCoordinator
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
-                    return WithAdditionalDetails(updateResult, launcherContextDetails);
+                    Logger.Warn($"Update apply failed, will try to launch existing version. Error='{updateResult.Message}'.");
+                    reporter.Report("update", "Update failed, launching existing version...");
+                    // Clean up corrupted update files to prevent repeated failures
+                    try
+                    {
+                        _updateEngine.CleanupIncomingArtifacts();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn($"Failed to cleanup update artifacts after failed update: {ex.Message}");
+                    }
+                    // Continue to launch existing version instead of aborting
                 }
 
                 reporter.Report("plugins", "Applying plugin upgrades...");
@@ -278,7 +289,8 @@ internal sealed class LauncherFlowCoordinator
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success)
                 {
-                    return WithAdditionalDetails(queueResult, launcherContextDetails);
+                    Logger.Warn($"Plugin upgrade failed, continuing startup. Error='{queueResult.Message}'.");
+                    reporter.Report("plugins", "Plugin upgrade failed, continuing...");
                 }
 
                 if (oobeDecision.ShouldShowOobe)
