@@ -10,10 +10,6 @@ namespace LanMountainDesktop.Launcher.Services;
 internal sealed class StartupAttemptRegistry
 {
     private static readonly TimeSpan CoordinatorHeartbeatTimeout = TimeSpan.FromSeconds(10);
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true
-    };
 
     private readonly string _statePath;
     private readonly string _mutexName;
@@ -429,7 +425,7 @@ internal sealed class StartupAttemptRegistry
         try
         {
             var json = File.ReadAllText(_statePath);
-            return JsonSerializer.Deserialize<StartupAttemptRecord>(json, SerializerOptions);
+            return JsonSerializer.Deserialize(json, AppJsonContext.Default.StartupAttemptRecord);
         }
         catch
         {
@@ -445,7 +441,7 @@ internal sealed class StartupAttemptRegistry
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(_statePath, JsonSerializer.Serialize(record, SerializerOptions));
+        File.WriteAllText(_statePath, JsonSerializer.Serialize(record, AppJsonContext.Default.StartupAttemptRecord));
     }
 
     private static bool IsAttachable(StartupAttemptRecord record)
