@@ -1,9 +1,57 @@
 {
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
+    "Launcher (Debug Mode)": {
+      "commandName": "Project",
+      "commandLineArgs": "launch --debug",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
     "Launcher (Launch Mode)": {
       "commandName": "Project",
       "commandLineArgs": "launch",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Preview Debug Window)": {
+      "commandName": "Project",
+      "commandLineArgs": "preview-debug",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Preview Splash)": {
+      "commandName": "Project",
+      "commandLineArgs": "preview-splash",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Preview Error)": {
+      "commandName": "Project",
+      "commandLineArgs": "preview-error",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Preview Update)": {
+      "commandName": "Project",
+      "commandLineArgs": "preview-update",
+      "workingDirectory": "$(SolutionDir)",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Launcher (Preview OOBE)": {
+      "commandName": "Project",
+      "commandLineArgs": "preview-oobe",
       "workingDirectory": "$(SolutionDir)",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"

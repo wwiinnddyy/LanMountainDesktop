@@ -4,10 +4,10 @@ using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher;
 
-internal static class Program
+public static class Program
 {
     [STAThread]
-    private static async Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         var commandContext = CommandContext.FromArgs(args);
         var execution = LauncherExecutionContext.Capture();
@@ -66,7 +66,7 @@ internal static class Program
         }
     }
 
-    private static AppBuilder BuildAvaloniaApp()
+    public static AppBuilder BuildAvaloniaApp()
     {
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
