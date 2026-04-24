@@ -79,6 +79,14 @@ public partial class SplashWindow : Window, ISplashStageReporter
         }
 
         _dismissed = true;
+
+        // 确保在UI线程上执行
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            await Dispatcher.UIThread.InvokeAsync(async () => await DismissAsync());
+            return;
+        }
+
         ConfigureForVisualMode();
 
         if (_mode == StartupVisualMode.SlideSplash)
@@ -91,13 +99,7 @@ public partial class SplashWindow : Window, ISplashStageReporter
             await AnimateOpacityAsync(Opacity, 0d, FadeAnimationDuration).ConfigureAwait(false);
         }
 
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (IsVisible)
-            {
-                Close();
-            }
-        });
+        Close();
     }
 
     public void Report(string stage, string message)

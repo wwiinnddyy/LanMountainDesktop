@@ -955,7 +955,7 @@ internal sealed class LauncherFlowCoordinator
     {
         try
         {
-            await splashWindow.DismissAsync().ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(() => splashWindow.DismissAsync());
         }
         catch (Exception ex)
         {
