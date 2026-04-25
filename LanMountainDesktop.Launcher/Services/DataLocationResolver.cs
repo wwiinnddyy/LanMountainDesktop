@@ -131,7 +131,9 @@ internal sealed class DataLocationResolver
     {
         try
         {
-            var configPath = ResolveConfigPath();
+            // 配置文件必须位于默认系统数据路径下的 Launcher 目录中
+            // 避免循环依赖：不能调用 ResolveConfigPath() -> ResolveLauncherDataPath() -> ResolveDataRoot() -> LoadConfig()
+            var configPath = Path.Combine(_defaultSystemDataPath, LauncherFolderName, ConfigFileName);
             if (!File.Exists(configPath))
             {
                 return null;
