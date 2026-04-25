@@ -23,7 +23,6 @@
   </Design.DataContext>
 
   <Grid x:Name="ContentGrid">
-
     <!-- 步骤 1: 打字机动画开场 -->
     <Grid x:Name="TypingStep" Margin="60,80,60,60">
       <!-- 主标题区域（左上角） -->

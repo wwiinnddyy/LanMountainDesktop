@@ -20,8 +20,20 @@
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Grid RowDefinitions="*,Auto"
-        Background="#0B0B0B">
+  <Grid RowDefinitions="*,Auto">
+    <!-- 背景图片 -->
+    <Image x:Name="BackgroundImage"
+           Grid.RowSpan="2"
+           Stretch="UniformToFill"
+           IsVisible="False"
+           Opacity="0"/>
+
+    <!-- 半透明遮罩层 -->
+    <Border x:Name="BackgroundOverlay"
+            Grid.RowSpan="2"
+            Background="#0B0B0B"
+            Opacity="0.85"/>
+
     <Grid Grid.Row="0"
           Margin="24">
       <TextBlock x:Name="AppNameText"

@@ -431,7 +431,7 @@ public partial class OobeWindow : Window
         // 应用数据位置选择
         if (!_isDebugMode)
         {
-            _resolver.ApplyLocationChoice(_selectedDataLocationMode, _migrateExistingData);
+            _resolver.ApplyLocationChoice(_selectedDataLocationMode, null, _migrateExistingData);
         }
 
         await NavigateToStep(4);

@@ -7,7 +7,6 @@ namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class UpdateEngineService
 {
-    private const string LauncherDirectoryName = ".launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
     private const string SnapshotsDirectoryName = "snapshots";
@@ -22,7 +21,6 @@ internal sealed class UpdateEngineService
 
     private readonly DeploymentLocator _deploymentLocator;
     private readonly string _appRoot;
-    private readonly string _dataRoot;
     private readonly string _launcherRoot;
     private readonly string _incomingRoot;
     private readonly string _snapshotsRoot;
@@ -31,8 +29,8 @@ internal sealed class UpdateEngineService
     {
         _deploymentLocator = deploymentLocator;
         _appRoot = deploymentLocator.GetAppRoot();
-        _dataRoot = new DataLocationResolver(_appRoot).ResolveDataRoot();
-        _launcherRoot = Path.Combine(_dataRoot, LauncherDirectoryName);
+        var resolver = new DataLocationResolver(_appRoot);
+        _launcherRoot = resolver.ResolveLauncherDataPath();
         _incomingRoot = Path.Combine(_launcherRoot, UpdateDirectoryName, IncomingDirectoryName);
         _snapshotsRoot = Path.Combine(_launcherRoot, SnapshotsDirectoryName);
     }

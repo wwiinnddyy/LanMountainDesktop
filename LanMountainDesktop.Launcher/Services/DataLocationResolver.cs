@@ -6,16 +6,15 @@ namespace LanMountainDesktop.Launcher.Services;
 internal sealed class DataLocationResolver
 {
     private const string ConfigFileName = "data-location.config.json";
-    private const string PortableDataFolderName = "AppData";
+    private const string LauncherFolderName = "Launcher";
+    private const string DesktopFolderName = "Desktop";
 
     private readonly string _appRoot;
-    private readonly string _configPath;
     private readonly string _defaultSystemDataPath;
 
     public DataLocationResolver(string appRoot)
     {
         _appRoot = Path.GetFullPath(appRoot);
-        _configPath = Path.Combine(_appRoot, ConfigFileName);
         _defaultSystemDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "LanMountainDesktop");
@@ -23,12 +22,19 @@ internal sealed class DataLocationResolver
 
     public string AppRoot => _appRoot;
 
-    public string ConfigPath => _configPath;
-
+    /// <summary>
+    /// 默认系统数据路径（用户目录）
+    /// </summary>
     public string DefaultSystemDataPath => _defaultSystemDataPath;
 
-    public string DefaultPortableDataPath => Path.Combine(_appRoot, PortableDataFolderName);
+    /// <summary>
+    /// 默认便携模式数据路径（应用目录下的 AppData）
+    /// </summary>
+    public string DefaultPortableDataPath => Path.Combine(_appRoot, "AppData");
 
+    /// <summary>
+    /// 检查是否允许便携模式（应用目录是否可写）
+    /// </summary>
     public bool IsPortableModeAllowed()
     {
         try
@@ -44,40 +50,9 @@ internal sealed class DataLocationResolver
         }
     }
 
-    public DataLocationConfig? LoadConfig()
-    {
-        try
-        {
-            if (!File.Exists(_configPath))
-            {
-                return null;
-            }
-
-            var json = File.ReadAllText(_configPath);
-            return JsonSerializer.Deserialize(json, AppJsonContext.Default.DataLocationConfig);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Failed to load data location config from '{_configPath}'. Error='{ex.Message}'.");
-            return null;
-        }
-    }
-
-    public bool SaveConfig(DataLocationConfig config)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(config, AppJsonContext.Default.DataLocationConfig);
-            File.WriteAllText(_configPath, json);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Failed to save data location config to '{_configPath}'. Error='{ex.Message}'.");
-            return false;
-        }
-    }
-
+    /// <summary>
+    /// 解析数据根目录（用户选择的位置）
+    /// </summary>
     public string ResolveDataRoot()
     {
         var config = LoadConfig();
@@ -90,13 +65,53 @@ internal sealed class DataLocationResolver
         {
             var portablePath = !string.IsNullOrWhiteSpace(config.PortableDataPath)
                 ? config.PortableDataPath
-                : DefaultPortableDataPath;
+                : _defaultSystemDataPath;
             return Path.GetFullPath(portablePath);
         }
 
         return !string.IsNullOrWhiteSpace(config.SystemDataPath)
             ? Path.GetFullPath(config.SystemDataPath)
             : _defaultSystemDataPath;
+    }
+
+    /// <summary>
+    /// 启动器数据目录（日志、配置、状态等）
+    /// </summary>
+    public string ResolveLauncherDataPath()
+    {
+        return Path.Combine(ResolveDataRoot(), LauncherFolderName);
+    }
+
+    /// <summary>
+    /// 桌面应用数据目录（组件、设置、插件等）
+    /// </summary>
+    public string ResolveDesktopDataPath()
+    {
+        return Path.Combine(ResolveDataRoot(), DesktopFolderName);
+    }
+
+    /// <summary>
+    /// 数据位置配置文件路径（保存在 Launcher 目录下）
+    /// </summary>
+    public string ResolveConfigPath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), ConfigFileName);
+    }
+
+    /// <summary>
+    /// 启动器日志目录
+    /// </summary>
+    public string ResolveLauncherLogsPath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), "logs");
+    }
+
+    /// <summary>
+    /// 启动器状态目录
+    /// </summary>
+    public string ResolveLauncherStatePath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), "state");
     }
 
     public DataLocationMode ResolveMode()
@@ -112,116 +127,127 @@ internal sealed class DataLocationResolver
             : DataLocationMode.System;
     }
 
+    public DataLocationConfig? LoadConfig()
+    {
+        try
+        {
+            var configPath = ResolveConfigPath();
+            if (!File.Exists(configPath))
+            {
+                return null;
+            }
+
+            var json = File.ReadAllText(configPath);
+            return JsonSerializer.Deserialize(json, AppJsonContext.Default.DataLocationConfig);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to load data location config. Error='{ex.Message}'.");
+            return null;
+        }
+    }
+
+    public bool SaveConfig(DataLocationConfig config)
+    {
+        try
+        {
+            var launcherPath = ResolveLauncherDataPath();
+            Directory.CreateDirectory(launcherPath);
+
+            var configPath = ResolveConfigPath();
+            var json = JsonSerializer.Serialize(config, AppJsonContext.Default.DataLocationConfig);
+            File.WriteAllText(configPath, json);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to save data location config. Error='{ex.Message}'.");
+            return false;
+        }
+    }
+
+    public bool ApplyLocationChoice(DataLocationMode mode, string? customPath = null, bool migrateExistingData = false)
+    {
+        var targetDataRoot = mode == DataLocationMode.Portable && !string.IsNullOrWhiteSpace(customPath)
+            ? Path.GetFullPath(customPath)
+            : _defaultSystemDataPath;
+
+        var config = new DataLocationConfig
+        {
+            DataLocationMode = mode.ToString(),
+            SystemDataPath = _defaultSystemDataPath,
+            PortableDataPath = mode == DataLocationMode.Portable ? targetDataRoot : null
+        };
+
+        // 先创建目录结构
+        try
+        {
+            Directory.CreateDirectory(ResolveLauncherDataPath());
+            Directory.CreateDirectory(ResolveDesktopDataPath());
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Failed to create data directories. Error='{ex.Message}'.");
+            return false;
+        }
+
+        // 保存配置
+        if (!SaveConfig(config))
+        {
+            return false;
+        }
+
+        if (migrateExistingData && mode == DataLocationMode.Portable)
+        {
+            MigrateSystemDataToPortable(targetDataRoot);
+        }
+
+        return true;
+    }
+
     public bool HasExistingSystemData()
     {
-        var systemPath = _defaultSystemDataPath;
-        if (!Directory.Exists(systemPath))
+        var desktopPath = Path.Combine(_defaultSystemDataPath, DesktopFolderName);
+        if (!Directory.Exists(desktopPath))
         {
             return false;
         }
 
         var markerFiles = new[]
         {
-            Path.Combine(systemPath, "settings.json"),
-            Path.Combine(systemPath, "launcher-settings.json"),
-            Path.Combine(systemPath, "component-state.db"),
-            Path.Combine(systemPath, "app.db")
+            Path.Combine(desktopPath, "settings.json"),
+            Path.Combine(desktopPath, "component-state.db"),
+            Path.Combine(desktopPath, "app.db")
         };
 
         return markerFiles.Any(File.Exists);
     }
 
-    public bool ApplyLocationChoice(DataLocationMode mode, bool migrateExistingData)
-    {
-        var config = new DataLocationConfig
-        {
-            DataLocationMode = mode.ToString(),
-            SystemDataPath = _defaultSystemDataPath,
-            PortableDataPath = DefaultPortableDataPath
-        };
-
-        if (!SaveConfig(config))
-        {
-            return false;
-        }
-
-        var targetDataRoot = mode == DataLocationMode.Portable
-            ? DefaultPortableDataPath
-            : _defaultSystemDataPath;
-
-        try
-        {
-            Directory.CreateDirectory(targetDataRoot);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Failed to create data directory '{targetDataRoot}'. Error='{ex.Message}'.");
-            return false;
-        }
-
-        if (migrateExistingData && mode == DataLocationMode.Portable)
-        {
-            MigrateSystemDataToPortable();
-        }
-
-        return true;
-    }
-
-    private void MigrateSystemDataToPortable()
+    private void MigrateSystemDataToPortable(string targetDataRoot)
     {
         if (!HasExistingSystemData())
         {
             return;
         }
 
-        var sourcePath = _defaultSystemDataPath;
-        var targetPath = DefaultPortableDataPath;
+        var sourceDesktopPath = Path.Combine(_defaultSystemDataPath, DesktopFolderName);
+        var targetDesktopPath = Path.Combine(targetDataRoot, DesktopFolderName);
 
         try
         {
-            Directory.CreateDirectory(targetPath);
+            Directory.CreateDirectory(targetDesktopPath);
 
-            var filesToMigrate = Directory.GetFiles(sourcePath, "*", SearchOption.TopDirectoryOnly);
-            foreach (var file in filesToMigrate)
+            // 迁移桌面数据
+            if (Directory.Exists(sourceDesktopPath))
             {
-                var fileName = Path.GetFileName(file);
-                var destFile = Path.Combine(targetPath, fileName);
-                try
-                {
-                    File.Copy(file, destFile, overwrite: true);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"Failed to migrate file '{fileName}'. Error='{ex.Message}'.");
-                }
+                CopyDirectory(sourceDesktopPath, targetDesktopPath);
             }
 
-            var dirsToMigrate = Directory.GetDirectories(sourcePath, "*", SearchOption.TopDirectoryOnly);
-            foreach (var dir in dirsToMigrate)
-            {
-                var dirName = Path.GetFileName(dir);
-                if (string.Equals(dirName, ".launcher", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(Path.GetFileName(sourcePath), "LanMountainDesktop", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var destDir = Path.Combine(targetPath, dirName);
-                try
-                {
-                    CopyDirectory(dir, destDir);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"Failed to migrate directory '{dirName}'. Error='{ex.Message}'.");
-                }
-            }
-
-            Logger.Info($"Data migration completed. Source='{sourcePath}'; Target='{targetPath}'.");
+            Logger.Info($"Data migration completed. Target='{targetDataRoot}'.");
         }
         catch (Exception ex)
         {
-            Logger.Warn($"Data migration failed. Source='{sourcePath}'; Target='{targetPath}'. Error='{ex.Message}'.");
+            Logger.Warn($"Data migration failed. Target='{targetDataRoot}'. Error='{ex.Message}'.");
         }
     }
 

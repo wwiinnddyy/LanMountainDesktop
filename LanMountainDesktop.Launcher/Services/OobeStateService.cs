@@ -23,7 +23,7 @@ internal sealed class OobeStateService
         var stateRoot = string.IsNullOrWhiteSpace(stateRootOverride)
             ? ResolveStateRoot(appRoot)
             : Path.GetFullPath(stateRootOverride);
-        _stateDirectory = Path.Combine(stateRoot, ".launcher", "state");
+        _stateDirectory = Path.Combine(stateRoot, "Launcher", "state");
         _statePath = Path.Combine(_stateDirectory, "oobe-state.json");
         _legacyMarkerPath = Path.Combine(_stateDirectory, "first_run_completed");
     }

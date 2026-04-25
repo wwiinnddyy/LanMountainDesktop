@@ -29,9 +29,37 @@ public partial class SplashWindow : Window, ISplashStageReporter
 
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
+        InitializeBackgroundImage();
+
         if (this.FindControl<Border>("VersionTextBorder") is { } versionBorder)
         {
             versionBorder.PointerPressed += OnVersionTextClick;
+        }
+    }
+
+    private void InitializeBackgroundImage()
+    {
+        try
+        {
+            var imageInfo = LauncherBackgroundService.LoadBackgroundImage();
+            if (imageInfo is { IsValid: true, Bitmap: not null })
+            {
+                if (this.FindControl<Image>("BackgroundImage") is { } backgroundImage)
+                {
+                    backgroundImage.Source = imageInfo.Bitmap;
+                    backgroundImage.IsVisible = true;
+                    backgroundImage.Opacity = 1;
+                }
+                Logger.Info("[SplashWindow] 背景图片加载成功");
+            }
+            else if (imageInfo is { Exists: true, IsValid: false })
+            {
+                Logger.Warn($"[SplashWindow] 背景图片校验失败: {imageInfo.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[SplashWindow] 加载背景图片失败: {ex.Message}");
         }
     }
 

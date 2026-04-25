@@ -43,11 +43,11 @@ internal sealed class DataLocationOobeStep : IOobeStep
             if (result is null)
             {
                 Logger.Info("DataLocation OOBE step: user cancelled or closed window. Using default system location.");
-                _resolver.ApplyLocationChoice(DataLocationMode.System, false);
+                _resolver.ApplyLocationChoice(DataLocationMode.System, null, false);
             }
             else
             {
-                var success = _resolver.ApplyLocationChoice(result.SelectedMode, result.MigrateExistingData);
+                var success = _resolver.ApplyLocationChoice(result.SelectedMode, null, result.MigrateExistingData);
                 Logger.Info(
                     $"DataLocation OOBE step: user selected '{result.SelectedMode}'. " +
                     $"Migrate={result.MigrateExistingData}; Success={success}.");

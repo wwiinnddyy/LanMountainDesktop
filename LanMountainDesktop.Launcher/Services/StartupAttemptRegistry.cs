@@ -26,14 +26,14 @@ internal sealed class StartupAttemptRegistry
         {
             var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
             var resolver = new DataLocationResolver(appRoot);
-            return Path.Combine(resolver.ResolveDataRoot(), ".launcher", "state", "startup-attempt.json");
+            return Path.Combine(resolver.ResolveLauncherStatePath(), "startup-attempt.json");
         }
         catch
         {
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "LanMountainDesktop",
-                ".launcher",
+                "Launcher",
                 "state",
                 "startup-attempt.json");
         }
