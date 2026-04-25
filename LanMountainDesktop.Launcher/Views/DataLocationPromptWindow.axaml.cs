@@ -221,6 +221,7 @@ internal partial class DataLocationPromptWindow : Window
             {
                 Duration = TimeSpan.FromMilliseconds(500),
                 Easing = new CubicEaseOut(),
+                FillMode = FillMode.Forward,
                 Children =
                 {
                     new KeyFrame
@@ -240,6 +241,7 @@ internal partial class DataLocationPromptWindow : Window
             {
                 Duration = TimeSpan.FromMilliseconds(500),
                 Easing = new CubicEaseOut(),
+                FillMode = FillMode.Forward,
                 Children =
                 {
                     new KeyFrame
@@ -280,6 +282,7 @@ internal partial class DataLocationPromptWindow : Window
             {
                 Duration = TimeSpan.FromMilliseconds(200),
                 Easing = new CubicEaseIn(),
+                FillMode = FillMode.Forward,
                 Children =
                 {
                     new KeyFrame

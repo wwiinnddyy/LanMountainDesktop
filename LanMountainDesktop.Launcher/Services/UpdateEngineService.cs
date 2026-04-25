@@ -22,6 +22,7 @@ internal sealed class UpdateEngineService
 
     private readonly DeploymentLocator _deploymentLocator;
     private readonly string _appRoot;
+    private readonly string _dataRoot;
     private readonly string _launcherRoot;
     private readonly string _incomingRoot;
     private readonly string _snapshotsRoot;
@@ -30,7 +31,8 @@ internal sealed class UpdateEngineService
     {
         _deploymentLocator = deploymentLocator;
         _appRoot = deploymentLocator.GetAppRoot();
-        _launcherRoot = Path.Combine(_appRoot, LauncherDirectoryName);
+        _dataRoot = new DataLocationResolver(_appRoot).ResolveDataRoot();
+        _launcherRoot = Path.Combine(_dataRoot, LauncherDirectoryName);
         _incomingRoot = Path.Combine(_launcherRoot, UpdateDirectoryName, IncomingDirectoryName);
         _snapshotsRoot = Path.Combine(_launcherRoot, SnapshotsDirectoryName);
     }

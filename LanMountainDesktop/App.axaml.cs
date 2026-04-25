@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -150,6 +150,37 @@ public partial class App : Application
 
         _settingsFacade.Settings.Changed += OnSettingsChanged;
         _appearanceThemeService.Changed += OnAppearanceThemeChanged;
+
+        // 监听系统主题变化
+        PropertyChanged += OnAppPropertyChanged;
+    }
+
+    private void OnAppPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == ActualThemeVariantProperty)
+        {
+            // 系统主题变化时，检查是否需要更新
+            var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ThemeMode;
+            if (string.Equals(themeMode, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
+            {
+                var newThemeVariant = (ThemeVariant?)e.NewValue;
+                var isDark = newThemeVariant == ThemeVariant.Dark;
+
+                // 同步到设置
+                var currentThemeState = _settingsFacade.Theme.Get();
+                if (currentThemeState.IsNightMode != isDark)
+                {
+                    _settingsFacade.Theme.Save(currentThemeState with { IsNightMode = isDark });
+                }
+
+                // 应用主题
+                Dispatcher.UIThread.Post(() =>
+                {
+                    ApplyThemeFromSettings();
+                    RefreshTrayIconContent();
+                }, DispatcherPriority.Background);
+            }
+        }
     }
 
     public override void Initialize()
@@ -762,9 +793,30 @@ public partial class App : Application
     private void ApplyThemeFromSettings()
     {
         var snapshot = _appearanceThemeService.GetCurrent();
-        RequestedThemeVariant = snapshot.IsNightMode
-            ? ThemeVariant.Dark
-            : ThemeVariant.Light;
+        var themeMode = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ThemeMode;
+
+        // 处理跟随系统主题模式
+        if (string.Equals(themeMode, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            // 使用 Avalonia 的系统主题检测
+            var systemTheme = ActualThemeVariant;
+            RequestedThemeVariant = systemTheme;
+
+            // 同步 IsNightMode 到设置
+            var isSystemDark = systemTheme == ThemeVariant.Dark;
+            var currentThemeState = _settingsFacade.Theme.Get();
+            if (currentThemeState.IsNightMode != isSystemDark)
+            {
+                _settingsFacade.Theme.Save(currentThemeState with { IsNightMode = isSystemDark });
+            }
+        }
+        else
+        {
+            RequestedThemeVariant = snapshot.IsNightMode
+                ? ThemeVariant.Dark
+                : ThemeVariant.Light;
+        }
+
         ApplyAdaptiveThemeResources();
     }
 
@@ -1054,6 +1106,7 @@ public partial class App : Application
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeMode), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.CornerRadiusStyle), StringComparer.OrdinalIgnoreCase) ||
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&

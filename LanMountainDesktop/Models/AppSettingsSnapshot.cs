@@ -27,6 +27,8 @@ public sealed class AppSettingsSnapshot
 
     public string? SelectedWallpaperSeed { get; set; }
 
+    public string ThemeMode { get; set; } = "light";
+
     public string? WallpaperPath { get; set; }
 
     public string WallpaperType { get; set; } = "Image";

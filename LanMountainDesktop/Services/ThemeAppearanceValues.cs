@@ -13,6 +13,10 @@ public static class ThemeAppearanceValues
     public const string ColorSchemeFollowSystem = "follow_system";
     public const string ColorSchemeNative = "native";
 
+    public const string ThemeModeLight = "light";
+    public const string ThemeModeDark = "dark";
+    public const string ThemeModeFollowSystem = "follow_system";
+
     public const string MaterialNone = "none";
     public const string MaterialMica = "mica";
     public const string MaterialAcrylic = "acrylic";
