@@ -141,6 +141,32 @@
             </Grid>
           </Border>
 
+          <!-- 数据位置选择页面 -->
+          <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
+                  CornerRadius="8"
+                  Padding="15">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="📁 数据位置选择 (DataLocationPromptWindow)"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="选择数据保存位置"
+                           FontSize="11"
+                           Opacity="0.6"
+                           Margin="0,3,0,0" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="8">
+                <ToggleSwitch Content="启用功能"
+                              IsChecked="{Binding IsDataLocationEnabled}"
+                              OnContent="功能"
+                              OffContent="查看" />
+                <Button Content="打开"
+                        Command="{Binding OpenDataLocationCommand}"
+                        HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
         </StackPanel>
       </ScrollViewer>
 

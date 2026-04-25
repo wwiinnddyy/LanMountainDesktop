@@ -20,39 +20,29 @@
     <views:SplashWindow />
   </Design.DataContext>
 
-  <Grid RowDefinitions="*,Auto"
-        Background="#0B0B0B">
-    <Grid Grid.Row="0">
-      <Grid x:Name="CompactHero"
-            Margin="24">
-        <TextBlock x:Name="AppNameText"
-                   Text="LanMountain Desktop"
-                   FontSize="24"
-                   FontWeight="SemiBold"
-                   VerticalAlignment="Top"
-                   HorizontalAlignment="Left"
-                   Foreground="#F6F7FB" />
-      </Grid>
+  <Grid RowDefinitions="*,Auto">
+    <!-- 背景图片 -->
+    <Image x:Name="BackgroundImage"
+           Grid.RowSpan="2"
+           Stretch="UniformToFill"
+           IsVisible="False"
+           Opacity="0"/>
 
-      <Grid x:Name="FullscreenHero"
-            IsVisible="False">
-        <StackPanel HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="24">
-          <Border Width="240"
-                  Height="240"
-                  Background="Transparent">
-            <Image Source="/Assets/logo_nightly.png"
-                   Stretch="Uniform" />
-          </Border>
+    <!-- 半透明遮罩层 -->
+    <Border x:Name="BackgroundOverlay"
+            Grid.RowSpan="2"
+            Background="#0B0B0B"
+            Opacity="0.85"/>
 
-          <TextBlock Text="LanMountain Desktop"
-                     HorizontalAlignment="Center"
-                     FontSize="26"
-                     FontWeight="SemiBold"
-                     Foreground="#F6F7FB" />
-        </StackPanel>
-      </Grid>
+    <Grid Grid.Row="0"
+          Margin="24">
+      <TextBlock x:Name="AppNameText"
+                 Text="LanMountain Desktop"
+                 FontSize="24"
+                 FontWeight="SemiBold"
+                 VerticalAlignment="Top"
+                 HorizontalAlignment="Left"
+                 Foreground="#F6F7FB" />
     </Grid>
 
     <Border Grid.Row="1"

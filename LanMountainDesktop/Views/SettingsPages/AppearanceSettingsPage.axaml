@@ -13,12 +13,21 @@
                                Text="{Binding ThemeHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding NightModeLabel}">
+            <ui:SettingsExpander Header="{Binding ThemeModeLabel}"
+                                 Description="{Binding ThemeModeDescription}">
                 <ui:SettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="WeatherMoon" />
                 </ui:SettingsExpander.IconSource>
                 <ui:SettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding IsNightMode}" />
+                    <ComboBox Width="200"
+                              ItemsSource="{Binding ThemeModeOptions}"
+                              SelectedItem="{Binding SelectedThemeMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </ui:SettingsExpander.Footer>
             </ui:SettingsExpander>
 

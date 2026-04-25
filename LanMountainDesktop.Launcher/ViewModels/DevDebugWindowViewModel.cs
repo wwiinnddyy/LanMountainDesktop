@@ -13,6 +13,7 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
     private bool _isErrorEnabled = true;
     private bool _isUpdateEnabled = true;
     private bool _isOobeEnabled = true;
+    private bool _isDataLocationEnabled = true;
     private string _statusMessage = "就绪";
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -87,6 +88,23 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 数据位置选择页面是否启用实际功能
+    /// </summary>
+    public bool IsDataLocationEnabled
+    {
+        get => _isDataLocationEnabled;
+        set
+        {
+            if (_isDataLocationEnabled != value)
+            {
+                _isDataLocationEnabled = value;
+                OnPropertyChanged();
+                UpdateStatus($"数据位置选择: {(value ? "功能模式" : "仅查看")}");
+            }
+        }
+    }
+
     #endregion
 
     #region 状态信息
@@ -132,6 +150,11 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
     public ICommand OpenOobeCommand { get; }
 
     /// <summary>
+    /// 打开数据位置选择页面命令
+    /// </summary>
+    public ICommand OpenDataLocationCommand { get; }
+
+    /// <summary>
     /// 全部切换到查看模式命令
     /// </summary>
     public ICommand SetAllViewOnlyCommand { get; }
@@ -171,6 +194,11 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
     public event EventHandler<OobeOpenEventArgs>? OpenOobeRequested;
 
     /// <summary>
+    /// 请求打开数据位置选择页面
+    /// </summary>
+    public event EventHandler<DataLocationOpenEventArgs>? OpenDataLocationRequested;
+
+    /// <summary>
     /// 请求关闭窗口
     /// </summary>
     public event EventHandler? CloseRequested;
@@ -199,12 +227,18 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
             OpenOobeRequested?.Invoke(this, new OobeOpenEventArgs(IsOobeEnabled));
         });
 
+        OpenDataLocationCommand = new RelayCommand(() =>
+        {
+            OpenDataLocationRequested?.Invoke(this, new DataLocationOpenEventArgs(IsDataLocationEnabled));
+        });
+
         SetAllViewOnlyCommand = new RelayCommand(() =>
         {
             IsSplashEnabled = false;
             IsErrorEnabled = false;
             IsUpdateEnabled = false;
             IsOobeEnabled = false;
+            IsDataLocationEnabled = false;
             UpdateStatus("全部页面已切换到查看模式");
         });
 
@@ -214,6 +248,7 @@ public sealed class DevDebugWindowViewModel : INotifyPropertyChanged
             IsErrorEnabled = true;
             IsUpdateEnabled = true;
             IsOobeEnabled = true;
+            IsDataLocationEnabled = true;
             UpdateStatus("全部页面已切换到功能模式");
         });
 
@@ -258,6 +293,12 @@ public class OobeOpenEventArgs : EventArgs
 {
     public bool IsFunctional { get; }
     public OobeOpenEventArgs(bool isFunctional) => IsFunctional = isFunctional;
+}
+
+public class DataLocationOpenEventArgs : EventArgs
+{
+    public bool IsFunctional { get; }
+    public DataLocationOpenEventArgs(bool isFunctional) => IsFunctional = isFunctional;
 }
 
 #endregion

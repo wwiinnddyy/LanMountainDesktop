@@ -25,6 +25,7 @@ public partial class DevDebugWindow : Window
         _viewModel.OpenErrorRequested += OnOpenErrorRequested;
         _viewModel.OpenUpdateRequested += OnOpenUpdateRequested;
         _viewModel.OpenOobeRequested += OnOpenOobeRequested;
+        _viewModel.OpenDataLocationRequested += OnOpenDataLocationRequested;
         _viewModel.CloseRequested += OnCloseRequested;
     }
 
@@ -133,6 +134,17 @@ public partial class DevDebugWindow : Window
         {
             Console.Error.WriteLine($"[DevDebugWindow] Error during OOBE simulation: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 打开数据位置选择页面
+    /// </summary>
+    private void OnOpenDataLocationRequested(object? sender, DataLocationOpenEventArgs e)
+    {
+        var appRoot = AppDomain.CurrentDomain.BaseDirectory;
+        var resolver = new DataLocationResolver(appRoot);
+        var window = new DataLocationPromptWindow(resolver);
+        window.Show();
     }
 
     /// <summary>

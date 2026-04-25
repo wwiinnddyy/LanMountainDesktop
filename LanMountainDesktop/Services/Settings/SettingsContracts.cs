@@ -33,7 +33,8 @@ public sealed record ThemeAppearanceSettingsState(
     string CornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle,
     string ThemeColorMode = ThemeAppearanceValues.ColorModeDefaultNeutral,
     string SystemMaterialMode = ThemeAppearanceValues.MaterialNone,
-    string? SelectedWallpaperSeed = null);
+    string? SelectedWallpaperSeed = null,
+    string ThemeMode = ThemeAppearanceValues.ThemeModeLight);
 public sealed record StatusBarSettingsState(
     IReadOnlyList<string> TopStatusComponentIds,
     IReadOnlyList<string> PinnedTaskbarActions,

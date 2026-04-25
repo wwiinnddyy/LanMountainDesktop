@@ -21,9 +21,9 @@ internal sealed class OobeStateService
         _executionSnapshot = executionSnapshot ?? LauncherExecutionContext.Capture();
 
         var stateRoot = string.IsNullOrWhiteSpace(stateRootOverride)
-            ? GetDefaultStateRoot()
+            ? ResolveStateRoot(appRoot)
             : Path.GetFullPath(stateRootOverride);
-        _stateDirectory = Path.Combine(stateRoot, ".launcher", "state");
+        _stateDirectory = Path.Combine(stateRoot, "Launcher", "state");
         _statePath = Path.Combine(_stateDirectory, "oobe-state.json");
         _legacyMarkerPath = Path.Combine(_stateDirectory, "first_run_completed");
     }
@@ -208,14 +208,22 @@ internal sealed class OobeStateService
         };
     }
 
-    private static string GetDefaultStateRoot()
+    private static string ResolveStateRoot(string appRoot)
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(appData))
+        try
         {
-            throw new InvalidOperationException("LocalApplicationData is unavailable.");
+            var resolver = new DataLocationResolver(appRoot);
+            return resolver.ResolveDataRoot();
         }
+        catch
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(appData))
+            {
+                throw new InvalidOperationException("LocalApplicationData is unavailable.");
+            }
 
-        return Path.Combine(appData, "LanMountainDesktop");
+            return Path.Combine(appData, "LanMountainDesktop");
+        }
     }
 }

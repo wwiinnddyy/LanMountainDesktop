@@ -34,7 +34,9 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(PendingUpgrade))]
 [JsonSerializable(typeof(List<PendingUpgrade>))]
 [JsonSerializable(typeof(OobeStateFile))]
+[JsonSerializable(typeof(DataLocationConfig))]
 [JsonSerializable(typeof(GitHubRelease))]
 [JsonSerializable(typeof(GitHubAsset))]
 [JsonSerializable(typeof(List<GitHubRelease>))]
+[JsonSerializable(typeof(StartupAttemptRecord))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;

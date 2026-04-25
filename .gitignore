@@ -514,3 +514,4 @@ nul
 /*.AppImage
 /velopack-output-local-verify
 /velopack-output-local
+/test-aot-publish

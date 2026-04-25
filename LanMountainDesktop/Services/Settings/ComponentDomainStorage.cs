@@ -76,9 +76,7 @@ internal sealed class SqliteComponentDomainStorage :
     public SqliteComponentDomainStorage(string? settingsRoot = null)
     {
         _settingsRoot = string.IsNullOrWhiteSpace(settingsRoot)
-            ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop")
+            ? AppDataPathProvider.GetDataRoot()
             : settingsRoot.Trim();
         _dbPath = Path.Combine(_settingsRoot, "component-state.db");
         _layoutJsonPath = Path.Combine(_settingsRoot, "desktop-layout-settings.json");

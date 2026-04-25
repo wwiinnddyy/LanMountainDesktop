@@ -23,6 +23,7 @@ internal sealed class LauncherFlowCoordinator
     private readonly PluginInstallerService _pluginInstallerService;
     private readonly StartupAttemptRegistry _startupAttemptRegistry;
     private readonly LauncherCoordinatorIpcServer? _coordinatorIpcServer;
+    private readonly DataLocationResolver _dataLocationResolver;
     private readonly IReadOnlyList<IOobeStep> _oobeSteps;
 
     public LauncherFlowCoordinator(
@@ -41,7 +42,12 @@ internal sealed class LauncherFlowCoordinator
         _pluginInstallerService = pluginInstallerService;
         _startupAttemptRegistry = startupAttemptRegistry ?? new StartupAttemptRegistry();
         _coordinatorIpcServer = coordinatorIpcServer;
-        _oobeSteps = [new WelcomeOobeStep(_oobeStateService, _context)];
+        _dataLocationResolver = new DataLocationResolver(deploymentLocator.GetAppRoot());
+        _oobeSteps =
+        [
+            new WelcomeOobeStep(_oobeStateService, _context),
+            new DataLocationOobeStep(_dataLocationResolver)
+        ];
     }
 
     public static string ResolveSuccessPolicyKey(CommandContext context)
@@ -270,7 +276,18 @@ internal sealed class LauncherFlowCoordinator
                 var updateResult = await _updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
                 if (!updateResult.Success)
                 {
-                    return WithAdditionalDetails(updateResult, launcherContextDetails);
+                    Logger.Warn($"Update apply failed, will try to launch existing version. Error='{updateResult.Message}'.");
+                    reporter.Report("update", "Update failed, launching existing version...");
+                    // Clean up corrupted update files to prevent repeated failures
+                    try
+                    {
+                        _updateEngine.CleanupIncomingArtifacts();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn($"Failed to cleanup update artifacts after failed update: {ex.Message}");
+                    }
+                    // Continue to launch existing version instead of aborting
                 }
 
                 reporter.Report("plugins", "Applying plugin upgrades...");
@@ -278,7 +295,8 @@ internal sealed class LauncherFlowCoordinator
                 var queueResult = new PluginUpgradeQueueService(_pluginInstallerService).ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success)
                 {
-                    return WithAdditionalDetails(queueResult, launcherContextDetails);
+                    Logger.Warn($"Plugin upgrade failed, continuing startup. Error='{queueResult.Message}'.");
+                    reporter.Report("plugins", "Plugin upgrade failed, continuing...");
                 }
 
                 if (oobeDecision.ShouldShowOobe)
@@ -943,7 +961,7 @@ internal sealed class LauncherFlowCoordinator
     {
         try
         {
-            await splashWindow.DismissAsync().ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(() => splashWindow.DismissAsync());
         }
         catch (Exception ex)
         {
@@ -1013,7 +1031,8 @@ internal sealed class LauncherFlowCoordinator
         bool forceDirectMode,
         string? retryTag)
     {
-        var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution);
+        var dataRoot = _dataLocationResolver.ResolveDataRoot();
+        var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution, dataRoot);
         var hostPath = plan.HostPath;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {

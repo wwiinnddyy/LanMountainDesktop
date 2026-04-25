@@ -30,8 +30,7 @@ public sealed class LauncherSettingsService
 
     public LauncherSettingsService()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var settingsDirectory = Path.Combine(appData, "LanMountainDesktop");
+        var settingsDirectory = AppDataPathProvider.GetSettingsDirectory();
         _settingsPath = Path.Combine(settingsDirectory, "launcher-settings.json");
         _legacyAppSettingsPath = Path.Combine(settingsDirectory, "settings.json");
     }

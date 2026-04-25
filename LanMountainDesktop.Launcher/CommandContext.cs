@@ -37,11 +37,25 @@ internal sealed class CommandContext
 
     /// <summary>
     /// 是否处于调试模式（从 Rider/VS 等 IDE 启动）
-    /// 仅当明确指定 --debug 参数或调试器附加时才启用
+    /// 当满足以下任一条件时启用：
+    /// 1. 明确指定 --debug 参数
+    /// 2. 调试器附加（Debugger.IsAttached）
+    /// 3. DOTNET_ENVIRONMENT 环境变量为 Development（IDE 调试启动时自动设置）
     /// </summary>
     public bool IsDebugMode =>
         Options.ContainsKey("debug") ||
-        System.Diagnostics.Debugger.IsAttached;
+        System.Diagnostics.Debugger.IsAttached ||
+        IsDevelopmentEnvironment;
+
+    /// <summary>
+    /// 是否为 Development 环境（DOTNET_ENVIRONMENT=Development）
+    /// Rider/VS 调试启动时会自动设置此环境变量
+    /// </summary>
+    public bool IsDevelopmentEnvironment =>
+        string.Equals(
+            System.Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
+            "Development",
+            StringComparison.OrdinalIgnoreCase);
 
     public bool IsPreviewCommand =>
         Command.StartsWith("preview-", StringComparison.OrdinalIgnoreCase);

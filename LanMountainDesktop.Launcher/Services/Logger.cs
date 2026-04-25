@@ -55,10 +55,20 @@ internal static class Logger
     {
         try
         {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return resolver.ResolveLauncherLogsPath();
+        }
+        catch
+        {
+        }
+
+        try
+        {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrEmpty(appData))
             {
-                return Path.Combine(appData, "LanMountainDesktop", ".launcher", "logs");
+                return Path.Combine(appData, "LanMountainDesktop", "Launcher", "logs");
             }
         }
         catch
@@ -68,7 +78,7 @@ internal static class Logger
         try
         {
             var launcherDir = AppContext.BaseDirectory;
-            return Path.Combine(launcherDir, ".launcher", "logs");
+            return Path.Combine(launcherDir, "Launcher", "logs");
         }
         catch
         {

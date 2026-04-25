@@ -10,23 +10,33 @@ namespace LanMountainDesktop.Launcher.Services;
 internal sealed class StartupAttemptRegistry
 {
     private static readonly TimeSpan CoordinatorHeartbeatTimeout = TimeSpan.FromSeconds(10);
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true
-    };
 
     private readonly string _statePath;
     private readonly string _mutexName;
     private string? _ownedAttemptId;
 
     public StartupAttemptRegistry()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            ".launcher",
-            "state",
-            "startup-attempt.json"))
+        : this(ResolveDefaultStatePath())
     {
+    }
+
+    private static string ResolveDefaultStatePath()
+    {
+        try
+        {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return Path.Combine(resolver.ResolveLauncherStatePath(), "startup-attempt.json");
+        }
+        catch
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "LanMountainDesktop",
+                "Launcher",
+                "state",
+                "startup-attempt.json");
+        }
     }
 
     internal StartupAttemptRegistry(string statePath)
@@ -415,7 +425,7 @@ internal sealed class StartupAttemptRegistry
         try
         {
             var json = File.ReadAllText(_statePath);
-            return JsonSerializer.Deserialize<StartupAttemptRecord>(json, SerializerOptions);
+            return JsonSerializer.Deserialize(json, AppJsonContext.Default.StartupAttemptRecord);
         }
         catch
         {
@@ -431,7 +441,7 @@ internal sealed class StartupAttemptRegistry
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(_statePath, JsonSerializer.Serialize(record, SerializerOptions));
+        File.WriteAllText(_statePath, JsonSerializer.Serialize(record, AppJsonContext.Default.StartupAttemptRecord));
     }
 
     private static bool IsAttachable(StartupAttemptRecord record)

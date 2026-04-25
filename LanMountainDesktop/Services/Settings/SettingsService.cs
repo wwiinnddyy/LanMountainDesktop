@@ -26,9 +26,7 @@ internal sealed class SettingsService : ISettingsService
 
     public SettingsService()
     {
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
+        var root = AppDataPathProvider.GetDataRoot();
         _pluginSettingsPath = Path.Combine(root, "plugin-settings.json");
     }
 

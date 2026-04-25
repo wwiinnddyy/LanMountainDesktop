@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -360,51 +360,59 @@ internal sealed class DeploymentLocator
     /// </summary>
     private static string? ScanDevelopmentPaths(string executable)
     {
+        var solutionRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        
         var possiblePaths = new[]
         {
-            // 浠?Launcher 椤圭洰杩愯
+            // 标准开发路径：解决方案根目录下的 LanMountainDesktop 项目
+            Path.Combine(solutionRoot, "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(solutionRoot, "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // 向后兼容
             Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
             Path.Combine(AppContext.BaseDirectory, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
             
-            // 浠庤В鍐虫柟妗堟牴鐩綍杩愯
-            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
-            Path.Combine(AppContext.BaseDirectory, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
-            
-            // dev-test 鐩綍
-            Path.Combine(AppContext.BaseDirectory, "..", "dev-test", "app-1.0.0-dev", executable),
+            // dev-test 目录
+            Path.Combine(solutionRoot, "dev-test", "app-1.0.0-dev", executable),
         };
 
         foreach (var path in possiblePaths.Select(Path.GetFullPath).Distinct())
         {
+            Logger.Info($"Scanning development path: {path}");
             if (File.Exists(path))
             {
+                Logger.Info($"Found host at: {path}");
                 return path;
             }
         }
 
         return null;
-    }
-
+     }
+    
     /// <summary>
-    /// 鑾峰彇寮€鍙戠幆澧冨彲鑳界殑涓荤▼搴忚矾寰?    /// </summary>
+    /// 鑾峰彇寮€鍙戞ā寮忥細鏌ユ壘涓荤▼搴忚経
+    /// </summary>
     private static IEnumerable<string> GetDevelopmentPaths(string executable)
     {
         var launcherDir = AppContext.BaseDirectory;
         
+        // 计算解决方案根目录：从 LanMountainDesktop.Launcher\bin\Debug\net10.0\ 向上4级
+        var solutionRoot = Path.GetFullPath(Path.Combine(launcherDir, "..", "..", "..", ".."));
+        
         var possiblePaths = new[]
         {
-            // 浠?Launcher 椤圭洰杩愯锛?.\LanMountainDesktop\bin\Debug\net10.0\LanMountainDesktop.exe
+            // 标准开发路径：解决方案根目录下的 LanMountainDesktop 项目
+            Path.Combine(solutionRoot, "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
+            Path.Combine(solutionRoot, "LanMountainDesktop", "bin", "Release", "net10.0", executable),
+            
+            // 向后兼容：如果 Launcher 在特殊目录结构中
             Path.Combine(launcherDir, "..", "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
             Path.Combine(launcherDir, "..", "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
             
-            // 浠庤В鍐虫柟妗堟牴鐩綍杩愯锛歀anMountainDesktop\bin\Debug\net10.0\LanMountainDesktop.exe
-            Path.Combine(launcherDir, "..", "LanMountainDesktop", "bin", "Debug", "net10.0", executable),
-            Path.Combine(launcherDir, "..", "LanMountainDesktop", "bin", "Release", "net10.0", executable),
-            
-            // 浠?dev-test 鐩綍杩愯
-            Path.Combine(launcherDir, "..", "dev-test", "app-1.0.0-dev", executable),
+            // dev-test 目录
+            Path.Combine(solutionRoot, "dev-test", "app-1.0.0-dev", executable),
         };
-
+        
         return possiblePaths.Select(Path.GetFullPath).Distinct();
     }
 
@@ -489,7 +497,8 @@ internal sealed class DeploymentLocator
             }
 
             // 3. 淇濈暀鏈夊揩鐓х殑鐗堟湰锛堢敤浜庡洖婊氾級
-            var snapshotDir = Path.Combine(_appRoot, ".launcher", "snapshots");
+            var resolver = new DataLocationResolver(_appRoot);
+            var snapshotDir = Path.Combine(resolver.ResolveLauncherDataPath(), "snapshots");
             if (Directory.Exists(snapshotDir))
             {
                 try

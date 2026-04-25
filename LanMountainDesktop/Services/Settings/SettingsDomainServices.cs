@@ -167,10 +167,7 @@ internal sealed class WallpaperMediaService : IWallpaperMediaService
 
     public WallpaperMediaService()
     {
-        var appDataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop");
-        _wallpapersDirectory = Path.Combine(appDataRoot, "Wallpapers");
+        _wallpapersDirectory = AppDataPathProvider.GetWallpapersDirectory();
     }
 
     public WallpaperMediaType DetectMediaType(string? path)
@@ -269,7 +266,21 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             cornerRadiusStyle,
             ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
             ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
-            snapshot.SelectedWallpaperSeed);
+            snapshot.SelectedWallpaperSeed,
+            NormalizeThemeMode(snapshot.ThemeMode));
+    }
+
+    private static string NormalizeThemeMode(string? value)
+    {
+        if (string.Equals(value, ThemeAppearanceValues.ThemeModeDark, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeAppearanceValues.ThemeModeDark;
+        }
+        if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeAppearanceValues.ThemeModeFollowSystem;
+        }
+        return ThemeAppearanceValues.ThemeModeLight;
     }
 
     public void Save(ThemeAppearanceSettingsState state)
@@ -324,6 +335,13 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         {
             snapshot.SelectedWallpaperSeed = normalizedSelectedWallpaperSeed;
             changedKeys.Add(nameof(AppSettingsSnapshot.SelectedWallpaperSeed));
+        }
+
+        var normalizedThemeMode = NormalizeThemeMode(state.ThemeMode);
+        if (!string.Equals(snapshot.ThemeMode, normalizedThemeMode, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.ThemeMode = normalizedThemeMode;
+            changedKeys.Add(nameof(AppSettingsSnapshot.ThemeMode));
         }
 
         if (changedKeys.Count == 0)
@@ -1026,10 +1044,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
     {
         _pluginRuntimeService = pluginRuntimeService;
 
-        var dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "PluginMarket");
+        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
         var cacheService = new AirAppMarketCacheService(dataRoot);
         _indexService = new AirAppMarketIndexService(cacheService);
         if (_pluginRuntimeService is not null)
@@ -1049,10 +1064,7 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             return;
         }
 
-        var dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "PluginMarket");
+        var dataRoot = AppDataPathProvider.GetPluginMarketDirectory();
         _installService = new AirAppMarketInstallService(_pluginRuntimeService, dataRoot);
     }
 

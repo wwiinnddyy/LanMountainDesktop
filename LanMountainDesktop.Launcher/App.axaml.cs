@@ -18,6 +18,12 @@ public partial class App : Application
 {
     public override void Initialize()
     {
+        if (Design.IsDesignMode)
+        {
+            AvaloniaXamlLoader.Load(this);
+            return;
+        }
+
         Logger.Initialize();
         var context = LauncherRuntimeContext.Current;
         var execution = LauncherExecutionContext.Capture();
@@ -32,6 +38,12 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (Design.IsDesignMode)
+        {
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -45,6 +57,18 @@ public partial class App : Application
 
             if (HandlePreviewCommand(context, desktop))
             {
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
+            // 调试模式：只显示 DevDebugWindow，不走正常启动流程
+            // 避免启动主程序后 Launcher 自动退出，导致开发者无法预览 UI
+            if (context.IsDebugMode && !context.IsPreviewCommand &&
+                !string.Equals(context.Command, "apply-update", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Info("Debug mode active — showing DevDebugWindow instead of normal launch flow.");
+                var devDebugWindow = new DevDebugWindow();
+                devDebugWindow.Show();
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
@@ -119,8 +143,7 @@ public partial class App : Application
 
     private static SplashWindow CreateSplashWindow()
     {
-        var preferences = StartupVisualPreferencesResolver.Resolve();
-        var window = new SplashWindow(preferences.Mode);
+        var window = new SplashWindow();
         TrySetSplashVersionInfo(window, LauncherRuntimeContext.Current);
         return window;
     }

@@ -102,10 +102,20 @@ internal static class LauncherDebugSettingsStore
     {
         try
         {
+            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(appRoot);
+            return resolver.ResolveLauncherDataPath();
+        }
+        catch
+        {
+        }
+
+        try
+        {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (!string.IsNullOrWhiteSpace(appData))
             {
-                return Path.Combine(appData, "LanMountainDesktop", ".launcher");
+                return Path.Combine(appData, "LanMountainDesktop", "Launcher");
             }
         }
         catch
@@ -114,11 +124,11 @@ internal static class LauncherDebugSettingsStore
 
         try
         {
-            return Path.Combine(AppContext.BaseDirectory, ".launcher");
+            return Path.Combine(AppContext.BaseDirectory, "Launcher");
         }
         catch
         {
-            return Path.Combine(Directory.GetCurrentDirectory(), ".launcher");
+            return Path.Combine(Directory.GetCurrentDirectory(), "Launcher");
         }
     }
 }

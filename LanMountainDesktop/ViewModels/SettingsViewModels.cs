@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.ComponentSystem;
@@ -576,10 +579,36 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         RefreshLocalizedText();
         ThemeColorModes = CreateThemeColorModes();
+        ThemeModeOptions = CreateThemeModeOptions();
 
         _isInitializing = true;
         Load();
         _isInitializing = false;
+
+    }
+
+    partial void OnSelectedThemeModeChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        // 根据选择的主题模式更新夜间模式状态
+        var newIsNightMode = value.Value switch
+        {
+            ThemeAppearanceValues.ThemeModeDark => true,
+            ThemeAppearanceValues.ThemeModeLight => false,
+            ThemeAppearanceValues.ThemeModeFollowSystem => Application.Current?.ActualThemeVariant == ThemeVariant.Dark,
+            _ => IsNightMode
+        };
+
+        if (IsNightMode != newIsNightMode)
+        {
+            IsNightMode = newIsNightMode;
+        }
+
+        PersistCurrentState(restartRequired: false);
     }
 
     public event Action<string>? RestartRequested;
@@ -594,6 +623,27 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _themeColor = string.Empty;
+
+    [ObservableProperty]
+    private IReadOnlyList<SelectionOption> _themeModeOptions = [];
+
+    [ObservableProperty]
+    private SelectionOption _selectedThemeMode = new(ThemeAppearanceValues.ThemeModeLight, "Light");
+
+    [ObservableProperty]
+    private string _themeModeLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _themeModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _themeModeLightText = string.Empty;
+
+    [ObservableProperty]
+    private string _themeModeDarkText = string.Empty;
+
+    [ObservableProperty]
+    private string _themeModeFollowSystemText = string.Empty;
 
     [ObservableProperty]
     private Color _customSeedPickerValue = DefaultSeedColor;
@@ -797,16 +847,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         UpdatePreview(theme);
     }
 
-    partial void OnIsNightModeChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        PersistCurrentState(restartRequired: false);
-    }
-
     partial void OnUseSystemChromeChanged(bool value)
     {
         if (_isInitializing)
@@ -887,7 +927,11 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PageTitle = L("settings.appearance.title", "Appearance");
         PageDescription = L("settings.appearance.description", "Adjust theme source, material background, and window chrome.");
         ThemeHeader = L("settings.appearance.theme_header", "Theme");
-        NightModeLabel = L("settings.color.enable_night_mode_toggle", "Enable night mode");
+        ThemeModeLabel = L("settings.appearance.theme_mode_label", "Theme mode");
+        ThemeModeDescription = L("settings.appearance.theme_mode_desc", "Choose light, dark, or follow system preference.");
+        ThemeModeLightText = L("settings.appearance.theme_mode.light", "Light");
+        ThemeModeDarkText = L("settings.appearance.theme_mode.dark", "Dark");
+        ThemeModeFollowSystemText = L("settings.appearance.theme_mode.follow_system", "Follow system");
         UseSystemChromeLabel = L("settings.color.use_system_chrome_toggle", "Use system window chrome");
         ThemeColorLabel = L("settings.color.theme_color_label", "Theme Accent Color");
         ThemeColorModeLabel = L("settings.appearance.theme_color_mode_label", "Theme color source");
@@ -957,6 +1001,26 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         SelectedSystemMaterialMode = SystemMaterialModes.FirstOrDefault(option =>
             string.Equals(option.Value, savedSystemMaterialMode, StringComparison.OrdinalIgnoreCase))
             ?? SystemMaterialModes[0];
+
+        // 应用主题模式设置
+        var savedThemeMode = NormalizeThemeMode(theme.ThemeMode);
+        SelectedThemeMode = ThemeModeOptions.FirstOrDefault(option =>
+            string.Equals(option.Value, savedThemeMode, StringComparison.OrdinalIgnoreCase))
+            ?? ThemeModeOptions.FirstOrDefault(o => o.Value == ThemeAppearanceValues.ThemeModeLight)
+            ?? new SelectionOption(ThemeAppearanceValues.ThemeModeLight, ThemeModeLightText);
+    }
+
+    private static string NormalizeThemeMode(string? value)
+    {
+        if (string.Equals(value, ThemeAppearanceValues.ThemeModeDark, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeAppearanceValues.ThemeModeDark;
+        }
+        if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return ThemeAppearanceValues.ThemeModeFollowSystem;
+        }
+        return ThemeAppearanceValues.ThemeModeLight;
     }
 
     private void PersistCurrentState(bool restartRequired)
@@ -984,6 +1048,16 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         }
     }
 
+    private IReadOnlyList<SelectionOption> CreateThemeModeOptions()
+    {
+        return
+        [
+            new SelectionOption(ThemeAppearanceValues.ThemeModeLight, ThemeModeLightText),
+            new SelectionOption(ThemeAppearanceValues.ThemeModeDark, ThemeModeDarkText),
+            new SelectionOption(ThemeAppearanceValues.ThemeModeFollowSystem, ThemeModeFollowSystemText)
+        ];
+    }
+
     private ThemeAppearanceSettingsState BuildPendingState(bool usePickerSeed)
     {
         var themeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(SelectedThemeColorMode?.Value, ThemeColor);
@@ -998,7 +1072,8 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
             themeColorMode,
             ThemeAppearanceValues.NormalizeSystemMaterialMode(SelectedSystemMaterialMode?.Value),
-            _selectedWallpaperSeed);
+            _selectedWallpaperSeed,
+            SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight);
     }
 
     private void UpdatePreview(ThemeAppearanceSettingsState pendingState)

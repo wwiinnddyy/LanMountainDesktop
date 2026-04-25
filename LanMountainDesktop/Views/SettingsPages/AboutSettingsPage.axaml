@@ -6,6 +6,19 @@
              xmlns:fi="using:FluentIcons.Avalonia.Fluent"
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <ImageBrush x:Key="AboutBannerBrush" Source="/Assets/about_banner_light.png" Stretch="Uniform" AlignmentX="Center" AlignmentY="Center" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <ImageBrush x:Key="AboutBannerBrush" Source="/Assets/about_banner_dark.png" Stretch="Uniform" AlignmentX="Center" AlignmentY="Center" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <Style Selector="StackPanel.about-page-container">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -38,10 +51,7 @@
                     Classes="about-hero-card"
                     Height="240"
                     PointerPressed="OnAboutHeroCardPointerPressed">
-                <Image Source="/Assets/about_banner.png"
-                       Stretch="Uniform"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
+                <Panel Background="{DynamicResource AboutBannerBrush}" />
             </Border>
 
             <TextBlock Classes="settings-subsection-title"

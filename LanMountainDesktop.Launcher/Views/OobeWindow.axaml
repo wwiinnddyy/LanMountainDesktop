@@ -4,13 +4,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
         mc:Ignorable="d"
-        d:DesignWidth="600"
+        d:DesignWidth="700"
         d:DesignHeight="500"
         x:Class="LanMountainDesktop.Launcher.Views.OobeWindow"
         x:DataType="views:OobeWindow"
         Title="欢迎使用阑山桌面"
-        Width="600"
+        Width="700"
         Height="500"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
@@ -21,59 +22,599 @@
     <views:OobeWindow />
   </Design.DataContext>
 
-  <Grid x:Name="ContentGrid"
-        Opacity="0">
-    <Grid.RenderTransform>
-      <TranslateTransform Y="24" />
-    </Grid.RenderTransform>
-    <!-- 主内容区域 -->
-    <Grid Margin="48" RowDefinitions="*,Auto">
-      <!-- 中央内容区域 -->
-      <StackPanel Grid.Row="0" 
-                  VerticalAlignment="Center" 
-                  HorizontalAlignment="Center"
-                  Spacing="24">
-        
-        <!-- 顶部：完成状态勾号图标 -->
-        <Border Width="80"
-                Height="80"
-                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
-                CornerRadius="40"
-                HorizontalAlignment="Center">
-          <ui:SymbolIcon Symbol="Accept"
-                         FontSize="40"
-                         Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"/>
-        </Border>
-        
-        <!-- 中央：欢迎文字 -->
-        <StackPanel Spacing="8" HorizontalAlignment="Center">
-          <TextBlock Text="欢迎使用阑山桌面"
+  <Grid x:Name="ContentGrid">
+    <!-- 步骤 1: 打字机动画开场 -->
+    <Grid x:Name="TypingStep" Margin="60,80,60,60">
+      <!-- 主标题区域（左上角） -->
+      <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="16">
+        <!-- 打字机文本区域 -->
+        <StackPanel Orientation="Horizontal">
+          <TextBlock x:Name="TypingTextBlock"
                      FontSize="28"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                     FontFamily="Consolas, Monaco, 'Courier New', monospace" />
+          <Border x:Name="CursorBorder"
+                  Width="3"
+                  Height="28"
+                  Background="{DynamicResource TextFillColorPrimaryBrush}"
+                  VerticalAlignment="Bottom"
+                  Margin="4,0,0,4">
+            <Border.Styles>
+              <Style Selector="Border">
+                <Style.Animations>
+                  <Animation Duration="0:0:0.8" IterationCount="INFINITE">
+                    <KeyFrame Cue="0%">
+                      <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                      <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                    <KeyFrame Cue="51%">
+                      <Setter Property="Opacity" Value="0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                      <Setter Property="Opacity" Value="0" />
+                    </KeyFrame>
+                  </Animation>
+                </Style.Animations>
+              </Style>
+            </Border.Styles>
+          </Border>
+        </StackPanel>
+
+        <!-- 副标题区域（流光渐变动画 + 打字机效果） -->
+        <StackPanel x:Name="SubtitlePanel" Opacity="0" IsVisible="False" Spacing="4">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="NextGenTextBlock"
+                       FontSize="48"
+                       FontWeight="Bold"
+                       FontFamily="Consolas, Monaco, 'Courier New', monospace">
+              <TextBlock.Foreground>
+                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                   <GradientStop Offset="0.0" Color="#0078D4" />
+                   <GradientStop Offset="0.33" Color="#7B68EE" />
+                   <GradientStop Offset="0.66" Color="#FF8C00" />
+                   <GradientStop Offset="1.0" Color="#107C10" />
+                 </LinearGradientBrush>
+               </TextBlock.Foreground>
+            </TextBlock>            <Border x:Name="SubtitleCursorBorder"
+                    Width="4"
+                    Height="48"
+                    Background="{DynamicResource TextFillColorPrimaryBrush}"
+                    VerticalAlignment="Bottom"
+                    Margin="4,0,0,4"
+                    IsVisible="False">
+              <Border.Styles>
+                <Style Selector="Border">
+                  <Style.Animations>
+                    <Animation Duration="0:0:0.8" IterationCount="INFINITE">
+                      <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="1" />
+                      </KeyFrame>
+                      <KeyFrame Cue="50%">
+                        <Setter Property="Opacity" Value="1" />
+                      </KeyFrame>
+                      <KeyFrame Cue="51%">
+                        <Setter Property="Opacity" Value="0" />
+                      </KeyFrame>
+                      <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0" />
+                      </KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </Border.Styles>
+            </Border>
+          </StackPanel>
+          <TextBlock x:Name="DashboardTextBlock"
+                     FontSize="48"
+                     FontWeight="Bold"
+                     FontFamily="Consolas, Monaco, 'Courier New', monospace"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- 按钮动画区域（左下角） -->
+      <Grid x:Name="ButtonAnimationArea"
+            Width="280"
+            Height="80"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Margin="0,0,0,40"
+            IsVisible="False">
+
+        <!-- 方框边框（由鼠标画出） -->
+        <Border x:Name="DrawnBorder"
+                Width="160"
+                Height="56"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Background="Transparent"
+                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                BorderThickness="0"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}">
+        </Border>
+
+        <!-- 开始按钮（从方框中弹出） -->
+        <Button x:Name="StartButton"
+                Width="160"
+                Height="56"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Theme="{DynamicResource AccentButtonTheme}"
+                Opacity="0"
+                IsVisible="False"
+                RenderTransformOrigin="0.5,0.5">
+          <Button.RenderTransform>
+            <ScaleTransform ScaleX="0.1" ScaleY="0.1" />
+          </Button.RenderTransform>
+          <TextBlock Text="开始使用"
+                     FontSize="16"
+                     FontWeight="SemiBold" />
+        </Button>
+
+        <!-- 鼠标光标 -->
+        <Canvas x:Name="MouseCursor"
+                Width="24"
+                Height="24"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="-50,-50,0,0"
+                IsVisible="False">
+          <Path Data="M0,0 L0,18 L4,14 L7,20 L10,19 L7,13 L12,13 Z"
+                Fill="{DynamicResource TextFillColorPrimaryBrush}"
+                Stroke="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                StrokeThickness="1" />
+        </Canvas>
+      </Grid>
+    </Grid>
+
+    <!-- 步骤 2: 主题选择页面 -->
+    <Grid x:Name="ThemeStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
+      <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
+        <TextBlock Text="个性化你的桌面"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock Text="选择你喜欢的主题样式，可随时在设置中更改"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      </StackPanel>
+
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="20">
+          <!-- 浅色/深色模式选择 -->
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <StackPanel Spacing="12">
+              <TextBlock Text="外观模式"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <Border x:Name="LightModeOption"
+                        Grid.Column="0"
+                        Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                        Padding="16"
+                        Cursor="Hand">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <Border Width="48"
+                            Height="48"
+                            Background="#F3F3F3"
+                            CornerRadius="8"
+                            BorderBrush="#E0E0E0"
+                            BorderThickness="1">
+                      <fi:SymbolIcon Symbol="WeatherSunny"
+                                     FontSize="24"
+                                     Foreground="#5F5F5F"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="浅色模式"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <RadioButton x:Name="LightModeRadio"
+                                 GroupName="ThemeMode"
+                                 IsChecked="True"
+                                 HorizontalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+
+                <Border x:Name="DarkModeOption"
+                        Grid.Column="1"
+                        Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Padding="16"
+                        Cursor="Hand">
+                  <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <Border Width="48"
+                            Height="48"
+                            Background="#1E1E1E"
+                            CornerRadius="8"
+                            BorderBrush="#333333"
+                            BorderThickness="1">
+                      <fi:SymbolIcon Symbol="WeatherMoon"
+                                     FontSize="24"
+                                     Foreground="#E0E0E0"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="深色模式"
+                               FontSize="13"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <RadioButton x:Name="DarkModeRadio"
+                                 GroupName="ThemeMode"
+                                 HorizontalAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 主题色选择 -->
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <StackPanel Spacing="12">
+              <TextBlock Text="主题色"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <WrapPanel x:Name="AccentColorPanel" HorizontalAlignment="Left">
+                <!-- 预设颜色 -->
+                <Border x:Name="BlueColor"
+                        Width="40"
+                        Height="40"
+                        Background="#0078D4"
+                        CornerRadius="20"
+                        BorderThickness="3"
+                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                        Margin="0,0,12,12"
+                        Cursor="Hand">
+                  <Border.Styles>
+                    <Style Selector="Border:pointerover">
+                      <Setter Property="RenderTransform" Value="scale(1.1)" />
+                    </Style>
+                  </Border.Styles>
+                </Border>
+                <Border x:Name="PurpleColor"
+                        Width="40"
+                        Height="40"
+                        Background="#7B68EE"
+                        CornerRadius="20"
+                        BorderThickness="0"
+                        Margin="0,0,12,12"
+                        Cursor="Hand" />
+                <Border x:Name="GreenColor"
+                        Width="40"
+                        Height="40"
+                        Background="#107C10"
+                        CornerRadius="20"
+                        BorderThickness="0"
+                        Margin="0,0,12,12"
+                        Cursor="Hand" />
+                <Border x:Name="OrangeColor"
+                        Width="40"
+                        Height="40"
+                        Background="#D83B01"
+                        CornerRadius="20"
+                        BorderThickness="0"
+                        Margin="0,0,12,12"
+                        Cursor="Hand" />
+                <Border x:Name="PinkColor"
+                        Width="40"
+                        Height="40"
+                        Background="#E3008C"
+                        CornerRadius="20"
+                        BorderThickness="0"
+                        Margin="0,0,12,12"
+                        Cursor="Hand" />
+                <Border x:Name="TealColor"
+                        Width="40"
+                        Height="40"
+                        Background="#008080"
+                        CornerRadius="20"
+                        BorderThickness="0"
+                        Margin="0,0,12,12"
+                        Cursor="Hand" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 莫奈取色来源 -->
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <StackPanel Spacing="12">
+              <TextBlock Text="莫奈取色来源"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <TextBlock Text="从壁纸自动提取主题色，让界面与桌面完美融合"
+                         FontSize="12"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+              <StackPanel Spacing="8">
+                <Border x:Name="MonetFromWallpaperOption"
+                        Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        BorderThickness="2"
+                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                        Padding="12"
+                        Cursor="Hand">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <RadioButton x:Name="MonetFromWallpaperRadio"
+                                 Grid.Column="0"
+                                 GroupName="MonetSource"
+                                 IsChecked="True"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <TextBlock Text="从桌面壁纸取色"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                      <TextBlock Text="自动分析当前壁纸颜色生成主题"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <Border x:Name="MonetFromCustomOption"
+                        Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Padding="12"
+                        Cursor="Hand">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <RadioButton x:Name="MonetFromCustomRadio"
+                                 Grid.Column="0"
+                                 GroupName="MonetSource"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <TextBlock Text="自定义图片取色"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                      <TextBlock Text="选择一张图片作为取色来源"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+
+                <Border x:Name="MonetDisabledOption"
+                        Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Padding="12"
+                        Cursor="Hand">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <RadioButton x:Name="MonetDisabledRadio"
+                                 Grid.Column="0"
+                                 GroupName="MonetSource"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <TextBlock Text="不使用莫奈取色"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                      <TextBlock Text="使用固定的预设主题色"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="12"
+                  Margin="0,24,0,0">
+        <Button x:Name="ThemeBackButton"
+                Content="返回"
+                Theme="{DynamicResource ButtonTheme}" />
+        <Button x:Name="ThemeNextButton"
+                Content="下一步"
+                Theme="{DynamicResource AccentButtonTheme}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- 步骤 3: 数据位置选择页面 -->
+    <Grid x:Name="DataLocationStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
+      <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
+        <TextBlock Text="选择数据保存位置"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock Text="决定将应用数据保存在哪里，可随时在设置中更改"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      </StackPanel>
+
+      <StackPanel Grid.Row="1" Spacing="16">
+        <Border x:Name="AdminWarningBanner"
+                Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                Padding="12,10"
+                IsVisible="False">
+          <StackPanel Spacing="4">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="M12,2 L1,21 L23,21 Z M11,9 L13,9 L13,15 L11,15 Z M11,17 L13,17 L13,19 L11,19 Z"
+                        Width="16"
+                        Height="16"
+                        Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+              <TextBlock Text="无法保存到应用目录"
+                         FontWeight="SemiBold"
+                         FontSize="13"
+                         Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </StackPanel>
+            <TextBlock Text="当前安装目录需要管理员权限才能写入，数据将自动保存到系统用户目录。"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+          </StackPanel>
+        </Border>
+
+        <Border x:Name="SystemOptionBorder"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                BorderThickness="2"
+                BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                Padding="16,14"
+                Cursor="Hand">
+          <Grid ColumnDefinitions="Auto,*">
+            <RadioButton x:Name="SystemRadio"
+                         Grid.Column="0"
+                         VerticalAlignment="Top"
+                         Margin="0,2,12,0"
+                         GroupName="DataLocation"
+                         IsChecked="True" />
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="保存在系统用户目录（推荐）"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <TextBlock Text="数据与当前 Windows 用户绑定，重装应用或更新后数据不会丢失"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock x:Name="SystemPathText"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="PortableOptionBorder"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                Padding="16,14"
+                Cursor="Hand">
+          <Grid ColumnDefinitions="Auto,*">
+            <RadioButton x:Name="PortableRadio"
+                         Grid.Column="0"
+                         VerticalAlignment="Top"
+                         Margin="0,2,12,0"
+                         GroupName="DataLocation"
+                         IsEnabled="False" />
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="保存在应用安装目录"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+              <TextBlock Text="便于携带，可随应用文件夹整体移动到其他电脑"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              <TextBlock x:Name="PortablePathText"
+                         FontSize="11"
+                         TextWrapping="Wrap"
+                         Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                         Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border x:Name="MigrationInfoBorder"
+                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                Padding="12,10"
+                IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="M9,16.17 L4.83,12 L3.41,13.41 L9,19 L21,7 L19.59,5.59 Z"
+                      Width="16"
+                      Height="16"
+                      Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+            <TextBlock x:Name="MigrationInfoText"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="12"
+                  Margin="0,24,0,0">
+        <Button x:Name="DataLocationBackButton"
+                Content="返回"
+                Theme="{DynamicResource ButtonTheme}" />
+        <Button x:Name="DataLocationNextButton"
+                Content="下一步"
+                Theme="{DynamicResource AccentButtonTheme}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- 步骤 4: 欢迎完成页面 -->
+    <Grid x:Name="WelcomeStep" Margin="48" RowDefinitions="*,Auto" IsVisible="False">
+      <StackPanel Grid.Row="0"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Center"
+                  Spacing="32">
+
+        <Border Width="96"
+                Height="96"
+                Background="{DynamicResource SystemFillColorSuccessBackgroundBrush}"
+                CornerRadius="48"
+                HorizontalAlignment="Center">
+          <PathIcon Data="M9,16.17 L4.83,12 L3.41,13.41 L9,19 L21,7 L19.59,5.59 Z"
+                    Width="48"
+                    Height="48"
+                    Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"/>
+        </Border>
+
+        <StackPanel Spacing="12" HorizontalAlignment="Center">
+          <TextBlock Text="欢迎使用阑山桌面"
+                     FontSize="32"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                      HorizontalAlignment="Center" />
           <TextBlock Text="你的桌面，不止一面"
-                     FontSize="14"
+                     FontSize="16"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                      HorizontalAlignment="Center" />
         </StackPanel>
-        
       </StackPanel>
 
-      <!-- 底部：圆形开始按钮 -->
       <Button Grid.Row="1"
               x:Name="EnterButton"
               HorizontalAlignment="Center"
               Width="56"
               Height="56"
-              Margin="0,0,0,16"
+              Margin="0,0,0,24"
               Theme="{DynamicResource AccentButtonTheme}"
               CornerRadius="28">
-        <ui:SymbolIcon Symbol="Forward"
+        <fi:SymbolIcon Symbol="ArrowRight"
                        FontSize="24"
-                       Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
       </Button>
     </Grid>
   </Grid>
