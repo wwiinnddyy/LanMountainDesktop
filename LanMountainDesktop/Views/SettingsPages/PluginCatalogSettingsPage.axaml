@@ -2,18 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.PluginCatalogSettingsPage"
              x:Name="Root"
              x:DataType="vm:PluginCatalogSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-            <ui:SettingsExpander Header="{Binding RefreshButtonText}"
+            <ui:FASettingsExpander Header="{Binding RefreshButtonText}"
                                  Description="{Binding StatusMessage}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="ShoppingBag" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="12">
                         <TextBox x:Name="SearchTextBox"
@@ -25,8 +25,8 @@
                                 Command="{Binding RefreshCommand}"
                                 Content="{Binding RefreshButtonText}" />
                     </Grid>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <TextBlock Classes="settings-item-description"
                        IsVisible="{Binding ShowEmptyState}"

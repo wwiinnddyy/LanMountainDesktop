@@ -3,13 +3,13 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
         mc:Ignorable="d"
         d:DesignWidth="520"
         d:DesignHeight="480"
         x:Class="LanMountainDesktop.Launcher.Views.DataLocationPromptWindow"
         x:DataType="views:DataLocationPromptWindow"
-        Title="选择数据保存位置"
+        Title="Choose Data Location"
         Width="520"
         Height="480"
         CanResize="False"
@@ -24,12 +24,13 @@
     </Grid.RenderTransform>
     <Grid Margin="36" RowDefinitions="Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
-        <TextBlock Text="选择数据保存位置"
+        <TextBlock Text="Choose Data Location"
                    FontSize="22"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="决定将应用数据保存在哪里，可随时在设置中更改"
+        <TextBlock Text="Choose where launcher and desktop data should be stored. You can change this later in settings."
                    FontSize="13"
+                   TextWrapping="Wrap"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
       </StackPanel>
 
@@ -41,15 +42,15 @@
                 IsVisible="False">
           <StackPanel Spacing="4">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <ui:SymbolIcon Symbol="Important"
+              <fi:SymbolIcon Symbol="Important"
                              FontSize="16"
                              Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
-              <TextBlock Text="无法保存到应用目录"
+              <TextBlock Text="App folder is not writable"
                          FontWeight="SemiBold"
                          FontSize="13"
                          Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
             </StackPanel>
-            <TextBlock Text="当前安装目录需要管理员权限才能写入，数据将自动保存到系统用户目录。"
+            <TextBlock Text="The current install directory requires elevated permissions. Data will be stored in the system user profile instead."
                        FontSize="12"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -70,11 +71,11 @@
                          GroupName="DataLocation"
                          IsChecked="True" />
             <StackPanel Grid.Column="1" Spacing="4">
-              <TextBlock Text="保存在系统用户目录（推荐）"
+              <TextBlock Text="Store in the system user profile (Recommended)"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="数据与当前 Windows 用户绑定，重装应用或更新后数据不会丢失"
+              <TextBlock Text="Data stays tied to the current Windows user and remains intact across app reinstalls and updates."
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -101,11 +102,11 @@
                          GroupName="DataLocation"
                          IsEnabled="False" />
             <StackPanel Grid.Column="1" Spacing="4">
-              <TextBlock Text="保存在应用安装目录"
+              <TextBlock Text="Store next to the app"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="便于携带，可随应用文件夹整体移动到其他电脑"
+              <TextBlock Text="Useful for portable installs. The whole app folder can be moved to another machine together with its data."
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -124,7 +125,7 @@
                 Padding="12,10"
                 IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <ui:SymbolIcon Symbol="Message"
+            <fi:SymbolIcon Symbol="Info"
                            FontSize="16"
                            Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
             <TextBlock x:Name="MigrationInfoText"
@@ -141,11 +142,11 @@
                   Spacing="10"
                   Margin="0,20,0,0">
         <Button x:Name="CancelButton"
-                Content="取消"
+                Content="Cancel"
                 Theme="{DynamicResource ButtonTheme}"
                 IsVisible="False" />
         <Button x:Name="ConfirmButton"
-                Content="确认"
+                Content="Confirm"
                 Theme="{DynamicResource AccentButtonTheme}" />
       </StackPanel>
     </Grid>

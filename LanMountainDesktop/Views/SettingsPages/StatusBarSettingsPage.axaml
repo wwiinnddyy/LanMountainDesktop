@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.StatusBarSettingsPage"
              x:DataType="vm:StatusBarSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -12,15 +12,15 @@
                                Text="{Binding ComponentsHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding ClockHeader}"
+            <ui:FASettingsExpander Header="{Binding ClockHeader}"
                                  Description="{Binding ClockDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Clock" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowClock}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding ClockFormatLabel}"
@@ -37,8 +37,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="16">
                         <StackPanel Spacing="2">
@@ -51,8 +51,8 @@
                                       IsChecked="{Binding ClockTransparentBackground}"
                                       VerticalAlignment="Center" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding ClockPositionLabel}"
@@ -69,8 +69,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding ClockFontSizeLabel}"
@@ -87,18 +87,18 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding TextCapsuleHeader}"
+            <ui:FASettingsExpander Header="{Binding TextCapsuleHeader}"
                                  Description="{Binding TextCapsuleDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="TextQuote" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowTextCapsule}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding TextCapsuleContentLabel}"
@@ -112,8 +112,8 @@
                                  Text="{Binding TextCapsuleContent}"
                                  Watermark="Enter Markdown text..." />
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding TextCapsulePositionLabel}"
@@ -130,8 +130,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding TextCapsuleTransparentBackgroundLabel}"
@@ -141,18 +141,18 @@
                                       IsEnabled="{Binding ShowTextCapsule}"
                                       VerticalAlignment="Center" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding NetworkSpeedHeader}"
+            <ui:FASettingsExpander Header="{Binding NetworkSpeedHeader}"
                                  Description="{Binding NetworkSpeedDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="ArrowBidirectionalUpDown" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowNetworkSpeed}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding NetworkSpeedPositionLabel}"
@@ -169,8 +169,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding NetworkSpeedDisplayModeLabel}"
@@ -187,8 +187,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding NetworkSpeedTransparentBackgroundLabel}"
@@ -198,8 +198,8 @@
                                       IsEnabled="{Binding ShowNetworkSpeed}"
                                       VerticalAlignment="Center" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding ShowNetworkTypeIconLabel}"
@@ -209,8 +209,8 @@
                                       IsEnabled="{Binding ShowNetworkSpeed}"
                                       VerticalAlignment="Center" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding NetworkSpeedFontSizeLabel}"
@@ -227,8 +227,8 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
@@ -236,12 +236,12 @@
                                Text="{Binding SpacingHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding SpacingHeader}"
+            <ui:FASettingsExpander Header="{Binding SpacingHeader}"
                                  Description="{Binding SpacingDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Apps" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="180"
                               ItemsSource="{Binding SpacingModes}"
                               SelectedItem="{Binding SelectedSpacingMode}">
@@ -251,8 +251,8 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem IsVisible="{Binding IsCustomSpacingVisible}">
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem IsVisible="{Binding IsCustomSpacingVisible}">
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding CustomSpacingLabel}"
@@ -266,8 +266,8 @@
                                       SpinButtonPlacementMode="Inline"
                                       Value="{Binding CustomSpacingPercent}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
@@ -275,15 +275,15 @@
                                Text="{Binding StatusBarShadowHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding StatusBarShadowHeader}"
+            <ui:FASettingsExpander Header="{Binding StatusBarShadowHeader}"
                                  Description="{Binding StatusBarShadowDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Square" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding StatusBarShadowEnabled}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding StatusBarShadowColorLabel}"
@@ -302,8 +302,8 @@
                             </Button.Flyout>
                         </Button>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding StatusBarShadowOpacityLabel}"
@@ -315,8 +315,8 @@
                                 IsEnabled="{Binding StatusBarShadowEnabled}"
                                 Value="{Binding StatusBarShadowOpacity}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

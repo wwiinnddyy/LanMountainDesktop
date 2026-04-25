@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.UpdateSettingsPage"
              x:DataType="vm:UpdateSettingsPageViewModel">
     <UserControl.Styles>
@@ -163,13 +163,13 @@
                        Margin="0,0,0,18"
                        Text="{Binding PreferencesDescription}" />
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding UpdateChannelLabel}"
                                  Description="{Binding SelectedUpdateChannelDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="BranchFork" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding UpdateChannelOptions}"
                               SelectedItem="{Binding SelectedUpdateChannelOption}">
@@ -179,24 +179,24 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem Content="{Binding ForceCheckUpdateLabel}"
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem Content="{Binding ForceCheckUpdateLabel}"
                                          Description="{Binding ForceCheckUpdateDescription}"
                                          IsClickEnabled="True"
                                          Command="{Binding ForceCheckUpdateCommand}">
-                    <ui:SettingsExpanderItem.IconSource>
+                    <ui:FASettingsExpanderItem.IconSource>
                         <fi:SymbolIconSource Symbol="ArrowSync" />
-                    </ui:SettingsExpanderItem.IconSource>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                    </ui:FASettingsExpanderItem.IconSource>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding UpdateSourceLabel}"
                                  Description="{Binding SelectedUpdateSourceDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="GlobeArrowForward" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding UpdateSourceOptions}"
                               SelectedItem="{Binding SelectedUpdateSourceOption}">
@@ -206,16 +206,16 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding UpdateModeLabel}"
                                  Description="{Binding SelectedUpdateModeDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Options" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="260"
                               ItemsSource="{Binding UpdateModeOptions}"
                               SelectedItem="{Binding SelectedUpdateModeOption}">
@@ -225,23 +225,23 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding DownloadThreadsLabel}"
                                  Description="{Binding DownloadThreadsDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="ArrowDownload" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ui:NumberBox Width="160"
                                   Minimum="1"
                                   Maximum="128"
                                   SpinButtonPlacementMode="Inline"
                                   Value="{Binding DownloadThreadsSliderValue}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
 
         </StackPanel>

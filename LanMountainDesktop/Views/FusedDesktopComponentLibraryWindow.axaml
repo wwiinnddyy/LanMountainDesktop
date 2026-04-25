@@ -1,24 +1,24 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:LanMountainDesktop.Views"
-        xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+        xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryWindow"
-        Width="860" Height="620"
-        MinWidth="600" MinHeight="500"
+        Width="860"
+        Height="620"
+        MinWidth="600"
+        MinHeight="500"
         CanResize="True"
         WindowStartupLocation="CenterScreen"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="48"
         Background="Transparent"
-        Title="添加小组件">
+        Title="Add Component">
 
     <Grid x:Name="RootGrid"
           Classes="settings-scope"
           Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
           RowDefinitions="Auto,*">
-        <!-- 自定义标题栏 - 与 SettingsWindow 风格一致 -->
         <Border x:Name="WindowTitleBarHost"
                 Height="48"
                 Padding="12,0,12,0"
@@ -41,14 +41,14 @@
                            FontSize="12"
                            FontWeight="SemiBold"
                            IsHitTestVisible="False"
-                           Text="添加小组件" />
+                           Text="Add Component" />
 
                 <TextBlock Grid.Column="2"
                            FontSize="12"
                            Opacity="0.6"
                            IsHitTestVisible="False"
                            VerticalAlignment="Center"
-                           Text="将精美组件放置在您的系统桌面上（负一屏）" />
+                           Text="Browse available widgets and add them to the current fused desktop layout." />
 
                 <Button x:Name="CloseWindowButton"
                         Grid.Column="3"
@@ -65,7 +65,6 @@
             </Grid>
         </Border>
 
-        <!-- 组件库控件 -->
         <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
                                                       Grid.Row="1"
                                                       Margin="12,8,16,8" />

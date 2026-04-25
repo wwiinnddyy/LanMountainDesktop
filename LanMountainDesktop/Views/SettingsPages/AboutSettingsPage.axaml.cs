@@ -74,6 +74,9 @@ public partial class AboutSettingsPage : SettingsPageBase
 
     private void OnAboutHeroCardPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        _ = sender;
+        _ = e;
+
         var now = DateTime.UtcNow;
         var elapsed = now - _lastHeroCardClickTime;
 
@@ -111,25 +114,23 @@ public partial class AboutSettingsPage : SettingsPageBase
         }
         else if (remaining <= 2)
         {
-            Debug.WriteLine($"[AboutSettingsPage] 再点击 {remaining} 次即可启用开发者模式。");
+            Debug.WriteLine($"[AboutSettingsPage] {remaining} tap(s) remaining before developer mode unlocks.");
         }
     }
 
     private async void PromptEnableDevMode(ISettingsFacadeService settingsFacade)
     {
-        var dialog = new ContentDialog
+        var dialog = new FAContentDialog
         {
-            Title = "启用开发者模式",
-            Content = "开发者模式提供了插件调试、热重载等高级功能，仅供开发和调试用途。\n\n" +
-                      "请注意：开发者不对以非开发用途使用此功能造成的任何后果负责，也不接受以非开发用途使用时产生的 Bug 反馈。\n\n" +
-                      "确定要启用开发者模式吗？",
-            PrimaryButtonText = "启用",
-            CloseButtonText = "取消",
-            DefaultButton = ContentDialogButton.Close
+            Title = "Enable developer mode",
+            Content = "Developer mode exposes experimental settings, diagnostics, and local plugin debugging options.\n\nUse it only when you are actively testing or troubleshooting the desktop host.",
+            PrimaryButtonText = "Enable",
+            CloseButtonText = "Not now",
+            DefaultButton = FAContentDialogButton.Close
         };
 
         var result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary)
+        if (result != FAContentDialogResult.Primary)
         {
             return;
         }

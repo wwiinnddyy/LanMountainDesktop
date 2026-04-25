@@ -4,7 +4,7 @@
              xmlns:models="using:LanMountainDesktop.Models"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.WeatherSettingsPage"
              x:DataType="vm:WeatherSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -56,13 +56,13 @@
                 </Grid>
             </Border>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding LocationSourceHeader}"
                                  Description="{Binding LocationSourceDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="WeatherMoon" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding LocationModes}"
                               SelectedItem="{Binding SelectedLocationMode}">
@@ -72,27 +72,27 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <TextBlock Classes="settings-item-description"
                                Text="{Binding CurrentLocationSummary}"
                                TextWrapping="Wrap" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding CitySearchHeader}"
                                  Description="{Binding CitySearchDescription}"
                                  IsVisible="{Binding IsCitySearchMode}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Search" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
                             Command="{Binding ApplyCitySelectionCommand}"
                             Content="{Binding ApplyCityButtonText}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="14">
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="12">
@@ -140,22 +140,22 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                     </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding CoordinatesHeader}"
                                  Description="{Binding CoordinatesDescription}"
                                  IsVisible="{Binding IsCoordinatesMode}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Location" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
                             Command="{Binding ApplyCoordinatesCommand}"
                             Content="{Binding ApplyCoordinatesButtonText}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,*"
                           Classes="settings-inline-pair">
                         <StackPanel Classes="settings-item">
@@ -179,36 +179,36 @@
                                            Value="{Binding Longitude}" />
                         </StackPanel>
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <TextBox x:Name="LocationKeyTextBox"
                              Text="{Binding LocationKey}"
                              Watermark="{Binding LocationKeyPlaceholder}"
                              Focusable="True"
                              IsTabStop="True" />
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem>
                     <TextBox x:Name="LocationNameTextBox"
                              Text="{Binding LocationName}"
                              Watermark="{Binding LocationNamePlaceholder}"
                              Focusable="True"
                              IsTabStop="True" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding LocationServicesHeader}"
                                  Description="{Binding LocationServicesDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Location" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
                             Command="{Binding UseCurrentLocationCommand}"
                             Content="{Binding UseCurrentLocationButtonText}"
                             IsVisible="{Binding IsLocationSupported}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
@@ -222,23 +222,23 @@
                                       IsChecked="{Binding AutoRefreshLocation}"
                                       IsEnabled="{Binding IsLocationSupported}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-                <ui:SettingsExpanderItem IsVisible="{Binding IsRefreshingLocation}">
+                </ui:FASettingsExpanderItem>
+                <ui:FASettingsExpanderItem IsVisible="{Binding IsRefreshingLocation}">
                     <ui:ProgressRing IsIndeterminate="True"
                                      IsVisible="{Binding IsRefreshingLocation}"
                                      Width="28"
                                      Height="28"
                                      HorizontalAlignment="Left" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding AlertFilterHeader}"
                                  Description="{Binding AlertFilterDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Warning" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <TextBox x:Name="ExcludedAlertsTextBox"
                              Width="360"
                              MinHeight="120"
@@ -247,24 +247,24 @@
                              Text="{Binding ExcludedAlerts}"
                              Focusable="True"
                              IsTabStop="True" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding RequestHeader}"
                                  Description="{Binding RequestDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="ShieldDismiss" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding NoTlsRequests}" />
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <TextBlock Classes="settings-item-description"
                                Text="{Binding NoTlsToggleText}"
                                TextWrapping="Wrap" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <TextBlock Classes="settings-item-description"
                        Margin="0,8,0,0"

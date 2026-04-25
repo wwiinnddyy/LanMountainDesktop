@@ -1,7 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
-        xmlns:fi="using:FluentIcons.Avalonia.Fluent">
+        xmlns:fi="using:FluentIcons.Avalonia">
 
     <Styles.Resources>
         <x:Double x:Key="PaneToggleButtonWidth">40</x:Double>
@@ -115,7 +115,7 @@
         <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
     </Style>
 
-    <Style Selector="ui|NavigationView.settings-navigation-view">
+    <Style Selector="ui|FANavigationView.settings-navigation-view">
         <Setter Property="Transitions">
             <Transitions>
                 <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="0.05,0.75,0.10,1.00" />
@@ -123,7 +123,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="ui|NavigationView.settings-navigation-view /template/ Border#NavigationViewBorder">
+    <Style Selector="ui|FANavigationView.settings-navigation-view /template/ Border#NavigationViewBorder">
         <Setter Property="Transitions">
             <Transitions>
                 <BrushTransition Property="Background" Duration="0:0:0.167" Easing="0.05,0.75,0.10,1.00" />
@@ -131,7 +131,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="ui|NavigationViewItem.settings-nav-item">
+    <Style Selector="ui|FANavigationViewItem.settings-nav-item">
         <Setter Property="Transitions">
             <Transitions>
                 <BrushTransition Property="Background" Duration="0:0:0.083" Easing="0.05,0.75,0.10,1.00" />
@@ -140,11 +140,11 @@
         </Setter>
     </Style>
 
-    <Style Selector="ui|NavigationViewItem.settings-nav-item:pointerover">
+    <Style Selector="ui|FANavigationViewItem.settings-nav-item:pointerover">
         <Setter Property="RenderTransform" Value="scale(1.01)" />
     </Style>
 
-    <Style Selector="ui|NavigationViewItem.settings-nav-item:pressed">
+    <Style Selector="ui|FANavigationViewItem.settings-nav-item:pressed">
         <Setter Property="RenderTransform" Value="scale(0.99)" />
     </Style>
 

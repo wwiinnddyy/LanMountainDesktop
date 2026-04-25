@@ -75,8 +75,7 @@ public partial class MainWindow
     private int? _desktopPageContextSettlingTargetIndex;
     private int _desktopPageContextSettleRevision;
 
-    // 三指滑动/右键拖动相关
-    private bool _isThreeFingerOrRightDragSwipeActive;
+    // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜鹃柛顭戝亯婢规ɑ銇勯婊冨妤犵偛顑呴埞鎴﹀窗?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈呮噺閻撶喖鏌嶉崫鍕灓闁绘帡绠栭弻?    private bool _isThreeFingerOrRightDragSwipeActive;
     private readonly HashSet<int> _activePointerIds = [];
 
     private int LauncherSurfaceIndex => Math.Max(MinDesktopPageCount, _desktopPageCount);
@@ -264,7 +263,6 @@ public partial class MainWindow
         Grid.SetColumn(LauncherPagePanel, 1);
         Grid.SetRow(LauncherPagePanel, 0);
 
-        // 为启动台添加安全边距以确保圆角不被裁剪
         var launcherMargin = Math.Clamp(gridMetrics.CellSize * 0.15, 6, 16);
         LauncherPagePanel.Margin = new Thickness(launcherMargin);
         LauncherPagePanel.Width = Math.Max(1, pageWidth - launcherMargin * 2);
@@ -272,7 +270,7 @@ public partial class MainWindow
         LauncherPagePanel.MaxWidth = pageWidth - launcherMargin * 2;
         LauncherPagePanel.MaxHeight = pageHeight - launcherMargin * 2;
 
-        // 更新启动台图标布局
+        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愰悷娆欓檮閵囧嫰寮介妸銊ヮ棟閻炴氨鍠栧娲川婵犲嫭鍣┑鐘灪閿氶棁澶嬫叏濡炶浜鹃悗娈垮枙缁瑥鐣烽幆閭︽Ь濡炪倕绻戦幐鎶藉箖濮椻偓閹瑩鍩℃担宄邦棜
         UpdateLauncherTileLayout();
 
         _desktopSurfacePageWidth = pageWidth;
@@ -287,39 +285,29 @@ public partial class MainWindow
             return;
         }
 
-        // 获取启动台面板的实际可用宽度（减去Padding）
         var availableWidth = Math.Max(1, LauncherPagePanel.Bounds.Width - 36); // 18px padding on each side
-        var availableHeight = Math.Max(1, LauncherPagePanel.Bounds.Height - 100); // 预留标题空间
+        var availableHeight = Math.Max(1, LauncherPagePanel.Bounds.Height - 100); // 婵犵妲呴崑鍛熆濡皷鍋撳鐓庢珝鐎殿喗濞婇崺鈧い鎺戝閻撴稓鈧箍鍎遍幊蹇涘窗濡眹浜滈柨婵嗘处濞呮洜绱掗鍊熷閻撱倖銇勮箛鎾村珔缂?
 
         if (availableWidth <= 1 || availableHeight <= 1)
         {
-            // 如果尺寸还未计算，使用默认值
-            availableWidth = 600;
+            // 婵犵數濮烽。浠嬪焵椤掆偓閸熷潡鍩€椤掆偓缂嶅﹪骞冨Ο璇茬窞閻忕偠鍋愰崜銊╂⒑閸涘﹦绠撻悗姘卞厴瀹曠敻鎮㈤悡搴ｉ獓闂佸啿鎼导鎺楀箣濠垫捁鈧寧銇勯幘璺盒ｅ┑顖氥偢閺屻劌鈽夊Ο渚紑闂佸搫妫崜鐔煎蓟閵娿儮妲堟俊顖欒濞堫厽绻濋悽闈涗粶婵炲樊鍙冮獮鍐╃鐎ｎ€晠鏌嶉崫鍕殭缂佹绻濋弻锝夋偐闁秵顎栭梺绋匡攻濞茬喖宕洪埀?            availableWidth = 600;
             availableHeight = 400;
         }
 
-        // 计算最佳图标尺寸
-        // 目标：每行显示4-8个图标，根据屏幕宽度调整
+        // 闂備浇宕垫慨宕囨閵堝洦顫曢柡鍥ュ灪閸嬧晛鈹戦悩瀹犲閻庢艾顦甸弻宥堫檨闁告挻宀搁獮蹇涘川閺夋垹顦ㄩ梺鍛婄懃椤﹂亶銆呴銏♀拺闁告繂瀚瓭濠电偛鐪伴崐婵嗩嚕娴兼潙纾兼繝褎鍎虫禍?        // 闂傚倷鑳堕崕鐢稿疾閳哄懎绐楁俊銈呮噺閸嬪鏌ㄥ┑鍡╂Ч闁哄拋鍓氶幈銊ヮ潨閸℃绠诲┑鈥崇湴閸旀垿骞冪捄琛℃婵☆垳绮幏鍗炩攽閳藉棗鐏犳い锕佷含閸?-8婵犵數鍋為崹鍫曞箹閳哄倻顩叉繝濠傚幘閻熼偊娼ㄩ柍褜鍓欓锝嗙鐎ｎ亞鍊炴俊鐐差儏濞寸兘藝椤曗偓濮婃椽宕崟顓夈儲銇勯銏╂Ц闁伙絽鐏氶幏鍛姜閻楀牆濯伴梻濠庡亜濞诧箓骞愭ィ鍐炬晩閹兼番鍔嶉崐鐢电棯椤撶偞鍣烘い銉ヮ樀閹鎮烽幍顕嗙礊闂佺懓顨庨崑濠傜暦濮椻偓閸╋繝宕掑☉鍗炴櫔
         const int minColumns = 4;
         const int maxColumns = 8;
-        const double targetAspectRatio = 1.2; // 图标宽高比
-
-        // 计算每列可以显示的图标数量
+        const double targetAspectRatio = 1.2; // 闂傚倷鐒﹂幃鍫曞磿閹惰棄纾婚柟鍓х帛閸嬪鏌ㄥ┑鍡樼闁稿鎹囬弻鍛槈濮樿京鍘梻浣虹帛缁诲秹宕伴弽顒夋毎?
         var optimalColumnCount = Math.Clamp((int)Math.Floor(availableWidth / 120), minColumns, maxColumns);
 
-        // 根据列数计算图标尺寸
         var tileWidth = Math.Floor(availableWidth / optimalColumnCount) - 12; // 12px spacing
-        var tileHeight = Math.Min(tileWidth / targetAspectRatio, availableHeight / 4); // 至少显示4行
-
-        // 确保最小尺寸
-        tileWidth = Math.Max(tileWidth, 100);
+        var tileHeight = Math.Min(tileWidth / targetAspectRatio, availableHeight / 4); // 闂傚倷鑳堕崢褔宕查弻銉ョ柈闁秆勵殕閸庡秵銇勯弽顐粶闁告瑥锕弻娑㈠箻濡炵偓顦风紒?闂?
+        // 缂傚倷鑳堕搹搴ㄥ矗鎼淬劌绐楅柡鍥╁У瀹曞弶鎱ㄥΟ鎸庣【閻庢艾顦甸弻宥堫檨闁告挻绋掔粋宥咁潰瀹€鈧悿鈧梺瑙勫劤閻°劑锝為崨瀛樼厽?        tileWidth = Math.Max(tileWidth, 100);
         tileHeight = Math.Max(tileHeight, 80);
 
-        // 更新WrapPanel的Item尺寸
-        LauncherRootTilePanel.Width = availableWidth;
+        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閸屻倖杈渁pPanel闂傚倷鐒﹂惇褰掑礉瀹€鍕惞婵帞妫渕闂備浇顕х换鎰崲閹版澘绠规い鎰跺瘜閺?        LauncherRootTilePanel.Width = availableWidth;
 
-        // 更新所有子元素的尺寸
-        foreach (var child in LauncherRootTilePanel.Children)
+        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愮紒鐘劦閺屽秷顧侀柛鎾跺枎椤曪綁宕归銏㈢獮婵犵數濮寸€氼參骞夐妶澶嬧拺缂佸娉曠粻浼存煕閻旂顥嬬紒顔肩墕閻ｆ繈宕熼鈧崜顓㈡⒑閸涘﹥澶勯柛瀣噹鍗遍柍褜鍓熼弻?        foreach (var child in LauncherRootTilePanel.Children)
         {
             if (child is Button button)
             {
@@ -487,7 +475,7 @@ public partial class MainWindow
             return;
         }
 
-        // 如果在组件编辑模式下点击空白区域，取消选中（组件或启动台图标）
+        // 婵犵數濮烽。浠嬪焵椤掆偓閸熷潡鍩€椤掆偓缂嶅﹪骞冨Ο璇茬窞闁归偊鍓氬畵宥夋⒑闂堟丹娑㈠川椤栨粌甯掓繝鐢靛仜椤曨厽鎱ㄧ€涙ɑ娅犻幖杈剧稻椤洘銇勮箛鎾村櫤缂傚秴娲弻鐔衡偓鐢告櫜鏉╃懓霉閿濆懎顥忛柛銈嗘礋閻擃偊宕惰閹癸綁鏌ｉ悢鍛婂磳闁哄矉缍侀獮鍥敊閽樺鐣梻浣规偠閸娿倝宕板鍗炲灊婵鍩栭幆鐐烘偡濞嗗繐顏村ù鐘讳憾濮婃椽宕ㄦ繝鍕吂闂佸湱鈷堥崑濠囧箖閳ユ枼鏋庨柟鎯х摠濞呮牠鏌ｈ箛鏇炰哗婵☆偄瀚濠囧箰鎼达絿顔曢梺鐟扮摠缁诲嫭鏅堕敃鍌涚厓鐟滄粓宕滃▎鎾嶅洭顢氶埀顒勫箠濞嗘挸绠ｉ柨鏃囧Г濞呮牠姊洪崜鎻掍簴闁搞劌顭烽幆宀€鈧綆鈧垹缍婇幃鈺呭传閸曨厼甯块梻浣规偠閸斿﹪宕濋幋婵堟殾闁靛鏅╅弫宥嗘叏濮楀棗鍔俊銈呮噺閻撴洘绻涢崱妯哄缂佽泛寮剁换娑氣偓娑欙公閼拌法鈧鍠曠划娆忕暦閼告妲归幖杈剧秵濡?
         if (_isComponentLibraryOpen &&
             (_selectedDesktopComponentHost is not null || _selectedLauncherTileButton is not null))
         {
@@ -504,7 +492,6 @@ public partial class MainWindow
             return;
         }
 
-        // 检查三指滑动功能是否启用
         var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         var isThreeFingerSwipeEnabled = appSnapshot.EnableThreeFingerSwipe;
 
@@ -513,23 +500,20 @@ public partial class MainWindow
         var isRightButtonPressed = currentPoint.Properties.IsRightButtonPressed;
         var isLeftButtonPressed = currentPoint.Properties.IsLeftButtonPressed;
 
-        // 处理三指滑动/右键拖动模式
+        // 婵犵數濮伴崹鐓庘枖濞戞埃鍋撳鐓庢珝妤犵偛鍟换婵嬪礃椤忎焦鐏冨┑鐘灱濞夋盯顢栭崨瀛樺剨閻熸瑥瀚弧鈧繝鐢靛Т閸燁偊鎮橀妷銉㈡斀?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈勬缁诲棙銇勯弽銊ｄ粶闁稿鎸搁悾鐑藉炊閳哄﹥鏁?
         if (isThreeFingerSwipeEnabled)
         {
-            // 跟踪活跃指针
             if (isLeftButtonPressed || isRightButtonPressed)
             {
                 _activePointerIds.Add(pointerId);
             }
 
-            // 判断是否是三指滑动或右键拖动
             var isThreeFinger = _activePointerIds.Count >= 3;
             var isRightDrag = isRightButtonPressed;
 
             if (isThreeFinger || isRightDrag)
             {
-                // 三指/右键拖动模式：跳过所有组件交互检查，直接开始滑动
-                ClearDesktopPageContextSettle(refreshContext: false);
+                // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈勬缁诲棙銇勯弽銊ｄ粶闁稿鎸搁悾鐑藉炊閳哄﹥鏁ら梻鍌欑劍鐎笛呯矙閹烘挾鈹嶆繛宸簼閸婂鏌ㄩ弮鍥撳ù婧垮€濋弻娑㈠Ψ閿濆懎顬堝銈忕稻閻擄繝寮婚敓鐘查唶婵犲灚鍔栨缂傚倷绶￠崰鏍矓閻㈢數鐭夐柟鐑橆殔鐎氬鏌涢…鎴濅簻闁衡偓椤撶喓绠鹃悗娑欘焽閻鎮介娑辨疁閽樼喖鏌涘☉娆愮稇闁藉啰鍠栭弻鏇熷緞濡櫣浠紓浣插亾濠㈣埖鍔栭悡鐔兼煃鏉炴媽鍏岄柟鐣屽█閹粙顢涘☉娆戠▏濡炪倖娲╃紞渚€宕洪埀顒併亜閹哄秶鍔嶉柛娆忕箻閹鏁愭惔鈥茬敖闂佽鐏氶崝鎴﹀蓟?                ClearDesktopPageContextSettle(refreshContext: false);
                 _isThreeFingerOrRightDragSwipeActive = true;
                 _isDesktopSwipeActive = true;
                 _isDesktopSwipeDirectionLocked = false;
@@ -540,14 +524,12 @@ public partial class MainWindow
                 _desktopSwipeLastTimestamp = Stopwatch.GetTimestamp();
                 _desktopSwipeBaseOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
                 
-                // 标记事件已处理，防止组件响应
-                e.Handled = true;
+                // 闂傚倷绀侀幖顐ょ矓閺夋嚚娲煛閸滀焦鏅╅梺鎼炲劘閸斿酣銆呴弻銉﹀€甸柨婵嗗€瑰▍鍡樸亜閹邦喗娅曢柍褜鍓涢幊鎾诲箟闄囬妵鎰板礃椤斻垹娲崺锟犲川椤旈棿鍝楅梻浣虹《濡插懘宕㈤崜褏鐭嗗鑸靛姈閳锋帡鏌涢幇鈺佸缂佺嫏鍕╀簻闁圭儤鎸鹃妴鎺旂磼鏉堛劌娴€规洜鍠栭、鏃堝椽娴ｉ晲缂撻梻鍌欑閹诧紕鎹㈤崒婊呯煋閻庡灚鐡曟慨?                e.Handled = true;
                 return;
             }
         }
 
-        // 原有单指滑动逻辑
-        if (IsInteractivePointerSource(e.Source))
+        // 闂傚倷绀侀幉锟犫€﹂崶顒€绐楅柟閭﹀墾閼板灝銆掑锝呬壕閻庤娲╃换婵嗩嚕閹绢喗鍋勫瀣閳诲本绻濋悽闈浶㈤柨鏇樺劦瀹曞綊宕归锝呭伎闂佸啿鎼幊蹇涙倿婵犳碍鐓涢柛鏇ㄥ亞缁犳娊鎮?        if (IsInteractivePointerSource(e.Source))
         {
             return;
         }
@@ -811,7 +793,6 @@ public partial class MainWindow
 
     private void OnDesktopPagesPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        // 清理活跃指针
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
         
@@ -823,7 +804,6 @@ public partial class MainWindow
 
     private void OnDesktopPagesPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        // 清理活跃指针
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
         
@@ -898,13 +878,12 @@ public partial class MainWindow
         var hasDistanceIntent = absDeltaX >= distanceThreshold && absDeltaX > absDeltaY * 1.05;
         var hasVelocityIntent = Math.Abs(_desktopSwipeVelocityX) >= velocityThreshold;
 
-        // 检查：三指/右键拖动 && 在第一页 && 向右滑动
+        // 濠电姷顣藉Σ鍛村磻閳ь剟鏌涚€ｎ偅宕岄柡宀嬬磿娴狅妇鎷犻幓鎺懶ョ紓鍌欐祰娴滎剚鏅跺Δ鍐煓濠㈣泛顑呯欢鐐烘倵閿濆簼绨芥俊?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁?&& 闂傚倷绶氬鑽ゆ嫻閻旂厧绀夐幖鎼厛閺佸嫰鏌涢妷锝呭闁崇粯妫冮弻宥堫檨闁告挻宀告俊?&& 闂傚倷绀侀幉锛勫枈瀹ュ鍨傚ù锝呭暔娴滃湱绱掔€ｎ偒鍎ラ柣鎾卞劦閺岀喓鈧稒顭囩粻鎾舵偖?
         if (wasThreeFingerOrRightDrag && 
             _currentDesktopSurfaceIndex == 0 && 
-            deltaX > 0 && // 向右滑动
+            deltaX > 0 && // 闂傚倷绀侀幉锛勫枈瀹ュ鍨傚ù锝呭暔娴滃湱绱掔€ｎ偒鍎ラ柣鎾卞劦閺岀喓鈧稒顭囩粻鎾舵偖?
             (hasDistanceIntent || hasVelocityIntent))
         {
-            // 最小化到 Windows 桌面
             if (Application.Current is App app)
             {
                 app.HideMainWindowToTray(this, "ThreeFingerOrRightDragSwipe");
@@ -998,8 +977,7 @@ public partial class MainWindow
                 string.Empty));
         }
 
-        // 在图标渲染完成后，应用布局计算
-        Dispatcher.UIThread.Post(() => UpdateLauncherTileLayout(), DispatcherPriority.Background);
+        // 闂傚倷绶氬鑽ゆ嫻閻旂厧绀夐悘鐐电叓閻熼偊娼ㄩ柍褜鍓欓锝嗙鐎ｎ亞鍊為梺闈涱煬閻撳牆煤椤掑嫭鈷戦柛婵嗗濠€浼存煙閸涘﹥鍊愰柟顕€绠栭、妤呭礋椤愩値鍚呴梻浣哥秺閸嬪﹪宕滃璺虹９闁汇垹鎲￠悡銉︾箾閹寸儐鐒鹃悗姘缁辨帡濡搁敂鎯у绩闂佽鍠曠划娆愪繆閹间礁唯鐟滄粍瀵煎畝鍕厽闊洦娲栨禍褰掓煕鐎ｎ偅宕岄柟顔款潐缁楃喐绻濋崟顓ㄧ吹闂?        Dispatcher.UIThread.Post(() => UpdateLauncherTileLayout(), DispatcherPriority.Background);
     }
 
     private Button CreateLauncherFolderTile(StartMenuFolderNode folder)
@@ -1063,8 +1041,7 @@ public partial class MainWindow
             BorderThickness = new Thickness(0),
             Margin = new Thickness(0, 0, 12, 12),
             CornerRadius = new CornerRadius(20),
-            Child = panel
-            // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
+            Child = panel,
         };
     }
 
@@ -1145,11 +1122,8 @@ public partial class MainWindow
             BorderBrush = Brushes.Transparent,
             CornerRadius = new CornerRadius(20),
             Padding = new Thickness(10),
-            Content = content
-            // 不设置固定 Width 和 Height，由 UpdateLauncherTileLayout 动态设置
+            Content = content,
         };
-
-        // 根据设置决定是否显示背景
         if (_showLauncherTileBackground)
         {
             button.Classes.Add("glass-panel");
@@ -1415,7 +1389,7 @@ public partial class MainWindow
             : fileName;
     }
 
-    private SettingsExpanderItem CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)
+    private FASettingsExpanderItem CreateLauncherHiddenItemRow(LauncherHiddenItemView hiddenItem)
     {
         var typeText = hiddenItem.Kind == LauncherEntryKind.Folder
             ? L("settings.launcher.hidden_type_folder", "Folder")
@@ -1430,7 +1404,7 @@ public partial class MainWindow
             BorderThickness = new Thickness(0),
             Tag = new LauncherHiddenItemToken(hiddenItem.Kind, hiddenItem.Key)
         };
-        restoreButton.Content = new FluentIcons.Avalonia.Fluent.SymbolIcon
+        restoreButton.Content = new FluentIcons.Avalonia.SymbolIcon
         {
             Symbol = FluentIcons.Common.Symbol.Eye,
             IconVariant = FluentIcons.Common.IconVariant.Regular,
@@ -1441,7 +1415,7 @@ public partial class MainWindow
         ToolTip.SetTip(restoreButton, L("settings.launcher.restore_button", "Unhide"));
         restoreButton.Click += OnRestoreLauncherHiddenItemClick;
 
-        return new SettingsExpanderItem
+        return new FASettingsExpanderItem
         {
             Content = hiddenItem.DisplayName,
             Description = typeText,
@@ -1451,23 +1425,17 @@ public partial class MainWindow
         };
     }
 
-    private IconSource CreateLauncherHiddenItemIconSource(LauncherHiddenItemView hiddenItem)
+    private FAIconSource? CreateLauncherHiddenItemIconSource(LauncherHiddenItemView hiddenItem)
     {
         if (hiddenItem.IconBitmap is not null)
         {
-            return new ImageIconSource
+            return new FAImageIconSource
             {
                 Source = hiddenItem.IconBitmap
             };
         }
 
-        return new FluentIcons.Avalonia.Fluent.SymbolIconSource
-        {
-            Symbol = hiddenItem.Kind == LauncherEntryKind.Folder
-                ? FluentIcons.Common.Symbol.Folder
-                : FluentIcons.Common.Symbol.Apps,
-            IconVariant = FluentIcons.Common.IconVariant.Regular
-        };
+        return null;
     }
 
     private void OnRestoreLauncherHiddenItemClick(object? sender, RoutedEventArgs e)
@@ -1696,7 +1664,7 @@ public partial class MainWindow
             Content = content
         };
 
-        // 根据设置决定是否显示背景
+        // 闂傚倷绀侀幖顐ょ矓閻戞枻缍栧璺猴功閺嗐倕霉閿濆洤鍔嬪┑顖氥偢閺屾盯骞樺Δ鈧幊蹇涙倵椤撱垺鈷戦柛娑橈工婵洭鏌涢悢閿嬪仴闁诡喚鍋撻妶锝夊礃閵娿儱鎸ゆ俊鐐€栭悧妤冨枈瀹ュ纾垮┑鐘叉处閻撴盯鏌涢弴銊ヤ簻闁抽攱妫冮弻鏇㈠炊閵娿儱鎽甸梺纭呮珪椤ㄥ牊绂掗敃鍌涘€锋い鎺戝€哥拋?
         if (_showLauncherTileBackground)
         {
             button.Classes.Add("glass-panel");
@@ -1775,7 +1743,7 @@ public partial class MainWindow
             Content = content
         };
 
-        // 根据设置决定是否显示背景
+        // 闂傚倷绀侀幖顐ょ矓閻戞枻缍栧璺猴功閺嗐倕霉閿濆洤鍔嬪┑顖氥偢閺屾盯骞樺Δ鈧幊蹇涙倵椤撱垺鈷戦柛娑橈工婵洭鏌涢悢閿嬪仴闁诡喚鍋撻妶锝夊礃閵娿儱鎸ゆ俊鐐€栭悧妤冨枈瀹ュ纾垮┑鐘叉处閻撴盯鏌涢弴銊ヤ簻闁抽攱妫冮弻鏇㈠炊閵娿儱鎽甸梺纭呮珪椤ㄥ牊绂掗敃鍌涘€锋い鎺戝€哥拋?
         if (_showLauncherTileBackground)
         {
             button.Classes.Add("glass-panel");

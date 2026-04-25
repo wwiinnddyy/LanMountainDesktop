@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:symbol="using:FluentIcons.Common"
              x:Class="LanMountainDesktop.Views.Components.NotificationBoxWidget">
 
@@ -9,18 +9,18 @@
             Background="Transparent"
             ClipToBounds="True">
         <Grid>
-            <!-- 主卡片 -->
+            <!-- 涓诲崱鐗?-->
             <Border x:Name="CardBorder"
                     Background="#FCFCFD"
                     CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     Padding="12,10">
                 <Grid RowDefinitions="Auto,*,Auto">
-                    <!-- 头部 -->
+                    <!-- 澶撮儴 -->
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <fi:SymbolIcon x:Name="HeaderIcon" Symbol="{x:Static symbol:Symbol.MailInbox}" FontSize="16" />
                             <TextBlock x:Name="HeaderTextBlock"
-                                       Text="消息盒子"
+                                       Text="娑堟伅鐩掑瓙"
                                        FontSize="15"
                                        FontWeight="SemiBold" />
                             <Border x:Name="UnreadBadge"
@@ -46,24 +46,24 @@
                         </Button>
                     </Grid>
 
-                    <!-- 通知列表 -->
+                    <!-- 閫氱煡鍒楄〃 -->
                     <ScrollViewer Grid.Row="1"
                                   Margin="0,8,0,0"
                                   VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="NotificationListPanel" Spacing="6" />
                     </ScrollViewer>
 
-                    <!-- 空状态 -->
+                    <!-- 绌虹姸鎬?-->
                     <TextBlock x:Name="EmptyStateText"
                                Grid.Row="1"
-                               Text="暂无通知"
+                               Text="鏆傛棤閫氱煡"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Foreground="#8B95A5"
                                FontSize="13"
                                IsVisible="False" />
 
-                    <!-- 隐私模式遮罩 -->
+                    <!-- 闅愮妯″紡閬僵 -->
                     <Border x:Name="PrivacyOverlay"
                             Grid.Row="1"
                             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
@@ -73,13 +73,13 @@
                                     VerticalAlignment="Center"
                                     Spacing="6">
                             <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.EyeOff}" FontSize="24" Foreground="#8B95A5" />
-                            <TextBlock Text="您有新的通知"
+                            <TextBlock Text="鎮ㄦ湁鏂扮殑閫氱煡"
                                        Foreground="#8B95A5"
                                        FontSize="12" />
                         </StackPanel>
                     </Border>
 
-                    <!-- 底部状态 -->
+                    <!-- 搴曢儴鐘舵€?-->
                     <TextBlock x:Name="StatusTextBlock"
                                Grid.Row="2"
                                FontSize="11"

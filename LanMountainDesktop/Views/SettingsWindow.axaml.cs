@@ -205,14 +205,14 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         {
             if (previousCategory is not null && previousCategory != page.Category)
             {
-                RootNavigationView.MenuItems.Add(new NavigationViewItemSeparator());
+                RootNavigationView.MenuItems.Add(new FANavigationViewItemSeparator());
             }
 
-            RootNavigationView.MenuItems.Add(new NavigationViewItem
+            RootNavigationView.MenuItems.Add(new FANavigationViewItem
             {
                 Content = page.Title,
                 Tag = page.PageId,
-                IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
+                IconSource = new FluentIcons.Avalonia.SymbolIconSource
                 {
                     Symbol = MapIcon(page.IconKey),
                     IconVariant = FluentIcons.Common.IconVariant.Regular
@@ -223,9 +223,9 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
     }
 
-    private void OnNavigationSelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e)
+    private void OnNavigationSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {
-        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as NavigationViewItem;
+        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as FANavigationViewItem;
         NavigateTo(selectedItem?.Tag as string);
     }
 
@@ -301,7 +301,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
-        foreach (var item in RootNavigationView.MenuItems.OfType<NavigationViewItem>())
+        foreach (var item in RootNavigationView.MenuItems.OfType<FANavigationViewItem>())
         {
             if (string.Equals(item.Tag as string, pageId, StringComparison.OrdinalIgnoreCase))
             {
@@ -374,17 +374,17 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
         try
         {
-            var dialog = new ContentDialog
+            var dialog = new FAContentDialog
             {
                 Title = ViewModel.RestartDialogTitle,
                 Content = ViewModel.RestartMessage,
                 PrimaryButtonText = ViewModel.RestartDialogPrimaryText,
                 CloseButtonText = ViewModel.RestartDialogCloseText,
-                DefaultButton = ContentDialogButton.Primary
+                DefaultButton = FAContentDialogButton.Primary
             };
 
             var result = await dialog.ShowAsync(this);
-            if (result == ContentDialogResult.Primary)
+            if (result == FAContentDialogResult.Primary)
             {
                 _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
                     Source: "SettingsWindow",
@@ -486,7 +486,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _ = TryApplyResponsiveLayout();
 
-        // 小窗口时隐藏抽屉面板
+        // 灏忕獥鍙ｆ椂闅愯棌鎶藉眽闈㈡澘
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -537,9 +537,9 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _ = sender;
 
-        if (e.Property == NavigationView.IsPaneOpenProperty ||
-            e.Property == NavigationView.OpenPaneLengthProperty ||
-            e.Property == NavigationView.PaneDisplayModeProperty)
+        if (e.Property == FANavigationView.IsPaneOpenProperty ||
+            e.Property == FANavigationView.OpenPaneLengthProperty ||
+            e.Property == FANavigationView.PaneDisplayModeProperty)
         {
             UpdatePaneToggleIcon();
             RequestResponsiveLayoutRefresh();

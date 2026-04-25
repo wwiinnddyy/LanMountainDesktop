@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.WebView.Desktop;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
@@ -111,7 +110,6 @@ public sealed class Program
     {
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .UseDesktopWebView()
             .WithInterFont()
             .LogToTrace();
 

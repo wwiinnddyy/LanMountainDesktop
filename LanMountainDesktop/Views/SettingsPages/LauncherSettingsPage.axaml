@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:symbol="using:FluentIcons.Common"
              x:Class="LanMountainDesktop.Views.SettingsPages.LauncherSettingsPage"
              x:DataType="vm:LauncherSettingsPageViewModel">
@@ -56,14 +56,14 @@
                                Text="{Binding AppearanceHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding AppearanceHeader}"
                                  Description="{Binding AppearanceDescription}"
                                  IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="{x:Static symbol:Symbol.Apps}" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="2">
                             <TextBlock Text="{Binding ShowTileBackgroundHeader}" />
@@ -73,21 +73,21 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsChecked="{Binding ShowTileBackground}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <controls:IconText Icon="Apps"
                                Text="{Binding HiddenHeader}"
                                Margin="0,24,0,4" />
 
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding HiddenHeader}"
                                  Description="{Binding HiddenDescription}"
                                  IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Apps" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <TextBlock Classes="settings-item-description"
                                    IsVisible="{Binding IsHiddenItemsEmpty}"
@@ -99,24 +99,24 @@
                                       IsVisible="{Binding HasHiddenItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:LauncherHiddenItemViewModel">
-                                    <ui:SettingsExpanderItem Content="{Binding DisplayName}"
+                                    <ui:FASettingsExpanderItem Content="{Binding DisplayName}"
                                                              Description="{Binding TypeLabel}"
                                                              IsClickEnabled="False">
-                                        <ui:SettingsExpanderItem.IconSource>
+                                        <ui:FASettingsExpanderItem.IconSource>
                                             <fi:SymbolIconSource Symbol="{Binding IconSymbol}" />
-                                        </ui:SettingsExpanderItem.IconSource>
-                                        <ui:SettingsExpanderItem.Footer>
+                                        </ui:FASettingsExpanderItem.IconSource>
+                                        <ui:FASettingsExpanderItem.Footer>
                                             <Button Command="{Binding RestoreCommand}"
                                                     Content="{Binding RestoreButtonText}"
                                                     VerticalAlignment="Center" />
-                                        </ui:SettingsExpanderItem.Footer>
-                                    </ui:SettingsExpanderItem>
+                                        </ui:FASettingsExpanderItem.Footer>
+                                    </ui:FASettingsExpanderItem>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

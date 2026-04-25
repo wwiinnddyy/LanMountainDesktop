@@ -9,7 +9,6 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentIcons.Avalonia;
-using FluentIcons.Avalonia.Fluent;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;

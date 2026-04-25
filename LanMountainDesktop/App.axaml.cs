@@ -14,7 +14,6 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
@@ -78,7 +77,6 @@ public partial class App : Application
     private TransparentOverlayWindow? _transparentOverlayWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
     private bool _mainWindowClosed;
-    private bool _uiUnhandledExceptionHooked;
     private DesktopShellHost? _desktopShellHost;
     private PublicIpcHostService? _publicIpcHostService;
     private LoadingStateManager? _loadingStateManager;
@@ -194,8 +192,6 @@ public partial class App : Application
             return;
         }
 
-        ConfigureWebViewUserDataFolder();
-        AvaloniaWebViewBuilder.Initialize(default);
         ApplyThemeFromSettings();
         ApplyCurrentCultureFromSettings();
         EnsureSettingsWindowService();
@@ -212,8 +208,7 @@ public partial class App : Application
         }
 
         AppLogger.Info("App", "Framework initialization completed.");
-        
-        RegisterUiUnhandledExceptionGuard();
+
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePublicIpc();
         CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
@@ -540,34 +535,6 @@ public partial class App : Application
         foreach (var plugin in dataValidationPluginsToRemove)
         {
             BindingPlugins.DataValidators.Remove(plugin);
-        }
-    }
-
-    private static void ConfigureWebViewUserDataFolder()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        const string userDataFolderEnvVar = "WEBVIEW2_USER_DATA_FOLDER";
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(userDataFolderEnvVar)))
-            {
-                return;
-            }
-
-            var userDataFolder = WebView2RuntimeProbe.ResolveUserDataFolder();
-            Environment.SetEnvironmentVariable(
-                userDataFolderEnvVar,
-                userDataFolder,
-                EnvironmentVariableTarget.Process);
-        }
-        catch (Exception ex)
-        {
-            // Keep startup resilient if user profile folders are unavailable.
-            AppLogger.Warn("WebView2", "Failed to configure WebView2 user data folder.", ex);
         }
     }
 
@@ -1176,43 +1143,6 @@ public partial class App : Application
     private void ApplyAdaptiveThemeResources()
     {
         _appearanceThemeService.ApplyThemeResources(Resources);
-    }
-
-    private void RegisterUiUnhandledExceptionGuard()
-    {
-        if (_uiUnhandledExceptionHooked)
-        {
-            return;
-        }
-
-        Dispatcher.UIThread.UnhandledException += OnUiThreadUnhandledException;
-        _uiUnhandledExceptionHooked = true;
-    }
-
-    private void OnUiThreadUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
-    {
-        if (!IsKnownWebViewStartupException(e.Exception))
-        {
-            return;
-        }
-
-        e.Handled = true;
-        AppLogger.Warn(
-            "WebView2",
-            "Suppressed a known WebView startup exception from AvaloniaWebView.Navigate to keep the host process alive.",
-            e.Exception);
-    }
-
-    private static bool IsKnownWebViewStartupException(Exception exception)
-    {
-        if (exception is not NullReferenceException)
-        {
-            return false;
-        }
-
-        var stackTrace = exception.StackTrace ?? string.Empty;
-        return stackTrace.Contains("AvaloniaWebView.WebView.Navigate", StringComparison.Ordinal) &&
-               stackTrace.Contains("AvaloniaWebView.WebView.OnAttachedToVisualTree", StringComparison.Ordinal);
     }
 
     private void ReleaseSingleInstanceAfterExit(string source)
@@ -1958,5 +1888,4 @@ public partial class App : Application
             .ToArray();
     }
 }
-
 

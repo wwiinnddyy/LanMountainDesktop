@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.NotificationSettingsPage"
              x:DataType="vm:NotificationSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -13,15 +13,15 @@
                                Text="{Binding NotificationHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding EnableNotificationHeader}"
+            <ui:FASettingsExpander Header="{Binding EnableNotificationHeader}"
                                  Description="{Binding EnableNotificationDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Alert" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsNotificationEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
@@ -29,39 +29,39 @@
                                Text="{Binding BehaviorHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding HoverPauseHeader}"
+            <ui:FASettingsExpander Header="{Binding HoverPauseHeader}"
                                  Description="{Binding HoverPauseDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="CursorHover" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsHoverPauseEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding ClickCloseHeader}"
+            <ui:FASettingsExpander Header="{Binding ClickCloseHeader}"
                                  Description="{Binding ClickCloseDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="CursorClick" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsClickCloseEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding MaxNotificationsHeader}"
+            <ui:FASettingsExpander Header="{Binding MaxNotificationsHeader}"
                                  Description="{Binding MaxNotificationsDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="NumberSymbol" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ui:NumberBox Value="{Binding MaxNotificationsPerPosition}"
                                   Minimum="1"
                                   Maximum="10"
                                   Width="100"
                                   SpinButtonPlacementMode="Inline" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
@@ -69,12 +69,12 @@
                                Text="{Binding TestHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding TestNotificationHeader}"
+            <ui:FASettingsExpander Header="{Binding TestNotificationHeader}"
                                  Description="{Binding TestNotificationDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Beaker" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ComboBox Width="120"
                                   ItemsSource="{Binding TestPositions}"
@@ -104,8 +104,8 @@
                             <fi:SymbolIcon Symbol="Send" FontSize="16" />
                         </Button>
                     </StackPanel>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
         </StackPanel>
     </ScrollViewer>

@@ -2,13 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:converters="using:Avalonia.Data.Converters"
              x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryControl"
              x:DataType="vm:ComponentLibraryWindowViewModel">
 
     <UserControl.Styles>
-        <!-- 分类列表项样式 - 遵循 Fluent NavigationView 风格 -->
+        <!-- 闂備礁鎲＄敮鎺懳涘☉姘仏妞ゆ劧绠戠粈鍡樹繆閵堝懎顏ラ柍褜鍓欓崯顖炲Φ閸曨厽鍠嗛柛鏇ㄥ幖椤ュ酣鎮?- 闂傚倷绶￠崜鐔奉焽瑜旈獮?Fluent NavigationView 濠碉紕鍋涢鍛偓娑掓櫊閹?-->
         <Style Selector="ListBoxItem.category-item">
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,2"/>
@@ -30,7 +30,7 @@
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
         </Style>
 
-        <!-- 分类项图标和文字 -->
+        <!-- 闂備礁鎲＄敮鎺懳涘☉姘仏妞ゆ劧绲绘禍婊堟煟閻斿搫顣肩紒鍌氱墦閺屸€愁吋閸涱喗鎮欓梺纭呮腹閸楀啿顕ｉ鍕倞鐟滃繘骞?-->
         <Style Selector="ListBoxItem.category-item fi|FluentIcon.category-icon">
             <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}"/>
         </Style>
@@ -50,11 +50,11 @@
     <Grid ColumnDefinitions="Auto,*"
           ColumnSpacing="0"
           Margin="0">
-        <!-- 左侧导航列 - 分类列表 + 底部"查找更多组件" -->
+        <!-- 闁诲骸缍婂鑽ょ磽濮樿泛鐤鹃柛鎾茶閸嬫挻鎷呴崘顭戞闂佺硶鏅涢幊妯虹暦?- 闂備礁鎲＄敮鎺懳涘☉姘仏妞ゆ劧绠戠粈鍡樹繆閵堝懎顏ラ柍?+ 闂佸湱鍘ч悺銊ッ洪悢鐓庣？?闂備礁鎼悮顐﹀磿閸欏鐝舵慨妞诲亾鐎殿喗鎸冲鍫曞箣椤撶啿鏌ょ紓鍌氬€风粈浣衡偓姘间簻閳? -->
         <Border Width="280"
                 Background="Transparent">
             <Grid RowDefinitions="*,Auto">
-                <!-- 分类列表 -->
+                <!-- 闂備礁鎲＄敮鎺懳涘☉姘仏妞ゆ劧绠戠粈鍡樹繆閵堝懎顏ラ柍?-->
                 <ListBox x:Name="CategoryListBox"
                          Grid.Row="0"
                          Background="Transparent"
@@ -81,7 +81,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <!-- 底部"查找更多组件" - 在左侧导航列底部 -->
+                <!-- 闂佸湱鍘ч悺銊ッ洪悢鐓庣？?闂備礁鎼悮顐﹀磿閸欏鐝舵慨妞诲亾鐎殿喗鎸冲鍫曞箣椤撶啿鏌ょ紓鍌氬€风粈浣衡偓姘间簻閳? - 闂備線娼荤拹鐔煎礉鐏炲墽鈻曢煫鍥ㄦ⒒閻熷湱鎲稿澶樻晪闂侇剙绉甸崵瀣亜韫囨挸顏╅柣蹇旂懇楠炴牜鈧稒蓱缁€瀣煕?-->
                 <StackPanel Grid.Row="1"
                             Margin="12,8,8,12">
                     <Border Height="1"
@@ -93,42 +93,42 @@
                             Click="OnFindMoreComponentsClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <fi:FluentIcon Icon="Globe" IconVariant="Regular" FontSize="14"/>
-                            <TextBlock Text="查找更多组件"/>
+                            <TextBlock Text="Find More Components"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- 右侧内容区与左侧的分隔线 -->
+        <!-- 闂備礁鎲￠悷銉╁储閺嶎厼鐤鹃柛顐ｆ礀缁€鍐煕濞戝崬寮鹃柛鐔锋喘閺屾盯寮介浣碘偓鍐磼濡も偓閼活垶顢欒箛娑欐櫆闁圭瀛╅悵鐑芥⒑濮瑰洤濡奸悗姘煎墴瀹曡鎯旈妸锔规寗闂佸搫鍟崐绋库枔?-->
         <Border Grid.Column="1"
                 Width="1"
                 HorizontalAlignment="Left"
                 Background="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                 Opacity="0.5"/>
 
-        <!-- 组件预览区 (右侧) -->
+        <!-- 缂傚倸鍊风粈浣衡偓姘间簻閳诲酣濮€閳藉懐鐭楅梺鍛婃处閸ｎ喖顭囬弮鍫熺厱?(闂備礁鎲￠悷銉╁储閺嶎厼鐤? -->
         <ScrollViewer Grid.Column="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="16,8,12,8"
                         Spacing="0">
 
-                <!-- 有选中组件时的显示 -->
+                <!-- 闂備礁鎼悧鍡浰囬悽绋跨劦妞ゆ巻鍋撴い锔诲櫍閹虫瑩骞嬮悩鐢碉紲闂佸憡娲︽禍婵嬵敃娴犲鐓涢柛鎰╁妼椤ｈ櫕绻涢崼鐔风伌鐎殿喕鍗冲畷婊嗩槹濞?-->
                 <Panel IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
 
-                    <!-- 组件展示面板 - 有独立背景色，与窗口背景形成层级分界 -->
+                    <!-- 缂傚倸鍊风粈浣衡偓姘间簻閳诲酣濮€椤厽鍕冮梺鍝勬川婵増绂掑☉銏♀拻闁割偅绋戦悘顏呯節?- 闂備礁鎼悧鍡浰囨潏鈹惧亾濮樼厧骞樼紒顔规櫇閳ь剨缍嗛崢濂稿礈瑜版帗鐓涢柛婊€绀侀悘銉ヮ熆閻熷府韬柡浣哥Ф娴狅箓鎳栭埡鍐╁枦缂傚倷鐒﹂崝鏍€冮崨鑸汗婵炴垯鍨洪崵鍕倶閻愰潧浜鹃柣婵愬灣閹叉悂鎳滈鈧悘顏堟煕閵婏附鐨戝ù鐙呯畵瀹曟帒顭ㄩ崼銏犵闂備礁鎲＄敮鎺懳涘☉銏犵柧?-->
                     <Border Classes="surface-translucent-panel"
                             CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                             Padding="20">
                         <StackPanel Spacing="16">
-                            <!-- 组件标题 -->
+                            <!-- 缂傚倸鍊风粈浣衡偓姘间簻閳诲酣濮€閵堝懎鍞ㄩ梺鎼炲労閸擄箓寮?-->
                             <TextBlock FontSize="28"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                        Text="{Binding SelectedComponent.DisplayName}"/>
 
-                            <!-- 固定大小的预览卡片 -->
+                            <!-- 闂備焦鎮堕崕閬嶅箹椤愶附鍋╅柣鎰靛墮缁剁偟鎲稿澶嬪剭妞ゆ帒瀚崕宥夋煕閺囥劌鐏遍柡鍡樻礋閹嘲鈻庤箛鏇烆暫閻庤娲熸禍鍫曞箖?-->
                             <Border CornerRadius="{DynamicResource DesignCornerRadiusSm}"
                                     Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
                                     BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
@@ -137,7 +137,7 @@
                                     Height="300"
                                     HorizontalAlignment="Center">
                                 <Grid Margin="16">
-                                    <!-- 预览图片 -->
+                                    <!-- 濠碘槅鍋呭妯尖偓姘煎灦閿濈偛顓兼径濠勫€為梺鍛婃寙閸愮偓姣?-->
                                     <Image Source="{Binding SelectedComponent.PreviewBitmap}"
                                            Stretch="Uniform"
                                            HorizontalAlignment="Center"
@@ -145,7 +145,7 @@
                                            RenderOptions.BitmapInterpolationMode="HighQuality"
                                            IsVisible="{Binding SelectedComponent.IsPreviewReady}"/>
 
-                                    <!-- 加载中状态 -->
+                                    <!-- 闂備礁鎲″缁樻叏閹灐褰掑炊閵娧€鏋栧銈嗘尵婵鐟ч梻?-->
                                     <Border IsVisible="{Binding SelectedComponent.IsPreviewPending}"
                                             Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
                                         <StackPanel HorizontalAlignment="Center"
@@ -161,7 +161,7 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- 失败状态 -->
+                                    <!-- 濠电姰鍨洪崕鑲╁垝閸撗勫枂闁挎洖鍊归崑鎰版煠閸濄儺鏆柛?-->
                                     <Border IsVisible="{Binding SelectedComponent.IsPreviewFailed}"
                                             Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
                                         <StackPanel HorizontalAlignment="Center"
@@ -188,7 +188,7 @@
                                 </Grid>
                             </Border>
 
-                            <!-- "添加小组件"按钮 - 在面板内居中，使用主题强调色 -->
+                            <!-- "婵犵數鍎戠紞鈧い鏇嗗嫭鍙忛柣鎰悁閻掑﹪鐓崶銊︾闁活厼顑呴湁?闂備礁婀遍…鍫ニ囬悽绋跨?- 闂備線娼荤拹鐔煎礉閹存繍鐒藉ù鍏兼綑缁狙囨煕椤垵鏋涢柡浣哥埣閹﹢鎮欓崣澶婃闂佺厧鐏氶崹鍧楀极瀹ュ洣娌柣鎾崇岸閺嬪繘姊哄ú缁樺▏闁告柨顑囬埀顒勬涧閺堫剟鏁嶉幇顑╃喖宕崟顓犵暢闂佽崵濮撮鍛村疮閾忣偆鐝?-->
                             <Button HorizontalAlignment="Center"
                                     Classes="accent"
                                     Padding="24,10"
@@ -196,14 +196,14 @@
                                     Click="OnAddComponentClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
-                                    <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Add Component" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
                     </Border>
                 </Panel>
 
-                <!-- 空状态 -->
+                <!-- 缂傚倷绀侀惌浣糕枍閿濆棙鍙忛柟闂寸缁?-->
                 <Grid IsVisible="{Binding SelectedComponent, Converter={x:Static converters:ObjectConverters.IsNull}}"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"
@@ -218,7 +218,7 @@
                         <TextBlock HorizontalAlignment="Center"
                                    FontSize="16"
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                   Text="请从左侧选择一个组件"/>
+                                   Text="Select a component to view its details."/>
                     </StackPanel>
                 </Grid>
             </StackPanel>

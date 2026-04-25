@@ -19,12 +19,20 @@ public static class WebView2RuntimeProbe
 
     public static WebView2RuntimeAvailability GetAvailability()
     {
-        if (!OperatingSystem.IsWindows())
+        if (OperatingSystem.IsMacOS())
         {
             return new WebView2RuntimeAvailability(
                 IsAvailable: true,
                 Version: null,
                 Message: string.Empty);
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            return new WebView2RuntimeAvailability(
+                IsAvailable: false,
+                Version: null,
+                Message: "Embedded browser is currently unavailable on this platform.");
         }
 
         try

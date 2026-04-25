@@ -3,7 +3,7 @@
         xmlns:vm="using:LanMountainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
-        xmlns:ic="using:FluentIcons.Avalonia.Fluent"
+        xmlns:ic="using:FluentIcons.Avalonia"
         xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:comp="using:LanMountainDesktop.Views.Components"
 
@@ -236,7 +236,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- 状态栏阴影层 - macOS 风格的完整阴影带 -->
+                        <!-- 鐘舵€佹爮闃村奖灞?- macOS 椋庢牸鐨勫畬鏁撮槾褰卞甫 -->
                         <Border x:Name="StatusBarOverlay"
                                 Grid.Row="0"
                                 Grid.Column="0"
@@ -265,7 +265,7 @@
                                 Padding="4"
                                 ZIndex="2">
                             <Grid ColumnDefinitions="*,Auto,*">
-                                <!-- 左侧状态栏组件 -->
+                                <!-- 宸︿晶鐘舵€佹爮缁勪欢 -->
                                 <StackPanel x:Name="TopStatusLeftPanel"
                                             Grid.Column="0"
                                             Orientation="Horizontal"
@@ -281,7 +281,7 @@
                                                              IsVisible="False"
                                                              Margin="0" />
                                 </StackPanel>
-                                <!-- 中间状态栏组件 -->
+                                <!-- 涓棿鐘舵€佹爮缁勪欢 -->
                                 <StackPanel x:Name="TopStatusCenterPanel"
                                             Grid.Column="1"
                                             Orientation="Horizontal"
@@ -297,7 +297,7 @@
                                                              IsVisible="False"
                                                              Margin="0" />
                                 </StackPanel>
-                                <!-- 右侧状态栏组件 -->
+                                <!-- 鍙充晶鐘舵€佹爮缁勪欢 -->
                                 <StackPanel x:Name="TopStatusRightPanel"
                                             Grid.Column="2"
                                             Orientation="Horizontal"

@@ -1,0 +1,40 @@
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="12.0.1" />
+    <PackageVersion Include="Avalonia.Controls.WebView" Version="12.0.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.0.1" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.1" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.1" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
+    <PackageVersion Include="ClassIsland.Markdown.Avalonia" Version="12.0.0" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    <PackageVersion Include="dotnetCampus.Ipc" Version="2.0.0-alpha434" />
+    <PackageVersion Include="DotNetCampus.AvaloniaInkCanvas" Version="1.0.1" />
+    <PackageVersion Include="Downloader" Version="4.1.1" />
+    <PackageVersion Include="FluentAvaloniaUI" Version="3.0.0-preview1" />
+    <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.325" />
+    <PackageVersion Include="Material.Avalonia" Version="3.16.0" />
+    <PackageVersion Include="MaterialColorUtilities" Version="0.3.0" />
+    <PackageVersion Include="Material.Icons.Avalonia" Version="3.0.2" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="MudTools.OfficeInterop" Version="2.0.8" />
+    <PackageVersion Include="MudTools.OfficeInterop.Excel" Version="2.0.8" />
+    <PackageVersion Include="MudTools.OfficeInterop.PowerPoint" Version="2.0.8" />
+    <PackageVersion Include="MudTools.OfficeInterop.Word" Version="2.0.8" />
+    <PackageVersion Include="PortAudioSharp2" Version="1.0.6" />
+    <PackageVersion Include="PostHog" Version="2.4.0" />
+    <PackageVersion Include="Sentry" Version="4.0.0" />
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
+    <PackageVersion Include="System.Runtime.WindowsRuntime" Version="4.7.0" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+    <PackageVersion Include="log4net" Version="3.3.0" />
+  </ItemGroup>
+</Project>

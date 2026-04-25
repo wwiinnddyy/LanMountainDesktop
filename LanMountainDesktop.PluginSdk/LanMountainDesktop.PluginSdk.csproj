@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>4.0.2</Version>
+    <Version>5.0.0-preview1</Version>
     <PackageId>LanMountainDesktop.PluginSdk</PackageId>
     <IsPackable>true</IsPackable>
     <Authors>LanMountainDesktop</Authors>
@@ -19,13 +19,12 @@
 
   <ItemGroup>
     <Compile Remove="_build_verify_*\**\*.cs" />
-    <PackageReference Include="Avalonia" Version="11.3.12" />
-    <PackageReference Include="FluentAvaloniaUI" Version="2.5.0" ExcludeAssets="runtime" />
-    <PackageReference Include="FluentIcons.Avalonia" Version="2.0.320" ExcludeAssets="runtime" />
-    <PackageReference Include="FluentIcons.Avalonia.Fluent" Version="2.0.320" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
-    <PackageReference Include="dotnetCampus.Ipc" Version="2.0.0-alpha434" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="FluentAvaloniaUI" ExcludeAssets="runtime" />
+    <PackageReference Include="FluentIcons.Avalonia" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="dotnetCampus.Ipc" />
     <ProjectReference Include="..\LanMountainDesktop.PluginIsolation.Contracts\LanMountainDesktop.PluginIsolation.Contracts.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.Shared.IPC\LanMountainDesktop.Shared.IPC.csproj" />

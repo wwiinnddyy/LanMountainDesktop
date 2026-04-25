@@ -152,7 +152,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
     </Style>
 
-    <Style Selector=".settings-scope ui|NavigationView, .settings-scope ui|NavigationViewItem, .settings-scope ui|SettingsExpander, .settings-scope ui|InfoBar, .settings-scope ListBoxItem">
+    <Style Selector=".settings-scope ui|FANavigationView, .settings-scope ui|FANavigationViewItem, .settings-scope ui|FASettingsExpander, .settings-scope ui|FAInfoBar, .settings-scope ListBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
@@ -169,9 +169,9 @@
     </Style>
 
     <!--
-        半透明表面样式类
-        注意：这些样式使用纯色半透明画刷模拟玻璃效果，并非真正的 Mica/Acrylic 模糊材质。
-        真正的 Mica/Acrylic 效果仅通过 WindowTransparencyLevel 在独立窗口上应用。
+        鍗婇€忔槑琛ㄩ潰鏍峰紡绫?
+        娉ㄦ剰锛氳繖浜涙牱寮忎娇鐢ㄧ函鑹插崐閫忔槑鐢诲埛妯℃嫙鐜荤拑鏁堟灉锛屽苟闈炵湡姝ｇ殑 Mica/Acrylic 妯＄硦鏉愯川銆?
+        鐪熸鐨?Mica/Acrylic 鏁堟灉浠呴€氳繃 WindowTransparencyLevel 鍦ㄧ嫭绔嬬獥鍙ｄ笂搴旂敤銆?
     -->
 
     <Style Selector="Border.surface-translucent-panel">
@@ -221,7 +221,7 @@
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassOverlayOpacity}" />
     </Style>
 
-    <!-- 向后兼容的旧样式类（已弃用） -->
+    <!-- 鍚戝悗鍏煎鐨勬棫鏍峰紡绫伙紙宸插純鐢級 -->
     <Style Selector="Border.glass-panel">
         <Setter Property="Background" Value="{DynamicResource AdaptiveGlassPanelBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />

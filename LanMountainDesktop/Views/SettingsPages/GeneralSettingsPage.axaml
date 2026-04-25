@@ -3,21 +3,20 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.GeneralSettingsPage"
              x:DataType="vm:GeneralSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-
             <controls:IconText Icon="Globe"
                                Text="{Binding BasicHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding LanguageHeader}">
-                <ui:SettingsExpander.IconSource>
+            <ui:FASettingsExpander Header="{Binding LanguageHeader}">
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Settings" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding Languages}"
                               SelectedItem="{Binding SelectedLanguage}">
@@ -27,15 +26,15 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding TimeZoneHeader}"
+            <ui:FASettingsExpander Header="{Binding TimeZoneHeader}"
                                  Description="{Binding TimeZoneDescription}">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Clock" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="240"
                               ItemsSource="{Binding TimeZones}"
                               SelectedItem="{Binding SelectedTimeZone}">
@@ -45,14 +44,14 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding PreviewHeader}">
-                <ui:SettingsExpander.IconSource>
+            <ui:FASettingsExpander Header="{Binding PreviewHeader}">
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Calendar" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
                           ColumnSpacing="16"
                           RowDefinitions="Auto,Auto"
@@ -70,8 +69,8 @@
                                    Opacity="0.82"
                                    Text="{Binding PreviewDateText}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
@@ -79,13 +78,13 @@
                                Text="{Binding RuntimeHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding RenderModeHeader}"
+            <ui:FASettingsExpander Header="{Binding RenderModeHeader}"
                                  Description="{Binding RuntimeDescription}"
                                  IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="DeveloperBoard" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding RenderModes}"
                               SelectedItem="{Binding SelectedRenderMode}">
@@ -95,48 +94,47 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-                <ui:SettingsExpanderItem>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
                     <TextBlock Text="{Binding RenderModeRestartMessage}"
                                Opacity="0.7"
                                FontSize="12"
                                TextWrapping="Wrap" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="淡入淡出效果"
+            <ui:FASettingsExpander Header="Fade startup transition"
                                  Description="{Binding FadeTransitionDescription}"
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowUpload" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Window" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableFadeTransition}"
                                   IsEnabled="{Binding IsFadeTransitionToggleEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="启动滑入滑出效果"
-                                 Description="启用后，启动和恢复时从屏幕右侧边缘滑入或滑出，仅 Windows 可用。"
+            <ui:FASettingsExpander Header="Slide startup transition"
+                                 Description="Use a slide-in startup transition on supported Windows builds. This option disables the fade transition."
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowRight" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <fi:SymbolIconSource Symbol="Gesture" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableSlideTransition}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="桌面主窗口在任务栏显示图标"
-                                 Description="仅控制桌面主窗口在系统任务栏中的图标显示，不影响设置窗口。">
-                <ui:SettingsExpander.IconSource>
+            <ui:FASettingsExpander Header="Show in taskbar"
+                                 Description="Keep the main window visible in the taskbar while the desktop host is running.">
+                <ui:FASettingsExpander.IconSource>
                     <fi:SymbolIconSource Symbol="Window" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowInTaskbar}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
-
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

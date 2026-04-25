@@ -390,12 +390,10 @@ public partial class MainWindow
 
         if (OperatingSystem.IsWindows())
         {
-            // Windows: 使用 SlideToShutDown 滑动关机界面
             _powerService.ShowNativePowerUI(PowerAction.Shutdown);
         }
         else
         {
-            // Linux: 二次确认对话框
             await ShowPowerConfirmDialogAsync(L("power.shutdown_confirm_title", "Shutdown"),
                 L("power.shutdown_confirm_message", "Are you sure you want to shut down this computer?"),
                 () => _powerService.ShutdownAsync());
@@ -408,8 +406,6 @@ public partial class MainWindow
         _ = e;
         ClosePopupIfOpen();
 
-        // 所有平台：统一使用二次确认对话框
-        // Note: SlideToShutDown.exe 只支持关机，不支持重启
         await ShowPowerConfirmDialogAsync(L("power.restart_confirm_title", "Restart"),
             L("power.restart_confirm_message", "Are you sure you want to restart this computer?"),
             () => _powerService.RestartAsync());
@@ -449,7 +445,7 @@ public partial class MainWindow
     {
         try
         {
-            var dialog = new ContentDialog
+            var dialog = new FAContentDialog
             {
                 Title = title,
                 Content = message,
@@ -458,7 +454,7 @@ public partial class MainWindow
             };
 
             var result = await dialog.ShowAsync(this);
-            if (result == ContentDialogResult.Primary)
+            if (result == FAContentDialogResult.Primary)
             {
                 await action();
             }
@@ -744,49 +740,41 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 检测状态栏组件是否会发生碰撞
-    /// </summary>
+    /// 濠碘槅鍋€閸嬫挻绻涢弶鎴剳濠殿喗鎮傞獮鈧ù锝呮贡閸╁绱撴担绋款仹婵炲棎鍨藉浼搭敍濮橆厼鍓ㄦ繛鏉戝悑閼规崘銇愰崒鐐村仺闁绘柧璀﹀楣冩煙?    /// </summary>
     private bool WouldComponentsCollide()
     {
         if (TopStatusBarHost is null)
             return false;
 
-        // 获取各区域当前占用的宽度
         var leftWidth = GetLeftPanelOccupiedWidth();
         var centerWidth = GetCenterPanelOccupiedWidth();
         var rightWidth = GetRightPanelOccupiedWidth();
 
-        // 获取状态栏总宽度
         var totalWidth = TopStatusBarHost.Bounds.Width;
         if (totalWidth <= 0)
             return false;
 
-        // 计算中间区域的实际位置
-        // 左列是 *, 中列是 Auto, 右列是 *
-        // 中间区域居中显示
-        var centerLeft = (totalWidth - centerWidth) / 2;
+        // 闁荤姳绶ょ槐鏇㈡偩缂佹鈻旀い鎾卞灪閿涚喖鏌涢弽褎鎯堥柣鎾寸懇閹啴宕熼銈嗘緰闂傚倸瀚幊宥囩礊閸涱垳纾?        // 閻庡綊娼荤粻鎴﹀垂椤忓牆鍙?*, 婵炴垶鎼╅崢濂稿垂椤忓牆鍙?Auto, 闂佸憡鐟ラ崯鍧楀垂椤忓牆鍙?*
+        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鎮橀悙鍙夊櫢闁煎灚鍨垮浼村礈瑜嬫禒?        var centerLeft = (totalWidth - centerWidth) / 2;
         var centerRight = centerLeft + centerWidth;
 
-        // 安全间距（像素）
+        // 闁诲海鎳撻ˇ顖炲矗韫囨稒鈷掔痪鎯ь儑閻涒晠鏌ㄥ☉妯煎闁稿孩姘ㄥΣ鎰版偑閸涱垳顦?
         const double safetyMargin = 20;
 
-        // 检测左侧组件是否会与中间区域碰撞
-        // 左侧组件右边界 = leftWidth
-        // 中间区域左边界 = centerLeft
+        // 濠碘槅鍋€閸嬫挻绻涢弶鎴剰濞戞柨绻戠粭鐔活槾缂侇喖绉电粋鎺楁嚋閸倣锕傛煕濮樺墽绱扮紒杈╁缁嬪鎯斿┑濠傚箑闂傚倸鍊瑰娆戜焊椤栫偛鏄ラ柣鏂捐濞奸箖鏌?        // 閻庡綊娼荤紓姘跺疾閸撲胶纾奸柛鏇ㄤ簼椤愪粙鏌涘▎蹇曟瀮缂佹梻鍠栭幃?= leftWidth
+        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼數鈧綊娼荤粻鎺旂博閻斿吋鍋?= centerLeft
         if (leftWidth + safetyMargin > centerLeft)
         {
             return true;
         }
 
-        // 检测右侧组件是否会与中间区域碰撞
-        // 右侧组件左边界 = totalWidth - rightWidth
-        // 中间区域右边界 = centerRight
+        // 濠碘槅鍋€閸嬫挻绻涢弶鎴剰鐟滄澘鎲＄粭鐔活槾缂侇喖绉电粋鎺楁嚋閸倣锕傛煕濮樺墽绱扮紒杈╁缁嬪鎯斿┑濠傚箑闂傚倸鍊瑰娆戜焊椤栫偛鏄ラ柣鏂捐濞奸箖鏌?        // 闂佸憡鐟ラ崢鏍疾閸撲胶纾奸柛鏇ㄤ簼椤愮晫鈧綊娼荤粻鎺旂博閻斿吋鍋?= totalWidth - rightWidth
+        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鏌涘▎蹇曟瀮缂佹梻鍠栭幃?= centerRight
         if (totalWidth - rightWidth - safetyMargin < centerRight)
         {
             return true;
         }
 
-        // 检测中间区域是否会与左右两侧碰撞（中间区域过宽）
         if (centerLeft < leftWidth + safetyMargin ||
             centerRight > totalWidth - rightWidth - safetyMargin)
         {
@@ -797,8 +785,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取左侧面板占用的宽度（包括间距）
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸パ屽晠闁挎梹瀵у▍鐘绘⒒閸稑鐏繝銏★耿瀹曪繝鎮╅崹顐ｆ闂佹眹鍔岀€氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
     private double GetLeftPanelOccupiedWidth()
     {
         if (TopStatusLeftPanel is null)
@@ -817,8 +804,7 @@ public partial class MainWindow
             }
         }
 
-        // 添加间距
-        if (visibleCount > 1)
+        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -827,8 +813,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取中间面板占用的宽度（包括间距）
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸ャ劎鈻旀い鎾卞灪閿涚喖姊婚崼娑樼仾婵犮垺锕㈠畷锟犳偐閸偅娈㈤梺姹囧妼鐎氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
     private double GetCenterPanelOccupiedWidth()
     {
         if (TopStatusCenterPanel is null)
@@ -847,8 +832,7 @@ public partial class MainWindow
             }
         }
 
-        // 添加间距
-        if (visibleCount > 1)
+        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -857,8 +841,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取右侧面板占用的宽度（包括间距）
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸ヮ剙鐭楅柛蹇撴噺濞呯娀姊婚崼娑樼仾婵犮垺锕㈠畷锟犳偐閸偅娈㈤梺姹囧妼鐎氼剟顢欓弮鈧幆鏃堟晜閼测晝顦╅梺鍛婄墪閹冲繒鈧凹鍙冨鑽ゅ鐎ｎ剛宕洪梺?    /// </summary>
     private double GetRightPanelOccupiedWidth()
     {
         if (TopStatusRightPanel is null)
@@ -877,8 +860,7 @@ public partial class MainWindow
             }
         }
 
-        // 添加间距
-        if (visibleCount > 1)
+        // 濠电儑缍€椤曆勬叏閻愮儤鈷掔痪鎯ь儑閻?        if (visibleCount > 1)
         {
             width += spacing * (visibleCount - 1);
         }
@@ -887,25 +869,19 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 检查是否可以在指定位置添加组件
-    /// </summary>
+    /// 濠碘槅鍋€閸嬫捇鏌＄仦璇插姕婵″弶鎮傚畷銉╂晝閳ь剝銇愰崣澶岊浄闁靛鍎查煬顒勬煙缁嬫寧鎼愰柣锝囧亾閹峰懎顓奸崶鈺傜€┑鐑囩秬椤曆勬叏閻愮數纾奸柛鏇ㄤ簼椤?    /// </summary>
     private bool CanAddComponentAtPosition(string position)
     {
-        // 先临时显示组件以计算宽度
         var wouldCollide = WouldComponentsCollide();
         if (!wouldCollide)
             return true;
 
-        // 如果会发生碰撞，检查是否是因为目标位置导致的
-        // 获取当前各区域宽度
         var leftWidth = GetLeftPanelOccupiedWidth();
         var centerWidth = GetCenterPanelOccupiedWidth();
         var rightWidth = GetRightPanelOccupiedWidth();
 
-        // 估算新组件的宽度（基于当前单元格大小）
         var estimatedNewComponentWidth = _currentDesktopCellSize > 0 ? _currentDesktopCellSize * 2 : 120;
 
-        // 根据目标位置检查添加后是否会碰撞
         return position switch
         {
             "Left" => CanAddToLeft(leftWidth, centerWidth, rightWidth, estimatedNewComponentWidth),
@@ -924,7 +900,7 @@ public partial class MainWindow
         if (totalWidth <= 0)
             return true;
 
-        var newLeftWidth = leftWidth + newWidth + TopStatusLeftPanel?.Spacing ?? 6;
+        var newLeftWidth = leftWidth + newWidth + (TopStatusLeftPanel?.Spacing ?? 6);
         var centerLeft = (totalWidth - centerWidth) / 2;
 
         const double safetyMargin = 20;
@@ -940,7 +916,7 @@ public partial class MainWindow
         if (totalWidth <= 0)
             return true;
 
-        var newCenterWidth = centerWidth + newWidth + TopStatusCenterPanel?.Spacing ?? 6;
+        var newCenterWidth = centerWidth + newWidth + (TopStatusCenterPanel?.Spacing ?? 6);
         var centerLeft = (totalWidth - newCenterWidth) / 2;
         var centerRight = centerLeft + newCenterWidth;
 
@@ -958,7 +934,7 @@ public partial class MainWindow
         if (totalWidth <= 0)
             return true;
 
-        var newRightWidth = rightWidth + newWidth + TopStatusRightPanel?.Spacing ?? 6;
+        var newRightWidth = rightWidth + newWidth + (TopStatusRightPanel?.Spacing ?? 6);
         var centerRight = (totalWidth + centerWidth) / 2;
 
         const double safetyMargin = 20;
@@ -970,7 +946,6 @@ public partial class MainWindow
         var showClock = _topStatusComponentIds.Contains(BuiltInComponentIds.Clock);
         var hasVisibleTopStatusComponent = false;
 
-        // 先隐藏所有时钟控件
         if (ClockWidgetLeft is not null)
             ClockWidgetLeft.IsVisible = false;
         if (ClockWidgetCenter is not null)
@@ -978,7 +953,6 @@ public partial class MainWindow
         if (ClockWidgetRight is not null)
             ClockWidgetRight.IsVisible = false;
 
-        // 先隐藏所有文字胶囊控件
         if (TextCapsuleWidgetLeft is not null)
             TextCapsuleWidgetLeft.IsVisible = false;
         if (TextCapsuleWidgetCenter is not null)
@@ -986,7 +960,6 @@ public partial class MainWindow
         if (TextCapsuleWidgetRight is not null)
             TextCapsuleWidgetRight.IsVisible = false;
 
-        // 先隐藏所有网速控件
         if (NetworkSpeedWidgetLeft is not null)
             NetworkSpeedWidgetLeft.IsVisible = false;
         if (NetworkSpeedWidgetCenter is not null)
@@ -994,7 +967,6 @@ public partial class MainWindow
         if (NetworkSpeedWidgetRight is not null)
             NetworkSpeedWidgetRight.IsVisible = false;
 
-        // 根据位置设置显示对应的时钟控件（带碰撞检测）
         if (showClock)
         {
             var targetPosition = _clockPosition;
@@ -1019,7 +991,6 @@ public partial class MainWindow
             }
             else
             {
-                // 如果目标位置无法添加，尝试其他位置
                 var alternativePosition = FindAlternativePosition(targetPosition);
                 if (alternativePosition is not null)
                 {
@@ -1041,8 +1012,7 @@ public partial class MainWindow
             }
         }
 
-        // 根据位置设置显示对应的文字胶囊控件（带碰撞检测）
-        if (_showTextCapsule)
+        // 闂佸搫绉烽～澶婄暤娴ｈ濯寸€广儱娲ㄩ弸鍌炴偣娴ｇ鈷旈柣銈呮瀵即宕滆娴犳盯鎮楅悽鍨殌缂併劍鐓￠幆鍐礋椤掍胶鈧噣鎮楀☉娆樻畽闁稿繐鐭傚畷鑸电節閸愩劋绮繛瀵稿Ь椤旀劗妲愬▎鎴炴殰闁挎梻铏庡楣冩煙閸撗冧沪妞ゃ儱鎳庨湁閻庯絽澧庣粈?        if (_showTextCapsule)
         {
             var targetPosition = _textCapsulePosition;
             var canAdd = CanAddComponentAtPosition(targetPosition);
@@ -1066,7 +1036,6 @@ public partial class MainWindow
             }
             else
             {
-                // 如果目标位置无法添加，尝试其他位置
                 var alternativePosition = FindAlternativePosition(targetPosition);
                 if (alternativePosition is not null)
                 {
@@ -1088,7 +1057,6 @@ public partial class MainWindow
             }
         }
 
-        // 根据位置设置显示对应的网速控件（带碰撞检测）
         if (_showNetworkSpeed)
         {
             var targetPosition = _networkSpeedPosition;
@@ -1113,7 +1081,6 @@ public partial class MainWindow
             }
             else
             {
-                // 如果目标位置无法添加，尝试其他位置
                 var alternativePosition = FindAlternativePosition(targetPosition);
                 if (alternativePosition is not null)
                 {
@@ -1140,7 +1107,6 @@ public partial class MainWindow
             TopStatusBarHost.IsVisible = hasVisibleTopStatusComponent;
         }
 
-        // 延迟检查碰撞并调整
         Dispatcher.UIThread.Post(async () =>
         {
             await System.Threading.Tasks.Task.Delay(50);
@@ -1149,22 +1115,18 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 当组件发生碰撞时，自动调整位置
-    /// </summary>
+    /// 閻熸粎澧楅幐鍓у垝瀹ュ棛顩烽悹鍝勬惈缁叉椽鏌ｉ姀銏犳灁妞ゎ偒鍋婇獮姗€鎮欑€涙﹩妲梺鎸庣☉閻線宕靛鍫濈闁靛鍔庡▓鍫曟煛娴ｈ櫣绡€缂傚秴鎳愮槐?    /// </summary>
     private void AdjustComponentsIfColliding()
     {
         if (!WouldComponentsCollide())
             return;
 
-        // 获取当前可见的组件
         var leftComponents = GetVisibleLeftComponents();
         var centerComponents = GetVisibleCenterComponents();
         var rightComponents = GetVisibleRightComponents();
 
-        // 优先保留时钟，调整文字胶囊位置
         if (TextCapsuleWidgetLeft?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将左侧文字胶囊移到中间
             if (CanAddComponentAtPosition("Center"))
             {
                 TextCapsuleWidgetLeft.IsVisible = false;
@@ -1172,7 +1134,6 @@ public partial class MainWindow
                 TextCapsuleWidgetCenter.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetCenter.SetText(_textCapsuleContent);
             }
-            // 或者移到右侧
             else if (CanAddComponentAtPosition("Right"))
             {
                 TextCapsuleWidgetLeft.IsVisible = false;
@@ -1180,7 +1141,6 @@ public partial class MainWindow
                 TextCapsuleWidgetRight.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetRight.SetText(_textCapsuleContent);
             }
-            // 如果都无法添加，则隐藏文字胶囊
             else
             {
                 TextCapsuleWidgetLeft.IsVisible = false;
@@ -1189,7 +1149,6 @@ public partial class MainWindow
 
         if (TextCapsuleWidgetRight?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将右侧文字胶囊移到中间
             if (CanAddComponentAtPosition("Center"))
             {
                 TextCapsuleWidgetRight.IsVisible = false;
@@ -1197,7 +1156,6 @@ public partial class MainWindow
                 TextCapsuleWidgetCenter.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetCenter.SetText(_textCapsuleContent);
             }
-            // 或者移到左侧
             else if (CanAddComponentAtPosition("Left"))
             {
                 TextCapsuleWidgetRight.IsVisible = false;
@@ -1205,7 +1163,6 @@ public partial class MainWindow
                 TextCapsuleWidgetLeft.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetLeft.SetText(_textCapsuleContent);
             }
-            // 如果都无法添加，则隐藏文字胶囊
             else
             {
                 TextCapsuleWidgetRight.IsVisible = false;
@@ -1214,7 +1171,6 @@ public partial class MainWindow
 
         if (TextCapsuleWidgetCenter?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将中间文字胶囊移到左侧
             if (CanAddComponentAtPosition("Left"))
             {
                 TextCapsuleWidgetCenter.IsVisible = false;
@@ -1222,7 +1178,6 @@ public partial class MainWindow
                 TextCapsuleWidgetLeft.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetLeft.SetText(_textCapsuleContent);
             }
-            // 或者移到右侧
             else if (CanAddComponentAtPosition("Right"))
             {
                 TextCapsuleWidgetCenter.IsVisible = false;
@@ -1230,17 +1185,14 @@ public partial class MainWindow
                 TextCapsuleWidgetRight.SetTransparentBackground(_textCapsuleTransparentBackground);
                 TextCapsuleWidgetRight.SetText(_textCapsuleContent);
             }
-            // 如果都无法添加，则隐藏文字胶囊
             else
             {
                 TextCapsuleWidgetCenter.IsVisible = false;
             }
         }
 
-        // 调整网速组件位置（优先级：时钟 > 文字胶囊 > 网速）
         if (NetworkSpeedWidgetLeft?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将左侧网速移到中间
             if (CanAddComponentAtPosition("Center"))
             {
                 NetworkSpeedWidgetLeft.IsVisible = false;
@@ -1248,7 +1200,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetCenter.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetCenter.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 或者移到右侧
             else if (CanAddComponentAtPosition("Right"))
             {
                 NetworkSpeedWidgetLeft.IsVisible = false;
@@ -1256,7 +1207,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetRight.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetRight.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 如果都无法添加，则隐藏网速
             else
             {
                 NetworkSpeedWidgetLeft.IsVisible = false;
@@ -1265,7 +1215,6 @@ public partial class MainWindow
 
         if (NetworkSpeedWidgetRight?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将右侧网速移到中间
             if (CanAddComponentAtPosition("Center"))
             {
                 NetworkSpeedWidgetRight.IsVisible = false;
@@ -1273,7 +1222,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetCenter.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetCenter.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 或者移到左侧
             else if (CanAddComponentAtPosition("Left"))
             {
                 NetworkSpeedWidgetRight.IsVisible = false;
@@ -1281,7 +1229,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetLeft.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetLeft.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 如果都无法添加，则隐藏网速
             else
             {
                 NetworkSpeedWidgetRight.IsVisible = false;
@@ -1290,7 +1237,6 @@ public partial class MainWindow
 
         if (NetworkSpeedWidgetCenter?.IsVisible == true && WouldComponentsCollide())
         {
-            // 尝试将中间网速移到左侧
             if (CanAddComponentAtPosition("Left"))
             {
                 NetworkSpeedWidgetCenter.IsVisible = false;
@@ -1298,7 +1244,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetLeft.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetLeft.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 或者移到右侧
             else if (CanAddComponentAtPosition("Right"))
             {
                 NetworkSpeedWidgetCenter.IsVisible = false;
@@ -1306,7 +1251,6 @@ public partial class MainWindow
                 NetworkSpeedWidgetRight.SetTransparentBackground(_networkSpeedTransparentBackground);
                 NetworkSpeedWidgetRight.SetDisplayMode(_networkSpeedDisplayMode);
             }
-            // 如果都无法添加，则隐藏网速
             else
             {
                 NetworkSpeedWidgetCenter.IsVisible = false;
@@ -1315,12 +1259,10 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 查找可用的替代位置
-    /// </summary>
+    /// 闂佸搫琚崕鍙夌珶濮椻偓瀹曪綁顢涘鍕闂佹眹鍔岀€氼厼霉濞戞瑧顩烽柨婵嗗缁夊绱?    /// </summary>
     private string? FindAlternativePosition(string originalPosition)
     {
-        // 尝试所有可能的位置
-        var positions = new[] { "Left", "Center", "Right" };
+        // 闁诲繐绻戠换鍡涙儊椤栫偛绠ラ柍褜鍓熷鍨緞婵犲倽顔夐梺鐓庣－閺咁偄鈻撻幋鐐村鐎广儱娲ㄩ弸?        var positions = new[] { "Left", "Center", "Right" };
         foreach (var position in positions)
         {
             if (position != originalPosition && CanAddComponentAtPosition(position))
@@ -1332,8 +1274,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取左侧可见组件列表
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸パ屽晠闁挎梹瀵у▍鐘绘煕濞嗘ê鐏ユい顐㈡缁辨帡宕熼鍜佸仺闂佸憡甯楅〃澶愬Υ?    /// </summary>
     private List<Control> GetVisibleLeftComponents()
     {
         var result = new List<Control>();
@@ -1348,8 +1289,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取中间可见组件列表
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸ャ劎鈻旀い鎾卞灪閿涚喖鏌涘▎妯虹仴妞ゎ偄妫涚槐鎺楀礋椤忓拋鍋ㄩ梺鍛婂笚椤ㄥ濡?    /// </summary>
     private List<Control> GetVisibleCenterComponents()
     {
         var result = new List<Control>();
@@ -1364,8 +1304,7 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 获取右侧可见组件列表
-    /// </summary>
+    /// 闂佸吋鍎抽崲鑼躲亹閸ヮ剙鐭楅柛蹇撴噺濞呯娀鏌涘▎妯虹仴妞ゎ偄妫涚槐鎺楀礋椤忓拋鍋ㄩ梺鍛婂笚椤ㄥ濡?    /// </summary>
     private List<Control> GetVisibleRightComponents()
     {
         var result = new List<Control>();
@@ -1833,17 +1772,17 @@ public partial class MainWindow
             return;
         }
 
-        var dialog = new ContentDialog
+        var dialog = new FAContentDialog
         {
-            Title = L("desktop.delete_page_confirm.title", "确认删除页面"),
-            Content = L("desktop.delete_page_confirm.message", "确定要删除当前页面吗？\n\n此操作将删除当前页面上的所有组件，且无法撤销。"),
-            PrimaryButtonText = L("desktop.delete_page_confirm.close", "取消"),
-            SecondaryButtonText = L("desktop.delete_page_confirm.primary", "删除"),
-            DefaultButton = ContentDialogButton.Primary
+            Title = L("desktop.delete_page_confirm.title", "Delete desktop page"),
+            Content = L("desktop.delete_page_confirm.message", "This will permanently remove the current desktop page and all widgets placed on it.\n\nThis action cannot be undone."),
+            PrimaryButtonText = L("desktop.delete_page_confirm.close", "Cancel"),
+            SecondaryButtonText = L("desktop.delete_page_confirm.primary", "Delete"),
+            DefaultButton = FAContentDialogButton.Primary
         };
 
         var result = await dialog.ShowAsync(this);
-        if (result == ContentDialogResult.Secondary)
+        if (result == FAContentDialogResult.Secondary)
         {
             DeleteCurrentDesktopPage();
         }
@@ -3938,7 +3877,7 @@ public partial class MainWindow
         }
 
         var point = e.GetPosition(ComponentLibraryWindow);
-        if (point.Y > 40) // 閺嶅洭顣介弽蹇涚彯鎼达妇瀹虫稉?0px
+        if (point.Y > 40) // 闂傚倷绀侀幖顐ょ矓閺夋嚚娲敇椤兘鍋撻崒娑氼浄閻庯綆浜滈崬銊╂椤愩垺澶勭紒瀣崄閵囨劙顢涢悙鑼啇闁哄鐗婇崕鎶姐€呴鍕€电痪顓炴噺閻濐亞绱?0px
         {
             return;
         }

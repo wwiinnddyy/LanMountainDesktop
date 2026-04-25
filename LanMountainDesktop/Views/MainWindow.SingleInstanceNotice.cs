@@ -38,14 +38,14 @@ public partial class MainWindow
 
         try
         {
-            var dialog = new ContentDialog
+            var dialog = new FAContentDialog
             {
-                Title = L("single_instance.notice.title", "应用已经运行"),
+                Title = L("single_instance.notice.title", "Already running"),
                 Content = L(
                     "single_instance.notice.description",
-                    "应用已经运行，无需多次点击打开。"),
-                PrimaryButtonText = L("single_instance.notice.button", "确定"),
-                DefaultButton = ContentDialogButton.Primary
+                    "LanMountainDesktop is already running. The existing window will stay active, so no new instance was started."),
+                PrimaryButtonText = L("single_instance.notice.button", "OK"),
+                DefaultButton = FAContentDialogButton.Primary
             };
 
             await dialog.ShowAsync(this);
