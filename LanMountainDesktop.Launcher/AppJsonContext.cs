@@ -39,4 +39,6 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(GitHubAsset))]
 [JsonSerializable(typeof(List<GitHubRelease>))]
 [JsonSerializable(typeof(StartupAttemptRecord))]
+[JsonSerializable(typeof(PrivacyConfig))]
+[JsonSerializable(typeof(PrivacyAgreementState))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;
