@@ -112,6 +112,9 @@ internal sealed class AirAppMarketMetadataResolverService : IDisposable
             ? entry.PackageSources
             : entry.Publication?.PackageSources ?? [];
         var firstPackageSourceUrl = resolvedPackageSources.FirstOrDefault()?.Url ?? entry.DownloadUrl;
+        var existingManifest = entry.Manifest;
+        var existingCompatibility = entry.Compatibility;
+        var existingPublication = entry.Publication;
 
         return new AirAppMarketPluginEntry
         {
@@ -142,9 +145,13 @@ internal sealed class AirAppMarketMetadataResolverService : IDisposable
                 {
                     MinHostVersion = FirstNonEmpty(
                         template?.MinHostVersion,
+                        existingCompatibility?.MinHostVersion,
                         entry.MinHostVersion),
                     PluginApiVersion = FirstNonEmpty(
                         resolvedManifest?.ApiVersion,
+                        existingCompatibility?.PluginApiVersion,
+                        existingCompatibility?.ApiVersion,
+                        existingManifest?.ApiVersion,
                         entry.ApiVersion)
                         ?? string.Empty
                 }
@@ -162,19 +169,24 @@ internal sealed class AirAppMarketMetadataResolverService : IDisposable
             },
             Publication = entry.Publication,
             Capabilities = entry.Capabilities,
-            Id = FirstNonEmpty(resolvedManifest?.Id, entry.Id, entry.PluginId) ?? entry.PluginId,
-            Name = FirstNonEmpty(resolvedManifest?.Name, entry.Name) ?? string.Empty,
-            Description = FirstNonEmpty(resolvedManifest?.Description, entry.Description) ?? string.Empty,
-            Author = FirstNonEmpty(resolvedManifest?.Author, entry.Author) ?? string.Empty,
-            Version = FirstNonEmpty(resolvedManifest?.Version, entry.Version) ?? string.Empty,
-            ApiVersion = FirstNonEmpty(resolvedManifest?.ApiVersion, entry.ApiVersion) ?? string.Empty,
-            MinHostVersion = FirstNonEmpty(template?.MinHostVersion, entry.MinHostVersion) ?? string.Empty,
+            Id = FirstNonEmpty(resolvedManifest?.Id, existingManifest?.Id, entry.Id, entry.PluginId) ?? entry.PluginId,
+            Name = FirstNonEmpty(resolvedManifest?.Name, existingManifest?.Name, entry.Name) ?? string.Empty,
+            Description = FirstNonEmpty(resolvedManifest?.Description, existingManifest?.Description, entry.Description) ?? string.Empty,
+            Author = FirstNonEmpty(resolvedManifest?.Author, existingManifest?.Author, entry.Author) ?? string.Empty,
+            Version = FirstNonEmpty(resolvedManifest?.Version, existingManifest?.Version, entry.Version) ?? string.Empty,
+            ApiVersion = FirstNonEmpty(
+                resolvedManifest?.ApiVersion,
+                existingCompatibility?.PluginApiVersion,
+                existingCompatibility?.ApiVersion,
+                existingManifest?.ApiVersion,
+                entry.ApiVersion) ?? string.Empty,
+            MinHostVersion = FirstNonEmpty(template?.MinHostVersion, existingCompatibility?.MinHostVersion, entry.MinHostVersion) ?? string.Empty,
             DownloadUrl = FirstNonEmpty(firstPackageSourceUrl, entry.DownloadUrl) ?? string.Empty,
-            Sha256 = entry.Sha256,
-            PackageSizeBytes = entry.PackageSizeBytes,
+            Sha256 = FirstNonEmpty(existingPublication?.Sha256, entry.Sha256) ?? string.Empty,
+            PackageSizeBytes = existingPublication?.PackageSizeBytes > 0 ? existingPublication.PackageSizeBytes : entry.PackageSizeBytes,
             IconUrl = FirstNonEmpty(template?.IconUrl, repository.IconUrl, entry.IconUrl) ?? string.Empty,
-            ReleaseTag = entry.ReleaseTag,
-            ReleaseAssetName = entry.ReleaseAssetName,
+            ReleaseTag = FirstNonEmpty(existingPublication?.ReleaseTag, entry.ReleaseTag) ?? string.Empty,
+            ReleaseAssetName = FirstNonEmpty(existingPublication?.ReleaseAssetName, entry.ReleaseAssetName) ?? string.Empty,
             ProjectUrl = FirstNonEmpty(template?.ProjectUrl, repository.ProjectUrl, entry.ProjectUrl) ?? string.Empty,
             ReadmeUrl = FirstNonEmpty(template?.ReadmeUrl, repository.ReadmeUrl, entry.ReadmeUrl) ?? string.Empty,
             HomepageUrl = FirstNonEmpty(template?.HomepageUrl, repository.HomepageUrl, entry.HomepageUrl) ?? string.Empty,
@@ -191,9 +203,9 @@ internal sealed class AirAppMarketMetadataResolverService : IDisposable
                 .ToList()
                 ?? entry.SharedContracts,
             PackageSources = resolvedPackageSources,
-            Md5 = entry.Md5,
-            PublishedAt = entry.PublishedAt,
-            UpdatedAt = entry.UpdatedAt,
+            Md5 = FirstNonEmpty(existingPublication?.Md5, entry.Md5) ?? string.Empty,
+            PublishedAt = existingPublication?.PublishedAt ?? entry.PublishedAt,
+            UpdatedAt = existingPublication?.UpdatedAt ?? entry.UpdatedAt,
             ReleaseNotes = FirstNonEmpty(template?.ReleaseNotes, repository.ReleaseNotes, entry.ReleaseNotes) ?? string.Empty
         };
     }

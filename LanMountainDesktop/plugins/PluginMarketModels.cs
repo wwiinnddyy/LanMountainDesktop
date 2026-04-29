@@ -646,6 +646,8 @@ internal sealed class AirAppMarketPluginCompatibilityEntry
 {
     public string MinHostVersion { get; init; } = string.Empty;
 
+    public string ApiVersion { get; init; } = string.Empty;
+
     public string PluginApiVersion { get; init; } = string.Empty;
 
     public AirAppMarketPluginCompatibilityEntry ValidateAndNormalize(string sourceName)
@@ -656,9 +658,13 @@ internal sealed class AirAppMarketPluginCompatibilityEntry
                 MinHostVersion,
                 nameof(MinHostVersion),
                 sourceName),
+            ApiVersion = AirAppMarketIndexDocument.NormalizeVersion(
+                AirAppMarketIndexDocument.NormalizeValue(PluginApiVersion) ?? ApiVersion,
+                nameof(ApiVersion),
+                sourceName),
             PluginApiVersion = AirAppMarketIndexDocument.NormalizeVersion(
-                PluginApiVersion,
-                nameof(PluginApiVersion),
+                AirAppMarketIndexDocument.NormalizeValue(PluginApiVersion) ?? ApiVersion,
+                nameof(ApiVersion),
                 sourceName)
         };
     }
@@ -742,6 +748,8 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
 
     public string Url { get; init; } = string.Empty;
 
+    public string Path { get; init; } = string.Empty;
+
     public PluginPackageSourceKind SourceKind { get; init; } = PluginPackageSourceKind.ReleaseAsset;
 
     public AirAppMarketPluginPackageSourceEntry ValidateAndNormalize(string sourceName, string pluginId)
@@ -755,9 +763,11 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
                 $"Market index '{sourceName}' declares invalid package source kind '{normalizedKind}' for plugin '{pluginId}'.");
         }
 
+        var normalizedPath = AirAppMarketIndexDocument.NormalizeValue(Path);
         var normalizedUrl = AirAppMarketIndexDocument.NormalizeValue(Url)
+            ?? normalizedPath
             ?? throw new InvalidOperationException(
-                $"Market index '{sourceName}' is missing package source url for plugin '{pluginId}'.");
+                $"Market index '{sourceName}' is missing package source url/path for plugin '{pluginId}'.");
         EnsurePackageSourceUrl(normalizedUrl, sourceName, pluginId);
 
         return new AirAppMarketPluginPackageSourceEntry
@@ -770,6 +780,7 @@ internal sealed class AirAppMarketPluginPackageSourceEntry
                 _ => normalizedKind
             },
             Url = normalizedUrl,
+            Path = normalizedPath ?? string.Empty,
             SourceKind = sourceKind
         };
     }
@@ -1240,6 +1251,7 @@ internal sealed class AirAppMarketPluginEntry
     {
         return compatibility is not null &&
                (!string.IsNullOrWhiteSpace(compatibility.MinHostVersion) ||
+                !string.IsNullOrWhiteSpace(compatibility.ApiVersion) ||
                 !string.IsNullOrWhiteSpace(compatibility.PluginApiVersion));
     }
 

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -111,7 +112,7 @@ internal sealed class LauncherClient
             WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
             Arguments = string.Create(
                 CultureInfo.InvariantCulture,
-                $"--source {QuoteArgument(Path.GetFullPath(packagePath))} --plugins-dir {QuoteArgument(Path.GetFullPath(pluginsDirectory))} --result {QuoteArgument(Path.GetFullPath(resultPath))} --launch-source plugin-install")
+                $"plugin install --source {QuoteArgument(Path.GetFullPath(packagePath))} --plugins-dir {QuoteArgument(Path.GetFullPath(pluginsDirectory))} --result {QuoteArgument(Path.GetFullPath(resultPath))} --launch-source plugin-install")
         };
 
         return Process.Start(startInfo);
@@ -130,7 +131,17 @@ internal sealed class LauncherClient
 
     private static string ResolveLauncherPath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "Launcher", LauncherExecutableName);
+        var baseDirectory = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(baseDirectory, "Launcher", LauncherExecutableName),
+            Path.Combine(baseDirectory, LauncherExecutableName),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "LanMountainDesktop.Launcher", LauncherExecutableName)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Debug", "net10.0", LauncherExecutableName)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Release", "net10.0", LauncherExecutableName))
+        };
+
+        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
     private static string QuoteArgument(string value)

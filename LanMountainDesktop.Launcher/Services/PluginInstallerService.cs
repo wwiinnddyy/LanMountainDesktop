@@ -9,8 +9,10 @@ namespace LanMountainDesktop.Launcher.Services;
 /// </summary>
 internal sealed class PluginInstallerService
 {
-    private const string ManifestFileName = "manifest.json";
-    private const string PackageFileExtension = ".lmdp";
+    private const string ManifestFileName = "plugin.json";
+    private const string LegacyManifestFileName = "manifest.json";
+    private const string PackageFileExtension = ".laapp";
+    private const string LegacyPackageFileExtension = ".lmdp";
     private const string RuntimeDirectoryName = "runtime";
     
     private static readonly TimeSpan[] RetryDelays =
@@ -114,14 +116,16 @@ internal sealed class PluginInstallerService
     public PluginManifest ReadManifestFromPackage(string packagePath)
     {
         using var archive = ZipFile.OpenRead(packagePath);
-        var entries = archive.Entries
-            .Where(entry => string.Equals(entry.Name, ManifestFileName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
+        var entries = FindManifestEntries(archive, ManifestFileName);
+        if (entries.Length == 0)
+        {
+            entries = FindManifestEntries(archive, LegacyManifestFileName);
+        }
 
         if (entries.Length == 0)
         {
             throw new InvalidOperationException(
-                $"Plugin package '{packagePath}' does not contain '{ManifestFileName}'.");
+                $"Plugin package '{packagePath}' does not contain '{ManifestFileName}' or '{LegacyManifestFileName}'.");
         }
 
         if (entries.Length > 1)
@@ -141,6 +145,13 @@ internal sealed class PluginInstallerService
         return manifest;
     }
 
+    private static ZipArchiveEntry[] FindManifestEntries(ZipArchive archive, string manifestFileName)
+    {
+        return archive.Entries
+            .Where(entry => string.Equals(entry.Name, manifestFileName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
     private void RemoveExistingPluginPackages(string pluginsDirectory, string pluginId, string destinationPath, string stagingPath)
     {
         var runtimeRootDirectory = EnsureTrailingSeparator(Path.Combine(Path.GetFullPath(pluginsDirectory), RuntimeDirectoryName));
@@ -148,8 +159,11 @@ internal sealed class PluginInstallerService
         Directory.CreateDirectory(pendingDeletionDir);
 
         foreach (var existingPackagePath in Directory
-                     .EnumerateFiles(pluginsDirectory, "*" + PackageFileExtension, SearchOption.AllDirectories)
+                     .EnumerateFiles(pluginsDirectory, "*", SearchOption.AllDirectories)
                      .Select(Path.GetFullPath)
+                     .Where(path =>
+                         path.EndsWith(PackageFileExtension, StringComparison.OrdinalIgnoreCase) ||
+                         path.EndsWith(LegacyPackageFileExtension, StringComparison.OrdinalIgnoreCase))
                      .Where(path => !path.StartsWith(runtimeRootDirectory, StringComparison.OrdinalIgnoreCase)))
         {
             try

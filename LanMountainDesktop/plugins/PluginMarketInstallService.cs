@@ -366,7 +366,17 @@ internal sealed class AirAppMarketInstallService : IDisposable
 
     private static string ResolveLauncherPath()
     {
-        return Path.Combine(AppContext.BaseDirectory, "Launcher", LauncherExecutableName);
+        var baseDirectory = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(baseDirectory, "Launcher", LauncherExecutableName),
+            Path.Combine(baseDirectory, LauncherExecutableName),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "LanMountainDesktop.Launcher", LauncherExecutableName)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Debug", "net10.0", LauncherExecutableName)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Release", "net10.0", LauncherExecutableName))
+        };
+
+        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
     private static void TryDeleteFile(string path)

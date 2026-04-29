@@ -1236,7 +1236,31 @@ internal sealed class PluginCatalogSettingsService : IPluginCatalogSettingsServi
             repository,
             publication,
             sources,
-            []);
+            BuildCapabilities(entry));
+    }
+
+    private static IReadOnlyList<PluginCapabilityInfo> BuildCapabilities(AirAppMarketPluginEntry entry)
+    {
+        if (entry.Capabilities is null)
+        {
+            return [];
+        }
+
+        var capabilities = new List<PluginCapabilityInfo>();
+        capabilities.AddRange(entry.Capabilities.SharedContracts.Select(contract =>
+            new PluginCapabilityInfo(contract.Id, contract.Version, contract.AssemblyName)));
+        capabilities.AddRange(entry.Capabilities.DesktopComponents.Select(id =>
+            new PluginCapabilityInfo(id, null, null)));
+        capabilities.AddRange(entry.Capabilities.SettingsSections.Select(id =>
+            new PluginCapabilityInfo(id, null, null)));
+        capabilities.AddRange(entry.Capabilities.Exports.Select(id =>
+            new PluginCapabilityInfo(id, null, null)));
+        capabilities.AddRange(entry.Capabilities.MessageTypes.Select(id =>
+            new PluginCapabilityInfo(id, null, null)));
+
+        return capabilities
+            .DistinctBy(capability => $"{capability.Id}@{capability.Version}@{capability.AssemblyName}")
+            .ToArray();
     }
 
     private static IReadOnlyList<PluginPackageSourceInfo> BuildPackageSources(AirAppMarketPluginEntry entry)
