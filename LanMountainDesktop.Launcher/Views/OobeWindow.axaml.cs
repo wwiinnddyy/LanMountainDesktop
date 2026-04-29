@@ -51,6 +51,7 @@ public partial class OobeWindow : Window
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         InitializeDataLocationStep();
+        InitializePrivacySettings();
         SetupEventHandlers();
     }
 
@@ -180,7 +181,29 @@ public partial class OobeWindow : Window
             };
         }
 
-        // 步骤 4: 欢迎完成页面
+        // 步骤 4: 隐私设置页面
+        if (this.FindControl<Button>("PrivacyBackButton") is { } privacyBackButton)
+        {
+            privacyBackButton.Click += OnPrivacyBackClick;
+        }
+
+        if (this.FindControl<Button>("PrivacyNextButton") is { } privacyNextButton)
+        {
+            privacyNextButton.Click += OnPrivacyNextClick;
+        }
+
+        if (this.FindControl<Button>("ViewPrivacyPolicyButton") is { } viewPrivacyPolicyButton)
+        {
+            viewPrivacyPolicyButton.Click += OnViewPrivacyPolicyClick;
+        }
+
+        // 隐私协议复选框 - 控制遥测开关
+        if (this.FindControl<CheckBox>("PrivacyAgreementCheckBox") is { } privacyCheckBox)
+        {
+            privacyCheckBox.IsCheckedChanged += OnPrivacyAgreementChanged;
+        }
+
+        // 步骤 5: 欢迎完成页面
         if (this.FindControl<Button>("EnterButton") is { } enterButton)
         {
             enterButton.Click += OnEnterClick;
@@ -437,6 +460,60 @@ public partial class OobeWindow : Window
         await NavigateToStep(4);
     }
 
+    // 隐私设置页面按钮
+    private async void OnPrivacyBackClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isTransitioning) return;
+        await NavigateToStep(3);
+    }
+
+    private async void OnPrivacyNextClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isTransitioning) return;
+
+        // 保存隐私设置
+        SavePrivacySettings();
+
+        await NavigateToStep(5);
+    }
+
+    private void OnViewPrivacyPolicyClick(object? sender, RoutedEventArgs e)
+    {
+        // 打开隐私政策窗口
+        var privacyWindow = new PrivacyPolicyWindow
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        privacyWindow.ShowDialog(this);
+    }
+
+    private void OnPrivacyAgreementChanged(object? sender, RoutedEventArgs e)
+    {
+        // 根据复选框状态控制遥测开关
+        if (this.FindControl<CheckBox>("PrivacyAgreementCheckBox") is { } checkBox &&
+            this.FindControl<ToggleSwitch>("CrashTelemetryToggle") is { } crashToggle &&
+            this.FindControl<ToggleSwitch>("UsageTelemetryToggle") is { } usageToggle)
+        {
+            var isAgreed = checkBox.IsChecked == true;
+
+            // 如果用户不同意协议，禁用遥测开关并关闭它们
+            crashToggle.IsEnabled = isAgreed;
+            usageToggle.IsEnabled = isAgreed;
+
+            if (!isAgreed)
+            {
+                crashToggle.IsChecked = false;
+                usageToggle.IsChecked = false;
+            }
+            else
+            {
+                // 用户同意协议后，默认开启遥测（用户可以在开关中手动关闭）
+                crashToggle.IsChecked = true;
+                usageToggle.IsChecked = true;
+            }
+        }
+    }
+
     private async void OnEnterClick(object? sender, RoutedEventArgs e)
     {
         if (_isTransitioning) return;
@@ -635,7 +712,8 @@ public partial class OobeWindow : Window
             1 => this.FindControl<Grid>("TypingStep"),
             2 => this.FindControl<Grid>("ThemeStep"),
             3 => this.FindControl<Grid>("DataLocationStep"),
-            4 => this.FindControl<Grid>("WelcomeStep"),
+            4 => this.FindControl<Grid>("PrivacyStep"),
+            5 => this.FindControl<Grid>("WelcomeStep"),
             _ => null
         };
 
@@ -645,7 +723,8 @@ public partial class OobeWindow : Window
             1 => this.FindControl<Grid>("TypingStep"),
             2 => this.FindControl<Grid>("ThemeStep"),
             3 => this.FindControl<Grid>("DataLocationStep"),
-            4 => this.FindControl<Grid>("WelcomeStep"),
+            4 => this.FindControl<Grid>("PrivacyStep"),
+            5 => this.FindControl<Grid>("WelcomeStep"),
             _ => null
         };
 
@@ -698,6 +777,76 @@ public partial class OobeWindow : Window
         var t1 = t - 1;
         return 1 + c3 * Math.Pow(t1, 3) + c1 * Math.Pow(t1, 2);
     }
+
+    private void InitializePrivacySettings()
+    {
+        // 生成隐私追踪 ID
+        var telemetryId = Guid.NewGuid().ToString("N");
+        if (this.FindControl<TextBox>("TelemetryIdTextBox") is { } telemetryIdTextBox)
+        {
+            telemetryIdTextBox.Text = telemetryId;
+        }
+    }
+
+    private void SavePrivacySettings()
+    {
+        try
+        {
+            var crashTelemetryEnabled = this.FindControl<ToggleSwitch>("CrashTelemetryToggle")?.IsChecked ?? true;
+            var usageTelemetryEnabled = this.FindControl<ToggleSwitch>("UsageTelemetryToggle")?.IsChecked ?? true;
+            var telemetryId = this.FindControl<TextBox>("TelemetryIdTextBox")?.Text ?? Guid.NewGuid().ToString("N");
+
+            // 保存到启动器配置
+            var privacyConfig = new PrivacyConfig
+            {
+                CrashTelemetryEnabled = crashTelemetryEnabled,
+                UsageTelemetryEnabled = usageTelemetryEnabled,
+                TelemetryId = telemetryId
+            };
+
+            var configPath = Path.Combine(_resolver.ResolveLauncherDataPath(), "privacy-config.json");
+            var json = System.Text.Json.JsonSerializer.Serialize(privacyConfig, AppJsonContext.Default.PrivacyConfig);
+            File.WriteAllText(configPath, json);
+
+            // 保存隐私协议同意状态（带防篡改保护）
+            var agreementService = new PrivacyAgreementService(_resolver.ResolveLauncherDataPath());
+            var isAgreed = this.FindControl<CheckBox>("PrivacyAgreementCheckBox")?.IsChecked ?? false;
+
+            // 生成用户ID和设备ID
+            var userId = telemetryId;
+            var deviceId = GetDeviceIdentifier();
+
+            agreementService.SaveAgreement(isAgreed, userId, deviceId);
+
+            Logger.Info($"[OobeWindow] 隐私设置已保存: Crash={crashTelemetryEnabled}, Usage={usageTelemetryEnabled}, Agreement={isAgreed}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[OobeWindow] 保存隐私设置失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 获取设备标识符
+    /// </summary>
+    private string GetDeviceIdentifier()
+    {
+        try
+        {
+            // 使用机器名和用户名的组合作为设备标识
+            var machineName = Environment.MachineName;
+            var userName = Environment.UserName;
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes($"{machineName}:{userName}"));
+            return Convert.ToHexString(hash).Substring(0, 16);
+        }
+        catch
+        {
+            return "UnknownDevice";
+        }
+    }
+
 }
 
 // 枚举定义（使用 Services 命名空间中的 ThemeMode）

@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        mc:Ignorable="d"
+        x:Class="LanMountainDesktop.Launcher.Views.PrivacyPolicyWindow"
+        x:DataType="views:PrivacyPolicyViewModel"
+        Title="阑山桌面遥测隐私数据收集协议"
+        Width="800"
+        Height="600"
+        MinWidth="600"
+        MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None"
+        Icon="/Assets/logo.ico">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+    <!-- 标题栏 -->
+    <Border Grid.Row="0"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,16">
+      <StackPanel Spacing="4">
+        <TextBlock Text="阑山桌面遥测隐私数据收集协议"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock Text="请仔细阅读以下协议内容，了解我们如何收集、使用和保护您的数据"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Markdown 内容区域 -->
+    <Border Grid.Row="1"
+            Margin="24,16"
+            Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+      <md:MarkdownScrollViewer x:Name="MarkdownViewer"
+                               Markdown="{Binding PrivacyPolicyMarkdown}"
+                               HorizontalAlignment="Stretch" />
+    </Border>
+
+    <!-- 底部按钮 -->
+    <Border Grid.Row="2"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="24,16">
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="12">
+        <Button x:Name="CloseButton"
+                Content="关闭"
+                Theme="{DynamicResource AccentButtonTheme}"
+                Width="100" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>
