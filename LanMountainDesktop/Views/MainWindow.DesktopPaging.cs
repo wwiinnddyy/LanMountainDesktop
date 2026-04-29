@@ -68,6 +68,7 @@ public partial class MainWindow : Window
     private long _desktopSwipeLastTimestamp;
     private double _desktopSwipeVelocityX;
     private double _desktopSwipeBaseOffset;
+    private int? _desktopSwipePointerId;
     private bool _desktopPageContextInitialized;
     private bool _desktopPageContextEditMode;
     private int _desktopPageContextActiveMask;
@@ -515,6 +516,7 @@ public partial class MainWindow : Window
 
             if (isThreeFinger || isRightDrag)
             {
+                ClearDesktopPageContextSettle(refreshContext: false);
                 // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈勬缁诲棙銇勯弽銊ｄ粶闁稿鎸搁悾鐑藉炊閳哄﹥鏁ら梻鍌欑劍鐎笛呯矙閹烘挾鈹嶆繛宸簼閸婂鏌ㄩ弮鍥撳ù婧垮€濋弻娑㈠Ψ閿濆懎顬堝銈忕稻閻擄繝寮婚敓鐘查唶婵犲灚鍔栨缂傚倷绶￠崰鏍矓閻㈢數鐭夐柟鐑橆殔鐎氬鏌涢…鎴濅簻闁衡偓椤撶喓绠鹃悗娑欘焽閻鎮介娑辨疁閽樼喖鏌涘☉娆愮稇闁藉啰鍠栭弻鏇熷緞濡櫣浠紓浣插亾濠㈣埖鍔栭悡鐔兼煃鏉炴媽鍏岄柟鐣屽█閹粙顢涘☉娆戠▏濡炪倖娲╃紞渚€宕洪埀顒併亜閹哄秶鍔嶉柛娆忕箻閹鏁愭惔鈥茬敖闂佽鐏氶崝鎴﹀蓟?                ClearDesktopPageContextSettle(refreshContext: false);
                 _isThreeFingerOrRightDragSwipeActive = true;
                 _isDesktopSwipeActive = true;
@@ -525,6 +527,8 @@ public partial class MainWindow : Window
                 _desktopSwipeVelocityX = 0;
                 _desktopSwipeLastTimestamp = Stopwatch.GetTimestamp();
                 _desktopSwipeBaseOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
+                _desktopSwipePointerId = pointerId;
+                e.Handled = true;
                 
                 // 闂傚倷绀侀幖顐ょ矓閺夋嚚娲煛閸滀焦鏅╅梺鎼炲劘閸斿酣銆呴弻銉﹀€甸柨婵嗗€瑰▍鍡樸亜閹邦喗娅曢柍褜鍓涢幊鎾诲箟闄囬妵鎰板礃椤斻垹娲崺锟犲川椤旈棿鍝楅梻浣虹《濡插懘宕㈤崜褏鐭嗗鑸靛姈閳锋帡鏌涢幇鈺佸缂佺嫏鍕╀簻闁圭儤鎸鹃妴鎺旂磼鏉堛劌娴€规洜鍠栭、鏃堝椽娴ｉ晲缂撻梻鍌欑閹诧紕鎹㈤崒婊呯煋閻庡灚鐡曟慨?                e.Handled = true;
                 return;
@@ -532,6 +536,7 @@ public partial class MainWindow : Window
         }
 
         // 闂傚倷绀侀幉锟犫€﹂崶顒€绐楅柟閭﹀墾閼板灝銆掑锝呬壕閻庤娲╃换婵嗩嚕閹绢喗鍋勫瀣閳诲本绻濋悽闈浶㈤柨鏇樺劦瀹曞綊宕归锝呭伎闂佸啿鎼幊蹇涙倿婵犳碍鐓涢柛鏇ㄥ亞缁犳娊鎮?        if (IsInteractivePointerSource(e.Source))
+        if (IsInteractivePointerSource(e.Source))
         {
             return;
         }
@@ -555,6 +560,13 @@ public partial class MainWindow : Window
         _desktopSwipeVelocityX = 0;
         _desktopSwipeLastTimestamp = Stopwatch.GetTimestamp();
         _desktopSwipeBaseOffset = -_currentDesktopSurfaceIndex * _desktopSurfacePageWidth;
+        _desktopSwipePointerId = pointerId;
+    }
+
+    private bool IsDesktopSwipePointer(IPointer? pointer)
+    {
+        return !_desktopSwipePointerId.HasValue ||
+               pointer is not null && pointer.Id == _desktopSwipePointerId.Value;
     }
 
     private static bool IsInteractivePointerSource(object? source)
@@ -736,6 +748,11 @@ public partial class MainWindow : Window
 
     private void OnDesktopPagesPointerMoved(object? sender, PointerEventArgs e)
     {
+        if (_isDesktopSwipeActive && !IsDesktopSwipePointer(e.Pointer))
+        {
+            return;
+        }
+
         if (!_isDesktopSwipeActive || !TryGetPointerPositionInDesktopViewport(e, out var pointerInViewport))
         {
             return;
@@ -797,6 +814,11 @@ public partial class MainWindow : Window
     {
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
+
+        if (_isDesktopSwipeActive && !IsDesktopSwipePointer(e.Pointer))
+        {
+            return;
+        }
         
         if (EndDesktopSwipeInteraction(e.Pointer))
         {
@@ -808,7 +830,17 @@ public partial class MainWindow : Window
     {
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
-        
+
+        if (!_isDesktopSwipeActive || !IsDesktopSwipePointer(e.Pointer))
+        {
+            return;
+        }
+
+        if (e.Pointer?.Captured == DesktopPagesViewport)
+        {
+            return;
+        }
+
         EndDesktopSwipeInteraction(e.Pointer);
     }
 
@@ -829,6 +861,7 @@ public partial class MainWindow : Window
         _isDesktopSwipeDirectionLocked = false;
         _isThreeFingerOrRightDragSwipeActive = false;
         _activePointerIds.Clear();
+        _desktopSwipePointerId = null;
         _desktopSwipeVelocityX = 0;
         _desktopSwipeLastTimestamp = 0;
         if (wasDirectionLocked)
@@ -851,6 +884,7 @@ public partial class MainWindow : Window
         _isDesktopSwipeDirectionLocked = false;
         _isThreeFingerOrRightDragSwipeActive = false;
         _activePointerIds.Clear();
+        _desktopSwipePointerId = null;
         
         if (pointer?.Captured == DesktopPagesViewport)
         {

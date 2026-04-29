@@ -34,6 +34,7 @@ public partial class TransparentOverlayWindow : Window
     private Point _swipeLastPoint;
     private double _swipeVelocityX;
     private long _swipeLastTimestamp;
+    private int? _swipePointerId;
     
     // 三指/右键拖动状态
     private bool _isThreeFingerOrRightDragSwipeActive;
@@ -624,6 +625,7 @@ public partial class TransparentOverlayWindow : Window
             _swipeLastPoint = pointerPos;
             _swipeVelocityX = 0;
             _swipeLastTimestamp = Stopwatch.GetTimestamp();
+            _swipePointerId = pointerId;
             e.Handled = true;
         }
         else
@@ -634,6 +636,12 @@ public partial class TransparentOverlayWindow : Window
     
     protected override void OnPointerMoved(PointerEventArgs e)
     {
+        if (_isSwipeActive && !IsSwipePointer(e.Pointer))
+        {
+            base.OnPointerMoved(e);
+            return;
+        }
+
         if (!_isSwipeActive)
         {
             base.OnPointerMoved(e);
@@ -686,6 +694,12 @@ public partial class TransparentOverlayWindow : Window
     {
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
+
+        if (_isSwipeActive && !IsSwipePointer(e.Pointer))
+        {
+            base.OnPointerReleased(e);
+            return;
+        }
         
         if (_isSwipeActive)
         {
@@ -703,7 +717,19 @@ public partial class TransparentOverlayWindow : Window
     {
         var pointerId = e.Pointer?.Id ?? 0;
         _activePointerIds.Remove(pointerId);
-        
+
+        if (_isSwipeActive && !IsSwipePointer(e.Pointer))
+        {
+            base.OnPointerCaptureLost(e);
+            return;
+        }
+
+        if (_isSwipeActive && e.Pointer?.Captured == this)
+        {
+            base.OnPointerCaptureLost(e);
+            return;
+        }
+
         if (_isSwipeActive)
         {
             EndSwipeInteraction(e.Pointer);
@@ -724,6 +750,12 @@ public partial class TransparentOverlayWindow : Window
             point = default;
             return false;
         }
+    }
+
+    private bool IsSwipePointer(IPointer? pointer)
+    {
+        return !_swipePointerId.HasValue ||
+               pointer is not null && pointer.Id == _swipePointerId.Value;
     }
     
     private void UpdateSwipeVelocity(Point currentPoint)
@@ -754,6 +786,7 @@ public partial class TransparentOverlayWindow : Window
         _isSwipeDirectionLocked = false;
         _isThreeFingerOrRightDragSwipeActive = false;
         _activePointerIds.Clear();
+        _swipePointerId = null;
         _swipeVelocityX = 0;
         _swipeLastTimestamp = 0;
     }
@@ -769,6 +802,7 @@ public partial class TransparentOverlayWindow : Window
         _isSwipeDirectionLocked = false;
         _isThreeFingerOrRightDragSwipeActive = false;
         _activePointerIds.Clear();
+        _swipePointerId = null;
         
         if (pointer?.Captured == this)
         {
