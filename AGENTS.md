@@ -74,7 +74,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 - SDK 公共 API 以 `LanMountainDesktop.PluginSdk/` 为准
 - 共享契约以 `LanMountainDesktop.Shared.Contracts/` 为准
 - market 数据来源默认是兄弟仓库 `..\\LanAirApp`
-- 迁移或 breaking change 优先同步 `docs/PLUGIN_SDK_V4_MIGRATION.md`
+- 迁移或 breaking change 优先同步 `docs/PLUGIN_SDK_V5_MIGRATION.md`
 
 ### 设置与主题
 
@@ -91,6 +91,6 @@ dotnet test LanMountainDesktop.slnx -c Debug
 - 视觉规范：`docs/VISUAL_SPEC.md`
 - 圆角规范：`docs/CORNER_RADIUS_SPEC.md`
 - 生态边界：`docs/ECOSYSTEM_BOUNDARIES.md`
-- SDK v4 迁移：`docs/PLUGIN_SDK_V4_MIGRATION.md`
+- SDK v5 迁移：`docs/PLUGIN_SDK_V5_MIGRATION.md`
 
 如果多个文档都提到同一件事，以 `docs/ai/DOC_SOURCES.md` 列出的权威来源为准。

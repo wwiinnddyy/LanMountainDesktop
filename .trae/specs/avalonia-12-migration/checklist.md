@@ -1,14 +1,21 @@
 # Checklist
 
-- [ ] `SettingsWindow.ApplyChromeMode()` 不再使用 `ExtendClientAreaChromeHints` 和 `SystemDecorations`
-- [ ] `ComponentEditorWindow.ApplyChromeMode()` 不再使用 `ExtendClientAreaChromeHints` 和 `SystemDecorations`
-- [ ] 所有 `.axaml` 文件中的 `SystemDecorations` 已替换为 `WindowDecorations`
-- [ ] `MainWindow.ComponentSystem.cs` 中 `centerLeft` 和 `positions` 变量已正确定义
-- [ ] `MainWindow.DesktopPaging.cs` 中 `child` 和 `_isThreeFingerOrRightDragSwipeActive` 变量已正确定义
-- [ ] `App.axaml.cs` 中 `BindingPlugins.DataValidators` 代码已移除
-- [ ] `DesktopComponentFailureView.cs` 使用 `ClipboardExtensions.SetTextAsync`
-- [ ] `MonetColorService.cs` 使用正确的 `Bitmap.CopyPixels` 签名
-- [ ] `SettingsWindow.axaml.cs` 使用 `FluentIcons.Avalonia.FluentIcon` 替代 `SymbolIconSource`
-- [ ] 所有 `TextBox.Watermark` 已替换为 `PlaceholderText`
-- [ ] `dotnet build LanMountainDesktop.slnx -c Debug` 0 errors, 0 warnings（过时 API 警告）
-- [ ] `dotnet test LanMountainDesktop.slnx -c Debug` 全部通过
+- [x] `Directory.Packages.props` contains the Avalonia 12 dependency baseline.
+- [x] Main host references `Avalonia.Controls.WebView`.
+- [x] Source no longer references `WebView.Avalonia`, `AvaloniaWebView`, or `.UseDesktopWebView()`.
+- [x] `BrowserWidget` uses `NativeWebView.Source`, `Navigate`, `Refresh()`, `NavigationStarted`, and `EnvironmentRequested`.
+- [x] WebView blanking navigates to `about:blank`.
+- [x] Plugin SDK package version is `5.0.0`.
+- [x] `PluginSdkInfo.ApiVersion` is `5.0.0`.
+- [x] Plugin template package version default is `5.0.0`.
+- [x] Plugin template manifest `apiVersion` is `5.0.0`.
+- [x] Launcher data location config resolution cannot recurse through `ResolveDataRoot()`.
+- [x] `OobeStateServiceTests` pass.
+- [x] `dotnet build LanMountainDesktop.slnx -c Debug` has 0 errors.
+- [x] `dotnet test LanMountainDesktop.slnx -c Debug` completes without a test host stack overflow.
+- [ ] Windows host smoke test completed.
+- [ ] Windows Launcher smoke test completed.
+- [ ] Settings window FluentAvalonia 3 smoke test completed.
+- [ ] Component editor Material smoke test completed.
+- [ ] BrowserWidget navigation/refresh/page activation smoke test completed.
+- [ ] WebView2 missing-runtime diagnostic smoke test completed.
