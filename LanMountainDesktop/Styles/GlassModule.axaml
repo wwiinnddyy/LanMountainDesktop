@@ -70,11 +70,25 @@
         <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="ui|NumberBox">
-        <Setter Property="Background" Value="{DynamicResource AdaptiveButtonBackgroundBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveButtonBorderBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+    <Style Selector="ui|FANumberBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusMd}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ui|FANumberBox /template/ Button#PART_SpinUp">
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="CornerRadius" Value="4,4,0,0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="ui|FANumberBox /template/ Button#PART_SpinDown">
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="CornerRadius" Value="0,0,4,4" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
     </Style>
 
     <Style Selector="CheckBox">
@@ -125,7 +139,7 @@
         <Setter Property="Background" Value="{DynamicResource AdaptiveNavItemSelectedBackgroundBrush}" />
     </Style>
 
-    <Style Selector=".settings-scope ui|NumberBox">
+    <Style Selector=".settings-scope ui|FANumberBox">
         <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
         <Setter Property="MinHeight" Value="34" />
     </Style>

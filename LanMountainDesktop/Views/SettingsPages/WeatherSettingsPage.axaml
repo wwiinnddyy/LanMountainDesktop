@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:models="using:LanMountainDesktop.Models"
@@ -47,7 +47,7 @@
                         <Button Classes="settings-accent-button"
                                 Command="{Binding RefreshPreviewCommand}"
                                 Content="{Binding RefreshButtonText}" />
-                        <ui:ProgressRing IsIndeterminate="True"
+                        <ui:FAProgressRing IsIndeterminate="True"
                                          IsVisible="{Binding IsRefreshingPreview}"
                                          Width="28"
                                          Height="28"
@@ -60,7 +60,7 @@
                                  Header="{Binding LocationSourceHeader}"
                                  Description="{Binding LocationSourceDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="WeatherMoon" />
+                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -85,7 +85,7 @@
                                  Description="{Binding CitySearchDescription}"
                                  IsVisible="{Binding IsCitySearchMode}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Search" />
+                    <ui:FAFontIconSource Glyph="&#xF03F4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
@@ -98,7 +98,7 @@
                               ColumnSpacing="12">
                             <TextBox x:Name="SearchKeywordTextBox"
                                      Text="{Binding SearchKeyword}"
-                                     Watermark="{Binding SearchPlaceholder}"
+                                     PlaceholderText="{Binding SearchPlaceholder}"
                                      Focusable="True"
                                      IsTabStop="True" />
                             <Button Grid.Column="1"
@@ -106,7 +106,7 @@
                                     Content="{Binding SearchButtonText}" />
                         </Grid>
 
-                        <ui:ProgressRing IsIndeterminate="True"
+                        <ui:FAProgressRing IsIndeterminate="True"
                                          IsVisible="{Binding IsSearching}"
                                          Width="24"
                                          Height="24"
@@ -123,9 +123,10 @@
                                 <DataTemplate x:DataType="models:WeatherLocation">
                                     <Grid ColumnDefinitions="Auto,*"
                                           ColumnSpacing="12">
-                                        <fi:SymbolIcon Classes="icon-s"
+                                        <ui:FAFontIcon Classes="icon-s"
                                                        Margin="0,2,0,0"
-                                                       Symbol="City" />
+                                                       Glyph="&#xF0950;"
+                                                       FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                                         <StackPanel Grid.Column="1"
                                                     Spacing="4">
                                             <TextBlock Classes="settings-item-label"
@@ -148,7 +149,7 @@
                                  Description="{Binding CoordinatesDescription}"
                                  IsVisible="{Binding IsCoordinatesMode}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Location" />
+                    <ui:FAFontIconSource Glyph="&#xF02BC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
@@ -183,14 +184,14 @@
                 <ui:FASettingsExpanderItem>
                     <TextBox x:Name="LocationKeyTextBox"
                              Text="{Binding LocationKey}"
-                             Watermark="{Binding LocationKeyPlaceholder}"
+                             PlaceholderText="{Binding LocationKeyPlaceholder}"
                              Focusable="True"
                              IsTabStop="True" />
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem>
                     <TextBox x:Name="LocationNameTextBox"
                              Text="{Binding LocationName}"
-                             Watermark="{Binding LocationNamePlaceholder}"
+                             PlaceholderText="{Binding LocationNamePlaceholder}"
                              Focusable="True"
                              IsTabStop="True" />
                 </ui:FASettingsExpanderItem>
@@ -200,7 +201,7 @@
                                  Header="{Binding LocationServicesHeader}"
                                  Description="{Binding LocationServicesDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Location" />
+                    <ui:FAFontIconSource Glyph="&#xF02BC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <Button Classes="settings-accent-button"
@@ -224,7 +225,7 @@
                     </Grid>
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem IsVisible="{Binding IsRefreshingLocation}">
-                    <ui:ProgressRing IsIndeterminate="True"
+                    <ui:FAProgressRing IsIndeterminate="True"
                                      IsVisible="{Binding IsRefreshingLocation}"
                                      Width="28"
                                      Height="28"
@@ -236,7 +237,7 @@
                                  Header="{Binding AlertFilterHeader}"
                                  Description="{Binding AlertFilterDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Warning" />
+                    <ui:FAFontIconSource Glyph="&#xF04E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <TextBox x:Name="ExcludedAlertsTextBox"
@@ -254,7 +255,7 @@
                                  Header="{Binding RequestHeader}"
                                  Description="{Binding RequestDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ShieldDismiss" />
+                    <ui:FAFontIconSource Glyph="&#xF0BC4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding NoTlsRequests}" />

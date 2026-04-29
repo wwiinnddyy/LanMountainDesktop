@@ -16,7 +16,7 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private const double PreviewRenderCellSizeMin = 42;
     private const double PreviewRenderCellSizeMax = 112;

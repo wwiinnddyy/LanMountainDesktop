@@ -1,11 +1,12 @@
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private bool _isSingleInstancePromptVisible;
 

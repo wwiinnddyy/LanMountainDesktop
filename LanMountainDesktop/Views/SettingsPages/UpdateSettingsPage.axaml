@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
@@ -167,7 +167,7 @@
                                  Header="{Binding UpdateChannelLabel}"
                                  Description="{Binding SelectedUpdateChannelDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="BranchFork" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -185,7 +185,7 @@
                                          IsClickEnabled="True"
                                          Command="{Binding ForceCheckUpdateCommand}">
                     <ui:FASettingsExpanderItem.IconSource>
-                        <fi:SymbolIconSource Symbol="ArrowSync" />
+                        <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                     </ui:FASettingsExpanderItem.IconSource>
                 </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>
@@ -194,7 +194,7 @@
                                  Header="{Binding UpdateSourceLabel}"
                                  Description="{Binding SelectedUpdateSourceDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="GlobeArrowForward" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -213,7 +213,7 @@
                                  Header="{Binding UpdateModeLabel}"
                                  Description="{Binding SelectedUpdateModeDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Options" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="260"
@@ -232,10 +232,10 @@
                                  Header="{Binding DownloadThreadsLabel}"
                                  Description="{Binding DownloadThreadsDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowDownload" />
+                    <ui:FAFontIconSource Glyph="&#xF06C0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
-                    <ui:NumberBox Width="160"
+                    <ui:FANumberBox Width="160"
                                   Minimum="1"
                                   Maximum="128"
                                   SpinButtonPlacementMode="Inline"

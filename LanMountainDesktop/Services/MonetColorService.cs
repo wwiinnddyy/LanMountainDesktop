@@ -88,8 +88,6 @@ public sealed class MonetColorService
                 PixelFormat.Bgra8888,
                 AlphaFormat.Premul);
             using var framebuffer = writeable.Lock();
-            scaledBitmap.CopyPixels(framebuffer, AlphaFormat.Premul);
-
             var byteCount = framebuffer.RowBytes * framebuffer.Size.Height;
             if (byteCount <= 0 || framebuffer.Address == IntPtr.Zero)
             {
@@ -97,6 +95,11 @@ public sealed class MonetColorService
             }
 
             var pixelBuffer = new byte[byteCount];
+            scaledBitmap.CopyPixels(
+                new PixelRect(scaledBitmap.PixelSize),
+                framebuffer.Address,
+                byteCount,
+                framebuffer.RowBytes);
             Marshal.Copy(framebuffer.Address, pixelBuffer, 0, byteCount);
 
             var argbPixels = new List<uint>(framebuffer.Size.Width * framebuffer.Size.Height);

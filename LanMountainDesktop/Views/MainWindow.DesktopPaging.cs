@@ -22,7 +22,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private const int MinDesktopPageCount = 1;
     private const int MaxDesktopPageCount = 12;
@@ -75,7 +75,8 @@ public partial class MainWindow
     private int? _desktopPageContextSettlingTargetIndex;
     private int _desktopPageContextSettleRevision;
 
-    // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜鹃柛顭戝亯婢规ɑ銇勯婊冨妤犵偛顑呴埞鎴﹀窗?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈呮噺閻撶喖鏌嶉崫鍕灓闁绘帡绠栭弻?    private bool _isThreeFingerOrRightDragSwipeActive;
+    // 婵犵數鍋為崹鍫曞箰閹间絸鍥箥椤旂懓浜鹃柛顭戝亯婢规ɑ銇勯婊冨妤犵偛顑呴埞鎴﹀窗?闂傚倷绀侀幉锟犳偡閿旂晫绠惧┑鐘叉搐閺嬩焦銇勯幘鍗炵仼缂佺媭鍨堕弻鈥崇暤椤旂厧鏁俊銈呮噺閻撶喖鏌嶉崫鍕灓闁绘帡绠栭弻?
+    private bool _isThreeFingerOrRightDragSwipeActive;
     private readonly HashSet<int> _activePointerIds = [];
 
     private int LauncherSurfaceIndex => Math.Max(MinDesktopPageCount, _desktopPageCount);
@@ -307,7 +308,8 @@ public partial class MainWindow
 
         // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閸屻倖杈渁pPanel闂傚倷鐒﹂惇褰掑礉瀹€鍕惞婵帞妫渕闂備浇顕х换鎰崲閹版澘绠规い鎰跺瘜閺?        LauncherRootTilePanel.Width = availableWidth;
 
-        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愮紒鐘劦閺屽秷顧侀柛鎾跺枎椤曪綁宕归銏㈢獮婵犵數濮寸€氼參骞夐妶澶嬧拺缂佸娉曠粻浼存煕閻旂顥嬬紒顔肩墕閻ｆ繈宕熼鈧崜顓㈡⒑閸涘﹥澶勯柛瀣噹鍗遍柍褜鍓熼弻?        foreach (var child in LauncherRootTilePanel.Children)
+        // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愮紒鐘劦閺屽秷顧侀柛鎾跺枎椤曪綁宕归銏㈢獮婵犵數濮寸€氼參骞夐妶澶嬧拺缂佸娉曠粻浼存煕閻旂顥嬬紒顔肩墕閻ｆ繈宕熼鈧崜顓㈡⒑閸涘﹥澶勯柛瀣噹鍗遍柍褜鍓熼弻?
+        foreach (var child in LauncherRootTilePanel.Children)
         {
             if (child is Button button)
             {

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -11,14 +11,14 @@
             <ui:FASettingsExpander Header="{Binding RefreshButtonText}"
                                  Description="{Binding StatusMessage}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ShoppingBag" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="12">
                         <TextBox x:Name="SearchTextBox"
                                  Text="{Binding SearchText}"
-                                 Watermark="{Binding SearchPlaceholder}"
+                                 PlaceholderText="{Binding SearchPlaceholder}"
                                  Focusable="True"
                                  IsTabStop="True" />
                         <Button Grid.Column="1"

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              x:Class="LanMountainDesktop.Views.ComponentEditors.ShortcutComponentEditor"
@@ -20,7 +20,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBox Text="{Binding TargetPath}"
                              IsReadOnly="True"
-                             Watermark="{Binding TargetPathPlaceholder}"
+                             PlaceholderText="{Binding TargetPathPlaceholder}"
                              Grid.Column="0" />
                     <Button Content="{Binding BrowseButtonText}"
                             Click="OnBrowseClick"

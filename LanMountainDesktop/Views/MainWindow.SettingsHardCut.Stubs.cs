@@ -20,7 +20,7 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private TextBlock? CurrentRenderBackendLabelTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendLabelTextBlock");
     private TextBlock? CurrentRenderBackendValueTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendValueTextBlock");

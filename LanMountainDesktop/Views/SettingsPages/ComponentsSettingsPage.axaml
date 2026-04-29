@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
@@ -15,7 +15,7 @@
             <ui:FASettingsExpander Header="{Binding ComponentsHeader}"
                                  IsExpanded="True">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Apps" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
@@ -76,7 +76,7 @@
             <ui:FASettingsExpander Header="{Binding CornerRadiusStyleLabel}"
                                  Description="{Binding CornerRadiusStyleDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ShapeOrganic" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <StackPanel Orientation="Horizontal" Spacing="8">

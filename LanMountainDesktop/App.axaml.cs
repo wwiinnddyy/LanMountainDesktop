@@ -527,15 +527,8 @@ public partial class App : Application
 
     private void DisableAvaloniaDataAnnotationValidation()
     {
-        // Get an array of plugins to remove
-        var dataValidationPluginsToRemove =
-            BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-        // remove each entry found
-        foreach (var plugin in dataValidationPluginsToRemove)
-        {
-            BindingPlugins.DataValidators.Remove(plugin);
-        }
+        // Avalonia 12 中 BindingPlugins 已移除，数据验证插件不再需要手动禁用
+        // 编译型绑定默认开启，数据注解验证行为已改变
     }
 
     private void InitializePluginRuntime()

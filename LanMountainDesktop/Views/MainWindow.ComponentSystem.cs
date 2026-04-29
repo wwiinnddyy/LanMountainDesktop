@@ -28,7 +28,7 @@ using SymbolIcon = FluentIcons.Avalonia.SymbolIcon;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private readonly List<DesktopComponentPlacementSnapshot> _desktopComponentPlacements = [];
     private readonly Dictionary<int, Grid> _desktopPageComponentGrids = new();
@@ -755,7 +755,8 @@ public partial class MainWindow
             return false;
 
         // 闁荤姳绶ょ槐鏇㈡偩缂佹鈻旀い鎾卞灪閿涚喖鏌涢弽褎鎯堥柣鎾寸懇閹啴宕熼銈嗘緰闂傚倸瀚幊宥囩礊閸涱垳纾?        // 閻庡綊娼荤粻鎴﹀垂椤忓牆鍙?*, 婵炴垶鎼╅崢濂稿垂椤忓牆鍙?Auto, 闂佸憡鐟ラ崯鍧楀垂椤忓牆鍙?*
-        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鎮橀悙鍙夊櫢闁煎灚鍨垮浼村礈瑜嬫禒?        var centerLeft = (totalWidth - centerWidth) / 2;
+        // 婵炴垶鎼╅崣鍐ㄎ涢崸妤€绀岄柛婵嗗閸樼敻鎮橀悙鍙夊櫢闁煎灚鍨垮浼村礈瑜嬫禒?
+        var centerLeft = (totalWidth - centerWidth) / 2;
         var centerRight = centerLeft + centerWidth;
 
         // 闁诲海鎳撻ˇ顖炲矗韫囨稒鈷掔痪鎯ь儑閻涒晠鏌ㄥ☉妯煎闁稿孩姘ㄥΣ鎰版偑閸涱垳顦?
@@ -1262,7 +1263,8 @@ public partial class MainWindow
     /// 闂佸搫琚崕鍙夌珶濮椻偓瀹曪綁顢涘鍕闂佹眹鍔岀€氼厼霉濞戞瑧顩烽柨婵嗗缁夊绱?    /// </summary>
     private string? FindAlternativePosition(string originalPosition)
     {
-        // 闁诲繐绻戠换鍡涙儊椤栫偛绠ラ柍褜鍓熷鍨緞婵犲倽顔夐梺鐓庣－閺咁偄鈻撻幋鐐村鐎广儱娲ㄩ弸?        var positions = new[] { "Left", "Center", "Right" };
+        // 闁诲繐绻戠换鍡涙儊椤栫偛绠ラ柍褜鍓熷鍨緞婵犲倽顔夐梺鐓庣－閺咁偄鈻撻幋鐐村鐎广儱娲ㄩ弸?
+        var positions = new[] { "Left", "Center", "Right" };
         foreach (var position in positions)
         {
             if (position != originalPosition && CanAddComponentAtPosition(position))

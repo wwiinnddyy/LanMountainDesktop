@@ -11,7 +11,7 @@
         MinHeight="480"
         CanResize="True"
         WindowStartupLocation="Manual"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         FontFamily="{DynamicResource AppFontFamily}"
         Background="Transparent"
         Title="{Binding Title}">

@@ -163,9 +163,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         if (_useSystemChrome)
         {
             ExtendClientAreaToDecorationsHint = true;
-            ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.PreferSystemChrome;
-            ExtendClientAreaTitleBarHeightHint = -1;
-            SystemDecorations = SystemDecorations.Full;
+            WindowDecorations = WindowDecorations.Full;
 
             if (WindowTitleBarHost is { })
             {
@@ -174,10 +172,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
-        SystemDecorations = SystemDecorations.BorderOnly;
+        WindowDecorations = WindowDecorations.BorderOnly;
         ExtendClientAreaToDecorationsHint = true;
-        ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
-        ExtendClientAreaTitleBarHeightHint = 48;
 
         if (WindowTitleBarHost is { })
         {
@@ -212,11 +208,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             {
                 Content = page.Title,
                 Tag = page.PageId,
-                IconSource = new FluentIcons.Avalonia.SymbolIconSource
-                {
-                    Symbol = MapIcon(page.IconKey),
-                    IconVariant = FluentIcons.Common.IconVariant.Regular
-                }
+                IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
             });
 
             previousCategory = page.Category;
@@ -746,6 +738,31 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "FolderLink" => Symbol.FolderLink,
             "WindowConsole" => Symbol.WindowConsole,
             _ => Symbol.Settings
+        };
+    }
+
+    private static FAFontIconSource CreateSettingsIconSource(Symbol symbol)
+    {
+        var symbolIcon = new FluentIcons.Avalonia.SymbolIcon
+        {
+            Symbol = symbol,
+            IconVariant = FluentIcons.Common.IconVariant.Regular
+        };
+
+        // 使用反射获取 IconText 和 IconFont
+        var iconTextProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var iconFontProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconFont", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        var iconText = iconTextProp?.GetValue(symbolIcon) as string ?? "?";
+        var iconFont = iconFontProp?.GetValue(symbolIcon);
+        var fontFamily = iconFont?.GetType().GetProperty("FontFamily")?.GetValue(iconFont) as Avalonia.Media.FontFamily
+            ?? new Avalonia.Media.FontFamily("avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons");
+
+        return new FAFontIconSource
+        {
+            Glyph = iconText,
+            FontFamily = fontFamily,
+            FontSize = 16
         };
     }
 }

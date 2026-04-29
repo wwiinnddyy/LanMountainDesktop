@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
@@ -15,7 +15,7 @@
             <ui:FASettingsExpander Header="{Binding ClockHeader}"
                                  Description="{Binding ClockDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Clock" />
+                    <ui:FASymbolIconSource Symbol="{x:Static ui:FASymbol.Clock}" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowClock}" />
@@ -93,7 +93,7 @@
             <ui:FASettingsExpander Header="{Binding TextCapsuleHeader}"
                                  Description="{Binding TextCapsuleDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="TextQuote" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowTextCapsule}" />
@@ -110,7 +110,7 @@
                                  Height="100"
                                  IsEnabled="{Binding ShowTextCapsule}"
                                  Text="{Binding TextCapsuleContent}"
-                                 Watermark="Enter Markdown text..." />
+                                 PlaceholderText="Enter Markdown text..." />
                     </Grid>
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem>
@@ -147,7 +147,7 @@
             <ui:FASettingsExpander Header="{Binding NetworkSpeedHeader}"
                                  Description="{Binding NetworkSpeedDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowBidirectionalUpDown" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowNetworkSpeed}" />
@@ -239,7 +239,7 @@
             <ui:FASettingsExpander Header="{Binding SpacingHeader}"
                                  Description="{Binding SpacingDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Apps" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="180"
@@ -257,7 +257,7 @@
                           ColumnSpacing="16">
                         <TextBlock Text="{Binding CustomSpacingLabel}"
                                    VerticalAlignment="Center" />
-                        <ui:NumberBox Grid.Column="1"
+                        <ui:FANumberBox Grid.Column="1"
                                       Width="160"
                                       Minimum="0"
                                       Maximum="30"
@@ -278,7 +278,7 @@
             <ui:FASettingsExpander Header="{Binding StatusBarShadowHeader}"
                                  Description="{Binding StatusBarShadowDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Square" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding StatusBarShadowEnabled}" />

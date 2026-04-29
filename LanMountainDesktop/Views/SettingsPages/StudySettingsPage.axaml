@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -13,7 +13,7 @@
                                  Header="{Binding MasterSwitchHeader}"
                                  Description="{Binding MasterSwitchDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="DataHistogram" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding StudyEnabled}" />
@@ -26,7 +26,7 @@
                                  Description="{Binding NoiseMonitoringDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Mic" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
 
                 <!-- 闁插洭娉︽０鎴犲芳 -->
@@ -93,7 +93,7 @@
                                  Description="{Binding FocusTimerDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Timer" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
 
                 <!-- 娑撴挻鏁為弮鍫曟毐 -->
@@ -231,7 +231,7 @@
                                  Description="{Binding AlertDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Alert" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
 
                 <!-- 閸ｎ亪鐓堕幍鎾存焽閹绘劙鍟?-->
@@ -273,7 +273,7 @@
                                  Description="{Binding DisplayDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Eye" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
 
                 <!-- 閺勫墽銇氱€圭偞妞傞崚鍡氱 -->

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
@@ -12,7 +12,7 @@
             <ui:FASettingsExpander Header="{Binding RefreshButtonText}"
                                  Description="{Binding StatusMessage}">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ArrowSync" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <Button Command="{Binding RefreshCommand}"
@@ -31,7 +31,7 @@
                     <DataTemplate x:DataType="vm:InstalledPluginItemViewModel">
                         <ui:FASettingsExpander>
                             <ui:FASettingsExpander.IconSource>
-                                <fi:SymbolIconSource Symbol="PuzzleCube" />
+                                <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                             </ui:FASettingsExpander.IconSource>
                             <ui:FASettingsExpander.Header>
                                 <StackPanel>

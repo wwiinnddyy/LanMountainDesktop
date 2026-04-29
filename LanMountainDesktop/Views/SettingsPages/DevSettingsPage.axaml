@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
@@ -14,14 +14,14 @@
                         Message="These options are intended for debugging, diagnostics, and local plugin development."
                         Margin="0,0,0,16">
                 <ui:FAInfoBar.IconSource>
-                    <fi:SymbolIconSource Symbol="Info" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FAInfoBar.IconSource>
             </ui:FAInfoBar>
 
             <ui:FASettingsExpander Header="Developer mode"
                                  Description="Enable developer-focused startup helpers and diagnostics.">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="DeveloperBoard" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsDevModeEnabled}" />
@@ -31,7 +31,7 @@
             <ui:FASettingsExpander Header="Three-finger desktop swipe"
                                  Description="Enable desktop page switching gestures when the current platform supports them.">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Gesture" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableThreeFingerSwipe}" />
@@ -41,7 +41,7 @@
             <ui:FASettingsExpander Header="Fused desktop experience"
                                  Description="Enable the fused desktop shell and its related experimental entry points.">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Apps" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableFusedDesktop}" />
@@ -53,11 +53,11 @@
             <ui:FASettingsExpander Header="Development plugin path"
                                  Description="Load a local plugin output directory for iterative debugging without packaging.">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="FolderLink" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <TextBox Text="{Binding DevPluginPath}"
-                             Watermark="C:\path\to\plugin\bin\Debug\net10.0"
+                             PlaceholderText="C:\path\to\plugin\bin\Debug\net10.0"
                              Width="360"
                              MinWidth="200" />
                 </ui:FASettingsExpanderItem>
@@ -68,7 +68,7 @@
             <ui:FASettingsExpander Header="Developer startup arguments"
                                  Description="Use these launch arguments or environment variables to start the app in development scenarios.">
                 <ui:FASettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="WindowConsole" />
+                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <StackPanel Margin="0,8,0,0"

@@ -16,7 +16,7 @@
         CanResize="True"
         SizeToContent="Manual"
         ShowInTaskbar="False"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         Background="Transparent"
         Title="Component Editor">
     <Window.Resources>
