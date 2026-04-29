@@ -478,7 +478,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _ = TryApplyResponsiveLayout();
 
-        // 灏忕獥鍙ｆ椂闅愯棌鎶藉眽闈㈡澘
+        // Hide the drawer pane on narrow windows.
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -728,12 +728,12 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "ShoppingBag" => Symbol.ShoppingBag,
-            "Shield" => Symbol.ShieldDismiss,
+            "Shield" => Symbol.ShieldLock,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             "Hourglass" => Symbol.Hourglass,
             "Alert" => Symbol.Alert,
-            "Bell" => Symbol.Alert,
+            "Bell" => Symbol.AlertOn,
             "DeveloperBoard" => Symbol.DeveloperBoard,
             "FolderLink" => Symbol.FolderLink,
             "WindowConsole" => Symbol.WindowConsole,
@@ -749,7 +749,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             IconVariant = FluentIcons.Common.IconVariant.Regular
         };
 
-        // 使用反射获取 IconText 和 IconFont
+        // FluentAvalonia still expects IconSource here, so bridge the Avalonia 12 FluentIcons glyph/font into FAFontIconSource.
         var iconTextProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         var iconFontProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconFont", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 

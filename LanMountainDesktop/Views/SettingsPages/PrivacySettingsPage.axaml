@@ -15,7 +15,7 @@
             <ui:FASettingsExpander Header="{Binding CrashUploadHeader}"
                                  Description="{Binding CrashUploadDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0D9C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UploadAnonymousCrashData}" />
@@ -25,7 +25,7 @@
             <ui:FASettingsExpander Header="{Binding UsageUploadHeader}"
                                  Description="{Binding UsageUploadDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF07A4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UploadAnonymousUsageData}" />

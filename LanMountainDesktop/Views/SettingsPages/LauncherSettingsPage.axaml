@@ -61,7 +61,7 @@
                                  Description="{Binding AppearanceDescription}"
                                  IsExpanded="True">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0888;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto">
@@ -85,7 +85,7 @@
                                  Description="{Binding HiddenDescription}"
                                  IsExpanded="True">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1C80;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
@@ -103,7 +103,7 @@
                                                              Description="{Binding TypeLabel}"
                                                              IsClickEnabled="False">
                                         <ui:FASettingsExpanderItem.IconSource>
-                                            <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                                            <ui:FAFontIconSource Glyph="&#xF19FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                                         </ui:FASettingsExpanderItem.IconSource>
                                         <ui:FASettingsExpanderItem.Footer>
                                             <Button Command="{Binding RestoreCommand}"

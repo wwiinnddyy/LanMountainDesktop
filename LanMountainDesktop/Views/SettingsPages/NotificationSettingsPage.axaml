@@ -16,7 +16,7 @@
             <ui:FASettingsExpander Header="{Binding EnableNotificationHeader}"
                                  Description="{Binding EnableNotificationDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0018;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsNotificationEnabled}" />
@@ -32,7 +32,7 @@
             <ui:FASettingsExpander Header="{Binding HoverPauseHeader}"
                                  Description="{Binding HoverPauseDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF066C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsHoverPauseEnabled}" />
@@ -42,7 +42,7 @@
             <ui:FASettingsExpander Header="{Binding ClickCloseHeader}"
                                  Description="{Binding ClickCloseDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0148;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsClickCloseEnabled}" />
@@ -52,7 +52,7 @@
             <ui:FASettingsExpander Header="{Binding MaxNotificationsHeader}"
                                  Description="{Binding MaxNotificationsDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0010;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ui:FANumberBox Value="{Binding MaxNotificationsPerPosition}"
@@ -72,7 +72,7 @@
             <ui:FASettingsExpander Header="{Binding TestNotificationHeader}"
                                  Description="{Binding TestNotificationDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF03FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <StackPanel Orientation="Horizontal" Spacing="8">

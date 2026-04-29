@@ -15,7 +15,7 @@
             <ui:FASettingsExpander Header="{Binding ClockHeader}"
                                  Description="{Binding ClockDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FASymbolIconSource Symbol="{x:Static ui:FASymbol.Clock}" />
+                    <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowClock}" />
@@ -93,7 +93,7 @@
             <ui:FASettingsExpander Header="{Binding TextCapsuleHeader}"
                                  Description="{Binding TextCapsuleDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF07F0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowTextCapsule}" />
@@ -147,7 +147,7 @@
             <ui:FASettingsExpander Header="{Binding NetworkSpeedHeader}"
                                  Description="{Binding NetworkSpeedDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF01A0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowNetworkSpeed}" />
@@ -239,7 +239,7 @@
             <ui:FASettingsExpander Header="{Binding SpacingHeader}"
                                  Description="{Binding SpacingDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF02D8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="180"
@@ -278,7 +278,7 @@
             <ui:FASettingsExpander Header="{Binding StatusBarShadowHeader}"
                                  Description="{Binding StatusBarShadowDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1A48;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding StatusBarShadowEnabled}" />

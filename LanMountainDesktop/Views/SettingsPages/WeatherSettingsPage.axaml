@@ -125,7 +125,7 @@
                                           ColumnSpacing="12">
                                         <ui:FAFontIcon Classes="icon-s"
                                                        Margin="0,2,0,0"
-                                                       Glyph="&#xF0950;"
+                                                       Glyph="&#xF02BC;"
                                                        FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                                         <StackPanel Grid.Column="1"
                                                     Spacing="4">

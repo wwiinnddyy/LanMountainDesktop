@@ -14,7 +14,7 @@
 
             <ui:FASettingsExpander Header="{Binding LanguageHeader}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FASymbolIconSource Symbol="{x:Static ui:FASymbol.Settings}" />
+                    <ui:FAFontIconSource Glyph="&#xF0404;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -32,7 +32,7 @@
             <ui:FASettingsExpander Header="{Binding TimeZoneHeader}"
                                  Description="{Binding TimeZoneDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FASymbolIconSource Symbol="{x:Static ui:FASymbol.Clock}" />
+                    <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="240"
@@ -49,7 +49,7 @@
 
             <ui:FASettingsExpander Header="{Binding PreviewHeader}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1C80;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="Auto,*"
@@ -82,7 +82,7 @@
                                  Description="{Binding RuntimeDescription}"
                                  IsExpanded="True">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -107,7 +107,7 @@
                                  Description="{Binding FadeTransitionDescription}"
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1A48;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableFadeTransition}"
@@ -119,7 +119,7 @@
                                  Description="Use a slide-in startup transition on supported Windows builds. This option disables the fade transition."
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF08E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableSlideTransition}" />
@@ -129,7 +129,7 @@
             <ui:FASettingsExpander Header="Show in taskbar"
                                  Description="Keep the main window visible in the taskbar while the desktop host is running.">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1BE0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding ShowInTaskbar}" />

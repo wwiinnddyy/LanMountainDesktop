@@ -16,7 +16,7 @@
             <ui:FASettingsExpander Header="{Binding ThemeModeLabel}"
                                  Description="{Binding ThemeModeDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FASymbolIconSource Symbol="{x:Static ui:FASymbol.WeatherMoon}" />
+                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="200"
@@ -33,7 +33,7 @@
 
             <ui:FASettingsExpander Header="{Binding UseSystemChromeLabel}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UseSystemChrome}" />
@@ -43,7 +43,7 @@
             <ui:FASettingsExpander Header="{Binding ThemeColorModeLabel}"
                                  Description="{Binding ThemeColorSourceDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF017C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="240"
@@ -61,7 +61,7 @@
             <ui:FASettingsExpander Header="{Binding SystemMaterialLabel}"
                                  Description="{Binding SystemMaterialDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF1A48;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
@@ -79,7 +79,7 @@
             <ui:FASettingsExpander Header="{Binding ThemeColorLabel}"
                                  Description="{Binding ThemeColorSourceDescription}">
                 <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0274;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    <ui:FAFontIconSource Glyph="&#xF0888;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="12">

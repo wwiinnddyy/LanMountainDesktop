@@ -92,6 +92,7 @@ public partial class SettingsSectionCard : UserControl
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
+            "Bell" => Symbol.AlertOn,
             _ => Symbol.Settings
         };
     }
