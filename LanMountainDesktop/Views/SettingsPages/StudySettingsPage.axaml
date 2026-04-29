@@ -1,36 +1,36 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.StudySettingsPage"
              x:DataType="vm:StudySettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
 
-            <!-- 总开关 -->
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <!-- 閹绱戦崗?-->
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding MasterSwitchHeader}"
                                  Description="{Binding MasterSwitchDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="DataHistogram" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF2014;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding StudyEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <!-- 噪音监测设置 -->
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <!-- 閸ｎ亪鐓堕惄鎴炵ゴ鐠佸墽鐤?-->
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding NoiseMonitoringHeader}"
                                  Description="{Binding NoiseMonitoringDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Mic" />
-                </ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0018;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
 
-                <!-- 采集频率 -->
-                <ui:SettingsExpanderItem>
+                <!-- 闁插洭娉︽０鎴犲芳 -->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -52,10 +52,10 @@
                                 TickFrequency="20"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 噪音敏感度 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閸ｎ亪鐓堕弫蹇斿妳鎼?-->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -77,27 +77,27 @@
                                 TickFrequency="5"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 评分阈值显示 -->
-                <ui:SettingsExpanderItem>
+                <!-- 鐠囧嫬鍨庨梼鍫濃偓鍏兼▔缁€?-->
+                <ui:FASettingsExpanderItem>
                     <TextBlock Classes="settings-item-description"
                                Text="{Binding CurrentThresholdText}"
                                TextWrapping="Wrap" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <!-- 专注计时设置 -->
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <!-- 娑撴挻鏁炵拋鈩冩鐠佸墽鐤?-->
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding FocusTimerHeader}"
                                  Description="{Binding FocusTimerDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Timer" />
-                </ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF066C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
 
-                <!-- 专注时长 -->
-                <ui:SettingsExpanderItem>
+                <!-- 娑撴挻鏁為弮鍫曟毐 -->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -119,10 +119,10 @@
                                 TickFrequency="5"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 休息时长 -->
-                <ui:SettingsExpanderItem>
+                <!-- 娴兼垶浼呴弮鍫曟毐 -->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -144,10 +144,10 @@
                                 TickFrequency="5"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 长休息时长 -->
-                <ui:SettingsExpanderItem>
+                <!-- 闂€澶哥搐閹垱妞傞梹?-->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -169,10 +169,10 @@
                                 TickFrequency="5"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 长休息间隔 -->
-                <ui:SettingsExpanderItem>
+                <!-- 闂€澶哥搐閹垶妫块梾?-->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -194,10 +194,10 @@
                                 TickFrequency="1"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 自动开始休息 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閼奉亜濮╁鈧慨瀣╃搐閹?-->
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
                             <TextBlock Classes="settings-item-label"
@@ -208,10 +208,10 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsChecked="{Binding AutoStartBreak}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 自动开始专注 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閼奉亜濮╁鈧慨瀣╃瑩濞?-->
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
                             <TextBlock Classes="settings-item-label"
@@ -222,20 +222,20 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsChecked="{Binding AutoStartFocus}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <!-- 提醒设置 -->
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <!-- 閹绘劙鍟嬬拋鍓х枂 -->
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding AlertHeader}"
                                  Description="{Binding AlertDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Alert" />
-                </ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0010;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
 
-                <!-- 噪音打断提醒 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閸ｎ亪鐓堕幍鎾存焽閹绘劙鍟?-->
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
                             <TextBlock Classes="settings-item-label"
@@ -246,10 +246,10 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsChecked="{Binding NoiseAlertEnabled}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 每分钟最大容忍打断次数 -->
-                <ui:SettingsExpanderItem IsVisible="{Binding NoiseAlertEnabled}">
+                <!-- 濮ｅ繐鍨庨柦鐔告付婢堆冾啇韫囧秵澧﹂弬顓燁偧閺?-->
+                <ui:FASettingsExpanderItem IsVisible="{Binding NoiseAlertEnabled}">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
                             <TextBlock Classes="settings-item-label"
@@ -264,20 +264,20 @@
                                        Increment="1"
                                        Value="{Binding MaxInterruptsPerMinute}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
-            <!-- 显示设置 -->
-            <ui:SettingsExpander Classes="settings-expander-card"
+            <!-- 閺勫墽銇氱拋鍓х枂 -->
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding DisplayHeader}"
                                  Description="{Binding DisplayDescription}"
                                  IsEnabled="{Binding StudyEnabled}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Eye" />
-                </ui:SettingsExpander.IconSource>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
 
-                <!-- 显示实时分贝 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閺勫墽銇氱€圭偞妞傞崚鍡氱 -->
+                <ui:FASettingsExpanderItem>
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                         <StackPanel Classes="settings-item">
                             <TextBlock Classes="settings-item-label"
@@ -288,10 +288,10 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsChecked="{Binding ShowRealtimeDb}" />
                     </Grid>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 基准显示分贝 -->
-                <ui:SettingsExpanderItem>
+                <!-- 閸╁搫鍣弰鍓с仛閸掑棜绀?-->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -313,10 +313,10 @@
                                 TickFrequency="5"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
+                </ui:FASettingsExpanderItem>
 
-                <!-- 平均时间窗 -->
-                <ui:SettingsExpanderItem>
+                <!-- 楠炲啿娼庨弮鍫曟？缁?-->
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                             <StackPanel Classes="settings-item">
@@ -338,8 +338,8 @@
                                 TickFrequency="1"
                                 IsSnapToTickEnabled="True" />
                     </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <TextBlock Classes="settings-item-description"
                        Margin="0,8,0,0"

@@ -6,7 +6,7 @@
         x:Class="LanMountainDesktop.Views.DesktopWidgetWindow"
         Title="Desktop Component"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         Background="Transparent"
         Topmost="False"
         SizeToContent="WidthAndHeight"

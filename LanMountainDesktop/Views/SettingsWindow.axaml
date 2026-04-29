@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:LanMountainDesktop.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
-        xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+        xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Width="1120"
@@ -11,7 +11,7 @@
         MinHeight="480"
         CanResize="True"
         WindowStartupLocation="Manual"
-        SystemDecorations="BorderOnly"
+        WindowDecorations="BorderOnly"
         FontFamily="{DynamicResource AppFontFamily}"
         Background="Transparent"
         Title="{Binding Title}">
@@ -112,7 +112,7 @@
             </Grid>
         </Border>
 
-        <ui:NavigationView x:Name="RootNavigationView"
+        <ui:FANavigationView x:Name="RootNavigationView"
                            Grid.Row="1"
                            Margin="0,8,0,0"
                            Background="Transparent"
@@ -122,10 +122,10 @@
                            IsPaneToggleButtonVisible="False"
                            IsBackButtonVisible="False"
                            SelectionChanged="OnNavigationSelectionChanged">
-            <ui:NavigationView.Resources>
+            <ui:FANavigationView.Resources>
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-            </ui:NavigationView.Resources>
+            </ui:FANavigationView.Resources>
 
             <Grid x:Name="SettingsContentGrid"
                   ColumnDefinitions="*,Auto"
@@ -142,7 +142,7 @@
                                    Text="{Binding CurrentPageTitle}" />
                     </Grid>
 
-                    <ui:Frame x:Name="ContentFrame"
+                    <ui:FAFrame x:Name="ContentFrame"
                               Grid.Row="1" />
                 </Grid>
 
@@ -180,6 +180,6 @@
                     </Grid>
                 </Border>
             </Grid>
-        </ui:NavigationView>
+        </ui:FANavigationView>
     </Grid>
 </Window>

@@ -1,0 +1,21 @@
+# Checklist
+
+- [x] `Directory.Packages.props` contains the Avalonia 12 dependency baseline.
+- [x] Main host references `Avalonia.Controls.WebView`.
+- [x] Source no longer references `WebView.Avalonia`, `AvaloniaWebView`, or `.UseDesktopWebView()`.
+- [x] `BrowserWidget` uses `NativeWebView.Source`, `Navigate`, `Refresh()`, `NavigationStarted`, and `EnvironmentRequested`.
+- [x] WebView blanking navigates to `about:blank`.
+- [x] Plugin SDK package version is `5.0.0`.
+- [x] `PluginSdkInfo.ApiVersion` is `5.0.0`.
+- [x] Plugin template package version default is `5.0.0`.
+- [x] Plugin template manifest `apiVersion` is `5.0.0`.
+- [x] Launcher data location config resolution cannot recurse through `ResolveDataRoot()`.
+- [x] `OobeStateServiceTests` pass.
+- [x] `dotnet build LanMountainDesktop.slnx -c Debug` has 0 errors.
+- [x] `dotnet test LanMountainDesktop.slnx -c Debug` completes without a test host stack overflow.
+- [ ] Windows host smoke test completed.
+- [ ] Windows Launcher smoke test completed.
+- [ ] Settings window FluentAvalonia 3 smoke test completed.
+- [ ] Component editor Material smoke test completed.
+- [ ] BrowserWidget navigation/refresh/page activation smoke test completed.
+- [ ] WebView2 missing-runtime diagnostic smoke test completed.

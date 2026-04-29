@@ -1,9 +1,10 @@
 using System;
+using Avalonia.Controls;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private void UpdateCurrentRenderBackendStatus()
     {

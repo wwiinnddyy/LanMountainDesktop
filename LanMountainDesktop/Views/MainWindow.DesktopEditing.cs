@@ -12,7 +12,7 @@ using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private static readonly TimeSpan DesktopEditCommitAnimationDuration = FluttermotionToken.Standard;
     private static readonly TimeSpan DesktopEditCancelAnimationDuration = FluttermotionToken.Fast;

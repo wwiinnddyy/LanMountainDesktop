@@ -60,17 +60,13 @@ public partial class ComponentEditorWindow : Window
         if (preferSystemChrome)
         {
             ExtendClientAreaToDecorationsHint = true;
-            ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.PreferSystemChrome;
-            ExtendClientAreaTitleBarHeightHint = -1;
-            SystemDecorations = SystemDecorations.Full;
+            WindowDecorations = WindowDecorations.Full;
             CustomTitleBarHost.IsVisible = false;
             return;
         }
 
-        SystemDecorations = SystemDecorations.BorderOnly;
+        WindowDecorations = WindowDecorations.BorderOnly;
         ExtendClientAreaToDecorationsHint = true;
-        ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
-        ExtendClientAreaTitleBarHeightHint = 52;
         CustomTitleBarHost.IsVisible = true;
     }
 

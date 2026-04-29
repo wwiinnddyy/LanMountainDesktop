@@ -1,84 +1,92 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.DevSettingsPage"
              x:DataType="vm:DevSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-
-            <ui:InfoBar IsOpen="True"
+            <ui:FAInfoBar IsOpen="True"
                         IsClosable="False"
                         Severity="Warning"
-                        Title="开发者模式"
-                        Message="开发者模式仅供开发和调试用途。开发者不对以非开发用途使用此功能造成的任何后果负责。"
-                        Margin="0,0,0,16" />
+                        Title="Preview and developer features"
+                        Message="These options are intended for debugging, diagnostics, and local plugin development."
+                        Margin="0,0,0,16">
+                <ui:FAInfoBar.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FAInfoBar.IconSource>
+            </ui:FAInfoBar>
 
-            <ui:SettingsExpander Header="启用开发者模式"
-                                 Description="启用后可使用插件调试、开发者插件路径等高级功能">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="DeveloperBoard" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+            <ui:FASettingsExpander Header="Developer mode"
+                                 Description="Enable developer-focused startup helpers and diagnostics.">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF01AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding IsDevModeEnabled}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="启用三指滑动"
-                                 Description="使用三根手指或鼠标右键拖动自由滑动页面，在第一页向右滑动可回到 Windows 桌面（实验性功能）">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Gesture" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+            <ui:FASettingsExpander Header="Three-finger desktop swipe"
+                                 Description="Enable desktop page switching gestures when the current platform supports them.">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF02FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableThreeFingerSwipe}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="启用融合桌面"
-                                 Description="允许将组件放置在 Windows 系统桌面上（实验性功能，重启后生效）">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Apps" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+            <ui:FASettingsExpander Header="Fused desktop experience"
+                                 Description="Enable the fused desktop shell and its related experimental entry points.">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding EnableFusedDesktop}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
-            <ui:SettingsExpander Header="开发者插件路径"
-                                 Description="指定开发中的插件目录路径，无需打包即可直接加载。多个路径用分号分隔。">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="FolderLink" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
+            <ui:FASettingsExpander Header="Development plugin path"
+                                 Description="Load a local plugin output directory for iterative debugging without packaging.">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF023C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
                     <TextBox Text="{Binding DevPluginPath}"
-                             Watermark="C:\path\to\plugin\bin\Debug\net10.0"
+                             PlaceholderText="C:\path\to\plugin\bin\Debug\net10.0"
                              Width="360"
                              MinWidth="200" />
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
 
             <Separator Classes="settings-separator" />
 
-            <ui:SettingsExpander Header="命令行参数"
-                                 Description="也可以通过命令行参数或环境变量指定开发者插件路径">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="WindowConsole" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
-                    <StackPanel Margin="0,8,0,0" Spacing="8">
-                        <TextBlock Text="命令行参数：" FontWeight="SemiBold" />
+            <ui:FASettingsExpander Header="Developer startup arguments"
+                                 Description="Use these launch arguments or environment variables to start the app in development scenarios.">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF1930;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
+                    <StackPanel Margin="0,8,0,0"
+                                Spacing="8">
+                        <TextBlock Text="Command-line arguments:"
+                                   FontWeight="SemiBold" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 CornerRadius="8"
                                 Padding="12,8">
                             <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                        FontSize="12"
-                                       Text="--dev-plugin &lt;path&gt;   或   -dp &lt;path&gt;"
+                                       Text="--dev-plugin &lt;path&gt;   or -dp &lt;path&gt;"
                                        TextWrapping="Wrap" />
                         </Border>
-                        <TextBlock Text="环境变量：" FontWeight="SemiBold" Margin="0,8,0,0" />
+
+                        <TextBlock Text="Environment variables:"
+                                   FontWeight="SemiBold"
+                                   Margin="0,8,0,0" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 CornerRadius="8"
                                 Padding="12,8">
@@ -87,23 +95,25 @@
                                        Text="LMD_DEV_PLUGIN=&lt;path&gt;"
                                        TextWrapping="Wrap" />
                         </Border>
-                        <TextBlock Text="其他参数：" FontWeight="SemiBold" Margin="0,8,0,0" />
+
+                        <TextBlock Text="Other arguments:"
+                                   FontWeight="SemiBold"
+                                   Margin="0,8,0,0" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 CornerRadius="8"
                                 Padding="12,8">
                             <StackPanel Spacing="4">
                                 <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                            FontSize="12"
-                                           Text="--dev-mode / -dev     启用开发者模式" />
+                                           Text="--dev-mode / -dev     Enable developer mode startup helpers." />
                                 <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                            FontSize="12"
-                                           Text="--hot-reload / -hr    启用热重载（预留）" />
+                                           Text="--hot-reload / -hr    Enable hot reload for development builds." />
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
-
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

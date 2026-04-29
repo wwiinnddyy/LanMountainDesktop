@@ -9,6 +9,7 @@ internal sealed class OobeStateService
 
     private readonly string _stateDirectory;
     private readonly string _statePath;
+    private readonly string _legacyStatePath;
     private readonly string _legacyMarkerPath;
     private readonly LauncherExecutionSnapshot _executionSnapshot;
 
@@ -25,7 +26,13 @@ internal sealed class OobeStateService
             : Path.GetFullPath(stateRootOverride);
         _stateDirectory = Path.Combine(stateRoot, "Launcher", "state");
         _statePath = Path.Combine(_stateDirectory, "oobe-state.json");
-        _legacyMarkerPath = Path.Combine(_stateDirectory, "first_run_completed");
+
+        var legacyRoot = string.IsNullOrWhiteSpace(stateRootOverride)
+            ? Path.GetFullPath(appRoot)
+            : Path.GetFullPath(stateRootOverride);
+        var legacyStateDirectory = Path.Combine(legacyRoot, ".launcher", "state");
+        _legacyStatePath = Path.Combine(legacyStateDirectory, "oobe-state.json");
+        _legacyMarkerPath = Path.Combine(legacyStateDirectory, "first_run_completed");
     }
 
     public OobeLaunchDecision Evaluate(CommandContext context)
@@ -100,14 +107,12 @@ internal sealed class OobeStateService
             var migratedLegacyMarker = false;
             if (File.Exists(_statePath))
             {
-                using var stream = File.OpenRead(_statePath);
-                var state = JsonSerializer.Deserialize(stream, AppJsonContext.Default.OobeStateFile);
-                if (state is null || state.SchemaVersion <= 0 || string.IsNullOrWhiteSpace(state.CompletedAtUtc))
-                {
-                    return BuildUnavailableDecision(context, "OOBE state file is invalid.");
-                }
+                return EvaluateStateFile(context, _statePath, migratedLegacyState: false);
+            }
 
-                return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, migratedLegacyMarker: false);
+            if (File.Exists(_legacyStatePath))
+            {
+                return EvaluateStateFile(context, _legacyStatePath, migratedLegacyState: false);
             }
 
             if (File.Exists(_legacyMarkerPath))
@@ -138,6 +143,18 @@ internal sealed class OobeStateService
     {
         var result = MarkCompleted(context);
         return result.Success;
+    }
+
+    private OobeLaunchDecision EvaluateStateFile(CommandContext context, string statePath, bool migratedLegacyState)
+    {
+        using var stream = File.OpenRead(statePath);
+        var state = JsonSerializer.Deserialize(stream, AppJsonContext.Default.OobeStateFile);
+        if (state is null || state.SchemaVersion <= 0 || string.IsNullOrWhiteSpace(state.CompletedAtUtc))
+        {
+            return BuildUnavailableDecision(context, "OOBE state file is invalid.");
+        }
+
+        return BuildDecision(context, OobeStateStatus.Completed, shouldShowOobe: false, migratedLegacyMarker: migratedLegacyState);
     }
 
     private void TryDeleteLegacyMarker()

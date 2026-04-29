@@ -1,4 +1,3 @@
-using System.Text.Json;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using Xunit;
@@ -34,10 +33,14 @@ public sealed class ComponentSettingsServiceTests
         Assert.Equal("Sweep", snapshot.DesktopClockSecondHandMode);
         Assert.Single(snapshot.ImportedClassSchedules);
 
-        using var document = JsonDocument.Parse(File.ReadAllText(sandbox.SettingsPath));
-        Assert.True(document.RootElement.TryGetProperty("defaultSettings", out var defaultSettings));
-        Assert.Equal("Sweep", defaultSettings.GetProperty("desktopClockSecondHandMode").GetString());
-        Assert.False(document.RootElement.TryGetProperty("DesktopClockSecondHandMode", out _));
+        Assert.True(File.Exists(sandbox.DatabasePath));
+        Assert.False(File.Exists(sandbox.SettingsPath));
+        Assert.True(File.Exists(sandbox.SettingsBackupPath));
+
+        ComponentSettingsService.ResetCacheForTests();
+        var reloadedService = sandbox.CreateService();
+        var reloaded = reloadedService.Load();
+        Assert.Equal("Sweep", reloaded.DesktopClockSecondHandMode);
     }
 
     [Fact]
@@ -72,11 +75,16 @@ public sealed class ComponentSettingsServiceTests
         Assert.Equal("Sweep", snapshot.DesktopClockSecondHandMode);
         Assert.True(pluginSettings.SampleFlag);
 
-        using var document = JsonDocument.Parse(File.ReadAllText(sandbox.SettingsPath));
-        Assert.True(document.RootElement.TryGetProperty("instanceSettings", out var instanceSettings));
-        Assert.True(instanceSettings.TryGetProperty("DesktopClock::clock-2x2", out var clockSettings));
-        Assert.Equal("Sweep", clockSettings.GetProperty("desktopClockSecondHandMode").GetString());
-        Assert.False(document.RootElement.TryGetProperty("InstanceSettings", out _));
+        Assert.True(File.Exists(sandbox.DatabasePath));
+        Assert.False(File.Exists(sandbox.SettingsPath));
+        Assert.True(File.Exists(sandbox.SettingsBackupPath));
+
+        ComponentSettingsService.ResetCacheForTests();
+        var reloadedService = sandbox.CreateService();
+        var reloadedSnapshot = reloadedService.LoadForComponent("DesktopClock", "clock-2x2");
+        var reloadedPluginSettings = reloadedService.LoadPluginSettings<SamplePluginSettings>("DesktopClock", "clock-2x2");
+        Assert.Equal("Sweep", reloadedSnapshot.DesktopClockSecondHandMode);
+        Assert.True(reloadedPluginSettings.SampleFlag);
     }
 
     [Fact]
@@ -132,12 +140,7 @@ public sealed class ComponentSettingsServiceTests
         Assert.True(pluginSettings.SampleFlag);
         Assert.Equal("schedule-settings", pluginSettings.Title);
 
-        using var document = JsonDocument.Parse(File.ReadAllText(sandbox.SettingsPath));
-        Assert.True(document.RootElement.TryGetProperty("instanceSettings", out var instanceSettings));
-        Assert.True(instanceSettings.TryGetProperty("DesktopClock::clock-2x2", out _));
-        Assert.True(instanceSettings.TryGetProperty("DesktopClassSchedule::class-schedule-2x2", out _));
-        Assert.True(document.RootElement.TryGetProperty("pluginSettings", out var pluginSettingsNode));
-        Assert.True(pluginSettingsNode.TryGetProperty("DesktopClassSchedule::class-schedule-2x2", out _));
+        Assert.True(File.Exists(sandbox.DatabasePath));
     }
 
     private sealed class ComponentSettingsSandbox : IDisposable
@@ -154,6 +157,10 @@ public sealed class ComponentSettingsServiceTests
         }
 
         public string SettingsPath => Path.Combine(_directoryPath, "component-settings.json");
+
+        public string SettingsBackupPath => $"{SettingsPath}.migrated.bak";
+
+        public string DatabasePath => Path.Combine(_directoryPath, "component-state.db");
 
         public ComponentSettingsService CreateService()
         {

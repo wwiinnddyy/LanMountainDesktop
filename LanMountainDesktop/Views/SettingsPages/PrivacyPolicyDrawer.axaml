@@ -3,7 +3,7 @@
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:mdxaml="https://github.com/whistyun/Markdown.Avalonia"
              xmlns:helpers="using:LanMountainDesktop.Helpers"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.PrivacyPolicyDrawer"
              x:DataType="vm:PrivacyPolicyViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">

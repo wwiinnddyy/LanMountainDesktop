@@ -20,7 +20,7 @@
 | 视觉规范 | `docs/VISUAL_SPEC.md` | 颜色、语义资源、玻璃层级 |
 | 圆角规范 | `docs/CORNER_RADIUS_SPEC.md` | 圆角层级与动态规则 |
 | 插件生态边界 | `docs/ECOSYSTEM_BOUNDARIES.md` | 仓库边界和 market 所属 |
-| SDK v4 迁移 | `docs/PLUGIN_SDK_V4_MIGRATION.md` | Plugin SDK breaking changes |
+| SDK v5 迁移 | `docs/PLUGIN_SDK_V5_MIGRATION.md` | Plugin SDK breaking changes |
 
 ## 已废弃来源
 

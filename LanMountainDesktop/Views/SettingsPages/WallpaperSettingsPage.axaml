@@ -1,35 +1,36 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.WallpaperSettingsPage"
              x:DataType="vm:WallpaperSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-
-            <!-- 预览与颜色选择区域 -->
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="32" Margin="0,0,0,32">
-                <!-- 左侧：模拟屏幕预览 (占一半宽度) -->
-                <Border Grid.Column="0" VerticalAlignment="Top">
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="32"
+                  Margin="0,0,0,32">
+                <Border Grid.Column="0"
+                        VerticalAlignment="Top">
                     <Viewbox Stretch="Uniform">
-                        <Border Width="1600" Height="900"
-                                Background="#080808" 
-                                BorderBrush="#1A1A1A" 
-                                BorderThickness="24" 
+                        <Border Width="1600"
+                                Height="900"
+                                Background="#080808"
+                                BorderBrush="#1A1A1A"
+                                BorderThickness="24"
                                 CornerRadius="48"
                                 BoxShadow="0 12 32 #50000000">
-                            <Panel Background="{DynamicResource AdaptiveSurfaceBaseBrush}" Margin="2">
-                                <!-- 图片预览 -->
+                            <Panel Background="{DynamicResource AdaptiveSurfaceBaseBrush}"
+                                   Margin="2">
                                 <Border Background="#FFF6F7F9"
                                         IsVisible="{Binding IsImage}">
                                     <Border Background="{Binding PreviewBrush}" />
                                 </Border>
-                                <!-- 纯色预览 -->
-                                <Border Background="{Binding SelectedColor}" 
+
+                                <Border Background="{Binding SelectedColor}"
                                         IsVisible="{Binding IsSolidColor}" />
-                                <!-- 系统壁纸预览 -->
+
                                 <Border Background="#FFF6F7F9"
                                         IsVisible="{Binding IsSystemWallpaper}">
                                     <Border Background="{Binding PreviewBrush}" />
@@ -39,100 +40,139 @@
                     </Viewbox>
                 </Border>
 
-                <!-- 右侧：颜色选择网格 -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsSolidColor}">
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Spacing="12"
+                            IsVisible="{Binding IsSolidColor}">
                     <TextBlock Text="{Binding WallpaperColorLabel}"
                                FontSize="14"
                                FontWeight="SemiBold"
                                Opacity="0.8" />
-                    <UniformGrid Columns="4" Rows="3">
-                        <!-- 预设颜色 1-11 -->
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                    <UniformGrid Columns="4"
+                                 Rows="3">
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#D8A7B1"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#D8A7B1"
                                 ToolTip.Tip="#D8A7B1" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#B6C9BB"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#B6C9BB"
                                 ToolTip.Tip="#B6C9BB" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#A2B5BB"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#A2B5BB"
                                 ToolTip.Tip="#A2B5BB" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#E6E2D3"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#E6E2D3"
                                 ToolTip.Tip="#E6E2D3" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#B5A397"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#B5A397"
                                 ToolTip.Tip="#B5A397" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#C5C1C0"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#C5C1C0"
                                 ToolTip.Tip="#C5C1C0" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#D4BE8D"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#D4BE8D"
                                 ToolTip.Tip="#D4BE8D" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#C08261"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#C08261"
                                 ToolTip.Tip="#C08261" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#8E9775"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#8E9775"
                                 ToolTip.Tip="#8E9775" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#9FBAD3"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#9FBAD3"
                                 ToolTip.Tip="#9FBAD3" />
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="#E5BAA2"
                                 BorderThickness="0"
                                 CornerRadius="6"
                                 Command="{Binding SelectColorCommand}"
                                 CommandParameter="#E5BAA2"
                                 ToolTip.Tip="#E5BAA2" />
-                        <!-- 第12个位置：自定义颜色选择器 -->
-                        <Button Width="48" Height="48" Margin="4" Padding="0"
+
+                        <Button Width="48"
+                                Height="48"
+                                Margin="4"
+                                Padding="0"
                                 Background="{Binding CustomColorBrush}"
                                 BorderThickness="0"
                                 CornerRadius="6"
-                                ToolTip.Tip="自定义颜色">
+                                ToolTip.Tip="Custom color">
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedLeft">
-                                    <StackPanel Width="260" Spacing="12">
+                                    <StackPanel Width="260"
+                                                Spacing="12">
                                         <ColorPicker Color="{Binding CustomColor}" />
                                     </StackPanel>
                                 </Flyout>
@@ -141,8 +181,10 @@
                     </UniformGrid>
                 </StackPanel>
 
-                <!-- 右侧：系统壁纸状态 -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12" IsVisible="{Binding IsSystemWallpaper}">
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Spacing="12"
+                            IsVisible="{Binding IsSystemWallpaper}">
                     <TextBlock Text="{Binding SystemWallpaperLabel}"
                                FontSize="14"
                                FontWeight="SemiBold"
@@ -155,19 +197,18 @@
                 </StackPanel>
             </Grid>
 
-            <Separator Classes="settings-separator" Margin="0,0,0,24" />
+            <Separator Classes="settings-separator"
+                       Margin="0,0,0,24" />
 
-            <!-- 基本设置项 -->
             <controls:IconText Icon="Image"
                                Text="{Binding WallpaperHeader}"
                                Margin="0,0,0,8" />
 
-            <!-- 壁纸类型 -->
-            <ui:SettingsExpander Header="{Binding WallpaperTypeLabel}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Layer" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+            <ui:FASettingsExpander Header="{Binding WallpaperTypeLabel}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF067C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="200"
                               ItemsSource="{Binding WallpaperTypes}"
                               SelectedItem="{Binding SelectedWallpaperType}">
@@ -177,18 +218,18 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <!-- 图片文件选择 -->
-            <ui:SettingsExpander Header="{Binding WallpaperPathLabel}" 
+            <ui:FASettingsExpander Header="{Binding WallpaperPathLabel}"
                                  IsVisible="{Binding IsImage}"
                                  Margin="0,4,0,0">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="FolderOpen" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF058C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8">
                         <TextBox IsReadOnly="True"
                                  Width="300"
                                  Text="{Binding WallpaperPath}"
@@ -198,18 +239,18 @@
                                 Content="{Binding ImportWallpaperButtonText}"
                                 VerticalAlignment="Center" />
                     </StackPanel>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <!-- 系统壁纸刷新设置 -->
-            <ui:SettingsExpander Header="{Binding RefreshIntervalLabel}"
+            <ui:FASettingsExpander Header="{Binding RefreshIntervalLabel}"
                                  IsVisible="{Binding IsSystemWallpaper}"
                                  Margin="0,4,0,0">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Clock" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8">
                         <ComboBox Width="140"
                                   ItemsSource="{Binding RefreshIntervals}"
                                   SelectedItem="{Binding SelectedRefreshInterval}">
@@ -224,21 +265,21 @@
                                 ToolTip.Tip="{Binding RefreshButtonTooltip}"
                                 VerticalAlignment="Center"
                                 Padding="12,8">
-                            <fi:SymbolIcon Symbol="ArrowSync" IconVariant="Regular" />
+                            <fi:SymbolIcon Symbol="ArrowSync"
+                                           IconVariant="Regular" />
                         </Button>
                     </StackPanel>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <!-- 填充方式（图片和系统壁纸都显示） -->
-            <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
+            <ui:FASettingsExpander Header="{Binding WallpaperPlacementLabel}"
                                  Description="{Binding WallpaperPlacementDescription}"
-                                 IsVisible="{Binding IsImageOrVideo}"
+                                 IsVisible="{Binding IsImage}"
                                  Margin="0,4,0,0">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Maximize" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="200"
                               ItemsSource="{Binding WallpaperPlacements}"
                               SelectedItem="{Binding SelectedWallpaperPlacement}">
@@ -248,18 +289,17 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <!-- 系统壁纸填充方式 -->
-            <ui:SettingsExpander Header="{Binding WallpaperPlacementLabel}"
+            <ui:FASettingsExpander Header="{Binding WallpaperPlacementLabel}"
                                  Description="{Binding WallpaperPlacementDescription}"
                                  IsVisible="{Binding IsSystemWallpaper}"
                                  Margin="0,4,0,0">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Maximize" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="200"
                               ItemsSource="{Binding WallpaperPlacements}"
                               SelectedItem="{Binding SelectedWallpaperPlacement}">
@@ -269,9 +309,8 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
-
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

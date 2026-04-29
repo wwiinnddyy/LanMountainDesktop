@@ -65,7 +65,7 @@ public interface INotificationService
 {
     void Show(NotificationContent content);
 
-    Task<ContentDialogResult> ShowDialogAsync(NotificationContent content);
+    Task<FAContentDialogResult> ShowDialogAsync(NotificationContent content);
 
     void ShowInfo(string title, string? message = null,
         NotificationPosition position = NotificationPosition.TopRight);
@@ -79,17 +79,17 @@ public interface INotificationService
     void ShowError(string title, string? message = null,
         NotificationPosition position = NotificationPosition.TopRight);
 
-    Task<ContentDialogResult> ShowDialogInfoAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消");
+    Task<FAContentDialogResult> ShowDialogInfoAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel");
 
-    Task<ContentDialogResult> ShowDialogSuccessAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消");
+    Task<FAContentDialogResult> ShowDialogSuccessAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel");
 
-    Task<ContentDialogResult> ShowDialogWarningAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消");
+    Task<FAContentDialogResult> ShowDialogWarningAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel");
 
-    Task<ContentDialogResult> ShowDialogErrorAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消");
+    Task<FAContentDialogResult> ShowDialogErrorAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel");
 }
 
 internal sealed class NotificationService : INotificationService
@@ -105,20 +105,17 @@ internal sealed class NotificationService : INotificationService
 
     public void Show(NotificationContent content)
     {
-        // 检查通知开关是否启用
         if (!IsNotificationEnabled())
         {
-            return; // 通知已禁用，不显示
+            return;
         }
 
-        // If it's a dialog notification (center position), show as dialog window
         if (content.IsDialogNotification)
         {
             Dispatcher.UIThread.Post(() => ShowDialogWindow(content), DispatcherPriority.Normal);
             return;
         }
 
-        // Otherwise, show as toast notification
         Dispatcher.UIThread.Post(() => ShowCore(content), DispatcherPriority.Normal);
     }
 
@@ -153,37 +150,35 @@ internal sealed class NotificationService : INotificationService
         });
     }
 
-    public async Task<ContentDialogResult> ShowDialogAsync(NotificationContent content)
+    public async Task<FAContentDialogResult> ShowDialogAsync(NotificationContent content)
     {
-        // 检查通知开关是否启用
         if (!IsNotificationEnabled())
         {
-            return ContentDialogResult.None; // 通知已禁用，不显示
+            return FAContentDialogResult.None;
         }
 
         return await Dispatcher.UIThread.InvokeAsync(() => ShowDialogCoreAsync(content));
     }
 
-    private async Task<ContentDialogResult> ShowDialogCoreAsync(NotificationContent content)
+    private async Task<FAContentDialogResult> ShowDialogCoreAsync(NotificationContent content)
     {
-        // Get the main window as the dialog host
         var mainWindow = GetMainWindow();
         if (mainWindow is null)
         {
             AppLogger.Warn("Notification", "Cannot show dialog notification: main window not found");
-            return ContentDialogResult.None;
+            return FAContentDialogResult.None;
         }
 
-        var dialog = new ContentDialog
+        var dialog = new FAContentDialog
         {
             Title = content.Title,
             Content = content.Message ?? string.Empty,
             PrimaryButtonText = content.PrimaryButtonText,
             SecondaryButtonText = content.SecondaryButtonText,
             CloseButtonText = content.CloseButtonText,
-            DefaultButton = !string.IsNullOrEmpty(content.PrimaryButtonText) ? ContentDialogButton.Primary :
-                           !string.IsNullOrEmpty(content.SecondaryButtonText) ? ContentDialogButton.Secondary :
-                           ContentDialogButton.Close
+            DefaultButton = !string.IsNullOrEmpty(content.PrimaryButtonText) ? FAContentDialogButton.Primary :
+                           !string.IsNullOrEmpty(content.SecondaryButtonText) ? FAContentDialogButton.Secondary :
+                           FAContentDialogButton.Close
         };
 
         var result = await dialog.ShowAsync(mainWindow);
@@ -191,10 +186,10 @@ internal sealed class NotificationService : INotificationService
         // Execute callbacks based on result
         switch (result)
         {
-            case ContentDialogResult.Primary:
+            case FAContentDialogResult.Primary:
                 content.OnPrimaryButtonClick?.Invoke();
                 break;
-            case ContentDialogResult.Secondary:
+            case FAContentDialogResult.Secondary:
                 content.OnSecondaryButtonClick?.Invoke();
                 break;
         }
@@ -206,14 +201,13 @@ internal sealed class NotificationService : INotificationService
     {
         try
         {
-            // 从全局设置服务中读取通知开关状态
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
             var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(PluginSdk.SettingsScope.App);
             return snapshot.NotificationEnabled;
         }
         catch
         {
-            // 如果读取失败，默认启用通知
+            // 濠电姷顣介埀顒€鍟块埀顒€缍婇幃妯诲緞鐏炴儳鐝伴柣鐘叉处瑜板啰寰婇崹顕呯唵闁诡垱澹嗙花鍧楁偡濞嗘瑧鐣甸柡浣哥Т閻ｆ繈宕熼鐐殿偧闂佽崵濮抽梽宥夊磹閺囥垹绠氶幖娣妽閸嬨劑鏌曟繛鐐澒闁稿鎸搁～婵囨綇閳轰礁缁?
             return true;
         }
     }
@@ -286,8 +280,8 @@ internal sealed class NotificationService : INotificationService
         Show(new NotificationContent(title, message, Severity: NotificationSeverity.Error, Position: position));
     }
 
-    public Task<ContentDialogResult> ShowDialogInfoAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消")
+    public Task<FAContentDialogResult> ShowDialogInfoAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel")
     {
         return ShowDialogAsync(new NotificationContent(
             title,
@@ -298,8 +292,8 @@ internal sealed class NotificationService : INotificationService
             CloseButtonText: closeButtonText));
     }
 
-    public Task<ContentDialogResult> ShowDialogSuccessAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消")
+    public Task<FAContentDialogResult> ShowDialogSuccessAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel")
     {
         return ShowDialogAsync(new NotificationContent(
             title,
@@ -310,8 +304,8 @@ internal sealed class NotificationService : INotificationService
             CloseButtonText: closeButtonText));
     }
 
-    public Task<ContentDialogResult> ShowDialogWarningAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消")
+    public Task<FAContentDialogResult> ShowDialogWarningAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel")
     {
         return ShowDialogAsync(new NotificationContent(
             title,
@@ -322,8 +316,8 @@ internal sealed class NotificationService : INotificationService
             CloseButtonText: closeButtonText));
     }
 
-    public Task<ContentDialogResult> ShowDialogErrorAsync(string title, string? message = null,
-        string? primaryButtonText = "确定", string? closeButtonText = "取消")
+    public Task<FAContentDialogResult> ShowDialogErrorAsync(string title, string? message = null,
+        string? primaryButtonText = "OK", string? closeButtonText = "Cancel")
     {
         return ShowDialogAsync(new NotificationContent(
             title,
@@ -357,7 +351,7 @@ internal sealed class NotificationWindowManager
         var position = viewModel.Position;
         var windows = _windowsByPosition[position];
 
-        // 从设置中读取最大通知数量
+        // 濠电偛顕慨鏉戭潩閿曞偆鏁婇柡鍥╁Х绾剧偓銇勯弮鈧Σ鎺楀储椤掑嫭鍋ｉ柛銉憾閸ゆ瑧鎲搁弶鎸庡枠鐎殿喚鏁婚崺鈧い鎺嶇缁剁偟鎲搁弮鍫濈劦妞ゆ帊鐒﹂惃鎴︽煟閹垮嫮绡€鐎殿噮鍋呯€靛ジ寮堕幋鐑嗕画
         var maxNotifications = GetMaxNotificationsPerPosition();
 
         if (windows.Count >= maxNotifications)
@@ -395,14 +389,13 @@ internal sealed class NotificationWindowManager
     {
         try
         {
-            // 从全局设置服务中读取最大通知数量
+            // 濠电偛顕慨瀛橆殽閹间礁鐭楅煫鍥ㄦ磻濞岊亪鏌嶈閸撴盯骞忕€ｎ喖绀堢憸蹇涘几閸岀偞鐓涢柛顐ｇ箘瀛濇繝娈垮枤閸犳劗绮欐径鎰垫晣闁宠棄妫楀▓娲⒑閸涘﹦鎳勯柣妤侇殔閵嗘帡鎳滈棃娑氱獮閻熸粍妫冮崺鈧い鎺嶇劍閻ㄦ垿鏌ｉ幙鍕瘈鐎殿噮鍋呯€靛ジ寮堕幋鐑嗕画
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
             var snapshot = settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(PluginSdk.SettingsScope.App);
             return snapshot.NotificationMaxPerPosition > 0 ? snapshot.NotificationMaxPerPosition : 5;
         }
         catch
         {
-            // 如果读取失败，返回默认值
             return 5;
         }
     }

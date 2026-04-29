@@ -9,7 +9,7 @@
         MinWidth="760"
         MinHeight="500"
         CanResize="True"
-        SystemDecorations="Full"
+        WindowDecorations="Full"
         Title="Component Library"
         Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
 

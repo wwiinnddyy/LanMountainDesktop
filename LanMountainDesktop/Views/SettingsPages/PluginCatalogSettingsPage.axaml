@@ -1,32 +1,32 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.PluginCatalogSettingsPage"
              x:Name="Root"
              x:DataType="vm:PluginCatalogSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="settings-page-container settings-page-animated">
-            <ui:SettingsExpander Header="{Binding RefreshButtonText}"
+            <ui:FASettingsExpander Header="{Binding RefreshButtonText}"
                                  Description="{Binding StatusMessage}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ShoppingBag" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF15E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="12">
                         <TextBox x:Name="SearchTextBox"
                                  Text="{Binding SearchText}"
-                                 Watermark="{Binding SearchPlaceholder}"
+                                 PlaceholderText="{Binding SearchPlaceholder}"
                                  Focusable="True"
                                  IsTabStop="True" />
                         <Button Grid.Column="1"
                                 Command="{Binding RefreshCommand}"
                                 Content="{Binding RefreshButtonText}" />
                     </Grid>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <TextBlock Classes="settings-item-description"
                        IsVisible="{Binding ShowEmptyState}"

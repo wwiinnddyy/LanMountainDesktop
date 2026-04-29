@@ -20,13 +20,13 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Views;
 
-public partial class MainWindow
+public partial class MainWindow : Window
 {
     private TextBlock? CurrentRenderBackendLabelTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendLabelTextBlock");
     private TextBlock? CurrentRenderBackendValueTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendValueTextBlock");
     private TextBlock? CurrentRenderBackendImplementationTextBlock => this.FindControl<TextBlock>("CurrentRenderBackendImplementationTextBlock");
     private ComboBox? TimeZoneComboBox => this.FindControl<ComboBox>("TimeZoneComboBox");
-    private SettingsExpander? LauncherHiddenItemsSettingsExpander => this.FindControl<SettingsExpander>("LauncherHiddenItemsSettingsExpander");
+    private FASettingsExpander? LauncherHiddenItemsSettingsExpander => this.FindControl<FASettingsExpander>("LauncherHiddenItemsSettingsExpander");
     private TextBlock? LauncherHiddenItemsEmptyTextBlock => this.FindControl<TextBlock>("LauncherHiddenItemsEmptyTextBlock");
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
@@ -38,13 +38,12 @@ public partial class MainWindow
             return;
         }
 
-        // 组件实例范围的设置变更不应触发整个桌面重新加载（比如翻页保存图片索引）
-        if (e.Scope == SettingsScope.ComponentInstance)
+        // 缁勪欢瀹炰緥鑼冨洿鐨勮缃彉鏇翠笉搴旇Е鍙戞暣涓闈㈤噸鏂板姞杞斤紙姣斿缈婚〉淇濆瓨鍥剧墖绱㈠紩锛?        if (e.Scope == SettingsScope.ComponentInstance)
         {
             return;
         }
 
-        // 启动台设置变化时，重新渲染启动台图标
+        // 鍚姩鍙拌缃彉鍖栨椂锛岄噸鏂版覆鏌撳惎鍔ㄥ彴鍥炬爣
         if (e.Scope == SettingsScope.Launcher && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();

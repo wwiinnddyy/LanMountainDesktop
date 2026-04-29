@@ -163,9 +163,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         if (_useSystemChrome)
         {
             ExtendClientAreaToDecorationsHint = true;
-            ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.PreferSystemChrome;
-            ExtendClientAreaTitleBarHeightHint = -1;
-            SystemDecorations = SystemDecorations.Full;
+            WindowDecorations = WindowDecorations.Full;
 
             if (WindowTitleBarHost is { })
             {
@@ -174,10 +172,8 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
-        SystemDecorations = SystemDecorations.BorderOnly;
+        WindowDecorations = WindowDecorations.BorderOnly;
         ExtendClientAreaToDecorationsHint = true;
-        ExtendClientAreaChromeHints = ExtendClientAreaChromeHints.NoChrome;
-        ExtendClientAreaTitleBarHeightHint = 48;
 
         if (WindowTitleBarHost is { })
         {
@@ -205,27 +201,23 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         {
             if (previousCategory is not null && previousCategory != page.Category)
             {
-                RootNavigationView.MenuItems.Add(new NavigationViewItemSeparator());
+                RootNavigationView.MenuItems.Add(new FANavigationViewItemSeparator());
             }
 
-            RootNavigationView.MenuItems.Add(new NavigationViewItem
+            RootNavigationView.MenuItems.Add(new FANavigationViewItem
             {
                 Content = page.Title,
                 Tag = page.PageId,
-                IconSource = new FluentIcons.Avalonia.Fluent.SymbolIconSource
-                {
-                    Symbol = MapIcon(page.IconKey),
-                    IconVariant = FluentIcons.Common.IconVariant.Regular
-                }
+                IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
             });
 
             previousCategory = page.Category;
         }
     }
 
-    private void OnNavigationSelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e)
+    private void OnNavigationSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {
-        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as NavigationViewItem;
+        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as FANavigationViewItem;
         NavigateTo(selectedItem?.Tag as string);
     }
 
@@ -301,7 +293,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
-        foreach (var item in RootNavigationView.MenuItems.OfType<NavigationViewItem>())
+        foreach (var item in RootNavigationView.MenuItems.OfType<FANavigationViewItem>())
         {
             if (string.Equals(item.Tag as string, pageId, StringComparison.OrdinalIgnoreCase))
             {
@@ -374,17 +366,17 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
         try
         {
-            var dialog = new ContentDialog
+            var dialog = new FAContentDialog
             {
                 Title = ViewModel.RestartDialogTitle,
                 Content = ViewModel.RestartMessage,
                 PrimaryButtonText = ViewModel.RestartDialogPrimaryText,
                 CloseButtonText = ViewModel.RestartDialogCloseText,
-                DefaultButton = ContentDialogButton.Primary
+                DefaultButton = FAContentDialogButton.Primary
             };
 
             var result = await dialog.ShowAsync(this);
-            if (result == ContentDialogResult.Primary)
+            if (result == FAContentDialogResult.Primary)
             {
                 _hostApplicationLifecycle.TryRestart(new HostApplicationLifecycleRequest(
                     Source: "SettingsWindow",
@@ -486,7 +478,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _ = TryApplyResponsiveLayout();
 
-        // 小窗口时隐藏抽屉面板
+        // Hide the drawer pane on narrow windows.
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -537,9 +529,9 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _ = sender;
 
-        if (e.Property == NavigationView.IsPaneOpenProperty ||
-            e.Property == NavigationView.OpenPaneLengthProperty ||
-            e.Property == NavigationView.PaneDisplayModeProperty)
+        if (e.Property == FANavigationView.IsPaneOpenProperty ||
+            e.Property == FANavigationView.OpenPaneLengthProperty ||
+            e.Property == FANavigationView.PaneDisplayModeProperty)
         {
             UpdatePaneToggleIcon();
             RequestResponsiveLayoutRefresh();
@@ -736,16 +728,41 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             "GridDots" => Symbol.GridDots,
             "PuzzlePiece" => Symbol.PuzzlePiece,
             "ShoppingBag" => Symbol.ShoppingBag,
-            "Shield" => Symbol.ShieldDismiss,
+            "Shield" => Symbol.ShieldLock,
             "Info" => Symbol.Info,
             "ArrowSync" => Symbol.ArrowSync,
             "Hourglass" => Symbol.Hourglass,
             "Alert" => Symbol.Alert,
-            "Bell" => Symbol.Alert,
+            "Bell" => Symbol.AlertOn,
             "DeveloperBoard" => Symbol.DeveloperBoard,
             "FolderLink" => Symbol.FolderLink,
             "WindowConsole" => Symbol.WindowConsole,
             _ => Symbol.Settings
+        };
+    }
+
+    private static FAFontIconSource CreateSettingsIconSource(Symbol symbol)
+    {
+        var symbolIcon = new FluentIcons.Avalonia.SymbolIcon
+        {
+            Symbol = symbol,
+            IconVariant = FluentIcons.Common.IconVariant.Regular
+        };
+
+        // FluentAvalonia still expects IconSource here, so bridge the Avalonia 12 FluentIcons glyph/font into FAFontIconSource.
+        var iconTextProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconText", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var iconFontProp = typeof(FluentIcons.Avalonia.SymbolIcon).GetProperty("IconFont", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        var iconText = iconTextProp?.GetValue(symbolIcon) as string ?? "?";
+        var iconFont = iconFontProp?.GetValue(symbolIcon);
+        var fontFamily = iconFont?.GetType().GetProperty("FontFamily")?.GetValue(iconFont) as Avalonia.Media.FontFamily
+            ?? new Avalonia.Media.FontFamily("avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons");
+
+        return new FAFontIconSource
+        {
+            Glyph = iconText,
+            FontFamily = fontFamily,
+            FontSize = 16
         };
     }
 }

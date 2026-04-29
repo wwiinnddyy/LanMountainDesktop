@@ -4,11 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Styling;
-using AvaloniaWebView;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
-using WebViewCore.Events;
 
 namespace LanMountainDesktop.Views.Components;
 
@@ -28,7 +27,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
     private bool _isEditMode;
     private bool _isWebViewActive = true;
     private bool _isWebViewFaulted;
-    private WebView? _browserWebView;
+    private NativeWebView? _browserWebView;
     private readonly WebView2RuntimeAvailability _runtimeAvailability;
     private bool _isDisposed;
 
@@ -78,7 +77,8 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         if (_browserWebView is not null)
         {
-            _browserWebView.NavigationStarting -= OnBrowserWebViewNavigationStarting;
+            _browserWebView.NavigationStarted -= OnBrowserWebViewNavigationStarting;
+            _browserWebView.EnvironmentRequested -= OnBrowserWebViewEnvironmentRequested;
         }
     }
 
@@ -294,15 +294,32 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         }
     }
 
-    private void OnBrowserWebViewNavigationStarting(object? sender, WebViewUrlLoadingEventArg e)
+    private void OnBrowserWebViewNavigationStarting(object? sender, WebViewNavigationStartingEventArgs e)
     {
-        if (e.Url is null)
+        if (e.Request is null)
         {
             return;
         }
 
-        _lastKnownUri = e.Url;
-        AddressTextBox.Text = e.Url.ToString();
+        _lastKnownUri = e.Request;
+        AddressTextBox.Text = e.Request.ToString();
+    }
+
+    private void OnBrowserWebViewEnvironmentRequested(object? sender, WebViewEnvironmentRequestedEventArgs e)
+    {
+        if (e is not WindowsWebView2EnvironmentRequestedEventArgs windowsArgs)
+        {
+            return;
+        }
+
+        try
+        {
+            windowsArgs.UserDataFolder = WebView2RuntimeProbe.ResolveUserDataFolder();
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn("WebView2", "Failed to configure the WebView2 user data folder for BrowserWidget.", ex);
+        }
     }
 
     private void UpdateWebViewActiveState()
@@ -358,6 +375,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
         GoButton.IsEnabled = true;
         AddressTextBox.IsEnabled = true;
         UnavailableOverlay.IsVisible = false;
+        TryNavigate(_lastKnownUri, "ActivateWebView");
     }
 
     private void DeactivateWebView(bool clearUrl)
@@ -383,8 +401,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         try
         {
-            _browserWebView.Reload();
-            return true;
+            return _browserWebView.Refresh();
         }
         catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
         {
@@ -402,7 +419,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         try
         {
-            _browserWebView.Url = uri;
+            _browserWebView.Navigate(uri);
             return true;
         }
         catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
@@ -421,7 +438,7 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
 
         try
         {
-            _browserWebView.Url = null;
+            _browserWebView.Navigate(new Uri("about:blank"));
         }
         catch
         {
@@ -466,12 +483,14 @@ public partial class BrowserWidget : UserControl, IDesktopComponentWidget,
             return;
         }
 
-        _browserWebView = new WebView
+        _browserWebView = new NativeWebView
         {
+            Source = new Uri("about:blank"),
             IsVisible = false,
             IsHitTestVisible = false
         };
-        _browserWebView.NavigationStarting += OnBrowserWebViewNavigationStarting;
+        _browserWebView.NavigationStarted += OnBrowserWebViewNavigationStarting;
+        _browserWebView.EnvironmentRequested += OnBrowserWebViewEnvironmentRequested;
         WebViewPresenter.Children.Insert(0, _browserWebView);
     }
 

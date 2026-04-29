@@ -21,8 +21,7 @@
                 <ToggleSwitch x:Name="EnabledToggleSwitch"
                               Grid.Column="1"
                               VerticalAlignment="Center"
-                              Checked="OnEnabledChanged"
-                              Unchecked="OnEnabledChanged" />
+                              IsCheckedChanged="OnEnabledChanged" />
             </Grid>
         </Border>
 

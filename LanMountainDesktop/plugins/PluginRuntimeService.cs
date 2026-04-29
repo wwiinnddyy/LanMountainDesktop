@@ -695,7 +695,7 @@ public sealed class PluginRuntimeService : IDisposable
             if (assemblyName.StartsWith("Avalonia", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "FluentAvaloniaUI", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "FluentIcons.Avalonia", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(assemblyName, "FluentIcons.Avalonia.Fluent", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(assemblyName, "Material.Avalonia", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "Material.Icons.Avalonia", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(assemblyName, "MicroCom.Runtime", StringComparison.OrdinalIgnoreCase))
             {

@@ -77,13 +77,11 @@
                           ColumnSpacing="4">
                         <ToggleButton x:Name="TickRadioButton"
                                       Classes="component-editor-segmented-choice"
-                                      Checked="OnSecondHandChanged"
-                                      Unchecked="OnSecondHandChanged" />
+                                      IsCheckedChanged="OnSecondHandChanged" />
                         <ToggleButton x:Name="SweepRadioButton"
                                       Grid.Column="1"
                                       Classes="component-editor-segmented-choice"
-                                      Checked="OnSecondHandChanged"
-                                      Unchecked="OnSecondHandChanged" />
+                                      IsCheckedChanged="OnSecondHandChanged" />
                     </Grid>
                 </Border>
             </StackPanel>

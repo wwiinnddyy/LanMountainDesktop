@@ -1,7 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
-        xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+        xmlns:fi="using:FluentIcons.Avalonia"
         xmlns:behaviors="using:LanMountainDesktop.Behaviors">
 
     <Style Selector="StackPanel.settings-page-container">
@@ -162,59 +162,59 @@
         <Setter Property="ColumnSpacing" Value="12" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander">
+    <Style Selector="ui|FASettingsExpander">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="0" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander ComboBox, ui|SettingsExpander TextBox, ui|SettingsExpander NumericUpDown">
+    <Style Selector="ui|FASettingsExpander ComboBox, ui|FASettingsExpander TextBox, ui|FASettingsExpander NumericUpDown">
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="MinWidth" Value="0" />
     </Style>
 
-    <Style Selector="ui|SettingsExpanderItem ComboBox, ui|SettingsExpanderItem TextBox, ui|SettingsExpanderItem NumericUpDown">
+    <Style Selector="ui|FASettingsExpanderItem ComboBox, ui|FASettingsExpanderItem TextBox, ui|FASettingsExpanderItem NumericUpDown">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinWidth" Value="0" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander ToggleSwitch, ui|SettingsExpanderItem ToggleSwitch">
+    <Style Selector="ui|FASettingsExpander ToggleSwitch, ui|FASettingsExpanderItem ToggleSwitch">
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card">
         <Setter Property="Margin" Value="0,0,0,14" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card /template/ ContentPresenter#FooterContentPresenter">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card /template/ ContentPresenter#FooterContentPresenter">
         <Setter Property="Margin" Value="0,6,0,2" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card /template/ ContentPresenter#ContentPresenter">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card /template/ ContentPresenter#ContentPresenter">
         <Setter Property="Margin" Value="0,14,0,0" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card ComboBox, .settings-section-card ComboBox, .settings-option-card ComboBox">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card ComboBox, .settings-section-card ComboBox, .settings-option-card ComboBox">
         <Setter Property="MinWidth" Value="220" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card TextBox, .settings-section-card TextBox, .settings-option-card TextBox">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card TextBox, .settings-section-card TextBox, .settings-option-card TextBox">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinHeight" Value="38" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card NumericUpDown, .settings-section-card NumericUpDown, .settings-option-card NumericUpDown">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card NumericUpDown, .settings-section-card NumericUpDown, .settings-option-card NumericUpDown">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="MinHeight" Value="38" />
     </Style>
 
-    <Style Selector="ui|SettingsExpander.settings-expander-card ToggleSwitch, .settings-option-card ToggleSwitch, .settings-list-item ToggleSwitch">
+    <Style Selector="ui|FASettingsExpander.settings-expander-card ToggleSwitch, .settings-option-card ToggleSwitch, .settings-list-item ToggleSwitch">
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="OnContent" Value="{x:Null}" />
         <Setter Property="OffContent" Value="{x:Null}" />
     </Style>
 
-    <Style Selector=".settings-section-card Button, .settings-option-card Button, .settings-list-item Button, ui|SettingsExpander.settings-expander-card Button">
+    <Style Selector=".settings-section-card Button, .settings-option-card Button, .settings-list-item Button, ui|FASettingsExpander.settings-expander-card Button">
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Padding" Value="14,8" />
     </Style>

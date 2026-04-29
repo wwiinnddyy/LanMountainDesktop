@@ -577,7 +577,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
                 CultureInfo.InvariantCulture,
                 L("study.session_history.dialog.rename_message", "Set a new name for \"{0}\"."),
                 label);
-            DialogRenameTextBox.Watermark = L("study.session_history.rename_placeholder", "Enter session name");
+            DialogRenameTextBox.PlaceholderText = L("study.session_history.rename_placeholder", "Enter session name");
             if (string.IsNullOrWhiteSpace(DialogRenameTextBox.Text))
             {
                 DialogRenameTextBox.Text = label;

@@ -1,19 +1,27 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <ImageBrush x:Key="AboutBannerBrush" Source="/Assets/about_banner_light.png" Stretch="Uniform" AlignmentX="Center" AlignmentY="Center" />
+                    <ImageBrush x:Key="AboutBannerBrush"
+                                Source="/Assets/about_banner_light.png"
+                                Stretch="Uniform"
+                                AlignmentX="Center"
+                                AlignmentY="Center" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <ImageBrush x:Key="AboutBannerBrush" Source="/Assets/about_banner_dark.png" Stretch="Uniform" AlignmentX="Center" AlignmentY="Center" />
+                    <ImageBrush x:Key="AboutBannerBrush"
+                                Source="/Assets/about_banner_dark.png"
+                                Stretch="Uniform"
+                                AlignmentX="Center"
+                                AlignmentY="Center" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -36,7 +44,7 @@
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
 
-        <Style Selector="ui|InfoBar.about-static-info">
+        <Style Selector="ui|FAInfoBar.about-static-info">
             <Setter Property="IsOpen" Value="True" />
             <Setter Property="IsClosable" Value="False" />
             <Setter Property="Severity" Value="Informational" />
@@ -57,30 +65,29 @@
             <TextBlock Classes="settings-subsection-title"
                        Text="{Binding AppInfoHeader}" />
 
-            <ui:InfoBar Classes="about-static-info"
-                        Title="{Binding VersionLabel}"
-                        Message="{Binding VersionText}">
-                <ui:InfoBar.IconSource>
-                    <fi:SymbolIconSource Symbol="Info" />
-                </ui:InfoBar.IconSource>
-            </ui:InfoBar>
+            <ui:FAInfoBar Classes="about-static-info"
+                          Title="{Binding VersionLabel}"
+                          Message="{Binding VersionText}">
+                <ui:FAInfoBar.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FAInfoBar.IconSource>
+            </ui:FAInfoBar>
 
-            <ui:InfoBar Classes="about-static-info"
-                        Title="{Binding CodenameLabel}"
-                        Message="{Binding CodenameText}">
-                <ui:InfoBar.IconSource>
-                    <fi:SymbolIconSource Symbol="Bookmark" />
-                </ui:InfoBar.IconSource>
-            </ui:InfoBar>
+            <ui:FAInfoBar Classes="about-static-info"
+                          Title="{Binding CodenameLabel}"
+                          Message="{Binding CodenameText}">
+                <ui:FAInfoBar.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF13D0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FAInfoBar.IconSource>
+            </ui:FAInfoBar>
 
-            <!-- 版权声明 - 放在渲染显示前面 -->
-            <ui:SettingsExpander Header="版权声明"
-                                 IsExpanded="True">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Document" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
-                    <ui:SettingsExpanderItem.Footer>
+            <ui:FASettingsExpander Header="Project resources"
+                                   IsExpanded="True">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF02AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
+                    <ui:FASettingsExpanderItem.Footer>
                         <WrapPanel>
                             <WrapPanel.Styles>
                                 <Style Selector="HyperlinkButton">
@@ -89,18 +96,18 @@
                                 </Style>
                             </WrapPanel.Styles>
                             <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop">
-                                <TextBlock Text="GitHub 仓库" />
+                                <TextBlock Text="GitHub Repository" />
                             </HyperlinkButton>
                             <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop/issues">
-                                <TextBlock Text="问题反馈" />
+                                <TextBlock Text="Issue Tracker" />
                             </HyperlinkButton>
                         </WrapPanel>
-                    </ui:SettingsExpanderItem.Footer>
+                    </ui:FASettingsExpanderItem.Footer>
                     <TextBlock>
                         <Run Text="Copyright (c) 2024-" /><Run Text="2025" /> Lincube
                     </TextBlock>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

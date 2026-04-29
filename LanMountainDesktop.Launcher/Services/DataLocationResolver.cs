@@ -32,6 +32,11 @@ internal sealed class DataLocationResolver
     /// </summary>
     public string DefaultPortableDataPath => Path.Combine(_appRoot, "AppData");
 
+    private string ResolveBootstrapLauncherDataPath()
+    {
+        return Path.Combine(_defaultSystemDataPath, LauncherFolderName);
+    }
+
     /// <summary>
     /// 检查是否允许便携模式（应用目录是否可写）
     /// </summary>
@@ -56,6 +61,11 @@ internal sealed class DataLocationResolver
     public string ResolveDataRoot()
     {
         var config = LoadConfig();
+        return ResolveDataRoot(config);
+    }
+
+    private string ResolveDataRoot(DataLocationConfig? config)
+    {
         if (config is null)
         {
             return _defaultSystemDataPath;
@@ -65,7 +75,7 @@ internal sealed class DataLocationResolver
         {
             var portablePath = !string.IsNullOrWhiteSpace(config.PortableDataPath)
                 ? config.PortableDataPath
-                : _defaultSystemDataPath;
+                : DefaultPortableDataPath;
             return Path.GetFullPath(portablePath);
         }
 
@@ -95,7 +105,7 @@ internal sealed class DataLocationResolver
     /// </summary>
     public string ResolveConfigPath()
     {
-        return Path.Combine(ResolveLauncherDataPath(), ConfigFileName);
+        return Path.Combine(ResolveBootstrapLauncherDataPath(), ConfigFileName);
     }
 
     /// <summary>
@@ -153,7 +163,7 @@ internal sealed class DataLocationResolver
     {
         try
         {
-            var launcherPath = ResolveLauncherDataPath();
+            var launcherPath = ResolveBootstrapLauncherDataPath();
             Directory.CreateDirectory(launcherPath);
 
             var configPath = ResolveConfigPath();
@@ -184,8 +194,9 @@ internal sealed class DataLocationResolver
         // 先创建目录结构
         try
         {
-            Directory.CreateDirectory(ResolveLauncherDataPath());
-            Directory.CreateDirectory(ResolveDesktopDataPath());
+            var resolvedDataRoot = ResolveDataRoot(config);
+            Directory.CreateDirectory(Path.Combine(resolvedDataRoot, LauncherFolderName));
+            Directory.CreateDirectory(Path.Combine(resolvedDataRoot, DesktopFolderName));
         }
         catch (Exception ex)
         {

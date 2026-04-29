@@ -6,7 +6,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
 
 [SettingsPageInfo(
     "dev",
-    "开发者",
+    "Developer",
     SettingsPageCategory.Dev,
     IconKey = "DeveloperBoard",
     SortOrder = 0,

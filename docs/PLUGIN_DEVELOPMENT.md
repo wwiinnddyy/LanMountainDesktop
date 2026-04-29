@@ -63,11 +63,11 @@ MyAwesomePlugin/
 
 ### 插件 SDK 版本
 
-当前 SDK 版本: **4.0.1**
+当前 SDK 版本: **5.0.0**
 
 ```xml
-<PackageReference Include="LanMountainDesktop.PluginSdk" Version="4.0.1" />
-<PackageReference Include="LanMountainDesktop.Shared.Contracts" Version="4.0.1" />
+<PackageReference Include="LanMountainDesktop.PluginSdk" Version="5.0.0" />
+<PackageReference Include="LanMountainDesktop.Shared.Contracts" Version="5.0.0" />
 ```
 
 ### 插件清单 (plugin.json)
@@ -175,9 +175,9 @@ public class Plugin : IPlugin
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LanMountainDesktop.PluginSdk" Version="4.0.1" />
-    <PackageReference Include="LanMountainDesktop.Shared.Contracts" Version="4.0.1" />
-    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="LanMountainDesktop.PluginSdk" Version="5.0.0" />
+    <PackageReference Include="LanMountainDesktop.Shared.Contracts" Version="5.0.0" />
+    <PackageReference Include="Avalonia" Version="12.0.1" />
   </ItemGroup>
 
   <!-- 复制 plugin.json 到输出目录 -->
@@ -680,7 +680,7 @@ if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
 
 ## 相关文档
 
-- [Plugin SDK v4 迁移指南](PLUGIN_SDK_V4_MIGRATION.md)
+- [Plugin SDK v5 迁移指南](PLUGIN_SDK_V5_MIGRATION.md)
 - [组件开发指南](COMPONENT_DEVELOPMENT.md)
 - [API 参考](API_REFERENCE.md)
 - [架构文档](ARCHITECTURE.md)

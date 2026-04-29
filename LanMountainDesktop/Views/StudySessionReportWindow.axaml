@@ -3,7 +3,7 @@
         xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.StudySessionReportWindow"
         x:CompileBindings="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         Background="Transparent"
         ShowInTaskbar="False"
         Topmost="True"
@@ -12,7 +12,6 @@
         Height="600"
         TransparencyLevelHint="Transparent"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
         WindowStartupLocation="CenterOwner">
 

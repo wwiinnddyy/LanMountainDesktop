@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.0.0</Version>
+    <Version>5.0.0</Version>
     <PackageId>LanMountainDesktop.PluginIsolation.Ipc</PackageId>
     <IsPackable>true</IsPackable>
     <Authors>LanMountainDesktop</Authors>
@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="dotnetCampus.Ipc" Version="2.0.0-alpha434" />
+    <PackageReference Include="dotnetCampus.Ipc" />
     <ProjectReference Include="..\LanMountainDesktop.PluginIsolation.Contracts\LanMountainDesktop.PluginIsolation.Contracts.csproj" />
   </ItemGroup>
 

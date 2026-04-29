@@ -1,9 +1,9 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.PrivacySettingsPage"
              x:DataType="vm:PrivacySettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -12,25 +12,25 @@
                                Text="{Binding PrivacyHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding CrashUploadHeader}"
+            <ui:FASettingsExpander Header="{Binding CrashUploadHeader}"
                                  Description="{Binding CrashUploadDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="ShieldDismiss" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0D9C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UploadAnonymousCrashData}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding UsageUploadHeader}"
+            <ui:FASettingsExpander Header="{Binding UsageUploadHeader}"
                                  Description="{Binding UsageUploadDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Info" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF07A4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UploadAnonymousUsageData}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
             <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     CornerRadius="8"

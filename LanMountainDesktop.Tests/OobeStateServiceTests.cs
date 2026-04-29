@@ -118,7 +118,7 @@ public sealed class OobeStateServiceTests : IDisposable
             executionSnapshot: executionSnapshot ?? new LauncherExecutionSnapshot(false, "tester", "S-1-5-test"));
     }
 
-    private string GetStatePath() => Path.Combine(_tempRoot, ".launcher", "state", "oobe-state.json");
+    private string GetStatePath() => Path.Combine(_tempRoot, "Launcher", "state", "oobe-state.json");
 
     private string GetLegacyMarkerPath() => Path.Combine(_tempRoot, ".launcher", "state", "first_run_completed");
 }

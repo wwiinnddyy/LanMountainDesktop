@@ -48,14 +48,12 @@ internal partial class DataLocationPromptWindow : Window
 
         if (systemRadio is not null)
         {
-            systemRadio.Checked += OnSelectionChanged;
-            systemRadio.Unchecked += OnSelectionChanged;
+            systemRadio.IsCheckedChanged += OnSelectionChanged;
         }
 
         if (portableRadio is not null)
         {
-            portableRadio.Checked += OnSelectionChanged;
-            portableRadio.Unchecked += OnSelectionChanged;
+            portableRadio.IsCheckedChanged += OnSelectionChanged;
         }
 
         if (confirmButton is not null)
@@ -108,7 +106,7 @@ internal partial class DataLocationPromptWindow : Window
 
         if (migrationInfoText is not null && hasExistingData)
         {
-            migrationInfoText.Text = "检测到系统用户目录已有应用数据。如果选择保存在应用安装目录，将自动迁移现有数据。";
+            migrationInfoText.Text = "Existing system data was detected. Choosing portable mode will migrate the current data automatically.";
         }
     }
 

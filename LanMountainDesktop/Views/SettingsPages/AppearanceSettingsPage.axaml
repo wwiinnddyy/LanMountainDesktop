@@ -1,9 +1,9 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
              xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
-             xmlns:fi="using:FluentIcons.Avalonia.Fluent"
+             xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.AppearanceSettingsPage"
              x:DataType="vm:AppearanceSettingsPageViewModel">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -13,12 +13,12 @@
                                Text="{Binding ThemeHeader}"
                                Margin="0,0,0,4" />
 
-            <ui:SettingsExpander Header="{Binding ThemeModeLabel}"
+            <ui:FASettingsExpander Header="{Binding ThemeModeLabel}"
                                  Description="{Binding ThemeModeDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="WeatherMoon" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="200"
                               ItemsSource="{Binding ThemeModeOptions}"
                               SelectedItem="{Binding SelectedThemeMode}">
@@ -28,24 +28,24 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding UseSystemChromeLabel}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Window" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+            <ui:FASettingsExpander Header="{Binding UseSystemChromeLabel}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0908;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding UseSystemChrome}" />
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding ThemeColorModeLabel}"
+            <ui:FASettingsExpander Header="{Binding ThemeColorModeLabel}"
                                  Description="{Binding ThemeColorSourceDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="PaintBrush" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF017C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="240"
                               ItemsSource="{Binding ThemeColorModes}"
                               SelectedItem="{Binding SelectedThemeColorMode}">
@@ -55,15 +55,15 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding SystemMaterialLabel}"
+            <ui:FASettingsExpander Header="{Binding SystemMaterialLabel}"
                                  Description="{Binding SystemMaterialDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="WindowDevTools" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpander.Footer>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF1A48;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
                     <ComboBox Width="220"
                               ItemsSource="{Binding SystemMaterialModes}"
                               SelectedItem="{Binding SelectedSystemMaterialMode}">
@@ -73,15 +73,15 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                </ui:SettingsExpander.Footer>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
 
-            <ui:SettingsExpander Header="{Binding ThemeColorLabel}"
+            <ui:FASettingsExpander Header="{Binding ThemeColorLabel}"
                                  Description="{Binding ThemeColorSourceDescription}">
-                <ui:SettingsExpander.IconSource>
-                    <fi:SymbolIconSource Symbol="Color" />
-                </ui:SettingsExpander.IconSource>
-                <ui:SettingsExpanderItem>
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0888;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
                     <StackPanel Spacing="12">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="12"
@@ -257,8 +257,8 @@
                             </Button>
                         </StackPanel>
                     </StackPanel>
-                </ui:SettingsExpanderItem>
-            </ui:SettingsExpander>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
