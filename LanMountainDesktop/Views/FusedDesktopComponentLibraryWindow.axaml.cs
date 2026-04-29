@@ -118,9 +118,4 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
         mainWindow?.UnregisterFusedLibraryWindow(this);
     }
-    
-    public void UpdatePreviewImage(ComponentPreviewImageEntry entry)
-    {
-        LibraryControl.UpdatePreviewImage(entry);
-    }
 }

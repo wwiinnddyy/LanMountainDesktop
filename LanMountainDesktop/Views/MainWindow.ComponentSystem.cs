@@ -1480,13 +1480,11 @@ public partial class MainWindow : Window
                     _weatherDataService,
                     _recommendationInfoService,
                     _calculatorDataService,
-                    _settingsFacade);
+                    _settingsFacade,
+                    PlacementId: null,
+                    RenderMode: DesktopComponentRenderMode.LibraryPreview);
             },
-            L,
-            previewKeyResolver: ResolveDetachedLibraryPreviewKey,
-            previewEntryResolver: ResolveDetachedLibraryPreviewEntry,
-            warmPreviewRequested: RequestDetachedLibraryPreviewWarm,
-            renderPreviewRequested: RequestDetachedLibraryPreviewRender);
+            L);
         window.AddComponentRequested += OnDetachedComponentLibraryAddComponentRequested;
         window.Closed += OnDetachedComponentLibraryClosed;
         return window;
@@ -3620,7 +3618,6 @@ public partial class MainWindow : Window
         var category = _componentLibraryCategories[_componentLibraryCategoryIndex];
         _componentLibraryActiveCategoryId = category.Id;
         _componentLibraryComponentIndex = 0;
-        _ = WarmComponentLibraryCategoryPreviewsAsync(category);
         BuildComponentLibraryComponentPages(category);
         ShowComponentLibraryComponentsView();
     }
@@ -3638,10 +3635,10 @@ public partial class MainWindow : Window
         var componentCount = _componentLibraryActiveComponents.Count;
 
         ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
+        DisposeStaticComponentLibraryPreviews(ComponentLibraryComponentPagesContainer.Children.OfType<Control>());
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
-        ClearComponentLibraryPreviewVisualTargets();
         if (componentCount == 0)
         {
             _componentLibraryComponentIndex = 0;
@@ -3715,49 +3712,20 @@ public partial class MainWindow : Window
 
             var previewWidth = previewSpan.WidthCells * previewCellSize;
             var previewHeight = previewSpan.HeightCells * previewCellSize;
-            var previewKey = CreateComponentTypePreviewKey(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
-            var cachedPreviewImage = ResolveComponentTypePreviewImage(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
+            var previewControl = CreateStaticComponentLibraryPreview(
+                component.ComponentId,
+                previewCellSize,
+                previewWidth,
+                previewHeight);
 
-            var previewImage = new Image
+            var previewSurface = new Border
             {
                 Width = previewWidth,
                 Height = previewHeight,
-                Stretch = Stretch.Uniform,
-                Source = cachedPreviewImage,
-                IsVisible = cachedPreviewImage is not null,
+                Background = Brushes.Transparent,
+                ClipToBounds = false,
+                Child = previewControl,
                 IsHitTestVisible = false
-            };
-
-            var previewFallback = new Border
-            {
-                Width = previewWidth,
-                Height = previewHeight,
-                Background = GetThemeBrush("AdaptiveCardBackgroundBrush"),
-                BorderBrush = GetThemeBrush("AdaptiveButtonBorderBrush"),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(Math.Clamp(Math.Min(previewWidth, previewHeight) * 0.18, 12, 28)),
-                IsVisible = cachedPreviewImage is null,
-                Child = new TextBlock
-                {
-                    Text = L("component_library.preview_loading", "Preparing preview"),
-                    FontSize = 11,
-                    Foreground = GetThemeBrush("AdaptiveTextSecondaryBrush"),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
-            };
-            RegisterComponentLibraryPreviewVisual(previewKey, previewImage, previewFallback);
-
-            var previewSurface = new Grid
-            {
-                Width = previewWidth,
-                Height = previewHeight,
-                IsHitTestVisible = false,
-                Children =
-                {
-                    previewImage,
-                    previewFallback
-                }
             };
 
             var previewBorder = new Border
@@ -3807,15 +3775,6 @@ public partial class MainWindow : Window
             Grid.SetRow(page, 0);
             Grid.SetColumn(page, i);
             ComponentLibraryComponentPagesContainer.Children.Add(page);
-
-            if (cachedPreviewImage is null)
-            {
-                _ = EnsureComponentTypePreviewImageAsync(component.ComponentId, previewSpan.WidthCells, previewSpan.HeightCells);
-            }
-            else
-            {
-                ApplyPreviewEntryToEmbeddedVisuals(previewKey);
-            }
         }
 
         _componentLibraryComponentHostTransform = ComponentLibraryComponentPagesHost.RenderTransform as TranslateTransform;
@@ -3837,10 +3796,10 @@ public partial class MainWindow : Window
         }
 
         ClearTimeZoneServiceBindings(ComponentLibraryComponentPagesContainer.Children.OfType<Control>().ToList());
+        DisposeStaticComponentLibraryPreviews(ComponentLibraryComponentPagesContainer.Children.OfType<Control>());
         ComponentLibraryComponentPagesContainer.Children.Clear();
         ComponentLibraryComponentPagesContainer.RowDefinitions.Clear();
         ComponentLibraryComponentPagesContainer.ColumnDefinitions.Clear();
-        ClearComponentLibraryPreviewVisualTargets();
     }
 
     private string GetLocalizedComponentDisplayName(ComponentLibraryComponentEntry component)

@@ -123,7 +123,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        _componentLibraryCollapsePresenter.SyncExpandedState(ComponentLibraryWindow.Margin, ComponentLibraryWindow.Opacity);
+        _componentLibraryCollapsePresenter.SyncExpandedState(ComponentLibraryWindow.Margin);
     }
 
     private void CollapseComponentLibraryForDesktopEdit(string? title)

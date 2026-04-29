@@ -11,7 +11,6 @@ using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.ViewModels;
 using LanMountainDesktop.Views.Components;
-using Avalonia.Controls.ApplicationLifetimes;
 
 namespace LanMountainDesktop.Views;
 
@@ -19,18 +18,19 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 {
     public event EventHandler<string>? AddComponentRequested;
 
-    private readonly ComponentLibraryWindowViewModel _viewModel = new();
-    private List<DesktopComponentDefinition> _allDefinitions = new();
+    private static readonly LocalizationService LocalizationService = new();
 
-    private ComponentRegistry? _componentRegistry;
-    private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
+    private readonly ComponentLibraryWindowViewModel _viewModel = new();
     private readonly ISettingsFacadeService _settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
     private readonly IWeatherInfoService _weatherDataService;
     private readonly TimeZoneService _timeZoneService;
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
 
-    private static readonly LocalizationService _localizationService = new();
+    private List<DesktopComponentDefinition> _allDefinitions = new();
+    private ComponentRegistry? _componentRegistry;
+    private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
+    private Control? _selectedPreviewControl;
 
     public FusedDesktopComponentLibraryControl()
     {
@@ -43,10 +43,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         LoadRegistry();
         LoadCategories();
 
-        // 为 ListBoxItem 添加 category-item 样式类
         CategoryListBox.ContainerPrepared += OnCategoryListBoxContainerPrepared;
-
-        // 默认选择第一个分类
         if (_viewModel.Categories.Count > 0)
         {
             CategoryListBox.SelectedIndex = 0;
@@ -55,6 +52,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void OnCategoryListBoxContainerPrepared(object? sender, ContainerPreparedEventArgs e)
     {
+        _ = sender;
         if (e.Container is ListBoxItem listBoxItem)
         {
             listBoxItem.Classes.Add("category-item");
@@ -71,7 +69,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             _settingsFacade);
 
         _allDefinitions = _componentRegistry.GetAll()
-            .Where(d => d.AllowDesktopPlacement)
+            .Where(static definition => definition.AllowDesktopPlacement)
             .ToList();
     }
 
@@ -80,8 +78,6 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         _viewModel.Categories.Clear();
 
         var languageCode = _settingsFacade.Region.Get().LanguageCode;
-
-        // 添加"全部组件"分类
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
             "all",
             L(languageCode, "component_category.all", "All"),
@@ -89,32 +85,26 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             Array.Empty<ComponentLibraryItemViewModel>()));
 
         var usedCategories = _allDefinitions
-            .Select(d => d.Category)
-            .Distinct()
-            .Where(c => !string.IsNullOrEmpty(c));
+            .Select(static definition => definition.Category)
+            .Where(static category => !string.IsNullOrWhiteSpace(category))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var cat in usedCategories)
+        foreach (var category in usedCategories)
         {
-            var icon = ResolveCategoryIcon(cat);
-            var title = GetLocalizedCategoryTitle(languageCode, cat);
-
             var categoryComponents = _allDefinitions
-                .Where(d => string.Equals(d.Category, cat, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(d => d.DisplayName)
-                .Select(d => CreateComponentItem(d))
+                .Where(definition => string.Equals(definition.Category, category, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .Select(CreateComponentItem)
                 .ToArray();
 
             _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
-                cat,
-                title,
-                icon,
+                category,
+                GetLocalizedCategoryTitle(languageCode, category),
+                ResolveCategoryIcon(category),
                 categoryComponents));
         }
     }
 
-    /// <summary>
-    /// 分类图标映射 - 与阑山桌面 Dock 栏组件库 (MainWindow.ComponentSystem) 保持一致
-    /// </summary>
     private static Symbol ResolveCategoryIcon(string categoryId)
     {
         if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return Symbol.Clock;
@@ -129,9 +119,6 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         return Symbol.Apps;
     }
 
-    /// <summary>
-    /// 分类本地化标题 - 与阑山桌面 Dock 栏组件库 (MainWindow.ComponentSystem) 保持一致
-    /// </summary>
     private string GetLocalizedCategoryTitle(string languageCode, string categoryId)
     {
         if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return L(languageCode, "component_category.clock", "Clock");
@@ -148,101 +135,123 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private string L(string languageCode, string key, string fallback)
     {
-        return _localizationService.GetString(languageCode, key, fallback);
+        return LocalizationService.GetString(languageCode, key, fallback);
     }
 
-    private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
+    private static ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
     {
-        var previewKey = ComponentPreviewKey.ForComponentType(
-            definition.Id,
-            definition.MinWidthCells,
-            definition.MinHeightCells);
-
-        var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
-        ComponentPreviewImageEntry? previewEntry = null;
-
-        if (mainWindow is not null)
-        {
-            previewEntry = mainWindow.GetPreviewEntry(previewKey);
-        }
-
-        var item = new ComponentLibraryItemViewModel(
-            definition.Id,
-            definition.DisplayName,
-            previewKey,
-            description: null,
-            "正在加载预览...",
-            "预览不可用",
-            previewEntry);
-
-        if (mainWindow is not null && (previewEntry is null || previewEntry.State == ComponentPreviewImageState.Pending))
-        {
-            mainWindow.RequestDetachedLibraryPreview(previewKey);
-        }
-
-        return item;
-    }
-
-    public void UpdatePreviewImage(ComponentPreviewImageEntry entry)
-    {
-        foreach (var category in _viewModel.Categories)
-        {
-            foreach (var component in category.Components)
-            {
-                if (component.PreviewKey.Equals(entry.Key))
-                {
-                    component.UpdatePreviewImageEntry(entry);
-                }
-            }
-        }
+        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName);
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        _ = sender;
+        _ = e;
         UpdateSelectedComponent();
     }
 
     private void UpdateSelectedComponent()
     {
-        var selectedCategory = CategoryListBox.SelectedItem as ComponentLibraryCategoryViewModel;
-        if (selectedCategory is null)
+        if (CategoryListBox.SelectedItem is not ComponentLibraryCategoryViewModel selectedCategory)
         {
             _viewModel.SelectedComponent = null;
+            SetSelectedPreviewControl(null);
             return;
         }
 
-        // 获取该分类下的组件列表
-        IEnumerable<DesktopComponentDefinition> filtered;
-        if (selectedCategory.Id == "all")
-        {
-            filtered = _allDefinitions.OrderBy(d => d.DisplayName);
-        }
-        else
-        {
-            filtered = _allDefinitions
-                .Where(d => string.Equals(d.Category, selectedCategory.Id, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(d => d.DisplayName);
-        }
+        var filtered = selectedCategory.Id == "all"
+            ? _allDefinitions.OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
+            : _allDefinitions
+                .Where(definition => string.Equals(definition.Category, selectedCategory.Id, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase);
 
-        // 选择该分类下的第一个组件作为默认选中
         var firstComponent = filtered.FirstOrDefault();
-        if (firstComponent is not null)
-        {
-            // 查找或创建对应的 ViewModel
-            var existingComponent = selectedCategory.Components.FirstOrDefault(c => c.ComponentId == firstComponent.Id);
-            if (existingComponent is not null)
-            {
-                _viewModel.SelectedComponent = existingComponent;
-            }
-            else
-            {
-                _viewModel.SelectedComponent = CreateComponentItem(firstComponent);
-            }
-        }
-        else
+        if (firstComponent is null)
         {
             _viewModel.SelectedComponent = null;
+            SetSelectedPreviewControl(null);
+            return;
         }
+
+        _viewModel.SelectedComponent = selectedCategory.Components.FirstOrDefault(component => component.ComponentId == firstComponent.Id)
+            ?? CreateComponentItem(firstComponent);
+        SetSelectedPreviewControl(CreateStaticPreviewControl(firstComponent));
+    }
+
+    private Control? CreateStaticPreviewControl(DesktopComponentDefinition definition)
+    {
+        if (_componentRuntimeRegistry is null ||
+            !_componentRuntimeRegistry.TryGetDescriptor(definition.Id, out var descriptor))
+        {
+            return null;
+        }
+
+        try
+        {
+            var control = descriptor.CreateControl(
+                ResolvePreviewCellSize(definition),
+                _timeZoneService,
+                _weatherDataService,
+                _recommendationInfoService,
+                _calculatorDataService,
+                _settingsFacade,
+                placementId: null,
+                renderMode: DesktopComponentRenderMode.LibraryPreview);
+            ComponentPreviewRuntimeQuiescer.Attach(control);
+            return control;
+        }
+        catch (Exception ex) when (!UiExceptionGuard.IsFatalException(ex))
+        {
+            AppLogger.Warn(
+                "ComponentLibrary",
+                $"Failed to create static fused preview for component '{definition.Id}'.",
+                ex);
+            return null;
+        }
+    }
+
+    private static double ResolvePreviewCellSize(DesktopComponentDefinition definition)
+    {
+        const double maxWidth = 360d;
+        const double maxHeight = 240d;
+        return Math.Clamp(
+            Math.Min(
+                maxWidth / Math.Max(1, definition.MinWidthCells),
+                maxHeight / Math.Max(1, definition.MinHeightCells)),
+            32d,
+            96d);
+    }
+
+    private void SetSelectedPreviewControl(Control? control)
+    {
+        DisposeSelectedPreviewControl();
+        _selectedPreviewControl = control;
+        if (SelectedComponentPreviewHost is not null)
+        {
+            SelectedComponentPreviewHost.Content = control;
+        }
+    }
+
+    private void DisposeSelectedPreviewControl()
+    {
+        if (_selectedPreviewControl is null)
+        {
+            return;
+        }
+
+        ComponentPreviewRuntimeQuiescer.Detach(_selectedPreviewControl);
+        if (_selectedPreviewControl is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
+        _selectedPreviewControl = null;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        DisposeSelectedPreviewControl();
+        base.OnDetachedFromVisualTree(e);
     }
 
     private void OnAddComponentClick(object? sender, RoutedEventArgs e)
@@ -255,15 +264,11 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
 
     private void OnFindMoreComponentsClick(object? sender, RoutedEventArgs e)
     {
-        // 打开设置窗口并导航到插件目录页面
         if (Application.Current is App app)
         {
             app.OpenIndependentSettingsModule("FusedDesktopComponentLibrary", "plugin-catalog");
         }
 
-        // 关闭所在窗口
-        var window = this.FindAncestorOfType<Window>();
-        var componentLibraryWindow = this.FindAncestorOfType<Window>();
-        componentLibraryWindow?.Close();
+        this.FindAncestorOfType<Window>()?.Close();
     }
 }

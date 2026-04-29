@@ -13,4 +13,5 @@ public sealed record DesktopComponentRuntimeContext(
     IAppearanceThemeService AppearanceTheme,
     ComponentChromeContext Chrome,
     IComponentSettingsAccessor ComponentSettingsAccessor,
-    IComponentInstanceSettingsStore ComponentSettingsStore);
+    IComponentInstanceSettingsStore ComponentSettingsStore,
+    DesktopComponentRenderMode RenderMode = DesktopComponentRenderMode.Live);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using LanMountainDesktop.ComponentSystem;
 using FluentIcons.Common;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.ViewModels;
@@ -14,10 +15,6 @@ public partial class ComponentLibraryWindow : Window
     private IComponentLibraryService? _componentLibraryService;
     private Func<double, ComponentLibraryCreateContext>? _createContextFactory;
     private Func<string, string, string>? _localize;
-    private Func<ComponentLibraryComponentEntry, ComponentPreviewKey>? _previewKeyResolver;
-    private Func<ComponentPreviewKey, ComponentPreviewImageEntry?>? _previewEntryResolver;
-    private Action<ComponentPreviewKey>? _warmPreviewRequested;
-    private Action<ComponentPreviewKey>? _renderPreviewRequested;
     private readonly ComponentLibraryWindowViewModel _viewModel = new();
 
     public ComponentLibraryWindow()
@@ -29,20 +26,12 @@ public partial class ComponentLibraryWindow : Window
     public ComponentLibraryWindow(
         IComponentLibraryService componentLibraryService,
         Func<double, ComponentLibraryCreateContext> createContextFactory,
-        Func<string, string, string> localize,
-        Func<ComponentLibraryComponentEntry, ComponentPreviewKey>? previewKeyResolver = null,
-        Func<ComponentPreviewKey, ComponentPreviewImageEntry?>? previewEntryResolver = null,
-        Action<ComponentPreviewKey>? warmPreviewRequested = null,
-        Action<ComponentPreviewKey>? renderPreviewRequested = null)
+        Func<string, string, string> localize)
         : this()
     {
         _componentLibraryService = componentLibraryService ?? throw new ArgumentNullException(nameof(componentLibraryService));
         _createContextFactory = createContextFactory ?? throw new ArgumentNullException(nameof(createContextFactory));
         _localize = localize ?? throw new ArgumentNullException(nameof(localize));
-        _previewKeyResolver = previewKeyResolver;
-        _previewEntryResolver = previewEntryResolver;
-        _warmPreviewRequested = warmPreviewRequested;
-        _renderPreviewRequested = renderPreviewRequested;
         Reload();
     }
 
@@ -56,6 +45,7 @@ public partial class ComponentLibraryWindow : Window
         }
 
         _viewModel.Title = _localize("component_library.title", "Widgets");
+        DisposePreviewControls(_viewModel.Categories.SelectMany(static category => category.Components));
         _viewModel.Categories.Clear();
         _viewModel.Components.Clear();
 
@@ -88,24 +78,12 @@ public partial class ComponentLibraryWindow : Window
         var displayName = string.IsNullOrWhiteSpace(entry.DisplayNameLocalizationKey)
             ? entry.DisplayName
             : _localize?.Invoke(entry.DisplayNameLocalizationKey, entry.DisplayName) ?? entry.DisplayName;
-        var previewKey = ResolvePreviewKey(entry);
-        var previewEntry = _previewEntryResolver?.Invoke(previewKey);
-        var item = new ComponentLibraryItemViewModel(
+        var previewControl = CreateStaticPreviewControl(entry);
+        return new ComponentLibraryItemViewModel(
             entry.ComponentId,
             displayName,
-            previewKey,
             description: null,
-            _localize?.Invoke("component_library.preview.loading", "Loading preview...") ?? "Loading preview...",
-            _localize?.Invoke("component_library.preview.unavailable", "Preview unavailable") ?? "Preview unavailable",
-            previewEntry);
-
-        if (previewEntry is null || previewEntry.State == ComponentPreviewImageState.Pending)
-        {
-            _warmPreviewRequested?.Invoke(previewKey);
-            _renderPreviewRequested?.Invoke(previewKey);
-        }
-
-        return item;
+            previewControl);
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -124,7 +102,7 @@ public partial class ComponentLibraryWindow : Window
             _viewModel.Components.Add(component);
         }
 
-        RequestPreviewWarmup(selectedCategory.Components);
+        ComponentPreviewRuntimeQuiescer.Quiesce(this);
     }
 
     private void OnAddComponentClick(object? sender, RoutedEventArgs e)
@@ -147,48 +125,54 @@ public partial class ComponentLibraryWindow : Window
         Hide();
     }
 
-    public void UpdatePreviewImage(ComponentPreviewImageEntry previewImageEntry)
+    private Control? CreateStaticPreviewControl(ComponentLibraryComponentEntry entry)
     {
-        ArgumentNullException.ThrowIfNull(previewImageEntry);
-
-        foreach (var category in _viewModel.Categories)
+        if (_componentLibraryService is null || _createContextFactory is null)
         {
-            foreach (var component in category.Components)
-            {
-                if (component.PreviewKey.Equals(previewImageEntry.Key))
-                {
-                    component.UpdatePreviewImageEntry(previewImageEntry);
-                }
-            }
+            return null;
         }
+
+        var cellSize = ResolvePreviewCellSize(entry);
+        var context = _createContextFactory(cellSize) with
+        {
+            PlacementId = null,
+            RenderMode = DesktopComponentRenderMode.LibraryPreview
+        };
+
+        if (!_componentLibraryService.TryCreateControl(entry.ComponentId, context, out var control, out _))
+        {
+            return null;
+        }
+
+        if (control is not null)
+        {
+            ComponentPreviewRuntimeQuiescer.Attach(control);
+        }
+
+        return control;
     }
 
-    private ComponentPreviewKey ResolvePreviewKey(ComponentLibraryComponentEntry entry)
+    private static double ResolvePreviewCellSize(ComponentLibraryComponentEntry entry)
     {
-        if (_previewKeyResolver is not null)
-        {
-            return _previewKeyResolver(entry);
-        }
-
-        return ComponentPreviewKey.ForComponentType(entry.ComponentId, entry.MinWidthCells, entry.MinHeightCells);
+        var maxWidth = 180d;
+        var maxHeight = 120d;
+        return Math.Clamp(
+            Math.Min(
+                maxWidth / Math.Max(1, entry.MinWidthCells),
+                maxHeight / Math.Max(1, entry.MinHeightCells)),
+            24d,
+            72d);
     }
 
-    private void RequestPreviewWarmup(IEnumerable<ComponentLibraryItemViewModel> components)
+    private static void DisposePreviewControls(IEnumerable<ComponentLibraryItemViewModel> components)
     {
-        if (_warmPreviewRequested is null && _renderPreviewRequested is null)
+        foreach (var control in components.Select(static component => component.PreviewControl).OfType<Control>())
         {
-            return;
-        }
-
-        foreach (var component in components)
-        {
-            if (!component.IsPreviewPending)
+            ComponentPreviewRuntimeQuiescer.Detach(control);
+            if (control is IDisposable disposable)
             {
-                continue;
+                disposable.Dispose();
             }
-
-            _warmPreviewRequested?.Invoke(component.PreviewKey);
-            _renderPreviewRequested?.Invoke(component.PreviewKey);
         }
     }
 

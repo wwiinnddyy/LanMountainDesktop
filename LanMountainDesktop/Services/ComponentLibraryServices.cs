@@ -92,7 +92,8 @@ internal sealed class ComponentLibraryService : IComponentLibraryService
                 context.RecommendationInfoService,
                 context.CalculatorDataService,
                 context.SettingsFacade,
-                context.PlacementId);
+                context.PlacementId,
+                context.RenderMode);
             return true;
         }
         catch (Exception ex)

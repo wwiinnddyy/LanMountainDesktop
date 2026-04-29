@@ -13,15 +13,13 @@ internal enum ComponentLibraryCollapseVisualState
 internal readonly record struct ComponentLibraryCollapseState(
     ComponentLibraryCollapseVisualState VisualState,
     Thickness ExpandedMargin,
-    double ExpandedOpacity,
     bool IsChipVisible)
 {
-    public static ComponentLibraryCollapseState CreateExpanded(Thickness expandedMargin, double expandedOpacity)
+    public static ComponentLibraryCollapseState CreateExpanded(Thickness expandedMargin)
     {
         return new(
             ComponentLibraryCollapseVisualState.Expanded,
             expandedMargin,
-            expandedOpacity,
             IsChipVisible: false);
     }
 

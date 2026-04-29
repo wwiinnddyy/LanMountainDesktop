@@ -12,7 +12,6 @@ internal sealed class ComponentLibraryCollapsePresenter
 {
     private static readonly TimeSpan TransitionDuration = TimeSpan.FromMilliseconds(150);
     private static readonly Easing TransitionEasing = new CubicEaseOut();
-    private const double StableOpacityThreshold = 0.01;
 
     private readonly Border _componentLibraryWindow;
     private readonly Border _collapsedChipHost;
@@ -37,9 +36,7 @@ internal sealed class ComponentLibraryCollapsePresenter
         _collapsedChipIcon = collapsedChipIcon;
 
         EnsureTransforms();
-        _state = ComponentLibraryCollapseState.CreateExpanded(
-            _componentLibraryWindow.Margin,
-            _componentLibraryWindow.Opacity <= 0 ? 1 : _componentLibraryWindow.Opacity);
+        _state = ComponentLibraryCollapseState.CreateExpanded(_componentLibraryWindow.Margin);
         ApplyExpandedSnapshot();
         _collapsedChipHost.IsVisible = false;
         _collapsedChipHost.IsHitTestVisible = false;
@@ -50,19 +47,16 @@ internal sealed class ComponentLibraryCollapsePresenter
 
     public ComponentLibraryCollapseVisualState VisualState => _state.VisualState;
 
-    public void SyncExpandedState(Thickness margin, double opacity)
+    public void SyncExpandedState(Thickness margin)
     {
-        var hasStableOpacity = IsStableExpandedOpacity(opacity);
-        var nextExpandedOpacity = hasStableOpacity ? Math.Clamp(opacity, 0, 1) : _state.ExpandedOpacity;
         _state = _state with
         {
-            ExpandedMargin = margin,
-            ExpandedOpacity = nextExpandedOpacity
+            ExpandedMargin = margin
         };
 
         if (_state.VisualState is ComponentLibraryCollapseVisualState.Expanded or ComponentLibraryCollapseVisualState.Restoring)
         {
-            ApplyExpandedSnapshot(applyOpacity: hasStableOpacity);
+            ApplyExpandedSnapshot();
         }
     }
 
@@ -122,7 +116,7 @@ internal sealed class ComponentLibraryCollapsePresenter
                     return;
                 }
 
-                _componentLibraryWindow.Opacity = _state.ExpandedOpacity;
+                _componentLibraryWindow.Opacity = 1;
                 _windowTranslate.Y = 0;
             },
             DispatcherPriority.Background);
@@ -190,14 +184,10 @@ internal sealed class ComponentLibraryCollapsePresenter
         };
     }
 
-    private void ApplyExpandedSnapshot(bool applyOpacity = true)
+    private void ApplyExpandedSnapshot()
     {
         _componentLibraryWindow.Margin = _state.ExpandedMargin;
-        if (applyOpacity)
-        {
-            _componentLibraryWindow.Opacity = _state.ExpandedOpacity;
-        }
-
+        _componentLibraryWindow.Opacity = 1;
         _componentLibraryWindow.IsVisible = true;
         _componentLibraryWindow.IsHitTestVisible = true;
         _windowTranslate.Y = 0;
@@ -269,12 +259,5 @@ internal sealed class ComponentLibraryCollapsePresenter
         _componentLibraryWindow.Margin = _state.ExpandedMargin;
         _componentLibraryWindow.Opacity = 0;
         _windowTranslate.Y = 28;
-    }
-
-    private static bool IsStableExpandedOpacity(double opacity)
-    {
-        return !double.IsNaN(opacity) &&
-               !double.IsInfinity(opacity) &&
-               opacity > StableOpacityThreshold;
     }
 }

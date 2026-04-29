@@ -99,48 +99,11 @@
                                                 BorderThickness="1"
                                                 BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
                                                 Padding="8">
-                                            <Grid>
-                                                <Image Source="{Binding PreviewBitmap}"
-                                                       Stretch="Uniform"
-                                                       HorizontalAlignment="Stretch"
-                                                       VerticalAlignment="Stretch"
-                                                       RenderOptions.BitmapInterpolationMode="HighQuality"
-                                                       IsVisible="{Binding IsPreviewReady}" />
-
-                                                <Border IsVisible="{Binding IsPreviewPending}"
-                                                        Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
-                                                    <StackPanel HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"
-                                                                Spacing="8">
-                                                        <ProgressBar Width="96"
-                                                                     IsIndeterminate="True" />
-                                                        <TextBlock HorizontalAlignment="Center"
-                                                                   TextAlignment="Center"
-                                                                   FontSize="12"
-                                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                                   Text="{Binding PreviewStatusText}" />
-                                                    </StackPanel>
-                                                </Border>
-
-                                                <Border IsVisible="{Binding IsPreviewFailed}"
-                                                        Background="{DynamicResource AdaptiveSurfaceBaseBrush}">
-                                                    <StackPanel HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"
-                                                                Spacing="8">
-                                                        <TextBlock HorizontalAlignment="Center"
-                                                                   TextAlignment="Center"
-                                                                   FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
-                                                                   Text="{Binding PreviewStatusText}" />
-                                                        <TextBlock HorizontalAlignment="Center"
-                                                                   TextAlignment="Center"
-                                                                   FontSize="12"
-                                                                   TextWrapping="Wrap"
-                                                                   Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
-                                                                   Text="{Binding PreviewErrorMessage}" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
+                                            <ContentControl Content="{Binding PreviewControl}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            IsHitTestVisible="False"
+                                                            Focusable="False" />
                                         </Border>
 
                                         <TextBlock Grid.Row="1"

@@ -25,7 +25,8 @@ public sealed record ComponentLibraryCreateContext(
     IRecommendationInfoService RecommendationInfoService,
     ICalculatorDataService CalculatorDataService,
     ISettingsFacadeService SettingsFacade,
-    string? PlacementId = null);
+    string? PlacementId = null,
+    DesktopComponentRenderMode RenderMode = DesktopComponentRenderMode.Live);
 
 public interface IComponentLibraryService
 {

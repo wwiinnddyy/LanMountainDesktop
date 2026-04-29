@@ -24,7 +24,8 @@ public sealed record DesktopComponentControlFactoryContext(
     ISettingsService SettingsService,
     IComponentInstanceSettingsStore ComponentSettingsStore,
     IComponentSettingsAccessor ComponentSettingsAccessor,
-    string? PlacementId = null);
+    string? PlacementId = null,
+    DesktopComponentRenderMode RenderMode = DesktopComponentRenderMode.Live);
 
 public sealed class DesktopComponentRuntimeRegistration
 {
@@ -115,7 +116,8 @@ public sealed class DesktopComponentRuntimeDescriptor
         IRecommendationInfoService recommendationInfoService,
         ICalculatorDataService calculatorDataService,
         ISettingsFacadeService settingsFacade,
-        string? placementId = null)
+        string? placementId = null,
+        DesktopComponentRenderMode renderMode = DesktopComponentRenderMode.Live)
     {
         ArgumentNullException.ThrowIfNull(settingsFacade);
 
@@ -141,7 +143,8 @@ public sealed class DesktopComponentRuntimeDescriptor
             settingsService,
             componentSettingsStore,
             componentAccessor,
-            placementId));
+            placementId,
+            renderMode));
         var runtimeContext = new DesktopComponentRuntimeContext(
             Definition.Id,
             placementId,
@@ -150,7 +153,8 @@ public sealed class DesktopComponentRuntimeDescriptor
             appearanceTheme,
             chromeContext,
             componentAccessor,
-            componentSettingsStore);
+            componentSettingsStore,
+            renderMode);
 
         ApplySettingsDependencies(control, settingsService, componentSettingsStore);
 
