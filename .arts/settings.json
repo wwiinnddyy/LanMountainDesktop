@@ -1,3 +1,5 @@
 {
-    "diffEditor.renderSideBySide": false
+    "diffEditor.renderSideBySide": false,
+    "clawMode.mode": "editor",
+    "workbench.activityBar.location": "default"
 }

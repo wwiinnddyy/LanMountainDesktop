@@ -337,12 +337,10 @@ public sealed class SentryCrashTelemetryService : IDisposable
             {
                 scope.SetExtra("log_tail", logTail);
                 scope.SetExtra("log_tail_line_count", logTail.Count(character => character == '\n') + 1);
-                var attachment = new Attachment(
-                    AttachmentType.Default,
-                    new ByteAttachmentContent(Encoding.UTF8.GetBytes(logTail)),
+                scope.AddAttachment(
+                    Encoding.UTF8.GetBytes(logTail),
                     "log-tail.txt",
-                    "text/plain");
-                scope.AddAttachment(attachment);
+                    contentType: "text/plain");
             }
         }
     }

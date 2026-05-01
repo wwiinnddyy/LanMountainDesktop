@@ -292,7 +292,7 @@ public sealed class ResumableDownloadService
             ParallelDownload = useParallelDownload,
             MinimumSizeOfChunking = options.ParallelThresholdBytes,
             MaxTryAgainOnFailure = 3,
-            ResumeDownloadIfCan = true,
+            EnableAutoResumeDownload = true,
             ClearPackageOnCompletionWithFailure = false,
             FileExistPolicy = FileExistPolicy.Delete,
             DownloadFileExtension = ".part"
