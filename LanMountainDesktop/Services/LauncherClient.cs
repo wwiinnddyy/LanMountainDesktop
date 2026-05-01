@@ -15,7 +15,6 @@ namespace LanMountainDesktop.Services;
 internal sealed class LauncherClient
 {
     private const int UserCanceledUacErrorCode = 1223;
-    private const string LauncherExecutableName = "LanMountainDesktop.Launcher.exe";
 
     public async Task<LauncherInstallResult> InstallPackageAsync(
         string packagePath,
@@ -34,13 +33,13 @@ internal sealed class LauncherClient
                 "failed");
         }
 
-        var launcherPath = ResolveLauncherPath();
-        if (!File.Exists(launcherPath))
+        var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
+        if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
         {
             return new LauncherInstallResult(
                 false,
                 null,
-                $"Launcher executable was not found at '{launcherPath}'.",
+                "Launcher executable was not found. Expected it to be located in the application root directory (sibling to the app-* deployment folder).",
                 "failed");
         }
 
@@ -127,21 +126,6 @@ internal sealed class LauncherClient
 
         await using var stream = File.OpenRead(resultPath);
         return await JsonSerializer.DeserializeAsync<HelperResultFile>(stream, cancellationToken: cancellationToken);
-    }
-
-    private static string ResolveLauncherPath()
-    {
-        var baseDirectory = AppContext.BaseDirectory;
-        var candidates = new[]
-        {
-            Path.Combine(baseDirectory, "Launcher", LauncherExecutableName),
-            Path.Combine(baseDirectory, LauncherExecutableName),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "LanMountainDesktop.Launcher", LauncherExecutableName)),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Debug", "net10.0", LauncherExecutableName)),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Release", "net10.0", LauncherExecutableName))
-        };
-
-        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
     private static string QuoteArgument(string value)

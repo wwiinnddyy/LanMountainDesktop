@@ -3,11 +3,30 @@ using LanMountainDesktop.Launcher.Models;
 
 namespace LanMountainDesktop.Launcher.Services;
 
+/// <summary>
+/// 解析应用数据目录位置。
+/// </summary>
+/// <remarks>
+/// 安装后的目录结构：
+/// <code>
+/// {AppRoot}/                          ← 应用安装根目录
+///   LanMountainDesktop.Launcher.exe   ← Launcher 可执行文件
+///   .Launcher/                        ← Launcher 数据目录（日志、状态、配置等）
+///   app-{version}/                    ← Host 部署目录
+///     LanMountainDesktop.exe
+///     ...
+/// </code>
+///
+/// Launcher 数据目录固定位于应用安装根目录下的 <c>.Launcher</c> 文件夹中，
+/// 与 app-* 部署目录同级。此目录不随数据位置模式改变。
+///
+/// Desktop（Host）数据目录则根据用户选择可位于系统目录或便携目录。
+/// </remarks>
 internal sealed class DataLocationResolver
 {
     private const string ConfigFileName = "data-location.config.json";
-    private const string LauncherFolderName = "Launcher";
     private const string DesktopFolderName = "Desktop";
+    private const string LauncherDataFolderName = ".Launcher";
 
     private readonly string _appRoot;
     private readonly string _defaultSystemDataPath;
@@ -28,13 +47,49 @@ internal sealed class DataLocationResolver
     public string DefaultSystemDataPath => _defaultSystemDataPath;
 
     /// <summary>
-    /// 默认便携模式数据路径（应用目录下的 AppData）
+    /// 默认便携模式数据路径（应用目录下的 Desktop 文件夹）
     /// </summary>
-    public string DefaultPortableDataPath => Path.Combine(_appRoot, "AppData");
+    public string DefaultPortableDataPath => Path.Combine(_appRoot, DesktopFolderName);
 
-    private string ResolveBootstrapLauncherDataPath()
+    /// <summary>
+    /// Launcher 数据目录，固定位于应用安装根目录下的 .Launcher 文件夹。
+    /// 该目录与 app-* 部署目录同级，不随数据位置模式改变。
+    /// </summary>
+    public string ResolveLauncherDataPath()
     {
-        return Path.Combine(_defaultSystemDataPath, LauncherFolderName);
+        return Path.Combine(_appRoot, LauncherDataFolderName);
+    }
+
+    /// <summary>
+    /// 桌面应用数据目录（组件、设置、插件等）
+    /// </summary>
+    public string ResolveDesktopDataPath()
+    {
+        return Path.Combine(ResolveDataRoot(), DesktopFolderName);
+    }
+
+    /// <summary>
+    /// 数据位置配置文件路径（保存在 Launcher 数据目录下）
+    /// </summary>
+    public string ResolveConfigPath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), ConfigFileName);
+    }
+
+    /// <summary>
+    /// 启动器日志目录
+    /// </summary>
+    public string ResolveLauncherLogsPath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), "logs");
+    }
+
+    /// <summary>
+    /// 启动器状态目录
+    /// </summary>
+    public string ResolveLauncherStatePath()
+    {
+        return Path.Combine(ResolveLauncherDataPath(), "state");
     }
 
     /// <summary>
@@ -53,6 +108,19 @@ internal sealed class DataLocationResolver
         {
             return false;
         }
+    }
+
+    public DataLocationMode ResolveMode()
+    {
+        var config = LoadConfig();
+        if (config is null)
+        {
+            return DataLocationMode.System;
+        }
+
+        return string.Equals(config.DataLocationMode, "Portable", StringComparison.OrdinalIgnoreCase)
+            ? DataLocationMode.Portable
+            : DataLocationMode.System;
     }
 
     /// <summary>
@@ -84,66 +152,11 @@ internal sealed class DataLocationResolver
             : _defaultSystemDataPath;
     }
 
-    /// <summary>
-    /// 启动器数据目录（日志、配置、状态等）
-    /// </summary>
-    public string ResolveLauncherDataPath()
-    {
-        return Path.Combine(ResolveDataRoot(), LauncherFolderName);
-    }
-
-    /// <summary>
-    /// 桌面应用数据目录（组件、设置、插件等）
-    /// </summary>
-    public string ResolveDesktopDataPath()
-    {
-        return Path.Combine(ResolveDataRoot(), DesktopFolderName);
-    }
-
-    /// <summary>
-    /// 数据位置配置文件路径（保存在 Launcher 目录下）
-    /// </summary>
-    public string ResolveConfigPath()
-    {
-        return Path.Combine(ResolveBootstrapLauncherDataPath(), ConfigFileName);
-    }
-
-    /// <summary>
-    /// 启动器日志目录
-    /// </summary>
-    public string ResolveLauncherLogsPath()
-    {
-        return Path.Combine(ResolveLauncherDataPath(), "logs");
-    }
-
-    /// <summary>
-    /// 启动器状态目录
-    /// </summary>
-    public string ResolveLauncherStatePath()
-    {
-        return Path.Combine(ResolveLauncherDataPath(), "state");
-    }
-
-    public DataLocationMode ResolveMode()
-    {
-        var config = LoadConfig();
-        if (config is null)
-        {
-            return DataLocationMode.System;
-        }
-
-        return string.Equals(config.DataLocationMode, "Portable", StringComparison.OrdinalIgnoreCase)
-            ? DataLocationMode.Portable
-            : DataLocationMode.System;
-    }
-
     public DataLocationConfig? LoadConfig()
     {
         try
         {
-            // 配置文件必须位于默认系统数据路径下的 Launcher 目录中
-            // 避免循环依赖：不能调用 ResolveConfigPath() -> ResolveLauncherDataPath() -> ResolveDataRoot() -> LoadConfig()
-            var configPath = Path.Combine(_defaultSystemDataPath, LauncherFolderName, ConfigFileName);
+            var configPath = ResolveConfigPath();
             if (!File.Exists(configPath))
             {
                 return null;
@@ -163,8 +176,8 @@ internal sealed class DataLocationResolver
     {
         try
         {
-            var launcherPath = ResolveBootstrapLauncherDataPath();
-            Directory.CreateDirectory(launcherPath);
+            var launcherDataPath = ResolveLauncherDataPath();
+            Directory.CreateDirectory(launcherDataPath);
 
             var configPath = ResolveConfigPath();
             var json = JsonSerializer.Serialize(config, AppJsonContext.Default.DataLocationConfig);
@@ -194,9 +207,8 @@ internal sealed class DataLocationResolver
         // 先创建目录结构
         try
         {
-            var resolvedDataRoot = ResolveDataRoot(config);
-            Directory.CreateDirectory(Path.Combine(resolvedDataRoot, LauncherFolderName));
-            Directory.CreateDirectory(Path.Combine(resolvedDataRoot, DesktopFolderName));
+            Directory.CreateDirectory(ResolveLauncherDataPath());
+            Directory.CreateDirectory(Path.Combine(ResolveDataRoot(config), DesktopFolderName));
         }
         catch (Exception ex)
         {

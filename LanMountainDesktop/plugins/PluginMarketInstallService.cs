@@ -14,8 +14,6 @@ namespace LanMountainDesktop.Services.PluginMarket;
 
 internal sealed class AirAppMarketInstallService : IDisposable
 {
-    private const string LauncherExecutableName = "LanMountainDesktop.Launcher.exe";
-
     private readonly PluginRuntimeService _runtime;
     private readonly LauncherClient _launcherClient = new();
     private readonly HttpClient _httpClient;
@@ -83,13 +81,13 @@ internal sealed class AirAppMarketInstallService : IDisposable
     {
         if (OperatingSystem.IsWindows())
         {
-            var launcherPath = ResolveLauncherPath();
-            if (!File.Exists(launcherPath))
+            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
+            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
             {
                 return new AirAppMarketInstallResult(
                     false,
                     null,
-                    $"Launcher executable was not found at '{launcherPath}'.");
+                    "Launcher executable was not found. Expected it to be located in the application root directory (sibling to the app-* deployment folder).");
             }
         }
 
@@ -362,21 +360,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
         }
 
         return new AirAppMarketVerificationResult(true, null);
-    }
-
-    private static string ResolveLauncherPath()
-    {
-        var baseDirectory = AppContext.BaseDirectory;
-        var candidates = new[]
-        {
-            Path.Combine(baseDirectory, "Launcher", LauncherExecutableName),
-            Path.Combine(baseDirectory, LauncherExecutableName),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "LanMountainDesktop.Launcher", LauncherExecutableName)),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Debug", "net10.0", LauncherExecutableName)),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "LanMountainDesktop.Launcher", "bin", "Release", "net10.0", LauncherExecutableName))
-        };
-
-        return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
     private static void TryDeleteFile(string path)

@@ -1431,25 +1431,14 @@ public sealed class UpdateWorkflowService
     {
         try
         {
-            var launcherExeName = OperatingSystem.IsWindows()
-                ? "LanMountainDesktop.Launcher.exe"
-                : "LanMountainDesktop.Launcher";
-
-            // The Launcher is in the parent directory of the app's base directory
-            // (app runs from app-{version}/ subdirectory, Launcher is at root)
-            var appBaseDir = AppContext.BaseDirectory;
-            var launcherRoot = Path.GetDirectoryName(appBaseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (string.IsNullOrWhiteSpace(launcherRoot))
+            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
+            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
             {
-                launcherRoot = appBaseDir;
-            }
-
-            var launcherPath = Path.Combine(launcherRoot, launcherExeName);
-            if (!File.Exists(launcherPath))
-            {
-                AppLogger.Warn("UpdateWorkflow", $"Launcher executable not found at '{launcherPath}'. Falling back to next-startup apply.");
+                AppLogger.Warn("UpdateWorkflow", "Launcher executable not found. Falling back to next-startup apply.");
                 return false;
             }
+
+            var launcherRoot = Path.GetDirectoryName(launcherPath)!;
 
             var startInfo = new ProcessStartInfo
             {
