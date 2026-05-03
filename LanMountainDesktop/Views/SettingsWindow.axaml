@@ -162,7 +162,7 @@
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             Margin="0,0,12,0"
-                            Spacing="2"
+                            Spacing="0"
                             VerticalAlignment="Center">
                     <Button x:Name="BackButton"
                             Classes="titlebar-icon-button"
