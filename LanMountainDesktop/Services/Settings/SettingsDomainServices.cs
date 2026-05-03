@@ -789,6 +789,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
             UpdateSettingsValues.NormalizeDownloadSource(snapshot.UpdateDownloadSource),
             UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
+            snapshot.UseGhProxyMirror,
             snapshot.PendingUpdateInstallerPath,
             snapshot.PendingUpdateVersion,
             snapshot.PendingUpdatePublishedAtUtcMs,
@@ -810,6 +811,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         snapshot.UpdateMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
         snapshot.UpdateDownloadSource = UpdateSettingsValues.NormalizeDownloadSource(state.UpdateDownloadSource);
         snapshot.UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
+        snapshot.UseGhProxyMirror = state.UseGhProxyMirror;
         snapshot.PendingUpdateInstallerPath = string.IsNullOrWhiteSpace(state.PendingUpdateInstallerPath)
             ? null
             : state.PendingUpdateInstallerPath.Trim();
@@ -836,6 +838,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 nameof(AppSettingsSnapshot.UpdateMode),
                 nameof(AppSettingsSnapshot.UpdateDownloadSource),
                 nameof(AppSettingsSnapshot.UpdateDownloadThreads),
+                nameof(AppSettingsSnapshot.UseGhProxyMirror),
                 nameof(AppSettingsSnapshot.PendingUpdateInstallerPath),
                 nameof(AppSettingsSnapshot.PendingUpdateVersion),
                 nameof(AppSettingsSnapshot.PendingUpdatePublishedAtUtcMs),
@@ -918,45 +921,37 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool isForce,
         CancellationToken cancellationToken)
     {
-        var source = UpdateSettingsValues.NormalizeDownloadSource(_settingsService.Load().UpdateDownloadSource);
-        if (string.Equals(source, UpdateSettingsValues.DownloadSourcePlonds, StringComparison.OrdinalIgnoreCase))
+        var plondsResult = isForce
+            ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+
+        if (plondsResult.Success)
         {
-            var plondsResult = isForce
-                ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-                : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-
-            if (plondsResult.Success)
-            {
-                return plondsResult;
-            }
-
-            AppLogger.Warn(
-                "UpdateSettings",
-                $"PLONDS update check failed and will fallback to GitHub. Error: {plondsResult.ErrorMessage}");
-
-            var githubFallbackResult = isForce
-                ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-                : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-
-            if (githubFallbackResult.Success)
-            {
-                AppLogger.Info(
-                    "UpdateSettings",
-                    $"GitHub fallback succeeded after PLONDS failure. Original PLONDS error: {plondsResult.ErrorMessage}");
-            }
-            else
-            {
-                AppLogger.Warn(
-                    "UpdateSettings",
-                    $"GitHub fallback also failed after PLONDS failure. PLONDS error: {plondsResult.ErrorMessage}; GitHub error: {githubFallbackResult.ErrorMessage}");
-            }
-
-            return githubFallbackResult;
+            return plondsResult;
         }
 
-        return isForce
+        AppLogger.Warn(
+            "UpdateSettings",
+            $"PLONDS update check failed and will fallback to GitHub. Error: {plondsResult.ErrorMessage}");
+
+        var githubFallbackResult = isForce
             ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
             : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+
+        if (githubFallbackResult.Success)
+        {
+            AppLogger.Info(
+                "UpdateSettings",
+                $"GitHub fallback succeeded after PLONDS failure. Original PLONDS error: {plondsResult.ErrorMessage}");
+        }
+        else
+        {
+            AppLogger.Warn(
+                "UpdateSettings",
+                $"GitHub fallback also failed after PLONDS failure. PLONDS error: {plondsResult.ErrorMessage}; GitHub error: {githubFallbackResult.ErrorMessage}");
+        }
+
+        return githubFallbackResult;
     }
 }
 

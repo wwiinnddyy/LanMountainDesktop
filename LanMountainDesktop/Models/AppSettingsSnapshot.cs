@@ -87,7 +87,9 @@ public sealed class AppSettingsSnapshot
 
     public string UpdateMode { get; set; } = "download_then_confirm";
 
-    public string UpdateDownloadSource { get; set; } = "stcn";
+    public string UpdateDownloadSource { get; set; } = "plonds-api";
+
+    public bool UseGhProxyMirror { get; set; }
 
     public int UpdateDownloadThreads { get; set; } = 4;
 

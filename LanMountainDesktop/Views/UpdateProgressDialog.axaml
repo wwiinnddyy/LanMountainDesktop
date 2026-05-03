@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LanMountainDesktop.ViewModels"
+        x:Class="LanMountainDesktop.Views.UpdateProgressDialog"
+        x:DataType="vm:UpdateProgressViewModel"
+        Title="阑山桌面 - Installing Update"
+        Width="480"
+        Height="320"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="None">
+
+  <Grid>
+    <Grid VerticalAlignment="Top" Margin="24,24,24,0">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+        <TextBlock Text="阑山桌面"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
+                CornerRadius="4"
+                Padding="6,2"
+                VerticalAlignment="Center">
+          <TextBlock Text="Update"
+                     FontSize="11"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <Grid VerticalAlignment="Center" Margin="24,0,24,0">
+      <StackPanel Spacing="12" HorizontalAlignment="Stretch">
+        <TextBlock Text="{Binding StageText}"
+                   FontSize="14"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center" />
+
+        <ProgressBar Minimum="0"
+                     Maximum="100"
+                     Value="{Binding ProgressPercent}"
+                     Height="4"
+                     IsIndeterminate="False"
+                     Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                     Background="{DynamicResource ControlStrokeColorDefaultBrush}"
+                     HorizontalAlignment="Stretch" />
+
+        <TextBlock Text="{Binding CurrentFile}"
+                   FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Opacity="0.8"
+                   TextTrimming="CharacterEllipsis"
+                   HorizontalAlignment="Center" />
+      </StackPanel>
+    </Grid>
+
+    <Grid VerticalAlignment="Bottom" Margin="24,0,24,24">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Bottom">
+        <TextBlock FontSize="11"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Opacity="0.8"
+                   VerticalAlignment="Bottom">
+          <TextBlock.Text>
+            <MultiBinding StringFormat="{}{0} / {1} files">
+              <Binding Path="FilesCompleted" />
+              <Binding Path="FilesTotal" />
+            </MultiBinding>
+          </TextBlock.Text>
+        </TextBlock>
+      </StackPanel>
+
+      <Button Grid.Column="1"
+              Classes="settings-accent-button"
+              Content="Cancel"
+              Command="{Binding CancelCommand}"
+              IsVisible="{Binding !IsCompleted}" />
+    </Grid>
+  </Grid>
+</Window>

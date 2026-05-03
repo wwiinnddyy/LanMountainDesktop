@@ -41,4 +41,6 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(StartupAttemptRecord))]
 [JsonSerializable(typeof(PrivacyConfig))]
 [JsonSerializable(typeof(PrivacyAgreementState))]
+[JsonSerializable(typeof(LanMountainDesktop.Shared.Contracts.Update.InstallProgressReport))]
+[JsonSerializable(typeof(LanMountainDesktop.Shared.Contracts.Update.InstallCompleteReport))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;

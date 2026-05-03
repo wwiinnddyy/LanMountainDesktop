@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -49,19 +50,25 @@ public sealed class PlondsGenerator
         var fileEntries = BuildFileEntries(previousManifest, currentManifest, repoRoot, options.RepoBaseUrl);
         var installerMirrors = BuildInstallerMirrors(options.Platform, installerMirrorRoot, options.InstallerDirectory, options.InstallerBaseUrl);
         var publishedAt = DateTimeOffset.UtcNow;
+        var generatedAt = DateTimeOffset.UtcNow;
         var baselineVersion = string.IsNullOrWhiteSpace(options.BaselineVersion)
             ? options.PreviousVersion
             : options.BaselineVersion;
+        var arch = ResolveArch(options.Platform);
 
         var fileMap = new FileMapDocument(
-            FormatVersion: "1.0",
+            FormatVersion: "2.0",
             DistributionId: distributionId,
             FromVersion: options.PreviousVersion,
             ToVersion: options.CurrentVersion,
+            Version: options.CurrentVersion,
             Platform: options.Platform,
+            Arch: arch,
             Channel: options.Channel,
             PublishedAt: publishedAt,
-            Capabilities: ["file-object"],
+            GeneratedAt: generatedAt,
+            BaselineVersion: baselineVersion,
+            Capabilities: ["file-object", "compressed-object"],
             Components:
             [
                 new ComponentDocument(
@@ -89,12 +96,13 @@ public sealed class PlondsGenerator
             Version: options.CurrentVersion,
             Channel: options.Channel,
             Platform: options.Platform,
+            Arch: arch,
             PublishedAt: publishedAt,
             FileMapUrl: options.FileMapUrl,
             FileMapSignatureUrl: options.FileMapSignatureUrl,
             Components: fileMap.Components,
             InstallerMirrors: installerMirrors,
-            Capabilities: ["file-object"],
+            Capabilities: ["file-object", "compressed-object"],
             Metadata: new Dictionary<string, string>
             {
                 ["protocol"] = "PLONDS",
@@ -133,6 +141,12 @@ public sealed class PlondsGenerator
             distributionPath,
             latestPath,
             installerMirrors.Select(x => x.FileName ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray());
+    }
+
+    public static void WriteBundle(string fileMapPath, string signatureBase64)
+    {
+        var fileMapJson = File.ReadAllText(fileMapPath);
+        WriteBundle(fileMapPath, fileMapJson, signatureBase64);
     }
 
     private static Dictionary<string, FileFingerprint> ScanDirectory(string? root)
@@ -181,12 +195,14 @@ public sealed class PlondsGenerator
                     Mode: "file-object",
                     ObjectKey: null,
                     ObjectUrl: null,
-                    Metadata: null));
+                    ArchiveSha256: null,
+                    Metadata: new Dictionary<string, string> { ["reuseVerified"] = "true" }));
                 continue;
             }
 
             var action = previousManifest.ContainsKey(path) ? "replace" : "add";
-            var objectKey = CopyContentObject(current.FullPath, repoRoot, current.Sha256);
+            var (objectKey, archiveSha256, mode) = CopyContentObjectWithCompression(
+                current.FullPath, repoRoot, current.Sha256, current.Size);
             var objectUrl = string.IsNullOrWhiteSpace(repoBaseUrl)
                 ? null
                 : $"{repoBaseUrl.TrimEnd('/')}/{objectKey}";
@@ -196,10 +212,11 @@ public sealed class PlondsGenerator
                 Action: action,
                 Sha256: current.Sha256,
                 Size: current.Size,
-                Mode: "file-object",
+                Mode: mode,
                 ObjectKey: objectKey,
                 ObjectUrl: objectUrl,
-                Metadata: new Dictionary<string, string> { ["mode"] = "file-object" }));
+                ArchiveSha256: string.IsNullOrEmpty(archiveSha256) ? null : archiveSha256,
+                Metadata: new Dictionary<string, string> { ["mode"] = mode }));
         }
 
         foreach (var path in previousManifest.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
@@ -214,6 +231,7 @@ public sealed class PlondsGenerator
                     Mode: "file-object",
                     ObjectKey: null,
                     ObjectUrl: null,
+                    ArchiveSha256: null,
                     Metadata: null));
             }
         }
@@ -301,6 +319,56 @@ public sealed class PlondsGenerator
         return relativeKey.Replace('\\', '/');
     }
 
+    private static (string ObjectKey, string ArchiveSha256, string Mode) CopyContentObjectWithCompression(
+        string sourcePath, string repoRoot, string sha256, long fileSize)
+    {
+        if (fileSize > 65536)
+        {
+            var compressedBytes = CompressGzip(sourcePath);
+            var archiveSha256 = ComputeSha256FromBytes(compressedBytes);
+            var archiveKey = CopyBytesToObjectStore(compressedBytes, repoRoot, archiveSha256);
+            return (archiveKey, archiveSha256, "compressed-object");
+        }
+
+        var key = CopyContentObject(sourcePath, repoRoot, sha256);
+        return (key, string.Empty, "file-object");
+    }
+
+    private static byte[] CompressGzip(string filePath)
+    {
+        using var input = File.OpenRead(filePath);
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionMode.Compress, leaveOpen: true))
+        {
+            input.CopyTo(gzip);
+        }
+        return output.ToArray();
+    }
+
+    private static string ComputeSha256FromBytes(byte[] data)
+    {
+        return Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+    }
+
+    private static string CopyBytesToObjectStore(byte[] data, string repoRoot, string sha256)
+    {
+        var prefix = sha256[..Math.Min(2, sha256.Length)];
+        var relativeKey = $"{prefix}/{sha256}";
+        var destinationPath = Path.Combine(repoRoot, prefix, sha256);
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        if (!File.Exists(destinationPath))
+        {
+            File.WriteAllBytes(destinationPath, data);
+        }
+        return relativeKey.Replace('\\', '/');
+    }
+
+    private static void WriteBundle(string fileMapPath, string fileMapJson, string signatureBase64)
+    {
+        var bundle = new BundleDocument(fileMapJson, signatureBase64);
+        WriteJson(fileMapPath + ".bundle.json", bundle);
+    }
+
     private static string ComputeSha256(string filePath)
     {
         using var stream = File.OpenRead(filePath);
@@ -320,9 +388,13 @@ public sealed class PlondsGenerator
         string DistributionId,
         string FromVersion,
         string ToVersion,
+        string Version,
         string Platform,
+        string Arch,
         string Channel,
         DateTimeOffset PublishedAt,
+        DateTimeOffset GeneratedAt,
+        string? BaselineVersion,
         IReadOnlyList<string> Capabilities,
         IReadOnlyList<ComponentDocument> Components,
         IReadOnlyDictionary<string, string>? Metadata);
@@ -332,6 +404,7 @@ public sealed class PlondsGenerator
         string Version,
         string Channel,
         string Platform,
+        string Arch,
         DateTimeOffset PublishedAt,
         string? FileMapUrl,
         string? FileMapSignatureUrl,
@@ -362,6 +435,7 @@ public sealed class PlondsGenerator
         string Mode,
         string? ObjectKey,
         string? ObjectUrl,
+        string? ArchiveSha256,
         IReadOnlyDictionary<string, string>? Metadata);
 
     private sealed record InstallerMirrorDocument(
@@ -372,4 +446,6 @@ public sealed class PlondsGenerator
         string? FileName,
         string? Sha256,
         long Size);
+
+    private sealed record BundleDocument(string Manifest, string Signature);
 }

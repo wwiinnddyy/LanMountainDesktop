@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
@@ -1609,8 +1610,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     public IReadOnlyList<SelectionOption> UpdateChannelOptions { get; }
 
-    public IReadOnlyList<SelectionOption> UpdateSourceOptions { get; }
-
     public IReadOnlyList<SelectionOption> UpdateModeOptions { get; }
 
     public IReadOnlyList<SelectionOption> DownloadThreadOptions { get; }
@@ -1624,7 +1623,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         RefreshLocalizedText();
         UpdateChannelOptions = CreateUpdateChannelOptions();
-        UpdateSourceOptions = CreateUpdateSourceOptions();
         UpdateModeOptions = CreateUpdateModeOptions();
         DownloadThreadOptions = CreateDownloadThreadOptions();
 
@@ -1639,9 +1637,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
-
-    [ObservableProperty]
-    private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
 
     [ObservableProperty]
     private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
@@ -1668,6 +1663,18 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _downloadProgressText = string.Empty;
 
     [ObservableProperty]
+    private string _updatePhaseText = string.Empty;
+
+    [ObservableProperty]
+    private double _phaseProgressValue;
+
+    [ObservableProperty]
+    private string _updateTypeText = string.Empty;
+
+    [ObservableProperty]
+    private bool _useGhProxyMirror;
+
+    [ObservableProperty]
     private string _pageTitle = string.Empty;
 
     [ObservableProperty]
@@ -1687,9 +1694,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _updateChannelLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _updateSourceLabel = string.Empty;
 
     [ObservableProperty]
     private string _updateModeLabel = string.Empty;
@@ -1755,9 +1759,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _selectedUpdateModeDescription = string.Empty;
 
     [ObservableProperty]
-    private string _selectedUpdateSourceDescription = string.Empty;
-
-    [ObservableProperty]
     private string _downloadThreadsLabel = string.Empty;
 
     [ObservableProperty]
@@ -1770,19 +1771,22 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private string _forceCheckUpdateDescription = string.Empty;
 
     [ObservableProperty]
+    private string _forceFullUpdateLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _forceFullUpdateDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _networkAccelerationLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _networkAccelerationDescription = string.Empty;
+
+    [ObservableProperty]
     private string _stableChannelText = string.Empty;
 
     [ObservableProperty]
     private string _previewChannelText = string.Empty;
-
-    [ObservableProperty]
-    private string _pdcSourceText = string.Empty;
-
-    [ObservableProperty]
-    private string _gitHubSourceText = string.Empty;
-
-    [ObservableProperty]
-    private string _ghProxySourceText = string.Empty;
 
     [ObservableProperty]
     private string _manualModeText = string.Empty;
@@ -1795,9 +1799,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private SelectionOption? _selectedUpdateChannelOption;
-
-    [ObservableProperty]
-    private SelectionOption? _selectedUpdateSourceOption;
 
     [ObservableProperty]
     private SelectionOption? _selectedUpdateModeOption;
@@ -1813,15 +1814,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     public bool IsPreviewChannelSelected =>
         string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsPdcSourceSelected =>
-        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourcePdc, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsGitHubSourceSelected =>
-        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsGhProxySourceSelected =>
-        string.Equals(SelectedUpdateSourceValue, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase);
 
     public bool IsManualModeSelected =>
         string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase);
@@ -1840,6 +1832,8 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
 
     public bool IsRedownloadButtonVisible => HasPendingInstaller && !IsDownloading;
 
+    public bool IsUpdateTypeVisible => !string.IsNullOrEmpty(UpdateTypeText) && !HasPendingInstaller;
+
     public string DownloadThreadsValueText =>
         UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
 
@@ -1851,15 +1845,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             !string.Equals(SelectedUpdateChannelValue, value.Value, StringComparison.OrdinalIgnoreCase))
         {
             SelectedUpdateChannelValue = value.Value;
-        }
-    }
-
-    partial void OnSelectedUpdateSourceOptionChanged(SelectionOption? value)
-    {
-        if (value is not null &&
-            !string.Equals(SelectedUpdateSourceValue, value.Value, StringComparison.OrdinalIgnoreCase))
-        {
-            SelectedUpdateSourceValue = value.Value;
         }
     }
 
@@ -1908,19 +1893,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         SelectedUpdateChannelDescription = BuildUpdateChannelDescription(value);
         SyncSelectedOptions();
         RefreshActionState();
-    }
-
-    partial void OnSelectedUpdateSourceValueChanged(string value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SaveUpdateSettings();
-        SelectedUpdateSourceDescription = BuildUpdateSourceDescription(value);
-        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
-        SyncSelectedOptions();
     }
 
     partial void OnSelectedUpdateModeValueChanged(string value)
@@ -1988,6 +1960,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
         DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
         InstallPendingUpdateCommand.NotifyCanExecuteChanged();
+        ForceFullUpdateCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsDownloadingChanged(bool value)
@@ -1995,6 +1968,18 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         CheckForUpdatesCommand.NotifyCanExecuteChanged();
         DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
         InstallPendingUpdateCommand.NotifyCanExecuteChanged();
+        ForceFullUpdateCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnUseGhProxyMirrorChanged(bool value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveUpdateSettings();
+        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
     }
 
     [RelayCommand]
@@ -2007,24 +1992,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     private void SelectPreviewChannel()
     {
         SelectedUpdateChannelValue = UpdateSettingsValues.ChannelPreview;
-    }
-
-    [RelayCommand]
-    private void SelectPdcSource()
-    {
-        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
-    }
-
-    [RelayCommand]
-    private void SelectGitHubSource()
-    {
-        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGitHub;
-    }
-
-    [RelayCommand]
-    private void SelectGhProxySource()
-    {
-        SelectedUpdateSourceValue = UpdateSettingsValues.DownloadSourceGhProxy;
     }
 
     [RelayCommand]
@@ -2056,7 +2023,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
                 StringComparison.OrdinalIgnoreCase),
             UpdateChannel = SelectedUpdateChannelValue,
             UpdateMode = SelectedUpdateModeValue,
-            UpdateDownloadSource = SelectedUpdateSourceValue,
+            UseGhProxyMirror = UseGhProxyMirror,
             UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue))
         });
     }
@@ -2077,6 +2044,86 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         await CheckForUpdatesCoreAsync(isForce: true);
     }
 
+    private bool CanForceFullUpdate() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanForceFullUpdate))]
+    private async Task ForceFullUpdateAsync()
+    {
+        try
+        {
+            IsCheckingForUpdates = true;
+            IsDownloadProgressVisible = true;
+            UpdatePhaseText = L("settings.update.phase_force_full", "Forcing full update...");
+            PhaseProgressValue = 0;
+            DownloadProgressValue = 0;
+            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdateStatus = L("settings.update.status_force_full_checking", "Checking for full installer...");
+
+            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce: true);
+            _lastCheckResult = result.Success ? result : null;
+
+            if (!result.Success || result.PreferredAsset is null)
+            {
+                UpdateStatus = L("settings.update.status_force_full_failed", "No full installer available.");
+                return;
+            }
+
+            UpdateTypeText = L("settings.update.type_full", "Full Update");
+            await DownloadFullInstallerCoreAsync(result);
+        }
+        finally
+        {
+            IsCheckingForUpdates = false;
+            IsDownloadProgressVisible = false;
+        }
+    }
+
+    private async Task DownloadFullInstallerCoreAsync(UpdateCheckResult result)
+    {
+        try
+        {
+            IsDownloading = true;
+            IsDownloadProgressVisible = true;
+            UpdatePhaseText = L("settings.update.phase_downloading_full", "Downloading full installer...");
+            DownloadProgressValue = 0;
+            PhaseProgressValue = 0;
+            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdateStatus = L("settings.update.status_downloading_full", "Downloading full installer...");
+
+            var progress = new Progress<double>(value =>
+            {
+                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
+                PhaseProgressValue = DownloadProgressValue;
+                DownloadProgressText = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
+                    DownloadProgressValue);
+            });
+
+            var downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress, CancellationToken.None);
+            if (!downloadResult.Success)
+            {
+                UpdateStatus = string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.status_download_failed_format", "Download failed: {0}"),
+                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
+                return;
+            }
+
+            ApplyPendingState(_settingsFacade.Update.Get());
+            UpdateStatus = downloadResult.HashVerified
+                ? BuildPendingReadyStatus()
+                : string.Format(
+                    CultureInfo.CurrentCulture,
+                    L("settings.update.status_downloaded_no_hash_format", "Update downloaded. Hash: {0}"),
+                    downloadResult.ActualHash ?? "N/A");
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
+    }
+
     private async Task CheckForUpdatesCoreAsync(bool isForce)
     {
         try
@@ -2085,6 +2132,10 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             IsDownloadProgressVisible = false;
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdatePhaseText = isForce
+                ? L("settings.update.phase_force_scanning", "Force scanning update source...")
+                : L("settings.update.phase_scanning", "Scanning update source...");
+            PhaseProgressValue = 0;
             UpdateStatus = isForce
                 ? L("settings.update.status_force_checking", "Force checking update source...")
                 : L("settings.update.status_checking", "Checking update source...");
@@ -2092,6 +2143,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce);
             _lastCheckResult = result.Success ? result : null;
             RefreshLastCheckedFromSettings();
+
+            UpdatePhaseText = L("settings.update.phase_locating_resources", "Locating update resources...");
+            PhaseProgressValue = 10;
 
             if (!result.Success)
             {
@@ -2105,6 +2159,9 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             }
 
             ApplyCheckResultDisplay(result);
+            UpdateTypeText = UpdateWorkflowService.IsDeltaUpdateAvailable(result)
+                ? L("settings.update.type_delta", "Incremental Update")
+                : L("settings.update.type_full", "Full Update");
             if (!result.IsUpdateAvailable && !isForce)
             {
                 return;
@@ -2255,12 +2312,15 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         PreferencesHeader = L("settings.update.preferences_header", "Update Preferences");
         PreferencesDescription = L("settings.update.preferences_description", "Choose your release channel, download source, behavior, and download speed.");
         UpdateChannelLabel = L("settings.update.channel_label", "Update Channel");
-        UpdateSourceLabel = L("settings.update.source_label", "Download Source");
         UpdateModeLabel = L("settings.update.mode_label", "Update Mode");
         DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
         DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
         ForceCheckUpdateLabel = L("settings.update.force_check_label", "Force Check Update");
         ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates, ignoring version comparison.");
+        ForceFullUpdateLabel = L("settings.update.force_full_label", "Force Full Update");
+        ForceFullUpdateDescription = L("settings.update.force_full_desc", "Skip incremental update and force download the full installer. Use this if incremental update fails repeatedly.");
+        NetworkAccelerationLabel = L("settings.update.network_accel_label", "Network Acceleration");
+        NetworkAccelerationDescription = L("settings.update.network_accel_desc", "Use gh-proxy mirror to accelerate GitHub downloads. Only applies when falling back to GitHub for full updates.");
         CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
         DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
         InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
@@ -2272,15 +2332,11 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         UpdateTypeLabel = L("settings.update.type_label", "Update Type");
         StableChannelText = L("settings.update.channel_stable", "Stable");
         PreviewChannelText = L("settings.update.channel_preview", "Preview");
-        PdcSourceText = L("settings.update.source_pdc", "PDC");
-        GitHubSourceText = L("settings.update.source_github", "GitHub");
-        GhProxySourceText = L("settings.update.source_ghproxy", "gh-proxy");
         ManualModeText = L("settings.update.mode_manual", "Manual Update");
         DownloadThenConfirmModeText = L("settings.update.mode_download_then_confirm", "Silent Download");
         SilentOnExitModeText = L("settings.update.mode_silent_on_exit", "Silent Install");
         SelectedUpdateChannelDescription = BuildUpdateChannelDescription(SelectedUpdateChannelValue);
         SelectedUpdateModeDescription = BuildUpdateModeDescription(SelectedUpdateModeValue);
-        SelectedUpdateSourceDescription = BuildUpdateSourceDescription(SelectedUpdateSourceValue);
     }
 
     private void LoadStateFromSettings()
@@ -2288,7 +2344,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         var update = _settingsFacade.Update.Get();
         _isInitializing = true;
         SelectedUpdateChannelValue = UpdateSettingsValues.NormalizeChannel(update.UpdateChannel, update.IncludePrereleaseUpdates);
-        SelectedUpdateSourceValue = UpdateSettingsValues.NormalizeDownloadSource(update.UpdateDownloadSource);
+        UseGhProxyMirror = update.UseGhProxyMirror;
         SelectedUpdateModeValue = UpdateSettingsValues.NormalizeMode(update.UpdateMode);
         DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(update.UpdateDownloadThreads);
         DownloadThreadsText = ((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
@@ -2368,10 +2424,14 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
             IsDownloadProgressVisible = true;
             DownloadProgressValue = 0;
             DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
+            UpdatePhaseText = UpdateWorkflowService.IsDeltaUpdateAvailable(result)
+                ? L("settings.update.phase_downloading_delta", "Downloading incremental update...")
+                : L("settings.update.phase_downloading_full", "Downloading full installer...");
 
             var progress = new Progress<double>(value =>
             {
                 DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
+                PhaseProgressValue = DownloadProgressValue;
                 DownloadProgressText = string.Format(
                     CultureInfo.CurrentCulture,
                     L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
@@ -2466,22 +2526,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         };
     }
 
-    private string BuildUpdateSourceDescription(string? value)
-    {
-        return UpdateSettingsValues.NormalizeDownloadSource(value) switch
-        {
-            UpdateSettingsValues.DownloadSourcePdc => L(
-                "settings.update.source_pdc_desc",
-                "Prefer PDC metadata and distribution endpoints, then automatically fallback to GitHub."),
-            UpdateSettingsValues.DownloadSourceGhProxy => L(
-                "settings.update.source_ghproxy_desc",
-                "Use the gh-proxy mirror when downloading GitHub release assets."),
-            _ => L(
-                "settings.update.source_github_desc",
-                "Download release assets directly from GitHub.")
-        };
-    }
-
     private string FormatTimestamp(long? utcMs)
     {
         if (utcMs is not > 0)
@@ -2509,6 +2553,7 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsRedownloadButtonVisible));
         OnPropertyChanged(nameof(DownloadThreadsValueText));
         RedownloadUpdateCommand.NotifyCanExecuteChanged();
+        ForceFullUpdateCommand.NotifyCanExecuteChanged();
     }
 
     private IReadOnlyList<SelectionOption> CreateUpdateChannelOptions()
@@ -2517,16 +2562,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
         [
             new SelectionOption(UpdateSettingsValues.ChannelStable, StableChannelText),
             new SelectionOption(UpdateSettingsValues.ChannelPreview, PreviewChannelText)
-        ];
-    }
-
-    private IReadOnlyList<SelectionOption> CreateUpdateSourceOptions()
-    {
-        return
-        [
-            new SelectionOption(UpdateSettingsValues.DownloadSourcePdc, PdcSourceText),
-            new SelectionOption(UpdateSettingsValues.DownloadSourceGitHub, GitHubSourceText),
-            new SelectionOption(UpdateSettingsValues.DownloadSourceGhProxy, GhProxySourceText)
         ];
     }
 
@@ -2554,8 +2589,6 @@ public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
     {
         SelectedUpdateChannelOption = UpdateChannelOptions.FirstOrDefault(option =>
             string.Equals(option.Value, SelectedUpdateChannelValue, StringComparison.OrdinalIgnoreCase));
-        SelectedUpdateSourceOption = UpdateSourceOptions.FirstOrDefault(option =>
-            string.Equals(option.Value, SelectedUpdateSourceValue, StringComparison.OrdinalIgnoreCase));
         SelectedUpdateModeOption = UpdateModeOptions.FirstOrDefault(option =>
             string.Equals(option.Value, SelectedUpdateModeValue, StringComparison.OrdinalIgnoreCase));
         SelectedDownloadThreadsOption = DownloadThreadOptions.FirstOrDefault(option =>

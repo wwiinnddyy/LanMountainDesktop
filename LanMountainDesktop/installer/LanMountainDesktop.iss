@@ -36,8 +36,12 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DisableDirPage=no
 UsePreviousAppDir=no
-ShowLanguageDialog=yes
-UsePreviousLanguage=no
+; 语言对话框行为：
+; - 全新安装：显示语言选择对话框
+; - 升级安装：自动沿用之前选择的语言，不弹出对话框
+; - 用户可以在欢迎页面点击语言按钮手动切换
+ShowLanguageDialog=auto
+UsePreviousLanguage=yes
 LanguageDetectionMethod=uilanguage
 DefaultGroupName={cm:AppShortcutName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
@@ -112,6 +116,10 @@ english.DotNetRuntimeOpenFailedMessage=Unable to open the download page automati
 chinesesimplified.DotNetRuntimeOpenFailedMessage=无法自动打开下载页面。
 english.DotNetRuntimeOpenFailedAction=Please open this URL manually:
 chinesesimplified.DotNetRuntimeOpenFailedAction=请手动打开以下链接：
+english.LanguageButtonCaption=Language
+chinesesimplified.LanguageButtonCaption=语言
+english.LanguageButtonHint=Click to change the installation language
+chinesesimplified.LanguageButtonHint=点击更改安装语言
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -158,6 +166,7 @@ var
   ExistingInstallWas64Bit: Boolean;
   ExistingInstallIsPerUser: Boolean;
   ExistingInstallRemoved: Boolean;
+  LanguageButton: TNewButton;
 
 function NormalizePathValue(const Value: String): String;
 begin
@@ -339,6 +348,59 @@ begin
   end;
 
   TryLoadExistingInstallation(HKCU32, False, True);
+end;
+
+{ 语言切换按钮点击处理 }
+{ 注意：Inno Setup 不支持运行时切换语言，所以我们显示一个简单对话框，
+  让用户选择语言，然后重启安装程序以应用新语言 }
+procedure LanguageButtonClick(Sender: TObject);
+var
+  NewLanguage: String;
+  Params: String;
+  ResultCode: Integer;
+begin
+  { 根据当前语言显示对应的提示 }
+  if ActiveLanguage = 'chinesesimplified' then
+  begin
+    { 当前是中文，询问是否切换到英文 }
+    if MsgBox('当前语言：简体中文' + #13#10#13#10 + '是否切换到 English？' + #13#10 + '(安装程序将重新启动以应用新语言)', mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      NewLanguage := 'english';
+    end
+    else
+    begin
+      exit;
+    end;
+  end
+  else
+  begin
+    { 当前是英文，询问是否切换到中文 }
+    if MsgBox('Current language: English' + #13#10#13#10 + 'Switch to 简体中文？' + #13#10 + '(The setup will restart to apply the new language)', mbConfirmation, MB_YESNO) = IDYES then
+    begin
+      NewLanguage := 'chinesesimplified';
+    end
+    else
+    begin
+      exit;
+    end;
+  end;
+  
+  { 构建重启参数，带上新语言设置 }
+  Params := '/LANG="' + NewLanguage + '"';
+  if WizardSilent then
+  begin
+    Params := Params + ' /SILENT';
+  end;
+  if WizardVerySilent then
+  begin
+    Params := Params + ' /VERYSILENT';
+  end;
+  
+  { 重启安装程序并退出当前实例 }
+  if Exec(ExpandConstant('{srcexe}'), Params, '', SW_SHOWNORMAL, ewNoWait, ResultCode) then
+  begin
+    WizardForm.Close;
+  end;
 end;
 
 function SelectedUpgradeChoice(): Integer;
@@ -588,6 +650,16 @@ var
   DetailsText: String;
 begin
   DetectExistingInstallation;
+
+  { 在欢迎页面添加语言切换按钮 }
+  LanguageButton := TNewButton.Create(WizardForm);
+  LanguageButton.Parent := WizardForm.WelcomePage;
+  LanguageButton.Caption := CustomMessage('LanguageButtonCaption');
+  LanguageButton.Hint := CustomMessage('LanguageButtonHint');
+  LanguageButton.ShowHint := True;
+  LanguageButton.Left := WizardForm.WelcomePage.ClientWidth - LanguageButton.Width - 20;
+  LanguageButton.Top := 12;
+  LanguageButton.OnClick := @LanguageButtonClick;
 
   if not ExistingInstallFound then
   begin

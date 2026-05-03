@@ -171,7 +171,9 @@ public sealed class UpdateWorkflowService
         }
 
         var state = _settingsFacade.Update.Get();
-        var downloadSource = state.UpdateDownloadSource;
+        var downloadSource = state.UseGhProxyMirror
+            ? UpdateSettingsValues.DownloadSourceGhProxy
+            : UpdateSettingsValues.DownloadSourceGitHub;
         var downloadThreads = state.UpdateDownloadThreads;
 
         var requiredAssets = new List<(GitHubReleaseAsset Asset, string DestinationFileName)>
@@ -312,7 +314,9 @@ public sealed class UpdateWorkflowService
                     payload,
                     incomingDir,
                     objectsDir,
-                    state.UpdateDownloadSource,
+                    state.UseGhProxyMirror
+                        ? UpdateSettingsValues.DownloadSourceGhProxy
+                        : UpdateSettingsValues.DownloadSourceGitHub,
                     downloadThreads,
                     progress,
                     cancellationToken);
@@ -502,7 +506,9 @@ public sealed class UpdateWorkflowService
         var result = await _settingsFacade.Update.DownloadAssetAsync(
             checkResult.PreferredAsset,
             destinationPath,
-            state.UpdateDownloadSource,
+            state.UseGhProxyMirror
+                ? UpdateSettingsValues.DownloadSourceGhProxy
+                : UpdateSettingsValues.DownloadSourceGitHub,
             state.UpdateDownloadThreads,
             progress,
             cancellationToken);

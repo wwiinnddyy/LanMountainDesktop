@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using LanMountainDesktop.Launcher.Models;
+using ContractsUpdate = LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Launcher.Services;
 
@@ -20,14 +21,16 @@ internal sealed class UpdateEngineService
     private const string PublicKeyFileName = "public-key.pem";
 
     private readonly DeploymentLocator _deploymentLocator;
+    private readonly IUpdateProgressReporter _progressReporter;
     private readonly string _appRoot;
     private readonly string _launcherRoot;
     private readonly string _incomingRoot;
     private readonly string _snapshotsRoot;
 
-    public UpdateEngineService(DeploymentLocator deploymentLocator)
+    public UpdateEngineService(DeploymentLocator deploymentLocator, IUpdateProgressReporter? progressReporter = null)
     {
         _deploymentLocator = deploymentLocator;
+        _progressReporter = progressReporter ?? new NullUpdateProgressReporter();
         _appRoot = deploymentLocator.GetAppRoot();
         var resolver = new DataLocationResolver(_appRoot);
         _launcherRoot = resolver.ResolveLauncherDataPath();
@@ -149,9 +152,11 @@ internal sealed class UpdateEngineService
             };
         }
 
+        _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifySignature, "Verifying signature...", 0, null, 0, 0));
         var verifyResult = VerifySignature(fileMapPath, signaturePath, SignatureFileName);
         if (!verifyResult.Success)
         {
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, verifyResult.Message, false));
             return Failed("update.apply", "signature_failed", verifyResult.Message);
         }
 
@@ -159,6 +164,7 @@ internal sealed class UpdateEngineService
         var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.SignedFileMap);
         if (fileMap is null || fileMap.Files.Count == 0)
         {
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, "No update file entries were found.", false));
             return Failed("update.apply", "invalid_manifest", "No update file entries were found.");
         }
 
@@ -206,14 +212,21 @@ internal sealed class UpdateEngineService
             Directory.CreateDirectory(extractRoot);
             ZipFile.ExtractToDirectory(archivePath, extractRoot, overwriteFiles: true);
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileMap.Files.Count));
             Directory.CreateDirectory(targetDeployment);
             File.WriteAllText(partialMarker, string.Empty);
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30, null, 0, fileMap.Files.Count));
+            var fileIndex = 0;
             foreach (var file in fileMap.Files)
             {
                 ApplyFileEntry(file, currentDeployment, targetDeployment, extractRoot);
+                fileIndex++;
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30 + (fileIndex * 30 / fileMap.Files.Count), file.Path, fileIndex, fileMap.Files.Count));
             }
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65, null, 0, fileMap.Files.Count));
+            var verifyIndex = 0;
             foreach (var file in fileMap.Files)
             {
                 if (!NeedsVerification(file))
@@ -227,15 +240,21 @@ internal sealed class UpdateEngineService
                 {
                     throw new InvalidOperationException($"File hash mismatch for '{file.Path}'.");
                 }
+
+                verifyIndex++;
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65 + (verifyIndex * 15 / fileMap.Files.Count), file.Path, verifyIndex, fileMap.Files.Count));
             }
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileMap.Files.Count, fileMap.Files.Count));
             ActivateDeployment(currentDeployment, targetDeployment);
 
             snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
-            // 婵炴挸鎳愰幃濠囧籍瑜忔晶妤呭嫉椤掑﹦绀夊ù锝呮缁绘岸鎮惧▎鎰粯閺?濞戞搩浜炴晶妤呭嫉椤戝じ绨伴柡鈧娑樼槷闁搞儳鍋炵划?
             CleanupDestroyedDeployments();
+
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileMap.Files.Count, fileMap.Files.Count));
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, currentVersion, targetVersion, null, false));
 
             return new LauncherResult
             {
@@ -249,9 +268,11 @@ internal sealed class UpdateEngineService
         }
         catch (Exception ex)
         {
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
             TryRollbackOnFailure(snapshot);
             snapshot.Status = "rolled_back";
             SaveSnapshot(snapshotPath, snapshot);
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, currentVersion, targetVersion, ex.Message, true));
             return new LauncherResult
             {
                 Success = false,
@@ -283,9 +304,11 @@ internal sealed class UpdateEngineService
         string pdcSignaturePath,
         string pdcUpdatePath)
     {
+        _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifySignature, "Verifying PLONDS signature...", 0, null, 0, 0));
         var verifyResult = VerifySignature(pdcFileMapPath, pdcSignaturePath, PlondsSignatureFileName);
         if (!verifyResult.Success)
         {
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, verifyResult.Message, false));
             return Failed("update.apply", "signature_failed", verifyResult.Message);
         }
 
@@ -299,6 +322,7 @@ internal sealed class UpdateEngineService
 
         if (fileEntries.Count == 0)
         {
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, "No PLONDS file entries were found.", false));
             return Failed("update.apply", "invalid_manifest", "No PLONDS file entries were found.");
         }
 
@@ -347,17 +371,26 @@ internal sealed class UpdateEngineService
                 Directory.Delete(targetDeployment, true);
             }
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
             Directory.CreateDirectory(targetDeployment);
             File.WriteAllText(partialMarker, string.Empty);
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30, null, 0, fileEntries.Count));
+            var fileIndex = 0;
             foreach (var entry in fileEntries)
             {
                 ApplyPlondsFileEntry(entry, currentDeployment, targetDeployment);
+                fileIndex++;
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30 + (fileIndex * 30 / fileEntries.Count), entry.Path, fileIndex, fileEntries.Count));
             }
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65, null, 0, fileEntries.Count));
+            var verifyIndex = 0;
             foreach (var entry in fileEntries)
             {
                 VerifyPlondsFileEntry(entry, targetDeployment);
+                verifyIndex++;
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65 + (verifyIndex * 15 / fileEntries.Count), entry.Path, verifyIndex, fileEntries.Count));
             }
 
             if (isInitialDeployment)
@@ -370,6 +403,7 @@ internal sealed class UpdateEngineService
             }
             else
             {
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileEntries.Count, fileEntries.Count));
                 ActivateDeployment(currentDeployment!, targetDeployment);
             }
 
@@ -377,6 +411,9 @@ internal sealed class UpdateEngineService
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
             CleanupDestroyedDeployments();
+
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileEntries.Count, fileEntries.Count));
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, sourceVersion, targetVersion, null, false));
 
             return new LauncherResult
             {
@@ -405,6 +442,7 @@ internal sealed class UpdateEngineService
 
                 snapshot.Status = "failed";
                 SaveSnapshot(snapshotPath, snapshot);
+                _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, "0.0.0", targetVersion, ex.Message, false));
                 return new LauncherResult
                 {
                     Success = false,
@@ -417,9 +455,11 @@ internal sealed class UpdateEngineService
                 };
             }
 
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
             TryRollbackOnFailure(snapshot);
             snapshot.Status = "rolled_back";
             SaveSnapshot(snapshotPath, snapshot);
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, sourceVersion, targetVersion, ex.Message, true));
             return new LauncherResult
             {
                 Success = false,

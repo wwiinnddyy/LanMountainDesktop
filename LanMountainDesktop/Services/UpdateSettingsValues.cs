@@ -12,11 +12,12 @@ public static class UpdateSettingsValues
     public const string ModeSilentOnExit = "silent_on_exit";
 
     // NOTE: keep constant name for compatibility with existing call sites.
-    public const string DownloadSourcePlonds = "stcn";
+    public const string DownloadSourcePlonds = "plonds-api";
     public const string DownloadSourcePdc = DownloadSourcePlonds;
     public const string DownloadSourceStcn = DownloadSourcePlonds;
     public const string LegacyDownloadSourcePlonds = "pdc";
     public const string LegacyDownloadSourcePdc = LegacyDownloadSourcePlonds;
+    public const string LegacyDownloadSourceStcn = "stcn";
     public const string DownloadSourceGitHub = "github";
     public const string DownloadSourceGhProxy = "gh-proxy";
 
@@ -59,7 +60,12 @@ public static class UpdateSettingsValues
     {
         if (string.Equals(value, LegacyDownloadSourcePlonds, StringComparison.OrdinalIgnoreCase))
         {
-            return DownloadSourceStcn;
+            return DownloadSourcePlonds;
+        }
+
+        if (string.Equals(value, LegacyDownloadSourceStcn, StringComparison.OrdinalIgnoreCase))
+        {
+            return DownloadSourcePlonds;
         }
 
         if (string.Equals(value, DownloadSourcePlonds, StringComparison.OrdinalIgnoreCase))
@@ -77,8 +83,7 @@ public static class UpdateSettingsValues
             return DownloadSourceGitHub;
         }
 
-        // Default to STCN(PLONDS/S3). Runtime will fallback to GitHub if STCN is unavailable.
-        return DownloadSourceStcn;
+        return DownloadSourcePlonds;
     }
 
     public static int NormalizeDownloadThreads(int value)

@@ -33,6 +33,13 @@
             <Setter Property="MaxWidth" Value="200" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
+
+        <Style Selector="TextBlock.update-phase-text">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -65,7 +72,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="Auto,*"
-                          RowDefinitions="Auto,Auto,Auto"
+                          RowDefinitions="Auto,Auto,Auto,Auto"
                           ColumnSpacing="20"
                           RowSpacing="16">
                         <StackPanel Grid.Row="0"
@@ -116,9 +123,19 @@
                             <TextBlock Classes="update-kv-value"
                                        Text="{Binding PendingUpdateTypeText}" />
                         </StackPanel>
+
+                        <StackPanel Grid.Row="2"
+                                    Grid.Column="1"
+                                    Spacing="4"
+                                    IsVisible="{Binding IsUpdateTypeVisible}">
+                            <TextBlock Classes="update-kv-label"
+                                       Text="{Binding UpdateTypeLabel}" />
+                            <TextBlock Classes="update-kv-value"
+                                       Text="{Binding UpdateTypeText}" />
+                        </StackPanel>
                     </Grid>
 
-                    <StackPanel Spacing="12"
+                    <StackPanel Spacing="8"
                                 HorizontalAlignment="Left">
                         <TextBlock Classes="settings-item-description"
                                    Text="{Binding UpdateStatus}"
@@ -126,12 +143,19 @@
                                    HorizontalAlignment="Left"
                                    MaxWidth="500" />
 
+                        <TextBlock Classes="update-phase-text"
+                                   IsVisible="{Binding IsDownloadProgressVisible}"
+                                   Text="{Binding UpdatePhaseText}"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Left" />
+
                         <ProgressBar Minimum="0"
                                      Maximum="100"
-                                     Value="{Binding DownloadProgressValue}"
+                                     Value="{Binding PhaseProgressValue}"
                                      IsVisible="{Binding IsDownloadProgressVisible}"
                                      HorizontalAlignment="Stretch"
-                                     Margin="0,4,0,4" />
+                                     Margin="0,4,0,4"
+                                     ShowProgressText="True" />
 
                         <TextBlock Classes="settings-item-description"
                                    IsVisible="{Binding IsDownloadProgressVisible}"
@@ -144,15 +168,27 @@
                     <StackPanel Orientation="Horizontal"
                                 Spacing="10">
                         <Button Command="{Binding DownloadLatestReleaseCommand}"
-                                Content="{Binding DownloadButtonText}"
-                                IsVisible="{Binding IsDownloadButtonVisible}" />
+                                IsVisible="{Binding IsDownloadButtonVisible}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <fi:SymbolIcon Symbol="ArrowDownload" FontSize="14" />
+                                <TextBlock Text="{Binding DownloadButtonText}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding RedownloadUpdateCommand}"
-                                Content="{Binding RedownloadButtonText}"
-                                IsVisible="{Binding IsRedownloadButtonVisible}" />
+                                IsVisible="{Binding IsRedownloadButtonVisible}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <fi:SymbolIcon Symbol="ArrowUndo" FontSize="14" />
+                                <TextBlock Text="{Binding RedownloadButtonText}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="settings-accent-button"
                                 Command="{Binding InstallPendingUpdateCommand}"
-                                Content="{Binding InstallNowButtonText}"
-                                IsVisible="{Binding IsInstallButtonVisible}" />
+                                IsVisible="{Binding IsInstallButtonVisible}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <fi:SymbolIcon Symbol="Play" FontSize="14" />
+                                <TextBlock Text="{Binding InstallNowButtonText}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -188,25 +224,14 @@
                         <ui:FAFontIconSource Glyph="&#xF0FD4;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                     </ui:FASettingsExpanderItem.IconSource>
                 </ui:FASettingsExpanderItem>
-            </ui:FASettingsExpander>
-
-            <ui:FASettingsExpander Classes="settings-expander-card"
-                                 Header="{Binding UpdateSourceLabel}"
-                                 Description="{Binding SelectedUpdateSourceDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF182C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ComboBox Width="220"
-                              ItemsSource="{Binding UpdateSourceOptions}"
-                              SelectedItem="{Binding SelectedUpdateSourceOption}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem Content="{Binding ForceFullUpdateLabel}"
+                                         Description="{Binding ForceFullUpdateDescription}"
+                                         IsClickEnabled="True"
+                                         Command="{Binding ForceFullUpdateCommand}">
+                    <ui:FASettingsExpanderItem.IconSource>
+                        <ui:FAFontIconSource Glyph="&#xF0E9F;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    </ui:FASettingsExpanderItem.IconSource>
+                </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>
 
             <ui:FASettingsExpander Classes="settings-expander-card"
@@ -225,6 +250,17 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding NetworkAccelerationLabel}"
+                                 Description="{Binding NetworkAccelerationDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF01BB;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding UseGhProxyMirror}" />
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
