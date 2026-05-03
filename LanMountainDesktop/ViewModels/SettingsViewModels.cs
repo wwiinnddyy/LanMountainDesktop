@@ -1590,6 +1590,18 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _renderBackendLabel = string.Empty;
 
+    [ObservableProperty]
+    private string _projectResourcesHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _linkGitHubText = string.Empty;
+
+    [ObservableProperty]
+    private string _linkIssuesText = string.Empty;
+
+    [ObservableProperty]
+    private string _copyrightLine = string.Empty;
+
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.about.title", "About");
@@ -1598,6 +1610,14 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
         VersionLabel = L("settings.about.version_label", "Version");
         CodenameLabel = L("settings.about.codename_label", "Codename");
         RenderBackendLabel = L("settings.about.render_backend_label", "Render Backend");
+        ProjectResourcesHeader = L("settings.about.project_resources_header", "Project resources");
+        LinkGitHubText = L("settings.about.link_github", "GitHub Repository");
+        LinkIssuesText = L("settings.about.link_issues", "Issue Tracker");
+        var year = Math.Max(2025, DateTime.UtcNow.Year);
+        CopyrightLine = string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            L("settings.about.copyright_format", "Copyright (c) 2024-{0} Lincube"),
+            year);
     }
 
     private string L(string key, string fallback)
@@ -3352,16 +3372,21 @@ public sealed class PluginGeneratedSettingsPageViewModel
 public sealed partial class DevSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly LocalizationService _localizationService = new();
+    private readonly string _languageCode;
     private bool _isInitializing;
 
     public DevSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
+        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
+
+        RefreshLocalizedText();
+
         _isInitializing = true;
         LoadSettings();
         _isInitializing = false;
 
-        // 监听设置变更，防止被意外重置
         _settingsFacade.Settings.Changed += OnSettingsChanged;
     }
 
@@ -3376,6 +3401,93 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _enableFusedDesktop;
+
+    [ObservableProperty]
+    private string _infoBarTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _infoBarMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _devModeHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _devModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _threeFingerHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _threeFingerDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _fusedHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _fusedDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathPlaceholder = string.Empty;
+
+    [ObservableProperty]
+    private string _startupArgsHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _startupArgsDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _cliLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _envLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _otherArgsLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _cliExample = string.Empty;
+
+    [ObservableProperty]
+    private string _envExample = string.Empty;
+
+    [ObservableProperty]
+    private string _otherDevModeLine = string.Empty;
+
+    [ObservableProperty]
+    private string _otherHotReloadLine = string.Empty;
+
+    private void RefreshLocalizedText()
+    {
+        InfoBarTitle = L("settings.dev.infobar.title", "Preview and developer features");
+        InfoBarMessage = L("settings.dev.infobar.message", "These options are intended for debugging and local plugin development.");
+        DevModeHeader = L("settings.dev.mode_header", "Developer mode");
+        DevModeDescription = L("settings.dev.mode_description", "Enable developer-focused startup helpers and diagnostics.");
+        ThreeFingerHeader = L("settings.dev.three_finger_header", "Three-finger desktop swipe");
+        ThreeFingerDescription = L("settings.dev.three_finger_description", "Enable desktop page switching gestures when supported.");
+        FusedHeader = L("settings.dev.fused_header", "Fused desktop experience");
+        FusedDescription = L("settings.dev.fused_description", "Enable the fused desktop shell and experimental entry points.");
+        PluginPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
+        PluginPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
+        PluginPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
+        StartupArgsHeader = L("settings.dev.startup_args_header", "Developer startup arguments");
+        StartupArgsDescription = L("settings.dev.startup_args_description", "Command-line arguments and environment variables for development.");
+        CliLabel = L("settings.dev.cli_label", "Command-line arguments:");
+        EnvLabel = L("settings.dev.env_label", "Environment variables:");
+        OtherArgsLabel = L("settings.dev.other_args_label", "Other arguments:");
+        CliExample = L("settings.dev.cli_example", "--dev-plugin <path>   or -dp <path>");
+        EnvExample = L("settings.dev.env_example", "LMD_DEV_PLUGIN=<path>");
+        OtherDevModeLine = L("settings.dev.other_dev_mode", "--dev-mode / -dev     Enable developer mode startup helpers.");
+        OtherHotReloadLine = L("settings.dev.other_hot_reload", "--hot-reload / -hr    Enable hot reload for development builds.");
+    }
+
+    private string L(string key, string fallback)
+        => _localizationService.GetString(_languageCode, key, fallback);
 
     partial void OnIsDevModeEnabledChanged(bool value)
     {
@@ -3423,7 +3535,6 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
             return;
         }
 
-        // 如果是其他设置变更，重新加载我们的设置
         _isInitializing = true;
         try
         {

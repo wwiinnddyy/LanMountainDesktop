@@ -10,16 +10,16 @@
             <ui:FAInfoBar IsOpen="True"
                         IsClosable="False"
                         Severity="Warning"
-                        Title="Preview and developer features"
-                        Message="These options are intended for debugging, diagnostics, and local plugin development."
+                        Title="{Binding InfoBarTitle}"
+                        Message="{Binding InfoBarMessage}"
                         Margin="0,0,0,16">
                 <ui:FAInfoBar.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FAInfoBar.IconSource>
             </ui:FAInfoBar>
 
-            <ui:FASettingsExpander Header="Developer mode"
-                                 Description="Enable developer-focused startup helpers and diagnostics.">
+            <ui:FASettingsExpander Header="{Binding DevModeHeader}"
+                                 Description="{Binding DevModeDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF01AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
@@ -28,8 +28,8 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="Three-finger desktop swipe"
-                                 Description="Enable desktop page switching gestures when the current platform supports them.">
+            <ui:FASettingsExpander Header="{Binding ThreeFingerHeader}"
+                                 Description="{Binding ThreeFingerDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF02FC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
@@ -38,8 +38,8 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="Fused desktop experience"
-                                 Description="Enable the fused desktop shell and its related experimental entry points.">
+            <ui:FASettingsExpander Header="{Binding FusedHeader}"
+                                 Description="{Binding FusedDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF01A8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
@@ -50,14 +50,14 @@
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="Development plugin path"
-                                 Description="Load a local plugin output directory for iterative debugging without packaging.">
+            <ui:FASettingsExpander Header="{Binding PluginPathHeader}"
+                                 Description="{Binding PluginPathDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF023C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <TextBox Text="{Binding DevPluginPath}"
-                             PlaceholderText="C:\path\to\plugin\bin\Debug\net10.0"
+                             Watermark="{Binding PluginPathPlaceholder}"
                              Width="360"
                              MinWidth="200" />
                 </ui:FASettingsExpanderItem>
@@ -65,26 +65,26 @@
 
             <Separator Classes="settings-separator" />
 
-            <ui:FASettingsExpander Header="Developer startup arguments"
-                                 Description="Use these launch arguments or environment variables to start the app in development scenarios.">
+            <ui:FASettingsExpander Header="{Binding StartupArgsHeader}"
+                                 Description="{Binding StartupArgsDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF1930;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>
                 <ui:FASettingsExpanderItem>
                     <StackPanel Margin="0,8,0,0"
                                 Spacing="8">
-                        <TextBlock Text="Command-line arguments:"
+                        <TextBlock Text="{Binding CliLabel}"
                                    FontWeight="SemiBold" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 CornerRadius="8"
                                 Padding="12,8">
                             <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                        FontSize="12"
-                                       Text="--dev-plugin &lt;path&gt;   or -dp &lt;path&gt;"
+                                       Text="{Binding CliExample}"
                                        TextWrapping="Wrap" />
                         </Border>
 
-                        <TextBlock Text="Environment variables:"
+                        <TextBlock Text="{Binding EnvLabel}"
                                    FontWeight="SemiBold"
                                    Margin="0,8,0,0" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -92,11 +92,11 @@
                                 Padding="12,8">
                             <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                        FontSize="12"
-                                       Text="LMD_DEV_PLUGIN=&lt;path&gt;"
+                                       Text="{Binding EnvExample}"
                                        TextWrapping="Wrap" />
                         </Border>
 
-                        <TextBlock Text="Other arguments:"
+                        <TextBlock Text="{Binding OtherArgsLabel}"
                                    FontWeight="SemiBold"
                                    Margin="0,8,0,0" />
                         <Border Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -105,10 +105,10 @@
                             <StackPanel Spacing="4">
                                 <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                            FontSize="12"
-                                           Text="--dev-mode / -dev     Enable developer mode startup helpers." />
+                                           Text="{Binding OtherDevModeLine}" />
                                 <TextBlock FontFamily="Cascadia Code, Consolas, monospace"
                                            FontSize="12"
-                                           Text="--hot-reload / -hr    Enable hot reload for development builds." />
+                                           Text="{Binding OtherHotReloadLine}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

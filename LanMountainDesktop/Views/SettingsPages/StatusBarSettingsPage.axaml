@@ -110,7 +110,7 @@
                                  Height="100"
                                  IsEnabled="{Binding ShowTextCapsule}"
                                  Text="{Binding TextCapsuleContent}"
-                                 PlaceholderText="Enter Markdown text..." />
+                                 Watermark="{Binding TextCapsulePlaceholder}" />
                     </Grid>
                 </ui:FASettingsExpanderItem>
                 <ui:FASettingsExpanderItem>

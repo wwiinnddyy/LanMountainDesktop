@@ -81,7 +81,7 @@
                 </ui:FAInfoBar.IconSource>
             </ui:FAInfoBar>
 
-            <ui:FASettingsExpander Header="Project resources"
+            <ui:FASettingsExpander Header="{Binding ProjectResourcesHeader}"
                                    IsExpanded="True">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF02AC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -96,16 +96,14 @@
                                 </Style>
                             </WrapPanel.Styles>
                             <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop">
-                                <TextBlock Text="GitHub Repository" />
+                                <TextBlock Text="{Binding LinkGitHubText}" />
                             </HyperlinkButton>
                             <HyperlinkButton NavigateUri="https://github.com/wwiinnddyy/LanMountainDesktop/issues">
-                                <TextBlock Text="Issue Tracker" />
+                                <TextBlock Text="{Binding LinkIssuesText}" />
                             </HyperlinkButton>
                         </WrapPanel>
                     </ui:FASettingsExpanderItem.Footer>
-                    <TextBlock>
-                        <Run Text="Copyright (c) 2024-" /><Run Text="2025" /> Lincube
-                    </TextBlock>
+                    <TextBlock Text="{Binding CopyrightLine}" />
                 </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>
         </StackPanel>

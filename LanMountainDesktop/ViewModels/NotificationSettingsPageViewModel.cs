@@ -13,23 +13,26 @@ namespace LanMountainDesktop.ViewModels;
 public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly LocalizationService _localizationService = new();
+    private readonly string _languageCode;
     private bool _isInitializing;
 
     public NotificationSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
+        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
 
         Positions = CreatePositionOptions();
         Durations = CreateDurationOptions();
         TestPositions = CreatePositionOptions();
         TestSeverities = CreateSeverityOptions();
+        RefreshLocalizedText();
 
         LoadSettings();
 
-        // Initialize test selections
-        SelectedTestPosition = TestPositions[1]; // TopRight
-        SelectedTestSeverity = TestSeverities[0]; // Info
-        TestDurationSeconds = 4; // Default 4 seconds
+        SelectedTestPosition = TestPositions[1];
+        SelectedTestSeverity = TestSeverities[0];
+        TestDurationSeconds = 4;
     }
 
     private void LoadSettings()
@@ -44,11 +47,11 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         MaxNotificationsPerPosition = snapshot.NotificationMaxPerPosition;
 
         SelectedPosition = Positions.FirstOrDefault(p =>
-            string.Equals(p.Value, snapshot.NotificationDefaultPosition, StringComparison.OrdinalIgnoreCase))
+                string.Equals(p.Value, snapshot.NotificationDefaultPosition, StringComparison.OrdinalIgnoreCase))
             ?? Positions[1];
 
         SelectedDuration = Durations.FirstOrDefault(d =>
-            int.TryParse(d.Value, out var seconds) && seconds == snapshot.NotificationDurationSeconds)
+                int.TryParse(d.Value, out var seconds) && seconds == snapshot.NotificationDurationSeconds)
             ?? Durations[1];
 
         _isInitializing = false;
@@ -81,71 +84,117 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
             ]);
     }
 
-    private static ObservableCollection<SelectionOption> CreatePositionOptions()
+    private ObservableCollection<SelectionOption> CreatePositionOptions()
     {
         return
         [
-            new SelectionOption("TopLeft", "左上角"),
-            new SelectionOption("TopRight", "右上角"),
-            new SelectionOption("TopCenter", "正上方"),
-            new SelectionOption("BottomLeft", "左下角"),
-            new SelectionOption("BottomRight", "右下角"),
-            new SelectionOption("BottomCenter", "正下方"),
-            new SelectionOption("Center", "正中央")
+            new SelectionOption("TopLeft", L("settings.notifications.position.top_left", "Top left")),
+            new SelectionOption("TopRight", L("settings.notifications.position.top_right", "Top right")),
+            new SelectionOption("TopCenter", L("settings.notifications.position.top_center", "Top center")),
+            new SelectionOption("BottomLeft", L("settings.notifications.position.bottom_left", "Bottom left")),
+            new SelectionOption("BottomRight", L("settings.notifications.position.bottom_right", "Bottom right")),
+            new SelectionOption("BottomCenter", L("settings.notifications.position.bottom_center", "Bottom center")),
+            new SelectionOption("Center", L("settings.notifications.position.center", "Center"))
         ];
     }
 
-    private static ObservableCollection<SelectionOption> CreateDurationOptions()
+    private ObservableCollection<SelectionOption> CreateDurationOptions()
     {
         return
         [
-            new SelectionOption("2", "2 秒"),
-            new SelectionOption("4", "4 秒"),
-            new SelectionOption("6", "6 秒"),
-            new SelectionOption("8", "8 秒"),
-            new SelectionOption("10", "10 秒")
+            new SelectionOption("2", L("settings.notifications.duration.2s", "2 seconds")),
+            new SelectionOption("4", L("settings.notifications.duration.4s", "4 seconds")),
+            new SelectionOption("6", L("settings.notifications.duration.6s", "6 seconds")),
+            new SelectionOption("8", L("settings.notifications.duration.8s", "8 seconds")),
+            new SelectionOption("10", L("settings.notifications.duration.10s", "10 seconds"))
         ];
     }
 
-    private static ObservableCollection<SelectionOption> CreateSeverityOptions()
+    private ObservableCollection<SelectionOption> CreateSeverityOptions()
     {
         return
         [
-            new SelectionOption("Info", "信息"),
-            new SelectionOption("Success", "成功"),
-            new SelectionOption("Warning", "警告"),
-            new SelectionOption("Error", "错误")
+            new SelectionOption("Info", L("settings.notifications.severity.info", "Info")),
+            new SelectionOption("Success", L("settings.notifications.severity.success", "Success")),
+            new SelectionOption("Warning", L("settings.notifications.severity.warning", "Warning")),
+            new SelectionOption("Error", L("settings.notifications.severity.error", "Error"))
         ];
     }
 
-    [ObservableProperty] private string _notificationHeader = "通知";
-    [ObservableProperty] private string _enableNotificationHeader = "启用通知";
-    [ObservableProperty] private string _enableNotificationDescription = "开启或关闭全局通知功能";
-    [ObservableProperty] private string _defaultPositionHeader = "默认位置";
-    [ObservableProperty] private string _defaultPositionDescription = "通知弹出的默认位置";
-    [ObservableProperty] private string _durationHeader = "显示时长";
-    [ObservableProperty] private string _durationDescription = "通知自动关闭的时间";
-    [ObservableProperty] private string _behaviorHeader = "行为";
-    [ObservableProperty] private string _hoverPauseHeader = "悬停暂停";
-    [ObservableProperty] private string _hoverPauseDescription = "鼠标悬停时暂停自动关闭计时";
-    [ObservableProperty] private string _clickCloseHeader = "点击关闭";
-    [ObservableProperty] private string _clickCloseDescription = "点击通知后关闭";
-    [ObservableProperty] private string _maxNotificationsHeader = "最大数量";
-    [ObservableProperty] private string _maxNotificationsDescription = "每个位置最多显示的通知数量";
-    [ObservableProperty] private string _testHeader = "测试";
-    [ObservableProperty] private string _testNotificationHeader = "测试通知";
-    [ObservableProperty] private string _testNotificationDescription = "选择位置和类型，发送测试通知";
-    [ObservableProperty] private string _sendTestButtonText = "发送";
+    private void RefreshLocalizedText()
+    {
+        NotificationHeader = L("settings.notifications.section_header", "Notifications");
+        EnableNotificationHeader = L("settings.notifications.enable_header", "Enable notifications");
+        EnableNotificationDescription = L("settings.notifications.enable_desc", "Turn all notification toasts on or off.");
+        BehaviorHeader = L("settings.notifications.behavior_header", "Behavior");
+        HoverPauseHeader = L("settings.notifications.hover_pause_header", "Pause on hover");
+        HoverPauseDescription = L("settings.notifications.hover_pause_desc", "Pause auto-dismiss while hovering.");
+        ClickCloseHeader = L("settings.notifications.click_close_header", "Close on click");
+        ClickCloseDescription = L("settings.notifications.click_close_desc", "Dismiss when clicked.");
+        MaxNotificationsHeader = L("settings.notifications.max_header", "Max per position");
+        MaxNotificationsDescription = L("settings.notifications.max_desc", "Maximum notifications per corner or edge.");
+        TestHeader = L("settings.notifications.test_header", "Test");
+        TestNotificationHeader = L("settings.notifications.test_notification_header", "Test notification");
+        TestNotificationDescription = L("settings.notifications.test_notification_desc", "Send a sample notification.");
+        DefaultPositionHeader = L("settings.notifications.default_position_header", "Default position");
+        DefaultPositionDescription = L("settings.notifications.default_position_desc", "Where notifications appear first.");
+        DurationHeader = L("settings.notifications.duration_header", "Visible duration");
+        DurationDescription = L("settings.notifications.duration_desc", "How long notifications stay on screen.");
+    }
+
+    private string L(string key, string fallback)
+        => _localizationService.GetString(_languageCode, key, fallback);
+
+    [ObservableProperty] private string _notificationHeader = string.Empty;
+
+    [ObservableProperty] private string _enableNotificationHeader = string.Empty;
+
+    [ObservableProperty] private string _enableNotificationDescription = string.Empty;
+
+    [ObservableProperty] private string _defaultPositionHeader = string.Empty;
+
+    [ObservableProperty] private string _defaultPositionDescription = string.Empty;
+
+    [ObservableProperty] private string _durationHeader = string.Empty;
+
+    [ObservableProperty] private string _durationDescription = string.Empty;
+
+    [ObservableProperty] private string _behaviorHeader = string.Empty;
+
+    [ObservableProperty] private string _hoverPauseHeader = string.Empty;
+
+    [ObservableProperty] private string _hoverPauseDescription = string.Empty;
+
+    [ObservableProperty] private string _clickCloseHeader = string.Empty;
+
+    [ObservableProperty] private string _clickCloseDescription = string.Empty;
+
+    [ObservableProperty] private string _maxNotificationsHeader = string.Empty;
+
+    [ObservableProperty] private string _maxNotificationsDescription = string.Empty;
+
+    [ObservableProperty] private string _testHeader = string.Empty;
+
+    [ObservableProperty] private string _testNotificationHeader = string.Empty;
+
+    [ObservableProperty] private string _testNotificationDescription = string.Empty;
 
     [ObservableProperty] private bool _isNotificationEnabled = true;
+
     [ObservableProperty] private bool _isHoverPauseEnabled = true;
+
     [ObservableProperty] private bool _isClickCloseEnabled = true;
+
     [ObservableProperty] private int _maxNotificationsPerPosition = 5;
 
     [ObservableProperty] private SelectionOption? _selectedPosition;
+
     [ObservableProperty] private SelectionOption? _selectedDuration;
+
     [ObservableProperty] private SelectionOption? _selectedTestPosition;
+
     [ObservableProperty] private SelectionOption? _selectedTestSeverity;
+
     [ObservableProperty] private int _testDurationSeconds = 4;
 
     public ObservableCollection<SelectionOption> Positions { get; }
@@ -154,10 +203,15 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
     public ObservableCollection<SelectionOption> TestSeverities { get; }
 
     partial void OnIsNotificationEnabledChanged(bool value) => SaveSettings();
+
     partial void OnIsHoverPauseEnabledChanged(bool value) => SaveSettings();
+
     partial void OnIsClickCloseEnabledChanged(bool value) => SaveSettings();
+
     partial void OnMaxNotificationsPerPositionChanged(int value) => SaveSettings();
+
     partial void OnSelectedPositionChanged(SelectionOption? value) => SaveSettings();
+
     partial void OnSelectedDurationChanged(SelectionOption? value) => SaveSettings();
 
     [RelayCommand]
@@ -169,24 +223,32 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         var position = Enum.Parse<NotificationPosition>(SelectedTestPosition.Value);
         var severity = SelectedTestSeverity.Value;
 
-        var (title, message) = severity! switch
+        var (title, message) = severity switch
         {
-            "Info" => ("测试通知", "这是一条信息类型的通知"),
-            "Success" => ("操作成功", "任务已完成"),
-            "Warning" => ("警告提示", "请注意检查"),
-            "Error" => ("错误报告", "操作失败，请重试"),
-            _ => ("测试通知", "这是一条测试通知")
+            "Info" => (
+                L("settings.notifications.test.title_info", "Test notification"),
+                L("settings.notifications.test.message_info", "This is an informational test notification.")),
+            "Success" => (
+                L("settings.notifications.test.title_success", "Succeeded"),
+                L("settings.notifications.test.message_success", "The task completed successfully.")),
+            "Warning" => (
+                L("settings.notifications.test.title_warning", "Warning"),
+                L("settings.notifications.test.message_warning", "Please review this notice.")),
+            "Error" => (
+                L("settings.notifications.test.title_error", "Error"),
+                L("settings.notifications.test.message_error", "Something went wrong. Please try again.")),
+            _ => (
+                L("settings.notifications.test.title_default", "Test notification"),
+                L("settings.notifications.test.message_default", "This is a test notification."))
         };
 
-        // Create notification content with specified duration
         var content = new NotificationContent(
             Title: title,
             Message: message,
-            Severity: Enum.Parse<NotificationSeverity>(severity),
+            Severity: Enum.Parse<NotificationSeverity>(severity!),
             Position: position,
             Duration: TimeSpan.FromSeconds(TestDurationSeconds));
 
-        // Use Show method which will automatically route to dialog or toast based on position
         App.CurrentNotificationService?.Show(content);
     }
 }

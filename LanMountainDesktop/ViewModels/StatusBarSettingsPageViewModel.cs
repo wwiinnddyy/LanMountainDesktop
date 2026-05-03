@@ -131,6 +131,9 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
     private string _textCapsuleContentLabel = string.Empty;
 
     [ObservableProperty]
+    private string _textCapsulePlaceholder = string.Empty;
+
+    [ObservableProperty]
     private string _textCapsuleTransparentBackgroundLabel = string.Empty;
 
     [ObservableProperty]
@@ -600,6 +603,7 @@ public sealed partial class StatusBarSettingsPageViewModel : ViewModelBase
         TextCapsuleDescription = L("settings.status_bar.text_capsule_description", "Display custom text with Markdown support on the status bar.");
         TextCapsulePositionLabel = L("settings.status_bar.text_capsule_position_label", "Text capsule position");
         TextCapsuleContentLabel = L("settings.status_bar.text_capsule_content_label", "Text content (Markdown supported)");
+        TextCapsulePlaceholder = L("settings.status_bar.text_capsule_placeholder", "Enter Markdown text…");
         TextCapsuleTransparentBackgroundLabel = L("settings.status_bar.text_capsule_transparent_background_label", "Transparent background");
         NetworkSpeedHeader = L("settings.status_bar.network_speed_header", "Network Speed");
         NetworkSpeedDescription = L("settings.status_bar.network_speed_description", "Display real-time network upload and download speed.");
