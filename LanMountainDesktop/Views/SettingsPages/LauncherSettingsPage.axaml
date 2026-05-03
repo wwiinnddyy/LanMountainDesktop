@@ -1,7 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
-             xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:symbol="using:FluentIcons.Common"
@@ -52,10 +51,6 @@
                 </Grid>
             </Border>
 
-            <controls:IconText Icon="Apps"
-                               Text="{Binding AppearanceHeader}"
-                               Margin="0,0,0,4" />
-
             <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding AppearanceHeader}"
                                  Description="{Binding AppearanceDescription}"
@@ -76,11 +71,8 @@
                 </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>
 
-            <controls:IconText Icon="Apps"
-                               Text="{Binding HiddenHeader}"
-                               Margin="0,24,0,4" />
-
             <ui:FASettingsExpander Classes="settings-expander-card"
+                                 Margin="0,24,0,14"
                                  Header="{Binding HiddenHeader}"
                                  Description="{Binding HiddenDescription}"
                                  IsExpanded="True">

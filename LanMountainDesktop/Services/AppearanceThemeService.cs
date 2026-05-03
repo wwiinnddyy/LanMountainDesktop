@@ -353,6 +353,26 @@ internal sealed class MaterialSurfaceService : IMaterialSurfaceService
         MaterialSurfaceRole role,
         bool isNightMode)
     {
+        // Settings 根层（如 RootGrid）叠在 Transparent + Mica/Acrylic 上：过高 alpha 会完全盖住系统 backdrop。
+        // 保持非 None 下较低 alpha；None 仍用不透明白底等价。BlurRadius=0（由 DWM 提供模糊）。
+        if (role == MaterialSurfaceRole.SettingsWindowBackground)
+        {
+            return materialMode switch
+            {
+                ThemeAppearanceValues.MaterialAcrylic => (
+                    0.20,
+                    0.14,
+                    isNightMode ? (byte)0x8E : (byte)0x96,
+                    0),
+                ThemeAppearanceValues.MaterialMica => (
+                    0.14,
+                    0.08,
+                    isNightMode ? (byte)0x9E : (byte)0xA6,
+                    0),
+                _ => (0.08, 0.05, (byte)0xFF, 0)
+            };
+        }
+
         var isOverlay = role is MaterialSurfaceRole.DockBackground or MaterialSurfaceRole.StatusBarBackground or MaterialSurfaceRole.OverlayPanel;
         return materialMode switch
         {
@@ -491,7 +511,8 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
 
         // Avoid hot-switching real backdrops on already-visible windows. This has been
         // a stability hotspot when users flip theme source/material at runtime.
-        if (window.IsVisible)
+        // SettingsWindowBackground 是唯一需要材质与资源同步热切换的宿主角色；其它窗口仍保持「仅创建时」应用以降低风险。
+        if (window.IsVisible && role != MaterialSurfaceRole.SettingsWindowBackground)
         {
             return;
         }

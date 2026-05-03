@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Local NuGet global packages (NuGet.Config globalPackagesFolder)
+.nuget/packages/
+
 # User-specific files
 *.rsuser
 *.suo

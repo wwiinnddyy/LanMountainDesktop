@@ -10,7 +10,7 @@
         <Style Selector="Border.update-status-card">
             <Setter Property="Padding" Value="24" />
             <Setter Property="Margin" Value="0,0,0,18" />
-            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusLg}" />
             <Setter Property="Background" Value="{DynamicResource AdaptiveSurfaceRaisedBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AdaptiveGlassPanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />

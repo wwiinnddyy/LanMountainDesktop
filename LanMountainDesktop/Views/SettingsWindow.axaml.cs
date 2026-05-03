@@ -87,7 +87,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         SyncPendingRestartState();
         SyncTitleText();
         UpdateChromeMetrics();
-        UpdatePaneToggleIcon();
+        UpdatePaneFooterToggleVisibility();
+        UpdatePaneFooterToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -104,6 +105,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         CloseDrawer();
         RebuildNavigationItems();
         NavigateTo(pageId ?? ViewModel.Pages.FirstOrDefault()?.PageId);
+        UpdatePaneFooterToggleVisibility();
     }
 
     public void RebuildAndNavigateToDevPage()
@@ -266,6 +268,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         ViewModel.IsPageTitleVisible = !descriptor.HidePageTitle;
         TrySelectNavigationItem(descriptor.PageId);
         SyncTitleText();
+        UpdatePaneFooterToggleVisibility();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
         if (!string.Equals(previousPageId, descriptor.PageId, StringComparison.OrdinalIgnoreCase))
@@ -523,7 +526,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
     }
 
-    private void OnTogglePaneButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnPaneFooterToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
@@ -533,7 +536,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         RootNavigationView.IsPaneOpen = !RootNavigationView.IsPaneOpen;
-        UpdatePaneToggleIcon();
+        UpdatePaneFooterToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -544,11 +547,31 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
         if (e.Property == FANavigationView.IsPaneOpenProperty ||
             e.Property == FANavigationView.OpenPaneLengthProperty ||
-            e.Property == FANavigationView.PaneDisplayModeProperty)
+            e.Property == FANavigationView.PaneDisplayModeProperty ||
+            e.Property == FANavigationView.IsPaneToggleButtonVisibleProperty)
         {
-            UpdatePaneToggleIcon();
+            if (e.Property == FANavigationView.IsPaneToggleButtonVisibleProperty)
+            {
+                UpdatePaneFooterToggleVisibility();
+            }
+
+            UpdatePaneFooterToggleIcon();
             RequestResponsiveLayoutRefresh();
         }
+    }
+
+    /// <summary>
+    /// 仅在 <c>:minimal</c>（<see cref="FANavigationView.IsPaneToggleButtonVisible"/> 为 false）时显示侧栏底部备胎按钮。
+    /// 根 DataContext 为 ViewModel 时，对 <c>#RootNavigationView</c> 的绑定易失效，故用代码同步可见性。
+    /// </summary>
+    private void UpdatePaneFooterToggleVisibility()
+    {
+        if (PaneFooterToggleButton is null || RootNavigationView is null)
+        {
+            return;
+        }
+
+        PaneFooterToggleButton.IsVisible = !RootNavigationView.IsPaneToggleButtonVisible;
     }
 
     private void RequestResponsiveLayoutRefresh()
@@ -580,14 +603,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             : compactPaneWidth;
     }
 
-    private void UpdatePaneToggleIcon()
+    private void UpdatePaneFooterToggleIcon()
     {
-        if (TogglePaneButtonIcon is null || RootNavigationView is null)
+        if (PaneFooterToggleButtonIcon is null || RootNavigationView is null)
         {
             return;
         }
 
-        TogglePaneButtonIcon.Icon = RootNavigationView.IsPaneOpen
+        PaneFooterToggleButtonIcon.Icon = RootNavigationView.IsPaneOpen
             ? FluentIcons.Common.Icon.LineHorizontal3
             : FluentIcons.Common.Icon.Navigation;
     }
@@ -604,8 +627,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         if (WindowTitleBarHost is null ||
-            TogglePaneButton is null ||
-            TogglePaneButtonIcon is null ||
             WindowBrandIcon is null ||
             WindowTitleTextBlock is null ||
             RestartNowButton is null ||
@@ -622,8 +643,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         var layoutScale = Math.Clamp(Math.Min(width / 1120d, height / 760d), 0.90, 1.18);
 
         const double titleBarHeight = 48d;
-        var titleBarButtonWidth = Math.Clamp(40d * layoutScale, 36d, 48d);
-        var titleBarButtonHeight = Math.Clamp(32d * layoutScale, 30d, 38d);
         var titleFontSize = Math.Clamp(12d * layoutScale, 11d, 14d);
         var titleBarIconSize = Math.Clamp(16d * layoutScale, 15d, 20d);
         var drawerTitleFontSize = Math.Clamp(16d * layoutScale, 14d, 20d);
@@ -634,9 +653,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
         WindowTitleBarHost.Height = titleBarHeight;
 
-        TogglePaneButton.Width = titleBarButtonWidth;
-        TogglePaneButton.Height = titleBarButtonHeight;
-        TogglePaneButtonIcon.FontSize = titleBarIconSize;
         WindowBrandIcon.FontSize = titleBarIconSize + 2;
 
         WindowTitleTextBlock.FontSize = titleFontSize;

@@ -40,10 +40,108 @@
           Classes="settings-scope"
           Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
           RowDefinitions="Auto,*">
-        <!-- 顶栏布局对齐 SecRandom：左（折叠/品牌/标题）+ 中（透明拖窗区）+ 右（重启 / Windows caption 占位） -->
+        <!-- ClassIsland SettingsWindowNew：声明顺序为先 FANavigationView（Grid.Row=1）再顶栏 Border（Grid.Row=0）；Row 仍为 0=标题栏、1=导航宿主，最终叠放不变。 -->
+
+        <ui:FANavigationView x:Name="RootNavigationView"
+                           Grid.Row="1"
+                           Margin="0"
+                           Background="Transparent"
+                           PaneDisplayMode="Auto"
+                           OpenPaneLength="283"
+                           IsSettingsVisible="False"
+                           IsBackButtonVisible="False"
+                           SelectionChanged="OnNavigationSelectionChanged">
+            <ui:FANavigationView.PaneFooter>
+                <!-- 仅在 :minimal（IsPaneToggleButtonVisible=False）时由代码显示；与模板内 pane-toggle-button 一致，不用顶栏备胎 -->
+                <StackPanel Orientation="Vertical">
+                    <Button x:Name="PaneFooterToggleButton"
+                            Classes="pane-toggle-button"
+                            Margin="0,-8,0,0"
+                            MinWidth="40"
+                            Width="48"
+                            VerticalAlignment="Bottom"
+                            Click="OnPaneFooterToggleClick">
+                        <Grid>
+                            <fi:FluentIcon x:Name="PaneFooterToggleButtonIcon"
+                                           Icon="Navigation"
+                                           IconVariant="Regular"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Grid>
+                    </Button>
+                </StackPanel>
+            </ui:FANavigationView.PaneFooter>
+
+            <ui:FANavigationView.Styles>
+                <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
+                    <Setter Property="IsPaneToggleButtonVisible" Value="False"/>
+                </Style>
+            </ui:FANavigationView.Styles>
+
+            <ui:FANavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+            </ui:FANavigationView.Resources>
+
+            <Grid x:Name="SettingsContentGrid"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="20"
+                  Margin="12,0,16,16">
+                <Grid Grid.Column="0"
+                      RowDefinitions="Auto,*">
+                    <Grid x:Name="PageTitleContainer"
+                          Grid.Row="0"
+                          Classes="page-title-container"
+                          IsVisible="{Binding IsPageTitleVisible}">
+                        <TextBlock x:Name="PageTitleTextBlock"
+                                   Classes="page-title-text"
+                                   Text="{Binding CurrentPageTitle}" />
+                    </Grid>
+
+                    <ui:FAFrame x:Name="ContentFrame"
+                              Grid.Row="1" />
+                </Grid>
+
+                <Border x:Name="DrawerBorder"
+                        Grid.Column="1"
+                        Width="296"
+                        Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
+                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                        Padding="20"
+                        BoxShadow="0 8 24 #14000000"
+                        IsVisible="{Binding IsDrawerOpen}">
+                    <Grid RowDefinitions="Auto,*"
+                          RowSpacing="16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock x:Name="DrawerTitleTextBlock"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding DrawerTitle}" />
+                            <Button Grid.Column="1"
+                                    Width="32"
+                                    Height="32"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="OnCloseDrawerClick">
+                                <fi:FluentIcon Icon="Dismiss"
+                                               IconVariant="Regular" />
+                            </Button>
+                        </Grid>
+
+                        <ContentControl x:Name="DrawerContentHost"
+                                        Grid.Row="1" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </ui:FANavigationView>
+
         <Border x:Name="WindowTitleBarHost"
+                Grid.Row="0"
                 Height="48"
-                Background="Transparent"
+                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                 BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
                 BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto,*,Auto"
@@ -53,26 +151,11 @@
                             Margin="8,0,8,0"
                             Spacing="8"
                             VerticalAlignment="Center">
-                    <Button x:Name="TogglePaneButton"
-                            Classes="pane-toggle-button"
-                            Margin="-7,-8,-8,-8"
-                            MinWidth="40"
-                            Width="48"
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding !#RootNavigationView.IsPaneToggleButtonVisible}"
-                            Click="OnTogglePaneButtonClick">
-                        <Grid>
-                            <fi:FluentIcon x:Name="TogglePaneButtonIcon"
-                                           Icon="Navigation"
-                                           IconVariant="Regular"
-                                           FontSize="16" />
-                        </Grid>
-                    </Button>
-
                     <fi:FluentIcon x:Name="WindowBrandIcon"
-                                   Margin="0,0,0,0"
                                    Icon="Settings"
                                    IconVariant="Filled"
+                                   FontSize="18"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    IsHitTestVisible="False"
                                    VerticalAlignment="Center" />
 
@@ -81,6 +164,7 @@
                                FontWeight="SemiBold"
                                Margin="8,0,0,0"
                                VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                IsHitTestVisible="False"
                                Text="{Binding Title}" />
                 </StackPanel>
@@ -119,80 +203,5 @@
                 </StackPanel>
             </Grid>
         </Border>
-
-        <ui:FANavigationView x:Name="RootNavigationView"
-                           Grid.Row="1"
-                           Margin="0"
-                           Background="Transparent"
-                           PaneDisplayMode="Auto"
-                           OpenPaneLength="283"
-                           IsSettingsVisible="False"
-                           IsBackButtonVisible="False"
-                           SelectionChanged="OnNavigationSelectionChanged">
-            <ui:FANavigationView.Styles>
-                <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
-                    <Setter Property="IsPaneToggleButtonVisible" Value="False"/>
-                </Style>
-            </ui:FANavigationView.Styles>
-
-            <ui:FANavigationView.Resources>
-                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-            </ui:FANavigationView.Resources>
-
-            <Grid x:Name="SettingsContentGrid"
-                  ColumnDefinitions="*,Auto"
-                  ColumnSpacing="20"
-                  Margin="12,0,16,16">
-                <Grid Grid.Column="0"
-                      RowDefinitions="Auto,*">
-                    <Grid x:Name="PageTitleContainer"
-                          Grid.Row="0"
-                          Classes="page-title-container"
-                          IsVisible="{Binding IsPageTitleVisible}">
-                        <TextBlock x:Name="PageTitleTextBlock"
-                                   Classes="page-title-text"
-                                   Text="{Binding CurrentPageTitle}" />
-                    </Grid>
-
-                    <ui:FAFrame x:Name="ContentFrame"
-                              Grid.Row="1" />
-                </Grid>
-
-                <Border x:Name="DrawerBorder"
-                        Grid.Column="1"
-                        Width="296"
-                        Background="{DynamicResource AdaptiveSurfaceRaisedBrush}"
-                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="16"
-                        Padding="20"
-                        BoxShadow="0 8 24 #14000000"
-                        IsVisible="{Binding IsDrawerOpen}">
-                    <Grid RowDefinitions="Auto,*"
-                          RowSpacing="16">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock x:Name="DrawerTitleTextBlock"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding DrawerTitle}" />
-                            <Button Grid.Column="1"
-                                    Width="32"
-                                    Height="32"
-                                    Padding="0"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Click="OnCloseDrawerClick">
-                                <fi:FluentIcon Icon="Dismiss"
-                                               IconVariant="Regular" />
-                            </Button>
-                        </Grid>
-
-                        <ContentControl x:Name="DrawerContentHost"
-                                        Grid.Row="1" />
-                    </Grid>
-                </Border>
-            </Grid>
-        </ui:FANavigationView>
     </Grid>
 </faWindowing:FAAppWindow>
