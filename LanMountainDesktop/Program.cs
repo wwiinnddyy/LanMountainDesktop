@@ -87,6 +87,8 @@ public sealed class Program
 
                 AppLogger.Info("SingleInstance", "Activation acknowledged before Avalonia App was ready.");
             });
+            LoadChromePatchState();
+            InstallChromePatchersIfNeeded();
             BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);
             AppLogger.Info("Startup", "Application exited normally.");
         }
@@ -195,6 +197,49 @@ public sealed class Program
         {
             AppLogger.Warn("Startup", "Failed to load configured render mode. Falling back to default.", ex);
             return AppRenderingModeHelper.Default;
+        }
+    }
+
+    private static void LoadChromePatchState()
+    {
+        try
+        {
+            var snapshot = HostSettingsFacadeProvider.GetOrCreate()
+                .Settings
+                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.PluginSdk.SettingsScope.App);
+            if (OperatingSystem.IsWindows())
+            {
+                LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome = snapshot.UseSystemChrome;
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Startup", "Failed to load chrome patch state. Falling back to FA chrome.", ex);
+        }
+    }
+
+    private static void InstallChromePatchersIfNeeded()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture;
+        if (arch != System.Runtime.InteropServices.Architecture.X64 &&
+            arch != System.Runtime.InteropServices.Architecture.X86)
+        {
+            return;
+        }
+
+        try
+        {
+            LanMountainDesktop.Platform.Windows.PatcherEntrance.InstallPatchers();
+            AppLogger.Info("Startup", $"Chrome patchers installed. UseSystemChrome={LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome}.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Startup", "Failed to install chrome patchers.", ex);
         }
     }
 

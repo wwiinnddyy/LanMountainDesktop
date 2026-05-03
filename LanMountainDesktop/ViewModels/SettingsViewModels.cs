@@ -31,12 +31,14 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     {
         _localizationService = new();
         _languageCode = "zh-CN";
+        IsWindowsOs = OperatingSystem.IsWindows();
     }
 
     public SettingsWindowViewModel(LocalizationService localizationService, string languageCode)
     {
         _localizationService = localizationService;
         _languageCode = languageCode;
+        IsWindowsOs = OperatingSystem.IsWindows();
     }
 
     private string L(string key) => _localizationService.GetString(_languageCode, key, key);
@@ -85,6 +87,10 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isDrawerOpen;
+
+    /// <summary>用于标题栏右侧系统按钮占位（与 SecRandom / ClassIsland 一致，仅 Windows 显示）。</summary>
+    [ObservableProperty]
+    private bool _isWindowsOs;
 
     public SettingsWindowViewModel Initialize()
     {
@@ -855,7 +861,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             return;
         }
 
-        PersistCurrentState(restartRequired: false);
+        PersistCurrentState(restartRequired: true);
     }
 
     partial void OnSelectedCornerRadiusStyleChanged(SelectionOption? value)

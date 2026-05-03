@@ -1,0 +1,13 @@
+  正在确定要还原的项目…
+  已还原 D:\github\LanMountainDesktop\LanMountainDesktop.PluginIsolation.Contracts\LanMountainDesktop.PluginIsolation.Contracts.csproj (用时 265 毫秒)。
+  已还原 D:\github\LanMountainDesktop\LanMountainDesktop.Shared.Contracts\LanMountainDesktop.Shared.Contracts.csproj (用时 597 毫秒)。
+  已还原 D:\github\LanMountainDesktop\LanMountainDesktop.Shared.IPC\LanMountainDesktop.Shared.IPC.csproj (用时 264 毫秒)。
+C:\Program Files\dotnet\sdk\10.0.201\NuGet.targets(196,5): error : 磁盘空间不足。 [D:\github\LanMountainDesktop\LanMountainDesktop\LanMountainDesktop.csproj]
+
+生成失败。
+
+C:\Program Files\dotnet\sdk\10.0.201\NuGet.targets(196,5): error : 磁盘空间不足。 [D:\github\LanMountainDesktop\LanMountainDesktop\LanMountainDesktop.csproj]
+    0 个警告
+    1 个错误
+
+已用时间 00:00:07.94

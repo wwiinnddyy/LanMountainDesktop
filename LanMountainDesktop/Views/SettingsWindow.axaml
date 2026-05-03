@@ -1,26 +1,26 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:LanMountainDesktop.ViewModels"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
-        xmlns:fi="using:FluentIcons.Avalonia"
-        x:Class="LanMountainDesktop.Views.SettingsWindow"
-        x:DataType="vm:SettingsWindowViewModel"
-        Width="1120"
-        Height="760"
-        MinWidth="560"
-        MinHeight="480"
-        CanResize="True"
-        WindowStartupLocation="Manual"
-        WindowDecorations="BorderOnly"
-        FontFamily="{DynamicResource AppFontFamily}"
-        Background="Transparent"
-        Title="{Binding Title}">
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:vm="using:LanMountainDesktop.ViewModels"
+                         xmlns:ui="using:FluentAvalonia.UI.Controls"
+                         xmlns:fi="using:FluentIcons.Avalonia"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         x:Class="LanMountainDesktop.Views.SettingsWindow"
+                         x:DataType="vm:SettingsWindowViewModel"
+                         Width="1120"
+                         Height="760"
+                         MinWidth="560"
+                         MinHeight="480"
+                         CanResize="True"
+                         WindowStartupLocation="Manual"
+                         FontFamily="{DynamicResource AppFontFamily}"
+                         Background="Transparent"
+                         Title="{Binding Title}">
 
-    <Window.Resources>
+    <faWindowing:FAAppWindow.Resources>
         <x:Double x:Key="SettingsContainerMaxWidth">960</x:Double>
-    </Window.Resources>
+    </faWindowing:FAAppWindow.Resources>
 
-    <Window.Styles>
+    <faWindowing:FAAppWindow.Styles>
         <Style Selector="Grid.page-title-container">
             <Setter Property="Margin" Value="0,16,0,0" />
             <Setter Property="MaxWidth" Value="{DynamicResource SettingsContainerMaxWidth}" />
@@ -34,94 +34,107 @@
         <Style Selector="TextBlock.page-title-text:narrow">
             <Setter Property="FontSize" Value="24" />
         </Style>
-    </Window.Styles>
+    </faWindowing:FAAppWindow.Styles>
 
     <Grid x:Name="RootGrid"
           Classes="settings-scope"
           Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
           RowDefinitions="Auto,*">
+        <!-- 顶栏布局对齐 SecRandom：左（折叠/品牌/标题）+ 中（透明拖窗区）+ 右（重启 / Windows caption 占位） -->
         <Border x:Name="WindowTitleBarHost"
                 Height="48"
-                Padding="12,0,12,0"
-                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+                Background="Transparent"
                 BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
-                BorderThickness="0,0,0,1"
-                PointerPressed="OnWindowTitleBarPointerPressed">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
-                  ColumnSpacing="8"
-                  VerticalAlignment="Center">
-                <Button x:Name="TogglePaneButton"
-                        Classes="pane-toggle-button"
-                        Click="OnTogglePaneButtonClick">
-                    <Grid>
-                        <fi:FluentIcon x:Name="TogglePaneButtonIcon"
-                                       Icon="Navigation"
-                                       IconVariant="Regular"
-                                       FontSize="16" />
-                    </Grid>
-                </Button>
-
-                <fi:FluentIcon x:Name="WindowBrandIcon"
-                               Grid.Column="1"
-                               Margin="6,0,2,0"
-                               Icon="Settings"
-                               IconVariant="Filled"
-                               IsHitTestVisible="False"
-                               VerticalAlignment="Center" />
-
-                <StackPanel Grid.Column="2"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  VerticalAlignment="Stretch">
+                <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
+                            Margin="8,0,8,0"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                    <Button x:Name="TogglePaneButton"
+                            Classes="pane-toggle-button"
+                            Margin="-7,-8,-8,-8"
+                            MinWidth="40"
+                            Width="48"
                             VerticalAlignment="Center"
-                            Spacing="10">
+                            IsVisible="{Binding !#RootNavigationView.IsPaneToggleButtonVisible}"
+                            Click="OnTogglePaneButtonClick">
+                        <Grid>
+                            <fi:FluentIcon x:Name="TogglePaneButtonIcon"
+                                           Icon="Navigation"
+                                           IconVariant="Regular"
+                                           FontSize="16" />
+                        </Grid>
+                    </Button>
+
+                    <fi:FluentIcon x:Name="WindowBrandIcon"
+                                   Margin="0,0,0,0"
+                                   Icon="Settings"
+                                   IconVariant="Filled"
+                                   IsHitTestVisible="False"
+                                   VerticalAlignment="Center" />
+
                     <TextBlock x:Name="WindowTitleTextBlock"
                                FontSize="12"
                                FontWeight="SemiBold"
+                               Margin="8,0,0,0"
+                               VerticalAlignment="Center"
                                IsHitTestVisible="False"
                                Text="{Binding Title}" />
                 </StackPanel>
 
-                <Button x:Name="RestartNowButton"
-                        Grid.Column="3"
-                        Padding="10,6"
-                        Margin="0,0,4,0"
+                <Border x:Name="TitleBarDragZone"
+                        Grid.Column="1"
                         Background="Transparent"
-                        IsVisible="{Binding IsRestartRequested}"
-                        Click="OnRestartNowClick">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="6">
-                        <fi:FluentIcon x:Name="RestartButtonIcon"
-                                       Icon="ArrowSync"
-                                       IconVariant="Regular" />
-                        <TextBlock x:Name="RestartButtonTextBlock"
-                                   Text="{Binding RestartButtonText}" />
-                    </StackPanel>
-                </Button>
+                        PointerPressed="OnTitleBarDragZonePointerPressed" />
 
-                <Button x:Name="CloseWindowButton"
-                        Grid.Column="4"
-                        Width="40"
-                        Height="32"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Click="OnCloseWindowClick">
-                    <fi:FluentIcon x:Name="CloseWindowButtonIcon"
-                                   Icon="Dismiss"
-                                   IconVariant="Regular" />
-                </Button>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0">
+                    <Button x:Name="RestartNowButton"
+                            Padding="10,6"
+                            Margin="0,-8,0,-8"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            IsVisible="{Binding IsRestartRequested}"
+                            Click="OnRestartNowClick">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6">
+                            <fi:FluentIcon x:Name="RestartButtonIcon"
+                                           Icon="ArrowSync"
+                                           IconVariant="Regular" />
+                            <TextBlock x:Name="RestartButtonTextBlock"
+                                       Text="{Binding RestartButtonText}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="140"
+                            Background="Transparent"
+                            IsHitTestVisible="False"
+                            IsVisible="{Binding IsWindowsOs}" />
+                </StackPanel>
             </Grid>
         </Border>
 
         <ui:FANavigationView x:Name="RootNavigationView"
                            Grid.Row="1"
-                           Margin="0,8,0,0"
+                           Margin="0"
                            Background="Transparent"
                            PaneDisplayMode="Auto"
                            OpenPaneLength="283"
                            IsSettingsVisible="False"
-                           IsPaneToggleButtonVisible="False"
                            IsBackButtonVisible="False"
                            SelectionChanged="OnNavigationSelectionChanged">
+            <ui:FANavigationView.Styles>
+                <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
+                    <Setter Property="IsPaneToggleButtonVisible" Value="False"/>
+                </Style>
+            </ui:FANavigationView.Styles>
+
             <ui:FANavigationView.Resources>
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
@@ -182,4 +195,4 @@
             </Grid>
         </ui:FANavigationView>
     </Grid>
-</Window>
+</faWindowing:FAAppWindow>

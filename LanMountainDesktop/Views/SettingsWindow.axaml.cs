@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Platform;
+using Avalonia.Media;
 using Avalonia.Threading;
 using FluentAvalonia.UI.Controls;
+using FluentAvalonia.UI.Windowing;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
@@ -16,7 +17,7 @@ using Symbol = FluentIcons.Common.Symbol;
 
 namespace LanMountainDesktop.Views;
 
-public partial class SettingsWindow : Window, ISettingsPageHostContext
+public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 {
     private const double BaseSettingsContainerWidth = 960d;
     private const double MinSettingsContentWidth = 320d;
@@ -56,7 +57,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         _hostApplicationLifecycle = hostApplicationLifecycle;
         DataContext = ViewModel;
         InitializeComponent();
-        Icon = _appLogoService.CreateWindowIcon();
+        SetValue(Window.IconProperty, _appLogoService.CreateWindowIcon());
         ApplyChromeMode(useSystemChrome);
 
         if (RootNavigationView is not null)
@@ -75,6 +76,14 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
     private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        TitleBar.Height = 48;
+        TitleBar.ExtendsContentIntoTitleBar = true;
+
+        // SecRandom MainWindow：标题栏按钮悬停/按下/非活动色，与系统 caption 更一致
+        TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(23, 0, 0, 0);
+        TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(52, 0, 0, 0);
+        TitleBar.ButtonInactiveForegroundColor = Colors.Gray;
+
         SyncPendingRestartState();
         SyncTitleText();
         UpdateChromeMetrics();
@@ -160,20 +169,17 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
     {
         _useSystemChrome = useSystemChrome || OperatingSystem.IsMacOS();
 
+        ExtendClientAreaToDecorationsHint = true;
+        WindowDecorations = WindowDecorations.Full;
+
         if (_useSystemChrome)
         {
-            ExtendClientAreaToDecorationsHint = true;
-            WindowDecorations = WindowDecorations.Full;
-
             if (WindowTitleBarHost is { })
             {
                 WindowTitleBarHost.IsVisible = false;
             }
             return;
         }
-
-        WindowDecorations = WindowDecorations.BorderOnly;
-        ExtendClientAreaToDecorationsHint = true;
 
         if (WindowTitleBarHost is { })
         {
@@ -195,21 +201,32 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         }
 
         RootNavigationView.MenuItems.Clear();
+        RootNavigationView.FooterMenuItems.Clear();
+
         SettingsPageCategory? previousCategory = null;
 
         foreach (var page in ViewModel.Pages)
         {
+            var item = new FANavigationViewItem
+            {
+                Content = page.Title,
+                Tag = page.PageId,
+                IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
+            };
+
+            if (page.Category == SettingsPageCategory.About ||
+                page.Category == SettingsPageCategory.Dev)
+            {
+                RootNavigationView.FooterMenuItems.Add(item);
+                continue;
+            }
+
             if (previousCategory is not null && previousCategory != page.Category)
             {
                 RootNavigationView.MenuItems.Add(new FANavigationViewItemSeparator());
             }
 
-            RootNavigationView.MenuItems.Add(new FANavigationViewItem
-            {
-                Content = page.Title,
-                Tag = page.PageId,
-                IconSource = CreateSettingsIconSource(MapIcon(page.IconKey))
-            });
+            RootNavigationView.MenuItems.Add(item);
 
             previousCategory = page.Category;
         }
@@ -293,7 +310,10 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             return;
         }
 
-        foreach (var item in RootNavigationView.MenuItems.OfType<FANavigationViewItem>())
+        var allItems = RootNavigationView.MenuItems.OfType<FANavigationViewItem>()
+            .Concat(RootNavigationView.FooterMenuItems.OfType<FANavigationViewItem>());
+
+        foreach (var item in allItems)
         {
             if (string.Equals(item.Tag as string, pageId, StringComparison.OrdinalIgnoreCase))
             {
@@ -494,7 +514,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         TelemetryServices.Usage?.TrackSettingsWindowClosed("SettingsWindow.OnClosed", ViewModel.CurrentPageId);
     }
 
-    private void OnWindowTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OnTitleBarDragZonePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -516,13 +536,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         UpdatePaneToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
-    }
-
-    private void OnCloseWindowClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        Close();
     }
 
     private void OnRootNavigationViewPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -573,6 +586,10 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         {
             return;
         }
+
+        TogglePaneButtonIcon.Icon = RootNavigationView.IsPaneOpen
+            ? FluentIcons.Common.Icon.LineHorizontal3
+            : FluentIcons.Common.Icon.Navigation;
     }
 
     private void UpdateChromeMetrics()
@@ -594,8 +611,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
             RestartNowButton is null ||
             RestartButtonIcon is null ||
             RestartButtonTextBlock is null ||
-            CloseWindowButton is null ||
-            CloseWindowButtonIcon is null ||
             DrawerTitleTextBlock is null ||
             RootNavigationView is null)
         {
@@ -606,7 +621,7 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         var height = Bounds.Height > 1 ? Bounds.Height : Math.Max(Height, MinHeight);
         var layoutScale = Math.Clamp(Math.Min(width / 1120d, height / 760d), 0.90, 1.18);
 
-        var titleBarHeight = Math.Clamp(48d * layoutScale, 44d, 58d);
+        const double titleBarHeight = 48d;
         var titleBarButtonWidth = Math.Clamp(40d * layoutScale, 36d, 48d);
         var titleBarButtonHeight = Math.Clamp(32d * layoutScale, 30d, 38d);
         var titleFontSize = Math.Clamp(12d * layoutScale, 11d, 14d);
@@ -618,7 +633,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
         ExtendClientAreaTitleBarHeightHint = titleBarHeight;
 
         WindowTitleBarHost.Height = titleBarHeight;
-        WindowTitleBarHost.Padding = new Thickness(chromePadding, 0, chromePadding, 0);
 
         TogglePaneButton.Width = titleBarButtonWidth;
         TogglePaneButton.Height = titleBarButtonHeight;
@@ -635,10 +649,6 @@ public partial class SettingsWindow : Window, ISettingsPageHostContext
 
         RestartButtonIcon.FontSize = titleBarIconSize;
         RestartButtonTextBlock.FontSize = titleFontSize;
-
-        CloseWindowButton.Width = titleBarButtonWidth;
-        CloseWindowButton.Height = titleBarButtonHeight;
-        CloseWindowButtonIcon.FontSize = titleBarIconSize;
 
         DrawerTitleTextBlock.FontSize = drawerTitleFontSize;
     }
