@@ -13,4 +13,4 @@ public sealed record ThemeColorContext(
     MonetPalette? MonetPalette = null,
     IReadOnlyList<Color>? MonetColors = null,
     bool UseNeutralSurfaces = false,
-    string SystemMaterialMode = ThemeAppearanceValues.MaterialNone);
+    string SystemMaterialMode = ThemeAppearanceValues.MaterialAuto);

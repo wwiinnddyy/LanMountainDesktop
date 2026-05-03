@@ -1,6 +1,8 @@
 <faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
                          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:local="using:LanMountainDesktop.Views"
                          xmlns:vm="using:LanMountainDesktop.ViewModels"
+                         xmlns:services="using:LanMountainDesktop.Services"
                          xmlns:ui="using:FluentAvalonia.UI.Controls"
                          xmlns:fi="using:FluentIcons.Avalonia"
                          xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
@@ -34,47 +36,52 @@
         <Style Selector="TextBlock.page-title-text:narrow">
             <Setter Property="FontSize" Value="24" />
         </Style>
+
+        <Style Selector="Button.titlebar-icon-button">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="MinWidth" Value="40" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="Button.titlebar-icon-button:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonHoverBackgroundBrush}" />
+        </Style>
+
+        <Style Selector="Button.titlebar-icon-button:pressed">
+            <Setter Property="Background" Value="{DynamicResource AdaptiveButtonPressedBackgroundBrush}" />
+        </Style>
+
+        <Style Selector="AutoCompleteBox.settings-search-box">
+            <Setter Property="MaxWidth" Value="440" />
+            <Setter Property="MinWidth" Value="240" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
     </faWindowing:FAAppWindow.Styles>
 
     <Grid x:Name="RootGrid"
           Classes="settings-scope"
           Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
           RowDefinitions="Auto,*">
-        <!-- ClassIsland SettingsWindowNew：声明顺序为先 FANavigationView（Grid.Row=1）再顶栏 Border（Grid.Row=0）；Row 仍为 0=标题栏、1=导航宿主，最终叠放不变。 -->
 
         <ui:FANavigationView x:Name="RootNavigationView"
-                           Grid.Row="1"
-                           Margin="0"
-                           Background="Transparent"
-                           PaneDisplayMode="Auto"
-                           OpenPaneLength="283"
-                           IsSettingsVisible="False"
-                           IsBackButtonVisible="False"
-                           SelectionChanged="OnNavigationSelectionChanged">
-            <ui:FANavigationView.PaneFooter>
-                <!-- 仅在 :minimal（IsPaneToggleButtonVisible=False）时由代码显示；与模板内 pane-toggle-button 一致，不用顶栏备胎 -->
-                <StackPanel Orientation="Vertical">
-                    <Button x:Name="PaneFooterToggleButton"
-                            Classes="pane-toggle-button"
-                            Margin="0,-8,0,0"
-                            MinWidth="40"
-                            Width="48"
-                            VerticalAlignment="Bottom"
-                            Click="OnPaneFooterToggleClick">
-                        <Grid>
-                            <fi:FluentIcon x:Name="PaneFooterToggleButtonIcon"
-                                           Icon="Navigation"
-                                           IconVariant="Regular"
-                                           FontSize="16"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        </Grid>
-                    </Button>
-                </StackPanel>
-            </ui:FANavigationView.PaneFooter>
-
+                             Grid.Row="1"
+                             Margin="0"
+                             Background="Transparent"
+                             PaneDisplayMode="Auto"
+                             OpenPaneLength="283"
+                             IsSettingsVisible="False"
+                             IsBackButtonVisible="False"
+                             SelectionChanged="OnNavigationSelectionChanged">
             <ui:FANavigationView.Styles>
                 <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
-                    <Setter Property="IsPaneToggleButtonVisible" Value="False"/>
+                    <Setter Property="IsPaneToggleButtonVisible" Value="False" />
                 </Style>
             </ui:FANavigationView.Styles>
 
@@ -99,7 +106,12 @@
                     </Grid>
 
                     <ui:FAFrame x:Name="ContentFrame"
-                              Grid.Row="1" />
+                                Grid.Row="1" />
+
+                    <Canvas x:Name="SearchHighlightOverlay"
+                            Grid.Row="1"
+                            IsHitTestVisible="False"
+                            ZIndex="1000" />
                 </Grid>
 
                 <Border x:Name="DrawerBorder"
@@ -141,42 +153,103 @@
         <Border x:Name="WindowTitleBarHost"
                 Grid.Row="0"
                 Height="48"
-                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
                 BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
-                BorderThickness="0,0,0,1">
+                BorderThickness="0,0,0,1"
+                PointerPressed="OnTitleBarDragZonePointerPressed">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   VerticalAlignment="Stretch">
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
-                            Margin="8,0,8,0"
-                            Spacing="8"
+                            Margin="0,0,12,0"
+                            Spacing="2"
                             VerticalAlignment="Center">
+                    <Button x:Name="BackButton"
+                            Classes="titlebar-icon-button"
+                            Width="48"
+                            Height="48"
+                            Margin="0,-8,0,-8"
+                            IsVisible="{Binding CanGoBack}"
+                            ToolTip.Tip="{Binding BackTooltip}"
+                            Click="OnBackButtonClick">
+                        <fi:FluentIcon Icon="ArrowLeft"
+                                       IconVariant="Regular"
+                                       FontSize="16"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </Button>
+
+                    <Button x:Name="TitleBarPaneToggleButton"
+                            Classes="titlebar-icon-button"
+                            Width="48"
+                            Height="48"
+                            Margin="0,-8,-8,-8"
+                            ToolTip.Tip="{Binding TogglePaneTooltip}"
+                            Click="OnTitleBarPaneToggleClick">
+                        <fi:FluentIcon x:Name="TitleBarPaneToggleButtonIcon"
+                                       Icon="Navigation"
+                                       IconVariant="Regular"
+                                       FontSize="16"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </Button>
+
                     <fi:FluentIcon x:Name="WindowBrandIcon"
                                    Icon="Settings"
                                    IconVariant="Filled"
                                    FontSize="18"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    IsHitTestVisible="False"
+                                   Margin="8,0,2,0"
                                    VerticalAlignment="Center" />
 
                     <TextBlock x:Name="WindowTitleTextBlock"
                                FontSize="12"
                                FontWeight="SemiBold"
-                               Margin="8,0,0,0"
+                               Margin="2,0,0,0"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                IsHitTestVisible="False"
                                Text="{Binding Title}" />
                 </StackPanel>
 
-                <Border x:Name="TitleBarDragZone"
-                        Grid.Column="1"
-                        Background="Transparent"
-                        PointerPressed="OnTitleBarDragZonePointerPressed" />
+                <AutoCompleteBox x:Name="SettingsSearchBox"
+                                 Grid.Column="1"
+                                 Classes="settings-search-box"
+                                 FilterMode="Custom"
+                                 ItemFilter="{x:Static local:SettingsWindow.SettingsSearchFilter}"
+                                 MaxDropDownHeight="480"
+                                 ItemsSource="{Binding SearchResults}"
+                                 SelectedItem="{Binding SelectedSearchResult, Mode=TwoWay}"
+                                 PlaceholderText="{Binding SearchPlaceholderText}"
+                                 KeyUp="OnSearchBoxKeyUp"
+                                 SelectionChanged="OnSearchBoxSelectionChanged">
+                    <AutoCompleteBox.InnerRightContent>
+                        <fi:FluentIcon Icon="Search"
+                                       IconVariant="Regular"
+                                       Margin="6"
+                                       FontSize="15"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </AutoCompleteBox.InnerRightContent>
+                    <AutoCompleteBox.ItemTemplate>
+                        <DataTemplate x:DataType="services:SettingsSearchResult">
+                            <Grid RowDefinitions="Auto,Auto"
+                                  RowSpacing="2"
+                                  MinWidth="240">
+                                <TextBlock Text="{Binding DisplayTitle}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding PageTitle}"
+                                           FontSize="12"
+                                           Opacity="0.72"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </DataTemplate>
+                    </AutoCompleteBox.ItemTemplate>
+                </AutoCompleteBox>
 
                 <StackPanel Grid.Column="2"
                             Orientation="Horizontal"
-                            Spacing="8"
+                            Spacing="6"
                             VerticalAlignment="Center"
                             Margin="0,0,8,0">
                     <Button x:Name="RestartNowButton"
@@ -194,6 +267,26 @@
                             <TextBlock x:Name="RestartButtonTextBlock"
                                        Text="{Binding RestartButtonText}" />
                         </StackPanel>
+                    </Button>
+
+                    <Button x:Name="MoreOptionsButton"
+                            Classes="titlebar-icon-button"
+                            ToolTip.Tip="{Binding MoreOptionsText}">
+                        <fi:FluentIcon Icon="MoreHorizontal"
+                                       IconVariant="Regular"
+                                       FontSize="17"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="{Binding RestartMenuItemText}"
+                                          Click="OnRestartMenuItemClick">
+                                    <MenuItem.Icon>
+                                        <fi:FluentIcon Icon="ArrowSync"
+                                                       IconVariant="Regular" />
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
                     </Button>
 
                     <Border Width="140"

@@ -145,7 +145,7 @@ internal sealed class WindowMaterialService : IWindowMaterialService
     private const int Windows11Build = 22000;
     private const int Windows11_24H2Build = 26100;
 
-    public bool CanChangeMode => GetSupportProfile() == WindowMaterialSupportProfile.FullSwitching;
+    public bool CanChangeMode => GetAvailableModes().Count > 1;
 
     public IReadOnlyList<string> GetAvailableModes()
     {
@@ -153,22 +153,26 @@ internal sealed class WindowMaterialService : IWindowMaterialService
         {
             WindowMaterialSupportProfile.FullSwitching =>
             [
+                ThemeAppearanceValues.MaterialAuto,
                 ThemeAppearanceValues.MaterialNone,
                 ThemeAppearanceValues.MaterialMica,
                 ThemeAppearanceValues.MaterialAcrylic
             ],
             WindowMaterialSupportProfile.FixedMica =>
             [
+                ThemeAppearanceValues.MaterialAuto,
                 ThemeAppearanceValues.MaterialNone,
                 ThemeAppearanceValues.MaterialMica
             ],
             WindowMaterialSupportProfile.FixedAcrylic =>
             [
+                ThemeAppearanceValues.MaterialAuto,
                 ThemeAppearanceValues.MaterialNone,
                 ThemeAppearanceValues.MaterialAcrylic
             ],
             _ =>
             [
+                ThemeAppearanceValues.MaterialAuto,
                 ThemeAppearanceValues.MaterialNone
             ]
         };
@@ -179,8 +183,12 @@ internal sealed class WindowMaterialService : IWindowMaterialService
         ArgumentNullException.ThrowIfNull(window);
 
         var normalizedMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(materialMode);
+        var supportProfile = GetSupportProfile();
+        var effectiveMode = normalizedMode == ThemeAppearanceValues.MaterialAuto
+            ? ResolveAutoMaterialMode(supportProfile)
+            : normalizedMode;
 
-        if (normalizedMode == ThemeAppearanceValues.MaterialNone)
+        if (effectiveMode == ThemeAppearanceValues.MaterialNone)
         {
             window.Background = Brushes.White;
             window.TransparencyLevelHint = [WindowTransparencyLevel.None];
@@ -189,7 +197,7 @@ internal sealed class WindowMaterialService : IWindowMaterialService
 
         window.Background = Brushes.Transparent;
 
-        if (!OperatingSystem.IsWindows() || !IsTransparencyEnabled())
+        if (supportProfile == WindowMaterialSupportProfile.NoneOnly)
         {
             window.TransparencyLevelHint =
             [
@@ -198,7 +206,9 @@ internal sealed class WindowMaterialService : IWindowMaterialService
             return;
         }
 
-        window.TransparencyLevelHint = normalizedMode switch
+        window.TransparencyLevelHint = normalizedMode == ThemeAppearanceValues.MaterialAuto
+            ? ResolveAutoTransparencyLevels(supportProfile)
+            : effectiveMode switch
         {
             ThemeAppearanceValues.MaterialMica =>
             [
@@ -207,6 +217,42 @@ internal sealed class WindowMaterialService : IWindowMaterialService
                 WindowTransparencyLevel.None
             ],
             ThemeAppearanceValues.MaterialAcrylic =>
+            [
+                WindowTransparencyLevel.AcrylicBlur,
+                WindowTransparencyLevel.Blur,
+                WindowTransparencyLevel.None
+            ],
+            _ =>
+            [
+                WindowTransparencyLevel.None
+            ]
+        };
+    }
+
+    private static string ResolveAutoMaterialMode(WindowMaterialSupportProfile supportProfile)
+    {
+        return supportProfile switch
+        {
+            WindowMaterialSupportProfile.FullSwitching or WindowMaterialSupportProfile.FixedMica =>
+                ThemeAppearanceValues.MaterialMica,
+            WindowMaterialSupportProfile.FixedAcrylic =>
+                ThemeAppearanceValues.MaterialAcrylic,
+            _ => ThemeAppearanceValues.MaterialNone
+        };
+    }
+
+    private static IReadOnlyList<WindowTransparencyLevel> ResolveAutoTransparencyLevels(WindowMaterialSupportProfile supportProfile)
+    {
+        return supportProfile switch
+        {
+            WindowMaterialSupportProfile.FullSwitching or WindowMaterialSupportProfile.FixedMica =>
+            [
+                WindowTransparencyLevel.Mica,
+                WindowTransparencyLevel.AcrylicBlur,
+                WindowTransparencyLevel.Blur,
+                WindowTransparencyLevel.None
+            ],
+            WindowMaterialSupportProfile.FixedAcrylic =>
             [
                 WindowTransparencyLevel.AcrylicBlur,
                 WindowTransparencyLevel.Blur,
@@ -300,7 +346,7 @@ internal sealed class MaterialSurfaceService : IMaterialSurfaceService
             ?? (monetColors.Length > 4
                 ? monetColors[4]
                 : ResolveLiftBase(context.IsNightMode, role));
-        var materialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(context.SystemMaterialMode);
+        var materialMode = ThemeAppearanceValues.ResolveEffectiveSystemMaterialMode(context.SystemMaterialMode);
 
         var (tintStrength, liftStrength, alpha, blurRadius) = ResolveModeParameters(materialMode, role, context.IsNightMode);
         var neutralBase = ResolveNeutralBase(context.IsNightMode, role);
@@ -428,9 +474,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     private readonly IWindowMaterialService _windowMaterialService;
     private readonly IMaterialSurfaceService _materialSurfaceService;
     private readonly MonetColorService _monetColorService = new();
-    private readonly string _liveThemeColorMode;
-    private readonly string _liveSystemMaterialMode;
-    private readonly string? _liveSelectedWallpaperSeed;
+    private string _liveThemeColorMode;
+    private string _liveSystemMaterialMode;
+    private string? _liveSelectedWallpaperSeed;
     private readonly object _paletteGate = new();
     private readonly Dictionary<string, WallpaperSeedExtractionResult> _wallpaperSeedCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pendingWallpaperSeedKeys = new(StringComparer.OrdinalIgnoreCase);
@@ -573,6 +619,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             !changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.CornerRadiusStyle), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColorMode), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparer.OrdinalIgnoreCase) &&
             !(respondsToThemeColor &&
               changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) &&
             !(respondsToWallpaper &&
@@ -583,6 +632,12 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             return;
         }
 
+        var latestThemeState = _settingsFacade.Theme.Get();
+        _liveThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(
+            latestThemeState.ThemeColorMode,
+            latestThemeState.ThemeColor);
+        _liveSystemMaterialMode = ResolveSupportedMaterialMode(latestThemeState.SystemMaterialMode);
+        _liveSelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed;
         RaiseChanged(queueWallpaperPaletteBuild: true);
     }
 

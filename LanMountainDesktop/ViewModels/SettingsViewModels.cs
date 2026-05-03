@@ -88,6 +88,36 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen;
 
+    [ObservableProperty]
+    private bool _canGoBack;
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private string _searchPlaceholderText = string.Empty;
+
+    [ObservableProperty]
+    private string _searchNoResultsText = string.Empty;
+
+    [ObservableProperty]
+    private string _searchPageHintText = string.Empty;
+
+    [ObservableProperty]
+    private SettingsSearchResult? _selectedSearchResult;
+
+    [ObservableProperty]
+    private string _moreOptionsText = string.Empty;
+
+    [ObservableProperty]
+    private string _restartMenuItemText = string.Empty;
+
+    [ObservableProperty]
+    private string _togglePaneTooltip = string.Empty;
+
+    [ObservableProperty]
+    private string _backTooltip = string.Empty;
+
     /// <summary>用于标题栏右侧系统按钮占位（与 SecRandom / ClassIsland 一致，仅 Windows 显示）。</summary>
     [ObservableProperty]
     private bool _isWindowsOs;
@@ -112,6 +142,13 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
             "settings.restart_dialog.later",
             L("settings.restart_dialog.cancel"));
         DrawerFallbackTitle = L("settings.window.drawer_default");
+        SearchPlaceholderText = L("settings.search.placeholder");
+        SearchNoResultsText = L("settings.search.no_results");
+        SearchPageHintText = L("settings.search.page_hint");
+        MoreOptionsText = L("settings.window.more_options");
+        RestartMenuItemText = L("settings.window.restart_menu_item");
+        TogglePaneTooltip = L("settings.window.toggle_pane");
+        BackTooltip = L("settings.window.back");
 
         var nextDefaultRestartMessage = L("settings.restart_dock.description");
         if (string.IsNullOrWhiteSpace(RestartMessage) || string.Equals(RestartMessage, _defaultRestartMessage, StringComparison.Ordinal))
@@ -125,6 +162,8 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     public string GetDefaultRestartMessage() => _defaultRestartMessage;
 
     public ObservableCollection<SettingsPageDescriptor> Pages { get; } = [];
+
+    public ObservableCollection<SettingsSearchResult> SearchResults { get; } = [];
 }
 
 public sealed class SelectionOption
@@ -284,6 +323,21 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private bool _showInTaskbar;
+
+    [ObservableProperty]
+    private string _fadeTransitionHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _slideTransitionHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _slideTransitionDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _showInTaskbarHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _showInTaskbarDescription = string.Empty;
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
@@ -512,6 +566,15 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         RenderModeRestartMessage = L(
             "settings.general.render_mode_restart_message",
             "Rendering mode changes require restarting the app.");
+        FadeTransitionHeader = L("settings.general.fade_transition_header", "Fade startup transition");
+        SlideTransitionHeader = L("settings.general.slide_transition_header", "Slide startup transition");
+        SlideTransitionDescription = L(
+            "settings.general.slide_transition_desc",
+            "Use a slide-in startup transition on supported Windows builds. This option disables fade transition.");
+        ShowInTaskbarHeader = L("settings.general.show_main_window_taskbar_header", "Show main desktop window in taskbar");
+        ShowInTaskbarDescription = L(
+            "settings.general.show_main_window_taskbar_desc",
+            "Keep the main desktop host window visible in the taskbar. The independent settings window always has its own taskbar entry.");
     }
 
     private void RefreshPreview()
@@ -676,7 +739,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private SelectionOption _selectedThemeColorMode = new(ThemeAppearanceValues.ColorModeSeedMonet, "User theme color Monet");
 
     [ObservableProperty]
-    private SelectionOption _selectedSystemMaterialMode = new(ThemeAppearanceValues.MaterialNone, "None");
+    private SelectionOption _selectedSystemMaterialMode = new(ThemeAppearanceValues.MaterialAuto, "Auto");
 
     [ObservableProperty]
     private bool _isThemeColorEditable;
@@ -778,6 +841,9 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _systemMaterialNoneText = string.Empty;
 
     [ObservableProperty]
+    private string _systemMaterialAutoText = string.Empty;
+
+    [ObservableProperty]
     private string _systemMaterialMicaText = string.Empty;
 
     [ObservableProperty]
@@ -788,6 +854,9 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _systemMaterialFixedDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _systemMaterialAutoDescription = string.Empty;
 
     [ObservableProperty]
     private string _appearanceRestartMessage = string.Empty;
@@ -959,10 +1028,12 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeSourceWallpaperSystemDescription = L("settings.appearance.theme_color_preview.system", "Currently previewing colors extracted from the system wallpaper.");
         ThemeSourceWallpaperFallbackDescription = L("settings.appearance.theme_color_preview.fallback", "No usable wallpaper was found. The app is using a fallback accent.");
         SystemMaterialNoneText = L("settings.appearance.system_material.none", "None");
+        SystemMaterialAutoText = L("settings.appearance.system_material.auto", "Auto (recommended)");
         SystemMaterialMicaText = L("settings.appearance.system_material.mica", "Mica");
         SystemMaterialAcrylicText = L("settings.appearance.system_material.acrylic", "Acrylic");
         SystemMaterialSwitchableDescription = L("settings.appearance.system_material_desc.switchable", "Apply the selected material to windows, Dock, status bar, and component hosts.");
         SystemMaterialFixedDescription = L("settings.appearance.system_material_desc.fixed", "Your current system only exposes the available material modes listed here.");
+        SystemMaterialAutoDescription = L("settings.appearance.system_material_desc.auto", "Auto prefers Mica on Windows 11, Acrylic on Windows 10, and falls back to no material when unavailable.");
         AppearanceRestartMessage = L(
             "settings.appearance.restart_message",
             "Theme source and system material changes require restarting the app.");
@@ -984,7 +1055,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             .Select(value => new SelectionOption(value, ResolveMaterialModeLabel(value)))
             .ToList();
         SystemMaterialDescription = snapshot.CanChangeSystemMaterial
-            ? SystemMaterialSwitchableDescription
+            ? SystemMaterialAutoDescription
             : SystemMaterialFixedDescription;
     }
 
@@ -1145,6 +1216,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     {
         return ThemeAppearanceValues.NormalizeSystemMaterialMode(value) switch
         {
+            ThemeAppearanceValues.MaterialAuto => SystemMaterialAutoText,
             ThemeAppearanceValues.MaterialMica => SystemMaterialMicaText,
             ThemeAppearanceValues.MaterialAcrylic => SystemMaterialAcrylicText,
             _ => SystemMaterialNoneText

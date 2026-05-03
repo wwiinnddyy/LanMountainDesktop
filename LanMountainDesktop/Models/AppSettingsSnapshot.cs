@@ -23,7 +23,7 @@ public sealed class AppSettingsSnapshot
 
     public string ThemeColorMode { get; set; } = "default_neutral";
 
-    public string SystemMaterialMode { get; set; } = "none";
+    public string SystemMaterialMode { get; set; } = "auto";
 
     public string? SelectedWallpaperSeed { get; set; }
 

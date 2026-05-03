@@ -18,6 +18,7 @@ public static class ThemeAppearanceValues
     public const string ThemeModeFollowSystem = "follow_system";
 
     public const string MaterialNone = "none";
+    public const string MaterialAuto = "auto";
     public const string MaterialMica = "mica";
     public const string MaterialAcrylic = "acrylic";
 
@@ -30,6 +31,7 @@ public static class ThemeAppearanceValues
 
     public static readonly IReadOnlyList<string> AllMaterialModes =
     [
+        MaterialAuto,
         MaterialNone,
         MaterialMica,
         MaterialAcrylic
@@ -59,6 +61,11 @@ public static class ThemeAppearanceValues
 
     public static string NormalizeSystemMaterialMode(string? value)
     {
+        if (string.Equals(value, MaterialAuto, StringComparison.OrdinalIgnoreCase))
+        {
+            return MaterialAuto;
+        }
+
         if (string.Equals(value, MaterialMica, StringComparison.OrdinalIgnoreCase))
         {
             return MaterialMica;
@@ -72,11 +79,32 @@ public static class ThemeAppearanceValues
         return MaterialNone;
     }
 
+    public static string ResolveEffectiveSystemMaterialMode(string? value)
+    {
+        var normalized = NormalizeSystemMaterialMode(value);
+        if (!string.Equals(normalized, MaterialAuto, StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            return MaterialMica;
+        }
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0))
+        {
+            return MaterialAcrylic;
+        }
+
+        return MaterialNone;
+    }
+
     public static IReadOnlyList<string> NormalizeAvailableMaterialModes(IEnumerable<string>? values)
     {
         if (values is null)
         {
-            return [MaterialNone];
+            return [MaterialAuto, MaterialNone];
         }
 
         var normalized = values
@@ -84,9 +112,14 @@ public static class ThemeAppearanceValues
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        if (!normalized.Contains(MaterialAuto, StringComparer.OrdinalIgnoreCase))
+        {
+            normalized.Insert(0, MaterialAuto);
+        }
+
         if (!normalized.Contains(MaterialNone, StringComparer.OrdinalIgnoreCase))
         {
-            normalized.Insert(0, MaterialNone);
+            normalized.Insert(normalized.Count > 0 ? 1 : 0, MaterialNone);
         }
 
         return normalized;

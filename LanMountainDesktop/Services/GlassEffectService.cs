@@ -113,7 +113,7 @@ public static class GlassEffectService
     /// <summary>可选内容叠层 alpha，与设置窗表面色相一致；None 为 0 避免重复染色。</summary>
     private static byte ResolveSettingsWindowTintAlpha(ThemeColorContext context)
     {
-        var mode = ThemeAppearanceValues.NormalizeSystemMaterialMode(context.SystemMaterialMode);
+        var mode = ThemeAppearanceValues.ResolveEffectiveSystemMaterialMode(context.SystemMaterialMode);
         return mode switch
         {
             ThemeAppearanceValues.MaterialAcrylic => context.IsNightMode ? (byte)0x58 : (byte)0x4C,

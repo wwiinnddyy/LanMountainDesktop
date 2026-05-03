@@ -103,7 +103,7 @@
                 </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="Fade startup transition"
+            <ui:FASettingsExpander Header="{Binding FadeTransitionHeader}"
                                  Description="{Binding FadeTransitionDescription}"
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
                 <ui:FASettingsExpander.IconSource>
@@ -115,8 +115,8 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="Slide startup transition"
-                                 Description="Use a slide-in startup transition on supported Windows builds. This option disables the fade transition."
+            <ui:FASettingsExpander Header="{Binding SlideTransitionHeader}"
+                                 Description="{Binding SlideTransitionDescription}"
                                  IsVisible="{Binding IsSlideTransitionAvailable}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF08E8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -126,8 +126,8 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="Show in taskbar"
-                                 Description="Keep the main window visible in the taskbar while the desktop host is running.">
+            <ui:FASettingsExpander Header="{Binding ShowInTaskbarHeader}"
+                                 Description="{Binding ShowInTaskbarDescription}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF1BE0;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
                 </ui:FASettingsExpander.IconSource>

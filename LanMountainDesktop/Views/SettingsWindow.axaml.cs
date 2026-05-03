@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using LanMountainDesktop.PluginSdk;
@@ -19,6 +20,8 @@ namespace LanMountainDesktop.Views;
 
 public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 {
+    public static AutoCompleteFilterPredicate<object?> SettingsSearchFilter => SettingsSearchService.Filter;
+
     private const double BaseSettingsContainerWidth = 960d;
     private const double MinSettingsContentWidth = 320d;
     private const double MinSettingsContainerWidth = 840d;
@@ -32,10 +35,15 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
     private readonly IAppLogoService _appLogoService = HostAppLogoProvider.GetOrCreate();
+    private readonly SettingsSearchService _searchService = new();
     private readonly Dictionary<string, Control> _cachedPages = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Stack<string> _navigationBackStack = new();
     private bool _useSystemChrome;
     private bool _isResponsiveRefreshPending;
     private bool _isRestartPromptVisible;
+    private bool _isHandlingSearchSelection;
+    private Border? _currentSearchHighlight;
+    private Action? _searchHighlightCleanup;
 
     public SettingsWindow()
         : this(
@@ -87,8 +95,8 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         SyncPendingRestartState();
         SyncTitleText();
         UpdateChromeMetrics();
-        UpdatePaneFooterToggleVisibility();
-        UpdatePaneFooterToggleIcon();
+        UpdatePaneToggleVisibility();
+        UpdatePaneToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -102,10 +110,13 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         _cachedPages.Clear();
+        _navigationBackStack.Clear();
+        ViewModel.CanGoBack = false;
         CloseDrawer();
         RebuildNavigationItems();
-        NavigateTo(pageId ?? ViewModel.Pages.FirstOrDefault()?.PageId);
-        UpdatePaneFooterToggleVisibility();
+        NavigateTo(pageId ?? ViewModel.Pages.FirstOrDefault()?.PageId, addHistory: false, source: "reload");
+        RebuildSearchIndex(scanBuiltInPages: true);
+        UpdatePaneToggleVisibility();
     }
 
     public void RebuildAndNavigateToDevPage()
@@ -236,17 +247,37 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
     private void OnNavigationSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {
+        _ = sender;
         var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as FANavigationViewItem;
-        NavigateTo(selectedItem?.Tag as string);
+        NavigateTo(selectedItem?.Tag as string, addHistory: true, source: "navigation");
     }
 
-    private void NavigateTo(string? pageId)
+    private void NavigateTo(
+        string? pageId,
+        bool addHistory,
+        string source,
+        SettingsSearchResult? searchResult = null)
     {
         var previousPageId = ViewModel.CurrentPageId;
         var descriptor = ResolveDescriptor(pageId);
         if (descriptor is null)
         {
             return;
+        }
+
+        if (string.Equals(previousPageId, descriptor.PageId, StringComparison.OrdinalIgnoreCase))
+        {
+            if (searchResult is not null)
+            {
+                HighlightSearchResult(searchResult);
+            }
+
+            return;
+        }
+
+        if (addHistory && !string.IsNullOrWhiteSpace(previousPageId))
+        {
+            _navigationBackStack.Push(previousPageId);
         }
 
         var page = GetOrCreatePage(descriptor);
@@ -266,14 +297,21 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         ViewModel.CurrentPageDescription = descriptor.Description;
         ViewModel.CurrentPageId = descriptor.PageId;
         ViewModel.IsPageTitleVisible = !descriptor.HidePageTitle;
+        ViewModel.CanGoBack = _navigationBackStack.Count > 0;
+        CloseDrawer();
         TrySelectNavigationItem(descriptor.PageId);
         SyncTitleText();
-        UpdatePaneFooterToggleVisibility();
+        UpdatePaneToggleVisibility();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
+        if (searchResult is not null)
+        {
+            HighlightSearchResult(searchResult);
+        }
+
         if (!string.Equals(previousPageId, descriptor.PageId, StringComparison.OrdinalIgnoreCase))
         {
-            TelemetryServices.Usage?.TrackSettingsNavigation(previousPageId, descriptor.PageId, "navigation");
+            TelemetryServices.Usage?.TrackSettingsNavigation(previousPageId, descriptor.PageId, source);
         }
     }
 
@@ -303,7 +341,32 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         _cachedPages[descriptor.PageId] = page;
+        _searchService.IndexPage(descriptor, page);
         return page;
+    }
+
+    private void RebuildSearchIndex(bool scanBuiltInPages)
+    {
+        _searchService.RebuildPageEntries(ViewModel.Pages);
+
+        if (scanBuiltInPages)
+        {
+            foreach (var descriptor in ViewModel.Pages.Where(static page => page.IsBuiltIn))
+            {
+                _ = GetOrCreatePage(descriptor);
+            }
+        }
+
+        SyncSearchResults();
+    }
+
+    private void SyncSearchResults()
+    {
+        ViewModel.SearchResults.Clear();
+        foreach (var result in _searchService.Entries)
+        {
+            ViewModel.SearchResults.Add(result);
+        }
     }
 
     private void TrySelectNavigationItem(string pageId)
@@ -338,6 +401,77 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         _ = sender;
         _ = e;
         CloseDrawer();
+    }
+
+    private void OnBackButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        while (_navigationBackStack.Count > 0)
+        {
+            var pageId = _navigationBackStack.Pop();
+            if (ResolveDescriptor(pageId) is not null)
+            {
+                NavigateTo(pageId, addHistory: false, source: "back");
+                return;
+            }
+        }
+
+        ViewModel.CanGoBack = false;
+    }
+
+    private void OnRestartMenuItemClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        ShowRestartPrompt();
+    }
+
+    private void OnSearchBoxKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+        {
+            return;
+        }
+
+        var selected = ViewModel.SelectedSearchResult;
+        if (selected is null && SettingsSearchBox is not null)
+        {
+            selected = _searchService.Search(SettingsSearchBox.Text, maxResults: 1).FirstOrDefault();
+        }
+
+        NavigateToSearchResult(selected);
+    }
+
+    private void OnSearchBoxSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        _ = sender;
+        if (_isHandlingSearchSelection || e.AddedItems.Count == 0)
+        {
+            return;
+        }
+
+        NavigateToSearchResult(e.AddedItems[0] as SettingsSearchResult);
+    }
+
+    private void NavigateToSearchResult(SettingsSearchResult? result)
+    {
+        if (result is null)
+        {
+            return;
+        }
+
+        _isHandlingSearchSelection = true;
+        try
+        {
+            NavigateTo(result.PageId, addHistory: true, source: "search", searchResult: result);
+            ViewModel.SelectedSearchResult = null;
+        }
+        finally
+        {
+            _isHandlingSearchSelection = false;
+        }
     }
 
     private void OnPendingRestartStateChanged()
@@ -504,8 +638,125 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         // Hide the drawer pane on narrow windows.
     }
 
+    private void HighlightSearchResult(SettingsSearchResult result)
+    {
+        var target = result.TargetControl;
+        if (target is null)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                ExpandSearchTarget(target);
+                target.BringIntoView();
+                target.Focus();
+                ShowSearchHighlight(target);
+            },
+            DispatcherPriority.Render);
+    }
+
+    private static void ExpandSearchTarget(Control target)
+    {
+        if (target is FASettingsExpander expander)
+        {
+            expander.IsExpanded = true;
+        }
+
+        foreach (var ancestor in target.GetVisualAncestors().OfType<FASettingsExpander>())
+        {
+            ancestor.IsExpanded = true;
+        }
+    }
+
+    private void ShowSearchHighlight(Control target)
+    {
+        RemoveSearchHighlight();
+
+        if (SearchHighlightOverlay is null || target.Bounds.Width <= 0 || target.Bounds.Height <= 0)
+        {
+            return;
+        }
+
+        var transform = target.TransformToVisual(SearchHighlightOverlay);
+        if (transform is null)
+        {
+            return;
+        }
+
+        var position = transform.Value.Transform(new Point(0, 0));
+        var accent = HostAppearanceThemeProvider.GetOrCreate().GetCurrent().AccentColor;
+        var highlight = new Border
+        {
+            Width = target.Bounds.Width,
+            Height = target.Bounds.Height,
+            Background = new SolidColorBrush(Color.FromArgb(34, accent.R, accent.G, accent.B)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(210, accent.R, accent.G, accent.B)),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(8),
+            IsHitTestVisible = false
+        };
+
+        Canvas.SetLeft(highlight, position.X);
+        Canvas.SetTop(highlight, position.Y);
+        SearchHighlightOverlay.Children.Add(highlight);
+        _currentSearchHighlight = highlight;
+
+        void OnLayoutUpdated(object? sender, EventArgs e)
+        {
+            _ = sender;
+            _ = e;
+            if (_currentSearchHighlight != highlight || SearchHighlightOverlay is null)
+            {
+                return;
+            }
+
+            var nextTransform = target.TransformToVisual(SearchHighlightOverlay);
+            if (nextTransform is null)
+            {
+                return;
+            }
+
+            var nextPosition = nextTransform.Value.Transform(new Point(0, 0));
+            Canvas.SetLeft(highlight, nextPosition.X);
+            Canvas.SetTop(highlight, nextPosition.Y);
+            highlight.Width = target.Bounds.Width;
+            highlight.Height = target.Bounds.Height;
+        }
+
+        target.LayoutUpdated += OnLayoutUpdated;
+        _searchHighlightCleanup = () =>
+        {
+            target.LayoutUpdated -= OnLayoutUpdated;
+            SearchHighlightOverlay?.Children.Remove(highlight);
+        };
+
+        var timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2.4)
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (_currentSearchHighlight == highlight)
+            {
+                RemoveSearchHighlight();
+            }
+        };
+        timer.Start();
+    }
+
+    private void RemoveSearchHighlight()
+    {
+        _searchHighlightCleanup?.Invoke();
+        _searchHighlightCleanup = null;
+        _currentSearchHighlight = null;
+    }
+
     private void OnClosed(object? sender, EventArgs e)
     {
+        RemoveSearchHighlight();
         _cachedPages.Clear();
         PendingRestartStateService.StateChanged -= OnPendingRestartStateChanged;
         if (RootNavigationView is not null)
@@ -520,13 +771,39 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private void OnTitleBarDragZonePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || IsInteractiveTitleBarSource(e.Source as Control))
         {
-            BeginMoveDrag(e);
+            return;
         }
+
+        BeginMoveDrag(e);
     }
 
-    private void OnPaneFooterToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private bool IsInteractiveTitleBarSource(Control? source)
+    {
+        if (source is null)
+        {
+            return false;
+        }
+
+        IEnumerable<Control> controls = source.GetVisualAncestors().OfType<Control>().Prepend(source);
+        foreach (var control in controls)
+        {
+            if (ReferenceEquals(control, WindowTitleBarHost))
+            {
+                return false;
+            }
+
+            if (control is Button or AutoCompleteBox or TextBox or MenuItem)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void OnTitleBarPaneToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
@@ -536,7 +813,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         }
 
         RootNavigationView.IsPaneOpen = !RootNavigationView.IsPaneOpen;
-        UpdatePaneFooterToggleIcon();
+        UpdatePaneToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -552,10 +829,10 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         {
             if (e.Property == FANavigationView.IsPaneToggleButtonVisibleProperty)
             {
-                UpdatePaneFooterToggleVisibility();
+                UpdatePaneToggleVisibility();
             }
 
-            UpdatePaneFooterToggleIcon();
+            UpdatePaneToggleIcon();
             RequestResponsiveLayoutRefresh();
         }
     }
@@ -564,14 +841,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     /// 仅在 <c>:minimal</c>（<see cref="FANavigationView.IsPaneToggleButtonVisible"/> 为 false）时显示侧栏底部备胎按钮。
     /// 根 DataContext 为 ViewModel 时，对 <c>#RootNavigationView</c> 的绑定易失效，故用代码同步可见性。
     /// </summary>
-    private void UpdatePaneFooterToggleVisibility()
+    private void UpdatePaneToggleVisibility()
     {
-        if (PaneFooterToggleButton is null || RootNavigationView is null)
+        if (TitleBarPaneToggleButton is null || RootNavigationView is null)
         {
             return;
         }
 
-        PaneFooterToggleButton.IsVisible = !RootNavigationView.IsPaneToggleButtonVisible;
+        TitleBarPaneToggleButton.IsVisible = !RootNavigationView.IsPaneToggleButtonVisible;
     }
 
     private void RequestResponsiveLayoutRefresh()
@@ -603,14 +880,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             : compactPaneWidth;
     }
 
-    private void UpdatePaneFooterToggleIcon()
+    private void UpdatePaneToggleIcon()
     {
-        if (PaneFooterToggleButtonIcon is null || RootNavigationView is null)
+        if (TitleBarPaneToggleButtonIcon is null || RootNavigationView is null)
         {
             return;
         }
 
-        PaneFooterToggleButtonIcon.Icon = RootNavigationView.IsPaneOpen
+        TitleBarPaneToggleButtonIcon.Icon = RootNavigationView.IsPaneOpen
             ? FluentIcons.Common.Icon.LineHorizontal3
             : FluentIcons.Common.Icon.Navigation;
     }
