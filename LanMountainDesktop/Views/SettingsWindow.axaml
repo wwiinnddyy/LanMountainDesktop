@@ -78,7 +78,9 @@
                              OpenPaneLength="283"
                              IsSettingsVisible="False"
                              IsBackButtonVisible="False"
-                             SelectionChanged="OnNavigationSelectionChanged">
+                             IsPaneToggleButtonVisible="False"
+                             SelectionChanged="OnNavigationSelectionChanged"
+                             ItemInvoked="OnNavigationItemInvoked">
             <ui:FANavigationView.Styles>
                 <Style Selector="ui|FANavigationView#RootNavigationView:minimal">
                     <Setter Property="IsPaneToggleButtonVisible" Value="False" />
@@ -173,20 +175,6 @@
                             ToolTip.Tip="{Binding BackTooltip}"
                             Click="OnBackButtonClick">
                         <fi:FluentIcon Icon="ArrowLeft"
-                                       IconVariant="Regular"
-                                       FontSize="16"
-                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                    </Button>
-
-                    <Button x:Name="TitleBarPaneToggleButton"
-                            Classes="titlebar-icon-button"
-                            Width="48"
-                            Height="48"
-                            Margin="0,-8,-8,-8"
-                            ToolTip.Tip="{Binding TogglePaneTooltip}"
-                            Click="OnTitleBarPaneToggleClick">
-                        <fi:FluentIcon x:Name="TitleBarPaneToggleButtonIcon"
-                                       Icon="Navigation"
                                        IconVariant="Regular"
                                        FontSize="16"
                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />

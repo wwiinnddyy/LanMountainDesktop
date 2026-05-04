@@ -596,7 +596,142 @@
       </StackPanel>
     </Grid>
 
-    <!-- 步骤 4: 信息与隐私页面 -->
+    <!-- 步骤 4: 启动与展示（紧接数据保存位置） -->
+    <Grid x:Name="StartupPresentationStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
+      <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
+        <TextBlock Text="启动与展示"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock Text="这些选项可随时在桌面应用的「设置」中更改。主窗口滑动入场仅在 Windows 上可用。"
+                   FontSize="13"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+      </StackPanel>
+
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="14">
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="在任务栏显示主桌面窗口"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <TextBlock Text="开启后最小化时可在任务栏保留条目；关闭则更多依赖托盘图标。"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              </StackPanel>
+              <ToggleSwitch x:Name="OobeShowInTaskbarToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <Border x:Name="OobeSlideTransitionSection"
+                  Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="以滑动方式显示主窗口"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                  <TextBlock Text="自屏幕边缘滑入；与「淡入」二选一。"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <ToggleSwitch x:Name="OobeSlideTransitionToggle"
+                              Grid.Column="1"
+                              VerticalAlignment="Center" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="4">
+                  <TextBlock Text="启动时使用淡入过渡"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                  <TextBlock Text="在未启用滑动入场时建议使用。"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <ToggleSwitch x:Name="OobeFadeTransitionToggle"
+                              Grid.Column="1"
+                              VerticalAlignment="Center" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <fi:SymbolIcon Symbol="SlideLayout"
+                                 FontSize="20"
+                                 Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
+                  <TextBlock Text="融合桌面与弹入手势"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                </StackPanel>
+                <TextBlock Text="同时启用融合桌面与三指滑动手势，以便使用边缘弹入与相关实验特性（与设置中开发者选项一致）。"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              </StackPanel>
+              <ToggleSwitch x:Name="OobeFusedPopupToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                  CornerRadius="{DynamicResource DesignCornerRadiusMd}"
+                  Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="登录 Windows 时自动启动阑山桌面"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <TextBlock x:Name="OobeAutoStartDescriptionText"
+                           Text="通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+              </StackPanel>
+              <ToggleSwitch x:Name="OobeAutoStartToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <StackPanel Grid.Row="2"
+                  Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="12"
+                  Margin="0,24,0,0">
+        <Button x:Name="StartupPresentationBackButton"
+                Content="返回"
+                Theme="{DynamicResource ButtonTheme}" />
+        <Button x:Name="StartupPresentationNextButton"
+                Content="下一步"
+                Theme="{DynamicResource AccentButtonTheme}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- 步骤 5: 信息与隐私页面 -->
     <Grid x:Name="PrivacyStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
         <TextBlock Text="信息与隐私"
@@ -731,7 +866,7 @@
       </StackPanel>
     </Grid>
 
-    <!-- 步骤 5: 欢迎完成页面 -->
+    <!-- 步骤 6: 欢迎完成页面 -->
     <Grid x:Name="WelcomeStep" Margin="48" RowDefinitions="*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0"
                   VerticalAlignment="Center"

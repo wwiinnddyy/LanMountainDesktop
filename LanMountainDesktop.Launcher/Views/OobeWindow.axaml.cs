@@ -31,6 +31,9 @@ public partial class OobeWindow : Window
     private string _selectedAccentColor = "#0078D4";
     private MonetSource _selectedMonetSource = MonetSource.Wallpaper;
 
+    private readonly bool _startupSlideUiAvailable;
+    private bool _suppressOobeStartupTransitionHandlers;
+
     public OobeWindow()
     {
         AvaloniaXamlLoader.Load(this);
@@ -39,6 +42,7 @@ public partial class OobeWindow : Window
 
         var appRoot = AppDomain.CurrentDomain.BaseDirectory;
         _resolver = new DataLocationResolver(appRoot);
+        _startupSlideUiAvailable = OperatingSystem.IsWindows();
     }
 
     public void SetDebugMode(bool isDebugMode)
@@ -181,7 +185,27 @@ public partial class OobeWindow : Window
             };
         }
 
-        // 步骤 4: 隐私设置页面
+        if (this.FindControl<Button>("StartupPresentationBackButton") is { } startupPresentationBack)
+        {
+            startupPresentationBack.Click += OnStartupPresentationBackClick;
+        }
+
+        if (this.FindControl<Button>("StartupPresentationNextButton") is { } startupPresentationNext)
+        {
+            startupPresentationNext.Click += OnStartupPresentationNextClick;
+        }
+
+        if (this.FindControl<ToggleSwitch>("OobeSlideTransitionToggle") is { } oobeSlideTransition)
+        {
+            oobeSlideTransition.IsCheckedChanged += OnOobeStartupSlideTransitionChanged;
+        }
+
+        if (this.FindControl<ToggleSwitch>("OobeFadeTransitionToggle") is { } oobeFadeTransition)
+        {
+            oobeFadeTransition.IsCheckedChanged += OnOobeStartupFadeTransitionChanged;
+        }
+
+        // 步骤 5: 隐私设置页面
         if (this.FindControl<Button>("PrivacyBackButton") is { } privacyBackButton)
         {
             privacyBackButton.Click += OnPrivacyBackClick;
@@ -203,7 +227,7 @@ public partial class OobeWindow : Window
             privacyCheckBox.IsCheckedChanged += OnPrivacyAgreementChanged;
         }
 
-        // 步骤 5: 欢迎完成页面
+        // 步骤 6: 欢迎完成页面
         if (this.FindControl<Button>("EnterButton") is { } enterButton)
         {
             enterButton.Click += OnEnterClick;
@@ -460,11 +484,189 @@ public partial class OobeWindow : Window
         await NavigateToStep(4);
     }
 
+    // 启动与展示（OOBE 步骤 4）
+    private async void OnStartupPresentationBackClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isTransitioning) return;
+        await NavigateToStep(3);
+    }
+
+    private async void OnStartupPresentationNextClick(object? sender, RoutedEventArgs e)
+    {
+        if (_isTransitioning) return;
+        SaveOobeStartupPresentation();
+        await NavigateToStep(5);
+    }
+
+    private void SaveOobeStartupPresentation()
+    {
+        try
+        {
+            var choices = CollectOobeStartupChoices();
+            var path = HostAppSettingsOobeMerger.GetSettingsFilePath(_resolver.ResolveDataRoot());
+            HostAppSettingsOobeMerger.MergeStartupPresentation(path, choices);
+            if (OperatingSystem.IsWindows())
+            {
+                _ = new LauncherWindowsStartupService().SetEnabled(choices.AutoStartWithWindows);
+            }
+
+            Logger.Info($"[OobeWindow] 启动与展示已写入 '{path}'.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[OobeWindow] 启动与展示保存失败: {ex.Message}");
+        }
+    }
+
+    private void RefreshOobeStartupPresentationFromDisk()
+    {
+        var path = HostAppSettingsOobeMerger.GetSettingsFilePath(_resolver.ResolveDataRoot());
+        var defaults = HostAppSettingsOobeMerger.LoadStartupDefaults(path);
+
+        if (this.FindControl<Border>("OobeSlideTransitionSection") is { } slideSection)
+        {
+            slideSection.IsVisible = _startupSlideUiAvailable;
+        }
+
+        if (this.FindControl<TextBlock>("OobeAutoStartDescriptionText") is { } autoStartDesc)
+        {
+            autoStartDesc.Text = OperatingSystem.IsWindows()
+                ? "通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。"
+                : "当前平台仅保存偏好；是否随系统自启动请使用系统提供的应用自启动设置。";
+        }
+
+        _suppressOobeStartupTransitionHandlers = true;
+        try
+        {
+            if (this.FindControl<ToggleSwitch>("OobeShowInTaskbarToggle") is { } taskbar)
+            {
+                taskbar.IsChecked = defaults.ShowInTaskbar;
+            }
+
+            if (_startupSlideUiAvailable)
+            {
+                if (this.FindControl<ToggleSwitch>("OobeSlideTransitionToggle") is { } slide)
+                {
+                    slide.IsChecked = defaults.EnableSlideTransition;
+                }
+
+                if (this.FindControl<ToggleSwitch>("OobeFadeTransitionToggle") is { } fade)
+                {
+                    fade.IsChecked = defaults.EnableFadeTransition;
+                    fade.IsEnabled = !defaults.EnableSlideTransition;
+                }
+            }
+
+            if (this.FindControl<ToggleSwitch>("OobeFusedPopupToggle") is { } fused)
+            {
+                fused.IsChecked = defaults.FusedPopupExperience;
+            }
+
+            if (this.FindControl<ToggleSwitch>("OobeAutoStartToggle") is { } autoStart)
+            {
+                autoStart.IsChecked = defaults.AutoStartWithWindows;
+                autoStart.IsEnabled = OperatingSystem.IsWindows();
+            }
+        }
+        finally
+        {
+            _suppressOobeStartupTransitionHandlers = false;
+        }
+    }
+
+    private HostAppSettingsStartupChoices CollectOobeStartupChoices()
+    {
+        var showTaskbar = this.FindControl<ToggleSwitch>("OobeShowInTaskbarToggle")?.IsChecked == true;
+        var fused = this.FindControl<ToggleSwitch>("OobeFusedPopupToggle")?.IsChecked == true;
+        var autoStart = OperatingSystem.IsWindows() &&
+                        this.FindControl<ToggleSwitch>("OobeAutoStartToggle")?.IsChecked == true;
+
+        bool fade;
+        bool slide;
+        if (_startupSlideUiAvailable)
+        {
+            slide = this.FindControl<ToggleSwitch>("OobeSlideTransitionToggle")?.IsChecked == true;
+            fade = this.FindControl<ToggleSwitch>("OobeFadeTransitionToggle")?.IsChecked == true;
+        }
+        else
+        {
+            slide = false;
+            fade = true;
+        }
+
+        return new HostAppSettingsStartupChoices(
+            ShowInTaskbar: showTaskbar,
+            EnableFadeTransition: fade,
+            EnableSlideTransition: slide,
+            FusedPopupExperience: fused,
+            AutoStartWithWindows: autoStart);
+    }
+
+    private void OnOobeStartupSlideTransitionChanged(object? sender, RoutedEventArgs e)
+    {
+        if (!_startupSlideUiAvailable || _suppressOobeStartupTransitionHandlers)
+        {
+            return;
+        }
+
+        if (sender is not ToggleSwitch slide || slide.IsChecked != true)
+        {
+            if (this.FindControl<ToggleSwitch>("OobeFadeTransitionToggle") is { } fade)
+            {
+                fade.IsEnabled = true;
+            }
+
+            return;
+        }
+
+        _suppressOobeStartupTransitionHandlers = true;
+        try
+        {
+            if (this.FindControl<ToggleSwitch>("OobeFadeTransitionToggle") is { } fade)
+            {
+                fade.IsChecked = false;
+                fade.IsEnabled = false;
+            }
+        }
+        finally
+        {
+            _suppressOobeStartupTransitionHandlers = false;
+        }
+    }
+
+    private void OnOobeStartupFadeTransitionChanged(object? sender, RoutedEventArgs e)
+    {
+        if (!_startupSlideUiAvailable || _suppressOobeStartupTransitionHandlers)
+        {
+            return;
+        }
+
+        if (sender is not ToggleSwitch fade || fade.IsChecked != true)
+        {
+            return;
+        }
+
+        _suppressOobeStartupTransitionHandlers = true;
+        try
+        {
+            if (this.FindControl<ToggleSwitch>("OobeSlideTransitionToggle") is { } slide)
+            {
+                slide.IsChecked = false;
+            }
+
+            fade.IsEnabled = true;
+        }
+        finally
+        {
+            _suppressOobeStartupTransitionHandlers = false;
+        }
+    }
+
     // 隐私设置页面按钮
     private async void OnPrivacyBackClick(object? sender, RoutedEventArgs e)
     {
         if (_isTransitioning) return;
-        await NavigateToStep(3);
+        await NavigateToStep(4);
     }
 
     private async void OnPrivacyNextClick(object? sender, RoutedEventArgs e)
@@ -474,7 +676,7 @@ public partial class OobeWindow : Window
         // 保存隐私设置
         SavePrivacySettings();
 
-        await NavigateToStep(5);
+        await NavigateToStep(6);
     }
 
     private void OnViewPrivacyPolicyClick(object? sender, RoutedEventArgs e)
@@ -712,8 +914,9 @@ public partial class OobeWindow : Window
             1 => this.FindControl<Grid>("TypingStep"),
             2 => this.FindControl<Grid>("ThemeStep"),
             3 => this.FindControl<Grid>("DataLocationStep"),
-            4 => this.FindControl<Grid>("PrivacyStep"),
-            5 => this.FindControl<Grid>("WelcomeStep"),
+            4 => this.FindControl<Grid>("StartupPresentationStep"),
+            5 => this.FindControl<Grid>("PrivacyStep"),
+            6 => this.FindControl<Grid>("WelcomeStep"),
             _ => null
         };
 
@@ -723,8 +926,9 @@ public partial class OobeWindow : Window
             1 => this.FindControl<Grid>("TypingStep"),
             2 => this.FindControl<Grid>("ThemeStep"),
             3 => this.FindControl<Grid>("DataLocationStep"),
-            4 => this.FindControl<Grid>("PrivacyStep"),
-            5 => this.FindControl<Grid>("WelcomeStep"),
+            4 => this.FindControl<Grid>("StartupPresentationStep"),
+            5 => this.FindControl<Grid>("PrivacyStep"),
+            6 => this.FindControl<Grid>("WelcomeStep"),
             _ => null
         };
 
@@ -736,6 +940,11 @@ public partial class OobeWindow : Window
 
         await AnimateOpacityAsync(currentStepControl, 1, 0, AnimationDurationMs);
         currentStepControl.IsVisible = false;
+
+        if (step == 4)
+        {
+            RefreshOobeStartupPresentationFromDisk();
+        }
 
         nextStepControl.IsVisible = true;
         nextStepControl.Opacity = 0;

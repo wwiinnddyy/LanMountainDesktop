@@ -531,6 +531,8 @@ _oobeSteps = [
 ];
 ```
 
+当前内置 OOBE 向导窗口（`OobeWindow`）内步骤顺序包含：开场 → 主题 → **数据保存位置** → **启动与展示** → 隐私与遥测 → 完成。「启动与展示」写入 Host 的 `settings.json`（PascalCase）并在 Windows 下同步 Run 项，实现代码在 `HostAppSettingsOobeMerger.cs` 与 `LauncherWindowsStartupService.cs`，界面与逻辑挂在 `Views/OobeWindow.axaml(.cs)`。
+
 ### 自定义更新源
 
 修改 `App.axaml.cs` 中的 GitHub 仓库信息:

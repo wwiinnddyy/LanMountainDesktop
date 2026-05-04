@@ -31,6 +31,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private const double MinPaneOpenLength = 260d;
     private const double MaxPaneOpenLength = 288d;
     private const double BaseNarrowThreshold = 800d;
+    private const string PaneToggleItemTag = "__pane_toggle__";
 
     private readonly ISettingsPageRegistry _pageRegistry;
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle;
@@ -42,6 +43,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private bool _isResponsiveRefreshPending;
     private bool _isRestartPromptVisible;
     private bool _isHandlingSearchSelection;
+    private FANavigationViewItem? _paneToggleItem;
     private Border? _currentSearchHighlight;
     private Action? _searchHighlightCleanup;
 
@@ -96,7 +98,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         SyncTitleText();
         UpdateChromeMetrics();
         UpdatePaneToggleVisibility();
-        UpdatePaneToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -216,6 +217,16 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         RootNavigationView.MenuItems.Clear();
         RootNavigationView.FooterMenuItems.Clear();
 
+        _paneToggleItem = new FANavigationViewItem
+        {
+            Content = string.Empty,
+            Tag = PaneToggleItemTag,
+            IconSource = CreateSettingsIconSource(Symbol.Navigation),
+            SelectsOnInvoked = false
+        };
+        ToolTip.SetTip(_paneToggleItem, ViewModel.TogglePaneTooltip);
+        RootNavigationView.MenuItems.Add(_paneToggleItem);
+
         SettingsPageCategory? previousCategory = null;
 
         foreach (var page in ViewModel.Pages)
@@ -248,8 +259,27 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private void OnNavigationSelectionChanged(object? sender, FANavigationViewSelectionChangedEventArgs e)
     {
         _ = sender;
-        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as FANavigationViewItem;
+        var selectedItem = e.SelectedItemContainer ?? e.SelectedItem as Control;
+        if (IsPaneToggleItem(selectedItem))
+        {
+            RestoreCurrentNavigationSelection();
+            return;
+        }
+
         NavigateTo(selectedItem?.Tag as string, addHistory: true, source: "navigation");
+    }
+
+    private void OnNavigationItemInvoked(object? sender, FANavigationViewItemInvokedEventArgs e)
+    {
+        _ = sender;
+        var invokedItem = e.InvokedItemContainer ?? e.InvokedItem as Control;
+        if (!IsPaneToggleItem(invokedItem))
+        {
+            return;
+        }
+
+        ToggleNavigationPane();
+        RestoreCurrentNavigationSelection();
     }
 
     private void NavigateTo(
@@ -803,17 +833,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         return false;
     }
 
-    private void OnTitleBarPaneToggleClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void ToggleNavigationPane()
     {
-        _ = sender;
-        _ = e;
         if (RootNavigationView is null)
         {
             return;
         }
 
         RootNavigationView.IsPaneOpen = !RootNavigationView.IsPaneOpen;
-        UpdatePaneToggleIcon();
         UpdateResponsiveLayout();
         RequestResponsiveLayoutRefresh();
     }
@@ -832,23 +859,35 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
                 UpdatePaneToggleVisibility();
             }
 
-            UpdatePaneToggleIcon();
             RequestResponsiveLayoutRefresh();
         }
     }
 
     /// <summary>
-    /// 仅在 <c>:minimal</c>（<see cref="FANavigationView.IsPaneToggleButtonVisible"/> 为 false）时显示侧栏底部备胎按钮。
-    /// 根 DataContext 为 ViewModel 时，对 <c>#RootNavigationView</c> 的绑定易失效，故用代码同步可见性。
+    /// The NavigationView template toggle is disabled; the first menu item is the only pane toggle.
     /// </summary>
     private void UpdatePaneToggleVisibility()
     {
-        if (TitleBarPaneToggleButton is null || RootNavigationView is null)
+        if (_paneToggleItem is null)
         {
             return;
         }
 
-        TitleBarPaneToggleButton.IsVisible = !RootNavigationView.IsPaneToggleButtonVisible;
+        _paneToggleItem.IsVisible = true;
+        ToolTip.SetTip(_paneToggleItem, ViewModel.TogglePaneTooltip);
+    }
+
+    private static bool IsPaneToggleItem(Control? item)
+    {
+        return string.Equals(item?.Tag as string, PaneToggleItemTag, StringComparison.Ordinal);
+    }
+
+    private void RestoreCurrentNavigationSelection()
+    {
+        if (!string.IsNullOrWhiteSpace(ViewModel.CurrentPageId))
+        {
+            TrySelectNavigationItem(ViewModel.CurrentPageId);
+        }
     }
 
     private void RequestResponsiveLayoutRefresh()
@@ -878,18 +917,6 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         return RootNavigationView.IsPaneOpen
             ? openPaneWidth
             : compactPaneWidth;
-    }
-
-    private void UpdatePaneToggleIcon()
-    {
-        if (TitleBarPaneToggleButtonIcon is null || RootNavigationView is null)
-        {
-            return;
-        }
-
-        TitleBarPaneToggleButtonIcon.Icon = RootNavigationView.IsPaneOpen
-            ? FluentIcons.Common.Icon.LineHorizontal3
-            : FluentIcons.Common.Icon.Navigation;
     }
 
     private void UpdateChromeMetrics()
