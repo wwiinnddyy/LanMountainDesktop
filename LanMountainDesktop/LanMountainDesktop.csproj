@@ -52,7 +52,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="DotNetCampus.AvaloniaInkCanvas" />
     <PackageReference Include="Downloader" />
     <PackageReference Include="FluentAvaloniaUI" />
     <PackageReference Include="FluentIcons.Avalonia" />
@@ -78,6 +77,10 @@
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Tmds.DBus.Protocol" />
     <PackageReference Include="log4net" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ThirdParty\DotNetCampus.InkCanvas\DotNetCampus.AvaloniaInkCanvas.Avalonia12.csproj" />
   </ItemGroup>
 
   <!-- Launcher 构建目标已移除 - Launcher 现在是独立应用，由 CI/CD 单独构建 -->

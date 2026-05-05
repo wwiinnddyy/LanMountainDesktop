@@ -7,7 +7,7 @@ public interface IWhiteboardNotePersistenceService
 {
     WhiteboardNoteSnapshot LoadNote(string componentId, string? placementId, int retentionDays);
 
-    void SaveNote(string componentId, string? placementId, WhiteboardNoteSnapshot snapshot, int retentionDays);
+    bool SaveNote(string componentId, string? placementId, WhiteboardNoteSnapshot snapshot, int retentionDays);
 
     bool DeleteNote(string componentId, string? placementId);
 

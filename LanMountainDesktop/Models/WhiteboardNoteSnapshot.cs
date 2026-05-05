@@ -5,9 +5,23 @@ namespace LanMountainDesktop.Models;
 
 public sealed class WhiteboardNoteSnapshot
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
 
     public DateTimeOffset SavedUtc { get; set; }
+
+    public DateTimeOffset? ExpiresUtc { get; set; }
+
+    public double CanvasWidth { get; set; }
+
+    public double CanvasHeight { get; set; }
+
+    public string BackgroundColor { get; set; } = "#FFFFFFFF";
+
+    public double ViewportZoom { get; set; } = 1d;
+
+    public double ViewportOffsetX { get; set; }
+
+    public double ViewportOffsetY { get; set; }
 
     public List<WhiteboardStrokeSnapshot> Strokes { get; set; } = [];
 
@@ -28,6 +42,8 @@ public sealed class WhiteboardStrokeSnapshot
     public double InkThickness { get; set; } = 2.5d;
 
     public bool IgnorePressure { get; set; } = true;
+
+    public string? PathSvgData { get; set; }
 
     public List<WhiteboardStylusPointSnapshot> Points { get; set; } = [];
 

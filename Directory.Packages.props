@@ -30,7 +30,7 @@
     <PackageVersion Include="MudTools.OfficeInterop.PowerPoint" Version="2.0.9" />
     <PackageVersion Include="MudTools.OfficeInterop.Word" Version="2.0.9" />
     <PackageVersion Include="PortAudioSharp2" Version="1.0.6" />
-    <PackageVersion Include="PostHog" Version="2.5.0" />
+    <PackageVersion Include="PostHog" Version="2.6.0" />
     <PackageVersion Include="Sentry" Version="6.4.1" />
     <PackageVersion Include="System.Drawing.Common" Version="11.0.0-preview.3.26207.106" />
     <PackageVersion Include="System.Runtime.WindowsRuntime" Version="5.0.0-preview.5.20278.1" />

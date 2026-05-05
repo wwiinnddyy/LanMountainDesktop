@@ -12,6 +12,7 @@
   <Project Path="LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
   <Project Path="LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
   <Project Path="LanMountainDesktop.PluginUpgradeHelper/LanMountainDesktop.PluginUpgradeHelper.csproj" />
+  <Project Path="ThirdParty/DotNetCampus.InkCanvas/DotNetCampus.AvaloniaInkCanvas.Avalonia12.csproj" />
   <Project Path="LanMountainDesktop/LanMountainDesktop.csproj" />
   <Project Path="LanMountainDesktop.Tests/LanMountainDesktop.Tests.csproj" />
 </Solution>
