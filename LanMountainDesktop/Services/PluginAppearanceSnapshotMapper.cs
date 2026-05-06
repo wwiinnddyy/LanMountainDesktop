@@ -9,6 +9,9 @@ namespace LanMountainDesktop.Services;
 
 internal static class PluginAppearanceSnapshotMapper
 {
+    /// <summary>
+    /// Normal host-to-plugin appearance mapping for the live material color pipeline.
+    /// </summary>
     public static PluginAppearanceSnapshot FromMaterialColorSnapshot(MaterialColorSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -32,7 +35,11 @@ internal static class PluginAppearanceSnapshotMapper
             snapshot.WallpaperSeedCandidates.Select(ToText).ToArray());
     }
 
-    public static PluginAppearanceSnapshot FromAppearanceSnapshot(AppearanceThemeSnapshot snapshot)
+    /// <summary>
+    /// Compatibility-only mapper for older hosts that still expose <see cref="IAppearanceThemeService"/>
+    /// instead of the material color pipeline.
+    /// </summary>
+    public static PluginAppearanceSnapshot FromCompatibilityAppearanceSnapshot(AppearanceThemeSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -54,6 +61,15 @@ internal static class PluginAppearanceSnapshotMapper
             },
             null,
             snapshot.WallpaperSeedCandidates.Select(ToText).ToArray());
+    }
+
+    /// <summary>
+    /// Backward-compatible alias for older call sites. Prefer <see cref="FromCompatibilityAppearanceSnapshot"/>.
+    /// </summary>
+    [Obsolete("Use FromCompatibilityAppearanceSnapshot instead.")]
+    public static PluginAppearanceSnapshot FromAppearanceSnapshot(AppearanceThemeSnapshot snapshot)
+    {
+        return FromCompatibilityAppearanceSnapshot(snapshot);
     }
 
     private static IReadOnlyDictionary<string, string> BuildColorRoles(MaterialColorSnapshot snapshot)

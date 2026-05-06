@@ -542,17 +542,17 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
         SourceStatusHeader = L("settings.material_color.source_status.header", "Resolved source");
         SemanticColorsHeader = L("settings.material_color.semantic.header", "Semantic colors");
         SurfacesHeader = L("settings.material_color.surfaces.header", "Material surfaces");
-        WallpaperSeedCurrentText = L("settings.appearance.preview.wallpaper_current", "Current");
-        ModeNeutralText = L("settings.appearance.theme_color_mode.neutral", "Default neutral");
-        ModeCustomText = L("settings.appearance.theme_color_mode.user", "User theme color Monet");
-        ModeWallpaperText = L("settings.appearance.theme_color_mode.wallpaper", "Wallpaper Monet");
+        WallpaperSeedCurrentText = L("settings.material_color.preview.wallpaper_current", "Current");
+        ModeNeutralText = L("settings.material_color.theme_color_mode.neutral", "Default neutral");
+        ModeCustomText = L("settings.material_color.theme_color_mode.user", "User theme color Monet");
+        ModeWallpaperText = L("settings.material_color.theme_color_mode.wallpaper", "Wallpaper Monet");
         WallpaperSourceAutoText = L("settings.material_color.wallpaper_source.auto", "Auto");
         WallpaperSourceAppText = L("settings.material_color.wallpaper_source.app", "App wallpaper");
         WallpaperSourceSystemText = L("settings.material_color.wallpaper_source.system", "System wallpaper");
-        MaterialNoneText = L("settings.appearance.system_material.none", "None");
-        MaterialAutoText = L("settings.appearance.system_material.auto", "Auto");
-        MaterialMicaText = L("settings.appearance.system_material.mica", "Mica");
-        MaterialAcrylicText = L("settings.appearance.system_material.acrylic", "Acrylic");
+        MaterialNoneText = L("settings.material_color.system_material.none", "None");
+        MaterialAutoText = L("settings.material_color.system_material.auto", "Auto");
+        MaterialMicaText = L("settings.material_color.system_material.mica", "Mica");
+        MaterialAcrylicText = L("settings.material_color.system_material.acrylic", "Acrylic");
     }
 
     private string L(string key, string fallback)

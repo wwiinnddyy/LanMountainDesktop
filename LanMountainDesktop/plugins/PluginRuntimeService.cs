@@ -1103,6 +1103,7 @@ public sealed class PluginRuntimeService : IDisposable
 
             if (serviceType == typeof(IAppearanceThemeService))
             {
+                // Compatibility-only. Plugin appearance snapshots are still sourced from the material pipeline.
                 return _appearanceThemeService;
             }
 

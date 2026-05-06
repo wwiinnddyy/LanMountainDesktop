@@ -20,11 +20,10 @@ public enum WallpaperMediaType
 
 public sealed record GridSettingsState(int ShortSideCells, string SpacingPreset, int EdgeInsetPercent);
 public sealed record WallpaperSettingsState(
-    string? WallpaperPath, 
-    string Type, 
-    string? Color, 
-    string Placement, 
-    string? CustomColor = null,
+    string? WallpaperPath,
+    string Type,
+    string? Color,
+    string Placement,
     int SystemWallpaperRefreshIntervalSeconds = 300);
 public sealed record ThemeAppearanceSettingsState(
     bool IsNightMode,

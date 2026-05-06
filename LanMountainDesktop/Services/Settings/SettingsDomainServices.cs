@@ -102,7 +102,6 @@ internal sealed class WallpaperSettingsService : IWallpaperSettingsService
             normalizedType,
             snapshot.WallpaperColor,
             snapshot.WallpaperPlacement,
-            CustomColor: null,
             SystemWallpaperRefreshIntervalSeconds: NormalizeRefreshInterval(snapshot.SystemWallpaperRefreshIntervalSeconds));
     }
 

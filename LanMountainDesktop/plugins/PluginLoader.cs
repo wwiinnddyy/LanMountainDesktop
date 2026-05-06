@@ -335,6 +335,7 @@ public sealed class PluginLoader
         RegisterHostService<ISettingsFacadeService>(services, hostServices);
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
+        // Legacy compatibility only. Normal plugin appearance snapshots come from IMaterialColorService.
         RegisterHostService<IAppearanceThemeService>(services, hostServices);
         RegisterHostService<IMaterialColorService>(services, hostServices);
         RegisterHostService<IExternalIpcNotificationPublisher>(services, hostServices);
@@ -344,20 +345,18 @@ public sealed class PluginLoader
 
     private static PluginAppearanceSnapshot BuildAppearanceSnapshot(IServiceProvider? hostServices)
     {
-        var defaultSnapshot = new PluginAppearanceSnapshot(
-            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
-            ThemeVariant: "Unknown");
+        var defaultSnapshot = CreateDefaultAppearanceSnapshot();
 
         try
         {
-            if (hostServices?.GetService(typeof(IMaterialColorService)) is IMaterialColorService materialColorService)
+            if (TryBuildAppearanceSnapshotFromMaterialColorService(hostServices, out var snapshot))
             {
-                return PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(materialColorService.GetMaterialColorSnapshot());
+                return snapshot;
             }
 
-            if (hostServices?.GetService(typeof(IAppearanceThemeService)) is IAppearanceThemeService appearanceThemeService)
+            if (TryBuildCompatibilityAppearanceSnapshotFromAppearanceThemeService(hostServices, out snapshot))
             {
-                return PluginAppearanceSnapshotMapper.FromAppearanceSnapshot(appearanceThemeService.GetCurrent());
+                return snapshot;
             }
 
             return defaultSnapshot;
@@ -367,6 +366,41 @@ public sealed class PluginLoader
             AppLogger.Warn("PluginLoader", "Failed to resolve host appearance snapshot for plugin runtime context.", ex);
             return defaultSnapshot;
         }
+    }
+
+    private static bool TryBuildAppearanceSnapshotFromMaterialColorService(
+        IServiceProvider? hostServices,
+        out PluginAppearanceSnapshot snapshot)
+    {
+        snapshot = default!;
+        if (hostServices?.GetService(typeof(IMaterialColorService)) is not IMaterialColorService materialColorService)
+        {
+            return false;
+        }
+
+        snapshot = PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(materialColorService.GetMaterialColorSnapshot());
+        return true;
+    }
+
+    private static bool TryBuildCompatibilityAppearanceSnapshotFromAppearanceThemeService(
+        IServiceProvider? hostServices,
+        out PluginAppearanceSnapshot snapshot)
+    {
+        snapshot = default!;
+        if (hostServices?.GetService(typeof(IAppearanceThemeService)) is not IAppearanceThemeService appearanceThemeService)
+        {
+            return false;
+        }
+
+        snapshot = PluginAppearanceSnapshotMapper.FromCompatibilityAppearanceSnapshot(appearanceThemeService.GetCurrent());
+        return true;
+    }
+
+    private static PluginAppearanceSnapshot CreateDefaultAppearanceSnapshot()
+    {
+        return new PluginAppearanceSnapshot(
+            CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
+            ThemeVariant: "Unknown");
     }
 
     private static void RegisterHostService<TService>(IServiceCollection services, IServiceProvider? hostServices)

@@ -16,7 +16,9 @@ internal sealed class SettingsCatalogService : ISettingsCatalog
         _sections.AddRange(
         [
             new SettingsSectionDefinition("general", SettingsCategories.General, SettingsScope.App, "settings.general.title", iconKey: "Settings", sortOrder: 0),
+            new SettingsSectionDefinition("material-color", SettingsCategories.Appearance, SettingsScope.App, "settings.material_color.title", iconKey: "Color", sortOrder: 8),
             new SettingsSectionDefinition("appearance", SettingsCategories.Appearance, SettingsScope.App, "settings.appearance.title", iconKey: "DesignIdeas", sortOrder: 10),
+            new SettingsSectionDefinition("wallpaper", SettingsCategories.Appearance, SettingsScope.App, "settings.wallpaper.title", iconKey: "Image", sortOrder: 15),
             new SettingsSectionDefinition("components", SettingsCategories.Components, SettingsScope.ComponentInstance, "settings.components.title", iconKey: "Apps", sortOrder: 20),
             new SettingsSectionDefinition("plugins", SettingsCategories.Plugins, SettingsScope.Plugin, "settings.plugins.title", iconKey: "PuzzlePiece", sortOrder: 30),
             new SettingsSectionDefinition("about", SettingsCategories.About, SettingsScope.App, "settings.about.title", iconKey: "Info", sortOrder: 40)

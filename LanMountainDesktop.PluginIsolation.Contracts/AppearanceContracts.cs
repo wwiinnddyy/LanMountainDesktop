@@ -1,5 +1,9 @@
 namespace LanMountainDesktop.PluginIsolation.Contracts;
 
+/// <summary>
+/// Wire request for the IPC appearance snapshot payload. This request targets the
+/// isolation-contract DTOs, not the runtime SDK snapshot with the same type name.
+/// </summary>
 public sealed record PluginAppearanceSnapshotRequest(string SessionId);
 
 public sealed record PluginMaterialSurfaceSnapshot(
@@ -8,6 +12,10 @@ public sealed record PluginMaterialSurfaceSnapshot(
     double BlurRadius,
     double Opacity);
 
+/// <summary>
+/// Wire-format appearance snapshot exchanged over IPC.
+/// Do not treat this as the same type as <c>LanMountainDesktop.PluginSdk.PluginAppearanceSnapshot</c>.
+/// </summary>
 public sealed record PluginAppearanceSnapshot(
     string ThemeVariant,
     string? AccentColor = null,
@@ -21,4 +29,7 @@ public sealed record PluginAppearanceSnapshot(
     IReadOnlyDictionary<string, PluginMaterialSurfaceSnapshot>? MaterialSurfaces = null,
     IReadOnlyList<string>? WallpaperSeedCandidates = null);
 
+/// <summary>
+/// Wire notification carrying the IPC appearance snapshot.
+/// </summary>
 public sealed record PluginAppearanceChangedNotification(PluginAppearanceSnapshot Snapshot);

@@ -35,12 +35,14 @@ public static class DesktopComponentRegistryFactory
     public static DesktopComponentRuntimeRegistry CreateRuntimeRegistry(
         ComponentRegistry componentRegistry,
         PluginRuntimeService? pluginRuntimeService,
-        ISettingsFacadeService settingsFacade)
+        ISettingsFacadeService settingsFacade,
+        IMaterialColorService? materialColorService = null)
     {
         var registrations = DesktopComponentRuntimeRegistry.GetDefaultRegistrations().ToList();
         var registeredIds = new HashSet<string>(
             registrations.Select(registration => registration.ComponentId),
             StringComparer.OrdinalIgnoreCase);
+        var resolvedMaterialColorService = materialColorService ?? HostMaterialColorProvider.GetOrCreate();
 
         if (pluginRuntimeService is not null)
         {
@@ -62,7 +64,7 @@ public static class DesktopComponentRegistryFactory
                 registrations.Add(new DesktopComponentRuntimeRegistration(
                     registration.ComponentId,
                     registration.DisplayNameLocalizationKey,
-                    factoryContext => CreatePluginControl(contribution, factoryContext),
+                    factoryContext => CreatePluginControl(contribution, factoryContext, resolvedMaterialColorService),
                     chromeContext =>
                     {
                         var appearanceContext = CreatePluginAppearanceContext(chromeContext);
@@ -118,7 +120,8 @@ public static class DesktopComponentRegistryFactory
 
     private static Control CreatePluginControl(
         PluginDesktopComponentContribution contribution,
-        DesktopComponentControlFactoryContext context)
+        DesktopComponentControlFactoryContext context,
+        IMaterialColorService materialColorService)
     {
         try
         {
@@ -129,7 +132,7 @@ public static class DesktopComponentRegistryFactory
                 settingsService);
             var pluginAppearance = new PluginAppearanceContext(
                 PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(
-                    HostMaterialColorProvider.GetOrCreate().GetMaterialColorSnapshot()));
+                    materialColorService.GetMaterialColorSnapshot()));
             var pluginContext = new PluginDesktopComponentContext(
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,

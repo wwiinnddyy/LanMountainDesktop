@@ -7,9 +7,10 @@ namespace LanMountainDesktop.Services;
 
 public static class GlassEffectService
 {
+    private static readonly IMaterialSurfaceService MaterialSurfaceService = new MaterialSurfaceService();
+
     public static void ApplyGlassResources(IResourceDictionary resources, ThemeColorContext context)
     {
-        var materialSurfaceService = new MaterialSurfaceService();
         var monetPalette = context.MonetPalette;
         var monetColors = context.MonetColors?.Where(color => color.A > 0).ToArray() ?? [];
         var primary = context.UseNeutralSurfaces
@@ -48,13 +49,13 @@ public static class GlassEffectService
                 ColorMath.Blend(buttonBackground, primary, context.IsNightMode ? 0.24 : 0.16),
                 context.IsNightMode ? (byte)0xF8 : (byte)0xFF));
 
-        var windowSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.WindowBackground);
-        var settingsWindowSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.SettingsWindowBackground);
-        var dockSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.DockBackground);
-        var statusBarSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarBackground);
-        var desktopComponentSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.DesktopComponentHost);
-        var statusBarComponentSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarComponentHost);
-        var overlaySurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.OverlayPanel);
+        var windowSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.WindowBackground);
+        var settingsWindowSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.SettingsWindowBackground);
+        var dockSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.DockBackground);
+        var statusBarSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarBackground);
+        var desktopComponentSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.DesktopComponentHost);
+        var statusBarComponentSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarComponentHost);
+        var overlaySurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.OverlayPanel);
         var strongSurfaceColor = ColorMath.Blend(
             desktopComponentSurface.BackgroundColor,
             overlaySurface.BackgroundColor,
