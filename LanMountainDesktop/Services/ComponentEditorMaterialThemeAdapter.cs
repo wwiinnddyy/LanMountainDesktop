@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Avalonia.Media;
 using LanMountainDesktop.Models;
-using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Theme;
 
 namespace LanMountainDesktop.Services;
@@ -28,89 +24,46 @@ internal sealed record ComponentEditorThemePalette(
 
 internal static class ComponentEditorMaterialThemeAdapter
 {
-    private static readonly Color DefaultPrimary = Color.Parse("#FF6750A4");
-    private static readonly Color DarkBackgroundBase = Color.Parse("#FF0B0F14");
-    private static readonly Color DarkSurfaceBase = Color.Parse("#FF10161D");
-    private static readonly Color DarkSurfaceContainerBase = Color.Parse("#FF151C24");
-    private static readonly Color DarkSurfaceContainerHighBase = Color.Parse("#FF1A232D");
-    private static readonly Color LightBackgroundBase = Color.Parse("#FFFCFCFF");
-    private static readonly Color LightSurfaceBase = Color.Parse("#FFFFFFFF");
-    private static readonly Color LightSurfaceContainerBase = Color.Parse("#FFF6F8FD");
-    private static readonly Color LightSurfaceContainerHighBase = Color.Parse("#FFF0F4FA");
-    private static readonly Color LightOnSurfaceBase = Color.Parse("#FF101316");
-    private static readonly Color DarkOnSurfaceBase = Color.Parse("#FFF6F8FC");
+    private static readonly Color FallbackPrimary = Color.Parse("#FF6750A4");
 
-    public static ComponentEditorThemePalette Build(
-        ThemeAppearanceSettingsState themeState,
-        WallpaperSettingsState wallpaperState,
-        MonetPalette monetPalette,
-        WallpaperMediaType wallpaperMediaType)
+    public static ComponentEditorThemePalette Build(MaterialColorSnapshot snapshot)
     {
-        ArgumentNullException.ThrowIfNull(monetPalette);
+        ArgumentNullException.ThrowIfNull(snapshot);
 
-        var isNightMode = themeState.IsNightMode;
-        var fallbackThemeColor = TryParseColor(themeState.ThemeColor);
-        var useWallpaperPalette = wallpaperMediaType == WallpaperMediaType.Image && monetPalette.Primary.A > 0;
+        var palette = snapshot.Palette;
+        var isNightMode = snapshot.IsNightMode;
+        var primary = FirstUsable(palette.Primary, palette.Accent, snapshot.AccentColor, FallbackPrimary);
+        var secondary = FirstUsable(
+            palette.Secondary,
+            snapshot.MonetPalette.Secondary,
+            ColorMath.Blend(primary, isNightMode ? Colors.White : Color.Parse("#FF1F1B24"), isNightMode ? 0.18 : 0.16));
+        var tertiary = FirstUsable(
+            snapshot.MonetPalette.Tertiary,
+            ColorMath.Blend(ColorMath.Blend(primary, secondary, 0.5), isNightMode ? Colors.White : Color.Parse("#FF2A2230"), isNightMode ? 0.12 : 0.14));
 
-        var primary = useWallpaperPalette
-            ? monetPalette.Primary
-            : fallbackThemeColor ?? monetPalette.Primary;
-        if (primary == default)
-        {
-            primary = DefaultPrimary;
-        }
-
-        var secondary = ResolveSecondaryColor(primary, monetPalette, isNightMode);
-        var tertiary = ResolveTertiaryColor(primary, secondary, monetPalette, isNightMode);
-
-        var backgroundBase = isNightMode ? DarkBackgroundBase : LightBackgroundBase;
-        var surfaceBase = isNightMode ? DarkSurfaceBase : LightSurfaceBase;
-        var surfaceContainerBase = isNightMode ? DarkSurfaceContainerBase : LightSurfaceContainerBase;
-        var surfaceContainerHighBase = isNightMode ? DarkSurfaceContainerHighBase : LightSurfaceContainerHighBase;
-
-        var background = ColorMath.Blend(backgroundBase, primary, isNightMode ? 0.10 : 0.025);
-        var surface = ColorMath.Blend(surfaceBase, primary, isNightMode ? 0.12 : 0.035);
-        var surfaceContainer = ColorMath.Blend(surfaceContainerBase, primary, isNightMode ? 0.18 : 0.065);
-        var surfaceContainerHigh = ColorMath.Blend(surfaceContainerHighBase, primary, isNightMode ? 0.24 : 0.09);
+        var windowBackground = GetSurfaceColor(snapshot, MaterialSurfaceRole.WindowBackground, palette.SurfaceBase);
+        var surface = FirstUsable(palette.SurfaceRaised, GetSurfaceColor(snapshot, MaterialSurfaceRole.SettingsWindowBackground, palette.SurfaceBase));
+        var surfaceContainer = FirstUsable(palette.SurfaceOverlay, GetSurfaceColor(snapshot, MaterialSurfaceRole.DesktopComponentHost, surface));
+        var surfaceContainerHigh = GetSurfaceColor(snapshot, MaterialSurfaceRole.OverlayPanel, surfaceContainer);
         var topAppBar = ColorMath.Blend(surfaceContainerHigh, primary, isNightMode ? 0.10 : 0.06);
 
-        var onSurfaceBase = isNightMode ? DarkOnSurfaceBase : LightOnSurfaceBase;
-        var onSurface = ColorMath.EnsureContrast(onSurfaceBase, background, 7.0);
-        var onSurfaceVariantBase = ColorMath.Blend(
-            onSurface,
-            surfaceContainer,
-            isNightMode ? 0.30 : 0.42);
-        var onSurfaceVariant = ColorMath.EnsureContrast(onSurfaceVariantBase, surfaceContainer, 4.5);
-        var outlineBase = ColorMath.Blend(onSurface, surfaceContainer, isNightMode ? 0.74 : 0.82);
-        var outline = Color.FromArgb(
-            isNightMode ? (byte)0x66 : (byte)0x42,
-            outlineBase.R,
-            outlineBase.G,
-            outlineBase.B);
-        var divider = Color.FromArgb(
-            isNightMode ? (byte)0x52 : (byte)0x26,
-            outlineBase.R,
-            outlineBase.G,
-            outlineBase.B);
-        var headerIconBackground = Color.FromArgb(
-            isNightMode ? (byte)0x36 : (byte)0x1F,
-            primary.R,
-            primary.G,
-            primary.B);
-        var titleBarButtonHover = Color.FromArgb(
-            isNightMode ? (byte)0x24 : (byte)0x12,
-            onSurface.R,
-            onSurface.G,
-            onSurface.B);
-        var onPrimaryBase = isNightMode ? Color.Parse("#FF111318") : Color.Parse("#FFFFFFFF");
-        var onPrimary = ColorMath.EnsureContrast(onPrimaryBase, primary, 4.5);
+        var textPrimary = FirstUsable(palette.TextPrimary, isNightMode ? Colors.White : Color.Parse("#FF101316"));
+        var textSecondary = FirstUsable(palette.TextSecondary, palette.TextMuted, ColorMath.Blend(textPrimary, surfaceContainer, isNightMode ? 0.30 : 0.42));
+        var outline = FirstUsable(
+            GetSurfaceBorder(snapshot, MaterialSurfaceRole.DesktopComponentHost),
+            palette.ToggleBorder,
+            ColorMath.WithAlpha(ColorMath.Blend(textPrimary, surfaceContainer, isNightMode ? 0.74 : 0.82), isNightMode ? (byte)0x66 : (byte)0x42));
+        var divider = ColorMath.WithAlpha(outline, isNightMode ? (byte)0x52 : (byte)0x26);
+        var headerIconBackground = Color.FromArgb(isNightMode ? (byte)0x36 : (byte)0x1F, primary.R, primary.G, primary.B);
+        var titleBarButtonHover = Color.FromArgb(isNightMode ? (byte)0x24 : (byte)0x12, textPrimary.R, textPrimary.G, textPrimary.B);
+        var onPrimary = FirstUsable(palette.OnAccent, ColorMath.EnsureContrast(Colors.White, primary, 4.5));
 
         return new ComponentEditorThemePalette(
             isNightMode,
             primary,
             secondary,
             tertiary,
-            background,
+            windowBackground,
             surface,
             surfaceContainer,
             surfaceContainerHigh,
@@ -119,43 +72,35 @@ internal static class ComponentEditorMaterialThemeAdapter
             titleBarButtonHover,
             outline,
             divider,
-            onSurface,
-            onSurfaceVariant,
+            textPrimary,
+            textSecondary,
             onPrimary);
     }
 
-    private static Color ResolveSecondaryColor(Color primary, MonetPalette monetPalette, bool isNightMode)
+    private static Color GetSurfaceColor(MaterialColorSnapshot snapshot, MaterialSurfaceRole role, Color fallback)
     {
-        if (monetPalette.Secondary != default)
-        {
-            return monetPalette.Secondary;
-        }
-
-        return ColorMath.Blend(
-            primary,
-            isNightMode ? Color.Parse("#FFFFFFFF") : Color.Parse("#FF1F1B24"),
-            isNightMode ? 0.18 : 0.16);
+        return snapshot.Surfaces.TryGetValue(role, out var surface) && surface.BackgroundColor.A > 0
+            ? surface.BackgroundColor
+            : fallback;
     }
 
-    private static Color ResolveTertiaryColor(
-        Color primary,
-        Color secondary,
-        MonetPalette monetPalette,
-        bool isNightMode)
+    private static Color GetSurfaceBorder(MaterialColorSnapshot snapshot, MaterialSurfaceRole role)
     {
-        if (monetPalette.Tertiary != default)
-        {
-            return monetPalette.Tertiary;
-        }
-
-        var blendTarget = isNightMode ? Color.Parse("#FFFFFFFF") : Color.Parse("#FF2A2230");
-        return ColorMath.Blend(ColorMath.Blend(primary, secondary, 0.5), blendTarget, isNightMode ? 0.12 : 0.14);
+        return snapshot.Surfaces.TryGetValue(role, out var surface)
+            ? surface.BorderColor
+            : default;
     }
 
-    private static Color? TryParseColor(string? value)
+    private static Color FirstUsable(params Color[] colors)
     {
-        return !string.IsNullOrWhiteSpace(value) && Color.TryParse(value, out var parsed)
-            ? parsed
-            : null;
+        foreach (var color in colors)
+        {
+            if (color.A > 0)
+            {
+                return color;
+            }
+        }
+
+        return default;
     }
 }

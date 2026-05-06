@@ -630,69 +630,33 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
 public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 {
-    private static readonly Color DefaultSeedColor = Color.Parse("#FF3B82F6");
-    private static readonly SolidColorBrush NeutralLightBrushValue = new(Color.Parse("#FFFFFFFF"));
-    private static readonly SolidColorBrush NeutralDarkBrushValue = new(Color.Parse("#FF000000"));
     private readonly ISettingsFacadeService _settingsFacade;
-    private readonly IAppearanceThemeService _appearanceThemeService;
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _isInitializing;
-    private string? _selectedWallpaperSeed;
 
-    public AppearanceSettingsPageViewModel(
-        ISettingsFacadeService settingsFacade,
-        IAppearanceThemeService appearanceThemeService)
+    public AppearanceSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
-        _settingsFacade = settingsFacade;
-        _appearanceThemeService = appearanceThemeService;
+        _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         RefreshLocalizedText();
-        ThemeColorModes = CreateThemeColorModes();
         ThemeModeOptions = CreateThemeModeOptions();
 
         _isInitializing = true;
-        Load();
-        _isInitializing = false;
-
-    }
-
-    partial void OnSelectedThemeModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
+        try
         {
-            return;
+            Load();
         }
-
-        // 根据选择的主题模式更新夜间模式状态
-        var newIsNightMode = value.Value switch
+        finally
         {
-            ThemeAppearanceValues.ThemeModeDark => true,
-            ThemeAppearanceValues.ThemeModeLight => false,
-            ThemeAppearanceValues.ThemeModeFollowSystem => Application.Current?.ActualThemeVariant == ThemeVariant.Dark,
-            _ => IsNightMode
-        };
-
-        if (IsNightMode != newIsNightMode)
-        {
-            IsNightMode = newIsNightMode;
+            _isInitializing = false;
         }
-
-        PersistCurrentState(restartRequired: false);
     }
 
     public event Action<string>? RestartRequested;
 
-    public IReadOnlyList<SelectionOption> ThemeColorModes { get; }
-
-    [ObservableProperty]
-    private IReadOnlyList<SelectionOption> _systemMaterialModes = [];
-
     [ObservableProperty]
     private bool _isNightMode;
-
-    [ObservableProperty]
-    private string _themeColor = string.Empty;
 
     [ObservableProperty]
     private IReadOnlyList<SelectionOption> _themeModeOptions = [];
@@ -716,90 +680,10 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _themeModeFollowSystemText = string.Empty;
 
     [ObservableProperty]
-    private Color _customSeedPickerValue = DefaultSeedColor;
-
-    partial void OnCustomSeedPickerValueChanged(Color value)
-    {
-        if (_isInitializing ||
-            !string.Equals(SelectedThemeColorMode?.Value, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        UpdatePreview(BuildPendingState(usePickerSeed: true));
-    }
-
-    [ObservableProperty]
     private bool _useSystemChrome;
 
     [ObservableProperty]
-    private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
-
-    [ObservableProperty]
-    private SelectionOption _selectedThemeColorMode = new(ThemeAppearanceValues.ColorModeSeedMonet, "User theme color Monet");
-
-    [ObservableProperty]
-    private SelectionOption _selectedSystemMaterialMode = new(ThemeAppearanceValues.MaterialAuto, "Auto");
-
-    [ObservableProperty]
-    private bool _isThemeColorEditable;
-
-    [ObservableProperty]
-    private bool _isWallpaperMode;
-
-    [ObservableProperty]
-    private bool _showNeutralPreview;
-
-    [ObservableProperty]
-    private bool _showMonetPreview;
-
-    [ObservableProperty]
-    private bool _isWallpaperSeedSelectable;
-
-    [ObservableProperty]
-    private string _themeColorSourceDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialDescription = string.Empty;
-
-    [ObservableProperty]
-    private IBrush _primarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _secondarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _tertiarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _neutralSwatchBrush = new SolidColorBrush(Color.Parse("#FFF2F4F7"));
-
-    [ObservableProperty]
-    private IBrush _seedSwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IReadOnlyList<ThemeSeedCandidateOption> _wallpaperSeedCandidates = [];
-
-    [ObservableProperty]
-    private string _pageTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _pageDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _nightModeLabel = string.Empty;
-
-    [ObservableProperty]
     private string _useSystemChromeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _themeColorLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _themeColorModeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialLabel = string.Empty;
 
     [ObservableProperty]
     private string _cornerRadiusStyleLabel = string.Empty;
@@ -811,89 +695,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _themeHeader = string.Empty;
 
     [ObservableProperty]
-    private string _themeSourceNeutralText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceUserColorText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceDefaultDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceUserColorDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperAppDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperSystemDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperFallbackDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialNoneText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialAutoText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialMicaText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialAcrylicText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialSwitchableDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialFixedDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialAutoDescription = string.Empty;
-
-    [ObservableProperty]
     private string _appearanceRestartMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _previewPrimaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewSecondaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewTertiaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewSeedLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralLightLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralDarkLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _seedApplyButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _wallpaperSeedFlyoutTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _wallpaperSeedCurrentText = string.Empty;
-
-    public IBrush NeutralLightPreviewBrush => NeutralLightBrushValue;
-
-    public IBrush NeutralDarkPreviewBrush => NeutralDarkBrushValue;
 
     [ObservableProperty]
     private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
@@ -907,8 +709,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     public void Load()
     {
         var theme = _settingsFacade.Theme.Get();
-        var liveSnapshot = _appearanceThemeService.GetCurrent();
-        RefreshMaterialModeOptions(liveSnapshot);
 
         _isInitializing = true;
         try
@@ -919,8 +719,29 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             _isInitializing = false;
         }
+    }
 
-        UpdatePreview(theme);
+    partial void OnSelectedThemeModeChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        var newIsNightMode = value.Value switch
+        {
+            ThemeAppearanceValues.ThemeModeDark => true,
+            ThemeAppearanceValues.ThemeModeLight => false,
+            ThemeAppearanceValues.ThemeModeFollowSystem => Application.Current?.ActualThemeVariant == ThemeVariant.Dark,
+            _ => IsNightMode
+        };
+
+        if (IsNightMode != newIsNightMode)
+        {
+            IsNightMode = newIsNightMode;
+        }
+
+        PersistCurrentState(restartRequired: false);
     }
 
     partial void OnUseSystemChromeChanged(bool value)
@@ -944,64 +765,8 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PersistCurrentState(restartRequired: false);
     }
 
-    partial void OnSelectedThemeColorModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        PersistCurrentState(restartRequired: true);
-    }
-
-    partial void OnSelectedSystemMaterialModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        PersistCurrentState(restartRequired: true);
-    }
-
-    [RelayCommand]
-    private void ApplyCustomSeed()
-    {
-        if (!IsThemeColorEditable)
-        {
-            return;
-        }
-
-        ThemeColor = CustomSeedPickerValue.ToString();
-        PersistCurrentState(restartRequired: false);
-    }
-
-    public void CancelCustomSeedPreview()
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SyncCustomSeedPickerWithSavedThemeColor();
-        UpdatePreview(BuildPendingState(usePickerSeed: false));
-    }
-
-    public void SelectWallpaperSeed(string value)
-    {
-        if (!IsWallpaperMode || string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        _selectedWallpaperSeed = value;
-        PersistCurrentState(restartRequired: true);
-    }
-
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.appearance.title", "Appearance");
-        PageDescription = L("settings.appearance.description", "Adjust theme source, material background, and window chrome.");
         ThemeHeader = L("settings.appearance.theme_header", "Theme");
         ThemeModeLabel = L("settings.appearance.theme_mode_label", "Theme mode");
         ThemeModeDescription = L("settings.appearance.theme_mode_desc", "Choose light, dark, or follow system preference.");
@@ -1009,78 +774,26 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeModeDarkText = L("settings.appearance.theme_mode.dark", "Dark");
         ThemeModeFollowSystemText = L("settings.appearance.theme_mode.follow_system", "Follow system");
         UseSystemChromeLabel = L("settings.color.use_system_chrome_toggle", "Use system window chrome");
-        ThemeColorLabel = L("settings.color.theme_color_label", "Theme Accent Color");
-        ThemeColorModeLabel = L("settings.appearance.theme_color_mode_label", "Theme color source");
-        SystemMaterialLabel = L("settings.appearance.system_material_label", "System material");
         CornerRadiusStyleLabel = L("settings.appearance.corner_radius.label", "Global corner radius style");
         CornerRadiusStyleDescription = L("settings.appearance.corner_radius.description", "Select a fixed corner radius style inspired by Xiaomi HyperOS.");
-        
+        AppearanceRestartMessage = L(
+            "settings.appearance.restart_message",
+            "Window chrome changes require restarting the app.");
+
         CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
             .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
             .ToList();
-        ThemeSourceNeutralText = L("settings.appearance.theme_color_mode.neutral", "Default neutral");
-        ThemeSourceUserColorText = L("settings.appearance.theme_color_mode.user", "User theme color Monet");
-        ThemeSourceWallpaperText = L("settings.appearance.theme_color_mode.wallpaper", "Wallpaper Monet");
-        ThemeSourceDefaultDescription = L("settings.appearance.theme_color_mode_desc.neutral", "Use the standard light and dark neutral surfaces.");
-        ThemeSourceUserColorDescription = L("settings.appearance.theme_color_mode_desc.user", "Use the selected theme color as the Monet seed.");
-        ThemeSourceWallpaperDescription = L("settings.appearance.theme_color_mode_desc.wallpaper", "Use the current wallpaper palette. App wallpaper is preferred, then system wallpaper.");
-        ThemeSourceWallpaperAppDescription = L("settings.appearance.theme_color_preview.app", "Currently previewing colors extracted from the app wallpaper.");
-        ThemeSourceWallpaperSystemDescription = L("settings.appearance.theme_color_preview.system", "Currently previewing colors extracted from the system wallpaper.");
-        ThemeSourceWallpaperFallbackDescription = L("settings.appearance.theme_color_preview.fallback", "No usable wallpaper was found. The app is using a fallback accent.");
-        SystemMaterialNoneText = L("settings.appearance.system_material.none", "None");
-        SystemMaterialAutoText = L("settings.appearance.system_material.auto", "Auto (recommended)");
-        SystemMaterialMicaText = L("settings.appearance.system_material.mica", "Mica");
-        SystemMaterialAcrylicText = L("settings.appearance.system_material.acrylic", "Acrylic");
-        SystemMaterialSwitchableDescription = L("settings.appearance.system_material_desc.switchable", "Apply the selected material to windows, Dock, status bar, and component hosts.");
-        SystemMaterialFixedDescription = L("settings.appearance.system_material_desc.fixed", "Your current system only exposes the available material modes listed here.");
-        SystemMaterialAutoDescription = L("settings.appearance.system_material_desc.auto", "Auto prefers Mica on Windows 11, Acrylic on Windows 10, and falls back to no material when unavailable.");
-        AppearanceRestartMessage = L(
-            "settings.appearance.restart_message",
-            "Theme source and system material changes require restarting the app.");
-        PreviewPrimaryLabel = L("settings.appearance.preview.primary", "Primary");
-        PreviewSecondaryLabel = L("settings.appearance.preview.secondary", "Secondary");
-        PreviewTertiaryLabel = L("settings.appearance.preview.tertiary", "Tertiary");
-        PreviewNeutralLabel = L("settings.appearance.preview.neutral", "Neutral");
-        PreviewSeedLabel = L("settings.appearance.preview.seed", "Seed");
-        PreviewNeutralLightLabel = L("settings.appearance.preview.neutral_light", "White");
-        PreviewNeutralDarkLabel = L("settings.appearance.preview.neutral_dark", "Black");
-        SeedApplyButtonText = L("settings.appearance.preview.apply_seed", "Apply");
-        WallpaperSeedFlyoutTitle = L("settings.appearance.preview.wallpaper_candidates", "Wallpaper seed candidates");
-        WallpaperSeedCurrentText = L("settings.appearance.preview.wallpaper_current", "Current");
-    }
-
-    private void RefreshMaterialModeOptions(AppearanceThemeSnapshot snapshot)
-    {
-        SystemMaterialModes = snapshot.AvailableSystemMaterialModes
-            .Select(value => new SelectionOption(value, ResolveMaterialModeLabel(value)))
-            .ToList();
-        SystemMaterialDescription = snapshot.CanChangeSystemMaterial
-            ? SystemMaterialAutoDescription
-            : SystemMaterialFixedDescription;
     }
 
     private void ApplySavedState(ThemeAppearanceSettingsState theme)
     {
         IsNightMode = theme.IsNightMode;
-        ThemeColor = theme.ThemeColor ?? string.Empty;
         UseSystemChrome = theme.UseSystemChrome;
         CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(theme.CornerRadiusStyle);
         SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
             string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
             ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
-        _selectedWallpaperSeed = theme.SelectedWallpaperSeed;
-        SyncCustomSeedPickerWithSavedThemeColor();
 
-        var savedThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(theme.ThemeColorMode, theme.ThemeColor);
-        var savedSystemMaterialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(theme.SystemMaterialMode);
-        SelectedThemeColorMode = ThemeColorModes.FirstOrDefault(option =>
-            string.Equals(option.Value, savedThemeColorMode, StringComparison.OrdinalIgnoreCase))
-            ?? ThemeColorModes[0];
-        SelectedSystemMaterialMode = SystemMaterialModes.FirstOrDefault(option =>
-            string.Equals(option.Value, savedSystemMaterialMode, StringComparison.OrdinalIgnoreCase))
-            ?? SystemMaterialModes[0];
-
-        // 应用主题模式设置
         var savedThemeMode = NormalizeThemeMode(theme.ThemeMode);
         SelectedThemeMode = ThemeModeOptions.FirstOrDefault(option =>
             string.Equals(option.Value, savedThemeMode, StringComparison.OrdinalIgnoreCase))
@@ -1094,16 +807,18 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             return ThemeAppearanceValues.ThemeModeDark;
         }
+
         if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
         {
             return ThemeAppearanceValues.ThemeModeFollowSystem;
         }
+
         return ThemeAppearanceValues.ThemeModeLight;
     }
 
     private void PersistCurrentState(bool restartRequired)
     {
-        var pendingState = BuildPendingState(usePickerSeed: false);
+        var pendingState = BuildPendingState();
         _settingsFacade.Theme.Save(pendingState);
         var savedState = _settingsFacade.Theme.Get();
 
@@ -1116,9 +831,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             _isInitializing = false;
         }
-
-        RefreshMaterialModeOptions(_appearanceThemeService.GetCurrent());
-        UpdatePreview(savedState);
 
         if (restartRequired)
         {
@@ -1136,108 +848,15 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ];
     }
 
-    private ThemeAppearanceSettingsState BuildPendingState(bool usePickerSeed)
+    private ThemeAppearanceSettingsState BuildPendingState()
     {
-        var themeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(SelectedThemeColorMode?.Value, ThemeColor);
-        var themeColor = themeColorMode == ThemeAppearanceValues.ColorModeSeedMonet
-            ? (usePickerSeed ? CustomSeedPickerValue.ToString() : string.IsNullOrWhiteSpace(ThemeColor) ? null : ThemeColor)
-            : string.IsNullOrWhiteSpace(ThemeColor) ? null : ThemeColor;
-
-        return new ThemeAppearanceSettingsState(
-            IsNightMode,
-            themeColor,
-            UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
-            themeColorMode,
-            ThemeAppearanceValues.NormalizeSystemMaterialMode(SelectedSystemMaterialMode?.Value),
-            _selectedWallpaperSeed,
-            SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight);
-    }
-
-    private void UpdatePreview(ThemeAppearanceSettingsState pendingState)
-    {
-        var preview = _appearanceThemeService.BuildPreview(pendingState);
-        var normalizedMode = preview.ThemeColorMode;
-
-        ShowNeutralPreview = normalizedMode == ThemeAppearanceValues.ColorModeDefaultNeutral;
-        ShowMonetPreview = !ShowNeutralPreview;
-        IsThemeColorEditable = normalizedMode == ThemeAppearanceValues.ColorModeSeedMonet;
-        IsWallpaperMode = normalizedMode == ThemeAppearanceValues.ColorModeWallpaperMonet;
-
-        PrimarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Primary);
-        SecondarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Secondary);
-        TertiarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Tertiary);
-        NeutralSwatchBrush = new SolidColorBrush(preview.MonetPalette.Neutral);
-        SeedSwatchBrush = new SolidColorBrush(preview.EffectiveSeedColor);
-
-        if (IsWallpaperMode)
+        return _settingsFacade.Theme.Get() with
         {
-            WallpaperSeedCandidates = preview.WallpaperSeedCandidates
-                .Select((color, index) => new ThemeSeedCandidateOption(
-                    color.ToString(),
-                    $"{PreviewSeedLabel} {index + 1}",
-                    color,
-                    string.Equals(color.ToString(), _selectedWallpaperSeed, StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-            if (WallpaperSeedCandidates.Count > 0 &&
-                !string.Equals(_selectedWallpaperSeed, preview.EffectiveSeedColor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                _selectedWallpaperSeed = preview.EffectiveSeedColor.ToString();
-                WallpaperSeedCandidates = preview.WallpaperSeedCandidates
-                    .Select((color, index) => new ThemeSeedCandidateOption(
-                        color.ToString(),
-                        $"{PreviewSeedLabel} {index + 1}",
-                        color,
-                        string.Equals(color.ToString(), _selectedWallpaperSeed, StringComparison.OrdinalIgnoreCase)))
-                    .ToArray();
-            }
-
-            IsWallpaperSeedSelectable = WallpaperSeedCandidates.Count > 1;
-            ThemeColorSourceDescription = preview.ResolvedSeedSource switch
-            {
-                "app_wallpaper" or "app_video" or "app_solid" => ThemeSourceWallpaperAppDescription,
-                "system_wallpaper" => ThemeSourceWallpaperSystemDescription,
-                _ => ThemeSourceWallpaperFallbackDescription
-            };
-        }
-        else
-        {
-            WallpaperSeedCandidates = [];
-            IsWallpaperSeedSelectable = false;
-            ThemeColorSourceDescription = normalizedMode switch
-            {
-                ThemeAppearanceValues.ColorModeDefaultNeutral => ThemeSourceDefaultDescription,
-                _ => ThemeSourceUserColorDescription
-            };
-        }
-    }
-
-    private string ResolveMaterialModeLabel(string value)
-    {
-        return ThemeAppearanceValues.NormalizeSystemMaterialMode(value) switch
-        {
-            ThemeAppearanceValues.MaterialAuto => SystemMaterialAutoText,
-            ThemeAppearanceValues.MaterialMica => SystemMaterialMicaText,
-            ThemeAppearanceValues.MaterialAcrylic => SystemMaterialAcrylicText,
-            _ => SystemMaterialNoneText
+            IsNightMode = IsNightMode,
+            UseSystemChrome = UseSystemChrome,
+            CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
+            ThemeMode = SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight
         };
-    }
-
-    private void SyncCustomSeedPickerWithSavedThemeColor()
-    {
-        CustomSeedPickerValue = !string.IsNullOrWhiteSpace(ThemeColor) && Color.TryParse(ThemeColor, out var parsedColor)
-            ? parsedColor
-            : DefaultSeedColor;
-    }
-
-    private IReadOnlyList<SelectionOption> CreateThemeColorModes()
-    {
-        return
-        [
-            new SelectionOption(ThemeAppearanceValues.ColorModeDefaultNeutral, ThemeSourceNeutralText),
-            new SelectionOption(ThemeAppearanceValues.ColorModeSeedMonet, ThemeSourceUserColorText),
-            new SelectionOption(ThemeAppearanceValues.ColorModeWallpaperMonet, ThemeSourceWallpaperText)
-        ];
     }
 
     private string L(string key, string fallback)
@@ -1379,14 +998,10 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private void SaveComponentCornerRadius()
     {
         var theme = _settingsFacade.Theme.Get();
-        _settingsFacade.Theme.Save(new ThemeAppearanceSettingsState(
-            theme.IsNightMode,
-            theme.ThemeColor,
-            theme.UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
-            theme.ThemeColorMode,
-            theme.SystemMaterialMode,
-            theme.SelectedWallpaperSeed));
+        _settingsFacade.Theme.Save(theme with
+        {
+            CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle)
+        });
     }
 
     private IReadOnlyList<SelectionOption> CreateSpacingPresets()

@@ -15,6 +15,20 @@ SDK v5 is a binary breaking change because the SDK exposes Avalonia UI types suc
 
 The host does not provide an Avalonia 11 / Avalonia 12 dual UI stack. The public extension entry points remain the same: custom settings pages still derive from `SettingsPageBase`, and desktop components still provide Avalonia controls through the existing registration APIs.
 
+## Appearance Snapshot
+
+`IPluginAppearanceContext.Snapshot` remains read-only. In addition to theme variant and corner radius tokens, the snapshot can now include host material/color data:
+
+- `AccentColor`
+- `SeedColor`
+- `ColorSource`
+- `SystemMaterialMode`
+- `ColorRoles`
+- `MaterialSurfaces`
+- `WallpaperSeedCandidates`
+
+Existing plugins that only read `CornerRadiusTokens` and `ThemeVariant` continue to work. New plugins should treat the added properties as optional and prefer `ColorRoles`/`MaterialSurfaces` over hard-coded colors.
+
 ## Minimal Package Update
 
 ```xml

@@ -26,4 +26,15 @@ public sealed class ThemeAppearanceValuesTests
         Assert.Equal(ThemeAppearanceValues.MaterialNone, result[1]);
         Assert.Contains(ThemeAppearanceValues.MaterialMica, result);
     }
+
+    [Theory]
+    [InlineData("auto", ThemeAppearanceValues.WallpaperColorSourceAuto)]
+    [InlineData("APP", ThemeAppearanceValues.WallpaperColorSourceApp)]
+    [InlineData("system", ThemeAppearanceValues.WallpaperColorSourceSystem)]
+    [InlineData("unknown", ThemeAppearanceValues.WallpaperColorSourceAuto)]
+    [InlineData(null, ThemeAppearanceValues.WallpaperColorSourceAuto)]
+    public void NormalizeWallpaperColorSource_ReturnsKnownValue(string? input, string expected)
+    {
+        Assert.Equal(expected, ThemeAppearanceValues.NormalizeWallpaperColorSource(input));
+    }
 }
