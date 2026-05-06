@@ -69,7 +69,7 @@ public sealed class UpdateOrchestrator : IDisposable
             {
                 manifest = await _manifestProvider.GetLatestAsync(
                     channel,
-                    "win-x64",
+                    LanMountainDesktop.Services.PlondsStaticUpdateService.ResolveCurrentPlatform(),
                     currentVersion,
                     ct);
             }

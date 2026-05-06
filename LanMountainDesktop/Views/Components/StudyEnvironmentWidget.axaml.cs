@@ -3,7 +3,6 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -17,10 +16,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private LanMountainDesktop.PluginSdk.ISettingsService _appSettingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private IComponentInstanceSettingsStore _componentSettingsService = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly LocalizationService _localizationService = new();
-    private readonly DispatcherTimer _uiTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(250)
-    };
+    private readonly StudySnapshotRenderGate _renderGate;
 
     private double _currentCellSize = 48;
     private bool _showDisplayDb = true;
@@ -29,6 +25,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isSubscribed;
     private bool _isDisposed;
     private bool _studyEnabled = true;
     private IDisposable? _monitoringLease;
@@ -37,7 +34,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         InitializeComponent();
 
-        _uiTimer.Tick += OnUiTimerTick;
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
@@ -45,7 +42,7 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
         ReloadDisplaySettings();
         ApplyCellSize(_currentCellSize);
-        RefreshVisual();
+        ApplySnapshot(_studyAnalyticsService.GetSnapshot());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -77,13 +74,12 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         {
             RefreshVisual();
         }
-        
-        UpdateTimerState();
     }
 
     public void RefreshFromSettings()
     {
         ReloadDisplaySettings();
+        UpdateMonitoringLeaseState();
         RefreshVisual();
     }
 
@@ -91,8 +87,13 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
     {
         _isAttached = true;
         ReloadDisplaySettings();
+        if (!_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
+            _isSubscribed = true;
+        }
+
         UpdateMonitoringLeaseState();
-        UpdateTimerState();
         RefreshVisual();
     }
 
@@ -101,7 +102,13 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         _isAttached = false;
         _monitoringLease?.Dispose();
         _monitoringLease = null;
-        _uiTimer.Stop();
+        _renderGate.Clear();
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -115,20 +122,19 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
         RefreshVisual();
     }
 
-    private void OnUiTimerTick(object? sender, EventArgs e)
+    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
-        RefreshVisual();
-    }
-
-    private void UpdateTimerState()
-    {
-        if (_isAttached && _isOnActivePage)
+        if (!_isAttached || !_isOnActivePage)
         {
-            _uiTimer.Start();
             return;
         }
 
-        _uiTimer.Stop();
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
     }
 
     private void UpdateMonitoringLeaseState()
@@ -140,7 +146,8 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             return;
         }
 
-        if (_isAttached)
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
             return;
@@ -167,6 +174,11 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
     private void RefreshVisual()
     {
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+    }
+
+    private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
+    {
         if (!_studyEnabled)
         {
             StatusTitleTextBlock.Text = L("study.widget.disabled_title", "自习功能未启用");
@@ -178,7 +190,6 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
             return;
         }
 
-        var snapshot = _studyAnalyticsService.GetSnapshot();
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
 
         StatusTitleTextBlock.Text = L("study.environment.status_label", "Environment");
@@ -380,12 +391,17 @@ public partial class StudyEnvironmentWidget : UserControl, IDesktopComponentWidg
 
         _isDisposed = true;
 
-        _uiTimer.Stop();
-        _uiTimer.Tick -= OnUiTimerTick;
+        _renderGate.Dispose();
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
 
         _monitoringLease?.Dispose();
         _monitoringLease = null;

@@ -10,6 +10,10 @@ namespace LanMountainDesktop.Views.Components;
 
 public sealed class StudyNoiseCurveChartControl : Control
 {
+    private const double MinDisplayDb = 20;
+    private const double MaxDisplayDb = 100;
+    private const double DynamicTailSeconds = 4;
+
     private static readonly IBrush GridBrush = new SolidColorBrush(Color.Parse("#324E6780"));
     private static readonly IBrush AxisBrush = new SolidColorBrush(Color.Parse("#5C6D86A1"));
     private static readonly IBrush LineBrush = new SolidColorBrush(Color.Parse("#FF52AEEA"));
@@ -20,11 +24,24 @@ public sealed class StudyNoiseCurveChartControl : Control
 
     private IReadOnlyList<NoiseRealtimePoint> _points = Array.Empty<NoiseRealtimePoint>();
     private Point[]? _pointBuffer;
-    private StreamGeometry? _lineGeometry;
-    private StreamGeometry? _fillGeometry;
+    private StreamGeometry? _gridGeometry;
+    private StreamGeometry? _axisGeometry;
+    private StreamGeometry? _staticLineGeometry;
+    private StreamGeometry? _staticFillGeometry;
+    private StreamGeometry? _dynamicLineGeometry;
+    private StreamGeometry? _dynamicFillGeometry;
     private Rect _cachedPlot;
+    private Rect _cachedGridPlot;
+    private DateTimeOffset _logicalOrigin;
+    private DateTimeOffset _lastSeriesStart;
+    private DateTimeOffset _lastSeriesEnd;
+    private double _cachedPixelsPerSecond;
+    private double _viewportTranslateX;
+    private bool _hasLogicalOrigin;
     private bool _geometryDirty = true;
     private int _lastSeriesSignature;
+    private int _staticSourceCount;
+    private int _dynamicSourceCount;
 
     public void UpdateSeries(IReadOnlyList<NoiseRealtimePoint>? points)
     {
@@ -35,6 +52,7 @@ public sealed class StudyNoiseCurveChartControl : Control
             return;
         }
 
+        UpdateLogicalOrigin(nextPoints);
         _points = nextPoints;
         _lastSeriesSignature = nextSignature;
         _geometryDirty = true;
@@ -49,16 +67,90 @@ public sealed class StudyNoiseCurveChartControl : Control
             _pointBuffer = null;
         }
 
-        _lineGeometry = null;
-        _fillGeometry = null;
+        _staticLineGeometry = null;
+        _staticFillGeometry = null;
+        _dynamicLineGeometry = null;
+        _dynamicFillGeometry = null;
         _geometryDirty = true;
+    }
+
+    internal int StaticSourceCount => _staticSourceCount;
+
+    internal int DynamicSourceCount => _dynamicSourceCount;
+
+    internal void RebuildCacheForTesting(Rect plot)
+    {
+        if (_points.Count >= 2)
+        {
+            EnsureGeometry(plot);
+        }
+    }
+
+    internal static double ResolveVisibleDurationSeconds(IReadOnlyList<NoiseRealtimePoint> points)
+    {
+        if (points.Count < 2)
+        {
+            return 12;
+        }
+
+        var duration = (points[^1].Timestamp - points[0].Timestamp).TotalSeconds;
+        if (double.IsNaN(duration) || double.IsInfinity(duration) || duration <= 1)
+        {
+            duration = 12;
+        }
+
+        return Math.Clamp(duration, 4, 60);
+    }
+
+    internal static int ResolveFirstTailIndex(IReadOnlyList<NoiseRealtimePoint> points, TimeSpan tailDuration)
+    {
+        if (points.Count <= 1)
+        {
+            return 0;
+        }
+
+        var cutoff = points[^1].Timestamp - tailDuration;
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (points[i].Timestamp >= cutoff)
+            {
+                return i;
+            }
+        }
+
+        return points.Count - 1;
+    }
+
+    internal static (int StaticSourceCount, int DynamicSourceCount) ResolveLayerSourceCounts(
+        IReadOnlyList<NoiseRealtimePoint> points,
+        TimeSpan tailDuration)
+    {
+        if (points.Count < 2)
+        {
+            return (0, 0);
+        }
+
+        var firstTailIndex = ResolveFirstTailIndex(points, tailDuration);
+        var dynamicStartIndex = Math.Max(0, firstTailIndex - 1);
+        var staticCount = firstTailIndex >= 2 ? firstTailIndex : 0;
+        var dynamicCount = points.Count - dynamicStartIndex >= 2 ? points.Count - dynamicStartIndex : 0;
+        return (staticCount, dynamicCount);
+    }
+
+    internal static double MapTimestampToLogicalX(DateTimeOffset timestamp, DateTimeOffset origin, double pixelsPerSecond)
+    {
+        return Math.Max(0, (timestamp - origin).TotalSeconds * pixelsPerSecond);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         ReleasePointBuffer();
-        _lineGeometry = null;
-        _fillGeometry = null;
+        _gridGeometry = null;
+        _axisGeometry = null;
+        _staticLineGeometry = null;
+        _staticFillGeometry = null;
+        _dynamicLineGeometry = null;
+        _dynamicFillGeometry = null;
         _geometryDirty = true;
         base.OnDetachedFromVisualTree(e);
     }
@@ -86,53 +178,194 @@ public sealed class StudyNoiseCurveChartControl : Control
         }
 
         EnsureGeometry(plot);
-        if (_lineGeometry is null || _fillGeometry is null)
+        if (_staticLineGeometry is null &&
+            _staticFillGeometry is null &&
+            _dynamicLineGeometry is null &&
+            _dynamicFillGeometry is null)
         {
             return;
         }
 
-        context.DrawGeometry(FillBrush, pen: null, _fillGeometry);
-        context.DrawGeometry(brush: null, pen: LinePen, _lineGeometry);
+        using (context.PushClip(plot))
+        using (context.PushTransform(Matrix.CreateTranslation(_viewportTranslateX, 0)))
+        {
+            if (_staticFillGeometry is not null)
+            {
+                context.DrawGeometry(FillBrush, pen: null, _staticFillGeometry);
+            }
+
+            if (_dynamicFillGeometry is not null)
+            {
+                context.DrawGeometry(FillBrush, pen: null, _dynamicFillGeometry);
+            }
+
+            if (_staticLineGeometry is not null)
+            {
+                context.DrawGeometry(brush: null, pen: LinePen, _staticLineGeometry);
+            }
+
+            if (_dynamicLineGeometry is not null)
+            {
+                context.DrawGeometry(brush: null, pen: LinePen, _dynamicLineGeometry);
+            }
+        }
     }
 
-    private static void DrawGrid(DrawingContext context, Rect plot)
+    private void UpdateLogicalOrigin(IReadOnlyList<NoiseRealtimePoint> nextPoints)
+    {
+        if (nextPoints.Count == 0)
+        {
+            _hasLogicalOrigin = false;
+            _lastSeriesStart = default;
+            _lastSeriesEnd = default;
+            return;
+        }
+
+        var nextStart = nextPoints[0].Timestamp;
+        var nextEnd = nextPoints[^1].Timestamp;
+        if (!_hasLogicalOrigin)
+        {
+            ResetLogicalOrigin(nextStart);
+        }
+        else
+        {
+            var overlapsPreviousSeries = nextStart <= _lastSeriesEnd && nextEnd >= _lastSeriesStart;
+            if (!overlapsPreviousSeries || nextStart < _logicalOrigin)
+            {
+                ResetLogicalOrigin(nextStart);
+            }
+        }
+
+        _lastSeriesStart = nextStart;
+        _lastSeriesEnd = nextEnd;
+    }
+
+    private void ResetLogicalOrigin(DateTimeOffset origin)
+    {
+        _logicalOrigin = origin;
+        _hasLogicalOrigin = true;
+        _staticLineGeometry = null;
+        _staticFillGeometry = null;
+        _dynamicLineGeometry = null;
+        _dynamicFillGeometry = null;
+        _geometryDirty = true;
+    }
+
+    private void DrawGrid(DrawingContext context, Rect plot)
+    {
+        if (_gridGeometry is null || _axisGeometry is null || _cachedGridPlot != plot)
+        {
+            _cachedGridPlot = plot;
+            (_gridGeometry, _axisGeometry) = BuildGridGeometry(plot);
+        }
+
+        context.DrawGeometry(brush: null, pen: GridPen, _gridGeometry);
+        context.DrawGeometry(brush: null, pen: AxisPen, _axisGeometry);
+    }
+
+    private static (StreamGeometry Grid, StreamGeometry Axis) BuildGridGeometry(Rect plot)
     {
         const int horizontalDivisions = 4;
         const int verticalDivisions = 4;
 
-        for (var i = 0; i <= horizontalDivisions; i++)
+        var grid = new StreamGeometry();
+        using (var builder = grid.Open())
         {
-            var y = plot.Top + plot.Height * (i / (double)horizontalDivisions);
-            context.DrawLine(GridPen, new Point(plot.Left, y), new Point(plot.Right, y));
+            for (var i = 0; i <= horizontalDivisions; i++)
+            {
+                var y = plot.Top + plot.Height * (i / (double)horizontalDivisions);
+                AddLine(builder, new Point(plot.Left, y), new Point(plot.Right, y));
+            }
+
+            for (var i = 0; i <= verticalDivisions; i++)
+            {
+                var x = plot.Left + plot.Width * (i / (double)verticalDivisions);
+                AddLine(builder, new Point(x, plot.Top), new Point(x, plot.Bottom));
+            }
         }
 
-        for (var i = 0; i <= verticalDivisions; i++)
+        var axis = new StreamGeometry();
+        using (var builder = axis.Open())
         {
-            var x = plot.Left + plot.Width * (i / (double)verticalDivisions);
-            context.DrawLine(GridPen, new Point(x, plot.Top), new Point(x, plot.Bottom));
+            AddLine(builder, new Point(plot.Left, plot.Top), new Point(plot.Left, plot.Bottom));
+            AddLine(builder, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
         }
 
-        context.DrawLine(AxisPen, new Point(plot.Left, plot.Top), new Point(plot.Left, plot.Bottom));
-        context.DrawLine(AxisPen, new Point(plot.Left, plot.Bottom), new Point(plot.Right, plot.Bottom));
+        return (grid, axis);
+    }
+
+    private static void AddLine(StreamGeometryContext builder, Point start, Point end)
+    {
+        builder.BeginFigure(start, isFilled: false);
+        builder.LineTo(end);
+        builder.EndFigure(isClosed: false);
     }
 
     private void EnsureGeometry(Rect plot)
     {
-        if (!_geometryDirty && _cachedPlot == plot)
+        var visibleDurationSeconds = ResolveVisibleDurationSeconds(_points);
+        var pixelsPerSecond = plot.Width / visibleDurationSeconds;
+        var latestLogicalX = MapTimestampToLogicalX(_points[^1].Timestamp, _logicalOrigin, pixelsPerSecond);
+        _viewportTranslateX = plot.Right - latestLogicalX;
+
+        if (!_geometryDirty &&
+            _cachedPlot == plot &&
+            Math.Abs(_cachedPixelsPerSecond - pixelsPerSecond) < 0.001)
         {
             return;
         }
 
         _cachedPlot = plot;
-        _lineGeometry = null;
-        _fillGeometry = null;
+        _cachedPixelsPerSecond = pixelsPerSecond;
+        _staticLineGeometry = null;
+        _staticFillGeometry = null;
+        _dynamicLineGeometry = null;
+        _dynamicFillGeometry = null;
+        _staticSourceCount = 0;
+        _dynamicSourceCount = 0;
+
+        var firstTailIndex = ResolveFirstTailIndex(_points, TimeSpan.FromSeconds(DynamicTailSeconds));
+        var dynamicStartIndex = Math.Max(0, firstTailIndex - 1);
+        var staticEndExclusive = firstTailIndex;
+
+        if (staticEndExclusive >= 2)
+        {
+            (_staticLineGeometry, _staticFillGeometry, _staticSourceCount) = BuildLayerGeometry(
+                startIndex: 0,
+                endExclusive: staticEndExclusive,
+                plot,
+                pixelsPerSecond);
+        }
+
+        if (_points.Count - dynamicStartIndex >= 2)
+        {
+            (_dynamicLineGeometry, _dynamicFillGeometry, _dynamicSourceCount) = BuildLayerGeometry(
+                dynamicStartIndex,
+                _points.Count,
+                plot,
+                pixelsPerSecond);
+        }
+
+        _geometryDirty = false;
+    }
+
+    private (StreamGeometry? Line, StreamGeometry? Fill, int SourceCount) BuildLayerGeometry(
+        int startIndex,
+        int endExclusive,
+        Rect plot,
+        double pixelsPerSecond)
+    {
+        var sourceCount = endExclusive - startIndex;
+        if (sourceCount < 2)
+        {
+            return (null, null, sourceCount);
+        }
 
         var maxSamples = Math.Clamp((int)Math.Floor(plot.Width), 56, 360);
-        var pointCount = BuildPlotPoints(plot, maxSamples);
+        var pointCount = BuildPlotPoints(startIndex, endExclusive, plot, pixelsPerSecond, maxSamples);
         if (pointCount < 2 || _pointBuffer is null)
         {
-            _geometryDirty = false;
-            return;
+            return (null, null, sourceCount);
         }
 
         var lineGeometry = new StreamGeometry();
@@ -163,14 +396,17 @@ public sealed class StudyNoiseCurveChartControl : Control
             builder.EndFigure(true);
         }
 
-        _lineGeometry = lineGeometry;
-        _fillGeometry = fillGeometry;
-        _geometryDirty = false;
+        return (lineGeometry, fillGeometry, sourceCount);
     }
 
-    private int BuildPlotPoints(Rect plot, int maxSamples)
+    private int BuildPlotPoints(
+        int startIndex,
+        int endExclusive,
+        Rect plot,
+        double pixelsPerSecond,
+        int maxSamples)
     {
-        var sourceCount = _points.Count;
+        var sourceCount = endExclusive - startIndex;
         if (sourceCount <= 1)
         {
             return 0;
@@ -186,7 +422,7 @@ public sealed class StudyNoiseCurveChartControl : Control
 
             for (var i = 0; i < sourceCount; i++)
             {
-                _pointBuffer[i] = MapToPlot(plot, _points[i], _points[0].Timestamp, _points[^1].Timestamp);
+                _pointBuffer[i] = MapToPlot(plot, _points[startIndex + i], pixelsPerSecond);
             }
 
             return sourceCount;
@@ -201,25 +437,23 @@ public sealed class StudyNoiseCurveChartControl : Control
         }
 
         var outputIndex = 0;
-        var startTimestamp = _points[0].Timestamp;
-        var endTimestamp = _points[^1].Timestamp;
-        _pointBuffer[outputIndex++] = MapToPlot(plot, _points[0], startTimestamp, endTimestamp);
+        _pointBuffer[outputIndex++] = MapToPlot(plot, _points[startIndex], pixelsPerSecond);
 
         var middleCount = sourceCount - 2;
         var bucketWidth = middleCount / (double)bucketCount;
-        var lastSourceIndex = 0;
+        var lastSourceIndex = startIndex;
 
         for (var bucket = 0; bucket < bucketCount; bucket++)
         {
-            var rangeStart = 1 + (int)Math.Floor(bucket * bucketWidth);
-            var rangeEnd = 1 + (int)Math.Floor((bucket + 1) * bucketWidth);
+            var rangeStart = startIndex + 1 + (int)Math.Floor(bucket * bucketWidth);
+            var rangeEnd = startIndex + 1 + (int)Math.Floor((bucket + 1) * bucketWidth);
             if (bucket == bucketCount - 1)
             {
-                rangeEnd = sourceCount - 1;
+                rangeEnd = endExclusive - 1;
             }
 
-            rangeStart = Math.Clamp(rangeStart, 1, sourceCount - 2);
-            rangeEnd = Math.Clamp(rangeEnd, rangeStart + 1, sourceCount - 1);
+            rangeStart = Math.Clamp(rangeStart, startIndex + 1, endExclusive - 2);
+            rangeEnd = Math.Clamp(rangeEnd, rangeStart + 1, endExclusive - 1);
 
             var minIndex = rangeStart;
             var maxIndex = rangeStart;
@@ -246,7 +480,7 @@ public sealed class StudyNoiseCurveChartControl : Control
             {
                 if (minIndex != lastSourceIndex)
                 {
-                    _pointBuffer[outputIndex++] = MapToPlot(plot, _points[minIndex], startTimestamp, endTimestamp);
+                    _pointBuffer[outputIndex++] = MapToPlot(plot, _points[minIndex], pixelsPerSecond);
                     lastSourceIndex = minIndex;
                 }
 
@@ -258,41 +492,31 @@ public sealed class StudyNoiseCurveChartControl : Control
 
             if (first != lastSourceIndex)
             {
-                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[first], startTimestamp, endTimestamp);
+                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[first], pixelsPerSecond);
                 lastSourceIndex = first;
             }
 
             if (second != lastSourceIndex)
             {
-                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[second], startTimestamp, endTimestamp);
+                _pointBuffer[outputIndex++] = MapToPlot(plot, _points[second], pixelsPerSecond);
                 lastSourceIndex = second;
             }
         }
 
-        var finalIndex = sourceCount - 1;
+        var finalIndex = endExclusive - 1;
         if (finalIndex != lastSourceIndex)
         {
-            _pointBuffer[outputIndex++] = MapToPlot(plot, _points[finalIndex], startTimestamp, endTimestamp);
+            _pointBuffer[outputIndex++] = MapToPlot(plot, _points[finalIndex], pixelsPerSecond);
         }
 
         return outputIndex;
     }
 
-    private static Point MapToPlot(
-        Rect plot,
-        NoiseRealtimePoint point,
-        DateTimeOffset start,
-        DateTimeOffset end)
+    private Point MapToPlot(Rect plot, NoiseRealtimePoint point, double pixelsPerSecond)
     {
-        const double minDisplayDb = 20;
-        const double maxDisplayDb = 100;
-
-        var rangeTicks = Math.Max(1, (end - start).Ticks);
-        var offsetTicks = Math.Clamp((point.Timestamp - start).Ticks, 0, rangeTicks);
-        var x = plot.Left + plot.Width * (offsetTicks / (double)rangeTicks);
-
-        var clampedDb = Math.Clamp(point.DisplayDb, minDisplayDb, maxDisplayDb);
-        var normalized = (clampedDb - minDisplayDb) / (maxDisplayDb - minDisplayDb);
+        var x = MapTimestampToLogicalX(point.Timestamp, _logicalOrigin, pixelsPerSecond);
+        var clampedDb = Math.Clamp(point.DisplayDb, MinDisplayDb, MaxDisplayDb);
+        var normalized = (clampedDb - MinDisplayDb) / (MaxDisplayDb - MinDisplayDb);
         var y = plot.Bottom - normalized * plot.Height;
         return new Point(x, y);
     }
@@ -341,6 +565,7 @@ public sealed class StudyNoiseCurveChartControl : Control
         return HashCode.Combine(
             points.Count,
             first.Timestamp.UtcTicks,
+            Math.Round(first.DisplayDb, 2),
             last.Timestamp.UtcTicks,
             Math.Round(last.DisplayDb, 2));
     }

@@ -1,0 +1,259 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
+             xmlns:ui="using:FluentAvalonia.UI.Controls"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanMountainDesktop.Views.SettingsPages.MaterialColorSettingsPage"
+             x:DataType="vm:MaterialColorSettingsPageViewModel">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="settings-page-container settings-page-animated">
+            <controls:IconText Icon="Color"
+                               Text="{Binding PageTitle}"
+                               Margin="0,0,0,4" />
+
+            <ui:FASettingsExpander Header="{Binding ColorSourceLabel}"
+                                   Description="{Binding ColorSourceDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF017C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="240"
+                              ItemsSource="{Binding ColorModes}"
+                              SelectedItem="{Binding SelectedColorMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding CustomSeedLabel}"
+                                   IsVisible="{Binding IsCustomSeedVisible}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0888;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
+                    <Grid ColumnDefinitions="96,*"
+                          ColumnSpacing="16">
+                        <Border Width="96"
+                                Height="64"
+                                Background="{Binding SeedBrush}"
+                                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
+                        <ColorPicker Grid.Column="1"
+                                     Color="{Binding CustomSeedPickerValue}" />
+                    </Grid>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding WallpaperColorSourceLabel}"
+                                   IsVisible="{Binding IsWallpaperOptionsVisible}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF067C;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding WallpaperColorSources}"
+                              SelectedItem="{Binding SelectedWallpaperColorSource}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
+                    <StackPanel Spacing="12">
+                        <ItemsControl ItemsSource="{Binding WallpaperSeedCandidates}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ThemeSeedCandidateOption">
+                                    <Button Padding="0"
+                                            Margin="0,0,8,8"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="OnWallpaperSeedCandidateClick">
+                                        <StackPanel Width="84"
+                                                    Spacing="6">
+                                            <Border Height="48"
+                                                    Background="{Binding Brush}"
+                                                    BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="{DynamicResource DesignCornerRadiusXs}" />
+                                            <TextBlock Text="{Binding Label}"
+                                                       HorizontalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding $parent[vm:MaterialColorSettingsPageViewModel].WallpaperSeedCurrentText}"
+                                                       HorizontalAlignment="Center"
+                                                       FontSize="10"
+                                                       IsVisible="{Binding IsSelected}" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding NativeWallpaperEventsLabel}"
+                                   Description="{Binding NativeWallpaperEventsDescription}"
+                                   IsVisible="{Binding IsWallpaperOptionsVisible}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding UseNativeWallpaperChangeEvents}" />
+                </ui:FASettingsExpander.Footer>
+                <ui:FASettingsExpanderItem>
+                    <TextBlock Text="{Binding NativeEventStatusText}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding RefreshIntervalLabel}"
+                                   IsVisible="{Binding IsWallpaperOptionsVisible}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8">
+                        <ComboBox Width="140"
+                                  ItemsSource="{Binding RefreshIntervals}"
+                                  SelectedItem="{Binding SelectedRefreshInterval}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Classes="settings-accent-button"
+                                Command="{Binding RefreshWallpaperColorsCommand}"
+                                ToolTip.Tip="{Binding RefreshNowText}"
+                                VerticalAlignment="Center"
+                                Padding="12,8">
+                            <fi:SymbolIcon Symbol="ArrowSync"
+                                           IconVariant="Regular" />
+                        </Button>
+                    </StackPanel>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding SystemMaterialLabel}"
+                                   Description="{Binding SystemMaterialDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF1A48;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding SystemMaterialModes}"
+                              SelectedItem="{Binding SelectedSystemMaterialMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding PreviewHeader}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpanderItem>
+                    <StackPanel Spacing="16">
+                        <Grid ColumnDefinitions="120,*"
+                              ColumnSpacing="16">
+                            <Border Height="72"
+                                    Background="{Binding AccentBrush}"
+                                    BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource DesignCornerRadiusMd}" />
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="4">
+                                <TextBlock Text="{Binding SourceStatusHeader}"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding ResolvedSourceText}"
+                                           Foreground="{DynamicResource AdaptiveTextSecondaryBrush}" />
+                                <TextBlock Text="{Binding ResolvedWallpaperPathText}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource AdaptiveTextMutedBrush}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="{Binding SemanticColorsHeader}"
+                                   FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding ColorRolePreviews}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MaterialColorRolePreviewOption">
+                                    <StackPanel Width="112"
+                                                Margin="0,0,10,10"
+                                                Spacing="6">
+                                        <Border Height="48"
+                                                Background="{Binding Brush}"
+                                                BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="{DynamicResource DesignCornerRadiusXs}" />
+                                        <TextBlock Text="{Binding Label}"
+                                                   TextAlignment="Center" />
+                                        <TextBlock Text="{Binding Value}"
+                                                   TextAlignment="Center"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource AdaptiveTextMutedBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{Binding SurfacesHeader}"
+                                   FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding SurfacePreviews}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MaterialSurfacePreviewOption">
+                                    <StackPanel Width="176"
+                                                Margin="0,0,10,10"
+                                                Spacing="6">
+                                        <Border Height="58"
+                                                Background="{Binding BackgroundBrush}"
+                                                BorderBrush="{Binding BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="{DynamicResource DesignCornerRadiusSm}" />
+                                        <TextBlock Text="{Binding Label}"
+                                                   TextAlignment="Center" />
+                                        <TextBlock Text="{Binding Detail}"
+                                                   TextAlignment="Center"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource AdaptiveTextMutedBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

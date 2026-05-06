@@ -5,7 +5,6 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -43,16 +42,14 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
-    private readonly DispatcherTimer _uiTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(250)
-    };
+    private readonly StudySnapshotRenderGate _renderGate;
 
     private readonly Queue<(DateTimeOffset Timestamp, double Score)> _realtimeHistory = new();
 
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isSubscribed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private bool _isExpandedMode;
@@ -64,14 +61,14 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     {
         InitializeComponent();
 
-        _uiTimer.Tick += OnUiTimerTick;
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
-        RefreshVisual();
+        ApplySnapshot(_studyAnalyticsService.GetSnapshot());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -83,17 +80,26 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
         UpdateMonitoringLeaseState();
-        UpdateTimerState();
+        if (isOnActivePage && !wasOnActivePage)
+        {
+            RefreshVisual();
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
         ReloadLanguageCode();
+        if (!_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
+            _isSubscribed = true;
+        }
+
         UpdateMonitoringLeaseState();
-        UpdateTimerState();
         RefreshVisual();
     }
 
@@ -102,7 +108,13 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         _isAttached = false;
         _monitoringLease?.Dispose();
         _monitoringLease = null;
-        _uiTimer.Stop();
+        _renderGate.Clear();
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -116,24 +128,19 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         RefreshVisual();
     }
 
-    private void OnUiTimerTick(object? sender, EventArgs e)
+    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
-        RefreshVisual();
-    }
-
-    private void UpdateTimerState()
-    {
-        if (_isAttached && _isOnActivePage)
+        if (!_isAttached || !_isOnActivePage)
         {
-            if (!_uiTimer.IsEnabled)
-            {
-                _uiTimer.Start();
-            }
-
             return;
         }
 
-        _uiTimer.Stop();
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
     }
 
     private void UpdateMonitoringLeaseState()
@@ -158,6 +165,11 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
 
     private void RefreshVisual()
     {
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+    }
+
+    private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
+    {
         ApplyLocalizedLabels();
 
         var panelColor = ResolvePanelBackgroundColor();
@@ -172,8 +184,6 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
             return;
         }
 
-        var snapshot = _studyAnalyticsService.GetSnapshot();
-
         var realtimeScore = ComputeRealtimeScore(snapshot);
         if (snapshot.DataMode == StudyDataMode.Realtime && realtimeScore is { } score)
         {
@@ -181,6 +191,13 @@ public partial class StudyScoreOverviewWidget : UserControl, IDesktopComponentWi
         }
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
+        var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;
+        if (isSessionReport)
+        {
+            ApplySessionReportMode(snapshot, panelColor);
+            return;
+        }
+
         if (isSessionRunning)
         {
             ApplySessionMode(snapshot, realtimeScore, panelColor);

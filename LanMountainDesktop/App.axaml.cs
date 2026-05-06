@@ -1074,7 +1074,10 @@ public partial class App : Application
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
                  (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
                   changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase)));
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeWallpaperColorSource), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.SystemWallpaperRefreshIntervalSeconds), StringComparer.OrdinalIgnoreCase)));
             var languageChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
@@ -1881,4 +1884,3 @@ public partial class App : Application
             .ToArray();
     }
 }
-

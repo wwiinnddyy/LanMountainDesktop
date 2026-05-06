@@ -5,7 +5,6 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -39,20 +38,20 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
+    private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
-    private readonly DispatcherTimer _uiTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(250)
-    };
+    private readonly StudySnapshotRenderGate _renderGate;
 
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isSubscribed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
     private bool _studyEnabled = true;
     private string _languageCode = "zh-CN";
+    private IDisposable? _monitoringLease;
 
     private readonly record struct DeductionMetrics(
         double SustainedPenalty,
@@ -68,14 +67,14 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     {
         InitializeComponent();
 
-        _uiTimer.Tick += OnUiTimerTick;
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
-        RefreshVisual();
+        ApplySnapshot(_studyAnalyticsService.GetSnapshot());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -87,26 +86,41 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
-        UpdateTimerState();
+        UpdateMonitoringLeaseState();
+        if (isOnActivePage && !wasOnActivePage)
+        {
+            RefreshVisual();
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
         ReloadLanguageCode();
-        if (_studyEnabled)
+        if (!_isSubscribed)
         {
-            _ = _studyAnalyticsService.StartOrResumeMonitoring();
+            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
+            _isSubscribed = true;
         }
-        UpdateTimerState();
+
+        UpdateMonitoringLeaseState();
         RefreshVisual();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
-        _uiTimer.Stop();
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
+        _renderGate.Clear();
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -120,27 +134,47 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
         RefreshVisual();
     }
 
-    private void OnUiTimerTick(object? sender, EventArgs e)
+    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
-        RefreshVisual();
-    }
-
-    private void UpdateTimerState()
-    {
-        if (_isAttached && _isOnActivePage)
+        if (!_isAttached || !_isOnActivePage)
         {
-            if (!_uiTimer.IsEnabled)
-            {
-                _uiTimer.Start();
-            }
-
             return;
         }
 
-        _uiTimer.Stop();
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
+    }
+
+    private void UpdateMonitoringLeaseState()
+    {
+        if (!_studyEnabled)
+        {
+            _monitoringLease?.Dispose();
+            _monitoringLease = null;
+            return;
+        }
+
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
+        {
+            _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
+            return;
+        }
+
+        _monitoringLease?.Dispose();
+        _monitoringLease = null;
     }
 
     private void RefreshVisual()
+    {
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+    }
+
+    private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
     {
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
@@ -153,8 +187,6 @@ public partial class StudyDeductionReasonsWidget : UserControl, IDesktopComponen
             ApplyUnavailableMetrics();
             return;
         }
-
-        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         var isSessionRunning = snapshot.Session.State == StudySessionRuntimeState.Running;
         var isSessionReport = snapshot.DataMode == StudyDataMode.SessionReport && snapshot.LastSessionReport is not null;

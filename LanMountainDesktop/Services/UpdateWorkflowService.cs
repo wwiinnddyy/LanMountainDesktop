@@ -55,7 +55,7 @@ public sealed class UpdateWorkflowService
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly string _updatesDirectory;
 
-    private const string LauncherDirectoryName = ".launcher";
+    private const string LauncherDirectoryName = ".Launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
     private const string IncomingObjectsDirectoryName = "objects";

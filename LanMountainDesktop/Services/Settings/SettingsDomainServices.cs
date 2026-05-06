@@ -267,7 +267,9 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
             ThemeAppearanceValues.NormalizeThemeColorMode(snapshot.ThemeColorMode, snapshot.ThemeColor),
             ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode),
             snapshot.SelectedWallpaperSeed,
-            NormalizeThemeMode(snapshot.ThemeMode));
+            NormalizeThemeMode(snapshot.ThemeMode),
+            ThemeAppearanceValues.NormalizeWallpaperColorSource(snapshot.ThemeWallpaperColorSource),
+            snapshot.UseNativeWallpaperChangeEvents);
     }
 
     private static string NormalizeThemeMode(string? value)
@@ -294,6 +296,7 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         var normalizedSelectedWallpaperSeed = string.IsNullOrWhiteSpace(state.SelectedWallpaperSeed)
             ? null
             : state.SelectedWallpaperSeed;
+        var normalizedWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(state.ThemeWallpaperColorSource);
 
         if ((snapshot.IsNightMode ?? false) != state.IsNightMode)
         {
@@ -335,6 +338,18 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         {
             snapshot.SelectedWallpaperSeed = normalizedSelectedWallpaperSeed;
             changedKeys.Add(nameof(AppSettingsSnapshot.SelectedWallpaperSeed));
+        }
+
+        if (!string.Equals(snapshot.ThemeWallpaperColorSource, normalizedWallpaperColorSource, StringComparison.OrdinalIgnoreCase))
+        {
+            snapshot.ThemeWallpaperColorSource = normalizedWallpaperColorSource;
+            changedKeys.Add(nameof(AppSettingsSnapshot.ThemeWallpaperColorSource));
+        }
+
+        if (snapshot.UseNativeWallpaperChangeEvents != state.UseNativeWallpaperChangeEvents)
+        {
+            snapshot.UseNativeWallpaperChangeEvents = state.UseNativeWallpaperChangeEvents;
+            changedKeys.Add(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents));
         }
 
         var normalizedThemeMode = NormalizeThemeMode(state.ThemeMode);
@@ -770,6 +785,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 {
     private readonly ISettingsService _settingsService;
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
+    private readonly PlondsStaticUpdateService _plondsStaticUpdateService = new();
     private readonly PlondsReleaseUpdateService _plondsReleaseUpdateService = new();
 
     public UpdateSettingsService(ISettingsService settingsService)
@@ -869,6 +885,14 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool isForce = false,
         CancellationToken cancellationToken = default)
     {
+        var staticResult = isForce
+            ? await _plondsStaticUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _plondsStaticUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        if (staticResult.Success && staticResult.PlondsPayload is not null)
+        {
+            return staticResult.PlondsPayload;
+        }
+
         var result = isForce
             ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
             : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
@@ -912,6 +936,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public void Dispose()
     {
         _githubReleaseUpdateService.Dispose();
+        _plondsStaticUpdateService.Dispose();
         _plondsReleaseUpdateService.Dispose();
     }
 
@@ -921,6 +946,19 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool isForce,
         CancellationToken cancellationToken)
     {
+        var staticResult = isForce
+            ? await _plondsStaticUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+            : await _plondsStaticUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+
+        if (staticResult.Success)
+        {
+            return staticResult;
+        }
+
+        AppLogger.Warn(
+            "UpdateSettings",
+            $"PLONDS static update check failed and will fallback to GitHub release PLONDS. Error: {staticResult.ErrorMessage}");
+
         var plondsResult = isForce
             ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
             : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);

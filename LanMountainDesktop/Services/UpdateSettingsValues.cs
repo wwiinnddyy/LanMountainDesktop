@@ -20,6 +20,8 @@ public static class UpdateSettingsValues
     public const string LegacyDownloadSourceStcn = "stcn";
     public const string DownloadSourceGitHub = "github";
     public const string DownloadSourceGhProxy = "gh-proxy";
+    public const string PlondsStaticBaseUrlEnvironmentVariable = "LANMOUNTAIN_UPDATE_BASE_URL";
+    public const string DefaultPlondsStaticBaseUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update";
 
     public const int DefaultDownloadThreads = 4;
     public const int MinDownloadThreads = 1;

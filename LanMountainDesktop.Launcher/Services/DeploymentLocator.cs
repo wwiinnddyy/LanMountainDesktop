@@ -503,7 +503,11 @@ internal sealed class DeploymentLocator
             {
                 try
                 {
-                    var snapshotFiles = Directory.GetFiles(snapshotDir, "*.json", SearchOption.TopDirectoryOnly);
+                    var snapshotFiles = Directory
+                        .GetFiles(snapshotDir, "*.json", SearchOption.TopDirectoryOnly)
+                        .OrderByDescending(File.GetCreationTimeUtc)
+                        .Take(Math.Max(1, minVersionsToKeep))
+                        .ToArray();
                     foreach (var snapshotFile in snapshotFiles)
                     {
                         try

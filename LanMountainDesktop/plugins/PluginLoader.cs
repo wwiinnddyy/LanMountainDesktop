@@ -336,6 +336,7 @@ public sealed class PluginLoader
         RegisterHostService<ISettingsService>(services, hostServices);
         RegisterHostService<ISettingsCatalog>(services, hostServices);
         RegisterHostService<IAppearanceThemeService>(services, hostServices);
+        RegisterHostService<IMaterialColorService>(services, hostServices);
         RegisterHostService<IExternalIpcNotificationPublisher>(services, hostServices);
 
         return services;
@@ -347,17 +348,19 @@ public sealed class PluginLoader
             CornerRadiusTokens: new PluginCornerRadiusTokens(6, 12, 14, 20, 28, 32, 36, 24),
             ThemeVariant: "Unknown");
 
-        if (hostServices?.GetService(typeof(IAppearanceThemeService)) is not IAppearanceThemeService appearanceThemeService)
-        {
-            return defaultSnapshot;
-        }
-
         try
         {
-            var hostSnapshot = appearanceThemeService.GetCurrent();
-            return new PluginAppearanceSnapshot(
-                CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(hostSnapshot.CornerRadiusTokens),
-                ThemeVariant: hostSnapshot.IsNightMode ? "Dark" : "Light");
+            if (hostServices?.GetService(typeof(IMaterialColorService)) is IMaterialColorService materialColorService)
+            {
+                return PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(materialColorService.GetMaterialColorSnapshot());
+            }
+
+            if (hostServices?.GetService(typeof(IAppearanceThemeService)) is IAppearanceThemeService appearanceThemeService)
+            {
+                return PluginAppearanceSnapshotMapper.FromAppearanceSnapshot(appearanceThemeService.GetCurrent());
+            }
+
+            return defaultSnapshot;
         }
         catch (Exception ex)
         {

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -31,16 +30,15 @@ public interface IComponentEditorWindowService
 internal sealed class ComponentEditorWindowService : IComponentEditorWindowService
 {
     private readonly ISettingsFacadeService _settingsFacade;
-    private readonly IAppearanceThemeService _appearanceThemeService;
+    private readonly IMaterialColorService _materialColorService;
     private ComponentEditorWindow? _window;
     private string? _currentPlacementId;
 
     public ComponentEditorWindowService(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
-        _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
-        _settingsFacade.Settings.Changed += OnSettingsChanged;
-        _appearanceThemeService.Changed += OnAppearanceThemeChanged;
+        _materialColorService = HostMaterialColorProvider.GetOrCreate();
+        _materialColorService.MaterialColorChanged += OnMaterialColorChanged;
     }
 
     public bool IsOpen => _window is { IsVisible: true };
@@ -100,60 +98,29 @@ internal sealed class ComponentEditorWindowService : IComponentEditorWindowServi
         return window;
     }
 
-    private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
-    {
-        if (_window is null || e.Scope != SettingsScope.App)
-        {
-            return;
-        }
-
-        var changedKeys = e.ChangedKeys?.ToArray() ?? [];
-        var liveAppearance = _appearanceThemeService.GetCurrent();
-        if (changedKeys.Length > 0 &&
-            !changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) &&
-            !(string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&
-              changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) &&
-            !(string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
-              (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
-               changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-               changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase))) &&
-            !changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        ApplyTheme(_window);
-    }
-
     private void ApplyTheme(ComponentEditorWindow window)
     {
-        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
-        var themeState = _settingsFacade.Theme.Get();
-        var wallpaperState = _settingsFacade.Wallpaper.Get();
-        var wallpaperMediaType = _settingsFacade.WallpaperMedia.DetectMediaType(
-            appearanceSnapshot.ResolvedWallpaperPath ?? wallpaperState.WallpaperPath);
-        var palette = ComponentEditorMaterialThemeAdapter.Build(
-            themeState,
-            wallpaperState,
-            appearanceSnapshot.MonetPalette,
-            wallpaperMediaType);
+        var snapshot = _materialColorService.GetMaterialColorSnapshot();
+        var palette = ComponentEditorMaterialThemeAdapter.Build(snapshot);
 
         window.ApplyTheme(palette);
-        window.ApplyChromeMode(themeState.UseSystemChrome);
-        _appearanceThemeService.ApplyWindowMaterial(window, MaterialSurfaceRole.WindowBackground);
+        window.ApplyChromeMode(snapshot.UseSystemChrome);
+        _materialColorService.ApplyWindowMaterial(window, MaterialSurfaceRole.WindowBackground);
     }
 
-    private void OnAppearanceThemeChanged(object? sender, AppearanceThemeSnapshot e)
+    private void OnMaterialColorChanged(object? sender, MaterialColorSnapshot snapshot)
     {
         _ = sender;
-        _ = e;
 
         if (_window is null)
         {
             return;
         }
 
-        ApplyTheme(_window);
+        var palette = ComponentEditorMaterialThemeAdapter.Build(snapshot);
+        _window.ApplyTheme(palette);
+        _window.ApplyChromeMode(snapshot.UseSystemChrome);
+        _materialColorService.ApplyWindowMaterial(_window, MaterialSurfaceRole.WindowBackground);
     }
 
     private sealed class HostContext : IComponentEditorHostContext

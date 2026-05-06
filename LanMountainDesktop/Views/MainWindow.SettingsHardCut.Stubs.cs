@@ -632,6 +632,8 @@ public partial class MainWindow : Window
             ThemeColorMode = latestThemeState.ThemeColorMode,
             SystemMaterialMode = latestThemeState.SystemMaterialMode,
             SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
+            ThemeWallpaperColorSource = latestThemeState.ThemeWallpaperColorSource,
+            UseNativeWallpaperChangeEvents = latestThemeState.UseNativeWallpaperChangeEvents,
             UseSystemChrome = latestThemeState.UseSystemChrome,
             CornerRadiusStyle = latestThemeState.CornerRadiusStyle,
             WallpaperPath = latestWallpaperState.WallpaperPath,

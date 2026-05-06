@@ -2,7 +2,7 @@ namespace LanMountainDesktop.Shared.Contracts.Update;
 
 public static class UpdatePaths
 {
-    private const string LauncherDirectoryName = ".launcher";
+    private const string LauncherDirectoryName = ".Launcher";
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
     private const string ObjectsDirectoryName = "objects";

@@ -52,15 +52,17 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
+    private readonly StudySnapshotRenderGate _renderGate;
     private readonly DispatcherTimer _uiTimer = new()
     {
-        Interval = TimeSpan.FromMilliseconds(250)
+        Interval = TimeSpan.FromSeconds(1)
     };
 
     private double _currentCellSize = 48;
     private string _languageCode = "zh-CN";
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isSubscribed;
     private bool _isDisposed;
     private bool _isCompactMode;
     private bool _isUltraCompactMode;
@@ -73,6 +75,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     {
         InitializeComponent();
 
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot);
         _uiTimer.Tick += OnUiTimerTick;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
@@ -81,7 +84,7 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
         ReloadLanguageCode();
         ApplyCellSize(_currentCellSize);
-        RefreshVisual();
+        ApplySnapshot(_studyAnalyticsService.GetSnapshot());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -93,15 +96,26 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
     {
         _ = isEditMode;
+        var wasOnActivePage = _isOnActivePage;
         _isOnActivePage = isOnActivePage;
         UpdateMonitoringLeaseState();
         UpdateTimerState();
+        if (isOnActivePage && !wasOnActivePage)
+        {
+            RefreshVisual();
+        }
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttached = true;
         ReloadLanguageCode();
+        if (!_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated += OnStudySnapshotUpdated;
+            _isSubscribed = true;
+        }
+
         UpdateMonitoringLeaseState();
         UpdateTimerState();
         RefreshVisual();
@@ -113,6 +127,13 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
         _monitoringLease?.Dispose();
         _monitoringLease = null;
         _uiTimer.Stop();
+        _renderGate.Clear();
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -129,6 +150,21 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
     private void OnUiTimerTick(object? sender, EventArgs e)
     {
         RefreshVisual();
+    }
+
+    private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
+    {
+        if (!_isAttached || !_isOnActivePage)
+        {
+            return;
+        }
+
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
     }
 
     private void UpdateTimerState()
@@ -192,6 +228,11 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
     private void RefreshVisual()
     {
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
+    }
+
+    private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
+    {
         var now = DateTimeOffset.UtcNow;
         var panelColor = ResolvePanelBackgroundColor();
         ApplyTypographyByBackground(panelColor);
@@ -204,8 +245,6 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
             ApplyActionBadgeStyle(panelColor, Color.Parse("#FF9AA0A6"));
             return;
         }
-
-        var snapshot = _studyAnalyticsService.GetSnapshot();
 
         if (_transientMessage is not null && now > _transientMessageExpireAt)
         {
@@ -486,9 +525,16 @@ public partial class StudySessionControlWidget : UserControl, IDesktopComponentW
 
         _uiTimer.Stop();
         _uiTimer.Tick -= OnUiTimerTick;
+        _renderGate.Dispose();
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+
+        if (_isSubscribed)
+        {
+            _studyAnalyticsService.SnapshotUpdated -= OnStudySnapshotUpdated;
+            _isSubscribed = false;
+        }
     }
 }

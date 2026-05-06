@@ -11,4 +11,6 @@ public sealed record PlondsDeltaBuildOptions(
     string? BaselineVersion = null,
     string? BaselineTag = null,
     string? BaselinePayloadZip = null,
-    bool IsFullPayload = false);
+    bool IsFullPayload = false,
+    string? StaticOutputRoot = null,
+    string? UpdateBaseUrl = null);

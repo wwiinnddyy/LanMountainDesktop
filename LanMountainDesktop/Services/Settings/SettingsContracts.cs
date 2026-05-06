@@ -34,7 +34,9 @@ public sealed record ThemeAppearanceSettingsState(
     string ThemeColorMode = ThemeAppearanceValues.ColorModeDefaultNeutral,
     string SystemMaterialMode = ThemeAppearanceValues.MaterialNone,
     string? SelectedWallpaperSeed = null,
-    string ThemeMode = ThemeAppearanceValues.ThemeModeLight);
+    string ThemeMode = ThemeAppearanceValues.ThemeModeLight,
+    string ThemeWallpaperColorSource = ThemeAppearanceValues.WallpaperColorSourceAuto,
+    bool UseNativeWallpaperChangeEvents = true);
 public sealed record StatusBarSettingsState(
     IReadOnlyList<string> TopStatusComponentIds,
     IReadOnlyList<string> PinnedTaskbarActions,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -55,7 +56,9 @@ public sealed record AppearanceThemeSnapshot(
     IReadOnlyList<string> AvailableSystemMaterialModes,
     bool CanChangeSystemMaterial,
     bool UseSystemChrome,
-    string? ResolvedWallpaperPath);
+    string? ResolvedWallpaperPath,
+    string ThemeWallpaperColorSource = ThemeAppearanceValues.WallpaperColorSourceAuto,
+    bool UseNativeWallpaperChangeEvents = true);
 
 public interface IAppearanceThemeService
 {
@@ -465,7 +468,7 @@ internal sealed class MaterialSurfaceService : IMaterialSurfaceService
     }
 }
 
-internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposable
+internal sealed class AppearanceThemeService : IAppearanceThemeService, IMaterialColorService, IDisposable
 {
     private static readonly Color DefaultAccentColor = Color.Parse("#FF3B82F6");
     private static readonly Color NeutralFallbackSeedColor = Color.Parse("#FF8A8A8A");
@@ -477,9 +480,15 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     private string _liveThemeColorMode;
     private string _liveSystemMaterialMode;
     private string? _liveSelectedWallpaperSeed;
+    private string _liveThemeWallpaperColorSource;
+    private bool _liveUseNativeWallpaperChangeEvents;
     private readonly object _paletteGate = new();
     private readonly Dictionary<string, WallpaperSeedExtractionResult> _wallpaperSeedCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pendingWallpaperSeedKeys = new(StringComparer.OrdinalIgnoreCase);
+    private Timer? _systemWallpaperPollTimer;
+    private string? _lastObservedWallpaperSourceKey;
+    private bool _nativeWallpaperEventsActive;
+    private bool _wallpaperPollingActive;
 
     public AppearanceThemeService(
         ISettingsFacadeService settingsFacade,
@@ -497,10 +506,15 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             initialThemeState.ThemeColor);
         _liveSystemMaterialMode = ResolveSupportedMaterialMode(initialThemeState.SystemMaterialMode);
         _liveSelectedWallpaperSeed = initialThemeState.SelectedWallpaperSeed;
+        _liveThemeWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(initialThemeState.ThemeWallpaperColorSource);
+        _liveUseNativeWallpaperChangeEvents = initialThemeState.UseNativeWallpaperChangeEvents;
         _settingsFacade.Settings.Changed += OnSettingsChanged;
+        ConfigureSystemWallpaperMonitoring(initialThemeState);
     }
 
     public event EventHandler<AppearanceThemeSnapshot>? Changed;
+
+    public event EventHandler<MaterialColorSnapshot>? MaterialColorChanged;
 
     public AppearanceThemeSnapshot GetCurrent()
     {
@@ -525,6 +539,39 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             normalizedSystemMaterialMode,
             pendingState.SelectedWallpaperSeed,
             queueWallpaperPaletteBuild: true);
+    }
+
+    public MaterialColorSnapshot GetMaterialColorSnapshot()
+    {
+        return CreateMaterialColorSnapshot(GetCurrent());
+    }
+
+    public MaterialColorSnapshot BuildMaterialColorPreview(ThemeAppearanceSettingsState pendingState)
+    {
+        return CreateMaterialColorSnapshot(BuildPreview(pendingState));
+    }
+
+    public MaterialSurfaceSnapshot GetSurface(MaterialSurfaceRole role)
+    {
+        var surface = GetMaterialSurface(role);
+        return new MaterialSurfaceSnapshot(
+            role,
+            surface.BackgroundColor,
+            surface.BorderColor,
+            surface.BlurRadius,
+            surface.Opacity);
+    }
+
+    public void RefreshWallpaperColors()
+    {
+        lock (_paletteGate)
+        {
+            _wallpaperSeedCache.Clear();
+            _pendingWallpaperSeedKeys.Clear();
+            _lastObservedWallpaperSourceKey = null;
+        }
+
+        RaiseChanged(queueWallpaperPaletteBuild: true);
     }
 
     public void ApplyThemeResources(IResourceDictionary resources)
@@ -582,6 +629,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     public void Dispose()
     {
         _settingsFacade.Settings.Changed -= OnSettingsChanged;
+        StopSystemWallpaperMonitoring();
+        _systemWallpaperPollTimer?.Dispose();
+        _systemWallpaperPollTimer = null;
     }
 
     private AppearanceThemeSnapshot BuildCurrentSnapshot(bool queueWallpaperPaletteBuild)
@@ -622,6 +672,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             !changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColorMode), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparer.OrdinalIgnoreCase) &&
             !changedKeys.Contains(nameof(AppSettingsSnapshot.SelectedWallpaperSeed), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeWallpaperColorSource), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents), StringComparer.OrdinalIgnoreCase) &&
+            !changedKeys.Contains(nameof(AppSettingsSnapshot.SystemWallpaperRefreshIntervalSeconds), StringComparer.OrdinalIgnoreCase) &&
             !(respondsToThemeColor &&
               changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) &&
             !(respondsToWallpaper &&
@@ -638,6 +691,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             latestThemeState.ThemeColor);
         _liveSystemMaterialMode = ResolveSupportedMaterialMode(latestThemeState.SystemMaterialMode);
         _liveSelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed;
+        _liveThemeWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(latestThemeState.ThemeWallpaperColorSource);
+        _liveUseNativeWallpaperChangeEvents = latestThemeState.UseNativeWallpaperChangeEvents;
+        ConfigureSystemWallpaperMonitoring(latestThemeState);
         RaiseChanged(queueWallpaperPaletteBuild: true);
     }
 
@@ -663,6 +719,7 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             var wallpaperResolution = ResolveWallpaperPalette(
                 themeState.IsNightMode,
                 wallpaperState,
+                ThemeAppearanceValues.NormalizeWallpaperColorSource(themeState.ThemeWallpaperColorSource),
                 selectedWallpaperSeed,
                 queueWallpaperPaletteBuild);
             palette = wallpaperResolution.Palette;
@@ -701,7 +758,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             availableModes,
             _windowMaterialService.CanChangeMode,
             themeState.UseSystemChrome,
-            resolvedWallpaperPath);
+            resolvedWallpaperPath,
+            ThemeAppearanceValues.NormalizeWallpaperColorSource(themeState.ThemeWallpaperColorSource),
+            themeState.UseNativeWallpaperChangeEvents);
     }
 
     private ThemeColorContext CreateThemeContext(AppearanceThemeSnapshot snapshot)
@@ -729,10 +788,11 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     private WallpaperPaletteResolution ResolveWallpaperPalette(
         bool nightMode,
         WallpaperSettingsState wallpaperState,
+        string wallpaperColorSource,
         string? selectedWallpaperSeed,
         bool queueWallpaperPaletteBuild)
     {
-        var source = ResolveWallpaperSeedSource(wallpaperState);
+        var source = ResolveWallpaperSeedSource(wallpaperState, wallpaperColorSource);
         if (string.Equals(source.SourceKind, "fallback", StringComparison.OrdinalIgnoreCase))
         {
             return BuildFallbackWallpaperPaletteResolution(nightMode, source.ResolvedWallpaperPath);
@@ -935,9 +995,14 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
         }
     }
 
-    private WallpaperSeedSourceDescriptor ResolveWallpaperSeedSource(WallpaperSettingsState wallpaperState)
+    private WallpaperSeedSourceDescriptor ResolveWallpaperSeedSource(
+        WallpaperSettingsState wallpaperState,
+        string wallpaperColorSource)
     {
-        if (string.Equals(wallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase) &&
+        var normalizedWallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(wallpaperColorSource);
+
+        if (normalizedWallpaperColorSource != ThemeAppearanceValues.WallpaperColorSourceSystem &&
+            string.Equals(wallpaperState.Type, "SolidColor", StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(wallpaperState.Color) &&
             Color.TryParse(wallpaperState.Color, out var solidColor))
         {
@@ -954,7 +1019,9 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             ? null
             : wallpaperState.WallpaperPath.Trim();
         var appWallpaperMediaType = _settingsFacade.WallpaperMedia.DetectMediaType(wallpaperPath);
-        if (!string.IsNullOrWhiteSpace(wallpaperPath) && File.Exists(wallpaperPath))
+        if (normalizedWallpaperColorSource != ThemeAppearanceValues.WallpaperColorSourceSystem &&
+            !string.IsNullOrWhiteSpace(wallpaperPath) &&
+            File.Exists(wallpaperPath))
         {
             if (appWallpaperMediaType == WallpaperMediaType.Image)
             {
@@ -967,8 +1034,19 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
             }
         }
 
+        if (normalizedWallpaperColorSource == ThemeAppearanceValues.WallpaperColorSourceApp)
+        {
+            return new WallpaperSeedSourceDescriptor(
+                "fallback",
+                "fallback",
+                null,
+                null,
+                null);
+        }
+
         var systemWallpaper = _systemWallpaperService.GetWallpaperPath();
-        if (!string.IsNullOrWhiteSpace(systemWallpaper) &&
+        if (normalizedWallpaperColorSource != ThemeAppearanceValues.WallpaperColorSourceApp &&
+            !string.IsNullOrWhiteSpace(systemWallpaper) &&
             File.Exists(systemWallpaper) &&
             _settingsFacade.WallpaperMedia.DetectMediaType(systemWallpaper) == WallpaperMediaType.Image)
         {
@@ -991,13 +1069,269 @@ internal sealed class AppearanceThemeService : IAppearanceThemeService, IDisposa
     private void RaiseChanged(bool queueWallpaperPaletteBuild)
     {
         var snapshot = BuildCurrentSnapshot(queueWallpaperPaletteBuild);
+        var materialSnapshot = CreateMaterialColorSnapshot(snapshot);
         if (Dispatcher.UIThread.CheckAccess())
         {
             Changed?.Invoke(this, snapshot);
+            MaterialColorChanged?.Invoke(this, materialSnapshot);
             return;
         }
 
-        Dispatcher.UIThread.Post(() => Changed?.Invoke(this, snapshot), DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() =>
+        {
+            Changed?.Invoke(this, snapshot);
+            MaterialColorChanged?.Invoke(this, materialSnapshot);
+        }, DispatcherPriority.Background);
+    }
+
+    private MaterialColorSnapshot CreateMaterialColorSnapshot(AppearanceThemeSnapshot snapshot)
+    {
+        var context = CreateThemeContext(snapshot);
+        var appPalette = ThemeColorSystemService.BuildPalette(context);
+        var palette = new LanMountainDesktop.Models.MaterialColorPalette(
+            appPalette.Primary,
+            appPalette.Secondary,
+            appPalette.Accent,
+            appPalette.OnAccent,
+            appPalette.AccentLight1,
+            appPalette.AccentLight2,
+            appPalette.AccentLight3,
+            appPalette.AccentDark1,
+            appPalette.AccentDark2,
+            appPalette.AccentDark3,
+            appPalette.SurfaceBase,
+            appPalette.SurfaceRaised,
+            appPalette.SurfaceOverlay,
+            appPalette.TextPrimary,
+            appPalette.TextSecondary,
+            appPalette.TextMuted,
+            appPalette.TextAccent,
+            appPalette.NavText,
+            appPalette.NavSelectedText,
+            appPalette.NavSelectionIndicator,
+            appPalette.NavItemBackground,
+            appPalette.NavItemHoverBackground,
+            appPalette.NavItemSelectedBackground,
+            appPalette.ToggleOn,
+            appPalette.ToggleOff,
+            appPalette.ToggleBorder);
+        var surfaces = Enum.GetValues<MaterialSurfaceRole>()
+            .Select(role =>
+            {
+                var surface = _materialSurfaceService.GetSurface(context, role);
+                return new MaterialSurfaceSnapshot(
+                    role,
+                    surface.BackgroundColor,
+                    surface.BorderColor,
+                    surface.BlurRadius,
+                    surface.Opacity);
+            })
+            .ToDictionary(surface => surface.Role);
+
+        return new MaterialColorSnapshot(
+            snapshot.IsNightMode,
+            snapshot.ThemeColorMode,
+            snapshot.ThemeWallpaperColorSource,
+            ResolveMaterialColorSourceKind(snapshot),
+            snapshot.ResolvedSeedSource,
+            snapshot.CornerRadiusTokens,
+            snapshot.UserThemeColor,
+            snapshot.SelectedWallpaperSeed,
+            snapshot.EffectiveSeedColor,
+            snapshot.AccentColor,
+            snapshot.MonetPalette,
+            palette,
+            snapshot.WallpaperSeedCandidates,
+            snapshot.SystemMaterialMode,
+            snapshot.AvailableSystemMaterialModes,
+            snapshot.CanChangeSystemMaterial,
+            snapshot.UseSystemChrome,
+            snapshot.ResolvedWallpaperPath,
+            snapshot.UseNativeWallpaperChangeEvents,
+            _nativeWallpaperEventsActive,
+            _wallpaperPollingActive,
+            surfaces);
+    }
+
+    private static MaterialColorSourceKind ResolveMaterialColorSourceKind(AppearanceThemeSnapshot snapshot)
+    {
+        if (string.Equals(snapshot.ThemeColorMode, ThemeAppearanceValues.ColorModeDefaultNeutral, StringComparison.OrdinalIgnoreCase))
+        {
+            return MaterialColorSourceKind.Neutral;
+        }
+
+        if (string.Equals(snapshot.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase))
+        {
+            return MaterialColorSourceKind.CustomSeed;
+        }
+
+        if (!string.Equals(snapshot.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase))
+        {
+            return MaterialColorSourceKind.Fallback;
+        }
+
+        if (string.Equals(snapshot.ResolvedSeedSource, "app_wallpaper", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(snapshot.ResolvedSeedSource, "app_solid", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(snapshot.ThemeWallpaperColorSource, ThemeAppearanceValues.WallpaperColorSourceApp, StringComparison.OrdinalIgnoreCase)
+                ? MaterialColorSourceKind.AppWallpaper
+                : MaterialColorSourceKind.WallpaperAuto;
+        }
+
+        if (string.Equals(snapshot.ResolvedSeedSource, "system_wallpaper", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(snapshot.ThemeWallpaperColorSource, ThemeAppearanceValues.WallpaperColorSourceSystem, StringComparison.OrdinalIgnoreCase)
+                ? MaterialColorSourceKind.SystemWallpaper
+                : MaterialColorSourceKind.WallpaperAuto;
+        }
+
+        return MaterialColorSourceKind.Fallback;
+    }
+
+    private void ConfigureSystemWallpaperMonitoring(ThemeAppearanceSettingsState themeState)
+    {
+        var colorMode = ThemeAppearanceValues.NormalizeThemeColorMode(themeState.ThemeColorMode, themeState.ThemeColor);
+        var wallpaperColorSource = ThemeAppearanceValues.NormalizeWallpaperColorSource(themeState.ThemeWallpaperColorSource);
+        var shouldMonitor =
+            string.Equals(colorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(wallpaperColorSource, ThemeAppearanceValues.WallpaperColorSourceApp, StringComparison.OrdinalIgnoreCase);
+
+        if (!shouldMonitor)
+        {
+            StopSystemWallpaperMonitoring();
+            return;
+        }
+
+        ConfigureNativeWallpaperEvents(themeState.UseNativeWallpaperChangeEvents);
+        ConfigureWallpaperPolling(_settingsFacade.Wallpaper.Get().SystemWallpaperRefreshIntervalSeconds);
+        UpdateObservedWallpaperSourceKey();
+    }
+
+    private void ConfigureNativeWallpaperEvents(bool enabled)
+    {
+        if (!enabled || !OperatingSystem.IsWindows())
+        {
+            UnregisterNativeWallpaperEvents();
+            return;
+        }
+
+        if (_nativeWallpaperEventsActive)
+        {
+            return;
+        }
+
+        RegisterNativeWallpaperEvents();
+    }
+
+    private void UnregisterNativeWallpaperEvents()
+    {
+        if (!_nativeWallpaperEventsActive)
+        {
+            return;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            UnregisterNativeWallpaperEventsCore();
+        }
+
+        _nativeWallpaperEventsActive = false;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private void RegisterNativeWallpaperEvents()
+    {
+        try
+        {
+            SystemEvents.UserPreferenceChanged += OnNativeWallpaperPreferenceChanged;
+            _nativeWallpaperEventsActive = true;
+        }
+        catch (Exception ex)
+        {
+            _nativeWallpaperEventsActive = false;
+            AppLogger.Warn("Appearance.WallpaperMonitor", "Failed to subscribe to native wallpaper change events; polling will remain active.", ex);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private void UnregisterNativeWallpaperEventsCore()
+    {
+        try
+        {
+            SystemEvents.UserPreferenceChanged -= OnNativeWallpaperPreferenceChanged;
+        }
+        catch
+        {
+            // Ignore shutdown-time native event cleanup failures.
+        }
+    }
+
+    private void ConfigureWallpaperPolling(int intervalSeconds)
+    {
+        var normalizedInterval = Math.Clamp(intervalSeconds <= 0 ? 300 : intervalSeconds, 30, 86400);
+        var interval = TimeSpan.FromSeconds(normalizedInterval);
+        _systemWallpaperPollTimer ??= new Timer(OnSystemWallpaperPollTimer);
+        _systemWallpaperPollTimer.Change(interval, interval);
+        _wallpaperPollingActive = true;
+    }
+
+    private void StopSystemWallpaperMonitoring()
+    {
+        UnregisterNativeWallpaperEvents();
+        _systemWallpaperPollTimer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _wallpaperPollingActive = false;
+        _lastObservedWallpaperSourceKey = null;
+    }
+
+    private void OnNativeWallpaperPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        if (e.Category is UserPreferenceCategory.Desktop or UserPreferenceCategory.General)
+        {
+            RefreshWallpaperColors();
+        }
+    }
+
+    private void OnSystemWallpaperPollTimer(object? state)
+    {
+        _ = state;
+
+        try
+        {
+            var source = ResolveWallpaperSeedSource(_settingsFacade.Wallpaper.Get(), _liveThemeWallpaperColorSource);
+            var sourceKey = source.SourceKey;
+            if (string.Equals(_lastObservedWallpaperSourceKey, sourceKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _lastObservedWallpaperSourceKey = sourceKey;
+            RefreshWallpaperColors();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Appearance.WallpaperMonitor", "Failed to poll wallpaper color source.", ex);
+        }
+    }
+
+    private void UpdateObservedWallpaperSourceKey()
+    {
+        try
+        {
+            _lastObservedWallpaperSourceKey = ResolveWallpaperSeedSource(
+                _settingsFacade.Wallpaper.Get(),
+                _liveThemeWallpaperColorSource).SourceKey;
+        }
+        catch
+        {
+            _lastObservedWallpaperSourceKey = null;
+        }
     }
 
     private static Color? ResolveSelectedWallpaperSeed(
@@ -1069,5 +1403,13 @@ internal static class HostAppearanceThemeProvider
                 new WindowMaterialService(),
                 new MaterialSurfaceService());
         }
+    }
+}
+
+internal static class HostMaterialColorProvider
+{
+    public static IMaterialColorService GetOrCreate()
+    {
+        return (IMaterialColorService)HostAppearanceThemeProvider.GetOrCreate();
     }
 }

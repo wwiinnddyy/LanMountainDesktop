@@ -10,6 +10,10 @@ public static class ThemeAppearanceValues
     public const string ColorModeSeedMonet = "seed_monet";
     public const string ColorModeWallpaperMonet = "wallpaper_monet";
 
+    public const string WallpaperColorSourceAuto = "auto";
+    public const string WallpaperColorSourceApp = "app";
+    public const string WallpaperColorSourceSystem = "system";
+
     public const string ColorSchemeFollowSystem = "follow_system";
     public const string ColorSchemeNative = "native";
 
@@ -35,6 +39,13 @@ public static class ThemeAppearanceValues
         MaterialNone,
         MaterialMica,
         MaterialAcrylic
+    ];
+
+    public static readonly IReadOnlyList<string> AllWallpaperColorSources =
+    [
+        WallpaperColorSourceAuto,
+        WallpaperColorSourceApp,
+        WallpaperColorSourceSystem
     ];
 
     public static string NormalizeThemeColorMode(string? value, string? themeColor = null)
@@ -77,6 +88,21 @@ public static class ThemeAppearanceValues
         }
 
         return MaterialNone;
+    }
+
+    public static string NormalizeWallpaperColorSource(string? value)
+    {
+        if (string.Equals(value, WallpaperColorSourceApp, StringComparison.OrdinalIgnoreCase))
+        {
+            return WallpaperColorSourceApp;
+        }
+
+        if (string.Equals(value, WallpaperColorSourceSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return WallpaperColorSourceSystem;
+        }
+
+        return WallpaperColorSourceAuto;
     }
 
     public static string ResolveEffectiveSystemMaterialMode(string? value)

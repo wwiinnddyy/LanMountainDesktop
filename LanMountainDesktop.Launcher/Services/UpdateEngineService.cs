@@ -251,7 +251,7 @@ internal sealed class UpdateEngineService
             snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
-            CleanupDestroyedDeployments();
+            RetainDeploymentsForRollback();
 
             _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileMap.Files.Count, fileMap.Files.Count));
             _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, currentVersion, targetVersion, null, false));
@@ -269,19 +269,24 @@ internal sealed class UpdateEngineService
         catch (Exception ex)
         {
             _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
-            TryRollbackOnFailure(snapshot);
-            snapshot.Status = "rolled_back";
+            var rollbackResult = TryRollbackOnFailure(snapshot);
+            snapshot.Status = rollbackResult.Success ? "rolled_back" : "rollback_failed";
             SaveSnapshot(snapshotPath, snapshot);
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, currentVersion, targetVersion, ex.Message, true));
+            var errorMessage = rollbackResult.Success
+                ? ex.Message
+                : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, currentVersion, targetVersion, errorMessage, rollbackResult.Success));
             return new LauncherResult
             {
                 Success = false,
                 Stage = "update.apply",
-                Code = "apply_failed",
-                Message = "Failed to apply update. Rolled back to previous version.",
-                ErrorMessage = ex.Message,
+                Code = rollbackResult.Success ? "apply_failed" : "rollback_failed",
+                Message = rollbackResult.Success
+                    ? "Failed to apply update. Rolled back to previous version."
+                    : "Failed to apply update and rollback failed.",
+                ErrorMessage = errorMessage,
                 CurrentVersion = currentVersion,
-                RolledBackTo = currentVersion
+                RolledBackTo = rollbackResult.Success ? currentVersion : null
             };
         }
         finally
@@ -410,7 +415,7 @@ internal sealed class UpdateEngineService
             snapshot.Status = "applied";
             SaveSnapshot(snapshotPath, snapshot);
             CleanupIncomingArtifacts();
-            CleanupDestroyedDeployments();
+            RetainDeploymentsForRollback();
 
             _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileEntries.Count, fileEntries.Count));
             _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, sourceVersion, targetVersion, null, false));
@@ -456,19 +461,24 @@ internal sealed class UpdateEngineService
             }
 
             _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
-            TryRollbackOnFailure(snapshot);
-            snapshot.Status = "rolled_back";
+            var rollbackResult = TryRollbackOnFailure(snapshot);
+            snapshot.Status = rollbackResult.Success ? "rolled_back" : "rollback_failed";
             SaveSnapshot(snapshotPath, snapshot);
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, sourceVersion, targetVersion, ex.Message, true));
+            var errorMessage = rollbackResult.Success
+                ? ex.Message
+                : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
+            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, sourceVersion, targetVersion, errorMessage, rollbackResult.Success));
             return new LauncherResult
             {
                 Success = false,
                 Stage = "update.apply",
-                Code = "apply_failed",
-                Message = "Failed to apply PLONDS update. Rolled back to previous version.",
-                ErrorMessage = ex.Message,
+                Code = rollbackResult.Success ? "apply_failed" : "rollback_failed",
+                Message = rollbackResult.Success
+                    ? "Failed to apply PLONDS update. Rolled back to previous version."
+                    : "Failed to apply PLONDS update and rollback failed.",
+                ErrorMessage = errorMessage,
                 CurrentVersion = sourceVersion,
-                RolledBackTo = sourceVersion
+                RolledBackTo = rollbackResult.Success ? sourceVersion : null
             };
         }
     }
@@ -1375,6 +1385,11 @@ internal sealed class UpdateEngineService
             return Failed("update.rollback", "invalid_snapshot", "Invalid snapshot metadata.");
         }
 
+        if (!Directory.Exists(snapshot.SourceDirectory))
+        {
+            return Failed("update.rollback", "source_missing", $"Rollback source deployment is missing: {snapshot.SourceDirectory}");
+        }
+
         var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
         if (string.IsNullOrWhiteSpace(currentDeployment))
         {
@@ -1397,21 +1412,7 @@ internal sealed class UpdateEngineService
 
     public void CleanupDestroyedDeployments()
     {
-        foreach (var dir in Directory.EnumerateDirectories(_appRoot, "app-*", SearchOption.TopDirectoryOnly))
-        {
-            if (!File.Exists(Path.Combine(dir, ".destroy")))
-            {
-                continue;
-            }
-
-            try
-            {
-                Directory.Delete(dir, true);
-            }
-            catch
-            {
-            }
-        }
+        RetainDeploymentsForRollback();
     }
 
     private void ApplyFileEntry(UpdateFileEntry file, string currentDeployment, string targetDeployment, string extractRoot)
@@ -1459,9 +1460,15 @@ internal sealed class UpdateEngineService
         var toCurrent = Path.Combine(toDeployment, ".current");
         var fromCurrent = Path.Combine(fromDeployment, ".current");
         var fromDestroy = Path.Combine(fromDeployment, ".destroy");
+        var toDestroy = Path.Combine(toDeployment, ".destroy");
         var toPartial = Path.Combine(toDeployment, ".partial");
 
         File.WriteAllText(toCurrent, string.Empty);
+        if (File.Exists(toDestroy))
+        {
+            File.Delete(toDestroy);
+        }
+
         if (File.Exists(fromCurrent))
         {
             File.Delete(fromCurrent);
@@ -1474,13 +1481,18 @@ internal sealed class UpdateEngineService
         }
     }
 
-    private void TryRollbackOnFailure(SnapshotMetadata snapshot)
+    private RollbackAttemptResult TryRollbackOnFailure(SnapshotMetadata snapshot)
     {
         try
         {
             if (!string.IsNullOrWhiteSpace(snapshot.TargetDirectory) && Directory.Exists(snapshot.TargetDirectory))
             {
                 Directory.Delete(snapshot.TargetDirectory, true);
+            }
+
+            if (string.IsNullOrWhiteSpace(snapshot.SourceDirectory) || !Directory.Exists(snapshot.SourceDirectory))
+            {
+                return new RollbackAttemptResult(false, "Source deployment is missing.");
             }
 
             if (File.Exists(Path.Combine(snapshot.SourceDirectory, ".destroy")))
@@ -1492,11 +1504,21 @@ internal sealed class UpdateEngineService
             {
                 File.WriteAllText(Path.Combine(snapshot.SourceDirectory, ".current"), string.Empty);
             }
+
+            return new RollbackAttemptResult(true, null);
         }
-        catch
+        catch (Exception ex)
         {
+            return new RollbackAttemptResult(false, ex.Message);
         }
     }
+
+    private void RetainDeploymentsForRollback()
+    {
+        _deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
+    }
+
+    private sealed record RollbackAttemptResult(bool Success, string? ErrorMessage);
 
     internal void CleanupIncomingArtifacts()
     {

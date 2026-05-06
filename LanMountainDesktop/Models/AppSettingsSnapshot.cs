@@ -27,6 +27,10 @@ public sealed class AppSettingsSnapshot
 
     public string? SelectedWallpaperSeed { get; set; }
 
+    public string ThemeWallpaperColorSource { get; set; } = "auto";
+
+    public bool UseNativeWallpaperChangeEvents { get; set; } = true;
+
     public string ThemeMode { get; set; } = "light";
 
     public string? WallpaperPath { get; set; }

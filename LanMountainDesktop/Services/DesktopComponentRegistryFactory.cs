@@ -127,10 +127,9 @@ public static class DesktopComponentRegistryFactory
             var pluginSettings = new PluginScopedSettingsService(
                 contribution.Plugin.Manifest.Id,
                 settingsService);
-            var appearanceSnapshot = HostAppearanceThemeProvider.GetOrCreate().GetCurrent();
-            var pluginAppearance = new PluginAppearanceContext(new PluginAppearanceSnapshot(
-                CornerRadiusTokens: PluginCornerRadiusTokens.FromShared(appearanceSnapshot.CornerRadiusTokens),
-                ThemeVariant: appearanceSnapshot.IsNightMode ? "Dark" : "Light"));
+            var pluginAppearance = new PluginAppearanceContext(
+                PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(
+                    HostMaterialColorProvider.GetOrCreate().GetMaterialColorSnapshot()));
             var pluginContext = new PluginDesktopComponentContext(
                 contribution.Plugin.Manifest,
                 contribution.Plugin.Context.PluginDirectory,

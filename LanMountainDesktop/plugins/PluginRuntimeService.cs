@@ -33,6 +33,7 @@ public sealed class PluginRuntimeService : IDisposable
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly SettingsCatalogService _settingsCatalogService;
     private readonly PublicIpcHostService? _publicIpcHostService;
+    private readonly IMaterialColorService _materialColorService;
     private readonly List<LoadedPlugin> _loadedPlugins = [];
     private readonly List<PluginLoadResult> _loadResults = [];
     private readonly List<PluginCatalogEntry> _catalog = [];
@@ -51,6 +52,7 @@ public sealed class PluginRuntimeService : IDisposable
         _packageManager = new PluginRuntimePackageManager(this);
         _settingsFacade = settingsFacade ?? new SettingsFacadeService();
         _publicIpcHostService = publicIpcHostService;
+        _materialColorService = HostMaterialColorProvider.GetOrCreate();
         _settingsCatalogService = _settingsFacade.Catalog as SettingsCatalogService
             ?? new SettingsCatalogService();
         if (_settingsFacade is SettingsFacadeService concreteFacade)
@@ -67,6 +69,7 @@ public sealed class PluginRuntimeService : IDisposable
             _publicIpcHostService);
         _loaderOptions = CreateOptions();
         _loader = new PluginLoader(_loaderOptions);
+        _materialColorService.MaterialColorChanged += OnMaterialColorChanged;
     }
 
     public string PluginsDirectory { get; }
@@ -423,11 +426,38 @@ public sealed class PluginRuntimeService : IDisposable
 
     public void Dispose()
     {
+        _materialColorService.MaterialColorChanged -= OnMaterialColorChanged;
         UnloadInstalledPlugins();
         _sharedContractManager.Dispose();
         if (_settingsFacade is IDisposable disposable && !ReferenceEquals(_settingsFacade, HostSettingsFacadeProvider.GetOrCreate()))
         {
             disposable.Dispose();
+        }
+    }
+
+    private void OnMaterialColorChanged(object? sender, MaterialColorSnapshot snapshot)
+    {
+        _ = sender;
+
+        var pluginSnapshot = PluginAppearanceSnapshotMapper.FromMaterialColorSnapshot(snapshot);
+        var changedProperties = new[]
+        {
+            AppearanceProperty.ThemeVariant,
+            AppearanceProperty.AccentColor,
+            AppearanceProperty.Wallpaper,
+            AppearanceProperty.SystemMaterialMode,
+            AppearanceProperty.ColorSource,
+            AppearanceProperty.ColorRoles,
+            AppearanceProperty.MaterialSurfaces,
+            AppearanceProperty.WallpaperSeedCandidates
+        };
+
+        foreach (var loadedPlugin in _loadedPlugins)
+        {
+            if (loadedPlugin.RuntimeContext.Appearance is PluginAppearanceContext appearanceContext)
+            {
+                appearanceContext.UpdateSnapshot(pluginSnapshot, changedProperties);
+            }
         }
     }
 
@@ -1016,6 +1046,7 @@ public sealed class PluginRuntimeService : IDisposable
         private readonly ISettingsService _settingsService;
         private readonly ISettingsCatalog _settingsCatalog;
         private readonly IAppearanceThemeService _appearanceThemeService;
+        private readonly IMaterialColorService _materialColorService;
         private readonly IExternalIpcNotificationPublisher? _externalIpcNotificationPublisher;
 
         public PluginHostServiceProvider(
@@ -1034,6 +1065,7 @@ public sealed class PluginRuntimeService : IDisposable
             _settingsService = settingsService;
             _settingsCatalog = settingsCatalog;
             _appearanceThemeService = HostAppearanceThemeProvider.GetOrCreate();
+            _materialColorService = HostMaterialColorProvider.GetOrCreate();
             _externalIpcNotificationPublisher = externalIpcNotificationPublisher;
         }
 
@@ -1072,6 +1104,11 @@ public sealed class PluginRuntimeService : IDisposable
             if (serviceType == typeof(IAppearanceThemeService))
             {
                 return _appearanceThemeService;
+            }
+
+            if (serviceType == typeof(IMaterialColorService))
+            {
+                return _materialColorService;
             }
 
             if (serviceType == typeof(IExternalIpcNotificationPublisher))
