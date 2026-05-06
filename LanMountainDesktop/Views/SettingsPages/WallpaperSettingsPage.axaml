@@ -167,7 +167,7 @@
                                 Background="{Binding CustomColorBrush}"
                                 BorderThickness="0"
                                 CornerRadius="6"
-                                ToolTip.Tip="Custom color">
+                                ToolTip.Tip="{Binding CustomColorTooltip}">
                             <Button.Flyout>
                                 <Flyout Placement="BottomEdgeAlignedLeft">
                                     <StackPanel Width="260"

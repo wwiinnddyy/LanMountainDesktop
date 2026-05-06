@@ -146,6 +146,7 @@ public partial class MainWindow : Window
         BackToWindowsTextBlock.Text = Lf("button.back_to_platform", "Back to {0}", platformName);
         ToolTip.SetTip(BackToWindowsButton, Lf("tooltip.back_to_platform", "Back to {0}", platformName));
         ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
+        ComponentLibraryEmptyTextBlock.Text = L("component_library.components_none", "No components.");
         LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
         LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()
             ? L("launcher.subtitle_linux", "Displays installed apps discovered from Linux desktop entries.")

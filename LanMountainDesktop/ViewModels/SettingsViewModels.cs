@@ -929,6 +929,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _cornerRadiusStyleDescription = string.Empty;
 
+    [ObservableProperty]
+    private string _cornerRadiusSpecTooltip = string.Empty;
+
     public void Load()
     {
         var state = _settingsFacade.Grid.Get();
@@ -1026,6 +1029,8 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         CornerRadiusStyleDescription = L(
             "settings.components.corner_radius.description",
             "Select a fixed corner radius style (inspired by Xiaomi HyperOS) to ensure consistency across all components.");
+        CornerRadiusSpecTooltip = L("settings.components.corner_radius.spec_tooltip", "View Corner Radius Specification");
+            
             
         CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
             .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))

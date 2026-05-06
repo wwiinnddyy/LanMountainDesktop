@@ -89,7 +89,7 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <Button Classes="AppBarButton" ToolTip.Tip="View Corner Radius Specification" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenDesignSpecCommand}" CommandParameter="CORNER_RADIUS_SPEC.md">
+                        <Button Classes="AppBarButton" ToolTip.Tip="{Binding CornerRadiusSpecTooltip}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenDesignSpecCommand}" CommandParameter="CORNER_RADIUS_SPEC.md">
                             <fi:SymbolIcon Symbol="QuestionCircle" />
                         </Button>
                     </StackPanel>

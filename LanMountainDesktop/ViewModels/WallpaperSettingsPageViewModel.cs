@@ -103,6 +103,9 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private IBrush _customColorBrush = new SolidColorBrush(Colors.White);
 
+    [ObservableProperty]
+    private string _customColorTooltip = string.Empty;
+
     public void Load()
     {
         var wallpaper = _settingsFacade.Wallpaper.Get();
@@ -338,6 +341,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         WallpaperPlacementDescription = L("settings.wallpaper.placement_desc", "Adjust how the image fills the desktop.");
         ImportWallpaperButtonText = L("settings.wallpaper.pick_button", "Import Wallpaper");
         FilePickerTitle = L("filepicker.title", "Select wallpaper");
+        CustomColorTooltip = L("settings.wallpaper.custom_color_tooltip", "Custom color");
     }
 
     private string L(string key, string fallback)

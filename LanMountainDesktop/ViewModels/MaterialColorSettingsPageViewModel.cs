@@ -13,12 +13,12 @@ namespace LanMountainDesktop.ViewModels;
 
 public sealed class MaterialSurfacePreviewOption
 {
-    public MaterialSurfacePreviewOption(string label, MaterialSurfaceSnapshot surface)
+    public MaterialSurfacePreviewOption(string label, MaterialSurfaceSnapshot surface, string detailFormat)
     {
         Label = label;
         BackgroundBrush = new SolidColorBrush(surface.BackgroundColor);
         BorderBrush = new SolidColorBrush(surface.BorderColor);
-        Detail = $"A={surface.BackgroundColor.A:X2} Blur={surface.BlurRadius:0}";
+        Detail = string.Format(CultureInfo.CurrentCulture, detailFormat, surface.BackgroundColor.A, surface.BlurRadius);
     }
 
     public string Label { get; }
@@ -232,6 +232,30 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _materialAcrylicText = string.Empty;
 
+    [ObservableProperty]
+    private string _sourceFallbackText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRoleAccentText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRolePrimaryText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRoleSecondaryText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRoleSurfaceText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRoleTextText = string.Empty;
+
+    [ObservableProperty]
+    private string _colorRoleToggleText = string.Empty;
+
+    [ObservableProperty]
+    private string _surfaceDetailFormat = string.Empty;
+
     public void Load()
     {
         var theme = _settingsFacade.Theme.Get();
@@ -401,12 +425,12 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
 
         ColorRolePreviews =
         [
-            new MaterialColorRolePreviewOption("Accent", snapshot.Palette.Accent),
-            new MaterialColorRolePreviewOption("Primary", snapshot.Palette.Primary),
-            new MaterialColorRolePreviewOption("Secondary", snapshot.Palette.Secondary),
-            new MaterialColorRolePreviewOption("Surface", snapshot.Palette.SurfaceRaised),
-            new MaterialColorRolePreviewOption("Text", snapshot.Palette.TextPrimary),
-            new MaterialColorRolePreviewOption("Toggle", snapshot.Palette.ToggleOn)
+            new MaterialColorRolePreviewOption(ColorRoleAccentText, snapshot.Palette.Accent),
+            new MaterialColorRolePreviewOption(ColorRolePrimaryText, snapshot.Palette.Primary),
+            new MaterialColorRolePreviewOption(ColorRoleSecondaryText, snapshot.Palette.Secondary),
+            new MaterialColorRolePreviewOption(ColorRoleSurfaceText, snapshot.Palette.SurfaceRaised),
+            new MaterialColorRolePreviewOption(ColorRoleTextText, snapshot.Palette.TextPrimary),
+            new MaterialColorRolePreviewOption(ColorRoleToggleText, snapshot.Palette.ToggleOn)
         ];
 
         SurfacePreviews = snapshot.Surfaces.Values
@@ -415,7 +439,7 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
                 MaterialSurfaceRole.DockBackground or
                 MaterialSurfaceRole.DesktopComponentHost or
                 MaterialSurfaceRole.OverlayPanel)
-            .Select(surface => new MaterialSurfacePreviewOption(surface.Role.ToString(), surface))
+            .Select(surface => new MaterialSurfacePreviewOption(surface.Role.ToString(), surface, SurfaceDetailFormat))
             .ToArray();
     }
 
@@ -449,7 +473,7 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
             MaterialColorSourceKind.AppWallpaper => WallpaperSourceAppText,
             MaterialColorSourceKind.SystemWallpaper => WallpaperSourceSystemText,
             MaterialColorSourceKind.WallpaperAuto => WallpaperSourceAutoText,
-            _ => L("settings.material_color.source.fallback", "Fallback")
+            _ => SourceFallbackText
         };
     }
 
@@ -550,9 +574,17 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
         WallpaperSourceAppText = L("settings.material_color.wallpaper_source.app", "App wallpaper");
         WallpaperSourceSystemText = L("settings.material_color.wallpaper_source.system", "System wallpaper");
         MaterialNoneText = L("settings.material_color.system_material.none", "None");
-        MaterialAutoText = L("settings.material_color.system_material.auto", "Auto");
+        MaterialAutoText = L("settings.material_color.system_material.auto", "Auto (recommended)");
         MaterialMicaText = L("settings.material_color.system_material.mica", "Mica");
         MaterialAcrylicText = L("settings.material_color.system_material.acrylic", "Acrylic");
+        SourceFallbackText = L("settings.material_color.source.fallback", "Fallback");
+        ColorRoleAccentText = L("settings.material_color.role.accent", "Accent");
+        ColorRolePrimaryText = L("settings.material_color.role.primary", "Primary");
+        ColorRoleSecondaryText = L("settings.material_color.role.secondary", "Secondary");
+        ColorRoleSurfaceText = L("settings.material_color.role.surface", "Surface");
+        ColorRoleTextText = L("settings.material_color.role.text", "Text");
+        ColorRoleToggleText = L("settings.material_color.role.toggle", "Toggle");
+        SurfaceDetailFormat = L("settings.material_color.surface.detail_format", "A={0:X2} Blur={1:0}");
     }
 
     private string L(string key, string fallback)
