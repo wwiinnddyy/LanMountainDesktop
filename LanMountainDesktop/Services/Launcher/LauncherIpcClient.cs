@@ -17,6 +17,9 @@ public class LauncherIpcClient : IDisposable
     };
 
     private const int LengthPrefixSize = 4;
+    private const int ConnectTimeoutMs = 5000;
+    private const int ConnectRetryCount = 3;
+    private const int ConnectRetryBaseDelayMs = 300;
 
     private NamedPipeClientStream? _pipeClient;
     private bool _isConnected;
@@ -26,26 +29,69 @@ public class LauncherIpcClient : IDisposable
 
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
     {
-        try
+        for (var attempt = 1; attempt <= ConnectRetryCount; attempt++)
         {
-            _pipeClient = new NamedPipeClientStream(
-                ".",
-                LauncherIpcConstants.PipeName,
-                PipeDirection.Out);
+            try
+            {
+                var client = new NamedPipeClientStream(
+                    ".",
+                    LauncherIpcConstants.PipeName,
+                    PipeDirection.Out,
+                    PipeOptions.Asynchronous);
 
-            await _pipeClient.ConnectAsync(5000, cancellationToken);
-            _isConnected = true;
-            return true;
+                await client.ConnectAsync(ConnectTimeoutMs, cancellationToken);
+                _pipeClient = client;
+                _isConnected = true;
+                return true;
+            }
+            catch (TimeoutException)
+            {
+                _pipeClient?.Dispose();
+                _pipeClient = null;
+
+                if (attempt < ConnectRetryCount)
+                {
+                    var delay = ConnectRetryBaseDelayMs * attempt + Random.Shared.Next(0, 100);
+                    try
+                    {
+                        await Task.Delay(delay, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _pipeClient?.Dispose();
+                _pipeClient = null;
+
+                if (attempt < ConnectRetryCount)
+                {
+                    AppLogger.Warn("LauncherIpc", $"Connect attempt {attempt} failed: {ex.Message}, retrying...");
+                    var delay = ConnectRetryBaseDelayMs * attempt + Random.Shared.Next(0, 100);
+                    try
+                    {
+                        await Task.Delay(delay, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    AppLogger.Warn("LauncherIpc", $"Failed to connect to Launcher IPC after {ConnectRetryCount} attempts: {ex.Message}");
+                }
+            }
         }
-        catch (TimeoutException)
-        {
-            return false;
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("LauncherIpc", $"Failed to connect to Launcher IPC: {ex.Message}");
-            return false;
-        }
+
+        return false;
     }
 
     public async Task ReportProgressAsync(StartupProgressMessage message)
@@ -62,14 +108,19 @@ public class LauncherIpcClient : IDisposable
             var lengthPrefix = BitConverter.GetBytes(payload.Length);
             Debug.Assert(lengthPrefix.Length == LengthPrefixSize);
 
-            lock (_writeLock)
+            var buffer = ArrayPool<byte>.Shared.Rent(LengthPrefixSize + payload.Length);
+            try
             {
-                _pipeClient.Write(lengthPrefix, 0, LengthPrefixSize);
-                _pipeClient.Write(payload, 0, payload.Length);
-                _pipeClient.Flush();
-            }
+                Buffer.BlockCopy(lengthPrefix, 0, buffer, 0, LengthPrefixSize);
+                Buffer.BlockCopy(payload, 0, buffer, LengthPrefixSize, payload.Length);
 
-            await Task.CompletedTask;
+                await _pipeClient.WriteAsync(buffer.AsMemory(0, LengthPrefixSize + payload.Length)).ConfigureAwait(false);
+                await _pipeClient.FlushAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
         catch (IOException)
         {

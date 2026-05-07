@@ -20,6 +20,7 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
     private readonly ConcurrentDictionary<string, PeerProxy> _connectedPeers = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
     private bool _started;
+    private bool _disposed;
 
     public PublicIpcHostService(string pipeName = IpcConstants.DefaultPipeName)
     {
@@ -190,12 +191,26 @@ public sealed class PublicIpcHostService : IDisposable, IExternalIpcNotification
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        _connectedPeers.Clear();
+
         Provider.PeerConnected -= OnPeerConnected;
         Provider.Dispose();
     }
 
     private void OnPeerConnected(object? sender, PeerConnectedArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var peer = e.Peer;
         _connectedPeers[peer.PeerName] = peer;
         peer.PeerConnectionBroken -= OnPeerConnectionBroken;

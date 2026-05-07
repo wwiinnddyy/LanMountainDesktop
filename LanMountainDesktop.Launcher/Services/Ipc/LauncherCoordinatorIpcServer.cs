@@ -10,6 +10,9 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
 {
     private const int LengthPrefixSize = 4;
     private const int MaxPayloadLength = 1024 * 1024;
+    private const int BackoffBaseMs = 250;
+    private const int BackoffMaxMs = 8000;
+    private const int BackoffJitterMs = 150;
     private readonly string _pipeName;
     private readonly Func<LauncherCoordinatorRequest, LauncherCoordinatorStatus, Task<LauncherCoordinatorResponse>> _requestHandler;
     private readonly Action<LauncherCoordinatorStatus> _heartbeatHandler;
@@ -78,6 +81,8 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
 
     private async Task ListenLoopAsync()
     {
+        var consecutiveErrors = 0;
+
         while (!_cts.IsCancellationRequested)
         {
             NamedPipeServerStream? server = null;
@@ -94,6 +99,7 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
                 var connectedServer = server;
                 _ = Task.Run(() => HandleConnectionAsync(connectedServer, _cts.Token), _cts.Token);
                 server = null;
+                consecutiveErrors = 0;
             }
             catch (OperationCanceledException)
             {
@@ -101,10 +107,12 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Launcher coordinator IPC listener failed: {ex.Message}");
+                consecutiveErrors++;
+                var delay = ComputeBackoff(consecutiveErrors);
+                Logger.Warn($"Launcher coordinator IPC listener failed (attempt {consecutiveErrors}), retrying in {delay}ms: {ex.Message}");
                 try
                 {
-                    await Task.Delay(250, _cts.Token).ConfigureAwait(false);
+                    await Task.Delay(delay, _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -116,6 +124,14 @@ internal sealed class LauncherCoordinatorIpcServer : IDisposable
                 server?.Dispose();
             }
         }
+    }
+
+    private int ComputeBackoff(int attempt)
+    {
+        var exponential = BackoffBaseMs * (1 << Math.Min(attempt - 1, 5));
+        var capped = Math.Min(exponential, BackoffMaxMs);
+        var jitter = Random.Shared.Next(0, BackoffJitterMs);
+        return capped + jitter;
     }
 
     private async Task HeartbeatLoopAsync()

@@ -19,9 +19,13 @@ public class LauncherIpcServer : IDisposable
 
     /// <summary>
     /// 协议：每条消息以 4 字节小端 int32 长度前缀开头，后跟 UTF-8 JSON 正文。
-    /// 这在 Windows Message 模式和 Unix Byte 模式下均能可靠工作。
+    /// 这在 Windows Message 模式和 unix Byte 模式下均能可靠工作。
     /// </summary>
     private const int LengthPrefixSize = 4;
+
+    private const int BackoffBaseMs = 200;
+    private const int BackoffMaxMs = 5000;
+    private const int BackoffJitterMs = 100;
 
     public LauncherIpcServer(Action<StartupProgressMessage> onProgress)
     {
@@ -38,6 +42,8 @@ public class LauncherIpcServer : IDisposable
 
     private async Task ListenLoopAsync()
     {
+        var consecutiveErrors = 0;
+
         while (!_cts.Token.IsCancellationRequested)
         {
             NamedPipeServerStream? pipe = null;
@@ -47,12 +53,14 @@ public class LauncherIpcServer : IDisposable
                     LauncherIpcConstants.PipeName,
                     PipeDirection.In,
                     1,
-                    PipeTransmissionMode.Byte);
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous);
 
                 _currentPipe = pipe;
                 await pipe.WaitForConnectionAsync(_cts.Token);
 
-                // 持久连接：在同一连接上循环读取多条消息，直到客户端断开
+                consecutiveErrors = 0;
+
                 await ReadMessagesFromConnectionAsync(pipe, _cts.Token);
             }
             catch (OperationCanceledException)
@@ -61,7 +69,7 @@ public class LauncherIpcServer : IDisposable
             }
             catch (IOException)
             {
-                // 客户端断开连接，继续等待新连接
+                consecutiveErrors = 0;
                 continue;
             }
             catch (ObjectDisposedException)
@@ -70,10 +78,12 @@ public class LauncherIpcServer : IDisposable
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"IPC listen error: {ex.Message}");
+                consecutiveErrors++;
+                var delay = ComputeBackoff(consecutiveErrors);
+                Console.Error.WriteLine($"IPC listen error (attempt {consecutiveErrors}), retrying in {delay}ms: {ex.Message}");
                 try
                 {
-                    await Task.Delay(200, _cts.Token);
+                    await Task.Delay(delay, _cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -94,6 +104,14 @@ public class LauncherIpcServer : IDisposable
                 }
             }
         }
+    }
+
+    private int ComputeBackoff(int attempt)
+    {
+        var exponential = BackoffBaseMs * (1 << Math.Min(attempt - 1, 5));
+        var capped = Math.Min(exponential, BackoffMaxMs);
+        var jitter = Random.Shared.Next(0, BackoffJitterMs);
+        return capped + jitter;
     }
 
     /// <summary>
