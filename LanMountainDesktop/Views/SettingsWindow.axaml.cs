@@ -1067,6 +1067,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
             "DeveloperBoard" => Symbol.DeveloperBoard,
             "FolderLink" => Symbol.FolderLink,
             "WindowConsole" => Symbol.WindowConsole,
+            "HardDrive" => Symbol.HardDrive,
             _ => Symbol.Settings
         };
     }

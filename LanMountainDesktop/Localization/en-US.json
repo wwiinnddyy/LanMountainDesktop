@@ -352,6 +352,8 @@
     "settings.general.slide_transition_desc":  "Use a slide-in startup transition on supported Windows builds. This option disables fade transition.",
     "settings.general.show_main_window_taskbar_header":  "Show main desktop window in taskbar",
     "settings.general.show_main_window_taskbar_desc":  "Keep the main desktop host window visible in the taskbar. The independent settings window always has its own taskbar entry.",
+    "settings.data.title":  "Data",
+    "settings.data.description":  "Review and manage local app storage and cache.",
     "settings.appearance.title":  "Appearance",
     "settings.appearance.description":  "Adjust theme source, system material, and window chrome.",
     "settings.appearance.theme_header":  "Theme",

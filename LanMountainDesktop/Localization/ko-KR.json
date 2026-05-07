@@ -335,6 +335,8 @@
     "settings.general.preview_time_label":  "시간",
     "settings.general.preview_date_label":  "날짜",
     "settings.general.render_mode_restart_message":  "렌더링 모드 변경은 앱 재시작이 필요합니다.",
+    "settings.data.title":  "데이터",
+    "settings.data.description":  "로컬에 저장된 앱 데이터와 캐시를 확인하고 관리합니다.",
     "settings.appearance.title":  "외관",
     "settings.appearance.description":  "테마 소스, 시스템 소재 및 창 외관을 조정합니다.",
     "settings.appearance.theme_header":  "테마",

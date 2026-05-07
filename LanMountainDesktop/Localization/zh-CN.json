@@ -352,6 +352,8 @@
     "settings.general.slide_transition_desc":  "在受支持的 Windows 版本上使用滑入启动过渡。启用后会关闭淡入淡出过渡。",
     "settings.general.show_main_window_taskbar_header":  "在任务栏显示主桌面窗口",
     "settings.general.show_main_window_taskbar_desc":  "让主桌面宿主窗口保持在任务栏中可见。独立设置窗口始终拥有自己的任务栏入口。",
+    "settings.data.title":  "数据",
+    "settings.data.description":  "查看与管理本机存储中的应用数据与缓存。",
     "settings.appearance.title":  "外观",
     "settings.appearance.description":  "调整主题来源、系统材质与窗口外观。",
     "settings.appearance.theme_header":  "主题",

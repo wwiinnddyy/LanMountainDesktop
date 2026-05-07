@@ -3,6 +3,7 @@
              xmlns:sty="using:FluentAvalonia.Styling"
              xmlns:fi="using:FluentIcons.Avalonia"
              xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:conv="using:LanMountainDesktop.Converters"
              x:Class="LanMountainDesktop.App"
              xmlns:local="using:LanMountainDesktop"
              RequestedThemeVariant="Default">
@@ -12,6 +13,8 @@
         <FontFamily x:Key="AppFontFamily">MiSans VF, avares://LanMountainDesktop/Assets/Fonts#MiSans, avares://LanMountainDesktop/Assets/Fonts#MiSans VF</FontFamily>
         <FontFamily x:Key="AppFontFamilyJP">avares://LanMountainDesktop/Assets/Fonts#MiSans JP</FontFamily>
         <FontFamily x:Key="AppFontFamilyKR">avares://LanMountainDesktop/Assets/Fonts#MiSans KR</FontFamily>
+        <conv:HexToColorConverter x:Key="HexToColorConverter" />
+        <conv:HexToBrushConverter x:Key="HexToBrushConverter" />
     </Application.Resources>
 
     <Application.DataTemplates>

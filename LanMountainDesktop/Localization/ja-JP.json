@@ -287,6 +287,8 @@
     "settings.general.preview_time_label":  "時刻",
     "settings.general.preview_date_label":  "日付",
     "settings.general.render_mode_restart_message":  "レンダリングモードの変更にはアプリの再起動が必要です。",
+    "settings.data.title":  "データ",
+    "settings.data.description":  "ローカルに保存されたアプリデータとキャッシュを確認・管理します。",
     "settings.appearance.title":  "外観",
     "settings.appearance.description":  "テーマソース、システムマテリアル、ウィンドウクロームを調整します。",
     "settings.appearance.theme_header":  "テーマ",

@@ -129,11 +129,11 @@ Name: "startup"; Description: "{cm:StartupTaskDescription}"; GroupDescription: "
 Name: "{app}\log"; Permissions: users-modify
 
 [InstallDelete]
-Type: files; Name: "{app}\LanMontainDesktop.exe"
-Type: files; Name: "{app}\LanMontainDesktop.dll"
-Type: files; Name: "{app}\LanMontainDesktop.deps.json"
-Type: files; Name: "{app}\LanMontainDesktop.runtimeconfig.json"
-Type: files; Name: "{app}\LanMontainDesktop.pdb"
+Type: files; Name: "{app}\LanMountainDesktop.exe"
+Type: files; Name: "{app}\LanMountainDesktop.dll"
+Type: files; Name: "{app}\LanMountainDesktop.deps.json"
+Type: files; Name: "{app}\LanMountainDesktop.runtimeconfig.json"
+Type: files; Name: "{app}\LanMountainDesktop.pdb"
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -390,10 +390,6 @@ begin
   if WizardSilent then
   begin
     Params := Params + ' /SILENT';
-  end;
-  if WizardVerySilent then
-  begin
-    Params := Params + ' /VERYSILENT';
   end;
   
   { 重启安装程序并退出当前实例 }
