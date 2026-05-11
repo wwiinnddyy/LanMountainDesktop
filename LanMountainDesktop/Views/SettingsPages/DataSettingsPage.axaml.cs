@@ -55,7 +55,8 @@ public partial class DataSettingsPage : SettingsPageBase
             return;
         }
 
-        if (string.Equals(e.PropertyName, nameof(DataSettingsPageViewModel.HasData), StringComparison.Ordinal))
+        if (string.Equals(e.PropertyName, nameof(DataSettingsPageViewModel.HasData), StringComparison.Ordinal) ||
+            string.Equals(e.PropertyName, nameof(DataSettingsPageViewModel.DiskUsagePercentage), StringComparison.Ordinal))
         {
             RebuildStorageBar();
         }
@@ -80,42 +81,30 @@ public partial class DataSettingsPage : SettingsPageBase
         StorageBarGrid.ColumnDefinitions.Clear();
         StorageBarGrid.Children.Clear();
 
-        if (!ViewModel.HasData)
-        {
-            return;
-        }
-
         var visibleItems = ViewModel.Items
             .Where(item => item.Percentage > 0)
             .OrderByDescending(item => item.Percentage)
             .ToList();
 
-        if (visibleItems.Count == 0)
-        {
-            return;
-        }
-
-        var totalPercent = visibleItems.Sum(item => item.Percentage);
-        if (totalPercent <= 0)
-        {
-            return;
-        }
-
         var idx = 0;
         foreach (var item in visibleItems)
         {
-            var normalized = Math.Max(0.1, item.Percentage / totalPercent * 100d);
-            StorageBarGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(normalized, GridUnitType.Star)));
-
+            var width = Math.Max(0.1, item.Percentage);
+            StorageBarGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(width, GridUnitType.Star)));
             var segment = new Border
             {
                 Background = ParseBrush(item.ColorHex),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
-
             Grid.SetColumn(segment, idx++);
             StorageBarGrid.Children.Add(segment);
+        }
+
+        var remaining = 100d - ViewModel.DiskUsagePercentage;
+        if (remaining > 0)
+        {
+            StorageBarGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(remaining, GridUnitType.Star)));
         }
     }
 

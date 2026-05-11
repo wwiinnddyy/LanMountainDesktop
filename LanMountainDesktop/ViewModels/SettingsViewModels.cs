@@ -16,6 +16,7 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -888,6 +889,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private int _shortSideCells;
 
     [ObservableProperty]
+    private double _screenAspectRatio = 16.0 / 9.0;
+
+    [ObservableProperty]
     private int _edgeInsetPercent;
 
     [ObservableProperty]
@@ -913,6 +917,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
+
+    [ObservableProperty]
+    private double _cornerRadiusPreviewValue = 24;
 
     [ObservableProperty]
     private IReadOnlyList<SelectionOption> _cornerRadiusStyleOptions = [];
@@ -947,6 +954,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
             string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
             ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
+        CornerRadiusPreviewValue = AppearanceCornerRadiusTokenFactory.Create(CornerRadiusStyle).Component.TopLeft;
     }
 
     partial void OnShortSideCellsChanged(int value)
@@ -987,6 +995,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         }
 
         CornerRadiusStyle = value.Value;
+        CornerRadiusPreviewValue = AppearanceCornerRadiusTokenFactory.Create(value.Value).Component.TopLeft;
         SaveComponentCornerRadius();
     }
 

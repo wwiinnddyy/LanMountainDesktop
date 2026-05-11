@@ -28,77 +28,74 @@
                 </ui:FASettingsExpander.Footer>
 
                 <ui:FASettingsExpanderItem>
-                    <StackPanel Spacing="16">
-                        <Border Height="22"
-                                Background="{DynamicResource ControlFillColorTertiaryBrush}"
-                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
-                                ClipToBounds="True"
-                                IsVisible="{Binding HasData}">
-                            <Grid x:Name="StorageBarGrid" />
-                        </Border>
-
-                        <ProgressBar Height="8"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     IsIndeterminate="{Binding IsScanning}"
-                                     Value="{Binding DiskUsagePercentage}" />
-
-                        <Grid ColumnDefinitions="*,Auto"
-                              ColumnSpacing="16">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="{Binding TotalSizeText}"
-                                           FontSize="22"
-                                           FontWeight="SemiBold" />
-                                <TextBlock Text="{Binding DiskUsageText}"
+                    <StackPanel Spacing="14">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="总占用"
                                            FontSize="13"
-                                           Opacity="0.72" />
+                                           Opacity="0.65" />
+                                <TextBlock Text="{Binding TotalSizeText}"
+                                           FontSize="26"
+                                           FontWeight="SemiBold" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1"
+                                        Spacing="2"
+                                        HorizontalAlignment="Right">
+                                <TextBlock Text="占磁盘比例"
+                                           FontSize="13"
+                                           Opacity="0.65"
+                                           HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding DiskUsageText}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Right" />
                             </StackPanel>
                         </Grid>
 
+                        <Border Height="14"
+                                Background="{DynamicResource ControlFillColorTertiaryBrush}"
+                                CornerRadius="{DynamicResource DesignCornerRadiusSm}"
+                                ClipToBounds="True">
+                            <Grid x:Name="StorageBarGrid" />
+                        </Border>
+
                         <TextBlock Text="正在扫描…"
                                    FontSize="13"
-                                   Opacity="0.72"
+                                   Opacity="0.65"
                                    IsVisible="{Binding IsScanning}" />
 
                         <TextBlock Text="暂无可用数据。完成首次扫描后将显示占比与图例。"
                                    FontSize="13"
-                                   Opacity="0.72"
+                                   Opacity="0.65"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding !HasData}" />
 
-                        <StackPanel Spacing="10"
-                                    IsVisible="{Binding HasData}">
-                            <TextBlock Classes="settings-item-label"
-                                       Text="分类图例" />
-                            <ItemsControl ItemsSource="{Binding Items}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:DataStorageItemViewModel">
-                                        <StackPanel Orientation="Horizontal"
-                                                    Spacing="8"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,16,8">
-                                            <Ellipse Width="10"
-                                                     Height="10"
-                                                     VerticalAlignment="Center"
-                                                     Fill="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}" />
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="13"
-                                                       VerticalAlignment="Center"
-                                                       Opacity="0.85" />
-                                            <TextBlock Text="{Binding Percentage, StringFormat={}{0:F1}%}"
-                                                       FontSize="12"
-                                                       VerticalAlignment="Center"
-                                                       Opacity="0.65" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Items}"
+                                      IsVisible="{Binding HasData}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DataStorageItemViewModel">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="6"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,14,6">
+                                        <Border Width="10"
+                                                Height="10"
+                                                CornerRadius="{DynamicResource DesignCornerRadiusMicro}"
+                                                VerticalAlignment="Center"
+                                                Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}" />
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   Opacity="0.85" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ui:FASettingsExpanderItem>
             </ui:FASettingsExpander>

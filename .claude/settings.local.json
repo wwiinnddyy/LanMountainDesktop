@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"/d/github/LanMountainDesktop/.claude/worktrees/agent-a4c5412322421ab67\" && ls -la \"/d/github/LanMountainDesktop\" && ls -la \"/d/github\")",
+      "Read(//d/github/**)"
+    ]
+  }
+}
