@@ -1,131 +1,214 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 
 namespace LanMountainDesktop.Services;
 
-/// <summary>
-/// Linux平台通知监听器 - 通过DBus监听org.freedesktop.Notifications
-/// </summary>
 [SupportedOSPlatform("linux")]
-internal sealed class LinuxNotificationListener : IDisposable
+internal sealed class LinuxNotificationListener : IPlatformNotificationListener
 {
-    private readonly NotificationListenerService _parent;
-    private CancellationTokenSource? _cts;
-    private bool _isRunning;
+    private static readonly Regex DbusStringRegex = new("^\\s*string\\s+\"(?<value>.*)\"\\s*$", RegexOptions.Compiled);
+    private static readonly Regex DbusUIntRegex = new("^\\s*uint32\\s+(?<value>\\d+)\\s*$", RegexOptions.Compiled);
+    private static readonly Regex DesktopEntryHintRegex = new("\"desktop-entry\"\\s+variant\\s+string\\s+\"(?<value>[^\"]+)\"", RegexOptions.Compiled);
+    private static readonly Regex ImagePathHintRegex = new("\"image-path\"\\s+variant\\s+string\\s+\"(?<value>[^\"]+)\"", RegexOptions.Compiled);
 
-    public LinuxNotificationListener(NotificationListenerService parent)
+    private readonly NotificationListenerService _parent;
+    private readonly string _requestedMode;
+    private readonly CancellationTokenSource _cts = new();
+    private Process? _monitorProcess;
+    private Task? _monitorTask;
+    private uint _nextSyntheticId = 1;
+
+    public LinuxNotificationListener(NotificationListenerService parent, string requestedMode)
     {
         _parent = parent;
+        _requestedMode = string.IsNullOrWhiteSpace(requestedMode) ? "ProxyDaemon" : requestedMode;
     }
 
-    /// <summary>
-    /// 初始化并启动DBus监听
-    /// </summary>
-    public async Task<bool> InitializeAsync()
+    public async Task<NotificationBoxStatus> InitializeAsync(CancellationToken cancellationToken = default)
     {
-        try
+        if (!OperatingSystem.IsLinux())
         {
-            // 检查DBus环境变量
-            var dbusSessionBus = Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS");
-            if (string.IsNullOrEmpty(dbusSessionBus))
-            {
-                Console.WriteLine("[NotificationBox] DBus Session Bus 环境变量未设置");
-                return false;
-            }
-
-            // 检查通知守护进程是否运行
-            // 通过检查常见进程名
-            var hasNotificationDaemon = await CheckNotificationDaemonAsync();
-            if (!hasNotificationDaemon)
-            {
-                Console.WriteLine("[NotificationBox] 未检测到通知守护进程，消息盒子功能可能不可用");
-                // 仍然返回true，因为守护进程可能在之后启动
-            }
-
-            _cts = new CancellationTokenSource();
-            _ = StartListeningAsync(_cts.Token);
-
-            Console.WriteLine("[NotificationBox] Linux通知监听已启动");
-            return true;
+            return new NotificationBoxStatus(NotificationBoxServiceState.Unsupported, "当前平台不是 Linux。", "Linux");
         }
-        catch (Exception ex)
+
+        var dbusSessionBus = Environment.GetEnvironmentVariable("DBUS_SESSION_BUS_ADDRESS");
+        if (string.IsNullOrEmpty(dbusSessionBus))
         {
-            Console.WriteLine($"[NotificationBox] Linux通知监听初始化失败: {ex.Message}");
-            return false;
+            return new NotificationBoxStatus(
+                NotificationBoxServiceState.Unsupported,
+                "DBus Session Bus 环境变量未设置，无法监听 Linux 通知。",
+                _requestedMode);
         }
+
+        var hasMonitorTool = CommandExists("dbus-monitor");
+        if (!hasMonitorTool)
+        {
+            return new NotificationBoxStatus(
+                NotificationBoxServiceState.Unsupported,
+                "未找到 dbus-monitor，无法启用 Linux 通知旁路监听。",
+                _requestedMode);
+        }
+
+        var mode = _requestedMode.Equals("PassiveMonitor", StringComparison.OrdinalIgnoreCase)
+            ? "PassiveMonitor"
+            : "ProxyDaemon";
+
+        var daemonRunning = await CheckNotificationDaemonAsync(cancellationToken).ConfigureAwait(false);
+        var statusMessage = mode == "ProxyDaemon" && daemonRunning
+            ? "系统通知守护进程已占用 org.freedesktop.Notifications，已以旁路监听方式运行。"
+            : mode == "ProxyDaemon"
+                ? "Linux 通知代理模式已启动；未检测到现有通知守护进程。"
+                : "Linux 通知旁路监听已启动。";
+
+        StartDbusMonitor(mode);
+
+        return new NotificationBoxStatus(
+            mode == "ProxyDaemon" && daemonRunning ? NotificationBoxServiceState.Degraded : NotificationBoxServiceState.Running,
+            statusMessage,
+            mode);
     }
 
-    private async Task<bool> CheckNotificationDaemonAsync()
+    private void StartDbusMonitor(string mode)
     {
-        try
+        var startInfo = new ProcessStartInfo
         {
-            // 检查常见通知守护进程
-            var processNames = new[] { "gnome-shell", "kded5", "dunst", "mako", "swaync" };
-            foreach (var name in processNames)
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "pgrep",
-                    Arguments = $"-x {name}",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+            FileName = "dbus-monitor",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        startInfo.ArgumentList.Add("--session");
+        startInfo.ArgumentList.Add("interface='org.freedesktop.Notifications'");
 
-                using var process = System.Diagnostics.Process.Start(psi);
-                if (process != null)
-                {
-                    await process.WaitForExitAsync();
-                    if (process.ExitCode == 0)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-        catch
+        _monitorProcess = Process.Start(startInfo);
+        if (_monitorProcess is null)
         {
-            return false;
+            throw new InvalidOperationException("Failed to start dbus-monitor.");
         }
+
+        _monitorTask = Task.Run(() => ReadMonitorOutputAsync(_monitorProcess, mode, _cts.Token), CancellationToken.None);
     }
 
-    private async Task StartListeningAsync(CancellationToken ct)
+    private async Task ReadMonitorOutputAsync(Process process, string mode, CancellationToken cancellationToken)
     {
-        _isRunning = true;
+        var capture = new List<string>();
+        var inNotify = false;
 
-        try
+        while (!cancellationToken.IsCancellationRequested && !process.HasExited)
         {
-            // 注意：Tmds.DBus.Protocol 是低层API
-            // 这里使用简化方案，实际生产环境需要完整的DBus信号订阅实现
-            // 当前版本为框架实现，后续可以完善DBus监听逻辑
-
-            while (!ct.IsCancellationRequested && _isRunning)
+            var line = await process.StandardOutput.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+            if (line is null)
             {
-                try
-                {
-                    await Task.Delay(1000, ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                break;
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[NotificationBox] Linux通知监听异常: {ex.Message}");
+
+            if (line.Contains("member=Notify", StringComparison.Ordinal))
+            {
+                capture.Clear();
+                inNotify = true;
+                continue;
+            }
+
+            if (!inNotify)
+            {
+                if (line.Contains("member=NotificationClosed", StringComparison.Ordinal) ||
+                    line.Contains("member=CloseNotification", StringComparison.Ordinal))
+                {
+                    capture.Clear();
+                    capture.Add(line);
+                    inNotify = false;
+                }
+                continue;
+            }
+
+            if (line.StartsWith("method ", StringComparison.Ordinal) ||
+                line.StartsWith("signal ", StringComparison.Ordinal))
+            {
+                TryParseNotify(capture, mode);
+                capture.Clear();
+                inNotify = line.Contains("member=Notify", StringComparison.Ordinal);
+                continue;
+            }
+
+            capture.Add(line);
+            if (capture.Count > 40)
+            {
+                TryParseNotify(capture, mode);
+                capture.Clear();
+                inNotify = false;
+            }
         }
     }
 
-    /// <summary>
-    /// 处理接收到的通知（供DBus信号处理器调用）
-    /// </summary>
+    private void TryParseNotify(IReadOnlyList<string> lines, string mode)
+    {
+        if (lines.Count == 0)
+        {
+            return;
+        }
+
+        var strings = lines
+            .Select(line => DbusStringRegex.Match(line))
+            .Where(match => match.Success)
+            .Select(match => UnescapeDbusString(match.Groups["value"].Value))
+            .ToList();
+
+        if (strings.Count < 4)
+        {
+            return;
+        }
+
+        var appName = strings[0];
+        var appIcon = strings[1];
+        var summary = strings[2];
+        var body = strings[3];
+        var desktopEntry = TryMatchHint(lines, DesktopEntryHintRegex);
+        var imagePath = TryMatchHint(lines, ImagePathHintRegex);
+
+        var sourceId = lines
+            .Select(line => DbusUIntRegex.Match(line))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["value"].Value)
+            .Skip(1)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(sourceId))
+        {
+            sourceId = (_nextSyntheticId++).ToString();
+        }
+
+        var notification = new NotificationItem
+        {
+            Id = $"linux:{sourceId}",
+            SourceNotificationId = sourceId,
+            Platform = "Linux",
+            CaptureMode = mode,
+            AppId = !string.IsNullOrWhiteSpace(desktopEntry)
+                ? desktopEntry
+                : NormalizeAppId(appName),
+            AppName = string.IsNullOrWhiteSpace(appName) ? "Linux 应用" : appName,
+            Title = StripHtmlTags(summary),
+            Content = StripHtmlTags(body),
+            AppIconPath = ResolveIconPath(!string.IsNullOrWhiteSpace(imagePath) ? imagePath : appIcon, appName),
+            DesktopEntryId = string.IsNullOrWhiteSpace(desktopEntry) ? null : $"{desktopEntry}.desktop",
+            LaunchTarget = string.IsNullOrWhiteSpace(desktopEntry) ? null : desktopEntry,
+            CanActivate = !string.IsNullOrWhiteSpace(desktopEntry),
+            ReceivedAtUtc = DateTimeOffset.UtcNow,
+            ReceivedTime = DateTime.Now
+        };
+
+        _parent.AddNotification(notification);
+    }
+
     public void HandleNotification(
         string appName,
         uint replacesId,
@@ -136,30 +219,75 @@ internal sealed class LinuxNotificationListener : IDisposable
         object hints,
         int expireTimeout)
     {
-        try
+        var sourceId = replacesId == 0 ? _nextSyntheticId++ : replacesId;
+        var notification = new NotificationItem
         {
-            var notification = new NotificationItem
-            {
-                Id = Guid.NewGuid().ToString(),
-                AppId = appName.ToLowerInvariant().Replace(" ", ""),
-                AppName = appName,
-                Title = summary,
-                Content = StripHtmlTags(body),
-                ReceivedTime = DateTime.Now,
-                AppIconPath = ResolveIconPath(appIcon, appName)
-            };
+            Id = $"linux:{sourceId}",
+            SourceNotificationId = sourceId.ToString(),
+            Platform = "Linux",
+            CaptureMode = _requestedMode,
+            AppId = NormalizeAppId(appName),
+            AppName = appName,
+            Title = StripHtmlTags(summary),
+            Content = StripHtmlTags(body),
+            AppIconPath = ResolveIconPath(appIcon, appName),
+            ReceivedAtUtc = DateTimeOffset.UtcNow,
+            ReceivedTime = DateTime.Now
+        };
 
-            _parent.AddNotification(notification);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[NotificationBox] 处理通知失败: {ex.Message}");
-        }
+        _parent.AddNotification(notification);
     }
 
-    /// <summary>
-    /// 解析应用图标路径
-    /// </summary>
+    private static async Task<bool> CheckNotificationDaemonAsync(CancellationToken cancellationToken)
+    {
+        var processNames = new[] { "gnome-shell", "plasmashell", "kded5", "dunst", "mako", "swaync", "xfce4-notifyd" };
+        foreach (var name in processNames)
+        {
+            try
+            {
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "pgrep",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }.WithArgument("-x").WithArgument(name));
+                if (process is null)
+                {
+                    continue;
+                }
+
+                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                if (process.ExitCode == 0)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return false;
+    }
+
+    private static bool CommandExists(string command)
+    {
+        var pathEntries = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return pathEntries.Any(path =>
+        {
+            try
+            {
+                return File.Exists(Path.Combine(path, command));
+            }
+            catch
+            {
+                return false;
+            }
+        });
+    }
+
     private static string? ResolveIconPath(string iconName, string appName)
     {
         if (string.IsNullOrEmpty(iconName))
@@ -167,13 +295,11 @@ internal sealed class LinuxNotificationListener : IDisposable
             return null;
         }
 
-        // 如果是绝对路径，直接使用
         if (File.Exists(iconName))
         {
             return iconName;
         }
 
-        // 尝试从图标主题中查找
         var iconPaths = new[]
         {
             $"/usr/share/icons/hicolor/48x48/apps/{iconName}.png",
@@ -187,9 +313,6 @@ internal sealed class LinuxNotificationListener : IDisposable
         return iconPaths.FirstOrDefault(File.Exists);
     }
 
-    /// <summary>
-    /// 去除HTML标签（通知内容可能包含HTML）
-    /// </summary>
     private static string StripHtmlTags(string html)
     {
         if (string.IsNullOrEmpty(html))
@@ -197,20 +320,58 @@ internal sealed class LinuxNotificationListener : IDisposable
             return string.Empty;
         }
 
-        // 简单的HTML标签去除
-        var result = html;
-        result = System.Text.RegularExpressions.Regex.Replace(result, "<[^>]+>", "");
-        result = result.Replace("&lt;", "<");
-        result = result.Replace("&gt;", ">");
-        result = result.Replace("&amp;", "&");
-        result = result.Replace("&quot;", "\"");
-        return result.Trim();
+        var result = Regex.Replace(html, "<[^>]+>", string.Empty);
+        return result
+            .Replace("&lt;", "<", StringComparison.Ordinal)
+            .Replace("&gt;", ">", StringComparison.Ordinal)
+            .Replace("&amp;", "&", StringComparison.Ordinal)
+            .Replace("&quot;", "\"", StringComparison.Ordinal)
+            .Trim();
     }
+
+    private static string NormalizeAppId(string appName)
+        => appName.ToLowerInvariant().Replace(" ", string.Empty, StringComparison.Ordinal);
+
+    private static string? TryMatchHint(IEnumerable<string> lines, Regex regex)
+        => lines.Select(line => regex.Match(line))
+            .Where(match => match.Success)
+            .Select(match => UnescapeDbusString(match.Groups["value"].Value))
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+    private static string UnescapeDbusString(string value)
+        => value
+            .Replace("\\\"", "\"", StringComparison.Ordinal)
+            .Replace("\\n", "\n", StringComparison.Ordinal)
+            .Replace("\\\\", "\\", StringComparison.Ordinal);
 
     public void Dispose()
     {
-        _isRunning = false;
-        _cts?.Cancel();
-        _cts?.Dispose();
+        _cts.Cancel();
+        try
+        {
+            if (_monitorProcess is { HasExited: false })
+            {
+                _monitorProcess.Kill(entireProcessTree: true);
+            }
+
+            _monitorTask?.Wait(TimeSpan.FromSeconds(1));
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _monitorProcess?.Dispose();
+            _cts.Dispose();
+        }
+    }
+}
+
+internal static class ProcessStartInfoArgumentExtensions
+{
+    public static ProcessStartInfo WithArgument(this ProcessStartInfo startInfo, string argument)
+    {
+        startInfo.ArgumentList.Add(argument);
+        return startInfo;
     }
 }

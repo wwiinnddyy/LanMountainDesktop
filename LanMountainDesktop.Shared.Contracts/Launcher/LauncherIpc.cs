@@ -28,8 +28,6 @@ public record StartupProgressMessage
 
 public static class LauncherIpcConstants
 {
-    public const string PipeName = "LanMountainDesktop_Launcher";
-
     public const string LauncherPidEnvVar = "LMD_LAUNCHER_PID";
 
     public const string PackageRootEnvVar = "LMD_PACKAGE_ROOT";

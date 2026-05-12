@@ -1,0 +1,124 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
+        mc:Ignorable="d"
+        x:Class="LanMountainDesktop.Launcher.Views.MultiInstancePromptWindow"
+        x:DataType="views:MultiInstancePromptWindow"
+        Title="LanMountain Desktop"
+        Width="620"
+        Height="360"
+        MinWidth="560"
+        MinHeight="330"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="Mica, AcrylicBlur, None"
+        Icon="/Assets/logo.ico">
+  <Design.DataContext>
+    <views:MultiInstancePromptWindow />
+  </Design.DataContext>
+
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0"
+          Margin="28,26,28,20"
+          RowDefinitions="Auto,Auto,*"
+          ColumnDefinitions="Auto,*">
+      <Border Grid.Column="0"
+              Width="52"
+              Height="52"
+              Margin="0,0,18,0"
+              Background="{DynamicResource SystemFillColorAttentionBackgroundBrush}"
+              CornerRadius="26"
+              VerticalAlignment="Top">
+        <fi:SymbolIcon Symbol="Desktop"
+                       IconVariant="Regular"
+                       FontSize="26"
+                       Foreground="{DynamicResource SystemFillColorAttentionBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+      </Border>
+
+      <StackPanel Grid.Column="1"
+                  Spacing="8">
+        <TextBlock Text="LanMountain Desktop is already running"
+                   FontSize="22"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                   TextWrapping="Wrap" />
+        <TextBlock x:Name="MessageText"
+                   Text="Launcher found an existing desktop instance and did not start another process."
+                   FontSize="14"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   TextWrapping="Wrap"
+                   LineHeight="22" />
+      </StackPanel>
+
+      <ui:FAInfoBar Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Margin="0,22,0,14"
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="Informational"
+                    Title="Repeated launch"
+                    Message="Your current setting is to show this prompt without opening the desktop automatically.">
+        <ui:FAInfoBar.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0288;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FAInfoBar.IconSource>
+      </ui:FAInfoBar>
+
+      <TextBlock x:Name="DetailsText"
+                 Grid.Row="2"
+                 Grid.Column="0"
+                 Grid.ColumnSpan="2"
+                 FontSize="12"
+                 Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                 TextWrapping="Wrap"
+                 Text="No second Host process was created." />
+    </Grid>
+
+    <Border Grid.Row="1"
+            Padding="18,14"
+            Background="{DynamicResource LayerOnMicaBaseAltFillColorDefaultBrush}">
+      <Grid ColumnDefinitions="*,Auto">
+        <Button x:Name="CopyDetailsButton"
+                Grid.Column="0"
+                MinWidth="104"
+                Height="34"
+                HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <fi:SymbolIcon Symbol="Copy" IconVariant="Regular" FontSize="16"/>
+            <TextBlock Text="Copy"/>
+          </StackPanel>
+        </Button>
+
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <Button x:Name="CloseButton"
+                  MinWidth="92"
+                  Height="34">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <fi:SymbolIcon Symbol="Dismiss" IconVariant="Regular" FontSize="16"/>
+              <TextBlock Text="Close"/>
+            </StackPanel>
+          </Button>
+          <Button x:Name="OpenDesktopButton"
+                  Classes="accent"
+                  MinWidth="136"
+                  Height="34">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <fi:SymbolIcon Symbol="ArrowRight" IconVariant="Regular" FontSize="16"/>
+              <TextBlock Text="Open desktop"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

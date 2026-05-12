@@ -22,7 +22,10 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         string Name,
         string TimeRange,
         string Detail,
-        bool IsCurrent);
+        bool IsCurrent,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        double Progress);
 
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -227,18 +230,11 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         for (var i = 0; i < _courseItems.Count; i++)
         {
             var item = _courseItems[i];
-            var timeParts = item.TimeRange.Split('-');
-            if (timeParts.Length != 2) continue;
-
-            if (TimeSpan.TryParse(timeParts[0].Trim(), out var startTime) &&
-                TimeSpan.TryParse(timeParts[1].Trim(), out var endTime))
+            var shouldBeCurrent = now.TimeOfDay >= item.StartTime && now.TimeOfDay <= item.EndTime;
+            if (shouldBeCurrent != item.IsCurrent)
             {
-                var shouldBeCurrent = now.TimeOfDay >= startTime && now.TimeOfDay <= endTime;
-                if (shouldBeCurrent != item.IsCurrent)
-                {
-                    needsRender = true;
-                    break;
-                }
+                needsRender = true;
+                break;
             }
         }
 
@@ -522,11 +518,22 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             var subjectName = ResolveSubjectName(snapshot, classInfo.SubjectId);
             var detail = ResolveSubjectDetail(snapshot, classInfo.SubjectId);
             var isCurrent = now.TimeOfDay >= slot.StartTime && now.TimeOfDay <= slot.EndTime;
+            var progress = 0.0;
+            if (isCurrent && slot.EndTime > slot.StartTime)
+            {
+                var elapsed = (now.TimeOfDay - slot.StartTime).TotalSeconds;
+                var total = (slot.EndTime - slot.StartTime).TotalSeconds;
+                progress = total > 0 ? Math.Clamp(elapsed / total, 0, 1) : 0;
+            }
+
             result.Add(new CourseItemViewModel(
                 Name: subjectName,
                 TimeRange: $"{FormatTime(slot.StartTime)}-{FormatTime(slot.EndTime)}",
                 Detail: detail,
-                IsCurrent: isCurrent));
+                IsCurrent: isCurrent,
+                StartTime: slot.StartTime,
+                EndTime: slot.EndTime,
+                Progress: progress));
         }
 
         return result;
@@ -674,173 +681,93 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
     {
         CourseListPanel.Children.Clear();
 
-        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
-            _componentColorScheme,
-            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
-
         var scale = ResolveScale();
-        var bulletSize = Math.Clamp(10 * scale, 5, 12);
-        var courseNameSize = Math.Clamp(42 * scale, 14, 42);
-        var secondarySize = Math.Clamp(29 * scale, 10, 28);
-        var lineSpacing = Math.Clamp(4 * scale, 1.5, 8);
-        var itemPadding = new Thickness(
-            Math.Clamp(6 * scale, 3, 10),
-            Math.Clamp(4 * scale, 2, 8),
-            Math.Clamp(4 * scale, 2, 8),
-            Math.Clamp(4 * scale, 2, 8));
-
-        var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
-        var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
-        var currentBrush = useMonetColor
-            ? CreateBrush("#FF4FC3F7")
-            : CreateBrush("#FF4D5A");
-        var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
+        var cardRadius = ComponentChromeCornerRadiusHelper.Small();
+        var timeFontSize = Math.Clamp(11 * scale, 8, 14);
+        var courseNameFontSize = Math.Clamp(14 * scale, 10, 18);
+        var detailFontSize = Math.Clamp(11 * scale, 8, 14);
+        var progressFontSize = Math.Clamp(10 * scale, 7, 12);
+        var cardPadding = new Thickness(
+            Math.Clamp(10 * scale, 6, 14),
+            Math.Clamp(8 * scale, 5, 12),
+            Math.Clamp(10 * scale, 6, 14),
+            Math.Clamp(8 * scale, 5, 12));
+        var timeColumnWidth = Math.Clamp(44 * scale, 30, 56);
+        var accentBarWidth = Math.Clamp(3 * scale, 2, 4);
+        var progressBarHeight = Math.Clamp(3 * scale, 2, 4);
 
         for (var i = 0; i < _courseItems.Count; i++)
         {
             var item = _courseItems[i];
-            var itemControls = CreateSingleItemControl(
+            var itemControl = CreateTimelineItemControl(
                 item,
                 scale,
-                bulletSize,
-                courseNameSize,
-                secondarySize,
-                lineSpacing,
-                itemPadding,
-                primaryBrush,
-                secondaryBrush,
-                item.IsCurrent ? currentBrush : normalBulletBrush);
-
-            CourseListPanel.Children.Add(itemControls);
+                cardRadius,
+                timeFontSize,
+                courseNameFontSize,
+                detailFontSize,
+                progressFontSize,
+                cardPadding,
+                timeColumnWidth,
+                accentBarWidth,
+                progressBarHeight);
+            CourseListPanel.Children.Add(itemControl);
         }
     }
 
-    private void IncrementalUpdateItems()
-    {
-        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
-            _componentColorScheme,
-            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
-
-        var currentBrush = useMonetColor
-            ? CreateBrush("#FF4FC3F7")
-            : CreateBrush("#FF4D5A");
-        var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
-        var primaryBrush = CreateBrush(_isNightVisual ? "#F9FBFF" : "#151821");
-        var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
-
-        for (var i = 0; i < _courseItems.Count && i < CourseListPanel.Children.Count; i++)
-        {
-            var item = _courseItems[i];
-            var existingBorder = CourseListPanel.Children[i] as Border;
-            if (existingBorder == null) continue;
-
-            var existingGrid = existingBorder.Child as Grid;
-            if (existingGrid == null || existingGrid.Children.Count < 2) continue;
-
-            var bulletBorder = existingGrid.Children[0] as Border;
-            var textStack = existingGrid.Children[1] as StackPanel;
-            if (bulletBorder == null || textStack == null || textStack.Children.Count < 3) continue;
-
-            var newBulletBrush = item.IsCurrent ? currentBrush : normalBulletBrush;
-            bulletBorder.Background = newBulletBrush;
-
-            var titleText = textStack.Children[0] as TextBlock;
-            var timeText = textStack.Children[1] as TextBlock;
-            var detailText = textStack.Children[2] as TextBlock;
-
-            if (titleText != null)
-            {
-                if (titleText.Text != item.Name)
-                {
-                    titleText.Text = item.Name;
-                }
-                titleText.Foreground = primaryBrush;
-            }
-
-            if (timeText != null)
-            {
-                if (timeText.Text != item.TimeRange)
-                {
-                    timeText.Text = item.TimeRange;
-                }
-                timeText.Foreground = secondaryBrush;
-            }
-
-            if (detailText != null)
-            {
-                if (detailText.Text != item.Detail)
-                {
-                    detailText.Text = item.Detail;
-                }
-                detailText.Foreground = secondaryBrush;
-            }
-        }
-    }
-
-    private void IncrementalUpdateCurrentCourseHighlight(int currentCourseIndex)
-    {
-        var useMonetColor = ComponentColorSchemeHelper.ShouldUseMonetColor(
-            _componentColorScheme,
-            ComponentColorSchemeHelper.GetCurrentGlobalThemeColorMode());
-
-        var currentBrush = useMonetColor
-            ? CreateBrush("#FF4FC3F7")
-            : CreateBrush("#FF4D5A");
-        var normalBulletBrush = CreateBrush(_isNightVisual ? "#B8BEC9" : "#9AA3B2");
-
-        for (var i = 0; i < CourseListPanel.Children.Count; i++)
-        {
-            var border = CourseListPanel.Children[i] as Border;
-            if (border == null) continue;
-
-            var grid = border.Child as Grid;
-            if (grid == null || grid.Children.Count < 2) continue;
-
-            var bulletBorder = grid.Children[0] as Border;
-            if (bulletBorder == null) continue;
-
-            bulletBorder.Background = i == currentCourseIndex ? currentBrush : normalBulletBrush;
-        }
-    }
-
-    private Border CreateSingleItemControl(
+    private Border CreateTimelineItemControl(
         CourseItemViewModel item,
         double scale,
-        double bulletSize,
-        double courseNameSize,
-        double secondarySize,
-        double lineSpacing,
-        Thickness itemPadding,
-        IBrush primaryBrush,
-        IBrush secondaryBrush,
-        IBrush bulletBrush)
+        double cardRadius,
+        double timeFontSize,
+        double courseNameFontSize,
+        double detailFontSize,
+        double progressFontSize,
+        Thickness cardPadding,
+        double timeColumnWidth,
+        double accentBarWidth,
+        double progressBarHeight)
     {
-        var bullet = new Border
+        var subjectBrush = SubjectColorService.ResolveForegroundBrush(item.Name, _isNightVisual);
+        var cardBackground = SubjectColorService.ResolveBackgroundBrush(item.Name, item.IsCurrent);
+        var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
+        var timeBrush = CreateBrush(_isNightVisual ? "#6B7280" : "#9AA3B2");
+        var timeEndBrush = CreateBrush(_isNightVisual ? "#4B5563" : "#B8BEC9");
+
+        var startTimeText = new TextBlock
         {
-            Width = bulletSize,
-            Height = bulletSize,
-            CornerRadius = new CornerRadius(bulletSize * 0.5),
-            Background = bulletBrush,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Margin = new Thickness(0, Math.Clamp(8 * scale, 2, 12), 0, 0)
+            Text = FormatTime(item.StartTime),
+            FontSize = timeFontSize,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = timeBrush,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
 
-        var titleText = new TextBlock
+        var endTimeText = new TextBlock
+        {
+            Text = FormatTime(item.EndTime),
+            FontSize = timeFontSize - 1,
+            FontWeight = FontWeight.Normal,
+            Foreground = timeEndBrush,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+
+        var timeColumn = new StackPanel
+        {
+            Spacing = Math.Clamp(2 * scale, 1, 4),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Width = timeColumnWidth,
+            Children = { startTimeText, endTimeText }
+        };
+
+        var courseNameText = new TextBlock
         {
             Text = item.Name,
-            FontSize = courseNameSize,
-            FontWeight = ToVariableWeight(Lerp(620, 780, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
-            Foreground = primaryBrush,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            TextWrapping = TextWrapping.NoWrap
-        };
-
-        var timeText = new TextBlock
-        {
-            Text = item.TimeRange,
-            FontSize = secondarySize,
-            FontWeight = ToVariableWeight(Lerp(520, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
-            Foreground = secondaryBrush,
+            FontSize = courseNameFontSize,
+            FontWeight = ToVariableWeight(Lerp(650, 800, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            Foreground = subjectBrush,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap
         };
@@ -848,31 +775,129 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         var detailText = new TextBlock
         {
             Text = item.Detail,
-            FontSize = secondarySize,
-            FontWeight = ToVariableWeight(Lerp(500, 640, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
+            FontSize = detailFontSize,
+            FontWeight = ToVariableWeight(Lerp(450, 550, Math.Clamp((scale - 0.60) / 1.2, 0, 1))),
             Foreground = secondaryBrush,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextWrapping = TextWrapping.NoWrap
         };
 
-        var textStack = new StackPanel
+        var cardContent = new StackPanel
         {
-            Spacing = lineSpacing,
-            Children = { titleText, timeText, detailText }
+            Spacing = Math.Clamp(2 * scale, 1, 4)
+        };
+
+        cardContent.Children.Add(courseNameText);
+        cardContent.Children.Add(detailText);
+
+        if (item.IsCurrent && item.Progress > 0)
+        {
+            var progressTrack = new Border
+            {
+                Height = progressBarHeight,
+                CornerRadius = new CornerRadius(progressBarHeight * 0.5),
+                Background = CreateBrush(_isNightVisual ? "#1AFFFFFF" : "#0D000000"),
+                ClipToBounds = true,
+                Child = new Border
+                {
+                    Height = progressBarHeight,
+                    Width = Math.Max(progressBarHeight, Math.Clamp(item.Progress * 100, 0, 100) * 0.01 * 200),
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                    CornerRadius = new CornerRadius(progressBarHeight * 0.5),
+                    Background = subjectBrush
+                }
+            };
+
+            var progressText = new TextBlock
+            {
+                Text = $"{(int)(item.Progress * 100)}%",
+                FontSize = progressFontSize,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = subjectBrush,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+            };
+
+            var progressRow = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+                Margin = new Thickness(0, Math.Clamp(2 * scale, 1, 4), 0, 0)
+            };
+            progressRow.Children.Add(progressTrack);
+            progressRow.Children.Add(progressText);
+            Grid.SetColumn(progressText, 1);
+
+            cardContent.Children.Add(progressRow);
+        }
+
+        var cardInner = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions($"{accentBarWidth},*")
+        };
+
+        if (item.IsCurrent)
+        {
+            var accentBar = new Border
+            {
+                Width = accentBarWidth,
+                CornerRadius = new CornerRadius(accentBarWidth * 0.5),
+                Background = subjectBrush,
+                Margin = new Thickness(0, 2, 0, 2)
+            };
+            cardInner.Children.Add(accentBar);
+
+            var contentWrapper = new StackPanel
+            {
+                Margin = new Thickness(Math.Clamp(6 * scale, 3, 8), 0, 0, 0),
+                Spacing = 0
+            };
+            foreach (var child in cardContent.Children.ToList())
+            {
+                cardContent.Children.Remove(child);
+                contentWrapper.Children.Add(child);
+            }
+            cardInner.Children.Add(contentWrapper);
+            Grid.SetColumn(contentWrapper, 1);
+        }
+        else
+        {
+            var contentWrapper = new StackPanel
+            {
+                Margin = new Thickness(Math.Clamp(8 * scale, 4, 12), 0, 0, 0),
+                Spacing = 0
+            };
+            foreach (var child in cardContent.Children.ToList())
+            {
+                cardContent.Children.Remove(child);
+                contentWrapper.Children.Add(child);
+            }
+            cardInner.Children.Add(contentWrapper);
+            Grid.SetColumn(contentWrapper, 1);
+        }
+
+        var cardBorder = new Border
+        {
+            CornerRadius = new CornerRadius(cardRadius),
+            Background = cardBackground,
+            Padding = cardPadding,
+            Child = cardInner
         };
 
         var itemGrid = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-            ColumnSpacing = Math.Clamp(10 * scale, 4, 14)
+            ColumnDefinitions = new ColumnDefinitions($"{timeColumnWidth},*"),
+            ColumnSpacing = Math.Clamp(6 * scale, 3, 10)
         };
-        itemGrid.Children.Add(bullet);
-        itemGrid.Children.Add(textStack);
-        Grid.SetColumn(textStack, 1);
+        itemGrid.Children.Add(timeColumn);
+        itemGrid.Children.Add(cardBorder);
+        Grid.SetColumn(cardBorder, 1);
 
         var itemBorder = new Border
         {
-            Padding = itemPadding,
+            Padding = new Thickness(
+                Math.Clamp(10 * scale, 6, 14),
+                Math.Clamp(2 * scale, 1, 4),
+                Math.Clamp(10 * scale, 6, 14),
+                Math.Clamp(2 * scale, 1, 4)),
             Background = Brushes.Transparent,
             Child = itemGrid
         };
@@ -880,15 +905,88 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         return itemBorder;
     }
 
-    private int ResolveMaxVisibleItems(double scale)
+    private void IncrementalUpdateItems()
     {
-        var height = Bounds.Height > 1 ? Bounds.Height : _currentCellSize * 4;
-        var rootVerticalPadding = RootBorder.Padding.Top + RootBorder.Padding.Bottom;
-        var headerEstimatedHeight = Math.Clamp(100 * scale, 54, 140);
-        var itemEstimatedHeight = Math.Clamp(136 * scale, 72, 178);
-        var available = Math.Max(1, height - rootVerticalPadding - headerEstimatedHeight);
-        var count = (int)Math.Floor(available / Math.Max(1, itemEstimatedHeight));
-        return Math.Clamp(count, 1, 6);
+        for (var i = 0; i < _courseItems.Count && i < CourseListPanel.Children.Count; i++)
+        {
+            var item = _courseItems[i];
+            var outerBorder = CourseListPanel.Children[i] as Border;
+            if (outerBorder == null) continue;
+
+            var itemGrid = outerBorder.Child as Grid;
+            if (itemGrid == null || itemGrid.Children.Count < 2) continue;
+
+            var cardBorder = itemGrid.Children[1] as Border;
+            if (cardBorder == null) continue;
+
+            cardBorder.Background = SubjectColorService.ResolveBackgroundBrush(item.Name, item.IsCurrent);
+
+            var cardInner = cardBorder.Child as Grid;
+            if (cardInner == null) continue;
+
+            var contentPanel = cardInner.Children.OfType<StackPanel>().FirstOrDefault();
+            if (contentPanel == null) continue;
+
+            var subjectBrush = SubjectColorService.ResolveForegroundBrush(item.Name, _isNightVisual);
+            var secondaryBrush = CreateBrush(_isNightVisual ? "#848B99" : "#667084");
+
+            foreach (var child in contentPanel.Children)
+            {
+                if (child is TextBlock tb)
+                {
+                    if (contentPanel.Children.IndexOf(tb) == 0)
+                    {
+                        if (tb.Text != item.Name) tb.Text = item.Name;
+                        tb.Foreground = subjectBrush;
+                    }
+                    else if (contentPanel.Children.IndexOf(tb) == 1)
+                    {
+                        if (tb.Text != item.Detail) tb.Text = item.Detail;
+                        tb.Foreground = secondaryBrush;
+                    }
+                }
+            }
+
+            var accentBar = cardInner.Children.OfType<Border>().FirstOrDefault(b => b.Width > 0 && b.Width < 10);
+            if (accentBar != null)
+            {
+                accentBar.Background = subjectBrush;
+                accentBar.IsVisible = item.IsCurrent;
+            }
+        }
+    }
+
+    private void IncrementalUpdateCurrentCourseHighlight(int currentCourseIndex)
+    {
+        for (var i = 0; i < CourseListPanel.Children.Count; i++)
+        {
+            var outerBorder = CourseListPanel.Children[i] as Border;
+            if (outerBorder == null) continue;
+
+            var itemGrid = outerBorder.Child as Grid;
+            if (itemGrid == null || itemGrid.Children.Count < 2) continue;
+
+            var cardBorder = itemGrid.Children[1] as Border;
+            if (cardBorder == null) continue;
+
+            var item = i < _courseItems.Count ? _courseItems[i] : null;
+            if (item == null) continue;
+
+            cardBorder.Background = SubjectColorService.ResolveBackgroundBrush(item.Name, i == currentCourseIndex);
+
+            var cardInner = cardBorder.Child as Grid;
+            if (cardInner == null) continue;
+
+            var accentBar = cardInner.Children.OfType<Border>().FirstOrDefault(b => b.Width > 0 && b.Width < 10);
+            if (accentBar != null)
+            {
+                accentBar.IsVisible = i == currentCourseIndex;
+                if (i == currentCourseIndex)
+                {
+                    accentBar.Background = SubjectColorService.ResolveForegroundBrush(item.Name, _isNightVisual);
+                }
+            }
+        }
     }
 
     private void ApplyAdaptiveLayout()
@@ -915,38 +1013,34 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
             : CreateGradientBrush("#F7F8FC", "#ECEFF6");
         RootBorder.BorderBrush = CreateBrush(_isNightVisual ? "#24FFFFFF" : "#15000000");
 
-        var rootPadding = new Thickness(
+        var headerPadding = new Thickness(
             ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 9, 20),
+            ComponentChromeCornerRadiusHelper.SafeValue(12 * scale, 8, 16),
             ComponentChromeCornerRadiusHelper.SafeValue(16 * scale, 10, 24),
-            ComponentChromeCornerRadiusHelper.SafeValue(14 * scale, 8, 20));
-        RootBorder.Padding = rootPadding;
+            ComponentChromeCornerRadiusHelper.SafeValue(8 * scale, 4, 12));
+        HeaderGrid.Margin = headerPadding;
 
-        LayoutGrid.RowSpacing = Math.Clamp(14 * scale, 6, 20);
-        HeaderGrid.ColumnSpacing = Math.Clamp(10 * scale, 4, 16);
+        HeaderGrid.ColumnSpacing = Math.Clamp(8 * scale, 4, 14);
         DateGroup.Spacing = Math.Clamp(1.5 * scale, 0.5, 3);
-        MetaStack.Spacing = Math.Clamp(6 * scale, 3, 10);
-        CourseListPanel.Spacing = Math.Clamp(6 * scale, 3, 10);
+        CourseListPanel.Spacing = Math.Clamp(2 * scale, 0, 6);
 
-        var dateFontByScale = Math.Clamp(66 * scale, 26, 82);
-        var weekdayFontByScale = Math.Clamp(34 * scale, 13, 32);
-        var classCountFontByScale = Math.Clamp(40 * scale, 14, 36);
+        var dateFontByScale = Math.Clamp(28 * scale, 14, 36);
+        var weekdayFontByScale = Math.Clamp(14 * scale, 10, 18);
+        var classCountFontByScale = Math.Clamp(12 * scale, 9, 15);
 
-        // 宽度感知：当头部内容总需求超过可用宽度时，按比例缩小日期字体
-        var availableWidth = Math.Max(1, Bounds.Width - rootPadding.Left - rootPadding.Right);
+        var availableWidth = Math.Max(1, Bounds.Width - headerPadding.Left - headerPadding.Right);
         var dateGroupEstimatedWidth = dateFontByScale * 0.6 * 3 + DateGroup.Spacing * 2;
-        var metaStackEstimatedWidth = classCountFontByScale * 0.6 * 4 + MetaStack.Spacing;
-        var headerColumnSpacing = Math.Clamp(10 * scale, 4, 16);
-        var totalHeaderNeed = dateGroupEstimatedWidth + headerColumnSpacing + metaStackEstimatedWidth;
+        var badgeEstimatedWidth = classCountFontByScale * 0.6 * 5 + 16;
+        var headerColumnSpacing = HeaderGrid.ColumnSpacing;
+        var totalHeaderNeed = dateGroupEstimatedWidth + headerColumnSpacing + badgeEstimatedWidth + weekdayFontByScale * 2;
 
         var dateFont = dateFontByScale;
         if (totalHeaderNeed > availableWidth)
         {
             var shrinkRatio = availableWidth / totalHeaderNeed;
-            dateFont = Math.Max(20, dateFontByScale * shrinkRatio);
+            dateFont = Math.Max(14, dateFontByScale * shrinkRatio);
         }
 
-        // 为 HeaderGrid 左列设置最小宽度，防止被压缩至零
         var minDateColumnWidth = dateFont * 0.6 * 3 + DateGroup.Spacing * 2;
         HeaderGrid.ColumnDefinitions[0].MinWidth = minDateColumnWidth;
 
@@ -958,15 +1052,24 @@ public partial class ClassScheduleWidget : UserControl, IDesktopComponentWidget,
         DayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#F8FAFF" : "#131722");
         SlashTextBlock.Foreground = slashBrush;
         WeekdayTextBlock.Foreground = CreateBrush(_isNightVisual ? "#C6CBD5" : "#4B5463");
-        ClassCountTextBlock.Foreground = CreateBrush(_isNightVisual ? "#8D95A4" : "#738095");
         StatusTextBlock.Foreground = CreateBrush(_isNightVisual ? "#9AA2B1" : "#4B5565");
 
         WeekdayTextBlock.FontSize = weekdayFontByScale;
-        ClassCountTextBlock.FontSize = classCountFontByScale;
-        StatusTextBlock.FontSize = Math.Clamp(30 * scale, 12, 30);
-
         WeekdayTextBlock.FontWeight = ToVariableWeight(Lerp(560, 700, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+
+        ClassCountTextBlock.FontSize = classCountFontByScale;
         ClassCountTextBlock.FontWeight = ToVariableWeight(Lerp(560, 680, Math.Clamp((scale - 0.60) / 1.2, 0, 1)));
+
+        var badgeBrush = useMonetColor
+            ? CreateBrush(_isNightVisual ? "#1A4FC3F7" : "#124FC3F7")
+            : CreateBrush(_isNightVisual ? "#1AFF4D5A" : "#12FF4D5A");
+        ClassCountBadge.Background = badgeBrush;
+        ClassCountBadge.CornerRadius = new CornerRadius(ComponentChromeCornerRadiusHelper.Micro());
+        ClassCountTextBlock.Foreground = useMonetColor
+            ? CreateBrush("#FF4FC3F7")
+            : CreateBrush("#FF4D5A");
+
+        StatusTextBlock.FontSize = Math.Clamp(14 * scale, 10, 18);
     }
 
     private static string FormatTime(TimeSpan time)

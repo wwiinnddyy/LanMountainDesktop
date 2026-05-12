@@ -20,7 +20,6 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ExternalIpc;
-using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Services.Update;
@@ -83,7 +82,6 @@ public partial class App : Application
     private PublicIpcHostService? _publicIpcHostService;
     private LoadingStateManager? _loadingStateManager;
     private LoadingStateReporter? _loadingStateReporter;
-    private bool _singleInstanceReleased;
     private int _forcedExitScheduled;
     private volatile bool _desktopShellInitializationStarted;
     private bool _mainWindowOpened;
@@ -91,7 +89,6 @@ public partial class App : Application
     private readonly object _launcherProgressLock = new();
     private readonly List<StartupProgressMessage> _pendingLauncherProgressMessages = [];
 
-    internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
     internal static INotificationService? CurrentNotificationService =>
@@ -213,7 +210,6 @@ public partial class App : Application
 
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePublicIpc();
-        CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         _ = InitializeLauncherIpcAsync();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
@@ -368,7 +364,7 @@ public partial class App : Application
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
             OnDesktopLifetimeExit,
-            () => CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow),
+            static () => { },
             StartWeatherLocationRefreshIfNeeded);
         _desktopShellHost.Initialize(this);
     }
@@ -377,7 +373,6 @@ public partial class App : Application
     {
         AppLogger.Info("App", "Desktop lifetime exit triggered.");
         PerformExitCleanup();
-        ReleaseSingleInstanceAfterExit("DesktopLifetimeExit");
         ScheduleForcedProcessTermination("DesktopLifetimeExit");
     }
 
@@ -396,7 +391,7 @@ public partial class App : Application
             return;
         }
 
-        RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayMenu");
+        RestoreOrCreateMainWindow("TrayMenu");
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
@@ -723,7 +718,7 @@ public partial class App : Application
 
         if (_desktopShellState == DesktopShellState.TrayOnly)
         {
-            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityFailed");
+            RestoreOrCreateMainWindow("TrayAvailabilityFailed");
             return;
         }
 
@@ -734,7 +729,7 @@ public partial class App : Application
             !taskbarUsable &&
             (_desktopTrayService?.ConsecutiveRecoveryFailures ?? 0) >= 3)
         {
-            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityRepeatedFailure");
+            RestoreOrCreateMainWindow("TrayAvailabilityRepeatedFailure");
         }
     }
 
@@ -862,39 +857,7 @@ public partial class App : Application
         Resources["AppFontFamily"] = fontFamily;
     }
 
-    internal void ActivateMainWindow()
-    {
-        AppLogger.Info("SingleInstance", $"Activation callback received. Pid={Environment.ProcessId}.");
-
-        if (!_desktopShellInitializationStarted && _mainWindow is null)
-        {
-            AppLogger.Info("SingleInstance", "Activation acknowledged while desktop shell is still initializing.");
-            return;
-        }
-
-        try
-        {
-            var restored = Dispatcher.UIThread.CheckAccess()
-                ? RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance")
-                : Dispatcher.UIThread.InvokeAsync(
-                    () => RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance"),
-                    DispatcherPriority.Send).GetAwaiter().GetResult();
-
-            if (!restored)
-            {
-                AppLogger.Warn("SingleInstance", "Activation callback could not restore the main window yet.");
-                return;
-            }
-
-            AppLogger.Info("SingleInstance", "Activation callback completed successfully.");
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("SingleInstance", "Activation callback failed while restoring the desktop shell.", ex);
-        }
-    }
-
-    private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
+    private void RestoreOrCreateMainWindow(string source)
     {
         if (IsShutdownInProgress)
         {
@@ -904,11 +867,11 @@ public partial class App : Application
 
         Dispatcher.UIThread.Post(() =>
         {
-            _ = RestoreOrCreateMainWindowCore(showSingleInstanceNotice, source);
+            _ = RestoreOrCreateMainWindowCore(source);
         }, DispatcherPriority.Send);
     }
 
-    private bool RestoreOrCreateMainWindowCore(bool showSingleInstanceNotice, string source)
+    private bool RestoreOrCreateMainWindowCore(string source)
     {
         if (IsShutdownInProgress)
         {
@@ -966,12 +929,7 @@ public partial class App : Application
             SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
             AppLogger.Info(
                 "DesktopShell",
-                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
-
-            if (showSingleInstanceNotice)
-            {
-                mainWindow.ShowSingleInstanceNotice();
-            }
+                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; WindowState='{mainWindow.WindowState}'.");
 
             return true;
         }
@@ -989,7 +947,7 @@ public partial class App : Application
             _transparentOverlayWindow = new TransparentOverlayWindow();
             _transparentOverlayWindow.RestoreMainWindowRequested += (s, e) =>
             {
-                RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TransparentOverlay");
+                RestoreOrCreateMainWindow("TransparentOverlay");
             };
             _transparentOverlayWindow.ExitEditRequested += (s, e) =>
             {
@@ -1044,7 +1002,6 @@ public partial class App : Application
         ScheduleForcedProcessTermination($"ShutdownRequest:{source}");
         StopShellRecoveryWatchdog();
         PerformExitCleanup();
-        ReleaseSingleInstanceAfterExit($"ShutdownRequest:{source}");
 
         try
         {
@@ -1193,33 +1150,6 @@ public partial class App : Application
     private void ApplyAdaptiveThemeResources()
     {
         _appearanceThemeService.ApplyThemeResources(Resources);
-    }
-
-    private void ReleaseSingleInstanceAfterExit(string source)
-    {
-        if (_singleInstanceReleased)
-        {
-            return;
-        }
-
-        _singleInstanceReleased = true;
-        var singleInstance = CurrentSingleInstanceService;
-        CurrentSingleInstanceService = null;
-        if (singleInstance is null)
-        {
-            AppLogger.Info("SingleInstance", $"No single-instance handle to release. Source='{source}'.");
-            return;
-        }
-
-        try
-        {
-            singleInstance.Dispose();
-            AppLogger.Info("SingleInstance", $"Released single-instance handle. Source='{source}'.");
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("SingleInstance", $"Failed to release single-instance handle. Source='{source}'.", ex);
-        }
     }
 
     private void ScheduleForcedProcessTermination(string source)
@@ -1809,7 +1739,7 @@ public partial class App : Application
                 GetPublicShellStatus());
         }
 
-        var restored = RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
+        var restored = RestoreOrCreateMainWindowCore(source);
         var status = GetPublicShellStatus();
         if (restored)
         {

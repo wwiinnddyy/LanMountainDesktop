@@ -26,6 +26,7 @@
     <EmbeddedResource Include="Localization\*.json" />
     <None Include="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Extensions\Components\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="WindowsIdentity\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

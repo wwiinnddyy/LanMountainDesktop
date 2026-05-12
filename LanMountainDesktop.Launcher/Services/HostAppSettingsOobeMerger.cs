@@ -16,6 +16,7 @@ public static class HostAppSettingsOobeMerger
     public const string EnableFusedDesktopKey = "EnableFusedDesktop";
     public const string EnableThreeFingerSwipeKey = "EnableThreeFingerSwipe";
     public const string AutoStartWithWindowsKey = "AutoStartWithWindows";
+    public const string MultiInstanceLaunchBehaviorKey = "MultiInstanceLaunchBehavior";
 
     public static string GetSettingsFilePath(string dataRoot) =>
         Path.Combine(Path.GetFullPath(dataRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), "settings.json");
@@ -51,6 +52,30 @@ public static class HostAppSettingsOobeMerger
         {
             Logger.Warn($"HostAppSettingsOobeMerger: failed to read '{settingsPath}'. {ex.Message}");
             return HostAppSettingsStartupDefaults.Fallback;
+        }
+    }
+
+    public static MultiInstanceLaunchBehavior LoadMultiInstanceLaunchBehavior(string settingsPath)
+    {
+        if (!File.Exists(settingsPath))
+        {
+            return MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+        }
+
+        try
+        {
+            var root = JsonNode.Parse(File.ReadAllText(settingsPath))?.AsObject();
+            if (root is null)
+            {
+                return MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+            }
+
+            return ReadMultiInstanceLaunchBehavior(root);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"HostAppSettingsOobeMerger: failed to read multi-instance behavior from '{settingsPath}'. {ex.Message}");
+            return MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
         }
     }
 
@@ -108,6 +133,31 @@ public static class HostAppSettingsOobeMerger
             JsonValue v when v.TryGetValue<string>(out var s) => bool.TryParse(s, out var p) && p,
             _ => defaultValue
         };
+    }
+
+    private static MultiInstanceLaunchBehavior ReadMultiInstanceLaunchBehavior(JsonObject root)
+    {
+        if (!root.TryGetPropertyValue(MultiInstanceLaunchBehaviorKey, out var node) || node is null)
+        {
+            return MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+        }
+
+        if (node is JsonValue value)
+        {
+            if (value.TryGetValue<string>(out var text) &&
+                Enum.TryParse<MultiInstanceLaunchBehavior>(text, ignoreCase: true, out var parsed))
+            {
+                return parsed;
+            }
+
+            if (value.TryGetValue<int>(out var numeric) &&
+                Enum.IsDefined(typeof(MultiInstanceLaunchBehavior), numeric))
+            {
+                return (MultiInstanceLaunchBehavior)numeric;
+            }
+        }
+
+        return MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
     }
 }
 

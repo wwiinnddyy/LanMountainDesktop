@@ -5,7 +5,8 @@
         CanResize="False"
         ShowInTaskbar="False"
         ExtendClientAreaToDecorationsHint="True"
-        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Background="{x:Null}"
         Title="LanMountainDesktop Fused Desktop">
     <Window.Styles>
         <Style Selector="Border.fused-desktop-component-host">
@@ -32,9 +33,9 @@
         </Style>
     </Window.Styles>
 
-    <Grid x:Name="OverlayRoot">
+    <Grid x:Name="OverlayRoot"
+          Background="{x:Null}">
         <Canvas x:Name="ComponentCanvas"
-                Background="#01000000"
                 PointerPressed="OnCanvasPointerPressed" />
 
         <Border x:Name="EditToolbar"

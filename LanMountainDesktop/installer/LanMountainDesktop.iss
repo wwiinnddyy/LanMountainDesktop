@@ -146,7 +146,11 @@ Name: "{autodesktop}\{cm:AppShortcutName}"; Filename: "{app}\{#MyAppExeName}"; T
 Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: startup; Flags: uninsdeletevalue
 
 [Run]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (Get-Command Add-AppxPackage -ErrorAction SilentlyContinue) {{ try {{ Add-AppxPackage -Register '{app}\WindowsIdentity\AppxManifest.xml' -ExternalLocation '{app}' -ForceApplicationShutdown -ErrorAction Stop }} catch {{ Write-Host $_.Exception.Message }} }}"""; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--launch-source postinstall"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue) {{ Get-AppxPackage -Name 'LanMountainDesktop.NotificationIdentity' | Remove-AppxPackage -ErrorAction SilentlyContinue }}"""; Flags: runhidden
 
 [Code]
 const

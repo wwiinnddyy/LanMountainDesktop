@@ -7,12 +7,12 @@ public static class HostExitCodes
 {
     public const int Success = 0;
 
-    // Secondary instance activated the existing primary instance successfully.
+    // Legacy host-side activation result retained for old builds and launcher compatibility.
     public const int SecondaryActivationSucceeded = 12;
 
-    // Secondary instance failed to activate the existing primary instance.
+    // Legacy host-side activation failure retained for old builds and launcher compatibility.
     public const int SecondaryActivationFailed = 13;
 
-    // Restart relaunch couldn't acquire the single-instance lock in time.
+    // Legacy restart lock failure retained for old builds and launcher compatibility.
     public const int RestartLockNotAcquired = 14;
 }

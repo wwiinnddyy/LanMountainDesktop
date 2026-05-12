@@ -10,7 +10,6 @@ using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.ViewModels;
 
@@ -445,22 +444,14 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             }
 
             var snapshot = result.Data;
-            var isNight = snapshot.Current.IsDaylight.HasValue
-                ? !snapshot.Current.IsDaylight.Value
-                : _settingsFacade.Theme.Get().IsNightMode;
-            var preview = XiaomiWeatherVisualResolver.Resolve(
-                snapshot.Current.WeatherText,
-                snapshot.Current.WeatherCode,
-                isNight,
-                _languageCode);
-            PreviewIcon = HyperOS3WeatherAssetLoader.LoadImage(preview.PrimaryIconAsset);
+            PreviewIcon = null;
             PreviewLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
                 ? state.LocationName
                 : snapshot.LocationName!;
             PreviewTemperature = snapshot.Current.TemperatureC.HasValue
                 ? string.Format(CultureInfo.InvariantCulture, "{0:0.#}°C", snapshot.Current.TemperatureC.Value)
                 : "--";
-            PreviewCondition = preview.DisplayText;
+            PreviewCondition = ResolveWeatherDisplayText(snapshot.Current.WeatherText, snapshot.Current.WeatherCode);
 
             var updatedAt = (snapshot.ObservationTime ?? snapshot.FetchedAt).ToLocalTime();
             PreviewUpdated = string.Format(
@@ -523,18 +514,12 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         UpdateModeVisibility();
         UpdateCurrentLocationSummary();
 
-        var preview = XiaomiWeatherVisualResolver.Resolve(
-            "Partly cloudy",
-            4,
-            isNight: false,
-            _languageCode);
-
         SearchStatus = "2 sample locations are shown for design preview.";
         LocationActionStatus = "Using mocked Windows location support in design mode.";
-        PreviewIcon = HyperOS3WeatherAssetLoader.LoadImage(preview.PrimaryIconAsset);
+        PreviewIcon = null;
         PreviewLocation = previewLocation.Name;
         PreviewTemperature = "24 deg C";
-        PreviewCondition = preview.DisplayText;
+        PreviewCondition = ResolveWeatherDisplayText("Partly cloudy", 4);
         PreviewUpdated = "Updated 09:42";
         PreviewStatus = "Preview data is mocked for Avalonia design mode.";
     }
@@ -711,6 +696,17 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    private string ResolveWeatherDisplayText(string? weatherText, int? weatherCode)
+    {
+        if (!string.IsNullOrWhiteSpace(weatherText))
+        {
+            return weatherText.Trim();
+        }
+
+        return XiaomiWeatherCodeMapper.ResolveDisplayText(weatherCode, _languageCode)
+            ?? L("settings.weather.preview_unknown", "Unknown");
     }
 
     private CultureInfo ResolveCulture()

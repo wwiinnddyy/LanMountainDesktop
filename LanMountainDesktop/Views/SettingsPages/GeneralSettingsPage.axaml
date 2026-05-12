@@ -47,6 +47,24 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
+            <ui:FASettingsExpander Header="{Binding MultiInstanceLaunchBehaviorHeader}"
+                                 Description="{Binding MultiInstanceLaunchBehaviorDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF1848;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="240"
+                              ItemsSource="{Binding MultiInstanceLaunchBehaviors}"
+                              SelectedItem="{Binding SelectedMultiInstanceLaunchBehavior}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
             <ui:FASettingsExpander Header="{Binding PreviewHeader}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF1C80;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />

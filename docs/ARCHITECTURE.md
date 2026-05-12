@@ -35,7 +35,7 @@
 
 启动入口在 `LanMountainDesktop/Program.cs`：
 
-1. 初始化日志、单实例锁和启动诊断
+1. 初始化日志、启动诊断和 Host 桌面生命周期
 2. 初始化遥测身份、崩溃遥测与使用遥测
 3. 构建 Avalonia `AppBuilder`
 4. 进入 `LanMountainDesktop/App.axaml.cs`

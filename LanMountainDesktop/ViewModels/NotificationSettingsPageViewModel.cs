@@ -26,6 +26,7 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         Durations = CreateDurationOptions();
         TestPositions = CreatePositionOptions();
         TestSeverities = CreateSeverityOptions();
+        LinuxCaptureModes = CreateLinuxCaptureModeOptions();
         RefreshLocalizedText();
 
         LoadSettings();
@@ -45,6 +46,11 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         IsHoverPauseEnabled = snapshot.NotificationHoverPauseEnabled;
         IsClickCloseEnabled = snapshot.NotificationClickCloseEnabled;
         MaxNotificationsPerPosition = snapshot.NotificationMaxPerPosition;
+        IsNotificationBoxEnabled = snapshot.NotificationBoxEnabled;
+        IsNotificationBoxPrivacyMode = snapshot.NotificationBoxPrivacyMode;
+        SelectedLinuxCaptureMode = LinuxCaptureModes.FirstOrDefault(o =>
+                string.Equals(o.Value, snapshot.NotificationBoxLinuxCaptureMode, StringComparison.OrdinalIgnoreCase))
+            ?? LinuxCaptureModes[0];
 
         SelectedPosition = Positions.FirstOrDefault(p =>
                 string.Equals(p.Value, snapshot.NotificationDefaultPosition, StringComparison.OrdinalIgnoreCase))
@@ -69,6 +75,9 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         snapshot.NotificationHoverPauseEnabled = IsHoverPauseEnabled;
         snapshot.NotificationClickCloseEnabled = IsClickCloseEnabled;
         snapshot.NotificationMaxPerPosition = MaxNotificationsPerPosition;
+        snapshot.NotificationBoxEnabled = IsNotificationBoxEnabled;
+        snapshot.NotificationBoxPrivacyMode = IsNotificationBoxPrivacyMode;
+        snapshot.NotificationBoxLinuxCaptureMode = SelectedLinuxCaptureMode?.Value ?? "ProxyDaemon";
 
         _settingsFacade.Settings.SaveSnapshot(
             SettingsScope.App,
@@ -80,7 +89,10 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
                 nameof(AppSettingsSnapshot.NotificationDurationSeconds),
                 nameof(AppSettingsSnapshot.NotificationHoverPauseEnabled),
                 nameof(AppSettingsSnapshot.NotificationClickCloseEnabled),
-                nameof(AppSettingsSnapshot.NotificationMaxPerPosition)
+                nameof(AppSettingsSnapshot.NotificationMaxPerPosition),
+                nameof(AppSettingsSnapshot.NotificationBoxEnabled),
+                nameof(AppSettingsSnapshot.NotificationBoxPrivacyMode),
+                nameof(AppSettingsSnapshot.NotificationBoxLinuxCaptureMode)
             ]);
     }
 
@@ -121,6 +133,15 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         ];
     }
 
+    private ObservableCollection<SelectionOption> CreateLinuxCaptureModeOptions()
+    {
+        return
+        [
+            new SelectionOption("ProxyDaemon", "代理守护进程"),
+            new SelectionOption("PassiveMonitor", "旁路监听")
+        ];
+    }
+
     private void RefreshLocalizedText()
     {
         NotificationHeader = L("settings.notifications.section_header", "Notifications");
@@ -133,6 +154,13 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
         ClickCloseDescription = L("settings.notifications.click_close_desc", "Dismiss when clicked.");
         MaxNotificationsHeader = L("settings.notifications.max_header", "Max per position");
         MaxNotificationsDescription = L("settings.notifications.max_desc", "Maximum notifications per corner or edge.");
+        NotificationBoxHeader = L("settings.notifications.box_header", "Message box");
+        NotificationBoxEnabledHeader = L("settings.notifications.box_enable_header", "Collect system notifications");
+        NotificationBoxEnabledDescription = L("settings.notifications.box_enable_desc", "Aggregate OS notifications in the desktop message box.");
+        NotificationBoxPrivacyHeader = L("settings.notifications.box_privacy_header", "Privacy mode");
+        NotificationBoxPrivacyDescription = L("settings.notifications.box_privacy_desc", "Hide notification details until you open the box.");
+        LinuxCaptureModeHeader = L("settings.notifications.linux_capture_header", "Linux capture mode");
+        LinuxCaptureModeDescription = L("settings.notifications.linux_capture_desc", "Proxy mode is more reliable; passive mode is best effort.");
         TestHeader = L("settings.notifications.test_header", "Test");
         TestNotificationHeader = L("settings.notifications.test_notification_header", "Test notification");
         TestNotificationDescription = L("settings.notifications.test_notification_desc", "Send a sample notification.");
@@ -173,6 +201,20 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty] private string _maxNotificationsDescription = string.Empty;
 
+    [ObservableProperty] private string _notificationBoxHeader = string.Empty;
+
+    [ObservableProperty] private string _notificationBoxEnabledHeader = string.Empty;
+
+    [ObservableProperty] private string _notificationBoxEnabledDescription = string.Empty;
+
+    [ObservableProperty] private string _notificationBoxPrivacyHeader = string.Empty;
+
+    [ObservableProperty] private string _notificationBoxPrivacyDescription = string.Empty;
+
+    [ObservableProperty] private string _linuxCaptureModeHeader = string.Empty;
+
+    [ObservableProperty] private string _linuxCaptureModeDescription = string.Empty;
+
     [ObservableProperty] private string _testHeader = string.Empty;
 
     [ObservableProperty] private string _testNotificationHeader = string.Empty;
@@ -187,6 +229,10 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty] private int _maxNotificationsPerPosition = 5;
 
+    [ObservableProperty] private bool _isNotificationBoxEnabled = true;
+
+    [ObservableProperty] private bool _isNotificationBoxPrivacyMode;
+
     [ObservableProperty] private SelectionOption? _selectedPosition;
 
     [ObservableProperty] private SelectionOption? _selectedDuration;
@@ -195,12 +241,16 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty] private SelectionOption? _selectedTestSeverity;
 
+    [ObservableProperty] private SelectionOption? _selectedLinuxCaptureMode;
+
     [ObservableProperty] private int _testDurationSeconds = 4;
 
     public ObservableCollection<SelectionOption> Positions { get; }
     public ObservableCollection<SelectionOption> Durations { get; }
     public ObservableCollection<SelectionOption> TestPositions { get; }
     public ObservableCollection<SelectionOption> TestSeverities { get; }
+
+    public ObservableCollection<SelectionOption> LinuxCaptureModes { get; }
 
     partial void OnIsNotificationEnabledChanged(bool value) => SaveSettings();
 
@@ -210,9 +260,15 @@ public sealed partial class NotificationSettingsPageViewModel : ViewModelBase
 
     partial void OnMaxNotificationsPerPositionChanged(int value) => SaveSettings();
 
+    partial void OnIsNotificationBoxEnabledChanged(bool value) => SaveSettings();
+
+    partial void OnIsNotificationBoxPrivacyModeChanged(bool value) => SaveSettings();
+
     partial void OnSelectedPositionChanged(SelectionOption? value) => SaveSettings();
 
     partial void OnSelectedDurationChanged(SelectionOption? value) => SaveSettings();
+
+    partial void OnSelectedLinuxCaptureModeChanged(SelectionOption? value) => SaveSettings();
 
     [RelayCommand]
     private void SendTest()

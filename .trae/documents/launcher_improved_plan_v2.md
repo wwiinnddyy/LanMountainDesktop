@@ -154,7 +154,7 @@
 │                                                                             │
 │  方案 2: 命名管道（推荐用于进度报告）                                           │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Launcher 创建命名管道: \\.\pipe\LanMountainDesktop_Launcher          │   │
+│  │  [历史方案] Launcher 创建命名管道: \\.\pipe\LanMountainDesktop_Launcher │   │
 │  │  主程序连接并发送进度消息                                              │   │
 │  │                                                                      │   │
 │  │  消息格式: JSON                                                       │   │
@@ -289,7 +289,7 @@ public static class LauncherIpcConstants
 
 #### 4. 实现 IPC 服务端
 
-**新建文件**: `LanMountainDesktop.Launcher/Services/Ipc/LauncherIpcServer.cs`
+**历史方案，已废弃**: `LanMountainDesktop.Launcher/Services/Ipc/LauncherIpcServer.cs`
 
 ```csharp
 using System.IO.Pipes;
@@ -428,7 +428,7 @@ public async Task<LauncherResult> RunAsync()
 
 #### 6. 实现 IPC 客户端
 
-**新建文件**: `LanMountainDesktop/Services/Launcher/LauncherIpcClient.cs`
+**历史方案，已废弃**: `LanMountainDesktop/Services/Launcher/LauncherIpcClient.cs`
 
 ```csharp
 using System.IO.Pipes;
@@ -672,8 +672,8 @@ public class UpdateInstallationService
 ### 新增文件
 
 1. `LanMountainDesktop.Shared.Contracts/Launcher/LauncherIpc.cs` - IPC 契约
-2. `LanMountainDesktop.Launcher/Services/Ipc/LauncherIpcServer.cs` - IPC 服务端
-3. `LanMountainDesktop/Services/Launcher/LauncherIpcClient.cs` - IPC 客户端
+2. `LanMountainDesktop.Launcher/Services/Ipc/LauncherIpcServer.cs` - 历史启动进度 IPC 服务端，已由公共 IPC 通知替代
+3. `LanMountainDesktop/Services/Launcher/LauncherIpcClient.cs` - 历史启动进度 IPC 客户端，已由公共 IPC 通知替代
 4. `LanMountainDesktop.Launcher/Services/Update/UpdateInstallationService.cs` - 更新安装
 
 ### 删除文件
@@ -715,3 +715,11 @@ public class UpdateInstallationService
 - [ ] GitHub Actions 打包成功
 - [ ] 安装程序图标正常
 - [ ] 快捷方式图标正常
+
+## 2026 Multi-instance Policy Update
+
+- The old launcher progress pipe is historical only; current startup progress uses public IPC.
+- Launcher now reads Host `settings.json` for `MultiInstanceLaunchBehavior` before normal launch.
+- Existing Host behavior is policy-driven: restart app, open desktop silently, prompt only, or notify and open desktop.
+- Host no longer owns the single-instance listener or already-running prompt; repeated-launch policy lives in Launcher.
+- The repeated-launch prompt is a Fluent Launcher window; Host public IPC only exposes execution actions such as activate, restart, and exit.

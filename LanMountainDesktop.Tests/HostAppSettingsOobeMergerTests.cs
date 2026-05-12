@@ -1,4 +1,5 @@
 using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -82,6 +83,56 @@ public sealed class HostAppSettingsOobeMergerTests
         {
             var d = HostAppSettingsOobeMerger.LoadStartupDefaults(path);
             Assert.False(d.FusedPopupExperience);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("RestartApp", MultiInstanceLaunchBehavior.RestartApp)]
+    [InlineData("OpenDesktopSilently", MultiInstanceLaunchBehavior.OpenDesktopSilently)]
+    [InlineData("PromptOnly", MultiInstanceLaunchBehavior.PromptOnly)]
+    [InlineData("NotifyAndOpenDesktop", MultiInstanceLaunchBehavior.NotifyAndOpenDesktop)]
+    public void LoadMultiInstanceLaunchBehavior_ReadsStringValues(
+        string value,
+        MultiInstanceLaunchBehavior expected)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "LMD.MultiInstanceSettings", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "settings.json");
+        File.WriteAllText(path, $$"""
+        {
+          "MultiInstanceLaunchBehavior": "{{value}}"
+        }
+        """);
+
+        try
+        {
+            Assert.Equal(expected, HostAppSettingsOobeMerger.LoadMultiInstanceLaunchBehavior(path));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{ \"MultiInstanceLaunchBehavior\": \"Unknown\" }")]
+    public void LoadMultiInstanceLaunchBehavior_FallsBackToNotifyAndOpenDesktop(string json)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "LMD.MultiInstanceSettings", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "settings.json");
+        File.WriteAllText(path, json);
+
+        try
+        {
+            Assert.Equal(
+                MultiInstanceLaunchBehavior.NotifyAndOpenDesktop,
+                HostAppSettingsOobeMerger.LoadMultiInstanceLaunchBehavior(path));
         }
         finally
         {

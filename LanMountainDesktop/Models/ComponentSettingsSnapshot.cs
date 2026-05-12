@@ -84,40 +84,40 @@ public sealed class ComponentSettingsSnapshot
 
     public int ZhiJiaoHubCurrentImageIndex { get; set; } = 0;
 
-    #region Notification Box Component Settings (消息盒子组件设置)
+    #region Notification Box Component Settings
 
     /// <summary>
-    /// 组件内最大显示通知数量
+    /// Maximum number of notifications displayed by this component.
     /// </summary>
     public int NotificationBoxMaxDisplayCount { get; set; } = 50;
 
     /// <summary>
-    /// 排序方式：TimeDesc(时间倒序), TimeAsc(时间正序), AppGroup(按应用分组)
+    /// Sort order: TimeDesc, TimeAsc, AppGroup.
     /// </summary>
     public string NotificationBoxSortOrder { get; set; } = "TimeDesc";
 
     /// <summary>
-    /// 是否显示应用图标
+    /// Whether to show app icons.
     /// </summary>
     public bool NotificationBoxShowAppIcon { get; set; } = true;
 
     /// <summary>
-    /// 是否显示时间戳
+    /// Whether to show timestamps.
     /// </summary>
     public bool NotificationBoxShowTimestamp { get; set; } = true;
 
     /// <summary>
-    /// 时间格式：Relative(相对时间，如"5分钟前"), Absolute(绝对时间)
+    /// Time format: Relative or Absolute.
     /// </summary>
     public string NotificationBoxTimeFormat { get; set; } = "Relative";
 
     /// <summary>
-    /// 是否按应用分组显示
+    /// Whether to group notifications by app.
     /// </summary>
     public bool NotificationBoxGroupByApp { get; set; } = false;
 
     /// <summary>
-    /// 是否显示清除按钮
+    /// Whether to show the clear button.
     /// </summary>
     public bool NotificationBoxShowClearButton { get; set; } = true;
 

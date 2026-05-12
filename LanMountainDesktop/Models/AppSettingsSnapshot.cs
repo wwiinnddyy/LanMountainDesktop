@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Models;
 
@@ -166,6 +168,10 @@ public sealed class AppSettingsSnapshot
 
     public bool ShowInTaskbar { get; set; } = false;
 
+    [JsonConverter(typeof(JsonStringEnumConverter<MultiInstanceLaunchBehavior>))]
+    public MultiInstanceLaunchBehavior MultiInstanceLaunchBehavior { get; set; } =
+        MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+
     public bool EnableFusedDesktop { get; set; } = false;
 
     public List<string> DisabledPluginIds { get; set; } = [];
@@ -222,32 +228,37 @@ public sealed class AppSettingsSnapshot
 
     #endregion
 
-    #region Notification Box Settings (消息盒子全局设置)
+    #region Notification Box Settings
 
     /// <summary>
-    /// 启用消息盒子功能（Windows通知监听）
+    /// Enables the system notification inbox component.
     /// </summary>
     public bool NotificationBoxEnabled { get; set; } = true;
 
     /// <summary>
-    /// 隐私模式：开启后只显示"您有新的通知"，不显示具体内容
+    /// Hides notification details when unread messages are present.
     /// </summary>
     public bool NotificationBoxPrivacyMode { get; set; } = false;
 
     /// <summary>
-    /// 被屏蔽的应用列表（不接收这些应用的通知）
+    /// App IDs that should not be collected by the notification box.
     /// </summary>
     public List<string> NotificationBoxBlockedApps { get; set; } = [];
 
     /// <summary>
-    /// 历史记录保留天数
+    /// Number of days to retain notification box history.
     /// </summary>
     public int NotificationBoxHistoryRetentionDays { get; set; } = 7;
 
     /// <summary>
-    /// 最大存储通知数量（防止内存无限增长）
+    /// Maximum number of notifications kept in memory.
     /// </summary>
     public int NotificationBoxMaxStoredCount { get; set; } = 500;
+
+    /// <summary>
+    /// Linux capture mode: ProxyDaemon or PassiveMonitor.
+    /// </summary>
+    public string NotificationBoxLinuxCaptureMode { get; set; } = "ProxyDaemon";
 
     #endregion
 

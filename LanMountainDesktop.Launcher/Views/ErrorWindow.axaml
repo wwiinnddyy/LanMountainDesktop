@@ -3,16 +3,20 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:fi="using:FluentIcons.Avalonia"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Launcher.Views.ErrorWindow"
         x:DataType="views:ErrorWindow"
         Title="LanMountain Desktop"
-        Width="560"
-        Height="320"
+        Width="760"
+        Height="460"
+        MinWidth="640"
+        MinHeight="420"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
-        Background="#111318"
-        TransparencyLevelHint="None"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        TransparencyLevelHint="Mica, AcrylicBlur, None"
         Icon="/Assets/logo.ico">
   <Design.DataContext>
     <views:ErrorWindow />
@@ -20,79 +24,128 @@
 
   <Grid RowDefinitions="*,Auto">
     <Grid Grid.Row="0"
-          Margin="24"
+          Margin="28,24,28,20"
+          RowDefinitions="Auto,Auto,*"
           ColumnDefinitions="Auto,*">
       <Border x:Name="ErrorIconBorder"
               Grid.Column="0"
-              Width="52"
-              Height="52"
-              Margin="0,4,18,0"
-              Background="#2B161A"
-              CornerRadius="26"
+              Width="56"
+              Height="56"
+              Margin="0,0,18,0"
+              Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}"
+              CornerRadius="28"
               VerticalAlignment="Top">
-        <TextBlock Text="!"
-                   FontSize="24"
-                   FontWeight="Bold"
-                   Foreground="#FFB4AB"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
+        <fi:SymbolIcon Symbol="ErrorCircle"
+                       IconVariant="Regular"
+                       FontSize="28"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
       </Border>
 
       <StackPanel Grid.Column="1"
-                  Spacing="10">
+                  Spacing="8">
         <TextBlock x:Name="TitleText"
                    Text="Launcher could not confirm startup"
-                   FontSize="20"
+                   FontSize="22"
                    FontWeight="SemiBold"
-                   Foreground="#F6F7FB"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    TextWrapping="Wrap" />
 
         <TextBlock x:Name="ErrorMessageText"
                    Text="LanMountain Desktop did not reach the expected startup state."
                    FontSize="14"
-                   Foreground="#D2D7E1"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap"
                    LineHeight="22" />
-
-        <TextBlock x:Name="SuggestionText"
-                   Text="You can inspect logs, retry when the old process is gone, or reactivate the current instance."
-                   FontSize="13"
-                   Foreground="#9BA5B7"
-                   TextWrapping="Wrap"
-                   LineHeight="20" />
       </StackPanel>
+
+      <ui:FAInfoBar x:Name="SuggestionInfoBar"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Margin="0,20,0,14"
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="Warning"
+                    Title="Startup recovery"
+                    Message="You can inspect logs, wait for the current process, or activate the running desktop instance.">
+        <ui:FAInfoBar.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0288;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FAInfoBar.IconSource>
+      </ui:FAInfoBar>
+
+      <Expander Grid.Row="2"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Header="Diagnostic details"
+                IsExpanded="True">
+        <TextBox x:Name="ErrorDetailsTextBox"
+                 Margin="0,10,0,0"
+                 MinHeight="150"
+                 MaxHeight="190"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 IsReadOnly="True"
+                 BorderThickness="0"
+                 FontSize="12"
+                 Text="Stage: launch&#x0a;Code: unknown"
+                 VerticalContentAlignment="Top" />
+      </Expander>
     </Grid>
 
     <Border Grid.Row="1"
-            Padding="24,16"
-            Background="#171A21">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto"
-            ColumnSpacing="8">
-        <Button x:Name="OpenLogButton"
-                Grid.Column="0"
-                Content="Open Logs"
-                MinWidth="108"
-                Height="34"
-                HorizontalAlignment="Left" />
+            Padding="18,14"
+            Background="{DynamicResource LayerOnMicaBaseAltFillColorDefaultBrush}">
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            ColumnSpacing="12">
+        <StackPanel Grid.Column="0"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <Button x:Name="OpenLogButton"
+                  MinWidth="112"
+                  Height="34">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <fi:SymbolIcon Symbol="FolderOpen" IconVariant="Regular" FontSize="16"/>
+              <TextBlock Text="Open Logs"/>
+            </StackPanel>
+          </Button>
 
-        <Button x:Name="SecondaryActionButton"
-                Grid.Column="1"
-                Content="Wait"
-                MinWidth="108"
-                Height="34"
-                IsVisible="False" />
+          <Button x:Name="CopyDetailsButton"
+                  MinWidth="100"
+                  Height="34">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <fi:SymbolIcon Symbol="Copy" IconVariant="Regular" FontSize="16"/>
+              <TextBlock Text="Copy"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
 
-        <Button x:Name="ExitButton"
-                Grid.Column="2"
-                Content="Exit"
-                MinWidth="90"
-                Height="34" />
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="8">
+          <Button x:Name="SecondaryActionButton"
+                  Content="Wait"
+                  MinWidth="96"
+                  Height="34"
+                  IsVisible="False" />
 
-        <Button x:Name="PrimaryActionButton"
-                Grid.Column="3"
-                Content="Retry"
-                MinWidth="108"
-                Height="34" />
+          <Button x:Name="ExitButton"
+                  MinWidth="92"
+                  Height="34">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <fi:SymbolIcon Symbol="Dismiss" IconVariant="Regular" FontSize="16"/>
+              <TextBlock Text="Exit"/>
+            </StackPanel>
+          </Button>
+
+          <Button x:Name="PrimaryActionButton"
+                  Classes="accent"
+                  Content="Retry"
+                  MinWidth="112"
+                  Height="34" />
+        </StackPanel>
       </Grid>
     </Border>
   </Grid>

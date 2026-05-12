@@ -24,7 +24,7 @@
 
 | 路径 | 用途 | 常见需求 |
 | --- | --- | --- |
-| `LanMountainDesktop/Program.cs` | 进程启动主线 | 启动诊断、单实例、启动配置 |
+| `LanMountainDesktop/Program.cs` | 进程启动主线 | 启动诊断、启动配置 |
 | `LanMountainDesktop/App.axaml.cs` | 应用初始化 | 主题、语言、托盘、插件运行时、主窗口 |
 | `LanMountainDesktop/Views/` | 界面视图 | 设置页、主窗口、组件 UI |
 | `LanMountainDesktop/ViewModels/` | 视图模型 | 页面状态、命令、交互行为 |

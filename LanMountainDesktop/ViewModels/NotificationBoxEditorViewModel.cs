@@ -18,10 +18,10 @@ public sealed partial class NotificationBoxEditorViewModel : ViewModelBase
 
         MaxDisplayCountOptions = new ObservableCollection<SelectionOption>
         {
-            new("20", "20条"),
-            new("50", "50条"),
-            new("100", "100条"),
-            new("200", "200条")
+            new("20", "20 条"),
+            new("50", "50 条"),
+            new("100", "100 条"),
+            new("200", "200 条")
         };
 
         SortOrderOptions = new ObservableCollection<SelectionOption>
@@ -33,7 +33,7 @@ public sealed partial class NotificationBoxEditorViewModel : ViewModelBase
 
         TimeFormatOptions = new ObservableCollection<SelectionOption>
         {
-            new("Relative", "相对时间（如：5分钟前）"),
+            new("Relative", "相对时间（如：5 分钟前）"),
             new("Absolute", "绝对时间（如：14:30）")
         };
 
@@ -49,7 +49,7 @@ public sealed partial class NotificationBoxEditorViewModel : ViewModelBase
 
         var countValue = snapshot.NotificationBoxMaxDisplayCount.ToString();
         SelectedMaxDisplayCount = MaxDisplayCountOptions.FirstOrDefault(o => o.Value == countValue)
-            ?? MaxDisplayCountOptions[1]; // 默认50
+            ?? MaxDisplayCountOptions[1];
 
         SelectedSortOrder = SortOrderOptions.FirstOrDefault(o => o.Value == snapshot.NotificationBoxSortOrder)
             ?? SortOrderOptions[0];
@@ -78,7 +78,6 @@ public sealed partial class NotificationBoxEditorViewModel : ViewModelBase
         snapshot.NotificationBoxShowClearButton = ShowClearButton;
 
         _context.ComponentSettingsAccessor.SaveSnapshot(snapshot);
-
         _context.HostContext.RequestRefresh();
     }
 
@@ -98,7 +97,7 @@ public sealed partial class NotificationBoxEditorViewModel : ViewModelBase
     [ObservableProperty] private bool _showAppIcon = true;
     [ObservableProperty] private bool _showTimestamp = true;
     [ObservableProperty] private SelectionOption? _selectedTimeFormat;
-    [ObservableProperty] private bool _groupByApp = false;
+    [ObservableProperty] private bool _groupByApp;
     [ObservableProperty] private bool _showClearButton = true;
 
     public ObservableCollection<SelectionOption> MaxDisplayCountOptions { get; }

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using LanMountainDesktop.Models;
@@ -9,145 +11,195 @@ using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Services;
 
+public enum NotificationBoxServiceState
+{
+    NotStarted,
+    Starting,
+    Running,
+    WaitingForPermission,
+    Unsupported,
+    Degraded,
+    Failed
+}
+
+public sealed record NotificationBoxStatus(
+    NotificationBoxServiceState State,
+    string Message,
+    string CaptureMode,
+    bool CanRequestPermission = false);
+
+internal interface IPlatformNotificationListener : IDisposable
+{
+    Task<NotificationBoxStatus> InitializeAsync(CancellationToken cancellationToken = default);
+
+    Task RequestPermissionAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
 /// <summary>
-/// 跨平台通知监听服务
+/// Cross-platform notification aggregation service used by the notification box widget.
 /// </summary>
 public sealed class NotificationListenerService : IDisposable
 {
     private readonly List<NotificationItem> _notifications = [];
     private readonly object _lock = new();
     private readonly ISettingsService _settingsService;
-
-    // 平台特定的监听器
-    private LinuxNotificationListener? _linuxListener;
+    private readonly CancellationTokenSource _disposeCts = new();
+    private IPlatformNotificationListener? _platformListener;
+    private NotificationBoxStatus _status = new(
+        NotificationBoxServiceState.NotStarted,
+        "通知监听尚未启动。",
+        "None");
 
     public event EventHandler<NotificationItem>? NotificationReceived;
     public event EventHandler<string>? NotificationRemoved;
+    public event EventHandler<NotificationBoxStatus>? StatusChanged;
 
     public NotificationListenerService(ISettingsService settingsService)
     {
         _settingsService = settingsService;
     }
 
-    /// <summary>
-    /// 初始化并启动监听
-    /// </summary>
     public async Task InitializeAsync()
     {
+        SetStatus(new NotificationBoxStatus(NotificationBoxServiceState.Starting, "正在启动通知监听...", "Starting"));
+
         try
         {
+            var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            if (!settings.NotificationBoxEnabled)
+            {
+                SetStatus(new NotificationBoxStatus(NotificationBoxServiceState.Unsupported, "消息盒子已在设置中关闭。", "Disabled"));
+                return;
+            }
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // Windows: 使用 UserNotificationListener (需要Windows SDK)
-                // 当前为模拟实现
-                await InitializeWindowsAsync();
+                _platformListener = new WindowsNotificationListener(this);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                // Linux: 使用 DBus
-                await InitializeLinuxAsync();
+                _platformListener = new LinuxNotificationListener(this, settings.NotificationBoxLinuxCaptureMode);
             }
             else
             {
-                // macOS 或其他平台：功能不可用
-                Console.WriteLine("[NotificationBox] 当前平台不支持通知监听");
+                SetStatus(new NotificationBoxStatus(
+                    NotificationBoxServiceState.Unsupported,
+                    "当前平台暂不支持系统通知监听。",
+                    "Unsupported"));
+                return;
             }
+
+            var status = await _platformListener.InitializeAsync(_disposeCts.Token).ConfigureAwait(false);
+            SetStatus(status);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[NotificationBox] 初始化失败: {ex.Message}");
+            SetStatus(new NotificationBoxStatus(
+                NotificationBoxServiceState.Failed,
+                $"通知监听初始化失败：{ex.Message}",
+                "Failed"));
         }
     }
 
-    private async Task InitializeWindowsAsync()
-    {
-        // Windows通知监听实现
-        // 实际项目中需要添加Windows SDK引用并使用UserNotificationListener
-        // 由于需要UWP API，这里使用模拟实现
-        await Task.CompletedTask;
-        Console.WriteLine("[NotificationBox] Windows通知监听已启动（模拟模式）");
-    }
+    public NotificationBoxStatus GetStatus() => _status;
 
-    private async Task InitializeLinuxAsync()
+    public async Task RequestPermissionAsync(CancellationToken cancellationToken = default)
     {
+        if (_platformListener is null)
+        {
+            await InitializeAsync().ConfigureAwait(false);
+            return;
+        }
+
         try
         {
-            _linuxListener = new LinuxNotificationListener(this);
-            var success = await _linuxListener.InitializeAsync();
-
-            if (!success)
-            {
-                Console.WriteLine("[NotificationBox] Linux通知监听初始化失败，可能未运行通知守护进程");
-            }
+            await _platformListener.RequestPermissionAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[NotificationBox] Linux通知监听异常: {ex.Message}");
+            SetStatus(new NotificationBoxStatus(
+                NotificationBoxServiceState.Failed,
+                $"请求通知权限失败：{ex.Message}",
+                _status.CaptureMode,
+                CanRequestPermission: true));
         }
     }
 
-    /// <summary>
-    /// 添加通知（供平台监听器调用）
-    /// </summary>
+    public void SetStatus(NotificationBoxStatus status)
+    {
+        _status = status;
+        Dispatcher.UIThread.InvokeAsync(() => StatusChanged?.Invoke(this, status));
+    }
+
     public void AddNotification(NotificationItem notification)
     {
         var settings = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-
-        // 检查全局开关
         if (!settings.NotificationBoxEnabled)
-            return;
-
-        // 检查是否在屏蔽列表中
-        if (settings.NotificationBoxBlockedApps.Contains(notification.AppId, StringComparer.OrdinalIgnoreCase))
-            return;
-
-        lock (_lock)
         {
-            _notifications.Add(notification);
-            CleanupOldNotifications(settings);
+            return;
         }
 
-        // 在UI线程触发事件
-        Dispatcher.UIThread.InvokeAsync(() =>
+        if (settings.NotificationBoxBlockedApps.Contains(notification.AppId, StringComparer.OrdinalIgnoreCase) ||
+            settings.NotificationBoxBlockedApps.Contains(notification.AppName, StringComparer.OrdinalIgnoreCase))
         {
-            NotificationReceived?.Invoke(this, notification);
-        });
-    }
+            return;
+        }
 
-    /// <summary>
-    /// 移除通知
-    /// </summary>
-    public void RemoveNotification(string notificationId)
-    {
+        var now = DateTimeOffset.UtcNow;
+        if (notification.ReceivedAtUtc == default)
+        {
+            notification.ReceivedAtUtc = now;
+        }
+
+        if (notification.ReceivedTime == default)
+        {
+            notification.ReceivedTime = notification.ReceivedAtUtc.LocalDateTime;
+        }
+
         lock (_lock)
         {
-            var notification = _notifications.FirstOrDefault(n => n.Id == notificationId);
-            if (notification != null)
+            var existing = !string.IsNullOrWhiteSpace(notification.SourceNotificationId)
+                ? _notifications.FirstOrDefault(n =>
+                    string.Equals(n.Platform, notification.Platform, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(n.SourceNotificationId, notification.SourceNotificationId, StringComparison.OrdinalIgnoreCase))
+                : null;
+
+            if (existing is not null)
             {
-                _notifications.Remove(notification);
+                CopyNotification(notification, existing);
+                CleanupOldNotifications(settings);
+            }
+            else
+            {
+                _notifications.Add(notification);
+                CleanupOldNotifications(settings);
             }
         }
 
-        NotificationRemoved?.Invoke(this, notificationId);
+        Dispatcher.UIThread.InvokeAsync(() => NotificationReceived?.Invoke(this, notification));
     }
 
-    private void CleanupOldNotifications(AppSettingsSnapshot settings)
+    public void RemoveNotification(string notificationId)
     {
-        // 按数量清理
-        var maxCount = settings.NotificationBoxMaxStoredCount;
-        while (_notifications.Count > maxCount)
+        var removed = false;
+        lock (_lock)
         {
-            _notifications.RemoveAt(0);
+            var notification = _notifications.FirstOrDefault(n =>
+                string.Equals(n.Id, notificationId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(n.SourceNotificationId, notificationId, StringComparison.OrdinalIgnoreCase));
+            if (notification != null)
+            {
+                _notifications.Remove(notification);
+                removed = true;
+            }
         }
 
-        // 按时间清理
-        var cutoffDate = DateTime.Now.AddDays(-settings.NotificationBoxHistoryRetentionDays);
-        _notifications.RemoveAll(n => n.ReceivedTime < cutoffDate);
+        if (removed)
+        {
+            Dispatcher.UIThread.InvokeAsync(() => NotificationRemoved?.Invoke(this, notificationId));
+        }
     }
 
-    /// <summary>
-    /// 获取所有通知
-    /// </summary>
     public IReadOnlyList<NotificationItem> GetNotifications()
     {
         lock (_lock)
@@ -156,20 +208,16 @@ public sealed class NotificationListenerService : IDisposable
         }
     }
 
-    /// <summary>
-    /// 清空所有通知
-    /// </summary>
     public void ClearAll()
     {
         lock (_lock)
         {
             _notifications.Clear();
         }
+
+        Dispatcher.UIThread.InvokeAsync(() => StatusChanged?.Invoke(this, _status));
     }
 
-    /// <summary>
-    /// 标记通知为已读
-    /// </summary>
     public void MarkAsRead(string notificationId)
     {
         lock (_lock)
@@ -182,9 +230,6 @@ public sealed class NotificationListenerService : IDisposable
         }
     }
 
-    /// <summary>
-    /// 获取未读通知数量
-    /// </summary>
     public int GetUnreadCount()
     {
         lock (_lock)
@@ -193,9 +238,187 @@ public sealed class NotificationListenerService : IDisposable
         }
     }
 
+    public bool TryActivate(NotificationItem notification)
+    {
+        if (!notification.CanActivate)
+        {
+            return false;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return TryLaunchWindows(notification);
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return TryLaunchLinux(notification);
+        }
+
+        return false;
+    }
+
+    private static bool TryLaunchWindows(NotificationItem notification)
+    {
+        try
+        {
+            var target = notification.LaunchTarget;
+            if (string.IsNullOrWhiteSpace(target) && !string.IsNullOrWhiteSpace(notification.Aumid))
+            {
+                target = $"shell:AppsFolder\\{notification.Aumid}";
+            }
+
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+
+            if (target.StartsWith("shell:AppsFolder\\", StringComparison.OrdinalIgnoreCase))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = target,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = target,
+                    UseShellExecute = true
+                });
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryLaunchLinux(NotificationItem notification)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(notification.DesktopEntryId))
+            {
+                var root = new LinuxDesktopEntryService().Load();
+                var entry = EnumerateApps(root).FirstOrDefault(app =>
+                    string.Equals(app.RelativePath, notification.DesktopEntryId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(app.RelativePath, $"{notification.DesktopEntryId}.desktop", StringComparison.OrdinalIgnoreCase));
+                if (entry is not null && !string.IsNullOrWhiteSpace(entry.LaunchExecutable))
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = entry.LaunchExecutable,
+                        UseShellExecute = false
+                    };
+                    foreach (var argument in entry.LaunchArguments)
+                    {
+                        startInfo.ArgumentList.Add(argument);
+                    }
+                    if (!string.IsNullOrWhiteSpace(entry.WorkingDirectory))
+                    {
+                        startInfo.WorkingDirectory = entry.WorkingDirectory;
+                    }
+                    Process.Start(startInfo);
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(notification.LaunchTarget))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = notification.LaunchTarget,
+                    UseShellExecute = true
+                });
+                return true;
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
+    private void CleanupOldNotifications(AppSettingsSnapshot settings)
+    {
+        var maxCount = Math.Max(1, settings.NotificationBoxMaxStoredCount);
+        while (_notifications.Count > maxCount)
+        {
+            _notifications.RemoveAt(0);
+        }
+
+        var cutoffDate = DateTime.Now.AddDays(-Math.Max(1, settings.NotificationBoxHistoryRetentionDays));
+        _notifications.RemoveAll(n => n.ReceivedTime < cutoffDate);
+    }
+
+    private static IEnumerable<StartMenuAppEntry> EnumerateApps(StartMenuFolderNode node)
+    {
+        foreach (var app in node.Apps)
+        {
+            yield return app;
+        }
+
+        foreach (var folder in node.Folders)
+        {
+            foreach (var app in EnumerateApps(folder))
+            {
+                yield return app;
+            }
+        }
+    }
+
+    private static void CopyNotification(NotificationItem source, NotificationItem target)
+    {
+        target.AppId = source.AppId;
+        target.AppName = source.AppName;
+        target.AppIconPath = source.AppIconPath;
+        target.AppIconBytes = source.AppIconBytes;
+        target.Title = source.Title;
+        target.Content = source.Content;
+        target.ReceivedTime = source.ReceivedTime;
+        target.ReceivedAtUtc = source.ReceivedAtUtc;
+        target.LaunchArgs = source.LaunchArgs;
+        target.Platform = source.Platform;
+        target.SourceNotificationId = source.SourceNotificationId;
+        target.DesktopEntryId = source.DesktopEntryId;
+        target.Aumid = source.Aumid;
+        target.LaunchTarget = source.LaunchTarget;
+        target.CanActivate = source.CanActivate;
+        target.CaptureMode = source.CaptureMode;
+    }
+
     public void Dispose()
     {
-        _linuxListener?.Dispose();
+        _disposeCts.Cancel();
+        _platformListener?.Dispose();
+        _disposeCts.Dispose();
         ClearAll();
+    }
+}
+
+public static class NotificationListenerServiceProvider
+{
+    private static readonly object Gate = new();
+    private static NotificationListenerService? _instance;
+
+    public static NotificationListenerService GetOrCreate(ISettingsService settingsService)
+    {
+        lock (Gate)
+        {
+            if (_instance == null)
+            {
+                _instance = new NotificationListenerService(settingsService);
+                _ = _instance.InitializeAsync();
+            }
+
+            return _instance;
+        }
     }
 }

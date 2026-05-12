@@ -232,6 +232,7 @@ public partial class TransparentOverlayWindow : Window
         }
 
         Dispatcher.UIThread.Post(UpdateInteractiveRegions, DispatcherPriority.Background);
+        DispatcherTimer.RunOnce(LogTransparencyDiagnostics, TimeSpan.FromMilliseconds(250));
     }
 
     protected override void OnClosed(EventArgs e)
@@ -264,6 +265,22 @@ public partial class TransparentOverlayWindow : Window
         Position = new PixelPoint(workArea.X, workArea.Y);
         Width = workArea.Width / scaling;
         Height = workArea.Height / scaling;
+    }
+
+    private void LogTransparencyDiagnostics()
+    {
+        var actualTransparency = ActualTransparencyLevel;
+        if (actualTransparency == WindowTransparencyLevel.Transparent)
+        {
+            AppLogger.Info(
+                "TransparentOverlay",
+                $"ActualTransparencyLevel={actualTransparency}; overlay should be visually transparent.");
+            return;
+        }
+
+        AppLogger.Warn(
+            "TransparentOverlay",
+            $"ActualTransparencyLevel={actualTransparency}; expected Transparent. The platform, window styles, or desktop host attachment may be preventing true transparency.");
     }
 
     private void EnsureGridContext()

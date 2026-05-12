@@ -236,6 +236,7 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
         Languages = CreateLanguageOptions();
         RenderModes = CreateRenderModeOptions();
+        MultiInstanceLaunchBehaviors = CreateMultiInstanceLaunchBehaviorOptions();
         TimeZones = CreateTimeZoneOptions();
         RefreshLocalizedText();
 
@@ -252,6 +253,10 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
+        SelectedMultiInstanceLaunchBehavior = MultiInstanceLaunchBehaviors.FirstOrDefault(option =>
+            string.Equals(option.Value, appSnapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
+            ?? MultiInstanceLaunchBehaviors.First(option =>
+                string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
         ApplyTransitionPreferences(appSnapshot.EnableFadeTransition, appSnapshot.EnableSlideTransition);
         ShowInTaskbar = appSnapshot.ShowInTaskbar;
         _isInitializing = false;
@@ -297,6 +302,15 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             ShowInTaskbar = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
         }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedMultiInstanceLaunchBehavior = MultiInstanceLaunchBehaviors.FirstOrDefault(option =>
+                string.Equals(option.Value, snapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
+                ?? MultiInstanceLaunchBehaviors.First(option =>
+                    string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     public event Action? RestartRequested;
@@ -304,6 +318,8 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     public IReadOnlyList<SelectionOption> Languages { get; }
 
     public IReadOnlyList<SelectionOption> RenderModes { get; }
+
+    public IReadOnlyList<SelectionOption> MultiInstanceLaunchBehaviors { get; }
 
     public IReadOnlyList<TimeZoneOption> TimeZones { get; }
 
@@ -315,6 +331,10 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private SelectionOption _selectedRenderMode = new(AppRenderingModeHelper.Default, "Default");
+
+    [ObservableProperty]
+    private SelectionOption _selectedMultiInstanceLaunchBehavior =
+        new(MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), "Notify and open desktop");
 
     [ObservableProperty]
     private bool _enableFadeTransition = true;
@@ -339,6 +359,12 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private string _showInTaskbarDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _multiInstanceLaunchBehaviorHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _multiInstanceLaunchBehaviorDescription = string.Empty;
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
@@ -447,6 +473,21 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         }
     }
 
+    partial void OnSelectedMultiInstanceLaunchBehaviorChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        if (!Enum.TryParse<MultiInstanceLaunchBehavior>(value.Value, ignoreCase: true, out var behavior))
+        {
+            behavior = MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+        }
+
+        SaveField(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), behavior);
+    }
+
     partial void OnEnableSlideTransitionChanged(bool value)
     {
         if (_isInitializing)
@@ -537,6 +578,25 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         ];
     }
 
+    private IReadOnlyList<SelectionOption> CreateMultiInstanceLaunchBehaviorOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.RestartApp.ToString(),
+                L("settings.general.multi_instance_behavior.restart", "Restart app")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.OpenDesktopSilently.ToString(),
+                L("settings.general.multi_instance_behavior.open_silently", "Open desktop without prompt")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.PromptOnly.ToString(),
+                L("settings.general.multi_instance_behavior.prompt_only", "Show prompt only")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(),
+                L("settings.general.multi_instance_behavior.notify_and_open", "Notify and open desktop"))
+        ];
+    }
+
     private IReadOnlyList<TimeZoneOption> CreateTimeZoneOptions()
     {
         return _timeZoneService
@@ -576,6 +636,12 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         ShowInTaskbarDescription = L(
             "settings.general.show_main_window_taskbar_desc",
             "Keep the main desktop host window visible in the taskbar. The independent settings window always has its own taskbar entry.");
+        MultiInstanceLaunchBehaviorHeader = L(
+            "settings.general.multi_instance_behavior_header",
+            "When opening the app again");
+        MultiInstanceLaunchBehaviorDescription = L(
+            "settings.general.multi_instance_behavior_desc",
+            "Choose how Launcher handles repeated launches while LanMountain Desktop is already running.");
     }
 
     private void RefreshPreview()

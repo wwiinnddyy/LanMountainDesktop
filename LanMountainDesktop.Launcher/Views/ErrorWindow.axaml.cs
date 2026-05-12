@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -33,9 +35,21 @@ public partial class ErrorWindow : Window
 
     public void SetErrorMessage(string message)
     {
+        var normalizedMessage = string.IsNullOrWhiteSpace(message)
+            ? "LanMountain Desktop did not reach the expected startup state."
+            : message.Trim();
+        var firstLine = normalizedMessage
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? normalizedMessage;
+
         if (this.FindControl<TextBlock>("ErrorMessageText") is { } errorText)
         {
-            errorText.Text = message;
+            errorText.Text = firstLine;
+        }
+
+        if (this.FindControl<TextBox>("ErrorDetailsTextBox") is { } detailsTextBox)
+        {
+            detailsTextBox.Text = normalizedMessage;
         }
     }
 
@@ -120,6 +134,11 @@ public partial class ErrorWindow : Window
         {
             openLogButton.Click += OnOpenLogClick;
         }
+
+        if (this.FindControl<Button>("CopyDetailsButton") is { } copyDetailsButton)
+        {
+            copyDetailsButton.Click += OnCopyDetailsClick;
+        }
     }
 
     private void ApplyActionLayout(
@@ -138,9 +157,9 @@ public partial class ErrorWindow : Window
             titleText.Text = title;
         }
 
-        if (this.FindControl<TextBlock>("SuggestionText") is { } suggestionText)
+        if (this.FindControl<FAInfoBar>("SuggestionInfoBar") is { } suggestionInfoBar)
         {
-            suggestionText.Text = suggestion;
+            suggestionInfoBar.Message = suggestion;
         }
 
         if (this.FindControl<Button>("PrimaryActionButton") is { } primaryButton)
@@ -241,6 +260,28 @@ public partial class ErrorWindow : Window
         }
 
         await Task.CompletedTask;
+    }
+
+    private async void OnCopyDetailsClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var details = this.FindControl<TextBox>("ErrorDetailsTextBox")?.Text;
+            if (string.IsNullOrWhiteSpace(details))
+            {
+                details = this.FindControl<TextBlock>("ErrorMessageText")?.Text;
+            }
+
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard is not null && !string.IsNullOrWhiteSpace(details))
+            {
+                await clipboard.SetTextAsync(details);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ErrorWindow] Failed to copy diagnostics: {ex}");
+        }
     }
 
     private void ScanDevPaths()

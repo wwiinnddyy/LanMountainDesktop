@@ -82,6 +82,7 @@ public partial class MainWindow : Window
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableFadeTransition), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableSlideTransition), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
@@ -685,6 +686,7 @@ public partial class MainWindow : Window
             EnableFadeTransition = existingSnapshot.EnableFadeTransition,
             EnableSlideTransition = existingSnapshot.EnableSlideTransition,
             ShowInTaskbar = existingSnapshot.ShowInTaskbar,
+            MultiInstanceLaunchBehavior = existingSnapshot.MultiInstanceLaunchBehavior,
             EnableFusedDesktop = existingSnapshot.EnableFusedDesktop,
             DisabledPluginIds = existingSnapshot.DisabledPluginIds,
             StudyFrameMs = existingSnapshot.StudyFrameMs,

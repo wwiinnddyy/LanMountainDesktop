@@ -6,14 +6,15 @@
             BorderBrush="{DynamicResource AdaptiveButtonBorderBrush}"
             BorderThickness="1"
             CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
-            Padding="14,12">
+            Padding="0">
         <Grid x:Name="LayoutGrid"
               RowDefinitions="Auto,*">
             <Grid x:Name="HeaderGrid"
-                  ColumnDefinitions="*,Auto">
+                  ColumnDefinitions="Auto,*,Auto"
+                  Margin="16,12,16,8">
                 <StackPanel x:Name="DateGroup"
                             Orientation="Horizontal"
-                            VerticalAlignment="Top">
+                            VerticalAlignment="Center">
                     <TextBlock x:Name="MonthTextBlock"
                                Text="7"
                                FontWeight="Bold"
@@ -27,21 +28,24 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <StackPanel x:Name="MetaStack"
-                            Grid.Column="1"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top">
-                    <TextBlock x:Name="WeekdayTextBlock"
-                               Text="周一"
-                               TextAlignment="Right"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="WeekdayTextBlock"
+                           Grid.Column="1"
+                           Text="周一"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+
+                <Border x:Name="ClassCountBadge"
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Padding="8,3"
+                        CornerRadius="{DynamicResource DesignCornerRadiusMicro}">
                     <TextBlock x:Name="ClassCountTextBlock"
                                Text="0节课"
-                               TextAlignment="Right"
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis" />
-                </StackPanel>
+                </Border>
             </Grid>
 
             <Grid Grid.Row="1">

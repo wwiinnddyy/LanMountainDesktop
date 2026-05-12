@@ -12,3 +12,10 @@
 - [x] 修复主窗口入场、通知定位和 Launcher OOBE 的高分屏动画/定位问题。
 - [x] 补充规格与版本同步说明文档。
 - [ ] 追加针对托盘恢复和启动判定的自动化回归测试。
+
+- [x] Remove the legacy `LanMountainDesktop_Launcher` startup progress pipe; launcher progress now uses public IPC plus host exit-code classification only.
+- [x] Move normal multi-open probing into Launcher before host launch and remove Host-side single-instance prompt/listener code.
+- [x] Refresh the Launcher error window with Fluent resources, InfoBar, Fluent icons, command bar actions, and copyable diagnostic details.
+- [x] Add app-level `MultiInstanceLaunchBehavior` setting and expose it in General > Basic Settings.
+- [x] Make Launcher apply restart/open silently/prompt only/notify and open behavior before starting a new Host.
+- [x] Add a Fluent Launcher multi-instance prompt; Host public IPC stays limited to activation/status/restart/exit actions.

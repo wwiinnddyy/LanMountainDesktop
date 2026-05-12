@@ -112,6 +112,15 @@ public partial class App : Application
                 _ = WaitForWindowCloseAsync(desktop, errorWindow);
                 return true;
             }
+            case "preview-multi-instance":
+            {
+                Logger.Info("Preview command: multi-instance prompt.");
+                var promptWindow = new MultiInstancePromptWindow();
+                promptWindow.SetDetails(Environment.ProcessId, "ForegroundDesktop");
+                promptWindow.Show();
+                _ = WaitForWindowCloseAsync(desktop, promptWindow);
+                return true;
+            }
             case "preview-update":
             {
                 Logger.Info("Preview command: update.");

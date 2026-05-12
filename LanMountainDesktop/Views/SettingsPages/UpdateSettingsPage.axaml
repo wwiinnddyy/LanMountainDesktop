@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LanMountainDesktop.ViewModels"
+             xmlns:controls="using:LanMountainDesktop.Controls"
              xmlns:ui="using:FluentAvalonia.UI.Controls"
              xmlns:fi="using:FluentIcons.Avalonia"
              x:Class="LanMountainDesktop.Views.SettingsPages.UpdateSettingsPage"
@@ -9,295 +10,263 @@
     <StackPanel Classes="settings-page-container settings-page-animated">
       <StackPanel Spacing="6">
         <TextBlock Classes="settings-section-title"
-                   Text="Update" />
+                   Text="{Binding PageTitle}" />
         <TextBlock Classes="settings-section-description"
-                   Text="Check for updates, watch download and install progress, and keep the update workflow recoverable from this page." />
+                   Text="{Binding PageDescription}" />
       </StackPanel>
 
-      <Border Classes="settings-section-card">
-        <Grid ColumnDefinitions="Auto,*,Auto"
-              ColumnSpacing="16">
-          <Border Classes="settings-section-card-icon-host"
-                  Width="56"
-                  Height="56"
-                  Padding="10">
-            <fi:SymbolIcon Symbol="ArrowSync"
-                           FontSize="22" />
-          </Border>
+      <controls:IconText Icon="ArrowSync"
+                         Text="{Binding StatusSectionHeader}"
+                         Margin="0,0,0,4" />
 
-          <StackPanel Grid.Column="1"
-                      Spacing="6"
-                      VerticalAlignment="Center">
-            <TextBlock Classes="settings-card-header"
-                       Text="Current update status" />
-            <TextBlock Classes="settings-card-description"
-                       Text="The status line below reflects the current update phase and any contextual message returned by the orchestrator." />
-            <TextBlock Text="{Binding StatusMessage}"
-                       TextWrapping="Wrap"
-                       FontSize="22"
-                       FontWeight="SemiBold"
-                       Margin="0,4,0,0" />
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        Margin="0,4,0,0">
-              <Border Background="#223D5979"
-                      BorderBrush="#326D8FB7"
-                      BorderThickness="1"
-                      CornerRadius="999"
-                      Padding="10,4">
-                <TextBlock Text="{Binding PhaseText}"
-                           FontSize="12"
-                           FontWeight="SemiBold" />
-              </Border>
-              <Border Background="#223D5979"
-                      BorderBrush="#326D8FB7"
-                      BorderThickness="1"
-                      CornerRadius="999"
-                      Padding="10,4"
-                      IsVisible="{Binding IsUpdateAvailable}">
-                <TextBlock Text="Update available"
-                           FontSize="12"
-                           FontWeight="SemiBold" />
-              </Border>
-              <Border Background="#223D5979"
-                      BorderBrush="#326D8FB7"
-                      BorderThickness="1"
-                      CornerRadius="999"
-                      Padding="10,4"
-                      IsVisible="{Binding IsPaused}">
-                <TextBlock Text="Paused"
-                           FontSize="12"
-                           FontWeight="SemiBold" />
-              </Border>
-            </StackPanel>
-          </StackPanel>
+      <ui:FASettingsExpander Header="{Binding CheckCardTitle}"
+                             Description="{Binding StatusMessage}"
+                             IsClickEnabled="{Binding CanCheck}"
+                             Command="{Binding CheckCommand}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0288;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <Button Classes="settings-accent-button"
+                  Content="{Binding CheckButtonText}"
+                  Command="{Binding CheckCommand}"
+                  IsEnabled="{Binding CanCheck}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
 
-          <StackPanel Grid.Column="2"
-                      Spacing="10"
+      <ui:FASettingsExpander Header="{Binding ProgressTitle}"
+                             Description="{Binding ProgressDescription}"
+                             IsVisible="{Binding IsProgressSectionVisible}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0BB2;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
                       VerticalAlignment="Center">
-            <Button Classes="settings-accent-button"
-                    Content="Check for updates"
-                    Command="{Binding CheckCommand}" />
+            <TextBlock Classes="settings-item-label"
+                       Text="{Binding PhaseText}"
+                       VerticalAlignment="Center" />
             <TextBlock Classes="settings-item-description"
-                       Text="{Binding LastCheckedText}"
-                       TextAlignment="Right"
-                       TextWrapping="Wrap"
-                       Width="220" />
+                       Text="{Binding ProgressFraction, StringFormat='{}{0:P0}'}"
+                       VerticalAlignment="Center" />
           </StackPanel>
-        </Grid>
-      </Border>
-
-      <Border Classes="settings-section-card">
-        <StackPanel Spacing="12">
-          <TextBlock Classes="settings-card-header"
-                     Text="Release facts" />
-          <TextBlock Classes="settings-card-description"
-                     Text="Keep the current version, published release, and update type visible without collapsing the layout while states change." />
-
-          <Grid RowDefinitions="Auto,Auto,Auto"
-                ColumnDefinitions="*,*"
-                ColumnSpacing="12"
-                RowSpacing="12">
-            <Border Classes="settings-list-item">
-              <StackPanel Classes="settings-item">
-                <TextBlock Classes="settings-item-label"
-                           Text="Current version" />
-                <TextBlock Classes="settings-item-description"
-                           Text="{Binding CurrentVersionText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border Grid.Column="1"
-                    Classes="settings-list-item">
-              <StackPanel Classes="settings-item">
-                <TextBlock Classes="settings-item-label"
-                           Text="Latest version" />
-                <TextBlock Classes="settings-item-description"
-                           Text="{Binding LatestVersionText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border Grid.Row="1"
-                    Classes="settings-list-item">
-              <StackPanel Classes="settings-item">
-                <TextBlock Classes="settings-item-label"
-                           Text="Published at" />
-                <TextBlock Classes="settings-item-description"
-                           Text="{Binding PublishedAtText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border Grid.Row="1"
-                    Grid.Column="1"
-                    Classes="settings-list-item">
-              <StackPanel Classes="settings-item">
-                <TextBlock Classes="settings-item-label"
-                           Text="Last checked" />
-                <TextBlock Classes="settings-item-description"
-                           Text="{Binding LastCheckedText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border Grid.Row="2"
-                    Grid.ColumnSpan="2"
-                    Classes="settings-list-item">
-              <StackPanel Classes="settings-item">
-                <TextBlock Classes="settings-item-label"
-                           Text="Update type" />
-                <TextBlock Classes="settings-item-description"
-                           Text="{Binding UpdateTypeText}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </Grid>
-        </StackPanel>
-      </Border>
-
-      <Border Classes="settings-section-card">
-        <StackPanel Spacing="12">
-          <TextBlock Classes="settings-card-header"
-                     Text="Progress" />
-          <TextBlock Classes="settings-card-description"
-                     Text="Watch download, installation, verification, and recovery progress here." />
-
-          <StackPanel Spacing="10">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="12">
-              <TextBlock Classes="settings-item-label"
-                         Text="{Binding PhaseText}" />
-              <TextBlock Classes="settings-item-description"
-                         Text="{Binding ProgressFraction, StringFormat='{}{0:P0}'}"
-                         HorizontalAlignment="Right" />
-            </Grid>
-
+        </ui:FASettingsExpander.Footer>
+        <ui:FASettingsExpanderItem>
+          <StackPanel Spacing="12">
             <ProgressBar Minimum="0"
                          Maximum="1"
                          Value="{Binding ProgressFraction}"
-                         Height="12"
                          IsVisible="{Binding IsProgressVisible}" />
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="10"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsBusy}">
+              <ui:FAProgressRing Width="20"
+                                 Height="20"
+                                 IsIndeterminate="True" />
+              <TextBlock Classes="settings-item-description"
+                         Text="{Binding ProgressDetail}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
 
             <TextBlock Classes="settings-item-description"
                        Text="{Binding ProgressDetail}"
-                       TextWrapping="Wrap" />
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding !IsBusy}" />
 
-            <Border Background="#223D5979"
-                    BorderBrush="#326D8FB7"
-                    BorderThickness="1"
-                    CornerRadius="10"
-                    Padding="12"
-                    IsVisible="{Binding IsPaused}">
-              <TextBlock Classes="settings-item-description"
-                         Text="Paused. Resume to continue from the current state." />
-            </Border>
+            <ui:FAInfoBar Title="{Binding PausedBadgeText}"
+                          Message="{Binding PausedHintText}"
+                          IsOpen="True"
+                          IsClosable="False"
+                          IsVisible="{Binding IsPaused}">
+              <ui:FAInfoBar.IconSource>
+                <ui:FAFontIconSource Glyph="&#xF28D;"
+                                     FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+              </ui:FAInfoBar.IconSource>
+            </ui:FAInfoBar>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanDownload}">
+              <Button Classes="settings-accent-button"
+                      Content="{Binding DownloadButtonText}"
+                      Command="{Binding DownloadCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanInstall}">
+              <Button Classes="settings-accent-button"
+                      Content="{Binding InstallButtonText}"
+                      Command="{Binding InstallCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanPause}">
+              <Button Content="{Binding PauseButtonText}"
+                      Command="{Binding PauseCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanResume}">
+              <Button Classes="settings-accent-button"
+                      Content="{Binding ResumeButtonText}"
+                      Command="{Binding ResumeCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanRollback}">
+              <Button Content="{Binding RollbackButtonText}"
+                      Command="{Binding RollbackCommand}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        IsVisible="{Binding CanCancel}">
+              <Button Content="{Binding CancelButtonText}"
+                      Command="{Binding CancelCommand}" />
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
-      </Border>
+        </ui:FASettingsExpanderItem>
+      </ui:FASettingsExpander>
 
-      <Border Classes="settings-section-card">
-        <StackPanel Spacing="12">
-          <TextBlock Classes="settings-card-header"
-                     Text="Actions" />
-          <TextBlock Classes="settings-card-description"
-                     Text="The buttons below stay in place while the update phase changes, so the page does not jump around." />
+      <Separator Classes="settings-separator" />
 
-          <Grid ColumnDefinitions="*,*,*"
-                RowDefinitions="Auto,Auto,Auto"
-                ColumnSpacing="12"
-                RowSpacing="10">
-            <Button Classes="settings-accent-button"
-                    Content="Check"
-                    Command="{Binding CheckCommand}" />
-            <Button Grid.Column="1"
-                    Content="Download"
-                    Command="{Binding DownloadCommand}" />
-            <Button Grid.Column="2"
-                    Content="Install"
-                    Command="{Binding InstallCommand}" />
+      <controls:IconText Icon="Info"
+                         Text="{Binding ReleaseFactsTitle}"
+                         Margin="0,0,0,4" />
 
-            <Button Grid.Row="1"
-                    Content="Pause"
-                    Command="{Binding PauseCommand}" />
-            <Button Grid.Row="1"
-                    Grid.Column="1"
-                    Content="Resume"
-                    Command="{Binding ResumeCommand}" />
-            <Button Grid.Row="1"
-                    Grid.Column="2"
-                    Content="Rollback"
-                    Command="{Binding RollbackCommand}" />
+      <ui:FASettingsExpander Header="{Binding CurrentVersionLabel}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0288;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <TextBlock Classes="settings-item-description"
+                     Text="{Binding CurrentVersionText}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
 
-            <Button Grid.Row="2"
-                    Grid.ColumnSpan="3"
-                    Content="Cancel"
-                    Command="{Binding CancelCommand}" />
-          </Grid>
-        </StackPanel>
-      </Border>
+      <ui:FASettingsExpander Header="{Binding LatestVersionLabel}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0B4E;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <TextBlock Classes="settings-item-description"
+                     Text="{Binding LatestVersionDisplayText}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
 
-      <ui:FASettingsExpander Classes="settings-expander-card"
-                             Header="Update preferences"
-                             Description="Choose the update channel, download source, mode, and thread count without leaving this page.">
+      <ui:FASettingsExpander Header="{Binding PublishedAtLabel}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0168;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <TextBlock Classes="settings-item-description"
+                     Text="{Binding PublishedAtText}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
+
+      <ui:FASettingsExpander Header="{Binding LastCheckedLabel}">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0B4E;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpander.Footer>
+          <TextBlock Classes="settings-item-description"
+                     Text="{Binding LastCheckedText}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
+
+      <ui:FASettingsExpander Header="{Binding UpdateTypeLabel}">
         <ui:FASettingsExpander.IconSource>
           <ui:FAFontIconSource Glyph="&#xF0504;"
                                FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
         </ui:FASettingsExpander.IconSource>
-        <ui:FASettingsExpanderItem>
-          <StackPanel Spacing="12">
-            <Grid ColumnDefinitions="180,*"
-                  RowDefinitions="Auto,Auto,Auto,Auto"
-                  RowSpacing="10"
-                  ColumnSpacing="12">
-              <TextBlock Grid.Row="0"
-                         Classes="settings-item-label"
-                         Text="Channel"
-                         VerticalAlignment="Center" />
-              <TextBox Grid.Row="0"
-                       Grid.Column="1"
-                       Text="{Binding SelectedUpdateChannelValue}"
-                       Watermark="stable / preview" />
+        <ui:FASettingsExpander.Footer>
+          <TextBlock Classes="settings-item-description"
+                     Text="{Binding UpdateTypeText}" />
+        </ui:FASettingsExpander.Footer>
+      </ui:FASettingsExpander>
 
-              <TextBlock Grid.Row="1"
-                         Classes="settings-item-label"
-                         Text="Source"
-                         VerticalAlignment="Center" />
-              <TextBox Grid.Row="1"
-                       Grid.Column="1"
-                       Text="{Binding SelectedUpdateSourceValue}"
-                       Watermark="plonds / github / proxy" />
+      <Separator Classes="settings-separator" />
 
-              <TextBlock Grid.Row="2"
-                         Classes="settings-item-label"
-                         Text="Mode"
-                         VerticalAlignment="Center" />
-              <TextBox Grid.Row="2"
-                       Grid.Column="1"
-                       Text="{Binding SelectedUpdateModeValue}"
-                       Watermark="manual / confirm / silent" />
+      <controls:IconText Icon="Settings"
+                         Text="{Binding PreferencesTitle}"
+                         Margin="0,0,0,4" />
 
-              <TextBlock Grid.Row="3"
-                         Classes="settings-item-label"
-                         Text="Download threads"
+      <ui:FASettingsExpander Header="{Binding PreferencesTitle}"
+                             Description="{Binding PreferencesDescription}"
+                             IsExpanded="True">
+        <ui:FASettingsExpander.IconSource>
+          <ui:FAFontIconSource Glyph="&#xF0504;"
+                               FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+        </ui:FASettingsExpander.IconSource>
+        <ui:FASettingsExpanderItem Content="{Binding ChannelLabel}">
+          <ui:FASettingsExpanderItem.IconSource>
+            <ui:FAFontIconSource Glyph="&#xF0908;"
+                                 FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+          </ui:FASettingsExpanderItem.IconSource>
+          <ui:FASettingsExpanderItem.Footer>
+            <ComboBox Width="220"
+                      ItemsSource="{Binding ChannelOptions}"
+                      SelectedItem="{Binding SelectedChannel}"
+                      DisplayMemberBinding="{Binding Label}" />
+          </ui:FASettingsExpanderItem.Footer>
+        </ui:FASettingsExpanderItem>
+        <ui:FASettingsExpanderItem Content="{Binding SourceLabel}">
+          <ui:FASettingsExpanderItem.IconSource>
+            <ui:FAFontIconSource Glyph="&#xF0B4E;"
+                                 FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+          </ui:FASettingsExpanderItem.IconSource>
+          <ui:FASettingsExpanderItem.Footer>
+            <ComboBox Width="220"
+                      ItemsSource="{Binding SourceOptions}"
+                      SelectedItem="{Binding SelectedSource}"
+                      DisplayMemberBinding="{Binding Label}" />
+          </ui:FASettingsExpanderItem.Footer>
+        </ui:FASettingsExpanderItem>
+        <ui:FASettingsExpanderItem Content="{Binding ModeLabel}">
+          <ui:FASettingsExpanderItem.IconSource>
+            <ui:FAFontIconSource Glyph="&#xF08E8;"
+                                 FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+          </ui:FASettingsExpanderItem.IconSource>
+          <ui:FASettingsExpanderItem.Footer>
+            <ComboBox Width="220"
+                      ItemsSource="{Binding ModeOptions}"
+                      SelectedItem="{Binding SelectedMode}"
+                      DisplayMemberBinding="{Binding Label}" />
+          </ui:FASettingsExpanderItem.Footer>
+        </ui:FASettingsExpanderItem>
+        <ui:FASettingsExpanderItem Content="{Binding DownloadThreadsLabel}">
+          <ui:FASettingsExpanderItem.IconSource>
+            <ui:FAFontIconSource Glyph="&#xF0168;"
+                                 FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+          </ui:FASettingsExpanderItem.IconSource>
+          <ui:FASettingsExpanderItem.Footer>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center">
+              <Slider Width="140"
+                      Minimum="1"
+                      Maximum="16"
+                      Value="{Binding DownloadThreadsSliderValue}"
+                      TickFrequency="1"
+                      IsSnapToTickEnabled="True" />
+              <TextBlock Classes="settings-item-label"
+                         Text="{Binding DownloadThreadsSliderValue, StringFormat='{}{0:F0}'}"
                          VerticalAlignment="Center" />
-              <StackPanel Grid.Row="3"
-                          Grid.Column="1"
-                          Orientation="Horizontal"
-                          Spacing="8">
-                <Slider Width="220"
-                        Minimum="1"
-                        Maximum="16"
-                        Value="{Binding DownloadThreadsSliderValue}"
-                        TickFrequency="1"
-                        IsSnapToTickEnabled="True" />
-                <TextBlock Classes="settings-item-label"
-                           Text="{Binding DownloadThreadsSliderValue, StringFormat='{}{0:F0}'}"
-                           VerticalAlignment="Center" />
-              </StackPanel>
-            </Grid>
-          </StackPanel>
+            </StackPanel>
+          </ui:FASettingsExpanderItem.Footer>
         </ui:FASettingsExpanderItem>
       </ui:FASettingsExpander>
     </StackPanel>
