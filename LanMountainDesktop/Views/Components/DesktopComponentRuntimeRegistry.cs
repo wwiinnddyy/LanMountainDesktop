@@ -333,6 +333,10 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.desktop_clock",
                     () => new AnalogClockWidget()),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopWeatherClock,
+                    "component.weather_clock",
+                    () => new WeatherClockWidget()),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopWorldClock,
                     "component.world_clock",
                     () => new WorldClockWidget()),
@@ -340,6 +344,22 @@ public sealed class DesktopComponentRuntimeRegistry
                     BuiltInComponentIds.DesktopTimer,
                     "component.desktop_timer",
                     () => new TimerWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopWeather,
+                    "component.desktop_weather",
+                    () => new WeatherWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopHourlyWeather,
+                    "component.hourly_weather",
+                    () => new HourlyWeatherWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopMultiDayWeather,
+                    "component.multiday_weather",
+                    () => new MultiDayWeatherWidget()),
+                new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopExtendedWeather,
+                    "component.extended_weather",
+                    () => new ExtendedWeatherWidget()),
                 new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopClassSchedule,
                     "component.class_schedule",

@@ -21,6 +21,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     private readonly WeatherLocationRefreshService _weatherLocationRefreshService;
     private string _languageCode;
     private bool _isInitializing;
+    private WeatherSnapshot? _previewSnapshot;
 
     public WeatherSettingsPageViewModel(
         ISettingsFacadeService settingsFacade,
@@ -39,6 +40,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
         RefreshLocalizedText();
         LocationModes = CreateLocationModes();
+        VisualStyles = CreateVisualStyles();
 
         var weatherState = _settingsFacade.Weather.Get();
         _isInitializing = true;
@@ -59,6 +61,8 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     }
 
     public IReadOnlyList<SelectionOption> LocationModes { get; }
+
+    public IReadOnlyList<SelectionOption> VisualStyles { get; }
 
     public ObservableCollection<WeatherLocation> SearchResults { get; } = [];
 
@@ -97,6 +101,12 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _locationServicesDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _visualStyleHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _visualStyleDescription = string.Empty;
 
     [ObservableProperty]
     private string _alertFilterHeader = string.Empty;
@@ -160,6 +170,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private SelectionOption _selectedLocationMode = new("CitySearch", "City Search");
+
+    [ObservableProperty]
+    private SelectionOption _selectedVisualStyle = new(WeatherVisualStyleId.Default, "Google Weather v4");
 
     [ObservableProperty]
     private bool _isCitySearchMode = true;
@@ -244,6 +257,17 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
         _settingsFacade.Weather.Save(CreateEditableState(value.Value));
         _ = RefreshPreviewAsync();
+    }
+
+    partial void OnSelectedVisualStyleChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        _settingsFacade.Weather.Save(CreateEditableState());
+        UpdatePreviewIcon(_previewSnapshot);
     }
 
     partial void OnAutoRefreshLocationChanged(bool value)
@@ -345,7 +369,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             selected.Longitude,
             AutoRefreshLocation,
             ExcludedAlerts ?? string.Empty,
-            "DefaultWeather",
+            SelectedVisualStyle?.Value ?? WeatherVisualStyleId.Default,
             NoTlsRequests,
             SearchKeyword?.Trim() ?? string.Empty);
 
@@ -417,7 +441,8 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             if (string.IsNullOrWhiteSpace(state.LocationKey))
             {
                 PreviewStatus = L("settings.weather.preview_missing_location", "Please apply one weather location before testing.");
-                PreviewIcon = null;
+                _previewSnapshot = null;
+                UpdatePreviewIcon(null);
                 PreviewLocation = CurrentLocationSummary;
                 PreviewTemperature = "--";
                 PreviewCondition = string.Empty;
@@ -439,12 +464,14 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                     ResolveCulture(),
                     L("settings.weather.preview_failed_format", "Test fetch failed: {0}"),
                     result.ErrorMessage ?? result.ErrorCode ?? L("settings.weather.preview_unknown", "Unknown"));
-                PreviewIcon = null;
+                _previewSnapshot = null;
+                UpdatePreviewIcon(null);
                 return;
             }
 
             var snapshot = result.Data;
-            PreviewIcon = null;
+            _previewSnapshot = snapshot;
+            UpdatePreviewIcon(snapshot);
             PreviewLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
                 ? state.LocationName
                 : snapshot.LocationName!;
@@ -517,6 +544,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         SearchStatus = "2 sample locations are shown for design preview.";
         LocationActionStatus = "Using mocked Windows location support in design mode.";
         PreviewIcon = null;
+        UpdatePreviewIcon(null);
         PreviewLocation = previewLocation.Name;
         PreviewTemperature = "24 deg C";
         PreviewCondition = ResolveWeatherDisplayText("Partly cloudy", 4);
@@ -538,6 +566,8 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         CoordinatesDescription = L("settings.weather.coordinates_desc", "Set latitude/longitude and optional key/name.");
         LocationServicesHeader = L("settings.weather.location_services_header", "Location Service");
         LocationServicesDescription = L("settings.weather.location_services_desc", "Use the current Windows location and decide whether it refreshes automatically at startup.");
+        VisualStyleHeader = L("settings.weather.visual_style_header", "Weather Visual Style");
+        VisualStyleDescription = L("settings.weather.visual_style_desc", "Choose the icon and component style used by desktop weather widgets.");
         AlertFilterHeader = L("settings.weather.alert_filter_header", "Excluded Alerts");
         AlertFilterDescription = L("settings.weather.alert_filter_desc", "Alerts containing these words will not be shown. One rule per line.");
         RequestHeader = L("settings.weather.no_tls_header", "No TLS Weather Request");
@@ -567,6 +597,13 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             new SelectionOption("CitySearch", L("settings.weather.mode_city_search", "City Search")),
             new SelectionOption("Coordinates", L("settings.weather.mode_coordinates", "Coordinates"))
         ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateVisualStyles()
+    {
+        return WeatherVisualStyleCatalog.GetStyles()
+            .Select(style => new SelectionOption(style.Id, L($"settings.weather.visual_style.{style.Id}", style.DisplayName)))
+            .ToArray();
     }
 
     private void UpdateModeVisibility()
@@ -629,7 +666,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             Longitude,
             AutoRefreshLocation,
             ExcludedAlerts ?? string.Empty,
-            "DefaultWeather",
+            SelectedVisualStyle?.Value ?? WeatherVisualStyleId.Default,
             NoTlsRequests,
             SearchKeyword?.Trim() ?? string.Empty);
     }
@@ -646,7 +683,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                 SelectedSearchResult.Longitude,
                 AutoRefreshLocation,
                 ExcludedAlerts ?? string.Empty,
-                "DefaultWeather",
+                SelectedVisualStyle?.Value ?? WeatherVisualStyleId.Default,
                 NoTlsRequests,
                 SearchKeyword?.Trim() ?? string.Empty);
         }
@@ -665,6 +702,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         SelectedLocationMode = LocationModes.FirstOrDefault(option =>
                                    string.Equals(option.Value, state.LocationMode, StringComparison.OrdinalIgnoreCase))
                                ?? LocationModes[0];
+        SelectedVisualStyle = VisualStyles.FirstOrDefault(option =>
+                                  string.Equals(option.Value, WeatherVisualStyleCatalog.Normalize(state.IconPackId), StringComparison.OrdinalIgnoreCase))
+                              ?? VisualStyles[0];
         Latitude = state.Latitude;
         Longitude = state.Longitude;
         LocationKey = state.LocationKey;
@@ -696,6 +736,14 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     private string L(string key, string fallback)
     {
         return _localizationService.GetString(_languageCode, key, fallback);
+    }
+
+    private void UpdatePreviewIcon(WeatherSnapshot? snapshot)
+    {
+        var styleId = SelectedVisualStyle?.Value ?? WeatherVisualStyleId.Default;
+        PreviewIcon = snapshot is null
+            ? WeatherIconAssetResolver.LoadIcon(styleId, 1, "Partly cloudy")
+            : WeatherIconAssetResolver.LoadIcon(styleId, snapshot);
     }
 
     private string ResolveWeatherDisplayText(string? weatherText, int? weatherCode)

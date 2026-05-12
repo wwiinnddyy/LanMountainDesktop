@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using FluentIcons.Avalonia;
 using FluentAvalonia.Styling;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
@@ -27,6 +29,8 @@ using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
+using FluentIconKind = FluentIcons.Common.Icon;
+using FluentIconVariant = FluentIcons.Common.IconVariant;
 
 
 namespace LanMountainDesktop.Views;
@@ -62,6 +66,13 @@ public partial class MainWindow : Window
     private static readonly int SettingsTransitionDurationMs = (int)FluttermotionToken.Page.TotalMilliseconds;
     private const double LightBackgroundLuminanceThreshold = 0.57;
     private const string TaskbarLayoutBottomFullRowMacStyle = "BottomFullRowMacStyle";
+    private const string BackToWindowsButtonDisplayModeIconAndText = "IconAndText";
+    private const string BackToWindowsButtonDisplayModeIconOnly = "IconOnly";
+    private const string BackToWindowsButtonDisplayModeTextOnly = "TextOnly";
+    private const string BackToWindowsIconSourceFluentIcon = "FluentIcon";
+    private const string BackToWindowsIconSourceText = "Text";
+    private const string DefaultBackToWindowsFluentIconName = "Circle";
+    private const string DefaultBackToWindowsIconText = "○";
     private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"
@@ -159,6 +170,10 @@ public partial class MainWindow : Window
     private double _statusBarShadowOpacity = 0.3;
     private int _desktopEdgeInsetPercent = DefaultEdgeInsetPercent;
     private string _taskbarLayoutMode = TaskbarLayoutBottomFullRowMacStyle;
+    private string _backToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModeIconAndText;
+    private string _backToWindowsIconSource = BackToWindowsIconSourceFluentIcon;
+    private string _backToWindowsFluentIconName = DefaultBackToWindowsFluentIconName;
+    private string _backToWindowsIconText = DefaultBackToWindowsIconText;
     private string _languageCode = "zh-CN";
     private WeatherLocationMode _weatherLocationMode = WeatherLocationMode.CitySearch;
     private string _weatherLocationKey = string.Empty;
@@ -167,7 +182,7 @@ public partial class MainWindow : Window
     private double _weatherLongitude = 116.4074;
     private bool _weatherAutoRefreshLocation;
     private string _weatherExcludedAlertsRaw = string.Empty;
-    private string _weatherIconPackId = "DefaultWeather";
+    private string _weatherIconPackId = WeatherVisualStyleId.Default;
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private bool _suppressAutoStartToggleEvents;
@@ -746,16 +761,18 @@ public partial class MainWindow : Window
         NetworkSpeedWidgetRight.Margin = new Thickness(0);
         NetworkSpeedWidgetRight.ApplyCellSize(cellSize);
 
-        var buttonMinWidth = Math.Clamp(taskbarCellHeight * 2.35, 100, 340);
+        var buttonMinWidth = GetBackToWindowsButtonMinWidth(taskbarCellHeight);
 
         BackToWindowsButton.Margin = new Thickness(0);
         BackToWindowsButton.Padding = taskbarButtonPadding;
         BackToWindowsButton.FontSize = taskbarTextSize;
         BackToWindowsButton.MinHeight = taskbarCellHeight;
         BackToWindowsButton.MinWidth = buttonMinWidth;
-        BackToWindowsIcon.FontSize = taskbarIconSize;
+        BackToWindowsButton.Width = double.NaN;
+        BackToWindowsButton.Height = double.NaN;
+        ApplyBackToWindowsIconCircleSize(taskbarCellHeight);
         BackToWindowsTextBlock.FontSize = taskbarTextSize;
-        SetButtonContentSpacing(BackToWindowsButton, buttonContentSpacing);
+        RefreshBackToWindowsButtonPresentation(buttonContentSpacing);
 
         TaskbarProfileButton.Margin = new Thickness(0);
         TaskbarProfileButton.Padding = new Thickness(0);
@@ -811,6 +828,156 @@ public partial class MainWindow : Window
         {
             contentPanel.Spacing = spacing;
         }
+    }
+
+    private double GetBackToWindowsButtonMinWidth(double taskbarCellHeight)
+    {
+        return _backToWindowsButtonDisplayMode switch
+        {
+            BackToWindowsButtonDisplayModeIconOnly => taskbarCellHeight,
+            BackToWindowsButtonDisplayModeTextOnly => Math.Clamp(taskbarCellHeight * 1.8, 72, 260),
+            _ => Math.Clamp(taskbarCellHeight * 2.35, 100, 340)
+        };
+    }
+
+    private double GetBackToWindowsTaskbarCellHeight()
+    {
+        if (_currentDesktopCellSize > 0)
+        {
+            return Math.Clamp(_currentDesktopCellSize * 0.76, 36, 76);
+        }
+
+        if (BackToWindowsButton.MinHeight > 0 && !double.IsNaN(BackToWindowsButton.MinHeight))
+        {
+            return Math.Clamp(BackToWindowsButton.MinHeight, 36, 76);
+        }
+
+        return 48;
+    }
+
+    private double GetBackToWindowsContentSpacing(double taskbarCellHeight)
+    {
+        return Math.Clamp(taskbarCellHeight * 0.20, 6, 14);
+    }
+
+    private void ApplyBackToWindowsIconCircleSize(double taskbarCellHeight)
+    {
+        var hitBoxSize = Math.Clamp(taskbarCellHeight * 0.62, 24, 44);
+        var iconSize = Math.Clamp(taskbarCellHeight * 0.32, 14, 24);
+
+        BackToWindowsIconCircle.Width = hitBoxSize;
+        BackToWindowsIconCircle.Height = hitBoxSize;
+        BackToWindowsIconCircle.CornerRadius = new CornerRadius(hitBoxSize / 2d);
+        BackToWindowsIconHost.Width = hitBoxSize;
+        BackToWindowsIconHost.Height = hitBoxSize;
+
+        if (BackToWindowsIconHost.Content is FluentIcon fluentIcon)
+        {
+            fluentIcon.FontSize = iconSize;
+            fluentIcon.Width = iconSize;
+            fluentIcon.Height = iconSize;
+        }
+        else if (BackToWindowsIconHost.Content is TextBlock textBlock)
+        {
+            textBlock.FontSize = Math.Clamp(taskbarCellHeight * 0.30, 12, 22);
+        }
+    }
+
+    private static string NormalizeBackToWindowsIconSource(string? value)
+    {
+        return string.Equals(value, BackToWindowsIconSourceText, StringComparison.OrdinalIgnoreCase)
+            ? BackToWindowsIconSourceText
+            : BackToWindowsIconSourceFluentIcon;
+    }
+
+    private static FluentIconKind NormalizeBackToWindowsFluentIcon(string? value)
+    {
+        return Enum.TryParse<FluentIconKind>(value, ignoreCase: true, out var icon)
+            ? icon
+            : FluentIconKind.Circle;
+    }
+
+    private static string NormalizeBackToWindowsIconText(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? DefaultBackToWindowsIconText
+            : value.Trim();
+
+        var enumerator = StringInfo.GetTextElementEnumerator(normalized);
+        var builder = new System.Text.StringBuilder();
+        var count = 0;
+        while (enumerator.MoveNext() && count < 4)
+        {
+            builder.Append(enumerator.GetTextElement());
+            count++;
+        }
+
+        return builder.Length > 0 ? builder.ToString() : DefaultBackToWindowsIconText;
+    }
+
+    private void RefreshBackToWindowsIconContent(double taskbarCellHeight)
+    {
+        _backToWindowsIconSource = NormalizeBackToWindowsIconSource(_backToWindowsIconSource);
+        if (_backToWindowsIconSource == BackToWindowsIconSourceText)
+        {
+            BackToWindowsIconHost.Content = new TextBlock
+            {
+                Text = NormalizeBackToWindowsIconText(_backToWindowsIconText),
+                Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+                FontWeight = FontWeight.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
+            };
+            ApplyBackToWindowsIconCircleSize(taskbarCellHeight);
+            return;
+        }
+
+        BackToWindowsIconHost.Content = new FluentIcon
+        {
+            Icon = NormalizeBackToWindowsFluentIcon(_backToWindowsFluentIconName),
+            IconVariant = FluentIconVariant.Regular,
+            Foreground = GetThemeBrush("AdaptiveTextPrimaryBrush"),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        ApplyBackToWindowsIconCircleSize(taskbarCellHeight);
+    }
+
+    private static string NormalizeBackToWindowsButtonDisplayMode(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, BackToWindowsButtonDisplayModeIconOnly, StringComparison.OrdinalIgnoreCase) =>
+                BackToWindowsButtonDisplayModeIconOnly,
+            _ when string.Equals(value, BackToWindowsButtonDisplayModeTextOnly, StringComparison.OrdinalIgnoreCase) =>
+                BackToWindowsButtonDisplayModeTextOnly,
+            _ => BackToWindowsButtonDisplayModeIconAndText
+        };
+    }
+
+    private void RefreshBackToWindowsButtonPresentation(double? contentSpacing = null)
+    {
+        _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(_backToWindowsButtonDisplayMode);
+        var taskbarCellHeight = GetBackToWindowsTaskbarCellHeight();
+        BackToWindowsButton.MinWidth = GetBackToWindowsButtonMinWidth(taskbarCellHeight);
+        RefreshBackToWindowsIconContent(taskbarCellHeight);
+
+        var showIcon = _backToWindowsButtonDisplayMode is not BackToWindowsButtonDisplayModeTextOnly;
+        var showText = _backToWindowsButtonDisplayMode is not BackToWindowsButtonDisplayModeIconOnly;
+
+        BackToWindowsIconCircle.IsVisible = showIcon;
+        BackToWindowsTextBlock.IsVisible = showText;
+
+        if (BackToWindowsContentPanel is not null)
+        {
+            BackToWindowsContentPanel.Spacing = showIcon && showText
+                ? contentSpacing ?? GetBackToWindowsContentSpacing(taskbarCellHeight)
+                : 0;
+        }
+
+        BackToWindowsButton.InvalidateMeasure();
+        BackToWindowsButton.InvalidateArrange();
     }
 
     private void UpdateComponentLibraryLayout(double cellSize)

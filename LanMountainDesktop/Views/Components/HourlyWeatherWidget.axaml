@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="clr-namespace:LanMountainDesktop.Views.Components"
+             x:Class="LanMountainDesktop.Views.Components.HourlyWeatherWidget">
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <Grid>
+            <components:MaterialWeatherSceneControl x:Name="Scene" />
+            <Border x:Name="OverlayBorder" />
+            <Grid x:Name="ContentGrid" RowDefinitions="Auto,*" Margin="18,14" RowSpacing="12">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                    <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="42" FontWeight="Bold" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="LocationTextBlock" Text="Weather" FontSize="12" FontWeight="Medium" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock x:Name="RangeTextBlock" Grid.Column="2" Text="-- / --" FontSize="12" FontWeight="Medium" VerticalAlignment="Center" Opacity="0.72" Margin="0,0,10,0" />
+                    <components:WeatherIconView x:Name="MainIcon" Grid.Column="3" Width="48" Height="48" />
+                </Grid>
+                <Border Grid.Row="1" Background="{DynamicResource SurfaceColor}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="8,6">
+                    <UniformGrid x:Name="HourlyGrid" Rows="1" Columns="6" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

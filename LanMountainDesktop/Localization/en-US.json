@@ -1436,5 +1436,25 @@
     "power.sleep_confirm_title":  "Sleep Confirmation",
     "power.sleep_confirm_message":  "Are you sure you want to put the computer to sleep?",
     "power.confirm_yes":  "Yes",
-    "power.confirm_cancel":  "Cancel"
-  }
+    "power.confirm_cancel":  "Cancel",
+    "settings.weather.visual_style_header":  "Weather Visual Style",
+    "settings.weather.visual_style_desc":  "Choose the icon and component style used by desktop weather widgets.",
+    "settings.weather.visual_style.GoogleWeatherV4":  "Google Weather v4",
+    "settings.weather.visual_style.Geometric":  "Geometric",
+    "settings.weather.visual_style.Breezy":  "Breezy Weather",
+    "settings.weather.visual_style.LemonFlutter":  "Lemon Weather Flutter",
+    "settings.general.back_to_windows_button_display_header":  "Back to platform button",
+    "settings.general.back_to_windows_button_display_desc":  "Choose whether the Dock button shows its circle icon, text, or both.",
+    "settings.general.back_to_windows_button_display.icon_and_text":  "Icon and text",
+    "settings.general.back_to_windows_button_display.icon_only":  "Icon only",
+    "settings.general.back_to_windows_button_display.text_only":  "Text only",
+    "settings.general.back_to_windows_icon_source_header":  "Back button icon source",
+    "settings.general.back_to_windows_icon_source_desc":  "Choose whether the left icon slot uses a Fluent icon or short custom text.",
+    "settings.general.back_to_windows_icon_source.fluent_icon":  "Fluent icon",
+    "settings.general.back_to_windows_icon_source.text":  "Text icon",
+    "settings.general.back_to_windows_fluent_icon_header":  "Fluent icon",
+    "settings.general.back_to_windows_fluent_icon_desc":  "Search and choose a built-in Fluent icon for the left icon slot.",
+    "settings.general.back_to_windows_icon_text_header":  "Text icon",
+    "settings.general.back_to_windows_icon_text_desc":  "Enter up to four characters to display as the left icon.",
+    "settings.general.back_to_windows_fluent_icon_search_placeholder":  "Search icon"
+}

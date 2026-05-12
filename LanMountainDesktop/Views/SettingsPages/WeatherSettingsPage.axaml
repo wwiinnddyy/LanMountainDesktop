@@ -57,6 +57,25 @@
             </Border>
 
             <ui:FASettingsExpander Classes="settings-expander-card"
+                                 Header="{Binding VisualStyleHeader}"
+                                 Description="{Binding VisualStyleDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0504;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="260"
+                              ItemsSource="{Binding VisualStyles}"
+                              SelectedItem="{Binding SelectedVisualStyle}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Classes="settings-expander-card"
                                  Header="{Binding LocationSourceHeader}"
                                  Description="{Binding LocationSourceDescription}">
                 <ui:FASettingsExpander.IconSource>

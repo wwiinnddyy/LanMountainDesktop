@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="clr-namespace:LanMountainDesktop.Views.Components"
+             x:Class="LanMountainDesktop.Views.Components.WeatherClockWidget">
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <Grid>
+            <components:MaterialWeatherSceneControl x:Name="Scene" />
+            <Border x:Name="OverlayBorder" />
+            <Grid x:Name="ContentGrid" ColumnDefinitions="*,Auto" Margin="18,12" ColumnSpacing="12">
+                <StackPanel VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="TimeTextBlock" Text="--:--" FontSize="38" FontWeight="Bold" />
+                    <TextBlock x:Name="DateTextBlock" Text="Weather" FontSize="12" FontWeight="Medium" Opacity="0.72" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="1">
+                    <components:WeatherIconView x:Name="MainIcon" Width="44" Height="44" HorizontalAlignment="Right" />
+                    <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                    <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="11" FontWeight="Medium" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="100" Opacity="0.82" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

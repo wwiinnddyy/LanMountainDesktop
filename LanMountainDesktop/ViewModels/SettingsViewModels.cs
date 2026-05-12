@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -180,6 +181,22 @@ public sealed class SelectionOption
     public string Label { get; }
 }
 
+public sealed class FluentIconSelectionOption
+{
+    public FluentIconSelectionOption(string value, string label, Icon icon)
+    {
+        Value = value;
+        Label = label;
+        Icon = icon;
+    }
+
+    public string Value { get; }
+
+    public string Label { get; }
+
+    public Icon Icon { get; }
+}
+
 public sealed class ThemeSeedCandidateOption
 {
     public ThemeSeedCandidateOption(string value, string label, Color color, bool isSelected)
@@ -237,6 +254,10 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         Languages = CreateLanguageOptions();
         RenderModes = CreateRenderModeOptions();
         MultiInstanceLaunchBehaviors = CreateMultiInstanceLaunchBehaviorOptions();
+        BackToWindowsButtonDisplayModes = CreateBackToWindowsButtonDisplayModeOptions();
+        BackToWindowsIconSources = CreateBackToWindowsIconSourceOptions();
+        BackToWindowsFluentIcons = CreateBackToWindowsFluentIconOptions();
+        FilteredBackToWindowsFluentIcons = BackToWindowsFluentIcons;
         TimeZones = CreateTimeZoneOptions();
         RefreshLocalizedText();
 
@@ -257,6 +278,16 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
             string.Equals(option.Value, appSnapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
             ?? MultiInstanceLaunchBehaviors.First(option =>
                 string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
+        SelectedBackToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModes.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsButtonDisplayMode(appSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsButtonDisplayModes[0];
+        SelectedBackToWindowsIconSource = BackToWindowsIconSources.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsIconSource(appSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsIconSources[0];
+        SelectedBackToWindowsFluentIcon = BackToWindowsFluentIcons.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsFluentIconName(appSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsFluentIcons.First(option => string.Equals(option.Value, "Circle", StringComparison.OrdinalIgnoreCase));
+        BackToWindowsIconText = NormalizeBackToWindowsIconText(appSnapshot.BackToWindowsIconText);
         ApplyTransitionPreferences(appSnapshot.EnableFadeTransition, appSnapshot.EnableSlideTransition);
         ShowInTaskbar = appSnapshot.ShowInTaskbar;
         _isInitializing = false;
@@ -311,6 +342,28 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
                 ?? MultiInstanceLaunchBehaviors.First(option =>
                     string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
         }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedBackToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModes.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsButtonDisplayModes[0];
+        }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsIconSource)) ||
+            changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsFluentIconName)) ||
+            changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsIconText)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedBackToWindowsIconSource = BackToWindowsIconSources.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsIconSources[0];
+            SelectedBackToWindowsFluentIcon = BackToWindowsFluentIcons.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsFluentIconName(snapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsFluentIcons.First(option => string.Equals(option.Value, "Circle", StringComparison.OrdinalIgnoreCase));
+            BackToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+        }
     }
 
     public event Action? RestartRequested;
@@ -320,6 +373,12 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     public IReadOnlyList<SelectionOption> RenderModes { get; }
 
     public IReadOnlyList<SelectionOption> MultiInstanceLaunchBehaviors { get; }
+
+    public IReadOnlyList<SelectionOption> BackToWindowsButtonDisplayModes { get; }
+
+    public IReadOnlyList<SelectionOption> BackToWindowsIconSources { get; }
+
+    public IReadOnlyList<FluentIconSelectionOption> BackToWindowsFluentIcons { get; }
 
     public IReadOnlyList<TimeZoneOption> TimeZones { get; }
 
@@ -335,6 +394,24 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     [ObservableProperty]
     private SelectionOption _selectedMultiInstanceLaunchBehavior =
         new(MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), "Notify and open desktop");
+
+    [ObservableProperty]
+    private SelectionOption _selectedBackToWindowsButtonDisplayMode = new("IconAndText", "Icon and text");
+
+    [ObservableProperty]
+    private SelectionOption _selectedBackToWindowsIconSource = new("FluentIcon", "Fluent icon");
+
+    [ObservableProperty]
+    private FluentIconSelectionOption _selectedBackToWindowsFluentIcon = new("Circle", "Circle", Icon.Circle);
+
+    [ObservableProperty]
+    private IReadOnlyList<FluentIconSelectionOption> _filteredBackToWindowsFluentIcons = [];
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconText = "○";
 
     [ObservableProperty]
     private bool _enableFadeTransition = true;
@@ -365,6 +442,39 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private string _multiInstanceLaunchBehaviorDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsButtonDisplayModeHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsButtonDisplayModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconSourceHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconSourceDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconSearchPlaceholder = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconTextHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconTextDescription = string.Empty;
+
+    public bool IsBackToWindowsFluentIconSource =>
+        string.Equals(SelectedBackToWindowsIconSource?.Value, "FluentIcon", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsBackToWindowsTextIconSource =>
+        string.Equals(SelectedBackToWindowsIconSource?.Value, "Text", StringComparison.OrdinalIgnoreCase);
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
@@ -488,6 +598,69 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SaveField(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), behavior);
     }
 
+    partial void OnSelectedBackToWindowsButtonDisplayModeChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode),
+            NormalizeBackToWindowsButtonDisplayMode(value.Value));
+    }
+
+    partial void OnSelectedBackToWindowsIconSourceChanged(SelectionOption value)
+    {
+        OnPropertyChanged(nameof(IsBackToWindowsFluentIconSource));
+        OnPropertyChanged(nameof(IsBackToWindowsTextIconSource));
+
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsIconSource),
+            NormalizeBackToWindowsIconSource(value.Value));
+    }
+
+    partial void OnSelectedBackToWindowsFluentIconChanged(FluentIconSelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsFluentIconName),
+            NormalizeBackToWindowsFluentIconName(value.Value));
+    }
+
+    partial void OnBackToWindowsFluentIconSearchTextChanged(string value)
+    {
+        var query = value?.Trim() ?? string.Empty;
+        FilteredBackToWindowsFluentIcons = string.IsNullOrWhiteSpace(query)
+            ? BackToWindowsFluentIcons
+            : BackToWindowsFluentIcons
+                .Where(option => option.Label.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                 option.Value.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Take(120)
+                .ToList();
+    }
+
+    partial void OnBackToWindowsIconTextChanged(string value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsIconText),
+            NormalizeBackToWindowsIconText(value));
+    }
+
     partial void OnEnableSlideTransitionChanged(bool value)
     {
         if (_isInitializing)
@@ -597,6 +770,86 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         ];
     }
 
+    private IReadOnlyList<SelectionOption> CreateBackToWindowsButtonDisplayModeOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                "IconAndText",
+                L("settings.general.back_to_windows_button_display.icon_and_text", "Icon and text")),
+            new SelectionOption(
+                "IconOnly",
+                L("settings.general.back_to_windows_button_display.icon_only", "Icon only")),
+            new SelectionOption(
+                "TextOnly",
+                L("settings.general.back_to_windows_button_display.text_only", "Text only"))
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateBackToWindowsIconSourceOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                "FluentIcon",
+                L("settings.general.back_to_windows_icon_source.fluent_icon", "Fluent icon")),
+            new SelectionOption(
+                "Text",
+                L("settings.general.back_to_windows_icon_source.text", "Text icon"))
+        ];
+    }
+
+    private IReadOnlyList<FluentIconSelectionOption> CreateBackToWindowsFluentIconOptions()
+    {
+        return Enum.GetValues<Icon>()
+            .Select(icon => icon.ToString())
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .Select(name => new FluentIconSelectionOption(name, name, Enum.Parse<Icon>(name)))
+            .ToList();
+    }
+
+    private static string NormalizeBackToWindowsButtonDisplayMode(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "IconOnly", StringComparison.OrdinalIgnoreCase) => "IconOnly",
+            _ when string.Equals(value, "TextOnly", StringComparison.OrdinalIgnoreCase) => "TextOnly",
+            _ => "IconAndText"
+        };
+    }
+
+    private static string NormalizeBackToWindowsIconSource(string? value)
+    {
+        return string.Equals(value, "Text", StringComparison.OrdinalIgnoreCase)
+            ? "Text"
+            : "FluentIcon";
+    }
+
+    private static string NormalizeBackToWindowsFluentIconName(string? value)
+    {
+        return Enum.TryParse<Icon>(value, ignoreCase: true, out var icon)
+            ? icon.ToString()
+            : Icon.Circle.ToString();
+    }
+
+    private static string NormalizeBackToWindowsIconText(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? "○"
+            : value.Trim();
+
+        var enumerator = StringInfo.GetTextElementEnumerator(normalized);
+        var builder = new System.Text.StringBuilder();
+        var count = 0;
+        while (enumerator.MoveNext() && count < 4)
+        {
+            builder.Append(enumerator.GetTextElement());
+            count++;
+        }
+
+        return builder.Length > 0 ? builder.ToString() : "○";
+    }
+
     private IReadOnlyList<TimeZoneOption> CreateTimeZoneOptions()
     {
         return _timeZoneService
@@ -642,6 +895,33 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         MultiInstanceLaunchBehaviorDescription = L(
             "settings.general.multi_instance_behavior_desc",
             "Choose how Launcher handles repeated launches while LanMountain Desktop is already running.");
+        BackToWindowsButtonDisplayModeHeader = L(
+            "settings.general.back_to_windows_button_display_header",
+            "Back to platform button");
+        BackToWindowsButtonDisplayModeDescription = L(
+            "settings.general.back_to_windows_button_display_desc",
+            "Choose whether the Dock button shows its circle icon, text, or both.");
+        BackToWindowsIconSourceHeader = L(
+            "settings.general.back_to_windows_icon_source_header",
+            "Back button icon source");
+        BackToWindowsIconSourceDescription = L(
+            "settings.general.back_to_windows_icon_source_desc",
+            "Choose whether the left icon slot uses a Fluent icon or short custom text.");
+        BackToWindowsFluentIconHeader = L(
+            "settings.general.back_to_windows_fluent_icon_header",
+            "Fluent icon");
+        BackToWindowsFluentIconDescription = L(
+            "settings.general.back_to_windows_fluent_icon_desc",
+            "Search and choose a built-in Fluent icon for the left icon slot.");
+        BackToWindowsFluentIconSearchPlaceholder = L(
+            "settings.general.back_to_windows_fluent_icon_search_placeholder",
+            "Search icon");
+        BackToWindowsIconTextHeader = L(
+            "settings.general.back_to_windows_icon_text_header",
+            "Text icon");
+        BackToWindowsIconTextDescription = L(
+            "settings.general.back_to_windows_icon_text_desc",
+            "Enter up to four characters to display as the left icon.");
     }
 
     private void RefreshPreview()

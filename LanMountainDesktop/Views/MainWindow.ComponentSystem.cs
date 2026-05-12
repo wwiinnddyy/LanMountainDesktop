@@ -553,6 +553,11 @@ public partial class MainWindow : Window
         _taskbarLayoutMode = string.IsNullOrWhiteSpace(snapshot.TaskbarLayoutMode)
             ? TaskbarLayoutBottomFullRowMacStyle
             : snapshot.TaskbarLayoutMode;
+        _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode);
+        _backToWindowsIconSource = NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource);
+        _backToWindowsFluentIconName = NormalizeBackToWindowsFluentIcon(snapshot.BackToWindowsFluentIconName).ToString();
+        _backToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+        RefreshBackToWindowsButtonPresentation();
 
         _clockDisplayFormat = snapshot.ClockDisplayFormat == "HourMinute"
             ? ClockDisplayFormat.HourMinute

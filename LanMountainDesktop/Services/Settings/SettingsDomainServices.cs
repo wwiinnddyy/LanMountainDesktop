@@ -668,8 +668,7 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
 
     private static string NormalizeIconPackId(string? iconPackId)
     {
-        _ = iconPackId;
-        return "DefaultWeather";
+        return WeatherVisualStyleCatalog.Normalize(iconPackId);
     }
 }
 

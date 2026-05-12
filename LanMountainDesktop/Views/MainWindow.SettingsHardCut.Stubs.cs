@@ -64,6 +64,23 @@ public partial class MainWindow : Window
         if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
+            if (changedKeys.Any(key =>
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconText), StringComparison.OrdinalIgnoreCase)))
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+                    _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode);
+                    _backToWindowsIconSource = NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource);
+                    _backToWindowsFluentIconName = NormalizeBackToWindowsFluentIcon(snapshot.BackToWindowsFluentIconName).ToString();
+                    _backToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+                    RefreshBackToWindowsButtonPresentation();
+                }, DispatcherPriority.Normal);
+            }
+
             if (changedKeys.All(key =>
                 string.Equals(key, nameof(AppSettingsSnapshot.ThemeColorMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparison.OrdinalIgnoreCase) ||
@@ -83,6 +100,10 @@ public partial class MainWindow : Window
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableFadeTransition), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconText), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableSlideTransition), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
@@ -142,9 +163,11 @@ public partial class MainWindow : Window
     private void ApplyLocalization()
     {
         Title = L("app.title", "LanMountainDesktop");
-        var platformName = OperatingSystem.IsWindows() ? "Windows" 
-            : OperatingSystem.IsMacOS() ? "macOS" 
-            : "Linux";
+        var platformName = OperatingSystem.IsWindows()
+            ? L("platform.windows", "Windows")
+            : OperatingSystem.IsMacOS()
+                ? L("platform.macos", "macOS")
+                : L("platform.linux", "Linux");
         BackToWindowsTextBlock.Text = Lf("button.back_to_platform", "Back to {0}", platformName);
         ToolTip.SetTip(BackToWindowsButton, Lf("tooltip.back_to_platform", "Back to {0}", platformName));
         ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
@@ -186,8 +209,7 @@ public partial class MainWindow : Window
 
     private static string NormalizeWeatherIconPackId(string? iconPackId)
     {
-        _ = iconPackId;
-        return "DefaultWeather";
+        return WeatherVisualStyleCatalog.Normalize(iconPackId);
     }
 
     private void InitializeAutoStartWithWindowsSetting(AppSettingsSnapshot snapshot)
@@ -668,6 +690,10 @@ public partial class MainWindow : Window
             PinnedTaskbarActions = [.. _pinnedTaskbarActions.Select(v => v.ToString())],
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
             TaskbarLayoutMode = _taskbarLayoutMode,
+            BackToWindowsButtonDisplayMode = existingSnapshot.BackToWindowsButtonDisplayMode,
+            BackToWindowsIconSource = existingSnapshot.BackToWindowsIconSource,
+            BackToWindowsFluentIconName = existingSnapshot.BackToWindowsFluentIconName,
+            BackToWindowsIconText = existingSnapshot.BackToWindowsIconText,
             ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
             StatusBarClockTransparentBackground = _statusBarClockTransparentBackground,
             ClockPosition = _clockPosition,

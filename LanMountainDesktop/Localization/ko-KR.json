@@ -1164,5 +1164,25 @@
     "single_instance.notice.description":  "앱이 이미 실행 중이므로 여러 번 클릭하여 열 필요가 없습니다.",
     "single_instance.notice.button":  "확인",
     "market.status.install_success_restart_format":  "✓ 플러그인 '{0}' 설치 성공! 활성화하려면 앱을 재시작하세요.",
-    "market.dialog.restart_message_format":  "플러그인 '{0}'이(가) 성공적으로 설치되었습니다.\n\n이 플러그인을 사용하려면 앱을 즉시 재시작해야 합니다.\n\n지금 재시작하시겠습니까?"
-  }
+    "market.dialog.restart_message_format":  "플러그인 '{0}'이(가) 성공적으로 설치되었습니다.\n\n이 플러그인을 사용하려면 앱을 즉시 재시작해야 합니다.\n\n지금 재시작하시겠습니까?",
+    "settings.weather.visual_style_header":  "날씨 비주얼 스타일",
+    "settings.weather.visual_style_desc":  "데스크톱 날씨 위젯에 사용할 아이콘과 스타일을 선택합니다.",
+    "settings.weather.visual_style.GoogleWeatherV4":  "Google Weather v4",
+    "settings.weather.visual_style.Geometric":  "Geometric",
+    "settings.weather.visual_style.Breezy":  "Breezy Weather",
+    "settings.weather.visual_style.LemonFlutter":  "Lemon Weather Flutter",
+    "settings.general.back_to_windows_button_display_header":  "플랫폼으로 돌아가기 버튼",
+    "settings.general.back_to_windows_button_display_desc":  "Dock 버튼에 원형 아이콘, 텍스트 또는 둘 다 표시할지 선택합니다.",
+    "settings.general.back_to_windows_button_display.icon_and_text":  "아이콘과 텍스트",
+    "settings.general.back_to_windows_button_display.icon_only":  "아이콘만",
+    "settings.general.back_to_windows_button_display.text_only":  "텍스트만",
+    "settings.general.back_to_windows_icon_source_header":  "돌아가기 버튼 아이콘 소스",
+    "settings.general.back_to_windows_icon_source_desc":  "왼쪽 아이콘 영역에 Fluent 아이콘 또는 짧은 텍스트를 사용할지 선택합니다.",
+    "settings.general.back_to_windows_icon_source.fluent_icon":  "Fluent 아이콘",
+    "settings.general.back_to_windows_icon_source.text":  "텍스트 아이콘",
+    "settings.general.back_to_windows_fluent_icon_header":  "Fluent 아이콘",
+    "settings.general.back_to_windows_fluent_icon_desc":  "왼쪽 아이콘 영역에 사용할 내장 Fluent 아이콘을 검색하고 선택합니다.",
+    "settings.general.back_to_windows_icon_text_header":  "텍스트 아이콘",
+    "settings.general.back_to_windows_icon_text_desc":  "왼쪽 아이콘으로 표시할 문자를 최대 4자까지 입력합니다.",
+    "settings.general.back_to_windows_fluent_icon_search_placeholder":  "아이콘 검색"
+}

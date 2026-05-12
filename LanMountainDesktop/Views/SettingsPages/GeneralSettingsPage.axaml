@@ -65,6 +65,121 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
+            <ui:FASettingsExpander Header="{Binding BackToWindowsButtonDisplayModeHeader}"
+                                 Description="{Binding BackToWindowsButtonDisplayModeDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF0164;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="220"
+                              ItemsSource="{Binding BackToWindowsButtonDisplayModes}"
+                              SelectedItem="{Binding SelectedBackToWindowsButtonDisplayMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+
+                <ui:FASettingsExpanderItem Description="{Binding BackToWindowsIconSourceDescription}">
+                    <ui:FASettingsExpanderItem.IconSource>
+                        <ui:FAFontIconSource Glyph="&#xF1F61;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    </ui:FASettingsExpanderItem.IconSource>
+                    <ui:FASettingsExpanderItem.Footer>
+                        <ComboBox Width="220"
+                                  ItemsSource="{Binding BackToWindowsIconSources}"
+                                  SelectedItem="{Binding SelectedBackToWindowsIconSource}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectionOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </ui:FASettingsExpanderItem.Footer>
+                    <TextBlock Classes="settings-item-label"
+                               Text="{Binding BackToWindowsIconSourceHeader}" />
+                </ui:FASettingsExpanderItem>
+
+                <ui:FASettingsExpanderItem Description="{Binding BackToWindowsFluentIconDescription}"
+                                           IsVisible="{Binding IsBackToWindowsFluentIconSource}">
+                    <ui:FASettingsExpanderItem.IconSource>
+                        <ui:FAFontIconSource Glyph="&#xF190D;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    </ui:FASettingsExpanderItem.IconSource>
+                    <ui:FASettingsExpanderItem.Footer>
+                        <Button Width="220"
+                                HorizontalContentAlignment="Stretch">
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="10">
+                                <fi:FluentIcon Width="18"
+                                               Height="18"
+                                               VerticalAlignment="Center"
+                                               Icon="{Binding SelectedBackToWindowsFluentIcon.Icon}" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SelectedBackToWindowsFluentIcon.Label}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedRight">
+                                    <Border Width="388"
+                                            MaxHeight="520"
+                                            Padding="14">
+                                        <StackPanel Spacing="12">
+                                            <TextBox Text="{Binding BackToWindowsFluentIconSearchText}"
+                                                     PlaceholderText="{Binding BackToWindowsFluentIconSearchPlaceholder}" />
+                                            <ListBox ItemsSource="{Binding FilteredBackToWindowsFluentIcons}"
+                                                     SelectedItem="{Binding SelectedBackToWindowsFluentIcon}"
+                                                     MaxHeight="400"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                                <ListBox.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ListBox.ItemsPanel>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:FluentIconSelectionOption">
+                                                        <StackPanel Width="76"
+                                                                    Height="68"
+                                                                    Spacing="6"
+                                                                    HorizontalAlignment="Center">
+                                                            <fi:FluentIcon Width="24"
+                                                                           Height="24"
+                                                                           HorizontalAlignment="Center"
+                                                                           Icon="{Binding Icon}" />
+                                                            <TextBlock Text="{Binding Label}"
+                                                                       FontSize="11"
+                                                                       TextAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
+                                    </Border>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </ui:FASettingsExpanderItem.Footer>
+                    <TextBlock Classes="settings-item-label"
+                               Text="{Binding BackToWindowsFluentIconHeader}" />
+                </ui:FASettingsExpanderItem>
+
+                <ui:FASettingsExpanderItem Description="{Binding BackToWindowsIconTextDescription}"
+                                           IsVisible="{Binding IsBackToWindowsTextIconSource}">
+                    <ui:FASettingsExpanderItem.IconSource>
+                        <ui:FAFontIconSource Glyph="&#xF005B;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                    </ui:FASettingsExpanderItem.IconSource>
+                    <ui:FASettingsExpanderItem.Footer>
+                        <TextBox Width="160"
+                                 MaxLength="8"
+                                 Text="{Binding BackToWindowsIconText}" />
+                    </ui:FASettingsExpanderItem.Footer>
+                    <TextBlock Classes="settings-item-label"
+                               Text="{Binding BackToWindowsIconTextHeader}" />
+                </ui:FASettingsExpanderItem>
+            </ui:FASettingsExpander>
+
             <ui:FASettingsExpander Header="{Binding PreviewHeader}">
                 <ui:FASettingsExpander.IconSource>
                     <ui:FAFontIconSource Glyph="&#xF1C80;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />

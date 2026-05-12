@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="clr-namespace:LanMountainDesktop.Views.Components"
+             x:Class="LanMountainDesktop.Views.Components.WeatherWidget">
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <Grid>
+            <components:MaterialWeatherSceneControl x:Name="Scene" />
+            <Border x:Name="OverlayBorder" />
+            <Grid x:Name="ContentGrid" RowDefinitions="*,Auto" Margin="20,16,20,14">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="4">
+                        <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="72" FontWeight="Bold" />
+                        <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <components:WeatherIconView x:Name="MainIcon" Grid.Column="1" Width="72" Height="72" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,4" />
+                </Grid>
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="LocationTextBlock" Text="Weather" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" VerticalAlignment="Bottom" />
+                    <TextBlock x:Name="RangeTextBlock" Grid.Column="1" Text="-- / --" FontSize="13" FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

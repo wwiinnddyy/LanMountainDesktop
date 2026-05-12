@@ -125,8 +125,7 @@ public sealed class WeatherLocationRefreshService
 
     private static string NormalizeIconPackId(string? iconPackId)
     {
-        _ = iconPackId;
-        return "DefaultWeather";
+        return WeatherVisualStyleCatalog.Normalize(iconPackId);
     }
 
     private string BuildCoordinateDisplayName(string? languageCode, double latitude, double longitude)

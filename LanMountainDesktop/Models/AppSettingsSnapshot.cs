@@ -69,7 +69,7 @@ public sealed class AppSettingsSnapshot
 
     public string WeatherExcludedAlerts { get; set; } = string.Empty;
 
-    public string WeatherIconPackId { get; set; } = "DefaultWeather";
+    public string WeatherIconPackId { get; set; } = "GoogleWeatherV4";
 
     public bool WeatherNoTlsRequests { get; set; }
 
@@ -119,6 +119,14 @@ public sealed class AppSettingsSnapshot
     public bool EnableDynamicTaskbarActions { get; set; } = true;
 
     public string TaskbarLayoutMode { get; set; } = "BottomFullRowMacStyle";
+
+    public string BackToWindowsButtonDisplayMode { get; set; } = "IconAndText";
+
+    public string BackToWindowsIconSource { get; set; } = "FluentIcon";
+
+    public string BackToWindowsFluentIconName { get; set; } = "Circle";
+
+    public string BackToWindowsIconText { get; set; } = "○";
 
     public string ClockDisplayFormat { get; set; } = "HourMinuteSecond";
 

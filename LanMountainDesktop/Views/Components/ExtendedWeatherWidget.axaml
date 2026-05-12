@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="clr-namespace:LanMountainDesktop.Views.Components"
+             x:Class="LanMountainDesktop.Views.Components.ExtendedWeatherWidget">
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True">
+        <Grid>
+            <components:MaterialWeatherSceneControl x:Name="Scene" />
+            <Border x:Name="OverlayBorder" />
+            <Grid x:Name="ContentGrid" RowDefinitions="Auto,Auto,*,Auto" Margin="20,16,20,14" RowSpacing="12">
+                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="LocationTextBlock" Text="Weather" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" Opacity="0.72" />
+                        <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <components:WeatherIconView x:Name="MainIcon" Grid.Column="1" Width="56" Height="56" Margin="0,0,10,0" />
+                    <TextBlock x:Name="TemperatureTextBlock" Grid.Column="2" Text="--°" FontSize="56" FontWeight="Bold" VerticalAlignment="Center" />
+                </Grid>
+                <UniformGrid x:Name="MetricGrid" Grid.Row="1" Rows="1" Columns="3" />
+                <Border Grid.Row="2" Background="{DynamicResource SurfaceColor}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="10,8">
+                    <UniformGrid x:Name="HourlyGrid" Rows="1" Columns="6" />
+                </Border>
+                <Border Grid.Row="3" Background="{DynamicResource SurfaceColor}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="10,8">
+                    <UniformGrid x:Name="DailyGrid" Rows="1" Columns="5" />
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>
