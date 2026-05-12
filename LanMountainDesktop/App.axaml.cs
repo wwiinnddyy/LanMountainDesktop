@@ -23,6 +23,7 @@ using LanMountainDesktop.Services.ExternalIpc;
 using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
@@ -76,6 +77,7 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private TransparentOverlayWindow? _transparentOverlayWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
+    private bool _isExitingFusedDesktopEditMode;
     private bool _mainWindowClosed;
     private DesktopShellHost? _desktopShellHost;
     private PublicIpcHostService? _publicIpcHostService;
@@ -441,88 +443,132 @@ public partial class App : Application
             return;
         }
         
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(
+            () => OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: false),
+            DispatcherPriority.Send);
+    }
+
+    private void OpenFusedDesktopComponentLibraryFromUi(bool centerInWorkArea)
+    {
+        if (IsShutdownInProgress)
         {
-            if (IsShutdownInProgress)
+            AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+            return;
+        }
+
+        try
+        {
+            var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
+            fusedDesktopManager.EnterEditMode();
+
+            EnsureTransparentOverlayWindow();
+            if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
             {
-                AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+                _transparentOverlayWindow.Show();
+            }
+
+            if (_fusedComponentLibraryWindow is { } existingWindow)
+            {
+                if (_transparentOverlayWindow is not null)
+                {
+                    existingWindow.SetOverlayWindow(_transparentOverlayWindow);
+                }
+
+                if (!existingWindow.IsVisible)
+                {
+                    existingWindow.Show();
+                }
+
+                if (centerInWorkArea)
+                {
+                    existingWindow.CenterInWorkArea(_transparentOverlayWindow);
+                }
+
+                existingWindow.Activate();
                 return;
+            }
+
+            var window = new FusedDesktopComponentLibraryWindow();
+            _fusedComponentLibraryWindow = window;
+            if (_transparentOverlayWindow is not null)
+            {
+                window.SetOverlayWindow(_transparentOverlayWindow);
+            }
+
+            window.Closed += OnFusedComponentLibraryWindowClosed;
+            window.Show();
+            if (centerInWorkArea)
+            {
+                window.CenterInWorkArea(_transparentOverlayWindow);
+            }
+
+            window.Activate();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+        }
+    }
+
+    private void OnFusedComponentLibraryWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is not FusedDesktopComponentLibraryWindow window)
+        {
+            return;
+        }
+
+        window.Closed -= OnFusedComponentLibraryWindowClosed;
+        if (ReferenceEquals(_fusedComponentLibraryWindow, window))
+        {
+            _fusedComponentLibraryWindow = null;
+        }
+
+        if (!window.PreserveEditModeOnClose && !_isExitingFusedDesktopEditMode)
+        {
+            ExitFusedDesktopEditModeFromUi(closeLibrary: false);
+        }
+    }
+
+    private void ExitFusedDesktopEditModeFromUi(bool closeLibrary)
+    {
+        if (_isExitingFusedDesktopEditMode)
+        {
+            return;
+        }
+
+        _isExitingFusedDesktopEditMode = true;
+        try
+        {
+            if (closeLibrary && _fusedComponentLibraryWindow is { } libraryWindow)
+            {
+                _fusedComponentLibraryWindow = null;
+                libraryWindow.Closed -= OnFusedComponentLibraryWindowClosed;
+                libraryWindow.Close();
             }
 
             try
             {
-                if (_fusedComponentLibraryWindow is { } existingWindow)
-                {
-                    if (!existingWindow.IsVisible)
-                    {
-                        existingWindow.Show();
-                    }
-
-                    existingWindow.Activate();
-                    return;
-                }
-
-                var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
-                fusedDesktopManager.EnterEditMode();
-
-                // 纭繚閫忔槑瑕嗙洊灞傜獥鍙ｅ瓨鍦ㄥ苟鏄剧ず
-                EnsureTransparentOverlayWindow();
-                if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
-                {
-                    _transparentOverlayWindow.Show();
-                }
-                
-                var window = new FusedDesktopComponentLibraryWindow();
-                _fusedComponentLibraryWindow = window;
-                
-                if (_transparentOverlayWindow is not null)
-                {
-                    window.SetOverlayWindow(_transparentOverlayWindow);
-                }
-                
-                window.Closed += (s, ev) =>
-                {
-                    if (_transparentOverlayWindow is not null)
-                    {
-                        // 瑙﹀彂鐢诲竷淇濆瓨锛屽苟闅愯棌鐢诲竷
-                        _transparentOverlayWindow.SaveLayoutAndHide();
-                    }
-                    
-                    // 璁╃鐞嗗櫒鏍规嵁宸插瓨鍌ㄧ殑鏈€鏂板揩鐓ч噸寤虹敓鎴愭墍鏈夊疄浣撳皬缁勪欢
-                    fusedDesktopManager.ExitEditMode();
-                    if (ReferenceEquals(_fusedComponentLibraryWindow, s))
-                    {
-                        _fusedComponentLibraryWindow = null;
-                    }
-                };
-
-                window.Show();
-                window.Activate();
+                _transparentOverlayWindow?.SaveLayoutAndHide();
             }
-            catch (Exception ex)
+            catch (Exception overlayEx)
             {
-                AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
-                try
-                {
-                    _transparentOverlayWindow?.SaveLayoutAndHide();
-                }
-                catch (Exception overlayEx)
-                {
-                    AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay after library open failure.", overlayEx);
-                }
-
-                try
-                {
-                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-                }
-                catch (Exception exitEx)
-                {
-                    AppLogger.Warn("FusedDesktop", "Failed to exit edit mode after library open failure.", exitEx);
-                }
-
-                _fusedComponentLibraryWindow = null;
+                AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay.", overlayEx);
             }
-        }, DispatcherPriority.Send);
+
+            try
+            {
+                FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+            }
+            catch (Exception exitEx)
+            {
+                AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode.", exitEx);
+            }
+        }
+        finally
+        {
+            _isExitingFusedDesktopEditMode = false;
+        }
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -945,6 +991,14 @@ public partial class App : Application
             {
                 RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TransparentOverlay");
             };
+            _transparentOverlayWindow.ExitEditRequested += (s, e) =>
+            {
+                ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            };
+            _transparentOverlayWindow.RestoreComponentLibraryRequested += (s, e) =>
+            {
+                OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: true);
+            };
         }
     }
 
@@ -1217,7 +1271,7 @@ public partial class App : Application
 
         try
         {
-            HostUpdateWorkflowServiceProvider.GetOrCreate().TryApplyPendingUpdateOnExit();
+            HostUpdateOrchestratorProvider.GetOrCreate().TryApplyOnExit();
         }
         catch (Exception ex)
         {

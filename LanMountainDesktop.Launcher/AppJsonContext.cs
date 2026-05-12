@@ -19,6 +19,7 @@ namespace LanMountainDesktop.Launcher;
 [JsonSerializable(typeof(PlondsFileEntry))]
 [JsonSerializable(typeof(PlondsHashDescriptor))]
 [JsonSerializable(typeof(SnapshotMetadata))]
+[JsonSerializable(typeof(InstallCheckpoint))]
 [JsonSerializable(typeof(AppVersionInfo))]
 [JsonSerializable(typeof(StartupProgressMessage))]
 [JsonSerializable(typeof(LauncherCoordinatorRequest))]

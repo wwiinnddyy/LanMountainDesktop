@@ -37,6 +37,14 @@ public sealed class FusedDesktopComponentPlacementSnapshot
     /// 高度（像素）
     /// </summary>
     public double Height { get; set; } = 200;
+
+    public int? GridRow { get; set; }
+
+    public int? GridColumn { get; set; }
+
+    public int? GridWidthCells { get; set; }
+
+    public int? GridHeightCells { get; set; }
     
     /// <summary>
     /// Z-Index（用于控制组件层叠顺序）
@@ -61,6 +69,10 @@ public sealed class FusedDesktopComponentPlacementSnapshot
             Y = Y,
             Width = Width,
             Height = Height,
+            GridRow = GridRow,
+            GridColumn = GridColumn,
+            GridWidthCells = GridWidthCells,
+            GridHeightCells = GridHeightCells,
             ZIndex = ZIndex,
             IsLocked = IsLocked
         };

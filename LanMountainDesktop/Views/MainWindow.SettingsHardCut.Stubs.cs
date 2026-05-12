@@ -15,6 +15,7 @@ using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
@@ -475,28 +476,14 @@ public partial class MainWindow : Window
 
     private void TriggerAutoUpdateCheckIfEnabled()
     {
-        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
-        if (!Version.TryParse(versionText, out var currentVersion))
-        {
-            currentVersion = new Version(0, 0, 0);
-        }
-
-        var major = Math.Max(0, currentVersion.Major);
-        var minor = Math.Max(0, currentVersion.Minor);
-        var build = Math.Max(0, currentVersion.Build >= 0 ? currentVersion.Build : 0);
-        var revision = Math.Max(0, currentVersion.Revision >= 0 ? currentVersion.Revision : 0);
-        var normalizedVersion = revision > 0
-            ? new Version(major, minor, build, revision)
-            : new Version(major, minor, build);
-
         DispatcherTimer.RunOnce(
             async () =>
             {
                 try
                 {
-                    await HostUpdateWorkflowServiceProvider
+                    await HostUpdateOrchestratorProvider
                         .GetOrCreate()
-                        .AutoCheckIfEnabledAsync(normalizedVersion);
+                        .AutoCheckIfEnabledAsync(default);
                 }
                 catch (Exception ex)
                 {

@@ -54,8 +54,20 @@ public static class UpdatePaths
     public static string GetPlondsSignaturePath(string launcherRoot)
         => Path.Combine(GetIncomingDirectory(launcherRoot), GetPlondsSignatureName());
 
-    public static string GetPlondsUpdateMetadataPath(string launcherRoot)
-        => Path.Combine(GetIncomingDirectory(launcherRoot), GetPlondsUpdateMetadataName());
+    public static string GetDeploymentLockName() => "deployment.lock";
+
+    public static string GetDeploymentLockPath(string launcherRoot)
+        => Path.Combine(GetIncomingDirectory(launcherRoot), GetDeploymentLockName());
+
+    public static string GetApplyInProgressLockName() => "apply-in-progress.lock";
+
+    public static string GetApplyInProgressLockPath(string launcherRoot)
+        => Path.Combine(GetIncomingDirectory(launcherRoot), GetApplyInProgressLockName());
+
+    public static string GetInstallCheckpointName() => "install-checkpoint.json";
+
+    public static string GetInstallCheckpointPath(string launcherRoot)
+        => Path.Combine(GetIncomingDirectory(launcherRoot), GetInstallCheckpointName());
 
     public static string GetDownloadMarkerContent(string manifestSha256, string targetVersion, int objectCount)
     {

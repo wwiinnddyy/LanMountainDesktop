@@ -79,6 +79,74 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
         Assert.Contains("app-1.0.0-0", result.ErrorMessage);
     }
 
+    [Fact]
+    public async Task ApplyPlondsUpdate_WhenInstallCheckpointIsStale_ReturnsStructuredFailure()
+    {
+        _directory.CreateDeployment("1.0.0", "old-state", isCurrent: true);
+        var newState = Encoding.UTF8.GetBytes("new-state");
+        _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, Sha256Hex(newState));
+        _directory.WriteStaleInstallCheckpoint("9.9.9", "1.1.0");
+
+        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var result = await service.ApplyPendingUpdateAsync();
+
+        Assert.False(result.Success);
+        Assert.Equal("resume_state_invalid", result.Code);
+    }
+
+    [Fact]
+    public async Task ApplyLegacyUpdate_WhenInstallCheckpointIsStale_ReturnsStructuredFailure()
+    {
+        _directory.CreateDeployment("1.0.0", "old-state", isCurrent: true);
+        _directory.StageLegacyUpdate("1.0.0", "1.1.0", "new-state");
+        _directory.WriteStaleInstallCheckpoint("9.9.9", "1.1.0");
+
+        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var result = await service.ApplyPendingUpdateAsync();
+
+        Assert.False(result.Success);
+        Assert.Equal("resume_state_invalid", result.Code);
+    }
+
+    [Fact]
+    public async Task ApplyPlondsUpdate_WhenCheckpointIsValid_ResumesAndSucceeds()
+    {
+        var current = _directory.CreateDeployment("1.0.0", "old-state", isCurrent: true);
+        var newState = Encoding.UTF8.GetBytes("new-state");
+        _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, Sha256Hex(newState));
+        _directory.WriteValidPlondsResumeCheckpoint("1.0.0", "1.1.0");
+
+        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var result = await service.ApplyPendingUpdateAsync();
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal("1.1.0", result.TargetVersion);
+        Assert.False(File.Exists(Path.Combine(current, ".current")));
+        var resumedTarget = Path.Combine(_directory.AppRoot, "app-1.1.0-0");
+        Assert.True(File.Exists(Path.Combine(resumedTarget, ".current")));
+        Assert.Equal("new-state", File.ReadAllText(Path.Combine(resumedTarget, "state.txt")));
+        Assert.False(File.Exists(UpdatePaths.GetInstallCheckpointPath(_directory.AppRoot)));
+    }
+
+    [Fact]
+    public async Task ApplyLegacyUpdate_WhenCheckpointIsValid_ResumesAndSucceeds()
+    {
+        var current = _directory.CreateDeployment("1.0.0", "old-state", isCurrent: true);
+        _directory.StageLegacyUpdate("1.0.0", "1.1.0", "new-state");
+        _directory.WriteValidLegacyResumeCheckpoint("1.0.0", "1.1.0");
+
+        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var result = await service.ApplyPendingUpdateAsync();
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal("1.1.0", result.TargetVersion);
+        Assert.False(File.Exists(Path.Combine(current, ".current")));
+        var resumedTarget = Path.Combine(_directory.AppRoot, "app-1.1.0-0");
+        Assert.True(File.Exists(Path.Combine(resumedTarget, ".current")));
+        Assert.Equal("new-state", File.ReadAllText(Path.Combine(resumedTarget, "state.txt")));
+        Assert.False(File.Exists(UpdatePaths.GetInstallCheckpointPath(_directory.AppRoot)));
+    }
+
     public void Dispose() => _directory.Dispose();
 
     private static string Sha256Hex(byte[] bytes)
@@ -166,6 +234,81 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
             var fileMapPath = Path.Combine(IncomingRoot, "plonds-filemap.json");
             File.WriteAllText(fileMapPath, JsonSerializer.Serialize(fileMap, AppJsonContext.Default.PlondsFileMap));
             Sign(fileMapPath, Path.Combine(IncomingRoot, "plonds-filemap.sig"));
+
+            var deploymentLock = new DeploymentLock(
+                SchemaVersion: 1,
+                Kind: "delta",
+                TargetVersion: toVersion,
+                PayloadPath: fileMapPath,
+                PayloadSha256: Sha256File(fileMapPath),
+                CreatedAtUtc: DateTimeOffset.UtcNow);
+            var deploymentLockPath = UpdatePaths.GetDeploymentLockPath(AppRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(deploymentLockPath)!);
+            File.WriteAllText(deploymentLockPath, JsonSerializer.Serialize(deploymentLock));
+
+            var markerPath = UpdatePaths.GetDownloadMarkerPath(AppRoot);
+            File.WriteAllText(markerPath, UpdatePaths.GetDownloadMarkerContent(
+                manifestSha256: Sha256File(fileMapPath),
+                targetVersion: toVersion,
+                objectCount: 1));
+        }
+
+        public void StageLegacyUpdate(string fromVersion, string toVersion, string newState)
+        {
+            Directory.CreateDirectory(IncomingRoot);
+            var extractRoot = Path.Combine(IncomingRoot, "legacy-src");
+            Directory.CreateDirectory(extractRoot);
+
+            File.WriteAllText(Path.Combine(extractRoot, ExecutableName), $"exe-{toVersion}");
+            File.WriteAllText(Path.Combine(extractRoot, "state.txt"), newState);
+
+            var archivePath = Path.Combine(IncomingRoot, "update.zip");
+            if (File.Exists(archivePath))
+            {
+                File.Delete(archivePath);
+            }
+
+            System.IO.Compression.ZipFile.CreateFromDirectory(extractRoot, archivePath);
+
+            var fileMap = new SignedFileMap
+            {
+                FromVersion = fromVersion,
+                ToVersion = toVersion,
+                Files =
+                [
+                    new LanMountainDesktop.Launcher.Models.UpdateFileEntry
+                    {
+                        Path = ExecutableName,
+                        ArchivePath = ExecutableName,
+                        Action = "replace",
+                        Sha256 = Sha256File(Path.Combine(extractRoot, ExecutableName))
+                    },
+                    new LanMountainDesktop.Launcher.Models.UpdateFileEntry
+                    {
+                        Path = "state.txt",
+                        ArchivePath = "state.txt",
+                        Action = "replace",
+                        Sha256 = Sha256File(Path.Combine(extractRoot, "state.txt"))
+                    }
+                ]
+            };
+
+            var fileMapPath = Path.Combine(IncomingRoot, "files.json");
+            File.WriteAllText(fileMapPath, JsonSerializer.Serialize(fileMap, AppJsonContext.Default.SignedFileMap));
+            Sign(fileMapPath, Path.Combine(IncomingRoot, "files.json.sig"));
+
+            var deploymentLock = new DeploymentLock(
+                SchemaVersion: 1,
+                Kind: "delta",
+                TargetVersion: toVersion,
+                PayloadPath: fileMapPath,
+                PayloadSha256: Sha256File(fileMapPath),
+                CreatedAtUtc: DateTimeOffset.UtcNow);
+            var deploymentLockPath = UpdatePaths.GetDeploymentLockPath(AppRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(deploymentLockPath)!);
+            File.WriteAllText(deploymentLockPath, JsonSerializer.Serialize(deploymentLock));
+
+            Directory.Delete(extractRoot, true);
         }
 
         public void WriteSnapshot(string sourceVersion, string sourceDirectory, string targetVersion, string targetDirectory)
@@ -185,6 +328,72 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
             File.WriteAllText(
                 Path.Combine(SnapshotsRoot, $"{snapshot.SnapshotId}.json"),
                 JsonSerializer.Serialize(snapshot, AppJsonContext.Default.SnapshotMetadata));
+        }
+
+        public void WriteStaleInstallCheckpoint(string sourceVersion, string targetVersion)
+        {
+            var checkpoint = new InstallCheckpoint
+            {
+                SnapshotId = Guid.NewGuid().ToString("N"),
+                SourceVersion = sourceVersion,
+                TargetVersion = targetVersion,
+                SourceDirectory = Path.Combine(AppRoot, $"app-{sourceVersion}-0"),
+                TargetDirectory = Path.Combine(AppRoot, $"app-{targetVersion}-999"),
+                IsInitialDeployment = false,
+                AppliedCount = 1,
+                VerifiedCount = 1
+            };
+
+            var checkpointPath = UpdatePaths.GetInstallCheckpointPath(AppRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(checkpointPath)!);
+            File.WriteAllText(checkpointPath, JsonSerializer.Serialize(checkpoint, AppJsonContext.Default.InstallCheckpoint));
+        }
+
+        public void WriteValidPlondsResumeCheckpoint(string sourceVersion, string targetVersion)
+        {
+            var targetDeployment = Path.Combine(AppRoot, $"app-{targetVersion}-0");
+            Directory.CreateDirectory(targetDeployment);
+            File.WriteAllText(Path.Combine(targetDeployment, ".partial"), string.Empty);
+            File.WriteAllText(Path.Combine(targetDeployment, ExecutableName), $"exe-{sourceVersion}");
+
+            var checkpoint = new InstallCheckpoint
+            {
+                SnapshotId = Guid.NewGuid().ToString("N"),
+                SourceVersion = sourceVersion,
+                TargetVersion = targetVersion,
+                SourceDirectory = Path.Combine(AppRoot, $"app-{sourceVersion}-0"),
+                TargetDirectory = targetDeployment,
+                IsInitialDeployment = false,
+                AppliedCount = 1,
+                VerifiedCount = 0
+            };
+
+            var checkpointPath = UpdatePaths.GetInstallCheckpointPath(AppRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(checkpointPath)!);
+            File.WriteAllText(checkpointPath, JsonSerializer.Serialize(checkpoint, AppJsonContext.Default.InstallCheckpoint));
+        }
+
+        public void WriteValidLegacyResumeCheckpoint(string sourceVersion, string targetVersion)
+        {
+            var targetDeployment = Path.Combine(AppRoot, $"app-{targetVersion}-0");
+            Directory.CreateDirectory(targetDeployment);
+            File.WriteAllText(Path.Combine(targetDeployment, ".partial"), string.Empty);
+
+            var checkpoint = new InstallCheckpoint
+            {
+                SnapshotId = Guid.NewGuid().ToString("N"),
+                SourceVersion = sourceVersion,
+                TargetVersion = targetVersion,
+                SourceDirectory = Path.Combine(AppRoot, $"app-{sourceVersion}-0"),
+                TargetDirectory = targetDeployment,
+                IsInitialDeployment = false,
+                AppliedCount = 0,
+                VerifiedCount = 0
+            };
+
+            var checkpointPath = UpdatePaths.GetInstallCheckpointPath(AppRoot);
+            Directory.CreateDirectory(Path.GetDirectoryName(checkpointPath)!);
+            File.WriteAllText(checkpointPath, JsonSerializer.Serialize(checkpoint, AppJsonContext.Default.InstallCheckpoint));
         }
 
         public void Dispose()
@@ -304,7 +513,7 @@ public sealed class UpdatePathConsistencyTests
     [Fact]
     public void HostAndSharedUpdatePathsUseLauncherDirectoryCasing()
     {
-        var incoming = UpdateWorkflowService.GetLauncherIncomingDirectory();
+        var incoming = UpdatePaths.GetIncomingDirectory("root");
         var sharedIncoming = UpdatePaths.GetIncomingDirectory("root");
 
         Assert.Contains($"{Path.DirectorySeparatorChar}.Launcher{Path.DirectorySeparatorChar}", incoming);

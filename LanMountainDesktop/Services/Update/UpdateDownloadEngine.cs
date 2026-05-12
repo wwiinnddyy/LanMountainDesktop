@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,7 +78,7 @@ internal sealed class UpdateDownloadEngine
 
         var totalFiles = downloadableFiles.Count + 2;
         var completedFiles = 2;
-        var seenHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenHashes = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
         var semaphore = new SemaphoreSlim(Math.Max(1, maxConcurrency), Math.Max(1, maxConcurrency));
         var errors = new List<string>();
         long totalBytes = downloadableFiles.Sum(f => f.Size);
@@ -89,7 +90,7 @@ internal sealed class UpdateDownloadEngine
             await semaphore.WaitAsync(ct);
             try
             {
-                if (!seenHashes.Add(entry.Sha256))
+                if (!seenHashes.TryAdd(entry.Sha256, 0))
                 {
                     lock (lockObj)
                     {
@@ -146,6 +147,20 @@ internal sealed class UpdateDownloadEngine
                         {
                             AppLogger.Warn("UpdateDownloadEngine",
                                 $"Object {entry.Path} hash mismatch after download. Expected: {entry.Sha256}, Actual: {actualHash}");
+                            SafeDeleteFile(objectPath);
+
+                            if (attempt < MaxRetryAttempts)
+                            {
+                                await Task.Delay(RetryDelayMs * attempt, ct);
+                                continue;
+                            }
+
+                            lock (lockObj)
+                            {
+                                errors.Add($"Hash mismatch for {entry.Path}: expected {entry.Sha256}, actual {actualHash}");
+                            }
+
+                            return;
                         }
 
                         lock (lockObj)
@@ -274,7 +289,7 @@ internal sealed class UpdateDownloadEngine
 
             if (result.Success)
             {
-                bool hashVerified;
+                bool hashVerified = true;
                 if (!string.IsNullOrWhiteSpace(mirror.Sha256))
                 {
                     var actualHash = await ComputeFileSha256Async(destinationPath, ct);
@@ -283,11 +298,16 @@ internal sealed class UpdateDownloadEngine
                     {
                         AppLogger.Warn("UpdateDownloadEngine",
                             $"Full installer hash mismatch. Expected: {mirror.Sha256}, Actual: {actualHash}");
+                        SafeDeleteFile(destinationPath);
+
+                        if (attempt < MaxRetryAttempts)
+                        {
+                            await Task.Delay(RetryDelayMs * attempt, ct);
+                            continue;
+                        }
+
+                        return new DownloadResult(false, null, $"Full installer hash mismatch. Expected: {mirror.Sha256}, Actual: {actualHash}", false);
                     }
-                }
-                else
-                {
-                    hashVerified = false;
                 }
 
                 AppLogger.Info("UpdateDownloadEngine", $"Full installer downloaded to {destinationPath}");
@@ -372,6 +392,20 @@ internal sealed class UpdateDownloadEngine
         using var hasher = SHA256.Create();
         var hash = await hasher.ComputeHashAsync(stream, ct);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static void SafeDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private static string ComputeStringSha256(string content)

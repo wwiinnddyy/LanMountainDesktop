@@ -1,72 +1,62 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:LanMountainDesktop.Views"
-        xmlns:fi="using:FluentIcons.Avalonia"
         x:Class="LanMountainDesktop.Views.FusedDesktopComponentLibraryWindow"
-        Width="860"
-        Height="620"
+        Width="740"
+        Height="500"
         MinWidth="600"
-        MinHeight="500"
+        MinHeight="440"
         CanResize="True"
         WindowStartupLocation="CenterScreen"
-        WindowDecorations="BorderOnly"
+        WindowDecorations="None"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="48"
         Background="Transparent"
         Title="Add Component">
 
     <Grid x:Name="RootGrid"
           Classes="settings-scope"
-          Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
-          RowDefinitions="Auto,*">
-        <Border x:Name="WindowTitleBarHost"
-                Height="48"
-                Padding="12,0,12,0"
-                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
-                BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
-                BorderThickness="0,0,0,1"
-                PointerPressed="OnWindowTitleBarPointerPressed">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
-                  ColumnSpacing="8"
-                  VerticalAlignment="Center">
-                <fi:FluentIcon x:Name="WindowBrandIcon"
-                               Icon="Apps"
-                               IconVariant="Filled"
-                               FontSize="16"
-                               IsHitTestVisible="False"
-                               VerticalAlignment="Center" />
-
-                <TextBlock x:Name="WindowTitleTextBlock"
-                           Grid.Column="1"
-                           FontSize="12"
-                           FontWeight="SemiBold"
-                           IsHitTestVisible="False"
-                           Text="Add Component" />
-
-                <TextBlock Grid.Column="2"
-                           FontSize="12"
-                           Opacity="0.6"
-                           IsHitTestVisible="False"
-                           VerticalAlignment="Center"
-                           Text="Browse available widgets and add them to the current fused desktop layout." />
-
-                <Button x:Name="CloseWindowButton"
-                        Grid.Column="3"
-                        Width="40"
-                        Height="32"
-                        Padding="0"
+          Background="Transparent">
+        <Border x:Name="PanelShell"
+                Classes="surface-translucent-strong"
+                Width="720"
+                MaxWidth="720"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="0"
+                ClipToBounds="True">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <Border Height="64"
+                        Padding="24,0,24,0"
                         Background="Transparent"
-                        BorderThickness="0"
-                        Click="OnCloseClick">
-                    <fi:FluentIcon Icon="Dismiss"
-                                   IconVariant="Regular"
-                                   FontSize="16" />
-                </Button>
+                        PointerPressed="OnWindowTitleBarPointerPressed">
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
+                               Text="添加小组件" />
+                </Border>
+
+                <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
+                                                              Grid.Row="1"
+                                                              Margin="22,0,22,8" />
+
+                <Border Grid.Row="2"
+                        Padding="24,16,24,22"
+                        BorderBrush="{DynamicResource AdaptiveGlassPanelBorderBrush}"
+                        BorderThickness="0,1,0,0">
+                    <Button x:Name="CloseWindowButton"
+                            HorizontalAlignment="Stretch"
+                            MinHeight="32"
+                            Padding="16,7"
+                            Background="{DynamicResource AdaptiveButtonBackgroundBrush}"
+                            BorderThickness="0"
+                            Click="OnCloseClick">
+                        <TextBlock HorizontalAlignment="Center"
+                                   FontSize="14"
+                                   Text="关闭" />
+                    </Button>
+                </Border>
             </Grid>
         </Border>
-
-        <controls:FusedDesktopComponentLibraryControl x:Name="LibraryControl"
-                                                      Grid.Row="1"
-                                                      Margin="12,8,16,8" />
     </Grid>
 </Window>

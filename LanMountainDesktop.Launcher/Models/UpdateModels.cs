@@ -41,6 +41,25 @@ internal sealed class SnapshotMetadata
     public string Status { get; set; } = "pending";
 }
 
+internal sealed class InstallCheckpoint
+{
+    public string SnapshotId { get; set; } = string.Empty;
+
+    public string SourceVersion { get; set; } = string.Empty;
+
+    public string? TargetVersion { get; set; }
+
+    public string? SourceDirectory { get; set; }
+
+    public string TargetDirectory { get; set; } = string.Empty;
+
+    public bool IsInitialDeployment { get; set; }
+
+    public int AppliedCount { get; set; }
+
+    public int VerifiedCount { get; set; }
+}
+
 internal sealed class UpdateApplyResult
 {
     public bool Success { get; init; }

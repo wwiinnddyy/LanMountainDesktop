@@ -94,7 +94,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             var categoryComponents = _allDefinitions
                 .Where(definition => string.Equals(definition.Category, category, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .Select(CreateComponentItem)
+                .Select(definition => CreateComponentItem(definition, languageCode))
                 .ToArray();
 
             _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
@@ -112,7 +112,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase)) return Symbol.WeatherSunny;
         if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase)) return Symbol.Edit;
         if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase)) return Symbol.Play;
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return Symbol.Apps;
+        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return Symbol.Info;
         if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase)) return Symbol.Calculator;
         if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase)) return Symbol.Hourglass;
         if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase)) return Symbol.Folder;
@@ -138,9 +138,11 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         return LocalizationService.GetString(languageCode, key, fallback);
     }
 
-    private static ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
+    private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition, string languageCode)
     {
-        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName);
+        var categoryTitle = GetLocalizedCategoryTitle(languageCode, definition.Category);
+        var description = $"{categoryTitle} - {Math.Max(1, definition.MinWidthCells)} x {Math.Max(1, definition.MinHeightCells)}";
+        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName, description);
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -174,7 +176,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         }
 
         _viewModel.SelectedComponent = selectedCategory.Components.FirstOrDefault(component => component.ComponentId == firstComponent.Id)
-            ?? CreateComponentItem(firstComponent);
+            ?? CreateComponentItem(firstComponent, _settingsFacade.Region.Get().LanguageCode);
         SetSelectedPreviewControl(CreateStaticPreviewControl(firstComponent));
     }
 

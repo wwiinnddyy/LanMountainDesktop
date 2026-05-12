@@ -1,5 +1,9 @@
 ﻿name: DDSS
 
+concurrency:
+  group: ddss-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
+  cancel-in-progress: false
+
 on:
   workflow_run:
     workflows:
@@ -31,7 +35,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Resolve release tag
+      - name: Resolve release tag and channel
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -50,6 +54,14 @@ jobs:
           fi
 
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          IS_PRERELEASE="$(gh release view "$TAG" --repo "${{ github.repository }}" --json isPrerelease --jq '.isPrerelease')"
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            CHANNEL="preview"
+          else
+            CHANNEL="stable"
+          fi
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
+          echo "DDSS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/ddss-latest.json" >> "$GITHUB_ENV"
           PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
           if [[ -z "$PUBLIC_BASE" ]]; then
             PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
@@ -213,6 +225,33 @@ jobs:
             --repository "${{ github.repository }}" \
             --s3-base-url "$S3_BASE_URL"
 
+      - name: Validate DDSS asset references in Rainyun S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          keys=$(jq -r '.assets[]?.mirrors[]?.url // empty' ddss-output/ddss.json \
+            | sed -n 's#^.*/lanmountain/update/\(.*\)$#lanmountain/update/\1#p' \
+            | sort -u)
+
+          if [[ -z "$keys" ]]; then
+            echo "No S3-backed asset URLs found in ddss.json"
+            exit 1
+          fi
+
+          while IFS= read -r key; do
+            [[ -n "$key" ]] || continue
+            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
+              --bucket "$S3_BUCKET" \
+              --key "$key" >/dev/null
+          done <<< "$keys"
+
       - name: Upload DDSS manifest to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -221,7 +260,7 @@ jobs:
           set -euo pipefail
           gh release upload "$RELEASE_TAG" ddss-output/ddss.json ddss-output/ddss.json.sig --clobber
 
-      - name: Upload DDSS manifest to Rainyun S3
+      - name: Upload DDSS manifest to Rainyun S3 staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -242,6 +281,69 @@ jobs:
               --body "$file" \
               --metadata "sha256=$sha256"
           done
+
+      - name: Prepare DDSS channel pointer
+        shell: bash
+        run: |
+          set -euo pipefail
+          pointer_file="ddss-output/ddss-latest.json"
+          cat > "$pointer_file" <<'JSON'
+          {
+            "schemaVersion": 1,
+            "channel": "__CHANNEL__",
+            "releaseTag": "__TAG__",
+            "version": "__VERSION__",
+            "updatedAt": "__UPDATED_AT__",
+            "manifest": {
+              "url": "__MANIFEST_URL__",
+              "signatureUrl": "__SIG_URL__"
+            }
+          }
+          JSON
+
+          manifest_url="${S3_BASE_URL}/ddss.json"
+          sig_url="${S3_BASE_URL}/ddss.json.sig"
+          version="${RELEASE_TAG#v}"
+          updated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          sed -i "s|__CHANNEL__|${RELEASE_CHANNEL}|g" "$pointer_file"
+          sed -i "s|__TAG__|${RELEASE_TAG}|g" "$pointer_file"
+          sed -i "s|__VERSION__|${version}|g" "$pointer_file"
+          sed -i "s|__UPDATED_AT__|${updated_at}|g" "$pointer_file"
+          sed -i "s|__MANIFEST_URL__|${manifest_url}|g" "$pointer_file"
+          sed -i "s|__SIG_URL__|${sig_url}|g" "$pointer_file"
+
+          jq -e . "$pointer_file" >/dev/null
+
+      - name: Atomically publish DDSS channel pointer
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pointer_file="ddss-output/ddss-latest.json"
+          staging_key="lanmountain/update/releases/${RELEASE_TAG}/assets/ddss-latest.json"
+
+          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
+            --bucket "$S3_BUCKET" \
+            --key "$staging_key" \
+            --body "$pointer_file"
+
+          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
+            --bucket "$S3_BUCKET" \
+            --key "$DDSS_CHANNEL_POINTER_KEY" \
+            --body "$pointer_file"
+
+          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
+            --bucket "$S3_BUCKET" \
+            --key "$DDSS_CHANNEL_POINTER_KEY" >/dev/null
+
+          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json" >/dev/null
 
       - name: Verify Rainyun S3 PLONDS output
         env:

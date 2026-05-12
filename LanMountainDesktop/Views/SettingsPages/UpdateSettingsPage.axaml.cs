@@ -1,5 +1,6 @@
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.SettingsPages;
@@ -15,16 +16,18 @@ namespace LanMountainDesktop.Views.SettingsPages;
 public partial class UpdateSettingsPage : SettingsPageBase
 {
     public UpdateSettingsPage()
-        : this(new UpdateSettingsPageViewModel(HostSettingsFacadeProvider.GetOrCreate()))
+        : this(new UpdateSettingsViewModel(
+            HostUpdateOrchestratorProvider.GetOrCreate(),
+            HostSettingsFacadeProvider.GetOrCreate()))
     {
     }
 
-    public UpdateSettingsPage(UpdateSettingsPageViewModel viewModel)
+    public UpdateSettingsPage(UpdateSettingsViewModel viewModel)
     {
         ViewModel = viewModel;
         DataContext = ViewModel;
         InitializeComponent();
     }
 
-    public UpdateSettingsPageViewModel ViewModel { get; }
+    public UpdateSettingsViewModel ViewModel { get; }
 }

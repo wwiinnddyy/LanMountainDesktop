@@ -48,24 +48,43 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
     public bool IsBusy => CurrentPhase.IsBusy();
+    public bool IsPaused => CurrentPhase.IsPaused();
     public bool CanCheck => CurrentPhase.CanCheck();
     public bool CanDownload => CurrentPhase.CanDownload();
     public bool CanInstall => CurrentPhase.CanInstall();
     public bool CanRollback => CurrentPhase.CanRollback();
-    public bool IsProgressVisible => CurrentPhase is UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Installing or UpdatePhase.Verifying or UpdatePhase.RollingBack;
+    public bool CanPause => CurrentPhase.CanPause();
+    public bool CanResume => CurrentPhase.CanResume();
+    public bool CanCancel => CurrentPhase.CanCancel();
+    public bool IsProgressVisible => CurrentPhase is UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.PausedDownloading or UpdatePhase.Installing or UpdatePhase.Verifying or UpdatePhase.RollingBack;
+    public string PhaseText => CurrentPhase switch
+    {
+        UpdatePhase.PausedDownloading => "Paused (Download)",
+        UpdatePhase.PausedInstalling => "Paused (Install)",
+        UpdatePhase.Recovering => "Recovering Install",
+        _ => CurrentPhase.ToString()
+    };
 
     partial void OnCurrentPhaseChanged(UpdatePhase value)
     {
         OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(IsPaused));
         OnPropertyChanged(nameof(CanCheck));
         OnPropertyChanged(nameof(CanDownload));
         OnPropertyChanged(nameof(CanInstall));
         OnPropertyChanged(nameof(CanRollback));
+        OnPropertyChanged(nameof(CanPause));
+        OnPropertyChanged(nameof(CanResume));
+        OnPropertyChanged(nameof(CanCancel));
         OnPropertyChanged(nameof(IsProgressVisible));
+        OnPropertyChanged(nameof(PhaseText));
         CheckCommand.NotifyCanExecuteChanged();
         DownloadCommand.NotifyCanExecuteChanged();
         InstallCommand.NotifyCanExecuteChanged();
         RollbackCommand.NotifyCanExecuteChanged();
+        PauseCommand.NotifyCanExecuteChanged();
+        ResumeCommand.NotifyCanExecuteChanged();
+        CancelCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedUpdateChannelValueChanged(string value)
@@ -121,6 +140,10 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         {
             StatusMessage = "Download complete. Ready to install.";
         }
+        else if (result.ErrorMessage is not null && result.ErrorMessage.Contains("stale or invalid", StringComparison.OrdinalIgnoreCase))
+        {
+            StatusMessage = "Install resume state is invalid. Cancel and redownload, then retry.";
+        }
         else
         {
             StatusMessage = result.ErrorMessage ?? "Download failed.";
@@ -138,7 +161,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         }
         else
         {
-            StatusMessage = result.ErrorMessage ?? "Install failed.";
+            StatusMessage = result.ErrorMessage ?? result.ErrorCode ?? "Install failed.";
         }
     }
 
@@ -148,6 +171,37 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         StatusMessage = "Rolling back...";
         await _orchestrator.RollbackAsync(CancellationToken.None);
         StatusMessage = "Rollback complete.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPause))]
+    private async Task PauseAsync()
+    {
+        await _orchestrator.PauseAsync();
+        StatusMessage = "Update paused.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanResume))]
+    private async Task ResumeAsync()
+    {
+        StatusMessage = "Resuming update...";
+        var result = await _orchestrator.ResumeAsync(CancellationToken.None);
+        if (result.Success)
+        {
+            StatusMessage = "Download complete. Ready to install.";
+        }
+        else
+        {
+            StatusMessage = result.ErrorMessage ?? "Resume failed.";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private async Task CancelAsync()
+    {
+        await _orchestrator.CancelAsync();
+        StatusMessage = "Update canceled.";
+        ProgressDetail = string.Empty;
+        ProgressFraction = 0;
     }
 
     private void OnOrchestratorPhaseChanged(UpdatePhase phase)

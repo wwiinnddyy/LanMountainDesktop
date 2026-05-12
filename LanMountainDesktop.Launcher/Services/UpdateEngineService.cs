@@ -26,6 +26,7 @@ internal sealed class UpdateEngineService
     private readonly string _launcherRoot;
     private readonly string _incomingRoot;
     private readonly string _snapshotsRoot;
+    private readonly string _installCheckpointPath;
 
     public UpdateEngineService(DeploymentLocator deploymentLocator, IUpdateProgressReporter? progressReporter = null)
     {
@@ -36,6 +37,7 @@ internal sealed class UpdateEngineService
         _launcherRoot = resolver.ResolveLauncherDataPath();
         _incomingRoot = Path.Combine(_launcherRoot, UpdateDirectoryName, IncomingDirectoryName);
         _snapshotsRoot = Path.Combine(_launcherRoot, SnapshotsDirectoryName);
+        _installCheckpointPath = ContractsUpdate.UpdatePaths.GetInstallCheckpointPath(_appRoot);
     }
 
     public LauncherResult CheckPendingUpdate()
@@ -129,19 +131,274 @@ internal sealed class UpdateEngineService
         Directory.CreateDirectory(_incomingRoot);
         Directory.CreateDirectory(_snapshotsRoot);
 
-        var pdcFileMapPath = Path.Combine(_incomingRoot, PlondsFileMapName);
-        var pdcSignaturePath = Path.Combine(_incomingRoot, PlondsSignatureFileName);
-        var pdcUpdatePath = Path.Combine(_incomingRoot, PlondsUpdateMetadataName);
-        if (File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
+        var stateValidation = ValidateIncomingState();
+        if (!stateValidation.Success)
         {
-            return await ApplyPendingPlondsUpdateAsync(pdcFileMapPath, pdcSignaturePath, pdcUpdatePath);
+            return stateValidation;
         }
 
-        var fileMapPath = Path.Combine(_incomingRoot, SignedFileMapName);
-        var signaturePath = Path.Combine(_incomingRoot, SignatureFileName);
-        var archivePath = Path.Combine(_incomingRoot, ArchiveFileName);
+        var applyLockPath = ContractsUpdate.UpdatePaths.GetApplyInProgressLockPath(_appRoot);
+        try
+        {
+            File.WriteAllText(applyLockPath, DateTimeOffset.UtcNow.ToString("O"));
+        }
+        catch (Exception ex)
+        {
+            return Failed("update.apply", "lock_conflict", $"Failed to acquire apply lock: {ex.Message}");
+        }
 
-        if (!File.Exists(fileMapPath) || !File.Exists(archivePath))
+        try
+        {
+            var pdcFileMapPath = Path.Combine(_incomingRoot, PlondsFileMapName);
+            var pdcSignaturePath = Path.Combine(_incomingRoot, PlondsSignatureFileName);
+            var pdcUpdatePath = Path.Combine(_incomingRoot, PlondsUpdateMetadataName);
+            if (File.Exists(pdcFileMapPath) && File.Exists(pdcSignaturePath))
+            {
+                return await ApplyPendingPlondsUpdateAsync(pdcFileMapPath, pdcSignaturePath, pdcUpdatePath);
+            }
+
+            var fileMapPath = Path.Combine(_incomingRoot, SignedFileMapName);
+            var signaturePath = Path.Combine(_incomingRoot, SignatureFileName);
+            var archivePath = Path.Combine(_incomingRoot, ArchiveFileName);
+
+            if (!File.Exists(fileMapPath) || !File.Exists(archivePath))
+            {
+                return new LauncherResult
+                {
+                    Success = true,
+                    Stage = "update.apply",
+                    Code = "noop",
+                    Message = "No update payload found."
+                };
+            }
+
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifySignature, "Verifying signature...", 0, null, 0, 0));
+            var verifyResult = VerifySignature(fileMapPath, signaturePath, SignatureFileName);
+            if (!verifyResult.Success)
+            {
+                _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, verifyResult.Message, false));
+                return Failed("update.apply", "signature_failed", verifyResult.Message);
+            }
+
+            var fileMapText = await File.ReadAllTextAsync(fileMapPath);
+            var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.SignedFileMap);
+            if (fileMap is null || fileMap.Files.Count == 0)
+            {
+                _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, "No update file entries were found.", false));
+                return Failed("update.apply", "invalid_manifest", "No update file entries were found.");
+            }
+
+            var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
+            if (string.IsNullOrWhiteSpace(currentDeployment))
+            {
+                // Initial install path: no current deployment exists, so apply the staged package directly.
+            }
+
+            var currentVersion = _deploymentLocator.GetCurrentVersion();
+            if (!string.IsNullOrWhiteSpace(fileMap.FromVersion) &&
+                !string.Equals(fileMap.FromVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                return Failed(
+                    "update.apply",
+                    "version_mismatch",
+                    $"Update requires source version {fileMap.FromVersion} but current is {currentVersion}.");
+            }
+
+            var targetVersion = string.IsNullOrWhiteSpace(fileMap.ToVersion) ? currentVersion : fileMap.ToVersion!;
+            var existingCheckpoint = LoadInstallCheckpoint();
+            var canResume = existingCheckpoint is not null
+                            && string.Equals(existingCheckpoint.SourceVersion, currentVersion, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(existingCheckpoint.TargetVersion, targetVersion, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(existingCheckpoint.SourceDirectory ?? string.Empty, currentDeployment ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                            && Directory.Exists(existingCheckpoint.TargetDirectory)
+                            && File.Exists(Path.Combine(existingCheckpoint.TargetDirectory, ".partial"));
+
+            if (existingCheckpoint is not null && !canResume)
+            {
+                return Failed("update.apply", "resume_state_invalid", "Install checkpoint is stale or invalid. Please cancel and redownload update payload.");
+            }
+
+            var targetDeployment = canResume
+                ? existingCheckpoint!.TargetDirectory
+                : _deploymentLocator.BuildNextDeploymentDirectory(targetVersion);
+            var partialMarker = Path.Combine(targetDeployment, ".partial");
+            var snapshot = new SnapshotMetadata
+            {
+                SnapshotId = canResume ? existingCheckpoint!.SnapshotId : Guid.NewGuid().ToString("N"),
+                SourceVersion = currentVersion,
+                TargetVersion = targetVersion,
+                CreatedAt = DateTimeOffset.UtcNow,
+                SourceDirectory = currentDeployment,
+                TargetDirectory = targetDeployment,
+                Status = "pending"
+            };
+            var snapshotPath = Path.Combine(_snapshotsRoot, $"{snapshot.SnapshotId}.json");
+            var checkpoint = canResume
+                ? existingCheckpoint!
+                : new InstallCheckpoint
+                {
+                    SnapshotId = snapshot.SnapshotId,
+                    SourceVersion = currentVersion,
+                    TargetVersion = targetVersion,
+                    SourceDirectory = currentDeployment,
+                    TargetDirectory = targetDeployment,
+                    IsInitialDeployment = false,
+                    AppliedCount = 0,
+                    VerifiedCount = 0
+                };
+
+            var extractRoot = Path.Combine(_incomingRoot, "extracted");
+            try
+            {
+                SaveSnapshot(snapshotPath, snapshot);
+
+                if (Directory.Exists(extractRoot))
+                {
+                    Directory.Delete(extractRoot, true);
+                }
+
+                Directory.CreateDirectory(extractRoot);
+                ZipFile.ExtractToDirectory(archivePath, extractRoot, overwriteFiles: true);
+
+                if (!canResume)
+                {
+                    _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileMap.Files.Count));
+                    Directory.CreateDirectory(targetDeployment);
+                    File.WriteAllText(partialMarker, string.Empty);
+                }
+
+                SaveInstallCheckpoint(checkpoint);
+
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30, null, checkpoint.AppliedCount, fileMap.Files.Count));
+                for (var fileIndex = checkpoint.AppliedCount; fileIndex < fileMap.Files.Count; fileIndex++)
+                {
+                    var file = fileMap.Files[fileIndex];
+                    ApplyFileEntry(file, currentDeployment, targetDeployment, extractRoot);
+                    checkpoint.AppliedCount = fileIndex + 1;
+                    SaveInstallCheckpoint(checkpoint);
+                    _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30 + (checkpoint.AppliedCount * 30 / fileMap.Files.Count), file.Path, checkpoint.AppliedCount, fileMap.Files.Count));
+                }
+
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65, null, checkpoint.VerifiedCount, fileMap.Files.Count));
+                for (var verifyIndex = checkpoint.VerifiedCount; verifyIndex < fileMap.Files.Count; verifyIndex++)
+                {
+                    var file = fileMap.Files[verifyIndex];
+                    if (!NeedsVerification(file))
+                    {
+                        checkpoint.VerifiedCount = verifyIndex + 1;
+                        SaveInstallCheckpoint(checkpoint);
+                        continue;
+                    }
+
+                    var fullPath = Path.Combine(targetDeployment, file.Path);
+                    var actualHash = ComputeSha256Hex(fullPath);
+                    if (!string.Equals(actualHash, file.Sha256, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"File hash mismatch for '{file.Path}'.");
+                    }
+
+                    checkpoint.VerifiedCount = verifyIndex + 1;
+                    SaveInstallCheckpoint(checkpoint);
+                    _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65 + (checkpoint.VerifiedCount * 15 / fileMap.Files.Count), file.Path, checkpoint.VerifiedCount, fileMap.Files.Count));
+                }
+
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileMap.Files.Count, fileMap.Files.Count));
+                ActivateDeployment(currentDeployment, targetDeployment);
+
+                snapshot.Status = "applied";
+                SaveSnapshot(snapshotPath, snapshot);
+                CleanupIncomingArtifacts();
+                RetainDeploymentsForRollback();
+
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileMap.Files.Count, fileMap.Files.Count));
+                _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, currentVersion, targetVersion, null, false));
+
+                return new LauncherResult
+                {
+                    Success = true,
+                    Stage = "update.apply",
+                    Code = "ok",
+                    Message = $"Updated to {targetVersion}.",
+                    CurrentVersion = currentVersion,
+                    TargetVersion = targetVersion
+                };
+            }
+            catch (Exception ex)
+            {
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
+                var rollbackResult = TryRollbackOnFailure(snapshot);
+                snapshot.Status = rollbackResult.Success ? "rolled_back" : "rollback_failed";
+                SaveSnapshot(snapshotPath, snapshot);
+                var errorMessage = rollbackResult.Success
+                    ? ex.Message
+                    : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
+                _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, currentVersion, targetVersion, errorMessage, rollbackResult.Success));
+                return new LauncherResult
+                {
+                    Success = false,
+                    Stage = "update.apply",
+                    Code = rollbackResult.Success ? "apply_failed" : "rollback_failed",
+                    Message = rollbackResult.Success
+                        ? "Failed to apply update. Rolled back to previous version."
+                        : "Failed to apply update and rollback failed.",
+                    ErrorMessage = errorMessage,
+                    CurrentVersion = currentVersion,
+                    RolledBackTo = rollbackResult.Success ? currentVersion : null
+                };
+            }
+            finally
+            {
+                DeleteInstallCheckpoint();
+                try
+                {
+                    if (Directory.Exists(extractRoot))
+                    {
+                        Directory.Delete(extractRoot, true);
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(applyLockPath))
+                {
+                    File.Delete(applyLockPath);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private LauncherResult ValidateIncomingState()
+    {
+        var applyLockPath = ContractsUpdate.UpdatePaths.GetApplyInProgressLockPath(_appRoot);
+        if (File.Exists(applyLockPath))
+        {
+            return Failed("update.apply", "lock_conflict", "Another update apply operation is already in progress.");
+        }
+
+        var deploymentLockPath = ContractsUpdate.UpdatePaths.GetDeploymentLockPath(_appRoot);
+        if (!File.Exists(deploymentLockPath))
+        {
+            return Failed("update.apply", "staging_incomplete", "Deployment lock is missing. Please redownload the update.");
+        }
+
+        var markerPath = ContractsUpdate.UpdatePaths.GetDownloadMarkerPath(_appRoot);
+        var hasPlondsMap = File.Exists(Path.Combine(_incomingRoot, PlondsFileMapName));
+        var hasLegacyMap = File.Exists(Path.Combine(_incomingRoot, SignedFileMapName));
+        if (hasPlondsMap && !File.Exists(markerPath))
+        {
+            return Failed("update.apply", "staging_incomplete", "Download marker is missing for pending PLONDS update.");
+        }
+
+        if (!hasPlondsMap && !hasLegacyMap)
         {
             return new LauncherResult
             {
@@ -152,156 +409,13 @@ internal sealed class UpdateEngineService
             };
         }
 
-        _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifySignature, "Verifying signature...", 0, null, 0, 0));
-        var verifyResult = VerifySignature(fileMapPath, signaturePath, SignatureFileName);
-        if (!verifyResult.Success)
+        return new LauncherResult
         {
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, verifyResult.Message, false));
-            return Failed("update.apply", "signature_failed", verifyResult.Message);
-        }
-
-        var fileMapText = await File.ReadAllTextAsync(fileMapPath);
-        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.SignedFileMap);
-        if (fileMap is null || fileMap.Files.Count == 0)
-        {
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, "No update file entries were found.", false));
-            return Failed("update.apply", "invalid_manifest", "No update file entries were found.");
-        }
-
-        var currentDeployment = _deploymentLocator.FindCurrentDeploymentDirectory();
-        if (string.IsNullOrWhiteSpace(currentDeployment))
-        {
-            // Initial install path: no current deployment exists, so apply the staged package directly.
-        }
-
-        var currentVersion = _deploymentLocator.GetCurrentVersion();
-        if (!string.IsNullOrWhiteSpace(fileMap.FromVersion) &&
-            !string.Equals(fileMap.FromVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
-        {
-            return Failed(
-                "update.apply",
-                "version_mismatch",
-                $"Update requires source version {fileMap.FromVersion} but current is {currentVersion}.");
-        }
-
-        var targetVersion = string.IsNullOrWhiteSpace(fileMap.ToVersion) ? currentVersion : fileMap.ToVersion!;
-        var targetDeployment = _deploymentLocator.BuildNextDeploymentDirectory(targetVersion);
-        var partialMarker = Path.Combine(targetDeployment, ".partial");
-        var snapshot = new SnapshotMetadata
-        {
-            SnapshotId = Guid.NewGuid().ToString("N"),
-            SourceVersion = currentVersion,
-            TargetVersion = targetVersion,
-            CreatedAt = DateTimeOffset.UtcNow,
-            SourceDirectory = currentDeployment,
-            TargetDirectory = targetDeployment,
-            Status = "pending"
+            Success = true,
+            Stage = "update.apply",
+            Code = "ok",
+            Message = "Incoming update state validated."
         };
-        var snapshotPath = Path.Combine(_snapshotsRoot, $"{snapshot.SnapshotId}.json");
-
-        var extractRoot = Path.Combine(_incomingRoot, "extracted");
-        try
-        {
-            SaveSnapshot(snapshotPath, snapshot);
-
-            if (Directory.Exists(extractRoot))
-            {
-                Directory.Delete(extractRoot, true);
-            }
-
-            Directory.CreateDirectory(extractRoot);
-            ZipFile.ExtractToDirectory(archivePath, extractRoot, overwriteFiles: true);
-
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileMap.Files.Count));
-            Directory.CreateDirectory(targetDeployment);
-            File.WriteAllText(partialMarker, string.Empty);
-
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30, null, 0, fileMap.Files.Count));
-            var fileIndex = 0;
-            foreach (var file in fileMap.Files)
-            {
-                ApplyFileEntry(file, currentDeployment, targetDeployment, extractRoot);
-                fileIndex++;
-                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying files...", 30 + (fileIndex * 30 / fileMap.Files.Count), file.Path, fileIndex, fileMap.Files.Count));
-            }
-
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65, null, 0, fileMap.Files.Count));
-            var verifyIndex = 0;
-            foreach (var file in fileMap.Files)
-            {
-                if (!NeedsVerification(file))
-                {
-                    continue;
-                }
-
-                var fullPath = Path.Combine(targetDeployment, file.Path);
-                var actualHash = ComputeSha256Hex(fullPath);
-                if (!string.Equals(actualHash, file.Sha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"File hash mismatch for '{file.Path}'.");
-                }
-
-                verifyIndex++;
-                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying hashes...", 65 + (verifyIndex * 15 / fileMap.Files.Count), file.Path, verifyIndex, fileMap.Files.Count));
-            }
-
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileMap.Files.Count, fileMap.Files.Count));
-            ActivateDeployment(currentDeployment, targetDeployment);
-
-            snapshot.Status = "applied";
-            SaveSnapshot(snapshotPath, snapshot);
-            CleanupIncomingArtifacts();
-            RetainDeploymentsForRollback();
-
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileMap.Files.Count, fileMap.Files.Count));
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, currentVersion, targetVersion, null, false));
-
-            return new LauncherResult
-            {
-                Success = true,
-                Stage = "update.apply",
-                Code = "ok",
-                Message = $"Updated to {targetVersion}.",
-                CurrentVersion = currentVersion,
-                TargetVersion = targetVersion
-            };
-        }
-        catch (Exception ex)
-        {
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
-            var rollbackResult = TryRollbackOnFailure(snapshot);
-            snapshot.Status = rollbackResult.Success ? "rolled_back" : "rollback_failed";
-            SaveSnapshot(snapshotPath, snapshot);
-            var errorMessage = rollbackResult.Success
-                ? ex.Message
-                : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
-            _progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, currentVersion, targetVersion, errorMessage, rollbackResult.Success));
-            return new LauncherResult
-            {
-                Success = false,
-                Stage = "update.apply",
-                Code = rollbackResult.Success ? "apply_failed" : "rollback_failed",
-                Message = rollbackResult.Success
-                    ? "Failed to apply update. Rolled back to previous version."
-                    : "Failed to apply update and rollback failed.",
-                ErrorMessage = errorMessage,
-                CurrentVersion = currentVersion,
-                RolledBackTo = rollbackResult.Success ? currentVersion : null
-            };
-        }
-        finally
-        {
-            try
-            {
-                if (Directory.Exists(extractRoot))
-                {
-                    Directory.Delete(extractRoot, true);
-                }
-            }
-            catch
-            {
-            }
-        }
     }
 
     private async Task<LauncherResult> ApplyPendingPlondsUpdateAsync(
@@ -353,11 +467,26 @@ internal sealed class UpdateEngineService
         }
 
         var isInitialDeployment = string.IsNullOrWhiteSpace(currentDeployment);
-        var targetDeployment = _deploymentLocator.BuildNextDeploymentDirectory(targetVersion!);
+        var existingCheckpoint = LoadInstallCheckpoint();
+        var canResume = existingCheckpoint is not null
+                        && string.Equals(existingCheckpoint.SourceVersion, sourceVersion, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(existingCheckpoint.TargetVersion, targetVersion, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(existingCheckpoint.SourceDirectory ?? string.Empty, currentDeployment ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                        && Directory.Exists(existingCheckpoint.TargetDirectory)
+                        && File.Exists(Path.Combine(existingCheckpoint.TargetDirectory, ".partial"));
+
+        if (existingCheckpoint is not null && !canResume)
+        {
+            return Failed("update.apply", "resume_state_invalid", "Install checkpoint is stale or invalid. Please cancel and redownload update payload.");
+        }
+
+        var targetDeployment = canResume
+            ? existingCheckpoint!.TargetDirectory
+            : _deploymentLocator.BuildNextDeploymentDirectory(targetVersion!);
         var partialMarker = Path.Combine(targetDeployment, ".partial");
         var snapshot = new SnapshotMetadata
         {
-            SnapshotId = Guid.NewGuid().ToString("N"),
+            SnapshotId = canResume ? existingCheckpoint!.SnapshotId : Guid.NewGuid().ToString("N"),
             SourceVersion = sourceVersion,
             TargetVersion = targetVersion,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -367,35 +496,56 @@ internal sealed class UpdateEngineService
         };
         var snapshotPath = Path.Combine(_snapshotsRoot, $"{snapshot.SnapshotId}.json");
 
+        var checkpoint = canResume
+            ? existingCheckpoint!
+            : new InstallCheckpoint
+            {
+                SnapshotId = snapshot.SnapshotId,
+                SourceVersion = sourceVersion,
+                TargetVersion = targetVersion,
+                SourceDirectory = currentDeployment,
+                TargetDirectory = targetDeployment,
+                IsInitialDeployment = isInitialDeployment,
+                AppliedCount = 0,
+                VerifiedCount = 0
+            };
+
         try
         {
             SaveSnapshot(snapshotPath, snapshot);
 
-            if (Directory.Exists(targetDeployment))
+            if (!canResume)
             {
-                Directory.Delete(targetDeployment, true);
+                if (Directory.Exists(targetDeployment))
+                {
+                    Directory.Delete(targetDeployment, true);
+                }
+
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
+                Directory.CreateDirectory(targetDeployment);
+                File.WriteAllText(partialMarker, string.Empty);
             }
 
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
-            Directory.CreateDirectory(targetDeployment);
-            File.WriteAllText(partialMarker, string.Empty);
+            SaveInstallCheckpoint(checkpoint);
 
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30, null, 0, fileEntries.Count));
-            var fileIndex = 0;
-            foreach (var entry in fileEntries)
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30, null, checkpoint.AppliedCount, fileEntries.Count));
+            for (var fileIndex = checkpoint.AppliedCount; fileIndex < fileEntries.Count; fileIndex++)
             {
+                var entry = fileEntries[fileIndex];
                 ApplyPlondsFileEntry(entry, currentDeployment, targetDeployment);
-                fileIndex++;
-                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30 + (fileIndex * 30 / fileEntries.Count), entry.Path, fileIndex, fileEntries.Count));
+                checkpoint.AppliedCount = fileIndex + 1;
+                SaveInstallCheckpoint(checkpoint);
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30 + (checkpoint.AppliedCount * 30 / fileEntries.Count), entry.Path, checkpoint.AppliedCount, fileEntries.Count));
             }
 
-            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65, null, 0, fileEntries.Count));
-            var verifyIndex = 0;
-            foreach (var entry in fileEntries)
+            _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65, null, checkpoint.VerifiedCount, fileEntries.Count));
+            for (var verifyIndex = checkpoint.VerifiedCount; verifyIndex < fileEntries.Count; verifyIndex++)
             {
+                var entry = fileEntries[verifyIndex];
                 VerifyPlondsFileEntry(entry, targetDeployment);
-                verifyIndex++;
-                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65 + (verifyIndex * 15 / fileEntries.Count), entry.Path, verifyIndex, fileEntries.Count));
+                checkpoint.VerifiedCount = verifyIndex + 1;
+                SaveInstallCheckpoint(checkpoint);
+                _progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65 + (checkpoint.VerifiedCount * 15 / fileEntries.Count), entry.Path, checkpoint.VerifiedCount, fileEntries.Count));
             }
 
             if (isInitialDeployment)
@@ -480,6 +630,10 @@ internal sealed class UpdateEngineService
                 CurrentVersion = sourceVersion,
                 RolledBackTo = rollbackResult.Success ? sourceVersion : null
             };
+        }
+        finally
+        {
+            DeleteInstallCheckpoint();
         }
     }
 
@@ -1529,7 +1683,8 @@ internal sealed class UpdateEngineService
                      Path.Combine(_incomingRoot, ArchiveFileName),
                      Path.Combine(_incomingRoot, PlondsFileMapName),
                      Path.Combine(_incomingRoot, PlondsSignatureFileName),
-                     Path.Combine(_incomingRoot, PlondsUpdateMetadataName)
+                     Path.Combine(_incomingRoot, PlondsUpdateMetadataName),
+                     _installCheckpointPath
                  })
         {
             try
@@ -1636,6 +1791,48 @@ internal sealed class UpdateEngineService
     private static void SaveSnapshot(string path, SnapshotMetadata snapshot)
     {
         File.WriteAllText(path, JsonSerializer.Serialize(snapshot, AppJsonContext.Default.SnapshotMetadata));
+    }
+
+    private InstallCheckpoint? LoadInstallCheckpoint()
+    {
+        if (!File.Exists(_installCheckpointPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var text = File.ReadAllText(_installCheckpointPath);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize(text, AppJsonContext.Default.InstallCheckpoint);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void SaveInstallCheckpoint(InstallCheckpoint checkpoint)
+    {
+        File.WriteAllText(_installCheckpointPath, JsonSerializer.Serialize(checkpoint, AppJsonContext.Default.InstallCheckpoint));
+    }
+
+    private void DeleteInstallCheckpoint()
+    {
+        try
+        {
+            if (File.Exists(_installCheckpointPath))
+            {
+                File.Delete(_installCheckpointPath);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private static LauncherResult Failed(string stage, string code, string message)

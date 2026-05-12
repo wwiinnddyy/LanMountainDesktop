@@ -9,6 +9,34 @@ using SettingsUpdateSettingsState = LanMountainDesktop.Services.Settings.UpdateS
 
 namespace LanMountainDesktop.Services.Update;
 
+internal static class HostUpdateOrchestratorProvider
+{
+    private static readonly object Gate = new();
+    private static UpdateOrchestrator? _instance;
+
+    public static UpdateOrchestrator GetOrCreate()
+    {
+        lock (Gate)
+        {
+            if (_instance is not null)
+            {
+                return _instance;
+            }
+
+            var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
+            var githubProvider = new GithubReleaseManifestProvider("wwiinnddyy", "LanMountainDesktop");
+            var staticProvider = new PlondsApiManifestProvider("https://api.classisland.tech");
+            var compositeProvider = new CompositeManifestProvider(staticProvider, githubProvider);
+            var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            var downloadEngine = new UpdateDownloadEngine(compositeProvider, new ResumableDownloadService(httpClient));
+            var installGateway = new UpdateInstallGateway();
+            var stateStore = new UpdateStateStore(settingsFacade);
+            _instance = new UpdateOrchestrator(compositeProvider, downloadEngine, installGateway, stateStore);
+            return _instance;
+        }
+    }
+}
+
 public sealed class UpdateOrchestrator : IDisposable
 {
     private readonly IUpdateManifestProvider _manifestProvider;
@@ -16,6 +44,8 @@ public sealed class UpdateOrchestrator : IDisposable
     private readonly UpdateInstallGateway _installGateway;
     private readonly UpdateStateStore _stateStore;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly object _cancellationSync = new();
+    private CancellationTokenSource? _activeOperationCts;
     private bool _disposed;
 
     internal UpdateOrchestrator(
@@ -40,9 +70,29 @@ public sealed class UpdateOrchestrator : IDisposable
     public event Action<UpdatePhase>? PhaseChanged;
     public event Action<UpdateProgressReport>? ProgressChanged;
 
+    private CancellationToken RegisterOperationCancellation(CancellationToken ct)
+    {
+        lock (_cancellationSync)
+        {
+            _activeOperationCts?.Dispose();
+            _activeOperationCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            return _activeOperationCts.Token;
+        }
+    }
+
+    private void ClearOperationCancellation()
+    {
+        lock (_cancellationSync)
+        {
+            _activeOperationCts?.Dispose();
+            _activeOperationCts = null;
+        }
+    }
+
     public async Task<UpdateCheckReport> CheckAsync(CancellationToken ct)
     {
         await _operationGate.WaitAsync(ct);
+        var operationToken = RegisterOperationCancellation(ct);
         try
         {
             if (!CurrentPhase.CanCheck())
@@ -59,9 +109,21 @@ public sealed class UpdateOrchestrator : IDisposable
             var currentVersionText = _stateStore.GetSettings().PendingUpdateVersion
                 ?? AppVersionProvider.ResolveForCurrentProcess().Version;
 
-            if (!Version.TryParse(currentVersionText, out var currentVersion))
+            if (!TryParseVersion(currentVersionText, out var currentVersion))
             {
-                currentVersion = new Version(0, 0, 0);
+                _stateStore.TransitionTo(UpdatePhase.Failed);
+                _stateStore.RecordFailure($"Invalid current version text: {currentVersionText}");
+                return new UpdateCheckReport(
+                    false,
+                    null,
+                    currentVersionText,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    $"Invalid current version text: {currentVersionText}");
             }
 
             UpdateManifest? manifest;
@@ -71,7 +133,7 @@ public sealed class UpdateOrchestrator : IDisposable
                     channel,
                     LanMountainDesktop.Services.PlondsStaticUpdateService.ResolveCurrentPlatform(),
                     currentVersion,
-                    ct);
+                    operationToken);
             }
             catch (OperationCanceledException)
             {
@@ -114,6 +176,7 @@ public sealed class UpdateOrchestrator : IDisposable
         }
         finally
         {
+            ClearOperationCancellation();
             _operationGate.Release();
         }
     }
@@ -121,9 +184,10 @@ public sealed class UpdateOrchestrator : IDisposable
     public async Task<DownloadResult> DownloadAsync(CancellationToken ct)
     {
         await _operationGate.WaitAsync(ct);
+        var operationToken = RegisterOperationCancellation(ct);
         try
         {
-            if (!CurrentPhase.CanDownload())
+            if (CurrentPhase is not (UpdatePhase.Checked or UpdatePhase.PausedDownloading))
             {
                 return new DownloadResult(false, null, $"Cannot download in phase {CurrentPhase}.", false);
             }
@@ -168,7 +232,7 @@ public sealed class UpdateOrchestrator : IDisposable
                         objectsDir,
                         maxThreads,
                         downloadProgress,
-                        ct);
+                        operationToken);
                 }
                 else
                 {
@@ -183,7 +247,7 @@ public sealed class UpdateOrchestrator : IDisposable
                         destinationPath,
                         maxThreads,
                         downloadProgress,
-                        ct);
+                        operationToken);
                 }
 
                 if (result.Success)
@@ -196,8 +260,18 @@ public sealed class UpdateOrchestrator : IDisposable
                         PendingUpdateInstallerPath = result.FilePath,
                         PendingUpdateVersion = manifest.ToVersion,
                         PendingUpdatePublishedAtUtcMs = manifest.PublishedAt.ToUnixTimeMilliseconds(),
-                        PendingUpdateSha256 = null
+                        PendingUpdateSha256 = null,
+                        LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
                     });
+
+                    var payloadKind = manifest.IsDelta ? "delta" : "full";
+                    DeploymentLockService.WriteLock(launcherRoot, new DeploymentLock(
+                        SchemaVersion: 1,
+                        Kind: payloadKind,
+                        TargetVersion: manifest.ToVersion,
+                        PayloadPath: result.FilePath ?? string.Empty,
+                        PayloadSha256: null,
+                        CreatedAtUtc: DateTimeOffset.UtcNow));
 
                     AppLogger.Info("UpdateOrchestrator", $"Update downloaded successfully: {manifest.ToVersion}");
                 }
@@ -211,7 +285,11 @@ public sealed class UpdateOrchestrator : IDisposable
             }
             catch (OperationCanceledException)
             {
-                _stateStore.TransitionTo(UpdatePhase.Idle);
+                if (CurrentPhase != UpdatePhase.PausedDownloading)
+                {
+                    _stateStore.TransitionTo(UpdatePhase.Idle);
+                }
+
                 throw;
             }
             catch (Exception ex)
@@ -223,6 +301,7 @@ public sealed class UpdateOrchestrator : IDisposable
         }
         finally
         {
+            ClearOperationCancellation();
             _operationGate.Release();
         }
     }
@@ -230,17 +309,18 @@ public sealed class UpdateOrchestrator : IDisposable
     public async Task<InstallResult> InstallAsync(CancellationToken ct)
     {
         await _operationGate.WaitAsync(ct);
+        var operationToken = RegisterOperationCancellation(ct);
         try
         {
             if (!CurrentPhase.CanInstall())
             {
-                return new InstallResult(false, $"Cannot install in phase {CurrentPhase}.", false);
+                return new InstallResult(false, $"Cannot install in phase {CurrentPhase}.", false, "invalid_phase");
             }
 
             var manifest = _stateStore.PendingManifest;
             if (manifest is null)
             {
-                return new InstallResult(false, "No manifest available for install.", false);
+                return new InstallResult(false, "No manifest available for install.", false, "staging_incomplete");
             }
 
             _stateStore.TransitionTo(UpdatePhase.Installing);
@@ -264,7 +344,7 @@ public sealed class UpdateOrchestrator : IDisposable
                     manifest.Kind,
                     launcherRoot,
                     installProgress,
-                    ct);
+                    operationToken);
 
                 if (result.Success)
                 {
@@ -282,18 +362,23 @@ public sealed class UpdateOrchestrator : IDisposable
             }
             catch (OperationCanceledException)
             {
-                _stateStore.TransitionTo(UpdatePhase.Failed);
+                if (CurrentPhase != UpdatePhase.PausedInstalling)
+                {
+                    _stateStore.TransitionTo(UpdatePhase.Idle);
+                }
+
                 throw;
             }
             catch (Exception ex)
             {
                 _stateStore.TransitionTo(UpdatePhase.Failed);
                 _stateStore.RecordFailure(ex.Message);
-                return new InstallResult(false, ex.Message, false);
+                return new InstallResult(false, ex.Message, false, "install_exception");
             }
         }
         finally
         {
+            ClearOperationCancellation();
             _operationGate.Release();
         }
     }
@@ -301,8 +386,11 @@ public sealed class UpdateOrchestrator : IDisposable
     public async Task RollbackAsync(CancellationToken ct)
     {
         await _operationGate.WaitAsync(ct);
+        var operationToken = RegisterOperationCancellation(ct);
         try
         {
+            operationToken.ThrowIfCancellationRequested();
+
             if (!CurrentPhase.CanRollback())
             {
                 return;
@@ -330,6 +418,11 @@ public sealed class UpdateOrchestrator : IDisposable
 
                 _stateStore.TransitionTo(UpdatePhase.RolledBack);
             }
+            catch (OperationCanceledException)
+            {
+                _stateStore.TransitionTo(UpdatePhase.Idle);
+                throw;
+            }
             catch (Exception ex)
             {
                 AppLogger.Warn("UpdateOrchestrator", $"Rollback failed: {ex.Message}");
@@ -338,21 +431,86 @@ public sealed class UpdateOrchestrator : IDisposable
         }
         finally
         {
+            ClearOperationCancellation();
             _operationGate.Release();
         }
     }
 
-    public async Task CancelAsync()
+    public Task CancelAsync()
     {
-        if (!CurrentPhase.IsBusy())
+        if (!CurrentPhase.CanCancel())
         {
-            return;
+            return Task.CompletedTask;
+        }
+
+        lock (_cancellationSync)
+        {
+            _activeOperationCts?.Cancel();
         }
 
         _stateStore.TransitionTo(UpdatePhase.Idle);
-        _stateStore.PendingManifest = null;
-        AppLogger.Info("UpdateOrchestrator", "Update operation cancelled.");
-        await Task.CompletedTask;
+
+        var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        CleanupIncomingArtifacts(launcherRoot);
+        DeploymentLockService.ClearLock(launcherRoot);
+
+        var state = _stateStore.GetSettings();
+        _stateStore.SaveSettings(state with
+        {
+            PendingUpdateInstallerPath = null,
+            PendingUpdateVersion = null,
+            PendingUpdateSha256 = null
+        });
+
+        AppLogger.Info("UpdateOrchestrator", "Cancellation requested for active update operation.");
+        return Task.CompletedTask;
+    }
+
+    public Task PauseAsync()
+    {
+        if (!CurrentPhase.CanPause())
+        {
+            return Task.CompletedTask;
+        }
+
+        var pausedPhase = CurrentPhase switch
+        {
+            UpdatePhase.Downloading => UpdatePhase.PausedDownloading,
+            UpdatePhase.Installing => UpdatePhase.PausedInstalling,
+            _ => UpdatePhase.Idle
+        };
+
+        _stateStore.TransitionTo(pausedPhase);
+
+        lock (_cancellationSync)
+        {
+            _activeOperationCts?.Cancel();
+        }
+
+        AppLogger.Info("UpdateOrchestrator", $"Pause requested in phase {pausedPhase}.");
+        return Task.CompletedTask;
+    }
+
+    public async Task<DownloadResult> ResumeAsync(CancellationToken ct)
+    {
+        return CurrentPhase switch
+        {
+            UpdatePhase.PausedDownloading => await DownloadAsync(ct),
+            UpdatePhase.PausedInstalling => await ResumeInstallAsync(ct),
+            _ => new DownloadResult(false, null, $"Cannot resume in phase {CurrentPhase}.", false)
+        };
+    }
+
+    private async Task<DownloadResult> ResumeInstallAsync(CancellationToken ct)
+    {
+        _stateStore.TransitionTo(UpdatePhase.Recovering);
+        var installResult = await InstallAsync(ct);
+        if (installResult.Success)
+        {
+            return new DownloadResult(true, null, null, false);
+        }
+
+        return new DownloadResult(false, null, installResult.ErrorMessage ?? installResult.ErrorCode ?? "Install resume failed.", false);
     }
 
     public async Task AutoCheckIfEnabledAsync(CancellationToken ct)
@@ -458,6 +616,77 @@ public sealed class UpdateOrchestrator : IDisposable
         }
     }
 
+    private static void CleanupIncomingArtifacts(string launcherRoot)
+    {
+        var incomingDir = UpdatePaths.GetIncomingDirectory(launcherRoot);
+
+        foreach (var path in new[]
+                 {
+                     Path.Combine(incomingDir, UpdatePaths.GetLegacyFileMapName()),
+                     Path.Combine(incomingDir, UpdatePaths.GetLegacySignatureName()),
+                     Path.Combine(incomingDir, UpdatePaths.GetLegacyArchiveName()),
+                     Path.Combine(incomingDir, UpdatePaths.GetPlondsFileMapName()),
+                     Path.Combine(incomingDir, UpdatePaths.GetPlondsSignatureName()),
+                     Path.Combine(incomingDir, UpdatePaths.GetPlondsUpdateMetadataName()),
+                     UpdatePaths.GetDownloadMarkerPath(launcherRoot)
+                 })
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        try
+        {
+            var objectsDir = UpdatePaths.GetObjectsDirectory(launcherRoot);
+            if (Directory.Exists(objectsDir))
+            {
+                Directory.Delete(objectsDir, true);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool TryParseVersion(string? value, out Version version)
+    {
+        version = new Version(0, 0, 0);
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.Trim().TrimStart('v', 'V');
+        var dashIndex = normalized.IndexOf('-');
+        if (dashIndex >= 0)
+        {
+            normalized = normalized[..dashIndex];
+        }
+
+        var plusIndex = normalized.IndexOf('+');
+        if (plusIndex >= 0)
+        {
+            normalized = normalized[..plusIndex];
+        }
+
+        if (!Version.TryParse(normalized, out var parsed))
+        {
+            return false;
+        }
+
+        version = new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build), Math.Max(0, parsed.Revision));
+        return true;
+    }
+
     private void OnPhaseChanged(UpdatePhase phase)
     {
         PhaseChanged?.Invoke(phase);
@@ -478,6 +707,11 @@ public sealed class UpdateOrchestrator : IDisposable
         _disposed = true;
         _stateStore.PhaseChanged -= OnPhaseChanged;
         _stateStore.ProgressChanged -= OnProgressChanged;
+        lock (_cancellationSync)
+        {
+            _activeOperationCts?.Dispose();
+            _activeOperationCts = null;
+        }
         _operationGate.Dispose();
     }
 }

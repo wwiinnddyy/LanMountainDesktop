@@ -848,7 +848,6 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             changedKeys:
             [
                 nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
-                nameof(AppSettingsSnapshot.IncludePrereleaseUpdates),
                 nameof(AppSettingsSnapshot.UpdateChannel),
                 nameof(AppSettingsSnapshot.UpdateMode),
                 nameof(AppSettingsSnapshot.UpdateDownloadSource),
