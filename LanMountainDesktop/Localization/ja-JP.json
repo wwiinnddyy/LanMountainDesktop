@@ -131,7 +131,7 @@
     "settings.privacy.policy_hint_prefix":  "詳細については、",
     "settings.privacy.view_policy":  "プライバシーポリシーをご覧ください",
     "settings.weather.title":  "天気",
-    "settings.weather.description":  "天気の場所、Xiaomi天気プレビュー、起動時の位置情報取得動作を設定します。",
+    "settings.weather.description":  "天気の場所、天気プレビュー、起動時の位置情報取得動作を設定します。",
     "settings.weather.location_source_header":  "位置情報ソース",
     "settings.weather.location_source_desc":  "天気ウィジェットが場所を解決する方法を選択します。",
     "settings.weather.mode_city_search":  "都市検索",

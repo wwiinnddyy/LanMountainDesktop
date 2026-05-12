@@ -133,7 +133,7 @@
     "settings.privacy.policy_hint_prefix":  "For more details, please ",
     "settings.privacy.view_policy":  "view our privacy policy",
     "settings.weather.title":  "Weather",
-    "settings.weather.description":  "Configure weather location, Xiaomi weather preview, and startup positioning behavior.",
+    "settings.weather.description":  "Configure weather location, weather preview, and startup positioning behavior.",
     "settings.weather.location_source_header":  "Location Source",
     "settings.weather.location_source_desc":  "Choose how weather widgets resolve location.",
     "settings.weather.mode_city_search":  "City Search",

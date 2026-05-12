@@ -668,9 +668,8 @@ internal sealed class WeatherSettingsService : IWeatherSettingsService, IDisposa
 
     private static string NormalizeIconPackId(string? iconPackId)
     {
-        return string.IsNullOrWhiteSpace(iconPackId)
-            ? "HyperOS3"
-            : "HyperOS3";
+        _ = iconPackId;
+        return "DefaultWeather";
     }
 }
 

@@ -132,7 +132,7 @@
     "settings.privacy.policy_hint_prefix":  "자세한 내용은",
     "settings.privacy.view_policy":  "개인정보 처리방침 보기",
     "settings.weather.title":  "날씨",
-    "settings.weather.description":  "날씨 위치, Xiaomi 날씨 미리보기 및 시작 시 위치 새로고침 동작을 구성합니다.",
+    "settings.weather.description":  "날씨 위치, 날씨 미리보기 및 시작 시 위치 새로고침 동작을 구성합니다.",
     "settings.weather.location_source_header":  "위치 소스",
     "settings.weather.location_source_desc":  "날씨 컴포넌트가 현재 위치를 해석하는 방법을 선택합니다.",
     "settings.weather.mode_city_search":  "도시 검색",

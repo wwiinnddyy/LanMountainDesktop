@@ -167,7 +167,7 @@ public partial class MainWindow : Window
     private double _weatherLongitude = 116.4074;
     private bool _weatherAutoRefreshLocation;
     private string _weatherExcludedAlertsRaw = string.Empty;
-    private string _weatherIconPackId = "HyperOS3";
+    private string _weatherIconPackId = "DefaultWeather";
     private bool _weatherNoTlsRequests;
     private bool _autoStartWithWindows;
     private bool _suppressAutoStartToggleEvents;

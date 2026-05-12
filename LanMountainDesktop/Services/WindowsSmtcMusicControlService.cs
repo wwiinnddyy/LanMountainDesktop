@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LanMountainDesktop.Services;
 
-public sealed class WindowsSmtcMusicControlService : IMusicControlService
+public sealed class WindowsSmtcMusicControlService : IMusicSessionProvider
 {
     private static readonly Type? SessionManagerType = ResolveWinRtType("Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager");
     private static readonly Type? AppInfoType = ResolveWinRtType("Windows.ApplicationModel.AppInfo");
@@ -27,11 +28,24 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
     private string _thumbnailKey = string.Empty;
     private byte[]? _thumbnailBytesCache;
 
-    public async Task<MusicPlaybackState> GetCurrentStateAsync(CancellationToken cancellationToken = default)
+    public MusicPlatform Platform => MusicPlatform.Windows;
+
+    public event EventHandler? SessionsChanged;
+
+    public async Task<IReadOnlyList<MusicPlaybackState>> GetSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        var state = await GetCurrentStateAsync(cancellationToken).ConfigureAwait(false);
+        return state.HasSession || !state.IsSupported
+            ? [state]
+            : [];
+    }
+
+    private async Task<MusicPlaybackState> GetCurrentStateAsync(CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
         {
-            return MusicPlaybackState.Unsupported();
+            return MusicPlaybackState.Unsupported(
+                "Windows media control is unavailable. Check the Windows version, WinRT runtime, and globalMediaControl capability.");
         }
 
         await _stateGate.WaitAsync(cancellationToken);
@@ -40,7 +54,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
             var session = await GetCurrentSessionAsync(cancellationToken);
             if (session is null)
             {
-                return MusicPlaybackState.NoSession(isSupported: true);
+                return MusicPlaybackState.NoSession(isSupported: true, platform: MusicPlatform.Windows);
             }
 
             var mediaProperties = await TryGetMediaPropertiesAsync(session, cancellationToken);
@@ -92,8 +106,11 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
             return new MusicPlaybackState(
                 IsSupported: true,
                 HasSession: true,
+                Platform: MusicPlatform.Windows,
+                SessionId: sourceAppId,
                 SourceAppId: sourceAppId,
                 SourceAppName: sourceAppName,
+                SourceExecutableOrBusName: sourceAppId,
                 Title: title,
                 Artist: artist,
                 AlbumTitle: albumTitle,
@@ -103,11 +120,26 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
                 PlaybackStatus: MapPlaybackStatus(playbackStatusRaw),
                 CanPlayPause: canPlayPause,
                 CanSkipPrevious: canSkipPrevious,
-                CanSkipNext: canSkipNext);
+                CanSkipNext: canSkipNext,
+                CanLaunch: !string.IsNullOrWhiteSpace(sourceAppId),
+                IsStale: false,
+                StatusMessage: string.Empty,
+                UpdatedAtUtc: DateTimeOffset.UtcNow);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return MusicPlaybackState.Unsupported($"Windows media control permission or capability is missing: {ex.Message}");
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is UnauthorizedAccessException inner)
+        {
+            return MusicPlaybackState.Unsupported($"Windows media control permission or capability is missing: {inner.Message}");
         }
         catch
         {
-            return MusicPlaybackState.NoSession(isSupported: true);
+            return MusicPlaybackState.NoSession(
+                isSupported: true,
+                platform: MusicPlatform.Windows,
+                statusMessage: "Windows media session was found but could not be read.");
         }
         finally
         {
@@ -115,7 +147,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
         }
     }
 
-    public async Task<bool> TogglePlayPauseAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> TogglePlayPauseAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
         {
@@ -153,7 +185,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
         return await AwaitBooleanWinRtOperationAsync(operation, cancellationToken);
     }
 
-    public async Task<bool> SkipNextAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> SkipNextAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
         {
@@ -176,7 +208,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
         return await AwaitBooleanWinRtOperationAsync(InvokeMethod(session, "TrySkipNextAsync"), cancellationToken);
     }
 
-    public async Task<bool> SkipPreviousAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> SkipPreviousAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
         {
@@ -199,7 +231,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
         return await AwaitBooleanWinRtOperationAsync(InvokeMethod(session, "TrySkipPreviousAsync"), cancellationToken);
     }
 
-    public async Task<bool> LaunchSourceAppAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> LaunchSourceAppAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         if (!IsRuntimeSupported())
         {
@@ -491,9 +523,18 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
         return type?
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .FirstOrDefault(method =>
-                method.Name == "AsTask" &&
-                method.IsGenericMethodDefinition &&
-                method.GetParameters().Length == 1);
+            {
+                try
+                {
+                    return method.Name == "AsTask" &&
+                           method.IsGenericMethodDefinition &&
+                           method.GetParameters().Length == 1;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
     }
 
     private static MethodInfo? ResolveAsStreamForReadMethod()
@@ -576,4 +617,7 @@ public sealed class WindowsSmtcMusicControlService : IMusicControlService
             _ => MusicPlaybackStatus.Unknown
         };
     }
+
+    public void Dispose()
+        => SessionsChanged = null;
 }

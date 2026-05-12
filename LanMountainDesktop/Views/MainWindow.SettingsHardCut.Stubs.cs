@@ -180,8 +180,14 @@ public partial class MainWindow : Window
         _weatherLongitude = snapshot.WeatherLongitude;
         _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
         _weatherExcludedAlertsRaw = snapshot.WeatherExcludedAlerts ?? string.Empty;
-        _weatherIconPackId = string.IsNullOrWhiteSpace(snapshot.WeatherIconPackId) ? "HyperOS3" : snapshot.WeatherIconPackId;
+        _weatherIconPackId = NormalizeWeatherIconPackId(snapshot.WeatherIconPackId);
         _weatherNoTlsRequests = snapshot.WeatherNoTlsRequests;
+    }
+
+    private static string NormalizeWeatherIconPackId(string? iconPackId)
+    {
+        _ = iconPackId;
+        return "DefaultWeather";
     }
 
     private void InitializeAutoStartWithWindowsSetting(AppSettingsSnapshot snapshot)

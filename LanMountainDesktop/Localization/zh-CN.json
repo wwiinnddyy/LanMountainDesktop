@@ -133,7 +133,7 @@
     "settings.privacy.policy_hint_prefix":  "了解更多详情，请",
     "settings.privacy.view_policy":  "查看我们的隐私政策",
     "settings.weather.title":  "天气",
-    "settings.weather.description":  "配置天气位置、小米天气预览和启动时的位置刷新行为。",
+    "settings.weather.description":  "配置天气位置、天气预览和启动时的位置刷新行为。",
     "settings.weather.location_source_header":  "位置来源",
     "settings.weather.location_source_desc":  "选择天气组件如何解析当前位置。",
     "settings.weather.mode_city_search":  "城市搜索",

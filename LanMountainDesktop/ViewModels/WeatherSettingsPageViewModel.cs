@@ -345,7 +345,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             selected.Longitude,
             AutoRefreshLocation,
             ExcludedAlerts ?? string.Empty,
-            "HyperOS3",
+            "DefaultWeather",
             NoTlsRequests,
             SearchKeyword?.Trim() ?? string.Empty);
 
@@ -527,7 +527,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.weather.title", "Weather");
-        PageDescription = L("settings.weather.description", "Configure weather location, automatic positioning, and Xiaomi weather preview.");
+        PageDescription = L("settings.weather.description", "Configure weather location, weather preview, and startup positioning behavior.");
         PreviewHeader = L("settings.weather.preview_panel_header", "Weather Preview");
         PreviewDescription = L("settings.weather.preview_panel_desc", "Refresh and verify current weather service status.");
         LocationSourceHeader = L("settings.weather.location_source_header", "Location Source");
@@ -629,7 +629,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             Longitude,
             AutoRefreshLocation,
             ExcludedAlerts ?? string.Empty,
-            "HyperOS3",
+            "DefaultWeather",
             NoTlsRequests,
             SearchKeyword?.Trim() ?? string.Empty);
     }
@@ -646,7 +646,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                 SelectedSearchResult.Longitude,
                 AutoRefreshLocation,
                 ExcludedAlerts ?? string.Empty,
-                "HyperOS3",
+                "DefaultWeather",
                 NoTlsRequests,
                 SearchKeyword?.Trim() ?? string.Empty);
         }
@@ -705,8 +705,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             return weatherText.Trim();
         }
 
-        return XiaomiWeatherCodeMapper.ResolveDisplayText(weatherCode, _languageCode)
-            ?? L("settings.weather.preview_unknown", "Unknown");
+        return weatherCode.HasValue
+            ? string.Format(CultureInfo.InvariantCulture, "Weather {0}", weatherCode.Value)
+            : L("settings.weather.preview_unknown", "Unknown");
     }
 
     private CultureInfo ResolveCulture()
