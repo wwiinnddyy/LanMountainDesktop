@@ -81,7 +81,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
             "all",
             L(languageCode, "component_category.all", "All"),
-            Symbol.Apps,
+            Icon.Apps,
             Array.Empty<ComponentLibraryItemViewModel>()));
 
         var usedCategories = _allDefinitions
@@ -97,26 +97,16 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
                 .Select(definition => CreateComponentItem(definition, languageCode))
                 .ToArray();
 
+            var categoryDefinitions = _allDefinitions
+                .Where(definition => string.Equals(definition.Category, category, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
                 category,
                 GetLocalizedCategoryTitle(languageCode, category),
-                ResolveCategoryIcon(category),
+                ComponentCategoryIconResolver.ResolveCategoryIcon(category, categoryDefinitions),
                 categoryComponents));
         }
-    }
-
-    private static Symbol ResolveCategoryIcon(string categoryId)
-    {
-        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return Symbol.Clock;
-        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase)) return Symbol.CalendarDate;
-        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase)) return Symbol.WeatherSunny;
-        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase)) return Symbol.Edit;
-        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase)) return Symbol.Play;
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return Symbol.Info;
-        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase)) return Symbol.Calculator;
-        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase)) return Symbol.Hourglass;
-        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase)) return Symbol.Folder;
-        return Symbol.Apps;
     }
 
     private string GetLocalizedCategoryTitle(string languageCode, string categoryId)

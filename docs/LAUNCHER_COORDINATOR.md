@@ -29,3 +29,14 @@ Launcher and external callers can use:
 - `EnsureTaskbarEntryAsync()`
 
 These APIs report process, shell, tray, taskbar, and activation state separately so callers do not infer health from window visibility alone.
+
+## Air APP Lifecycle
+
+- Launcher is also the Air APP lifecycle manager.
+- The desktop host requests Air APP operations through `IAirAppLifecycleService` on the dedicated `LanMountainDesktop.Launcher.AirApp.v1` IPC pipe.
+- When the dedicated pipe is unavailable, the desktop host starts `LanMountainDesktop.Launcher.exe air-app-broker --requester-pid <pid>` and retries the request.
+- `air-app-broker` is a hidden internal command that starts only the Air APP lifecycle IPC host. It bypasses OOBE, Splash, debug preview windows, and normal desktop launch orchestration.
+- Launcher creates, activates, tracks, and closes Air APP host processes by instance key: `{appId}:{sourceComponentId}:{sourcePlacementId}`.
+- `LanMountainDesktop.AirAppHost` registers itself with Launcher after its window opens and unregisters on close; Launcher also prunes exited processes.
+- Launcher remains alive while either the desktop host process or any Air APP process is alive.
+- Broker mode remains alive while the requester process or any Air APP process is alive, then exits after both are gone.

@@ -124,6 +124,8 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                 {
                     existingWindow.Show();
                 }
+
+                existingWindow.RefreshDesktopLayer();
             }
             else
             {
@@ -136,6 +138,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                         _widgetWindows[placement.PlacementId] = window;
                         window.Show();
                         window.Position = new Avalonia.PixelPoint((int)placement.X, (int)placement.Y);
+                        window.RefreshDesktopLayer();
                     }
                 }
                 catch (Exception ex)

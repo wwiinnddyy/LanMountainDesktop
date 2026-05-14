@@ -228,6 +228,30 @@ For the detailed design, migration path, UI strategy, and residual risks, see `d
 
 See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration model.
 
+## Air APP Lifecycle
+
+- Launcher is the lifecycle bridge between the desktop host and Air APP processes.
+- The desktop host requests built-in Air APP operations through `IAirAppLifecycleService` on `LanMountainDesktop.Launcher.AirApp.v1`.
+- If that pipe is not available because the desktop host was started directly from IDE/dev tooling, the host starts `LanMountainDesktop.Launcher.exe air-app-broker --requester-pid <pid>` and retries the request.
+- `air-app-broker` is an internal hidden command that starts only the Air APP lifecycle IPC broker and does not run OOBE, Splash, debug preview windows, or normal desktop launch.
+- Launcher owns Air APP process creation, activation, instance-key de-duplication, registration tracking, and exited-process cleanup.
+- `LanMountainDesktop.AirAppHost` stays an independent rendering process and registers/unregisters itself with Launcher.
+- Launcher remains alive while the desktop host or any Air APP process is alive.
+- Air APP windows are ordinary application windows: they do not use fused desktop bottom-most services and do not use global `Topmost` promotion.
+
+## Fused Desktop Window Layer
+
+- `TransparentOverlayWindow` and `DesktopWidgetWindow` are desktop-surface windows.
+- On Windows, desktop-surface windows may attach to the desktop icon host through `IWindowBottomMostService`, or fall back to `HWND_BOTTOM`.
+- Fused desktop windows refresh their bottom-most layer after being opened, shown, or reloaded so they do not cover ordinary apps.
+
+## Air APP Window Chrome
+
+- `LanMountainDesktop.AirAppHost` owns Air APP window chrome through `AirAppWindowDescriptor`.
+- Supported chrome modes are `Standard`, `Borderless`, `FullScreen`, `Tool`, and reserved `BackgroundOnly`.
+- Built-in `world-clock` uses `Standard` chrome with the LanMountain custom title bar.
+- Built-in `whiteboard` uses `FullScreen` chrome and supplies its own in-app exit affordance.
+
 ## Launcher OOBE / Elevation Contract
 
 - Launcher OOBE state is owned by a per-user JSON file under `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.

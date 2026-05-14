@@ -106,6 +106,7 @@ public partial class MainWindow : Window
     private readonly IComponentLibraryService _componentLibraryService;
     private readonly IComponentEditorWindowService _componentEditorWindowService;
     private readonly IEmbeddedComponentLibraryService _componentLibraryWindowService = new EmbeddedComponentLibraryService();
+    private readonly IAirAppLauncherService _airAppLauncherService = AirAppLauncherServiceProvider.GetOrCreate();
     private ComponentLibraryWindow? _detachedComponentLibraryWindow;
     private readonly FluentAvaloniaTheme? _fluentAvaloniaTheme;
     private readonly HashSet<string> _topStatusComponentIds = new(StringComparer.OrdinalIgnoreCase);

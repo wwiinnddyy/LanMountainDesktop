@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Services.AirApp;
 using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -61,6 +62,13 @@ public partial class App : Application
                 return;
             }
 
+            if (context.IsAirAppBrokerCommand)
+            {
+                _ = RunAirAppBrokerAsync(desktop, context);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             // 调试模式：只显示 DevDebugWindow，不走正常启动流程
             // 避免启动主程序后 Launcher 自动退出，导致开发者无法预览 UI
             if (context.IsDebugMode && !context.IsPreviewCommand &&
@@ -88,6 +96,45 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task RunAirAppBrokerAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        CommandContext context)
+    {
+        var appRoot = Commands.ResolveAppRoot(context);
+        var requesterPid = context.GetIntOption("requester-pid", 0);
+        Logger.Info($"Air APP broker starting. AppRoot='{appRoot}'; RequesterPid={requesterPid}.");
+
+        using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
+            new LauncherAirAppLifecycleService(
+                new AirAppProcessStarter(
+                    new AirAppHostLocator(),
+                    () => appRoot,
+                    () => null)));
+        airAppIpcHost.Start();
+
+        await WaitForAirAppBrokerExitAsync(requesterPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
+
+        Logger.Info("Air APP broker exiting.");
+        await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0), DispatcherPriority.Background);
+    }
+
+    internal static async Task WaitForAirAppBrokerExitAsync(
+        int requesterPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        while (ShouldKeepAirAppBrokerAlive(requesterPid, airAppLifecycleService))
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        }
+    }
+
+    internal static bool ShouldKeepAirAppBrokerAlive(
+        int requesterPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        return TryGetLiveProcess(requesterPid) || airAppLifecycleService.HasLiveAirApps();
     }
 
     private bool HandlePreviewCommand(CommandContext context, IClassicDesktopStyleApplicationLifetime desktop)
@@ -236,7 +283,6 @@ public partial class App : Application
         var startupAttemptRegistry = new StartupAttemptRegistry();
         var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
         var successPolicy = LauncherFlowCoordinator.ResolveSuccessPolicyKey(context);
-
         if (!startupAttemptRegistry.TryReserveCoordinator(
                 context.LaunchSource,
                 successPolicy,
@@ -256,6 +302,14 @@ public partial class App : Application
             await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
             return;
         }
+
+        using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
+            new LauncherAirAppLifecycleService(
+                new AirAppProcessStarter(
+                    new AirAppHostLocator(),
+                    () => appRoot,
+                    () => null)));
+        airAppIpcHost.Start();
 
         using var coordinatorServer = new LauncherCoordinatorIpcServer(
             coordinatorPipeName,
@@ -334,7 +388,43 @@ public partial class App : Application
         await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
 
         Environment.ExitCode = result.Success ? 0 : 1;
+        if (result.Success)
+        {
+            var hostPid = ResolveManagedHostPid(result, startupAttemptRegistry.GetOwnedAttempt()?.HostPid ?? 0);
+            await WaitForManagedProcessesToExitAsync(hostPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
+        }
+
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
+    }
+
+    private static int ResolveManagedHostPid(LauncherResult result, int fallbackHostPid)
+    {
+        if (result.Details.TryGetValue("hostPid", out var hostPidText) &&
+            int.TryParse(hostPidText, out var hostPid))
+        {
+            return hostPid;
+        }
+
+        if (result.Details.TryGetValue("existingHostPid", out var existingHostPidText) &&
+            int.TryParse(existingHostPidText, out var existingHostPid))
+        {
+            return existingHostPid;
+        }
+
+        return fallbackHostPid;
+    }
+
+    private static async Task WaitForManagedProcessesToExitAsync(
+        int hostPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        Logger.Info($"Launcher entering managed background lifetime. HostPid={hostPid}.");
+        while (TryGetLiveProcess(hostPid) || airAppLifecycleService.HasLiveAirApps())
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        }
+
+        Logger.Info("Launcher managed background lifetime completed; no host or Air APP process remains.");
     }
 
     private static async Task<LauncherResult> AttachToExistingCoordinatorAsync(

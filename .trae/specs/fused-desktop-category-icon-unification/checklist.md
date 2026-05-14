@@ -1,0 +1,14 @@
+- [x] ComponentCategoryIconResolver 基于 IconKey 正确解析分类图标
+- [x] IconKey 为 "Clock" 时解析为 Icon.Clock
+- [x] IconKey 为 "WeatherSunny" 时解析为 Icon.WeatherSunny
+- [x] IconKey 为 "News" 时解析为 Icon.News
+- [x] IconKey 为 "Edit" 时解析为 Icon.Edit
+- [x] IconKey 为无效值时回退到 Icon.Apps
+- [x] 分类 ID 为 "all" 时返回 Icon.Apps
+- [x] ComponentLibraryCategoryViewModel.Icon 类型为 FluentIcons.Common.Icon
+- [x] FusedDesktopComponentLibraryControl.axaml.cs 不再包含硬编码 ResolveCategoryIcon 方法
+- [x] ComponentLibraryWindow.axaml.cs 不再包含硬编码 ResolveCategoryIcon 方法
+- [x] MainWindow.ComponentSystem.cs 不再包含硬编码 ResolveComponentLibraryCategoryIcon 方法
+- [x] 三处组件库入口对同一分类显示相同图标
+- [x] dotnet build 无编译错误
+- [x] dotnet test 全部通过

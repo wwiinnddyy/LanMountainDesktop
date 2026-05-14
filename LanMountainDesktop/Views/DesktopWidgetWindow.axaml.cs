@@ -15,6 +15,7 @@ public partial class DesktopWidgetWindow : Window
     public DesktopWidgetWindow()
     {
         InitializeComponent();
+        AppLogger.Info("DesktopWidgetWindow", "Initialized. WindowRole=DesktopSurface.");
 
         if (OperatingSystem.IsWindows())
         {
@@ -44,15 +45,23 @@ public partial class DesktopWidgetWindow : Window
         }
     }
 
+    public void RefreshDesktopLayer()
+    {
+        if (!OperatingSystem.IsWindows() || !IsVisible)
+        {
+            return;
+        }
+
+        _bottomMostService.SendToBottom(this);
+        Dispatcher.UIThread.Post(UpdateInteractiveRegion, DispatcherPriority.Render);
+        AppLogger.Info("DesktopWidgetWindow", "Refreshed desktop layer. WindowRole=DesktopSurface.");
+    }
+
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
 
-        if (OperatingSystem.IsWindows())
-        {
-            _bottomMostService.SendToBottom(this);
-            Dispatcher.UIThread.Post(UpdateInteractiveRegion, DispatcherPriority.Render);
-        }
+        RefreshDesktopLayer();
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
@@ -71,5 +80,15 @@ public partial class DesktopWidgetWindow : Window
         {
             new(0, 0, Bounds.Width, Bounds.Height)
         });
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (ComponentContainer.Child is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        ComponentContainer.Child = null;
+        base.OnClosing(e);
     }
 }

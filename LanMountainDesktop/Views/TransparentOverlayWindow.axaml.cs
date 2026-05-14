@@ -224,15 +224,25 @@ public partial class TransparentOverlayWindow : Window
         _layout = _layoutService.Load();
         RenderAllComponents();
 
-        AppLogger.Info("TransparentOverlay", $"Opened with {_layout.ComponentPlacements.Count} components.");
+        AppLogger.Info(
+            "TransparentOverlay",
+            $"Opened with {_layout.ComponentPlacements.Count} components. WindowRole=DesktopSurface.");
 
-        if (OperatingSystem.IsWindows())
-        {
-            _bottomMostService.SendToBottom(this);
-        }
+        RefreshDesktopLayer();
 
         Dispatcher.UIThread.Post(UpdateInteractiveRegions, DispatcherPriority.Background);
         DispatcherTimer.RunOnce(LogTransparencyDiagnostics, TimeSpan.FromMilliseconds(250));
+    }
+
+    public void RefreshDesktopLayer()
+    {
+        if (!OperatingSystem.IsWindows() || !IsVisible)
+        {
+            return;
+        }
+
+        _bottomMostService.SendToBottom(this);
+        AppLogger.Info("TransparentOverlay", "Refreshed desktop layer. WindowRole=DesktopSurface.");
     }
 
     protected override void OnClosed(EventArgs e)

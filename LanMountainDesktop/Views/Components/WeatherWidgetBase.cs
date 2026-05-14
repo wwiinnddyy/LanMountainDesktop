@@ -71,6 +71,8 @@ public abstract class WeatherWidgetBase : UserControl,
 
     protected string CurrentVisualStyleId { get; private set; } = WeatherVisualStyleId.Default;
 
+    protected bool CurrentIsNight { get; private set; }
+
     protected bool IsLiveRenderMode => _renderMode == DesktopComponentRenderMode.Live;
 
     protected double CurrentCellSize => _cellSize;
@@ -200,7 +202,7 @@ public abstract class WeatherWidgetBase : UserControl,
 
     protected void ApplyCurrentScene()
     {
-        SceneControl.Apply(CurrentVisualStyleId, CurrentCondition, CurrentPalette, IsLiveRenderMode && _isAttached && _isOnActivePage && !_isEditMode);
+        SceneControl.Apply(CurrentVisualStyleId, CurrentCondition, CurrentPalette, IsLiveRenderMode && _isAttached && _isOnActivePage && !_isEditMode, CurrentIsNight);
     }
 
     protected string ResolveIconKey(int? weatherCode, string? weatherText, bool isDaylight = true)
@@ -320,6 +322,7 @@ public abstract class WeatherWidgetBase : UserControl,
             : _settingsFacade.Theme.Get().IsNightMode;
         CurrentVisualStyleId = WeatherVisualStyleCatalog.Normalize(_settingsFacade.Weather.Get().IconPackId);
         CurrentCondition = MaterialWeatherVisualTheme.ResolveCondition(snapshot);
+        CurrentIsNight = isNight;
         CurrentPalette = MaterialWeatherVisualTheme.ResolvePalette(CurrentVisualStyleId, CurrentCondition, isNight);
         ApplyCurrentScene();
         RenderWeather();
@@ -361,6 +364,8 @@ public abstract class WeatherWidgetBase : UserControl,
         }
 
         CurrentVisualStyleId = WeatherVisualStyleCatalog.Normalize(_settingsFacade.Weather.Get().IconPackId);
+        CurrentPalette = MaterialWeatherVisualTheme.ResolvePalette(CurrentVisualStyleId, CurrentCondition, CurrentIsNight);
+        ApplyCurrentScene();
         RenderWeather();
     }
 

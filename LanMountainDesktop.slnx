@@ -9,6 +9,7 @@
   <Project Path="LanMountainDesktop.PluginIsolation.Contracts/LanMountainDesktop.PluginIsolation.Contracts.csproj" />
   <Project Path="LanMountainDesktop.PluginIsolation.Ipc/LanMountainDesktop.PluginIsolation.Ipc.csproj" />
   <Project Path="LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
+  <Project Path="LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj" />
   <Project Path="LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
   <Project Path="LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />
   <Project Path="LanMountainDesktop.PluginUpgradeHelper/LanMountainDesktop.PluginUpgradeHelper.csproj" />

@@ -107,4 +107,32 @@
     <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1&quot; -OutputPath &quot;$(VersionFilePath)&quot; -Version &quot;$(AppVersion)&quot; -Codename &quot;$(AppCodename)&quot;" Condition="'$(OS)' == 'Windows_NT'" />
     <Exec Command="pwsh -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\scripts\Generate-VersionFile.ps1&quot; -OutputPath &quot;$(VersionFilePath)&quot; -Version &quot;$(AppVersion)&quot; -Codename &quot;$(AppCodename)&quot;" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
+  <Target Name="BuildAirAppHostOutput"
+          AfterTargets="Build"
+          Condition="'$(BuildingAirAppHost)' != 'true' and '$(SkipAirAppHostBuild)' != 'true'">
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\LanMountainDesktop.AirAppHost\LanMountainDesktop.AirAppHost.csproj&quot; -c &quot;$(Configuration)&quot; --no-restore -p:BuildProjectReferences=false -p:BuildingAirAppHost=true" />
+  </Target>
+
+  <Target Name="CopyAirAppHostOutput"
+          AfterTargets="Build"
+          DependsOnTargets="BuildAirAppHostOutput"
+          Condition="'$(SkipAirAppHostBuild)' != 'true'">
+    <ItemGroup>
+      <_AirAppHostOutput Include="..\LanMountainDesktop.AirAppHost\bin\$(Configuration)\$(TargetFramework)\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutDir)AirAppHost" />
+    <Copy SourceFiles="@(_AirAppHostOutput)"
+          DestinationFiles="@(_AirAppHostOutput->'$(OutDir)AirAppHost\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyAirAppHostPublishOutput" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+    <ItemGroup>
+      <_AirAppHostPublishOutput Include="..\LanMountainDesktop.AirAppHost\bin\$(Configuration)\$(TargetFramework)\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="$(PublishDir)AirAppHost" />
+    <Copy SourceFiles="@(_AirAppHostPublishOutput)"
+          DestinationFiles="@(_AirAppHostPublishOutput->'$(PublishDir)AirAppHost\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

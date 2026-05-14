@@ -117,6 +117,40 @@ public sealed class DesktopComponentRenderModeTests
         Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 999, "Unknown", isDaylight: true));
     }
 
+    [Theory]
+    [InlineData(WeatherVisualStyleId.GoogleWeatherV4, "google")]
+    [InlineData(WeatherVisualStyleId.Geometric, "geometric")]
+    [InlineData(WeatherVisualStyleId.Breezy, "breezy")]
+    [InlineData(WeatherVisualStyleId.LemonFlutter, "lemon")]
+    public void WeatherSceneProfileResolver_UsesDistinctRendererPerVisualStyle(string styleId, string expectedRenderer)
+    {
+        var profile = WeatherSceneProfileResolver.Resolve(styleId, MaterialWeatherCondition.Rain, isNight: false, isLive: true);
+
+        Assert.Equal(expectedRenderer, profile.RendererId);
+        Assert.Equal("rain", profile.WeatherLayerId);
+        Assert.True(profile.IsLive);
+    }
+
+    [Theory]
+    [InlineData(MaterialWeatherCondition.Clear, "clear")]
+    [InlineData(MaterialWeatherCondition.PartlyCloudy, "partly-cloudy")]
+    [InlineData(MaterialWeatherCondition.Cloudy, "cloudy")]
+    [InlineData(MaterialWeatherCondition.Rain, "rain")]
+    [InlineData(MaterialWeatherCondition.Storm, "storm")]
+    [InlineData(MaterialWeatherCondition.Snow, "snow")]
+    [InlineData(MaterialWeatherCondition.Fog, "fog")]
+    [InlineData(MaterialWeatherCondition.Haze, "haze")]
+    [InlineData(MaterialWeatherCondition.Unknown, "ambient")]
+    public void WeatherSceneProfileResolver_UsesDistinctWeatherLayerPerCondition(MaterialWeatherCondition condition, string expectedLayer)
+    {
+        var profile = WeatherSceneProfileResolver.Resolve(WeatherVisualStyleId.Breezy, condition, isNight: true, isLive: false);
+
+        Assert.Equal("breezy", profile.RendererId);
+        Assert.Equal(expectedLayer, profile.WeatherLayerId);
+        Assert.True(profile.IsNight);
+        Assert.False(profile.IsLive);
+    }
+
     private static DesktopComponentRuntimeDescriptor CreateDescriptor()
     {
         Assert.True(CreateRuntimeRegistry().TryGetDescriptor(ComponentId, out var descriptor));

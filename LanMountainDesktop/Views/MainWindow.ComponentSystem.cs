@@ -58,7 +58,7 @@ public partial class MainWindow : Window
 
     private sealed record ComponentLibraryCategory(
         string Id,
-        Symbol Icon,
+        Icon Icon,
         string Title,
         IReadOnlyList<ComponentLibraryComponentEntry> Components);
 
@@ -2873,7 +2873,13 @@ public partial class MainWindow : Window
 
     private void OnDesktopComponentHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_isComponentLibraryOpen || HasActiveDesktopEditSession)
+        if (!_isComponentLibraryOpen)
+        {
+            TryOpenAirAppFromDesktopComponent(sender, e);
+            return;
+        }
+
+        if (HasActiveDesktopEditSession)
         {
             return;
         }
@@ -2914,6 +2920,29 @@ public partial class MainWindow : Window
         }
 
         BeginDesktopComponentMoveDrag(host, placement, e);
+        e.Handled = true;
+    }
+
+    private void TryOpenAirAppFromDesktopComponent(object? sender, PointerPressedEventArgs e)
+    {
+        if (HasActiveDesktopEditSession ||
+            DesktopPagesViewport is null ||
+            sender is not Border host ||
+            host.Tag is not string placementId ||
+            !e.GetCurrentPoint(host).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
+            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
+        if (placement is null ||
+            !string.Equals(placement.ComponentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _airAppLauncherService.OpenWorldClock(placement.PlacementId);
         e.Handled = true;
     }
 
@@ -3390,9 +3419,9 @@ public partial class MainWindow : Window
             var row = new RowDefinition(GridLength.Auto);
             ComponentLibraryCategoryPagesContainer.RowDefinitions.Add(row);
 
-            var icon = new SymbolIcon
+            var icon = new FluentIcon
             {
-                Symbol = category.Icon,
+                Icon = category.Icon,
                 IconVariant = IconVariant.Regular,
                 FontSize = 18,
                 VerticalAlignment = VerticalAlignment.Center
@@ -3461,60 +3490,12 @@ public partial class MainWindow : Window
         return categories
             .Select(category => new ComponentLibraryCategory(
                 category.Id,
-                ResolveComponentLibraryCategoryIcon(category.Id),
+                ComponentCategoryIconResolver.ResolveCategoryIcon(
+                    category.Id,
+                    _componentRegistry.GetAll().Where(d => string.Equals(d.Category, category.Id, StringComparison.OrdinalIgnoreCase))),
                 GetLocalizedComponentLibraryCategoryTitle(category.Id),
                 category.Components))
             .ToList();
-    }
-
-    private Symbol ResolveComponentLibraryCategoryIcon(string categoryId)
-    {
-        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Clock;
-        }
-
-        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.CalendarDate;
-        }
-
-        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.WeatherSunny;
-        }
-
-        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Edit;
-        }
-
-        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Play;
-        }
-
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Apps;
-        }
-
-        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Calculator;
-        }
-
-        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Hourglass;
-        }
-
-        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Folder;
-        }
-
-        return Symbol.Apps;
     }
 
     private string GetLocalizedComponentLibraryCategoryTitle(string categoryId)

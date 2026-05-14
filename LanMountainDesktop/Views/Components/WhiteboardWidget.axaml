@@ -135,6 +135,18 @@
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>
+                        <Button x:Name="SurfaceModeButton"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                CornerRadius="15"
+                                ToolTip.Tip="Full screen"
+                                Click="OnSurfaceModeButtonClick">
+                            <fi:SymbolIcon x:Name="SurfaceModeIcon"
+                                           Symbol="ArrowExport"
+                                           IconVariant="Regular"
+                                           FontSize="14" />
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>

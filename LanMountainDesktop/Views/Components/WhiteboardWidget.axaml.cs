@@ -16,12 +16,19 @@ using Avalonia.Threading;
 using DotNetCampus.Inking;
 using DotNetCampus.Inking.Primitive;
 using FluentIcons.Avalonia;
+using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using SkiaSharp;
 
 namespace LanMountainDesktop.Views.Components;
+
+public enum WhiteboardWidgetSurfaceMode
+{
+    Component,
+    AirApp
+}
 
 public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
 {
@@ -64,6 +71,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private bool _noteDirty;
     private int _noteSaveRevision;
     private int _noteLoadRevision;
+    private WhiteboardWidgetSurfaceMode _surfaceMode = WhiteboardWidgetSurfaceMode.Component;
+    private Action? _airAppCloseAction;
     private bool _disposed;
 
     public WhiteboardWidget()
@@ -190,7 +199,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             ComponentChromeCornerRadiusHelper.SafeValue(toolbarPaddingVertical, 4, 8));
         ToolbarButtonsPanel.Spacing = toolbarSpacing;
 
-        foreach (var button in new[] { PenButton, EraserButton, HandButton, ClearButton, FileButton })
+        foreach (var button in new[] { PenButton, EraserButton, HandButton, ClearButton, FileButton, SurfaceModeButton })
         {
             button.Width = buttonSize;
             button.Height = buttonSize;
@@ -272,6 +281,13 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         RefreshFromSettings();
         ClearAllStrokes();
         SchedulePersistedNoteLoad();
+    }
+
+    public void SetSurfaceMode(WhiteboardWidgetSurfaceMode mode, Action? airAppCloseAction = null)
+    {
+        _surfaceMode = mode;
+        _airAppCloseAction = airAppCloseAction;
+        RefreshSurfaceModeButton();
     }
 
     public void RefreshFromSettings()
@@ -475,6 +491,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ApplyToolButtonVisual(HandButton, _toolMode == WhiteboardToolMode.PanZoom, activeBackground, activeForeground, idleBackground, idleForeground);
         ApplyToolButtonVisual(ClearButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
         ApplyToolButtonVisual(FileButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
+        ApplyToolButtonVisual(SurfaceModeButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
     }
 
     private static void ApplyToolButtonVisual(
@@ -551,6 +568,42 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     {
         ClearAllStrokes();
         QueueNoteSave();
+    }
+
+    private void OnSurfaceModeButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (_surfaceMode == WhiteboardWidgetSurfaceMode.AirApp)
+        {
+            ForceSaveNote();
+            _airAppCloseAction?.Invoke();
+            return;
+        }
+
+        if (!HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        AirAppLauncherServiceProvider
+            .GetOrCreate()
+            .OpenWhiteboard(_componentId, _placementId);
+    }
+
+    private void RefreshSurfaceModeButton()
+    {
+        if (SurfaceModeIcon is not null)
+        {
+            SurfaceModeIcon.Symbol = _surfaceMode == WhiteboardWidgetSurfaceMode.AirApp
+                ? Symbol.Subtract
+                : Symbol.ArrowExport;
+        }
+
+        if (SurfaceModeButton is not null)
+        {
+            ToolTip.SetTip(
+                SurfaceModeButton,
+                _surfaceMode == WhiteboardWidgetSurfaceMode.AirApp ? "Exit" : "Full screen");
+        }
     }
 
     private void OnViewportPointerPressed(object? sender, PointerPressedEventArgs e)

@@ -4,6 +4,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -13,7 +14,11 @@ using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
+public partial class WorldClockWidget : UserControl,
+    IDesktopComponentWidget,
+    ITimeZoneAwareComponentWidget,
+    IComponentPlacementContextAware,
+    IComponentRuntimeContextAware
 {
     private const int BaseWidthCells = 4;
     private const int BaseHeightCells = 2;
@@ -106,6 +111,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
     private bool _isNightVisual = true;
     private string _componentId = BuiltInComponentIds.DesktopWorldClock;
     private string _placementId = string.Empty;
+    private DesktopComponentRenderMode _renderMode = DesktopComponentRenderMode.Live;
 
     public WorldClockWidget()
     {
@@ -122,6 +128,7 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        PointerReleased += OnPointerReleased;
     }
 
     public void SetTimeZoneService(TimeZoneService timeZoneService)
@@ -157,6 +164,15 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
             : componentId.Trim();
         _placementId = placementId?.Trim() ?? string.Empty;
         RefreshFromSettings();
+    }
+
+    public void SetComponentRuntimeContext(DesktopComponentRuntimeContext context)
+    {
+        _componentId = string.IsNullOrWhiteSpace(context.ComponentId)
+            ? BuiltInComponentIds.DesktopWorldClock
+            : context.ComponentId.Trim();
+        _placementId = context.PlacementId?.Trim() ?? string.Empty;
+        _renderMode = context.RenderMode;
     }
 
     public void ApplyCellSize(double cellSize)
@@ -314,6 +330,20 @@ public partial class WorldClockWidget : UserControl, IDesktopComponentWidget, IT
         _ = sender;
         _ = e;
         UpdateClockVisuals();
+    }
+
+    private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        if (e.InitialPressMouseButton != MouseButton.Left ||
+            _renderMode != DesktopComponentRenderMode.Live ||
+            !string.Equals(_componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        AirAppLauncherServiceProvider.GetOrCreate().OpenWorldClock(_placementId);
+        e.Handled = true;
     }
 
     private void BuildClockEntryVisuals()

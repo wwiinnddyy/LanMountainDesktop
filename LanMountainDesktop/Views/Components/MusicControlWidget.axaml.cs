@@ -15,7 +15,7 @@ using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
     private readonly DispatcherTimer _refreshTimer = new()
     {
@@ -28,6 +28,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isOnActivePage = true;
+    private bool _isDisposed;
 
     public MusicControlWidget()
     {
@@ -42,6 +43,19 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         ApplyCellSize(_currentCellSize);
         ApplyViewModel();
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        _refreshTimer.Stop();
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.Dispose();
     }
 
     public void ApplyCellSize(double cellSize)
