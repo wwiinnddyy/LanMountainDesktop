@@ -99,6 +99,8 @@ public sealed class AppSettingsSnapshot
 
     public int UpdateDownloadThreads { get; set; } = 4;
 
+    public bool ForceUpdateReinstall { get; set; }
+
     public string? PendingUpdateInstallerPath { get; set; }
 
     public string? PendingUpdateVersion { get; set; }
@@ -181,6 +183,8 @@ public sealed class AppSettingsSnapshot
         MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
 
     public bool EnableFusedDesktop { get; set; } = false;
+
+    public bool EnableMainWindowDesktopLayer { get; set; } = false;
 
     public List<string> DisabledPluginIds { get; set; } = [];
 

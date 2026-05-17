@@ -245,6 +245,15 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 - On Windows, desktop-surface windows may attach to the desktop icon host through `IWindowBottomMostService`, or fall back to `HWND_BOTTOM`.
 - Fused desktop windows refresh their bottom-most layer after being opened, shown, or reloaded so they do not cover ordinary apps.
 
+## Main Window Desktop Layer
+
+- The main desktop host window has a separate developer option, `EnableMainWindowDesktopLayer`.
+- This mode is mutually exclusive with fused desktop because fused desktop manages component windows while main-window desktop layer manages the host window itself.
+- The main-window service is `IMainWindowDesktopLayerService`; it attaches only the main window to the desktop icon host on Windows and falls back to `HWND_BOTTOM`.
+- The main-window service does not use fused desktop click-through region logic, so the main desktop window remains interactive.
+- Main-window restore paths refresh the desktop-layer attachment instead of using temporary `Topmost` foreground promotion while this mode is enabled.
+- Air APP windows remain ordinary application windows and are not handled by either desktop-layer service.
+
 ## Air APP Window Chrome
 
 - `LanMountainDesktop.AirAppHost` owns Air APP window chrome through `AirAppWindowDescriptor`.

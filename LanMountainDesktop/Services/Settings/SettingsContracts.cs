@@ -89,6 +89,7 @@ public sealed record UpdateSettingsState(
     string UpdateMode,
     string UpdateDownloadSource,
     int UpdateDownloadThreads,
+    bool ForceUpdateReinstall,
     bool UseGhProxyMirror,
     string? PendingUpdateInstallerPath,
     string? PendingUpdateVersion,

@@ -96,6 +96,7 @@ public partial class MainWindow : Window
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadSource), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UseGhProxyMirror), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.ForceUpdateReinstall), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableFadeTransition), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparison.OrdinalIgnoreCase) ||
@@ -681,6 +682,7 @@ public partial class MainWindow : Window
             UpdateMode = latestUpdateState.UpdateMode,
             UpdateDownloadSource = latestUpdateState.UpdateDownloadSource,
             UpdateDownloadThreads = latestUpdateState.UpdateDownloadThreads,
+            ForceUpdateReinstall = latestUpdateState.ForceUpdateReinstall,
             UseGhProxyMirror = latestUpdateState.UseGhProxyMirror,
             PendingUpdateInstallerPath = latestUpdateState.PendingUpdateInstallerPath,
             PendingUpdateVersion = latestUpdateState.PendingUpdateVersion,

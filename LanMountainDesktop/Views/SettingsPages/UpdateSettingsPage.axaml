@@ -89,49 +89,40 @@
               </ui:FAInfoBar.IconSource>
             </ui:FAInfoBar>
 
+            <ui:FAInfoBar Title="{Binding ResumeSupportLabel}"
+                          Message="{Binding ResumeSupportDescription}"
+                          IsOpen="True"
+                          IsClosable="False"
+                          Severity="Informational">
+              <ui:FAInfoBar.IconSource>
+                <ui:FAFontIconSource Glyph="&#xF0647;"
+                                     FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+              </ui:FAInfoBar.IconSource>
+            </ui:FAInfoBar>
+
             <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanDownload}">
+                        Spacing="8">
               <Button Classes="settings-accent-button"
                       Content="{Binding DownloadButtonText}"
-                      Command="{Binding DownloadCommand}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanInstall}">
+                      Command="{Binding DownloadCommand}"
+                      IsVisible="{Binding CanDownload}" />
               <Button Classes="settings-accent-button"
                       Content="{Binding InstallButtonText}"
-                      Command="{Binding InstallCommand}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanPause}">
+                      Command="{Binding InstallCommand}"
+                      IsVisible="{Binding CanInstall}" />
               <Button Content="{Binding PauseButtonText}"
-                      Command="{Binding PauseCommand}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanResume}">
+                      Command="{Binding PauseCommand}"
+                      IsVisible="{Binding CanPause}" />
               <Button Classes="settings-accent-button"
                       Content="{Binding ResumeButtonText}"
-                      Command="{Binding ResumeCommand}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanRollback}">
+                      Command="{Binding ResumeCommand}"
+                      IsVisible="{Binding CanResume}" />
               <Button Content="{Binding RollbackButtonText}"
-                      Command="{Binding RollbackCommand}" />
-            </StackPanel>
-
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8"
-                        IsVisible="{Binding CanCancel}">
+                      Command="{Binding RollbackCommand}"
+                      IsVisible="{Binding CanRollback}" />
               <Button Content="{Binding CancelButtonText}"
-                      Command="{Binding CancelCommand}" />
+                      Command="{Binding CancelCommand}"
+                      IsVisible="{Binding CanCancel}" />
             </StackPanel>
           </StackPanel>
         </ui:FASettingsExpanderItem>
@@ -211,7 +202,8 @@
           <ui:FAFontIconSource Glyph="&#xF0504;"
                                FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
         </ui:FASettingsExpander.IconSource>
-        <ui:FASettingsExpanderItem Content="{Binding ChannelLabel}">
+        <ui:FASettingsExpanderItem Content="{Binding ChannelLabel}"
+                                   Description="{Binding ChannelDescription}">
           <ui:FASettingsExpanderItem.IconSource>
             <ui:FAFontIconSource Glyph="&#xF0908;"
                                  FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -219,11 +211,17 @@
           <ui:FASettingsExpanderItem.Footer>
             <ComboBox Width="220"
                       ItemsSource="{Binding ChannelOptions}"
-                      SelectedItem="{Binding SelectedChannel}"
-                      DisplayMemberBinding="{Binding Label}" />
+                      SelectedItem="{Binding SelectedChannel}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SelectionOption">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </ui:FASettingsExpanderItem.Footer>
         </ui:FASettingsExpanderItem>
-        <ui:FASettingsExpanderItem Content="{Binding SourceLabel}">
+        <ui:FASettingsExpanderItem Content="{Binding SourceLabel}"
+                                   Description="{Binding SourceDescription}">
           <ui:FASettingsExpanderItem.IconSource>
             <ui:FAFontIconSource Glyph="&#xF0B4E;"
                                  FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -231,11 +229,17 @@
           <ui:FASettingsExpanderItem.Footer>
             <ComboBox Width="220"
                       ItemsSource="{Binding SourceOptions}"
-                      SelectedItem="{Binding SelectedSource}"
-                      DisplayMemberBinding="{Binding Label}" />
+                      SelectedItem="{Binding SelectedSource}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SelectionOption">
+                  <TextBlock Text="{Binding Label}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </ui:FASettingsExpanderItem.Footer>
         </ui:FASettingsExpanderItem>
-        <ui:FASettingsExpanderItem Content="{Binding ModeLabel}">
+        <ui:FASettingsExpanderItem Content="{Binding ModeLabel}"
+                                   Description="{Binding ModeDescription}">
           <ui:FASettingsExpanderItem.IconSource>
             <ui:FAFontIconSource Glyph="&#xF08E8;"
                                  FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -243,11 +247,28 @@
           <ui:FASettingsExpanderItem.Footer>
             <ComboBox Width="220"
                       ItemsSource="{Binding ModeOptions}"
-                      SelectedItem="{Binding SelectedMode}"
-                      DisplayMemberBinding="{Binding Label}" />
+                      SelectedItem="{Binding SelectedMode}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SelectionOption">
+                  <TextBlock Text="{Binding Label}"
+                             TextWrapping="Wrap" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
           </ui:FASettingsExpanderItem.Footer>
         </ui:FASettingsExpanderItem>
-        <ui:FASettingsExpanderItem Content="{Binding DownloadThreadsLabel}">
+        <ui:FASettingsExpanderItem Content="{Binding ForceReinstallLabel}"
+                                   Description="{Binding ForceReinstallDescription}">
+          <ui:FASettingsExpanderItem.IconSource>
+            <ui:FAFontIconSource Glyph="&#xF0504;"
+                                 FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+          </ui:FASettingsExpanderItem.IconSource>
+          <ui:FASettingsExpanderItem.Footer>
+            <ToggleSwitch IsChecked="{Binding ForceReinstall}" />
+          </ui:FASettingsExpanderItem.Footer>
+        </ui:FASettingsExpanderItem>
+        <ui:FASettingsExpanderItem Content="{Binding DownloadThreadsLabel}"
+                                   Description="{Binding DownloadThreadsDescription}">
           <ui:FASettingsExpanderItem.IconSource>
             <ui:FAFontIconSource Glyph="&#xF0168;"
                                  FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -258,7 +279,7 @@
                         VerticalAlignment="Center">
               <Slider Width="140"
                       Minimum="1"
-                      Maximum="16"
+                      Maximum="128"
                       Value="{Binding DownloadThreadsSliderValue}"
                       TickFrequency="1"
                       IsSnapToTickEnabled="True" />

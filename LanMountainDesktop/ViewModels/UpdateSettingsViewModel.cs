@@ -63,9 +63,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _lastCheckedLabel = string.Empty;
     [ObservableProperty] private string _updateTypeLabel = string.Empty;
     [ObservableProperty] private string _channelLabel = string.Empty;
+    [ObservableProperty] private string _channelDescription = string.Empty;
     [ObservableProperty] private string _sourceLabel = string.Empty;
+    [ObservableProperty] private string _sourceDescription = string.Empty;
     [ObservableProperty] private string _modeLabel = string.Empty;
+    [ObservableProperty] private string _modeDescription = string.Empty;
     [ObservableProperty] private string _downloadThreadsLabel = string.Empty;
+    [ObservableProperty] private string _downloadThreadsDescription = string.Empty;
+    [ObservableProperty] private string _forceReinstallLabel = string.Empty;
+    [ObservableProperty] private string _forceReinstallDescription = string.Empty;
+    [ObservableProperty] private string _resumeSupportLabel = string.Empty;
+    [ObservableProperty] private string _resumeSupportDescription = string.Empty;
+    [ObservableProperty] private string _transferControlsTitle = string.Empty;
+    [ObservableProperty] private string _transferControlsDescription = string.Empty;
 
     [ObservableProperty] private string _updateAvailableBadgeText = string.Empty;
     [ObservableProperty] private string _pausedBadgeText = string.Empty;
@@ -86,10 +96,11 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string _updateTypeText = string.Empty;
     [ObservableProperty] private bool _isUpdateAvailable;
     [ObservableProperty] private bool _isDeltaUpdate;
+    [ObservableProperty] private bool _forceReinstall;
 
     [ObservableProperty] private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
     [ObservableProperty] private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
-    [ObservableProperty] private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
+    [ObservableProperty] private string _selectedUpdateModeValue = UpdateSettingsValues.ModeSilentDownload;
     [ObservableProperty] private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
     [ObservableProperty] private SelectionOption? _selectedChannel;
@@ -181,6 +192,16 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     partial void OnDownloadThreadsSliderValueChanged(double value)
     {
         SavePreferenceState();
+    }
+
+    partial void OnForceReinstallChanged(bool value)
+    {
+        SavePreferenceState();
+        UpdateTypeText = value
+            ? L("settings.update.type_reinstall", "Reinstall")
+            : (IsDeltaUpdate
+                ? L("settings.update.type_delta", "Incremental Update")
+                : UpdateTypeText);
     }
 
     [RelayCommand(CanExecute = nameof(CanCheck))]
@@ -332,6 +353,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         SelectedUpdateSourceValue = state.UpdateDownloadSource;
         SelectedUpdateModeValue = state.UpdateMode;
         DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
+        ForceReinstall = state.ForceUpdateReinstall;
 
         SyncComboBoxSelections();
     }
@@ -369,9 +391,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
         UpdateTypeLabel = L("settings.update.update_type_label", "Update Type");
         ChannelLabel = L("settings.update.channel_label", "Update Channel");
+        ChannelDescription = L("settings.update.channel_description", "Choose Stable for regular releases or Preview for earlier builds.");
         SourceLabel = L("settings.update.source_label", "Download Source");
+        SourceDescription = L("settings.update.source_description", "Select the manifest and installer source used by the update workflow.");
         ModeLabel = L("settings.update.mode_label", "Update Mode");
+        ModeDescription = L("settings.update.mode_description", "Manual never downloads or installs automatically. Silent Download downloads in the background. Silent Install downloads in the background and applies on exit.");
         DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
+        DownloadThreadsDescription = L("settings.update.download_threads_description", "Select how many parallel threads are used for update downloads. Paused downloads can be resumed later.");
+        ForceReinstallLabel = L("settings.update.force_reinstall_label", "Force Reinstall");
+        ForceReinstallDescription = L("settings.update.force_reinstall_description", "Download the full payload for the selected version and mark this run as a reinstall instead of an incremental update.");
+        ResumeSupportLabel = L("settings.update.resume_support_label", "Resume Support");
+        ResumeSupportDescription = L("settings.update.resume_support_description", "Downloads keep partial files and package metadata, so Pause and Resume continue from the previous state when the server supports it.");
+        TransferControlsTitle = L("settings.update.transfer_controls_title", "Transfer Controls");
+        TransferControlsDescription = L("settings.update.transfer_controls_description", "Pause a running download, resume it from the saved state, or cancel and clear pending update artifacts.");
 
         UpdateAvailableBadgeText = L("settings.update.badge_available", "Update available");
         PausedBadgeText = L("settings.update.badge_paused", "Paused");
@@ -423,9 +455,9 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     {
         return
         [
-            new(UpdateSettingsValues.ModeManual, L("settings.update.mode_manual", "Manual")),
-            new(UpdateSettingsValues.ModeDownloadThenConfirm, L("settings.update.mode_confirm", "Download then Confirm")),
-            new(UpdateSettingsValues.ModeSilentOnExit, L("settings.update.mode_silent", "Silent on Exit"))
+            new(UpdateSettingsValues.ModeManual, L("settings.update.mode_manual", "Manual: no automatic download or install")),
+            new(UpdateSettingsValues.ModeSilentDownload, L("settings.update.mode_silent_download", "Silent Download")),
+            new(UpdateSettingsValues.ModeSilentInstall, L("settings.update.mode_silent_install", "Silent Install"))
         ];
     }
 
@@ -437,7 +469,8 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
             UpdateChannel = SelectedUpdateChannelValue,
             UpdateDownloadSource = SelectedUpdateSourceValue,
             UpdateMode = SelectedUpdateModeValue,
-            UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue))
+            UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)),
+            ForceUpdateReinstall = ForceReinstall
         });
     }
 
@@ -541,12 +574,19 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         => L("settings.update.status_canceled", "Update canceled.");
 
     private string GetUpdateTypeText(UpdatePayloadKind? payloadKind)
-        => payloadKind switch
+    {
+        if (ForceReinstall)
+        {
+            return L("settings.update.type_reinstall", "Reinstall");
+        }
+
+        return payloadKind switch
         {
             UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy => L("settings.update.type_delta", "Incremental Update"),
-            UpdatePayloadKind.FullInstaller => L("settings.update.type_full", "Full Installer"),
+            UpdatePayloadKind.FullInstaller => L("settings.update.type_reinstall", "Reinstall"),
             _ => string.Empty
         };
+    }
 
     private string L(string key, string fallback)
         => _localizationService.GetString(_languageCode, key, fallback);

@@ -129,11 +129,27 @@ public sealed class UpdateOrchestrator : IDisposable
             UpdateManifest? manifest;
             try
             {
-                manifest = await _manifestProvider.GetLatestAsync(
-                    channel,
-                    LanMountainDesktop.Services.PlondsStaticUpdateService.ResolveCurrentPlatform(),
-                    currentVersion,
-                    operationToken);
+                var platform = LanMountainDesktop.Services.PlondsStaticUpdateService.ResolveCurrentPlatform();
+                manifest = settings.ForceUpdateReinstall
+                    ? await _manifestProvider.GetByVersionAsync(
+                        currentVersionText,
+                        channel,
+                        platform,
+                        operationToken)
+                    : await _manifestProvider.GetLatestAsync(
+                        channel,
+                        platform,
+                        currentVersion,
+                        operationToken);
+
+                if (manifest is null && settings.ForceUpdateReinstall)
+                {
+                    manifest = await _manifestProvider.GetLatestAsync(
+                        channel,
+                        platform,
+                        currentVersion,
+                        operationToken);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -525,7 +541,13 @@ public sealed class UpdateOrchestrator : IDisposable
 
         try
         {
-            await CheckAsync(ct);
+            var report = await CheckAsync(ct);
+            if (!report.IsUpdateAvailable || !CurrentPhase.CanDownload())
+            {
+                return;
+            }
+
+            await DownloadAsync(ct);
         }
         catch (OperationCanceledException)
         {

@@ -57,6 +57,7 @@ public partial class App : Application
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly HostShutdownGate _shutdownGate = new();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
+    private readonly IMainWindowDesktopLayerService _mainWindowDesktopLayerService = MainWindowDesktopLayerServiceFactory.GetOrCreate();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
     private readonly string _launchSource = LauncherRuntimeMetadata.GetLaunchSource(Environment.GetCommandLineArgs()) ?? "normal";
@@ -897,7 +898,7 @@ public partial class App : Application
             var mainWindow = GetOrCreateMainWindow(desktop, source);
             mainWindow.PrepareEnterAnimation();
 
-            mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar();
+            mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar() && !IsMainWindowDesktopLayerEnabled();
 
             if (!mainWindow.IsVisible)
             {
@@ -917,9 +918,7 @@ public partial class App : Application
                 mainWindow.WindowState = WindowState.FullScreen;
             }
 
-            mainWindow.Activate();
-            mainWindow.Topmost = true;
-            mainWindow.Topmost = false;
+            ActivateOrRefreshMainWindowLayer(mainWindow, $"Restore:{source}");
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -1113,7 +1112,17 @@ public partial class App : Application
 
             if (fusedDesktopChanged)
             {
+                ApplyFusedDesktopRuntimeState();
                 RefreshFusedDesktopMenuItemVisibility();
+            }
+
+            var mainWindowDesktopLayerChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer), StringComparer.OrdinalIgnoreCase);
+
+            if (mainWindowDesktopLayerChanged)
+            {
+                ApplyMainWindowDesktopLayerRuntimeState("SettingsChanged");
             }
 
             var showInTaskbarChanged =
@@ -1313,7 +1322,7 @@ public partial class App : Application
         var mainWindow = new MainWindow
         {
             DataContext = new MainWindowViewModel(),
-            ShowInTaskbar = ShouldShowMainWindowInTaskbar()
+            ShowInTaskbar = ShouldShowMainWindowInTaskbar() && !IsMainWindowDesktopLayerEnabled()
         };
 
         _mainWindowOpened = false;
@@ -1351,6 +1360,7 @@ public partial class App : Application
         {
             mainWindow.Opened -= OnMainWindowOpened;
             _mainWindowOpened = true;
+            ApplyMainWindowDesktopLayerRuntimeState("MainWindowOpened");
             _loadingStateManager?.CompleteItem("system.init", "System initialization completed.");
 
             if (TryApplyStartupPresentation(mainWindow))
@@ -1428,6 +1438,7 @@ public partial class App : Application
 
         if (_mainWindow is not null)
         {
+            _mainWindowDesktopLayerService.Disable(_mainWindow);
             _mainWindow.Closing -= OnMainWindowClosing;
             _mainWindow.Closed -= OnMainWindowClosed;
             _mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
@@ -1473,6 +1484,7 @@ public partial class App : Application
         mainWindow.Closing -= OnMainWindowClosing;
         mainWindow.Closed -= OnMainWindowClosed;
         mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
+        _mainWindowDesktopLayerService.Disable(mainWindow);
 
         if (ReferenceEquals(_mainWindow, mainWindow))
         {
@@ -1614,16 +1626,83 @@ public partial class App : Application
             mainWindow.WindowState = WindowState.FullScreen;
         }
 
-        mainWindow.Activate();
-        mainWindow.Topmost = true;
-        mainWindow.Topmost = false;
+        ActivateOrRefreshMainWindowLayer(mainWindow, $"TrayFallbackForeground:{source}");
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"TrayFallbackForeground:{source}");
         ReportStartupProgress(StartupStage.DesktopVisible, 100, "Desktop restored because tray was unavailable.");
     }
 
     private bool ShouldShowMainWindowInTaskbar()
     {
-        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        return snapshot.ShowInTaskbar && !snapshot.EnableMainWindowDesktopLayer;
+    }
+
+    private bool IsMainWindowDesktopLayerEnabled()
+    {
+        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableMainWindowDesktopLayer;
+    }
+
+    private void ActivateOrRefreshMainWindowLayer(MainWindow mainWindow, string source)
+    {
+        if (IsMainWindowDesktopLayerEnabled())
+        {
+            mainWindow.ShowInTaskbar = false;
+            _mainWindowDesktopLayerService.EnableOrRefresh(mainWindow);
+            AppLogger.Info("DesktopShell", $"Main window kept on desktop layer. Source='{source}'.");
+            return;
+        }
+
+        _mainWindowDesktopLayerService.Disable(mainWindow);
+        mainWindow.Activate();
+        mainWindow.Topmost = true;
+        mainWindow.Topmost = false;
+    }
+
+    private void ApplyMainWindowDesktopLayerRuntimeState(string source)
+    {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        if (IsMainWindowDesktopLayerEnabled())
+        {
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+            _mainWindow.ShowInTaskbar = false;
+            _mainWindowDesktopLayerService.EnableOrRefresh(_mainWindow);
+            AppLogger.Info("DesktopShell", $"Main window desktop layer enabled. Source='{source}'.");
+            return;
+        }
+
+        _mainWindowDesktopLayerService.Disable(_mainWindow);
+        _mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar();
+        AppLogger.Info("DesktopShell", $"Main window desktop layer disabled. Source='{source}'.");
+    }
+
+    private void ApplyFusedDesktopRuntimeState()
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        try
+        {
+            if (snapshot.EnableFusedDesktop)
+            {
+                if (_mainWindow is not null)
+                {
+                    _mainWindowDesktopLayerService.Disable(_mainWindow);
+                }
+
+                FusedDesktopManagerServiceFactory.GetOrCreate().Initialize();
+                return;
+            }
+
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktop", "Failed to apply fused desktop runtime state.", ex);
+        }
     }
 
     private bool EnsureTaskbarEntry(string source)

@@ -2417,6 +2417,9 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
     private bool _enableFusedDesktop;
 
     [ObservableProperty]
+    private bool _enableMainWindowDesktopLayer;
+
+    [ObservableProperty]
     private string _infoBarTitle = string.Empty;
 
     [ObservableProperty]
@@ -2439,6 +2442,27 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _fusedDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _mainWindowDesktopLayerHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _mainWindowDesktopLayerDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictEnableMainMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictEnableFusedMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictConfirmText = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictCancelText = string.Empty;
 
     [ObservableProperty]
     private string _pluginPathHeader = string.Empty;
@@ -2486,6 +2510,13 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         ThreeFingerDescription = L("settings.dev.three_finger_description", "Enable desktop page switching gestures when supported.");
         FusedHeader = L("settings.dev.fused_header", "Fused desktop experience");
         FusedDescription = L("settings.dev.fused_description", "Enable the fused desktop shell and experimental entry points.");
+        MainWindowDesktopLayerHeader = L("settings.dev.main_window_desktop_layer_header", "Prevent covering other apps");
+        MainWindowDesktopLayerDescription = L("settings.dev.main_window_desktop_layer_description", "Keep the main desktop window on the desktop layer so ordinary app windows can stay above it.");
+        DesktopLayerConflictTitle = L("settings.dev.desktop_layer_conflict_title", "Switch desktop layer mode?");
+        DesktopLayerConflictEnableMainMessage = L("settings.dev.desktop_layer_conflict_enable_main", "Main desktop layer mode and fused desktop cannot run at the same time. Enabling this option will turn off fused desktop.");
+        DesktopLayerConflictEnableFusedMessage = L("settings.dev.desktop_layer_conflict_enable_fused", "Fused desktop and main desktop layer mode cannot run at the same time. Enabling fused desktop will turn off main desktop layer mode.");
+        DesktopLayerConflictConfirmText = L("settings.dev.desktop_layer_conflict_confirm", "Switch");
+        DesktopLayerConflictCancelText = L("settings.dev.desktop_layer_conflict_cancel", "Cancel");
         PluginPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
         PluginPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
         PluginPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
@@ -2527,6 +2558,12 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         SaveField(nameof(AppSettingsSnapshot.EnableFusedDesktop), value);
     }
 
+    partial void OnEnableMainWindowDesktopLayerChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer), value);
+    }
+
     private void LoadSettings()
     {
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -2534,6 +2571,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         DevPluginPath = snapshot.DevPluginPath ?? string.Empty;
         EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
         EnableFusedDesktop = snapshot.EnableFusedDesktop;
+        EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
@@ -2555,6 +2593,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
             var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
             EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
             EnableFusedDesktop = snapshot.EnableFusedDesktop;
+            EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
         }
         finally
         {
@@ -2572,5 +2611,52 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         }
 
         _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+    }
+
+    public void ApplyFusedDesktopPreference(bool enabled, bool disableMainWindowDesktopLayer)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.EnableFusedDesktop = enabled;
+        if (enabled && disableMainWindowDesktopLayer)
+        {
+            snapshot.EnableMainWindowDesktopLayer = false;
+        }
+
+        SaveDesktopLayerPreferences(snapshot);
+    }
+
+    public void ApplyMainWindowDesktopLayerPreference(bool enabled, bool disableFusedDesktop)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.EnableMainWindowDesktopLayer = enabled;
+        if (enabled && disableFusedDesktop)
+        {
+            snapshot.EnableFusedDesktop = false;
+        }
+
+        SaveDesktopLayerPreferences(snapshot);
+    }
+
+    private void SaveDesktopLayerPreferences(AppSettingsSnapshot snapshot)
+    {
+        _settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.EnableFusedDesktop),
+                nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer)
+            ]);
+
+        _isInitializing = true;
+        try
+        {
+            EnableFusedDesktop = snapshot.EnableFusedDesktop;
+            EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
     }
 }

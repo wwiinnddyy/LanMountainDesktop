@@ -10,6 +10,8 @@ public static class UpdateSettingsValues
     public const string ModeManual = "manual";
     public const string ModeDownloadThenConfirm = "download_then_confirm";
     public const string ModeSilentOnExit = "silent_on_exit";
+    public const string ModeSilentDownload = ModeDownloadThenConfirm;
+    public const string ModeSilentInstall = ModeSilentOnExit;
 
     // NOTE: keep constant name for compatibility with existing call sites.
     public const string DownloadSourcePlonds = "plonds-api";

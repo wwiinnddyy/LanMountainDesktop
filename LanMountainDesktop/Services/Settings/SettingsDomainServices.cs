@@ -802,6 +802,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
             UpdateSettingsValues.NormalizeMode(snapshot.UpdateMode),
             UpdateSettingsValues.NormalizeDownloadSource(snapshot.UpdateDownloadSource),
             UpdateSettingsValues.NormalizeDownloadThreads(snapshot.UpdateDownloadThreads),
+            snapshot.ForceUpdateReinstall,
             snapshot.UseGhProxyMirror,
             snapshot.PendingUpdateInstallerPath,
             snapshot.PendingUpdateVersion,
@@ -824,6 +825,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         snapshot.UpdateMode = UpdateSettingsValues.NormalizeMode(state.UpdateMode);
         snapshot.UpdateDownloadSource = UpdateSettingsValues.NormalizeDownloadSource(state.UpdateDownloadSource);
         snapshot.UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
+        snapshot.ForceUpdateReinstall = state.ForceUpdateReinstall;
         snapshot.UseGhProxyMirror = state.UseGhProxyMirror;
         snapshot.PendingUpdateInstallerPath = string.IsNullOrWhiteSpace(state.PendingUpdateInstallerPath)
             ? null
@@ -850,6 +852,7 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 nameof(AppSettingsSnapshot.UpdateMode),
                 nameof(AppSettingsSnapshot.UpdateDownloadSource),
                 nameof(AppSettingsSnapshot.UpdateDownloadThreads),
+                nameof(AppSettingsSnapshot.ForceUpdateReinstall),
                 nameof(AppSettingsSnapshot.UseGhProxyMirror),
                 nameof(AppSettingsSnapshot.PendingUpdateInstallerPath),
                 nameof(AppSettingsSnapshot.PendingUpdateVersion),

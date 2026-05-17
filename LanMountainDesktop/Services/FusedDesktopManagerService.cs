@@ -20,6 +20,7 @@ public interface IFusedDesktopManagerService
     void EnterEditMode();
     void ExitEditMode();
     void ReloadWidgets();
+    void Shutdown();
 }
 
 /// <summary>
@@ -156,6 +157,18 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                 windowToRemove.Close();
             }
         }
+    }
+
+    public void Shutdown()
+    {
+        _isEditMode = false;
+        foreach (var window in _widgetWindows.Values)
+        {
+            window.Close();
+        }
+
+        _widgetWindows.Clear();
+        AppLogger.Info("FusedDesktop", "Fused desktop manager shut down.");
     }
 
     private DesktopWidgetWindow? CreateWidgetWindow(FusedDesktopComponentPlacementSnapshot placement)
