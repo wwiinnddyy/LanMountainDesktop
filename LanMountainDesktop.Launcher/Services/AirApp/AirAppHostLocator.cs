@@ -33,6 +33,8 @@ internal sealed class AirAppHostLocator
                 {
                     yield return Path.Combine(deploymentDirectory, "AirAppHost", WindowsExecutableName);
                     yield return Path.Combine(deploymentDirectory, "AirAppHost", DllName);
+                    yield return Path.Combine(deploymentDirectory, WindowsExecutableName);
+                    yield return Path.Combine(deploymentDirectory, DllName);
                 }
             }
         }

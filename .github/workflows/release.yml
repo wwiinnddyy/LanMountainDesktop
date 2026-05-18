@@ -179,6 +179,7 @@ jobs:
               -p:PublishSingleFile=false `
               -p:DebugType=none `
               -p:DebugSymbols=false `
+              -p:SkipAirAppHostBuild=true `
               -p:PublishTrimmed=false `
               -p:PublishReadyToRun=false `
               -p:Version=${{ needs.prepare.outputs.version }} `
@@ -193,8 +194,51 @@ jobs:
               -p:PublishSingleFile=false `
               -p:DebugType=none `
               -p:DebugSymbols=false `
+              -p:SkipAirAppHostBuild=true `
               -p:PublishTrimmed=false `
               -p:PublishReadyToRun=false `
+              -p:Version=${{ needs.prepare.outputs.version }} `
+              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+          }
+        shell: pwsh
+
+      - name: Publish AirAppHost
+        run: |
+          $arch = "${{ matrix.arch }}"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+
+          if ($selfContained) {
+            dotnet publish LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj `
+              -c Release `
+              -o ./$publishDir `
+              --self-contained:false `
+              -r win-$arch `
+              -p:PublishSingleFile=false `
+              -p:DebugType=none `
+              -p:DebugSymbols=false `
+              -p:PublishTrimmed=false `
+              -p:PublishReadyToRun=false `
+              -p:BuildingAirAppHost=true `
+              -p:SkipAirAppHostBuild=true `
+              -p:Version=${{ needs.prepare.outputs.version }} `
+              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+          } else {
+            dotnet publish LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj `
+              -c Release `
+              -o ./$publishDir `
+              --self-contained:false `
+              -p:PublishSingleFile=false `
+              -p:DebugType=none `
+              -p:DebugSymbols=false `
+              -p:PublishTrimmed=false `
+              -p:PublishReadyToRun=false `
+              -p:BuildingAirAppHost=true `
+              -p:SkipAirAppHostBuild=true `
               -p:Version=${{ needs.prepare.outputs.version }} `
               -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
               -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
@@ -225,6 +269,18 @@ jobs:
           Remove-Item -Path $publishDir -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path $launcherPublishDir -Recurse -Force -ErrorAction SilentlyContinue
           Move-Item -Path $newStructure -Destination $publishDir -Force
+        shell: pwsh
+
+      - name: Optimize and Guard Windows Payload
+        run: |
+          $arch = "${{ matrix.arch }}"
+          $selfContained = "${{ matrix.self_contained }}" -eq "true"
+          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+
+          ./LanMountainDesktop/scripts/Optimize-PublishPayload.ps1 `
+            -PublishDir $publishDir `
+            -RuntimeIdentifier "win-$arch" `
+            -AssertClean
         shell: pwsh
 
       - name: Install Inno Setup and 7z
@@ -418,6 +474,7 @@ jobs:
             -p:SelfContained=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
+            -p:SkipAirAppHostBuild=true \
             -p:PublishTrimmed=false \
             -p:PublishReadyToRun=false \
             -p:Version=${{ needs.prepare.outputs.version }} \
@@ -606,6 +663,7 @@ jobs:
             -p:SelfContained=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
+            -p:SkipAirAppHostBuild=true \
             -p:PublishTrimmed=false \
             -p:PublishReadyToRun=false \
             -p:Version=${{ needs.prepare.outputs.version }} \

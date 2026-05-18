@@ -126,9 +126,11 @@
           SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="CopyAirAppHostPublishOutput" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+  <Target Name="CopyAirAppHostPublishOutput"
+          AfterTargets="Publish"
+          Condition="'$(PublishDir)' != '' and '$(AirAppHostPublishDir)' != '' and '$(SkipAirAppHostBuild)' != 'true'">
     <ItemGroup>
-      <_AirAppHostPublishOutput Include="..\LanMountainDesktop.AirAppHost\bin\$(Configuration)\$(TargetFramework)\**\*" />
+      <_AirAppHostPublishOutput Include="$(AirAppHostPublishDir)\**\*" />
     </ItemGroup>
     <MakeDir Directories="$(PublishDir)AirAppHost" />
     <Copy SourceFiles="@(_AirAppHostPublishOutput)"
