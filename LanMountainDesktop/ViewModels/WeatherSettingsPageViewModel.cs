@@ -66,6 +66,10 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
 
     public ObservableCollection<WeatherLocation> SearchResults { get; } = [];
 
+    public ObservableCollection<WeatherPreviewMetric> PreviewMetrics { get; } = [];
+
+    public ObservableCollection<WeatherPreviewAlert> PreviewAlerts { get; } = [];
+
     [ObservableProperty]
     private string _pageTitle = string.Empty;
 
@@ -169,6 +173,15 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     private string _footerHint = string.Empty;
 
     [ObservableProperty]
+    private string _previewMetricsHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _previewAlertsHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _previewNoAlertsText = string.Empty;
+
+    [ObservableProperty]
     private SelectionOption _selectedLocationMode = new("CitySearch", "City Search");
 
     [ObservableProperty]
@@ -246,6 +259,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _previewStatus = string.Empty;
 
+    [ObservableProperty]
+    private bool _hasPreviewAlerts;
+
     partial void OnSelectedLocationModeChanged(SelectionOption value)
     {
         UpdateModeVisibility();
@@ -279,6 +295,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         }
 
         _settingsFacade.Weather.Save(CreateEditableState());
+        UpdatePreviewDetails(_previewSnapshot);
     }
 
     partial void OnExcludedAlertsChanged(string value)
@@ -447,6 +464,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                 PreviewTemperature = "--";
                 PreviewCondition = string.Empty;
                 PreviewUpdated = string.Empty;
+                UpdatePreviewDetails(null);
                 return;
             }
 
@@ -466,6 +484,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
                     result.ErrorMessage ?? result.ErrorCode ?? L("settings.weather.preview_unknown", "Unknown"));
                 _previewSnapshot = null;
                 UpdatePreviewIcon(null);
+                UpdatePreviewDetails(null);
                 return;
             }
 
@@ -475,10 +494,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             PreviewLocation = string.IsNullOrWhiteSpace(snapshot.LocationName)
                 ? state.LocationName
                 : snapshot.LocationName!;
-            PreviewTemperature = snapshot.Current.TemperatureC.HasValue
-                ? string.Format(CultureInfo.InvariantCulture, "{0:0.#}°C", snapshot.Current.TemperatureC.Value)
-                : "--";
+            PreviewTemperature = FormatTemperatureWithUnit(snapshot.Current.TemperatureC);
             PreviewCondition = ResolveWeatherDisplayText(snapshot.Current.WeatherText, snapshot.Current.WeatherCode);
+            UpdatePreviewDetails(snapshot);
 
             var updatedAt = (snapshot.ObservationTime ?? snapshot.FetchedAt).ToLocalTime();
             PreviewUpdated = string.Format(
@@ -546,10 +564,17 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         PreviewIcon = null;
         UpdatePreviewIcon(null);
         PreviewLocation = previewLocation.Name;
-        PreviewTemperature = "24 deg C";
+        PreviewTemperature = "24°C";
         PreviewCondition = ResolveWeatherDisplayText("Partly cloudy", 4);
         PreviewUpdated = "Updated 09:42";
         PreviewStatus = "Preview data is mocked for Avalonia design mode.";
+        PreviewMetrics.Clear();
+        PreviewMetrics.Add(new WeatherPreviewMetric("Humidity", "58%", "\uE794"));
+        PreviewMetrics.Add(new WeatherPreviewMetric("AQI", "42", "\uEA7D"));
+        PreviewMetrics.Add(new WeatherPreviewMetric("Wind", "12 km/h", "\uF43B"));
+        PreviewMetrics.Add(new WeatherPreviewMetric("Feels like", "25°C", "\uE706"));
+        PreviewAlerts.Clear();
+        HasPreviewAlerts = false;
     }
 
     private void RefreshLocalizedText()
@@ -558,6 +583,9 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
         PageDescription = L("settings.weather.description", "Configure weather location, weather preview, and startup positioning behavior.");
         PreviewHeader = L("settings.weather.preview_panel_header", "Weather Preview");
         PreviewDescription = L("settings.weather.preview_panel_desc", "Refresh and verify current weather service status.");
+        PreviewMetricsHeader = L("settings.weather.preview_metrics_header", "Current conditions");
+        PreviewAlertsHeader = L("settings.weather.preview_alerts_header", "Weather alerts");
+        PreviewNoAlertsText = L("settings.weather.preview_no_alerts", "No active weather alerts.");
         LocationSourceHeader = L("settings.weather.location_source_header", "Location Source");
         LocationSourceDescription = L("settings.weather.location_source_desc", "Choose how weather widgets resolve location.");
         CitySearchHeader = L("settings.weather.city_search_header", "City Search");
@@ -746,6 +774,131 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             : WeatherIconAssetResolver.LoadIcon(styleId, snapshot);
     }
 
+    private void UpdatePreviewDetails(WeatherSnapshot? snapshot)
+    {
+        PreviewMetrics.Clear();
+        PreviewAlerts.Clear();
+
+        if (snapshot is null)
+        {
+            HasPreviewAlerts = false;
+            return;
+        }
+
+        AddPreviewMetric(
+            L("settings.weather.metric_humidity", "Humidity"),
+            snapshot.Current.RelativeHumidityPercent is int humidity
+                ? string.Format(CultureInfo.InvariantCulture, "{0}%", humidity)
+                : "--",
+            "\uE794");
+        AddPreviewMetric(
+            L("settings.weather.metric_aqi", "AQI"),
+            snapshot.Current.AirQualityIndex?.ToString(CultureInfo.InvariantCulture) ?? "--",
+            "\uEA7D");
+        AddPreviewMetric(
+            L("settings.weather.metric_wind", "Wind"),
+            snapshot.Current.WindSpeedKph.HasValue
+                ? string.Format(CultureInfo.InvariantCulture, "{0:0.#} km/h", snapshot.Current.WindSpeedKph.Value)
+                : "--",
+            "\uF43B");
+        AddPreviewMetric(
+            L("settings.weather.metric_feels_like", "Feels like"),
+            FormatTemperatureWithUnit(snapshot.Current.FeelsLikeC),
+            "\uE706");
+
+        var today = snapshot.DailyForecasts.FirstOrDefault();
+        if (today is not null)
+        {
+            AddPreviewMetric(
+                L("settings.weather.metric_precipitation", "Precipitation"),
+                today.PrecipitationProbabilityPercent is int precipitation
+                    ? string.Format(CultureInfo.InvariantCulture, "{0}%", precipitation)
+                    : "--",
+                "\uE9C4");
+
+            var sunValue = string.IsNullOrWhiteSpace(today.SunriseTime) && string.IsNullOrWhiteSpace(today.SunsetTime)
+                ? "--"
+                : string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0} / {1}",
+                    string.IsNullOrWhiteSpace(today.SunriseTime) ? "--" : today.SunriseTime,
+                    string.IsNullOrWhiteSpace(today.SunsetTime) ? "--" : today.SunsetTime);
+            AddPreviewMetric(L("settings.weather.metric_sun", "Sunrise / sunset"), sunValue, "\uE706");
+        }
+
+        var excludedRules = SplitAlertExclusions();
+        foreach (var alert in snapshot.Alerts.Where(alert => !IsAlertExcluded(alert, excludedRules)))
+        {
+            PreviewAlerts.Add(new WeatherPreviewAlert(
+                string.IsNullOrWhiteSpace(alert.Title) ? L("settings.weather.alert_untitled", "Weather alert") : alert.Title,
+                string.IsNullOrWhiteSpace(alert.Detail) ? L("settings.weather.alert_no_detail", "No details were provided.") : alert.Detail!,
+                BuildAlertMetadata(alert),
+                alert.IconUri));
+        }
+
+        HasPreviewAlerts = PreviewAlerts.Count > 0;
+    }
+
+    private void AddPreviewMetric(string label, string value, string glyph)
+    {
+        PreviewMetrics.Add(new WeatherPreviewMetric(label, value, glyph));
+    }
+
+    private string[] SplitAlertExclusions()
+    {
+        return (ExcludedAlerts ?? string.Empty)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static bool IsAlertExcluded(WeatherAlert alert, IReadOnlyList<string> excludedRules)
+    {
+        if (excludedRules.Count == 0)
+        {
+            return false;
+        }
+
+        var haystack = string.Join(
+            '\n',
+            alert.Title,
+            alert.Detail,
+            alert.Type,
+            alert.Level);
+        return excludedRules.Any(rule => haystack.Contains(rule, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string BuildAlertMetadata(WeatherAlert alert)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(alert.Level))
+        {
+            parts.Add(alert.Level!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(alert.Type))
+        {
+            parts.Add(alert.Type!);
+        }
+
+        if (alert.PublishedAt.HasValue)
+        {
+            parts.Add(string.Format(
+                ResolveCulture(),
+                L("settings.weather.alert_published_format", "Published {0}"),
+                alert.PublishedAt.Value.ToLocalTime().ToString("g", ResolveCulture())));
+        }
+
+        return parts.Count == 0
+            ? L("settings.weather.alert_active", "Active alert")
+            : string.Join(" · ", parts);
+    }
+
+    private static string FormatTemperatureWithUnit(double? value)
+    {
+        return value.HasValue
+            ? string.Format(CultureInfo.InvariantCulture, "{0:0.#}°C", value.Value)
+            : "--";
+    }
+
     private string ResolveWeatherDisplayText(string? weatherText, int? weatherCode)
     {
         if (!string.IsNullOrWhiteSpace(weatherText))
@@ -777,3 +930,7 @@ public sealed partial class WeatherSettingsPageViewModel : ViewModelBase
             : "zh_cn";
     }
 }
+
+public sealed record WeatherPreviewMetric(string Label, string Value, string Glyph);
+
+public sealed record WeatherPreviewAlert(string Title, string Detail, string Metadata, string? IconUri);
