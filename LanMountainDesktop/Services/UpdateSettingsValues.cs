@@ -10,6 +10,8 @@ public static class UpdateSettingsValues
     public const string ModeManual = "manual";
     public const string ModeDownloadThenConfirm = "download_then_confirm";
     public const string ModeSilentOnExit = "silent_on_exit";
+    public const string ModeSilentDownload = ModeDownloadThenConfirm;
+    public const string ModeSilentInstall = ModeSilentOnExit;
 
     // NOTE: keep constant name for compatibility with existing call sites.
     public const string DownloadSourcePlonds = "plonds-api";
@@ -20,6 +22,8 @@ public static class UpdateSettingsValues
     public const string LegacyDownloadSourceStcn = "stcn";
     public const string DownloadSourceGitHub = "github";
     public const string DownloadSourceGhProxy = "gh-proxy";
+    public const string PlondsStaticBaseUrlEnvironmentVariable = "LANMOUNTAIN_UPDATE_BASE_URL";
+    public const string DefaultPlondsStaticBaseUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update";
 
     public const int DefaultDownloadThreads = 4;
     public const int MinDownloadThreads = 1;

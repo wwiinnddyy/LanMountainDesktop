@@ -1,9 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -14,48 +11,51 @@ using Avalonia.Threading;
 using FluentIcons.Common;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
+using LanMountainDesktop.ViewModels;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget
+public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, IDesktopPageVisibilityAwareComponentWidget, IDisposable
 {
-    private const Symbol PlaySymbol = Symbol.Play;
-    private const Symbol PauseSymbol = Symbol.Pause;
-
     private readonly DispatcherTimer _refreshTimer = new()
     {
         Interval = TimeSpan.FromSeconds(2.4)
     };
 
-    private readonly IMusicControlService _musicControlService = MusicControlServiceFactory.CreateDefault();
+    private readonly MusicControlViewModel _viewModel = new();
     private readonly MonetColorService _monetColorService = new();
-    private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
-    private readonly LocalizationService _localizationService = new();
 
-    private CancellationTokenSource? _refreshCts;
-    private Bitmap? _coverBitmap;
-    private MusicPlaybackState _currentState = MusicPlaybackState.NoSession(isSupported: true);
-    private string _languageCode = "zh-CN";
     private double _currentCellSize = 48;
     private bool _isAttached;
     private bool _isOnActivePage = true;
-    private bool _isRefreshing;
-    private bool _isExecutingCommand;
-    private double _progressRatio;
-    private bool _isProgressIndeterminate;
+    private bool _isDisposed;
 
     public MusicControlWidget()
     {
         InitializeComponent();
+        DataContext = _viewModel;
 
         _refreshTimer.Tick += OnRefreshTimerTick;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
 
         ApplyCellSize(_currentCellSize);
-        ApplyDynamicBackground(null);
-        ApplyState(MusicPlaybackState.NoSession(isSupported: OperatingSystem.IsWindows()));
+        ApplyViewModel();
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _isDisposed = true;
+        _refreshTimer.Stop();
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.Dispose();
     }
 
     public void ApplyCellSize(double cellSize)
@@ -123,7 +123,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         NextIcon.FontSize = Math.Clamp(18 * scale, 13, 24);
         FavoriteIcon.FontSize = Math.Clamp(16 * scale, 11, 21);
 
-        UpdateProgressVisual(_progressRatio, _isProgressIndeterminate);
+        UpdateProgressVisual(_viewModel.ProgressRatio, _viewModel.IsProgressIndeterminate);
     }
 
     public void SetDesktopPageContext(bool isOnActivePage, bool isEditMode)
@@ -135,7 +135,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
         if (!wasOnActivePage && _isOnActivePage && _isAttached)
         {
-            _ = RefreshStateAsync();
+            _ = _viewModel.RefreshAsync();
         }
     }
 
@@ -145,7 +145,7 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         UpdateRefreshTimerState();
         if (_isOnActivePage)
         {
-            _ = RefreshStateAsync();
+            _ = _viewModel.RefreshAsync();
         }
     }
 
@@ -153,125 +153,28 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
     {
         _isAttached = false;
         UpdateRefreshTimerState();
-        CancelRefreshRequest();
-        DisposeCoverBitmap();
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        ApplyCellSize(_currentCellSize);
-    }
+        => ApplyCellSize(_currentCellSize);
 
     private async void OnRefreshTimerTick(object? sender, EventArgs e)
-    {
-        await RefreshStateAsync();
-    }
+        => await _viewModel.RefreshAsync();
 
     private async void OnPlayPauseButtonClick(object? sender, RoutedEventArgs e)
-    {
-        await ExecuteCommandAsync(token => _musicControlService.TogglePlayPauseAsync(token));
-    }
+        => await _viewModel.TogglePlayPauseAsync();
 
     private async void OnPreviousButtonClick(object? sender, RoutedEventArgs e)
-    {
-        await ExecuteCommandAsync(token => _musicControlService.SkipPreviousAsync(token));
-    }
+        => await _viewModel.SkipPreviousAsync();
 
     private async void OnNextButtonClick(object? sender, RoutedEventArgs e)
-    {
-        await ExecuteCommandAsync(token => _musicControlService.SkipNextAsync(token));
-    }
+        => await _viewModel.SkipNextAsync();
 
     private async void OnSourceAppButtonClick(object? sender, RoutedEventArgs e)
-    {
-        await ExecuteCommandAsync(
-            token => _musicControlService.LaunchSourceAppAsync(token),
-            refreshAfterCommand: false,
-            requireActiveSession: false);
-    }
+        => await _viewModel.LaunchSourceAsync();
 
-    private async Task ExecuteCommandAsync(
-        Func<CancellationToken, Task<bool>> command,
-        bool refreshAfterCommand = true,
-        bool requireActiveSession = true)
-    {
-        if (_isExecutingCommand
-            || !_currentState.IsSupported
-            || (requireActiveSession && !_currentState.HasSession))
-        {
-            return;
-        }
-
-        _isExecutingCommand = true;
-        ApplyActionButtonState(_currentState);
-
-        try
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-            _ = await command(cts.Token);
-        }
-        catch
-        {
-            // Ignore command transport errors and recover on next poll.
-        }
-        finally
-        {
-            _isExecutingCommand = false;
-        }
-
-        if (refreshAfterCommand)
-        {
-            await RefreshStateAsync();
-        }
-    }
-
-    private async Task RefreshStateAsync()
-    {
-        if (!_isAttached || !_isOnActivePage || _isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-        UpdateLanguageCode();
-
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var previous = Interlocked.Exchange(ref _refreshCts, cts);
-        previous?.Cancel();
-        previous?.Dispose();
-
-        try
-        {
-            var state = await _musicControlService.GetCurrentStateAsync(cts.Token);
-            if (cts.IsCancellationRequested || !_isAttached)
-            {
-                return;
-            }
-
-            _currentState = state;
-            ApplyState(state);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellation.
-        }
-        catch
-        {
-            var fallbackState = MusicPlaybackState.NoSession(isSupported: OperatingSystem.IsWindows());
-            _currentState = fallbackState;
-            ApplyState(fallbackState);
-        }
-        finally
-        {
-            if (ReferenceEquals(_refreshCts, cts))
-            {
-                _refreshCts = null;
-            }
-
-            cts.Dispose();
-            _isRefreshing = false;
-        }
-    }
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        => Dispatcher.UIThread.Post(ApplyViewModel);
 
     private void UpdateRefreshTimerState()
     {
@@ -288,109 +191,51 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         _refreshTimer.Stop();
     }
 
-    private void ApplyState(MusicPlaybackState state)
+    private void ApplyViewModel()
     {
-        var hasMediaSession = state.IsSupported && state.HasSession;
+        var state = _viewModel.State;
+        var cover = _viewModel.Cover;
+        var hasCover = cover is not null;
 
-        if (!state.IsSupported)
+        TitleTextBlock.Text = _viewModel.TitleText;
+        ArtistTextBlock.Text = _viewModel.ArtistText;
+        ArtistTextBlock.MaxLines = _viewModel.IsNoMedia ? 2 : 1;
+        SourceAppTextBlock.Text = _viewModel.SourceAppText;
+        StatusTextBlock.Text = _viewModel.StatusText;
+        PositionTextBlock.Text = _viewModel.PositionText;
+        DurationTextBlock.Text = _viewModel.DurationText;
+        PlaybackActivityIcon.IsVisible = _viewModel.IsPlaybackActive;
+        PlayPauseGlyphIcon.Symbol = _viewModel.IsPlaybackActive ? Symbol.Pause : Symbol.Play;
+
+        PlayPauseButton.IsEnabled = _viewModel.CanPlayPause;
+        PreviousButton.IsEnabled = _viewModel.CanSkipPrevious;
+        NextButton.IsEnabled = _viewModel.CanSkipNext;
+        SourceAppButton.IsEnabled = _viewModel.CanLaunchSource;
+        QueueButton.IsEnabled = state.IsSupported;
+        FavoriteButton.IsEnabled = state.IsSupported;
+
+        CoverImage.Source = cover;
+        BackdropCoverImage.Source = cover;
+        CoverImage.IsVisible = hasCover;
+        BackdropCoverImage.IsVisible = hasCover;
+        CoverFallbackGlyph.IsVisible = !hasCover;
+
+        if (_viewModel.IsNoMedia)
         {
-            TitleTextBlock.Text = L("music.widget.unsupported", "Music control is only available on Windows");
-            ArtistTextBlock.Text = L("music.widget.unsupported_hint", "SMTC backend is unavailable");
-            SourceAppTextBlock.Text = L("music.widget.open_player", "Open player");
-            StatusTextBlock.Text = "--";
-            PositionTextBlock.Text = "00:00";
-            DurationTextBlock.Text = "00:00";
-            PlaybackActivityIcon.IsVisible = false;
-            PlayPauseGlyphIcon.Symbol = PlaySymbol;
-            UpdateProgressVisual(0, false);
-            SetCoverImage(null);
             ApplyNoMediaVisualTheme();
-            ApplyActionButtonState(state);
-            UpdateSourceAppButtonTooltip();
-            return;
+        }
+        else
+        {
+            ApplyActiveVisualTheme();
         }
 
-        if (!state.HasSession)
-        {
-            TitleTextBlock.Text = L("music.widget.no_session", "No active media session");
-            ArtistTextBlock.Text = L("music.widget.no_session_hint", "Open a player that supports SMTC");
-            SourceAppTextBlock.Text = L("music.widget.open_player", "Open player");
-            StatusTextBlock.Text = "--";
-            PositionTextBlock.Text = "00:00";
-            DurationTextBlock.Text = "00:00";
-            PlaybackActivityIcon.IsVisible = false;
-            PlayPauseGlyphIcon.Symbol = PlaySymbol;
-            UpdateProgressVisual(0, false);
-            SetCoverImage(null);
-            ApplyNoMediaVisualTheme();
-            ApplyActionButtonState(state);
-            UpdateSourceAppButtonTooltip();
-            return;
-        }
-
-        ApplyActiveVisualTheme();
-
-        var title = string.IsNullOrWhiteSpace(state.Title)
-            ? L("music.widget.unknown_title", "Unknown title")
-            : state.Title;
-        var subtitle = !string.IsNullOrWhiteSpace(state.Artist)
-            ? state.Artist
-            : !string.IsNullOrWhiteSpace(state.AlbumTitle)
-                ? state.AlbumTitle
-                : L("music.widget.unknown_artist", "Unknown artist");
-
-        TitleTextBlock.Text = title;
-        ArtistTextBlock.Text = subtitle;
-        SourceAppTextBlock.Text = string.IsNullOrWhiteSpace(state.SourceAppName)
-            ? L("music.widget.open_player", "Open player")
-            : state.SourceAppName;
-        StatusTextBlock.Text = ResolveStatusText(state.PlaybackStatus);
-        PlaybackActivityIcon.IsVisible = state.PlaybackStatus == MusicPlaybackStatus.Playing;
-
-        var position = ClampToNonNegative(state.Position);
-        var duration = ClampToNonNegative(state.Duration);
-        var progressRatio = duration.TotalMilliseconds <= 1
-            ? 0
-            : Math.Clamp(position.TotalMilliseconds / duration.TotalMilliseconds, 0, 1);
-
-        PositionTextBlock.Text = FormatTimeline(position);
-        DurationTextBlock.Text = duration.TotalMilliseconds > 1
-            ? FormatTimeline(duration)
-            : "00:00";
-        UpdateProgressVisual(progressRatio, hasMediaSession && duration.TotalMilliseconds <= 1);
-
-        PlayPauseGlyphIcon.Symbol = state.PlaybackStatus == MusicPlaybackStatus.Playing
-            ? PauseSymbol
-            : PlaySymbol;
-
-        SetCoverImage(state.ThumbnailBytes);
-        ApplyActionButtonState(state);
+        ApplyDynamicBackground(cover);
+        UpdateProgressVisual(_viewModel.ProgressRatio, _viewModel.IsProgressIndeterminate);
         UpdateSourceAppButtonTooltip();
-    }
-
-    private void ApplyActionButtonState(MusicPlaybackState state)
-    {
-        var canOperate = !_isExecutingCommand && state.IsSupported && state.HasSession;
-        var showNoSessionStyle = !_isExecutingCommand && state.IsSupported && !state.HasSession;
-
-        PlayPauseButton.IsEnabled = canOperate
-            ? state.CanPlayPause
-            : showNoSessionStyle;
-        PreviousButton.IsEnabled = canOperate
-            ? state.CanSkipPrevious
-            : showNoSessionStyle;
-        NextButton.IsEnabled = canOperate
-            ? state.CanSkipNext
-            : showNoSessionStyle;
-        SourceAppButton.IsEnabled = !_isExecutingCommand && state.IsSupported;
-        QueueButton.IsEnabled = canOperate || showNoSessionStyle;
-        FavoriteButton.IsEnabled = canOperate || showNoSessionStyle;
     }
 
     private void ApplyNoMediaVisualTheme()
     {
-        ArtistTextBlock.MaxLines = 2;
-
         DynamicBackgroundBase.Background = new SolidColorBrush(Color.Parse("#F0635D61"));
         DynamicGradientOverlay.Background = new LinearGradientBrush
         {
@@ -444,8 +289,6 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
 
     private void ApplyActiveVisualTheme()
     {
-        ArtistTextBlock.MaxLines = 1;
-
         CoverBorder.Background = new SolidColorBrush(Color.Parse("#3CFFFFFF"));
         CoverBorder.BorderBrush = new SolidColorBrush(Color.Parse("#77FFFFFF"));
         CoverFallbackGlyph.Symbol = Symbol.Album;
@@ -460,49 +303,6 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         SourceAppIcon.Foreground = new SolidColorBrush(Color.Parse("#F7FFFFFF"));
     }
 
-    private void UpdateLanguageCode()
-    {
-        try
-        {
-            var snapshot = _settingsService.Load();
-            _languageCode = _localizationService.NormalizeLanguageCode(snapshot.LanguageCode);
-        }
-        catch
-        {
-            _languageCode = "zh-CN";
-        }
-    }
-
-    private void CancelRefreshRequest()
-    {
-        var cts = Interlocked.Exchange(ref _refreshCts, null);
-        if (cts is null)
-        {
-            return;
-        }
-
-        cts.Cancel();
-        cts.Dispose();
-    }
-
-    private string ResolveStatusText(MusicPlaybackStatus status)
-    {
-        return status switch
-        {
-            MusicPlaybackStatus.Playing => L("music.widget.status.playing", "Playing"),
-            MusicPlaybackStatus.Paused => L("music.widget.status.paused", "Paused"),
-            MusicPlaybackStatus.Stopped => L("music.widget.status.stopped", "Stopped"),
-            MusicPlaybackStatus.Changing => L("music.widget.status.changing", "Changing"),
-            MusicPlaybackStatus.Opened => L("music.widget.status.opened", "Opened"),
-            _ => "--"
-        };
-    }
-
-    private string L(string key, string fallback)
-    {
-        return _localizationService.GetString(_languageCode, key, fallback);
-    }
-
     private double ResolveScale()
     {
         var cellScale = Math.Clamp(_currentCellSize / 48d, 0.62, 2.1);
@@ -515,84 +315,8 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
         return Math.Clamp(Math.Min(cellScale, Math.Min(widthScale, heightScale) * 1.05), 0.56, 2.0);
     }
 
-    private static TimeSpan ClampToNonNegative(TimeSpan value)
-    {
-        return value < TimeSpan.Zero ? TimeSpan.Zero : value;
-    }
-
-    private static string FormatTimeline(TimeSpan value)
-    {
-        if (value.TotalHours >= 1)
-        {
-            return value.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture);
-        }
-
-        return value.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
-    }
-
-    private void SetCoverImage(byte[]? thumbnailBytes)
-    {
-        DisposeCoverBitmap();
-
-        if (thumbnailBytes is null || thumbnailBytes.Length == 0)
-        {
-            CoverImage.Source = null;
-            BackdropCoverImage.Source = null;
-            CoverImage.IsVisible = false;
-            BackdropCoverImage.IsVisible = false;
-            CoverFallbackGlyph.IsVisible = true;
-            ApplyDynamicBackground(null);
-            return;
-        }
-
-        try
-        {
-            using var stream = new MemoryStream(thumbnailBytes, writable: false);
-            _coverBitmap = new Bitmap(stream);
-            CoverImage.Source = _coverBitmap;
-            BackdropCoverImage.Source = _coverBitmap;
-            CoverImage.IsVisible = true;
-            BackdropCoverImage.IsVisible = true;
-            CoverFallbackGlyph.IsVisible = false;
-            ApplyDynamicBackground(_coverBitmap);
-        }
-        catch
-        {
-            CoverImage.Source = null;
-            BackdropCoverImage.Source = null;
-            CoverImage.IsVisible = false;
-            BackdropCoverImage.IsVisible = false;
-            CoverFallbackGlyph.IsVisible = true;
-            ApplyDynamicBackground(null);
-        }
-    }
-
-    private void DisposeCoverBitmap()
-    {
-        if (_coverBitmap is null)
-        {
-            return;
-        }
-
-        if (ReferenceEquals(CoverImage.Source, _coverBitmap))
-        {
-            CoverImage.Source = null;
-        }
-
-        if (ReferenceEquals(BackdropCoverImage.Source, _coverBitmap))
-        {
-            BackdropCoverImage.Source = null;
-        }
-
-        _coverBitmap.Dispose();
-        _coverBitmap = null;
-    }
-
     private void UpdateProgressVisual(double ratio, bool indeterminate)
     {
-        _progressRatio = Math.Clamp(ratio, 0, 1);
-        _isProgressIndeterminate = indeterminate;
-
         if (ProgressTrackHost.Bounds.Width <= 0)
         {
             return;
@@ -606,18 +330,18 @@ public partial class MusicControlWidget : UserControl, IDesktopComponentWidget, 
             return;
         }
 
-        ProgressFillBorder.Width = trackWidth * _progressRatio;
+        ProgressFillBorder.Width = trackWidth * Math.Clamp(ratio, 0, 1);
         ProgressFillBorder.Opacity = 0.96;
     }
 
     private void UpdateSourceAppButtonTooltip()
     {
-        var sourceName = string.IsNullOrWhiteSpace(SourceAppTextBlock.Text)
-            ? L("music.widget.open_player", "Open player")
-            : SourceAppTextBlock.Text;
-        var statusText = string.IsNullOrWhiteSpace(StatusTextBlock.Text) || StatusTextBlock.Text == "--"
+        var sourceName = string.IsNullOrWhiteSpace(_viewModel.SourceAppText)
+            ? "Open player"
+            : _viewModel.SourceAppText;
+        var statusText = string.IsNullOrWhiteSpace(_viewModel.StatusText) || _viewModel.StatusText == "--"
             ? sourceName
-            : string.Create(CultureInfo.InvariantCulture, $"{sourceName} ({StatusTextBlock.Text})");
+            : $"{sourceName} ({_viewModel.StatusText})";
         ToolTip.SetTip(SourceAppButton, statusText);
     }
 

@@ -1,0 +1,16 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         x:Class="LanMountainDesktop.AirAppHost.AirAppWindow"
+                         Width="520"
+                         Height="360"
+                         MinWidth="360"
+                         MinHeight="260"
+                         WindowStartupLocation="CenterScreen"
+                         FontFamily="{DynamicResource AppFontFamily}"
+                         Title="Air APP">
+    <Grid x:Name="WindowRoot"
+          Background="{DynamicResource AirAppWindowBackgroundBrush}">
+        <ContentControl x:Name="ContentHost" />
+    </Grid>
+</faWindowing:FAAppWindow>

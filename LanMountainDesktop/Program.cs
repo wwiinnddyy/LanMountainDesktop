@@ -1,15 +1,11 @@
 using System;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using LanMountainDesktop.DesktopHost;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Plugins;
 using LanMountainDesktop.Services;
-using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop;
 
@@ -24,43 +20,6 @@ public sealed class Program
         AppDataPathProvider.Initialize(args);
         DevPluginOptions.Parse(args);
         RegisterGlobalExceptionLogging();
-        var restartParentProcessId = LauncherRuntimeMetadata.GetRestartParentProcessId(args);
-
-        using var singleInstance = AcquireSingleInstance(restartParentProcessId);
-        if (!singleInstance.IsPrimaryInstance)
-        {
-            if (restartParentProcessId is not null)
-            {
-                AppLogger.Warn(
-                    "Startup",
-                    $"Restart relaunch could not acquire the single-instance lock. pid={restartParentProcessId.Value}. Suppressing multi-open activation prompt.");
-                ReportLauncherStageBeforeExit(StartupStage.ActivationFailed, "Restart relaunch could not acquire the single-instance lock.");
-                Environment.ExitCode = HostExitCodes.RestartLockNotAcquired;
-                return;
-            }
-
-            var activationAcknowledged = singleInstance.TryNotifyPrimaryInstance(TimeSpan.FromSeconds(2), out var failureReason);
-            if (activationAcknowledged)
-            {
-                AppLogger.Info(
-                    "Startup",
-                    $"Secondary launch forwarded to primary instance successfully. Acked={activationAcknowledged}; Pid={Environment.ProcessId}.");
-                ReportLauncherStageBeforeExit(StartupStage.ActivationRedirected, "Secondary launch forwarded to the primary instance.");
-                Environment.ExitCode = HostExitCodes.SecondaryActivationSucceeded;
-            }
-            else
-            {
-                AppLogger.Warn(
-                    "Startup",
-                    $"Secondary launch failed to activate the primary instance. Acked={activationAcknowledged}; Reason='{failureReason ?? "unknown"}'; Pid={Environment.ProcessId}.");
-                ReportLauncherStageBeforeExit(
-                    StartupStage.ActivationFailed,
-                    $"Secondary launch failed to activate the primary instance. Reason='{failureReason ?? "unknown"}'.");
-                Environment.ExitCode = HostExitCodes.SecondaryActivationFailed;
-            }
-
-            return;
-        }
 
         DesktopBootstrap.InitializeStartupServices(
             InitializeTelemetryIdentity,
@@ -76,17 +35,8 @@ public sealed class Program
             var renderMode = LoadConfiguredRenderMode();
             StartupRenderMode = renderMode;
             AppLogger.Info("Startup", $"Resolved render mode '{renderMode}'.");
-            App.CurrentSingleInstanceService = singleInstance;
-            singleInstance.StartActivationListener(() =>
-            {
-                if (Avalonia.Application.Current is App app)
-                {
-                    app.ActivateMainWindow();
-                    return;
-                }
-
-                AppLogger.Info("SingleInstance", "Activation acknowledged before Avalonia App was ready.");
-            });
+            LoadChromePatchState();
+            InstallChromePatchersIfNeeded();
             BuildAvaloniaApp(renderMode).StartWithClassicDesktopLifetime(args);
             AppLogger.Info("Startup", "Application exited normally.");
         }
@@ -94,10 +44,6 @@ public sealed class Program
         {
             AppLogger.Critical("Startup", "Application terminated during startup.", ex);
             throw;
-        }
-        finally
-        {
-            App.CurrentSingleInstanceService = null;
         }
     }
 
@@ -147,41 +93,6 @@ public sealed class Program
         });
     }
 
-    private static SingleInstanceService AcquireSingleInstance(int? restartParentProcessId)
-    {
-        var singleInstance = SingleInstanceService.CreateDefault();
-        if (singleInstance.IsPrimaryInstance || restartParentProcessId is null)
-        {
-            return singleInstance;
-        }
-
-        AppLogger.Info(
-            "Startup",
-            $"Restart relaunch detected. Waiting for previous instance pid={restartParentProcessId.Value} to exit before re-acquiring the single-instance lock.");
-        singleInstance.Dispose();
-
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(12);
-        WaitForRestartParentExit(restartParentProcessId.Value, deadline);
-
-        while (DateTime.UtcNow < deadline)
-        {
-            var retryInstance = SingleInstanceService.CreateDefault();
-            if (retryInstance.IsPrimaryInstance)
-            {
-                AppLogger.Info("Startup", "Restart relaunch acquired the single-instance lock.");
-                return retryInstance;
-            }
-
-            retryInstance.Dispose();
-            Thread.Sleep(150);
-        }
-
-        AppLogger.Warn(
-            "Startup",
-            $"Restart relaunch timed out while waiting for the single-instance lock. pid={restartParentProcessId.Value}.");
-        return SingleInstanceService.CreateDefault();
-    }
-
     private static string LoadConfiguredRenderMode()
     {
         try
@@ -198,23 +109,46 @@ public sealed class Program
         }
     }
 
-    private static void WaitForRestartParentExit(int processId, DateTime deadlineUtc)
+    private static void LoadChromePatchState()
     {
         try
         {
-            using var process = Process.GetProcessById(processId);
-            var remaining = deadlineUtc - DateTime.UtcNow;
-            if (remaining > TimeSpan.Zero)
+            var snapshot = HostSettingsFacadeProvider.GetOrCreate()
+                .Settings
+                .LoadSnapshot<AppSettingsSnapshot>(LanMountainDesktop.PluginSdk.SettingsScope.App);
+            if (OperatingSystem.IsWindows())
             {
-                process.WaitForExit((int)Math.Ceiling(remaining.TotalMilliseconds));
+                LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome = snapshot.UseSystemChrome;
             }
-        }
-        catch (ArgumentException)
-        {
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("Startup", $"Failed while waiting for restart parent pid={processId} to exit.", ex);
+            AppLogger.Warn("Startup", "Failed to load chrome patch state. Falling back to FA chrome.", ex);
+        }
+    }
+
+    private static void InstallChromePatchersIfNeeded()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture;
+        if (arch != System.Runtime.InteropServices.Architecture.X64 &&
+            arch != System.Runtime.InteropServices.Architecture.X86)
+        {
+            return;
+        }
+
+        try
+        {
+            LanMountainDesktop.Platform.Windows.PatcherEntrance.InstallPatchers();
+            AppLogger.Info("Startup", $"Chrome patchers installed. UseSystemChrome={LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome}.");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Startup", "Failed to install chrome patchers.", ex);
         }
     }
 
@@ -260,35 +194,6 @@ public sealed class Program
 
             eventArgs.SetObserved();
         };
-    }
-
-    private static void ReportLauncherStageBeforeExit(StartupStage stage, string message)
-    {
-        if (!LauncherIpcClient.IsLaunchedByLauncher())
-        {
-            return;
-        }
-
-        try
-        {
-            using var launcherIpcClient = new LauncherIpcClient();
-            var connected = launcherIpcClient.ConnectAsync().GetAwaiter().GetResult();
-            if (!connected)
-            {
-                return;
-            }
-
-            launcherIpcClient.ReportProgressAsync(new StartupProgressMessage
-            {
-                Stage = stage,
-                ProgressPercent = 100,
-                Message = message
-            }).GetAwaiter().GetResult();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("LauncherIpc", $"Failed to report early launcher stage '{stage}'.", ex);
-        }
     }
 
     private static void InitializeTelemetryIdentity()

@@ -9,6 +9,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FluentIcons.Avalonia;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views;
@@ -28,24 +29,31 @@ public partial class NotificationDialogWindow : Window
 
     public void Initialize(NotificationContent content, IAppearanceThemeService? themeService = null)
     {
+        Initialize(content, themeService is IMaterialColorService materialColorService
+            ? materialColorService.GetMaterialColorSnapshot()
+            : themeService is null
+                ? null
+                : HostMaterialColorProvider.GetOrCreate().GetMaterialColorSnapshot());
+    }
+
+    public void Initialize(NotificationContent content, MaterialColorSnapshot? materialColorSnapshot)
+    {
         _viewModel = new NotificationDialogViewModel(content, this);
         DataContext = _viewModel;
 
         CompletionSource = new TaskCompletionSource<bool>();
 
-        bool isNightMode = false;
-        if (themeService is not null)
+        if (materialColorSnapshot is not null)
         {
-            var snapshot = themeService.GetCurrent();
-            isNightMode = snapshot.IsNightMode;
-            RequestedThemeVariant = isNightMode ? ThemeVariant.Dark : ThemeVariant.Light;
+            RequestedThemeVariant = materialColorSnapshot.IsNightMode ? ThemeVariant.Dark : ThemeVariant.Light;
         }
 
-        if (DialogCard is not null)
+        if (DialogCard is not null && materialColorSnapshot is not null)
         {
-            DialogCard.Background = isNightMode
-                ? new SolidColorBrush(Color.Parse("#FF2D2D2D"))
-                : new SolidColorBrush(Color.Parse("#FFF8F9FA"));
+            var cardSurface = GetDialogSurface(materialColorSnapshot);
+            DialogCard.Background = new SolidColorBrush(cardSurface.BackgroundColor);
+            DialogCard.BorderBrush = new SolidColorBrush(cardSurface.BorderColor);
+            DialogCard.BorderThickness = new Thickness(1);
         }
 
         if (!HasButtons(content) && content.Duration.HasValue)
@@ -57,6 +65,20 @@ public partial class NotificationDialogWindow : Window
             _autoCloseTimer.Tick += OnAutoCloseTimerTick;
             _autoCloseTimer.Start();
         }
+    }
+
+    private static MaterialSurfaceSnapshot GetDialogSurface(MaterialColorSnapshot materialColorSnapshot)
+    {
+        return materialColorSnapshot.Surfaces.TryGetValue(MaterialSurfaceRole.OverlayPanel, out var overlaySurface)
+            ? overlaySurface
+            : materialColorSnapshot.Surfaces.TryGetValue(MaterialSurfaceRole.WindowBackground, out var windowSurface)
+                ? windowSurface
+                : new MaterialSurfaceSnapshot(
+                    MaterialSurfaceRole.WindowBackground,
+                    Color.Parse("#FFF8F9FA"),
+                    Color.Parse("#22000000"),
+                    0,
+                    1);
     }
 
     private static bool HasButtons(NotificationContent content)

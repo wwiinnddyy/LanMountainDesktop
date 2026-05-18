@@ -10,6 +10,10 @@ public static class ThemeAppearanceValues
     public const string ColorModeSeedMonet = "seed_monet";
     public const string ColorModeWallpaperMonet = "wallpaper_monet";
 
+    public const string WallpaperColorSourceAuto = "auto";
+    public const string WallpaperColorSourceApp = "app";
+    public const string WallpaperColorSourceSystem = "system";
+
     public const string ColorSchemeFollowSystem = "follow_system";
     public const string ColorSchemeNative = "native";
 
@@ -18,6 +22,7 @@ public static class ThemeAppearanceValues
     public const string ThemeModeFollowSystem = "follow_system";
 
     public const string MaterialNone = "none";
+    public const string MaterialAuto = "auto";
     public const string MaterialMica = "mica";
     public const string MaterialAcrylic = "acrylic";
 
@@ -30,9 +35,17 @@ public static class ThemeAppearanceValues
 
     public static readonly IReadOnlyList<string> AllMaterialModes =
     [
+        MaterialAuto,
         MaterialNone,
         MaterialMica,
         MaterialAcrylic
+    ];
+
+    public static readonly IReadOnlyList<string> AllWallpaperColorSources =
+    [
+        WallpaperColorSourceAuto,
+        WallpaperColorSourceApp,
+        WallpaperColorSourceSystem
     ];
 
     public static string NormalizeThemeColorMode(string? value, string? themeColor = null)
@@ -59,6 +72,11 @@ public static class ThemeAppearanceValues
 
     public static string NormalizeSystemMaterialMode(string? value)
     {
+        if (string.Equals(value, MaterialAuto, StringComparison.OrdinalIgnoreCase))
+        {
+            return MaterialAuto;
+        }
+
         if (string.Equals(value, MaterialMica, StringComparison.OrdinalIgnoreCase))
         {
             return MaterialMica;
@@ -72,11 +90,47 @@ public static class ThemeAppearanceValues
         return MaterialNone;
     }
 
+    public static string NormalizeWallpaperColorSource(string? value)
+    {
+        if (string.Equals(value, WallpaperColorSourceApp, StringComparison.OrdinalIgnoreCase))
+        {
+            return WallpaperColorSourceApp;
+        }
+
+        if (string.Equals(value, WallpaperColorSourceSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return WallpaperColorSourceSystem;
+        }
+
+        return WallpaperColorSourceAuto;
+    }
+
+    public static string ResolveEffectiveSystemMaterialMode(string? value)
+    {
+        var normalized = NormalizeSystemMaterialMode(value);
+        if (!string.Equals(normalized, MaterialAuto, StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            return MaterialMica;
+        }
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0))
+        {
+            return MaterialAcrylic;
+        }
+
+        return MaterialNone;
+    }
+
     public static IReadOnlyList<string> NormalizeAvailableMaterialModes(IEnumerable<string>? values)
     {
         if (values is null)
         {
-            return [MaterialNone];
+            return [MaterialAuto, MaterialNone];
         }
 
         var normalized = values
@@ -84,9 +138,14 @@ public static class ThemeAppearanceValues
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        if (!normalized.Contains(MaterialAuto, StringComparer.OrdinalIgnoreCase))
+        {
+            normalized.Insert(0, MaterialAuto);
+        }
+
         if (!normalized.Contains(MaterialNone, StringComparer.OrdinalIgnoreCase))
         {
-            normalized.Insert(0, MaterialNone);
+            normalized.Insert(normalized.Count > 0 ? 1 : 0, MaterialNone);
         }
 
         return normalized;

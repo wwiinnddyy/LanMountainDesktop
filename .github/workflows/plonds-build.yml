@@ -1,10 +1,15 @@
 ﻿name: PLONDS
 
+concurrency:
+  group: plonds-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
+  cancel-in-progress: false
+
 on:
   release:
     types:
       - published
       - prereleased
+      - edited
   workflow_dispatch:
     inputs:
       tag:
@@ -66,6 +71,11 @@ jobs:
           echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
           echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
           echo "BASELINE_TAG_INPUT=${BASELINE_TAG}" >> "$GITHUB_ENV"
+          PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
+          if [[ -z "$PUBLIC_BASE" ]]; then
+            PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
+          fi
+          echo "S3_PUBLIC_BASE_URL=${PUBLIC_BASE%/}" >> "$GITHUB_ENV"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -189,7 +199,9 @@ jobs:
               '--current-zip', $currentZip,
               '--output-dir', 'plonds-output',
               '--private-key', $env:UPDATE_PRIVATE_KEY_PATH,
-              '--channel', $plan.channel
+              '--channel', $plan.channel,
+              '--static-output-dir', 'plonds-output/static',
+              '--update-base-url', $env:S3_PUBLIC_BASE_URL
             )
 
             if ([bool]$entry.isFullPayload) {
@@ -212,6 +224,29 @@ jobs:
             --output-dir plonds-output `
             --private-key $env:UPDATE_PRIVATE_KEY_PATH
 
+          foreach ($entry in $plan.platforms) {
+            $summary = Get-Content "plonds-output/platform-summaries/platform-summary-$($entry.platform).json" | ConvertFrom-Json
+            $required = @(
+              "plonds-output/static/meta/channels/$($plan.channel)/$($entry.platform)/latest.json",
+              "plonds-output/static/meta/distributions/$($summary.distributionId).json",
+              "plonds-output/static/manifests/$($summary.distributionId)/plonds-filemap.json",
+              "plonds-output/static/manifests/$($summary.distributionId)/plonds-filemap.json.sig"
+            )
+
+            foreach ($path in $required) {
+              if (-not (Test-Path $path)) {
+                throw "Missing PLONDS static output: $path"
+              }
+            }
+          }
+
+          $objects = Get-ChildItem -Path "plonds-output/static/repo/sha256" -File -Recurse -ErrorAction SilentlyContinue
+          if (-not $objects -or $objects.Count -eq 0) {
+            throw "PLONDS static object repository is empty."
+          }
+
+          Compress-Archive -Path "plonds-output/static/*" -DestinationPath "plonds-output/release-assets/plonds-static.zip" -Force
+
       - name: Upload PLONDS assets to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -231,5 +266,13 @@ jobs:
         with:
           name: plonds-run-metadata
           path: plonds-run-metadata/tag.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload PLONDS static artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plonds-static
+          path: plonds-output/static/**
           if-no-files-found: error
           retention-days: 7

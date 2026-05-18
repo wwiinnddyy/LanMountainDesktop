@@ -1,4 +1,7 @@
 using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using LanMountainDesktop.Models;
 using Microsoft.Data.Sqlite;
@@ -8,18 +11,39 @@ namespace LanMountainDesktop.Services;
 public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenceService
 {
     private const int DefaultCleanupBatchSize = 256;
+    private const int CurrentSnapshotVersion = 2;
+    private const string Category = "WhiteboardPersistence";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
     };
 
-    private readonly object _schemaSyncRoot = new();
-    private readonly AppDatabaseService _databaseService;
-    private bool _schemaInitialized;
+    private readonly object _legacySchemaSyncRoot = new();
+    private readonly string _whiteboardsRootDirectory;
+    private readonly AppDatabaseService _legacyDatabaseService;
+    private bool _legacySchemaInitialized;
 
-    public WhiteboardNotePersistenceService(AppDatabaseService? databaseService = null)
+    public WhiteboardNotePersistenceService()
+        : this(Path.Combine(AppDataPathProvider.GetDataRoot(), "Whiteboards"), AppDatabaseServiceFactory.CreateDefault())
     {
-        _databaseService = databaseService ?? AppDatabaseServiceFactory.CreateDefault();
+    }
+
+    public WhiteboardNotePersistenceService(AppDatabaseService? legacyDatabaseService)
+        : this(Path.Combine(AppDataPathProvider.GetDataRoot(), "Whiteboards"), legacyDatabaseService)
+    {
+    }
+
+    public WhiteboardNotePersistenceService(string whiteboardsRootDirectory, AppDatabaseService? legacyDatabaseService = null)
+    {
+        if (string.IsNullOrWhiteSpace(whiteboardsRootDirectory))
+        {
+            throw new ArgumentException("Whiteboard root directory cannot be null or whitespace.", nameof(whiteboardsRootDirectory));
+        }
+
+        _whiteboardsRootDirectory = Path.GetFullPath(whiteboardsRootDirectory);
+        _legacyDatabaseService = legacyDatabaseService ?? AppDatabaseServiceFactory.CreateDefault();
     }
 
     public WhiteboardNoteSnapshot LoadNote(string componentId, string? placementId, int retentionDays)
@@ -29,108 +53,89 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
             return new WhiteboardNoteSnapshot();
         }
 
+        var notePath = GetNoteFilePath(normalizedComponentId, normalizedPlacementId);
+        var normalizedRetentionDays = WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays);
+
         try
         {
-            using var connection = OpenConnection();
-            DeleteExpiredInternal(
-                connection,
-                normalizedComponentId,
-                normalizedPlacementId,
-                WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays),
-                DateTimeOffset.UtcNow);
+            if (File.Exists(notePath))
+            {
+                var snapshot = ReadSnapshot(notePath);
+                if (IsExpired(snapshot, normalizedRetentionDays))
+                {
+                    TryDeleteFile(notePath);
+                    return new WhiteboardNoteSnapshot();
+                }
 
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                SELECT note_json, saved_at_utc_ms
-                FROM whiteboard_notes
-                WHERE component_id = $componentId
-                  AND placement_id = $placementId
-                LIMIT 1;
-                """;
-            command.Parameters.AddWithValue("$componentId", normalizedComponentId);
-            command.Parameters.AddWithValue("$placementId", normalizedPlacementId);
+                return snapshot.Clone();
+            }
 
-            using var reader = command.ExecuteReader();
-            if (!reader.Read() || reader.IsDBNull(0))
+            var legacySnapshot = TryLoadLegacyNote(normalizedComponentId, normalizedPlacementId, normalizedRetentionDays);
+            if (legacySnapshot.Strokes.Count == 0 && legacySnapshot.SavedUtc == default)
             {
                 return new WhiteboardNoteSnapshot();
             }
 
-            var json = reader.GetString(0);
-            if (string.IsNullOrWhiteSpace(json))
+            if (!IsExpired(legacySnapshot, normalizedRetentionDays))
             {
-                return new WhiteboardNoteSnapshot();
+                if (SaveNote(normalizedComponentId, normalizedPlacementId, legacySnapshot, normalizedRetentionDays))
+                {
+                    _ = TryDeleteLegacyNote(normalizedComponentId, normalizedPlacementId);
+                }
+
+                return legacySnapshot.Clone();
             }
 
-            var snapshot = JsonSerializer.Deserialize<WhiteboardNoteSnapshot>(json, JsonOptions) ?? new WhiteboardNoteSnapshot();
-            if (!reader.IsDBNull(1))
-            {
-                snapshot.SavedUtc = DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1));
-            }
-
-            if (IsExpired(snapshot, retentionDays))
-            {
-                DeleteNote(normalizedComponentId, normalizedPlacementId);
-                return new WhiteboardNoteSnapshot();
-            }
-
-            return snapshot.Clone();
+            _ = TryDeleteLegacyNote(normalizedComponentId, normalizedPlacementId);
         }
-        catch
+        catch (Exception ex)
         {
-            return new WhiteboardNoteSnapshot();
+            AppLogger.Warn(
+                Category,
+                $"Failed to load whiteboard note. ComponentId='{normalizedComponentId}'; PlacementId='{normalizedPlacementId}'.",
+                ex);
         }
+
+        return new WhiteboardNoteSnapshot();
     }
 
-    public void SaveNote(string componentId, string? placementId, WhiteboardNoteSnapshot snapshot, int retentionDays)
+    public bool SaveNote(string componentId, string? placementId, WhiteboardNoteSnapshot snapshot, int retentionDays)
     {
         if (!TryNormalizeKeys(componentId, placementId, out var normalizedComponentId, out var normalizedPlacementId))
         {
-            return;
+            return false;
         }
+
+        var notePath = GetNoteFilePath(normalizedComponentId, normalizedPlacementId);
+        var tempPath = $"{notePath}.{Guid.NewGuid():N}.tmp";
 
         try
         {
             var nowUtc = DateTimeOffset.UtcNow;
             var persistedSnapshot = snapshot?.Clone() ?? new WhiteboardNoteSnapshot();
+            persistedSnapshot.Version = CurrentSnapshotVersion;
             persistedSnapshot.SavedUtc = nowUtc;
-            var expiresUtc = GetExpirationUtc(persistedSnapshot, retentionDays) ?? nowUtc.AddDays(WhiteboardNoteRetentionPolicy.DefaultDays);
-            var json = JsonSerializer.Serialize(persistedSnapshot, JsonOptions);
+            persistedSnapshot.ExpiresUtc = nowUtc.AddDays(WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays));
 
-            using var connection = OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                INSERT INTO whiteboard_notes(
-                    component_id,
-                    placement_id,
-                    note_json,
-                    saved_at_utc_ms,
-                    expires_at_utc_ms,
-                    updated_at_utc_ms)
-                VALUES(
-                    $componentId,
-                    $placementId,
-                    $noteJson,
-                    $savedAtUtcMs,
-                    $expiresAtUtcMs,
-                    $updatedAtUtcMs)
-                ON CONFLICT(component_id, placement_id) DO UPDATE SET
-                    note_json = excluded.note_json,
-                    saved_at_utc_ms = excluded.saved_at_utc_ms,
-                    expires_at_utc_ms = excluded.expires_at_utc_ms,
-                    updated_at_utc_ms = excluded.updated_at_utc_ms;
-                """;
-            command.Parameters.AddWithValue("$componentId", normalizedComponentId);
-            command.Parameters.AddWithValue("$placementId", normalizedPlacementId);
-            command.Parameters.AddWithValue("$noteJson", json);
-            command.Parameters.AddWithValue("$savedAtUtcMs", persistedSnapshot.SavedUtc.ToUnixTimeMilliseconds());
-            command.Parameters.AddWithValue("$expiresAtUtcMs", expiresUtc.ToUnixTimeMilliseconds());
-            command.Parameters.AddWithValue("$updatedAtUtcMs", nowUtc.ToUnixTimeMilliseconds());
-            command.ExecuteNonQuery();
+            var directory = Path.GetDirectoryName(notePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var json = JsonSerializer.Serialize(persistedSnapshot, JsonOptions);
+            File.WriteAllText(tempPath, json, Encoding.UTF8);
+            File.Move(tempPath, notePath, overwrite: true);
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Keep whiteboard usable even when persistence is unavailable.
+            TryDeleteFile(tempPath);
+            AppLogger.Warn(
+                Category,
+                $"Failed to save whiteboard note. ComponentId='{normalizedComponentId}'; PlacementId='{normalizedPlacementId}'; StrokeCount={snapshot?.Strokes.Count ?? 0}.",
+                ex);
+            return false;
         }
     }
 
@@ -141,23 +146,9 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
             return false;
         }
 
-        try
-        {
-            using var connection = OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                DELETE FROM whiteboard_notes
-                WHERE component_id = $componentId
-                  AND placement_id = $placementId;
-                """;
-            command.Parameters.AddWithValue("$componentId", normalizedComponentId);
-            command.Parameters.AddWithValue("$placementId", normalizedPlacementId);
-            return command.ExecuteNonQuery() > 0;
-        }
-        catch
-        {
-            return false;
-        }
+        var deleted = TryDeleteFile(GetNoteFilePath(normalizedComponentId, normalizedPlacementId));
+        deleted |= TryDeleteLegacyNote(normalizedComponentId, normalizedPlacementId);
+        return deleted;
     }
 
     public bool TryDeleteExpiredNote(string componentId, string? placementId, int retentionDays)
@@ -167,46 +158,72 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
             return false;
         }
 
+        var notePath = GetNoteFilePath(normalizedComponentId, normalizedPlacementId);
         try
         {
-            using var connection = OpenConnection();
-            return DeleteExpiredInternal(
-                connection,
-                normalizedComponentId,
-                normalizedPlacementId,
-                WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays),
-                DateTimeOffset.UtcNow);
+            if (File.Exists(notePath))
+            {
+                var snapshot = ReadSnapshot(notePath);
+                if (IsExpired(snapshot, retentionDays))
+                {
+                    return TryDeleteFile(notePath);
+                }
+
+                return false;
+            }
+
+            return TryDeleteExpiredLegacyNote(normalizedComponentId, normalizedPlacementId, retentionDays);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn(
+                Category,
+                $"Failed to delete expired whiteboard note. ComponentId='{normalizedComponentId}'; PlacementId='{normalizedPlacementId}'.",
+                ex);
             return false;
         }
     }
 
     public int DeleteExpiredNotesBatch(int batchSize = DefaultCleanupBatchSize, DateTimeOffset? now = null)
     {
+        var deletedCount = 0;
+        var normalizedBatchSize = NormalizeBatchSize(batchSize);
+        var nowUtc = now ?? DateTimeOffset.UtcNow;
+
         try
         {
-            using var connection = OpenConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                DELETE FROM whiteboard_notes
-                WHERE rowid IN (
-                    SELECT rowid
-                    FROM whiteboard_notes
-                    WHERE expires_at_utc_ms <= $nowUtcMs
-                    ORDER BY expires_at_utc_ms ASC
-                    LIMIT $batchSize
-                );
-                """;
-            command.Parameters.AddWithValue("$nowUtcMs", (now ?? DateTimeOffset.UtcNow).ToUnixTimeMilliseconds());
-            command.Parameters.AddWithValue("$batchSize", NormalizeBatchSize(batchSize));
-            return command.ExecuteNonQuery();
+            if (Directory.Exists(_whiteboardsRootDirectory))
+            {
+                foreach (var notePath in Directory.EnumerateFiles(_whiteboardsRootDirectory, "*.json", SearchOption.AllDirectories))
+                {
+                    if (deletedCount >= normalizedBatchSize)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        var snapshot = ReadSnapshot(notePath);
+                        if (IsExpired(snapshot, WhiteboardNoteRetentionPolicy.DefaultDays, nowUtc) &&
+                            TryDeleteFile(notePath))
+                        {
+                            deletedCount++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogger.Warn(Category, $"Failed to inspect whiteboard note file '{notePath}'.", ex);
+                    }
+                }
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            return 0;
+            AppLogger.Warn(Category, $"Failed to scan whiteboard note directory '{_whiteboardsRootDirectory}'.", ex);
         }
+
+        deletedCount += DeleteExpiredLegacyNotesBatch(Math.Max(0, normalizedBatchSize - deletedCount), nowUtc);
+        return deletedCount;
     }
 
     public bool IsExpired(WhiteboardNoteSnapshot snapshot, int retentionDays, DateTimeOffset? now = null)
@@ -227,7 +244,17 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
 
     public DateTimeOffset? GetExpirationUtc(WhiteboardNoteSnapshot snapshot, int retentionDays)
     {
-        if (snapshot is null || snapshot.SavedUtc == default)
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        if (snapshot.ExpiresUtc.HasValue)
+        {
+            return snapshot.ExpiresUtc.Value;
+        }
+
+        if (snapshot.SavedUtc == default)
         {
             return null;
         }
@@ -235,23 +262,170 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
         return snapshot.SavedUtc.AddDays(WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays));
     }
 
-    private SqliteConnection OpenConnection()
+    internal string GetNoteFilePathForTests(string componentId, string? placementId)
     {
-        var connection = _databaseService.OpenConnection();
-        EnsureSchema(connection);
+        if (!TryNormalizeKeys(componentId, placementId, out var normalizedComponentId, out var normalizedPlacementId))
+        {
+            return string.Empty;
+        }
+
+        return GetNoteFilePath(normalizedComponentId, normalizedPlacementId);
+    }
+
+    private string GetNoteFilePath(string normalizedComponentId, string normalizedPlacementId)
+    {
+        return Path.Combine(
+            _whiteboardsRootDirectory,
+            SanitizePathSegment(normalizedComponentId),
+            $"{SanitizePathSegment(normalizedPlacementId)}.json");
+    }
+
+    private static WhiteboardNoteSnapshot ReadSnapshot(string notePath)
+    {
+        var json = File.ReadAllText(notePath, Encoding.UTF8);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new WhiteboardNoteSnapshot();
+        }
+
+        return JsonSerializer.Deserialize<WhiteboardNoteSnapshot>(json, JsonOptions) ?? new WhiteboardNoteSnapshot();
+    }
+
+    private WhiteboardNoteSnapshot TryLoadLegacyNote(string componentId, string placementId, int retentionDays)
+    {
+        try
+        {
+            using var connection = OpenLegacyConnection();
+            TryDeleteExpiredLegacyNote(connection, componentId, placementId, retentionDays, DateTimeOffset.UtcNow);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT note_json, saved_at_utc_ms, expires_at_utc_ms
+                FROM whiteboard_notes
+                WHERE component_id = $componentId
+                  AND placement_id = $placementId
+                LIMIT 1;
+                """;
+            command.Parameters.AddWithValue("$componentId", componentId);
+            command.Parameters.AddWithValue("$placementId", placementId);
+
+            using var reader = command.ExecuteReader();
+            if (!reader.Read() || reader.IsDBNull(0))
+            {
+                return new WhiteboardNoteSnapshot();
+            }
+
+            var snapshot = JsonSerializer.Deserialize<WhiteboardNoteSnapshot>(reader.GetString(0), JsonOptions) ??
+                           new WhiteboardNoteSnapshot();
+            if (!reader.IsDBNull(1))
+            {
+                snapshot.SavedUtc = DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(1));
+            }
+
+            if (!reader.IsDBNull(2))
+            {
+                snapshot.ExpiresUtc = DateTimeOffset.FromUnixTimeMilliseconds(reader.GetInt64(2));
+            }
+
+            return snapshot;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn(
+                Category,
+                $"Failed to load legacy whiteboard note. ComponentId='{componentId}'; PlacementId='{placementId}'.",
+                ex);
+            return new WhiteboardNoteSnapshot();
+        }
+    }
+
+    private bool TryDeleteLegacyNote(string componentId, string placementId)
+    {
+        try
+        {
+            using var connection = OpenLegacyConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                DELETE FROM whiteboard_notes
+                WHERE component_id = $componentId
+                  AND placement_id = $placementId;
+                """;
+            command.Parameters.AddWithValue("$componentId", componentId);
+            command.Parameters.AddWithValue("$placementId", placementId);
+            return command.ExecuteNonQuery() > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool TryDeleteExpiredLegacyNote(string componentId, string placementId, int retentionDays)
+    {
+        try
+        {
+            using var connection = OpenLegacyConnection();
+            return TryDeleteExpiredLegacyNote(
+                connection,
+                componentId,
+                placementId,
+                WhiteboardNoteRetentionPolicy.NormalizeDays(retentionDays),
+                DateTimeOffset.UtcNow);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private int DeleteExpiredLegacyNotesBatch(int batchSize, DateTimeOffset nowUtc)
+    {
+        if (batchSize <= 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            using var connection = OpenLegacyConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                DELETE FROM whiteboard_notes
+                WHERE rowid IN (
+                    SELECT rowid
+                    FROM whiteboard_notes
+                    WHERE expires_at_utc_ms <= $nowUtcMs
+                    ORDER BY expires_at_utc_ms ASC
+                    LIMIT $batchSize
+                );
+                """;
+            command.Parameters.AddWithValue("$nowUtcMs", nowUtc.ToUnixTimeMilliseconds());
+            command.Parameters.AddWithValue("$batchSize", NormalizeBatchSize(batchSize));
+            return command.ExecuteNonQuery();
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private SqliteConnection OpenLegacyConnection()
+    {
+        var connection = _legacyDatabaseService.OpenConnection();
+        EnsureLegacySchema(connection);
         return connection;
     }
 
-    private void EnsureSchema(SqliteConnection connection)
+    private void EnsureLegacySchema(SqliteConnection connection)
     {
-        if (_schemaInitialized)
+        if (_legacySchemaInitialized)
         {
             return;
         }
 
-        lock (_schemaSyncRoot)
+        lock (_legacySchemaSyncRoot)
         {
-            if (_schemaInitialized)
+            if (_legacySchemaInitialized)
             {
                 return;
             }
@@ -272,11 +446,11 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
                     ON whiteboard_notes(expires_at_utc_ms);
                 """;
             command.ExecuteNonQuery();
-            _schemaInitialized = true;
+            _legacySchemaInitialized = true;
         }
     }
 
-    private static bool DeleteExpiredInternal(
+    private static bool TryDeleteExpiredLegacyNote(
         SqliteConnection connection,
         string componentId,
         string placementId,
@@ -326,7 +500,51 @@ public sealed class WhiteboardNotePersistenceService : IWhiteboardNotePersistenc
     {
         normalizedComponentId = componentId?.Trim() ?? string.Empty;
         normalizedPlacementId = placementId?.Trim() ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(normalizedComponentId);
+        return !string.IsNullOrWhiteSpace(normalizedComponentId) &&
+               !string.IsNullOrWhiteSpace(normalizedPlacementId);
+    }
+
+    private static string SanitizePathSegment(string value)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var builder = new StringBuilder(value.Length);
+        foreach (var ch in value.Trim())
+        {
+            builder.Append(Array.IndexOf(invalidChars, ch) >= 0 ? '_' : ch);
+        }
+
+        var safe = builder.ToString();
+        if (string.IsNullOrWhiteSpace(safe))
+        {
+            return "_";
+        }
+
+        if (safe.Length <= 120)
+        {
+            return safe;
+        }
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(safe)))[..12].ToLowerInvariant();
+        return $"{safe[..100]}-{hash}";
+    }
+
+    private static bool TryDeleteFile(string path)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn(Category, $"Failed to delete whiteboard note file '{path}'.", ex);
+        }
+
+        return false;
     }
 
     private static int NormalizeBatchSize(int batchSize)

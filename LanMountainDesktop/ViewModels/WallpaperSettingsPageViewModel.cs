@@ -20,6 +20,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _isInitializing;
+    private int _systemWallpaperRefreshIntervalSeconds = 300;
 
     public WallpaperSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
@@ -28,7 +29,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         WallpaperPlacements = CreateWallpaperPlacements();
         WallpaperTypes = CreateWallpaperTypes();
-        RefreshIntervals = CreateRefreshIntervals();
         PresetColors = CreatePresetColors();
         RefreshLocalizedText();
 
@@ -39,7 +39,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     public IReadOnlyList<SelectionOption> WallpaperPlacements { get; }
     public IReadOnlyList<SelectionOption> WallpaperTypes { get; }
-    public IReadOnlyList<SelectionOption> RefreshIntervals { get; }
     public IReadOnlyList<string> PresetColors { get; }
 
     public bool IsSystemWallpaperSupported => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -55,9 +54,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private SelectionOption _selectedWallpaperPlacement = null!;
-
-    [ObservableProperty]
-    private SelectionOption _selectedRefreshInterval = null!;
 
     [ObservableProperty]
     private string _wallpaperHeader = string.Empty;
@@ -84,18 +80,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     private string _filePickerTitle = string.Empty;
 
     [ObservableProperty]
-    private string _systemWallpaperLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _refreshIntervalLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _refreshButtonTooltip = string.Empty;
-
-    [ObservableProperty]
-    private string _systemWallpaperStatus = string.Empty;
-
-    [ObservableProperty]
     private bool _isImageOrVideo;
 
     [ObservableProperty]
@@ -119,6 +103,9 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private IBrush _customColorBrush = new SolidColorBrush(Colors.White);
 
+    [ObservableProperty]
+    private string _customColorTooltip = string.Empty;
+
     public void Load()
     {
         var wallpaper = _settingsFacade.Wallpaper.Get();
@@ -126,6 +113,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
         SelectedWallpaperType = WallpaperTypes.FirstOrDefault(t => t.Value == wallpaper.Type) ?? WallpaperTypes[0];
         SelectedColor = wallpaper.Color ?? PresetColors[0];
+        UpdateCustomColorPreview(SelectedColor);
 
         var wallpaperPlacement = string.IsNullOrWhiteSpace(wallpaper.Placement)
             ? "Fill"
@@ -134,20 +122,10 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
             string.Equals(option.Value, wallpaperPlacement, StringComparison.OrdinalIgnoreCase))
             ?? WallpaperPlacements[0];
 
-        var refreshIntervalSeconds = wallpaper.SystemWallpaperRefreshIntervalSeconds;
-        SelectedRefreshInterval = RefreshIntervals.FirstOrDefault(option =>
-            GetIntervalSeconds(option.Value) == refreshIntervalSeconds)
-            ?? RefreshIntervals[2];
-
-        if (!string.IsNullOrWhiteSpace(wallpaper.CustomColor) && Color.TryParse(wallpaper.CustomColor, out var customColor))
-        {
-            CustomColor = customColor;
-            CustomColorBrush = new SolidColorBrush(customColor);
-        }
+        _systemWallpaperRefreshIntervalSeconds = wallpaper.SystemWallpaperRefreshIntervalSeconds;
 
         UpdateVisibility();
         UpdatePreviewFromCurrentSelection();
-        UpdateSystemWallpaperStatus();
     }
 
     partial void OnSelectedWallpaperTypeChanged(SelectionOption value)
@@ -168,6 +146,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
 
     partial void OnSelectedColorChanged(string? value)
     {
+        UpdateCustomColorPreview(value);
         if (_isInitializing) return;
         SaveWallpaper();
     }
@@ -177,12 +156,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         CustomColorBrush = new SolidColorBrush(value);
         var colorHex = $"#{value.A:X2}{value.R:X2}{value.G:X2}{value.B:X2}";
         SelectedColor = colorHex;
-        if (_isInitializing) return;
-        SaveWallpaper();
-    }
-
-    partial void OnSelectedRefreshIntervalChanged(SelectionOption value)
-    {
         if (_isInitializing) return;
         SaveWallpaper();
     }
@@ -227,11 +200,9 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(systemPath))
         {
             ClearPreviewImage();
-            SystemWallpaperStatus = L("settings.wallpaper.system.unavailable", "Unable to read system wallpaper");
             return;
         }
 
-        SystemWallpaperStatus = systemPath;
         UpdatePreviewImage(systemPath);
     }
 
@@ -270,16 +241,13 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         previousPreview?.Dispose();
     }
 
-    private void UpdateSystemWallpaperStatus()
+    private void UpdateCustomColorPreview(string? value)
     {
-        if (!IsSystemWallpaper) return;
-        UpdateSystemWallpaperPreview();
-    }
-
-    [RelayCommand]
-    private void RefreshSystemWallpaper()
-    {
-        UpdateSystemWallpaperPreview();
+        if (!string.IsNullOrWhiteSpace(value) && Color.TryParse(value, out var parsed))
+        {
+            CustomColor = parsed;
+            CustomColorBrush = new SolidColorBrush(parsed);
+        }
     }
 
     partial void OnSelectedWallpaperPlacementChanged(SelectionOption value)
@@ -303,8 +271,10 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
     {
         var selectedType = SelectedWallpaperType?.Value ?? "Image";
         var selectedPlacement = SelectedWallpaperPlacement?.Value ?? WallpaperImageBrushFactory.Fill;
-        var refreshIntervalSeconds = GetIntervalSeconds(SelectedRefreshInterval?.Value);
-        
+        var selectedColor = string.IsNullOrWhiteSpace(SelectedColor)
+            ? PresetColors[0]
+            : SelectedColor.Trim();
+
         string? normalizedPath;
         if (selectedType == "SolidColor" || selectedType == "SystemWallpaper")
         {
@@ -315,34 +285,12 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
             normalizedPath = string.IsNullOrWhiteSpace(WallpaperPath) ? null : WallpaperPath;
         }
 
-        var customColorHex = $"#{CustomColor.A:X2}{CustomColor.R:X2}{CustomColor.G:X2}{CustomColor.B:X2}";
         _settingsFacade.Wallpaper.Save(new WallpaperSettingsState(
             normalizedPath,
             selectedType,
-            SelectedColor,
+            selectedColor,
             selectedPlacement,
-            customColorHex,
-            refreshIntervalSeconds));
-    }
-
-    private static int GetIntervalSeconds(string? value)
-    {
-        return value switch
-        {
-            "30s" => 30,
-            "1m" => 60,
-            "5m" => 300,
-            "10m" => 600,
-            "15m" => 900,
-            "30m" => 1800,
-            "1h" => 3600,
-            "2h" => 7200,
-            "4h" => 14400,
-            "8h" => 28800,
-            "12h" => 43200,
-            "24h" => 86400,
-            _ => 300
-        };
+            _systemWallpaperRefreshIntervalSeconds));
     }
 
     private IReadOnlyList<SelectionOption> CreateWallpaperPlacements()
@@ -373,25 +321,6 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         return types;
     }
 
-    private IReadOnlyList<SelectionOption> CreateRefreshIntervals()
-    {
-        return
-        [
-            new SelectionOption("30s", L("settings.wallpaper.refresh.30s", "30 seconds")),
-            new SelectionOption("1m", L("settings.wallpaper.refresh.1m", "1 minute")),
-            new SelectionOption("5m", L("settings.wallpaper.refresh.5m", "5 minutes")),
-            new SelectionOption("10m", L("settings.wallpaper.refresh.10m", "10 minutes")),
-            new SelectionOption("15m", L("settings.wallpaper.refresh.15m", "15 minutes")),
-            new SelectionOption("30m", L("settings.wallpaper.refresh.30m", "30 minutes")),
-            new SelectionOption("1h", L("settings.wallpaper.refresh.1h", "1 hour")),
-            new SelectionOption("2h", L("settings.wallpaper.refresh.2h", "2 hours")),
-            new SelectionOption("4h", L("settings.wallpaper.refresh.4h", "4 hours")),
-            new SelectionOption("8h", L("settings.wallpaper.refresh.8h", "8 hours")),
-            new SelectionOption("12h", L("settings.wallpaper.refresh.12h", "12 hours")),
-            new SelectionOption("24h", L("settings.wallpaper.refresh.24h", "24 hours"))
-        ];
-    }
-
     private IReadOnlyList<string> CreatePresetColors()
     {
         return
@@ -412,9 +341,7 @@ public sealed partial class WallpaperSettingsPageViewModel : ViewModelBase
         WallpaperPlacementDescription = L("settings.wallpaper.placement_desc", "Adjust how the image fills the desktop.");
         ImportWallpaperButtonText = L("settings.wallpaper.pick_button", "Import Wallpaper");
         FilePickerTitle = L("filepicker.title", "Select wallpaper");
-        SystemWallpaperLabel = L("settings.wallpaper.system.label", "System Wallpaper");
-        RefreshIntervalLabel = L("settings.wallpaper.refresh_interval", "Refresh Interval");
-        RefreshButtonTooltip = L("settings.wallpaper.refresh_now", "Refresh Now");
+        CustomColorTooltip = L("settings.wallpaper.custom_color_tooltip", "Custom color");
     }
 
     private string L(string key, string fallback)

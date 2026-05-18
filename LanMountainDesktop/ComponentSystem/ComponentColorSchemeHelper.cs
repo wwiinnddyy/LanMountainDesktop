@@ -1,4 +1,5 @@
 using System;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Views;
 
@@ -25,13 +26,18 @@ public static class ComponentColorSchemeHelper
     {
         try
         {
-            var service = HostAppearanceThemeProvider.GetOrCreate();
-            var appearance = service.GetCurrent();
-            return appearance?.ThemeColorMode ?? ThemeAppearanceValues.ColorModeDefaultNeutral;
+            var service = HostMaterialColorProvider.GetOrCreate();
+            return service.GetMaterialColorSnapshot().ThemeColorMode;
         }
         catch
         {
             return ThemeAppearanceValues.ColorModeDefaultNeutral;
         }
+    }
+
+    public static string GetCurrentGlobalThemeColorMode(MaterialColorSnapshot materialColorSnapshot)
+    {
+        ArgumentNullException.ThrowIfNull(materialColorSnapshot);
+        return materialColorSnapshot.ThemeColorMode;
     }
 }

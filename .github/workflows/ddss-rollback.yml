@@ -1,0 +1,146 @@
+name: DDSS Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Target channel to rollback'
+        required: true
+        type: choice
+        default: stable
+        options:
+          - stable
+          - preview
+      target_tag:
+        description: 'Release tag to rollback to (e.g. v1.2.3)'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    concurrency:
+      group: ddss-rollback-${{ github.event.inputs.channel }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve rollback context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RAW_TAG="${{ github.event.inputs.target_tag }}"
+          if [[ "$RAW_TAG" == v* ]]; then
+            TAG="$RAW_TAG"
+          else
+            TAG="v$RAW_TAG"
+          fi
+
+          CHANNEL="${{ github.event.inputs.channel }}"
+
+          gh release view "$TAG" --repo "${{ github.repository }}" --json tagName >/dev/null
+
+          PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
+          if [[ -z "$PUBLIC_BASE" ]]; then
+            PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
+          fi
+          PUBLIC_BASE="${PUBLIC_BASE%/}"
+
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
+          echo "S3_PUBLIC_BASE_URL=${PUBLIC_BASE}" >> "$GITHUB_ENV"
+          echo "S3_BASE_URL=${PUBLIC_BASE}/releases/${TAG}/assets" >> "$GITHUB_ENV"
+          echo "DDSS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/ddss-latest.json" >> "$GITHUB_ENV"
+
+      - name: Validate rollback target assets
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for name in ddss.json ddss.json.sig; do
+            key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
+            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
+              --bucket "$S3_BUCKET" \
+              --key "$key" >/dev/null
+          done
+
+      - name: Build rollback pointer
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p rollback-output
+          pointer_file="rollback-output/ddss-latest.json"
+
+          manifest_url="${S3_BASE_URL}/ddss.json"
+          sig_url="${S3_BASE_URL}/ddss.json.sig"
+          version="${RELEASE_TAG#v}"
+          updated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          cat > "$pointer_file" <<EOF
+          {
+            "schemaVersion": 1,
+            "channel": "${RELEASE_CHANNEL}",
+            "releaseTag": "${RELEASE_TAG}",
+            "version": "${version}",
+            "updatedAt": "${updated_at}",
+            "manifest": {
+              "url": "${manifest_url}",
+              "signatureUrl": "${sig_url}"
+            }
+          }
+          EOF
+
+          jq -e . "$pointer_file" >/dev/null
+
+      - name: Publish rollback pointer
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
+          AWS_REGION: ${{ vars.S3_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pointer_file="rollback-output/ddss-latest.json"
+
+          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
+            --bucket "$S3_BUCKET" \
+            --key "$DDSS_CHANNEL_POINTER_KEY" \
+            --body "$pointer_file"
+
+          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
+            --bucket "$S3_BUCKET" \
+            --key "$DDSS_CHANNEL_POINTER_KEY" >/dev/null
+
+          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json" >/dev/null
+
+      - name: Print rollback summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Rolled back channel '${RELEASE_CHANNEL}' to '${RELEASE_TAG}'."
+          echo "Pointer: ${S3_PUBLIC_BASE_URL}/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json"

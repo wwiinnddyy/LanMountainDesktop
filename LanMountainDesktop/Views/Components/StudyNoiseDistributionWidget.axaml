@@ -83,10 +83,10 @@
                                FontSize="10" />
                 </Grid>
 
-                <local:StudyNoiseDistributionScatterChartControl x:Name="ChartControl"
-                                                                 Grid.Row="0"
-                                                                 Grid.Column="1"
-                                                                 MinHeight="64" />
+                <local:StudyNoiseDistributionAreaChartControl x:Name="ChartControl"
+                                                              Grid.Row="0"
+                                                              Grid.Column="1"
+                                                              MinHeight="64" />
 
                 <Grid Grid.Row="1"
                       Grid.Column="1"

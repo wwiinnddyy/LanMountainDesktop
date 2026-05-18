@@ -6,7 +6,7 @@ using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
-internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
+internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider, IDisposable
 {
     private const string ApiBasePath = "/api/plonds/v1";
 
@@ -51,6 +51,12 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
             return null;
         }
 
+        if (string.IsNullOrWhiteSpace(pointer.DistributionId) ||
+            string.IsNullOrWhiteSpace(pointer.Version))
+        {
+            return null;
+        }
+
         return await FetchDistributionManifestAsync(pointer.DistributionId, pointer.Version, channel, platform, ct);
     }
 
@@ -72,6 +78,14 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
         CancellationToken ct)
     {
         return Task.FromResult<IReadOnlyList<UpdateManifest>>([]);
+    }
+
+    public void Dispose()
+    {
+        if (_ownsHttpClient)
+        {
+            _httpClient.Dispose();
+        }
     }
 
     private async Task<PlondsChannelPointerDto?> GetChannelPointerAsync(
@@ -142,15 +156,17 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
 
                 foreach (var f in component.Files)
                 {
+                    var action = FirstNonEmpty(f.Action, f.Op) ?? "add";
+                    var sha256 = FirstNonEmpty(f.Sha256, f.ContentHash) ?? string.Empty;
                     files.Add(new UpdateFileEntry(
                         Path: f.Path ?? string.Empty,
-                        Action: f.Op ?? "add",
-                        Sha256: f.ContentHash ?? string.Empty,
+                        Action: action,
+                        Sha256: sha256,
                         Size: f.Size,
                         Mode: f.Mode ?? "file-object",
                         ObjectKey: f.ObjectKey,
-                        ObjectUrl: null,
-                        ArchiveSha256: null,
+                        ObjectUrl: f.ObjectUrl,
+                        ArchiveSha256: f.ArchiveSha256,
                         Metadata: null));
                 }
             }
@@ -163,7 +179,7 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
             Sha256: m.Sha256,
             Size: m.Size)).ToArray();
 
-        var fileMapSignatureUrl = dto.Signatures?.FirstOrDefault()?.Signature;
+        var fileMapSignatureUrl = FirstNonEmpty(dto.FileMapSignatureUrl, dto.Signatures?.FirstOrDefault()?.Signature);
 
         return new UpdateManifest(
             DistributionId: dto.DistributionId ?? string.Empty,
@@ -209,14 +225,15 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
     private sealed record PlondsDistributionDto(
         string? DistributionId,
         string? Version,
-        string? SourceVersion,
-        string? Channel,
-        string? Platform,
-        DateTimeOffset PublishedAt,
-        string? FileMapUrl,
-        List<PlondsComponentDto>? Components,
-        List<PlondsMirrorDto>? InstallerMirrors,
-        List<PlondsSignatureDto>? Signatures,
+            string? SourceVersion,
+            string? Channel,
+            string? Platform,
+            DateTimeOffset PublishedAt,
+            string? FileMapUrl,
+            string? FileMapSignatureUrl,
+            List<PlondsComponentDto>? Components,
+            List<PlondsMirrorDto>? InstallerMirrors,
+            List<PlondsSignatureDto>? Signatures,
         Dictionary<string, string>? Metadata);
 
     private sealed record PlondsComponentDto(
@@ -228,10 +245,14 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
     private sealed record PlondsFileDto(
         string? Path,
         string? Op,
+        string? Action,
         string? ContentHash,
+        string? Sha256,
         long Size,
         string? Mode,
-        string? ObjectKey);
+        string? ObjectKey,
+        string? ObjectUrl,
+        string? ArchiveSha256);
 
     private sealed record PlondsMirrorDto(
         string? Platform,
@@ -244,4 +265,9 @@ internal sealed class PlondsApiManifestProvider : IUpdateManifestProvider
         string? Algorithm,
         string? KeyId,
         string? Signature);
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+    }
 }

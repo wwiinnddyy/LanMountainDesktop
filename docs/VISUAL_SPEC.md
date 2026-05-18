@@ -46,3 +46,11 @@ This specification defines the visual language of LanMountainDesktop, including 
 - use semantic resource keys instead of hard-coded colors
 - keep glass layers visually distinct
 - maintain contrast targets for readability
+
+### Material And Color Source
+
+`IMaterialColorService` is the host source of truth for Monet seeds, wallpaper-derived colors, semantic color roles, material surfaces, and plugin appearance snapshots.
+
+New UI, component, window, and plugin appearance consumers should use `MaterialColorSnapshot` or resources produced from it. Do not recalculate application colors from raw wallpaper settings, theme settings, or `MonetPalette` in parallel.
+
+The Wallpaper settings page owns wallpaper asset/source selection. The Material & Color settings page owns color-source selection, wallpaper color-source selection, system material mode, wallpaper color refresh behavior, and color/material previews.

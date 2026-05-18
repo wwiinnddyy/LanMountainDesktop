@@ -4,11 +4,14 @@ namespace LanMountainDesktop.Launcher;
 
 internal sealed class CommandContext
 {
+    public const string AirAppBrokerCommand = "air-app-broker";
+
     private const string LaunchSourceOptionName = "launch-source";
 
     private static readonly string[] GuiCommands =
     [
         "launch",
+        AirAppBrokerCommand,
         "apply-update",
         "preview-splash",
         "preview-error",
@@ -59,6 +62,9 @@ internal sealed class CommandContext
 
     public bool IsPreviewCommand =>
         Command.StartsWith("preview-", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsAirAppBrokerCommand =>
+        string.Equals(Command, AirAppBrokerCommand, StringComparison.OrdinalIgnoreCase);
 
     public bool IsGuiCommand =>
         GuiCommands.Contains(Command, StringComparer.OrdinalIgnoreCase);

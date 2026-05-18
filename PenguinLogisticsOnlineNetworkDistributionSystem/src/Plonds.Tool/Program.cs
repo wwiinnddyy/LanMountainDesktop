@@ -135,7 +135,9 @@ internal static class PlondsCli
             BaselineVersion: Get(options, "baseline-version"),
             BaselineTag: Get(options, "baseline-tag"),
             BaselinePayloadZip: Get(options, "baseline-zip"),
-            IsFullPayload: bool.TryParse(Get(options, "is-full-payload", "false"), out var isFullPayload) && isFullPayload));
+            IsFullPayload: bool.TryParse(Get(options, "is-full-payload", "false"), out var isFullPayload) && isFullPayload,
+            StaticOutputRoot: Get(options, "static-output-dir"),
+            UpdateBaseUrl: Get(options, "update-base-url")));
 
         Console.WriteLine($"Built PLONDS delta for {result.Platform}: {result.UpdateArchivePath}");
         Console.WriteLine(result.FileMapPath);
@@ -211,7 +213,7 @@ internal static class PlondsCli
     {
         Console.WriteLine("PLONDS Tool");
         Console.WriteLine("  pack-payload --source-dir <dir> --output-zip <file>");
-        Console.WriteLine("  build-delta --platform <platform> --current-version <v> --current-tag <tag> --current-zip <file> --output-dir <dir> --private-key <pem> [--baseline-tag <tag>] [--baseline-version <v>] [--baseline-zip <file>] [--is-full-payload]");
+        Console.WriteLine("  build-delta --platform <platform> --current-version <v> --current-tag <tag> --current-zip <file> --output-dir <dir> --private-key <pem> [--baseline-tag <tag>] [--baseline-version <v>] [--baseline-zip <file>] [--is-full-payload] [--static-output-dir <dir>] [--update-base-url <url>]");
         Console.WriteLine("  build-index --release-tag <tag> --version <v> --platform-summaries-dir <dir> --output-dir <dir> --private-key <pem> [--channel <channel>]");
         Console.WriteLine("  build-ddss --release-tag <tag> --assets-dir <dir> --output-dir <dir> --private-key <pem> --repository <owner/repo> [--s3-base-url <url>]");
         Console.WriteLine("  sign --manifest <file> --private-key <pem> [--output <file>]");

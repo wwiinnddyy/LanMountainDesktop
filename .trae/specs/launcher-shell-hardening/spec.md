@@ -65,3 +65,19 @@
 - 托盘失败时应用仍保持可恢复。
 - Launcher 与应用设置页显示相同版本。
 - 100% / 150% / 200% / 250% 缩放下，Launcher OOBE、主窗口入场、通知位置与动画正常。
+
+### 5. Launcher IPC and error surface follow-up
+
+- The legacy `LanMountainDesktop_Launcher` named-pipe startup progress channel is retired. Public IPC notifications and host exit codes are the only startup state sources.
+- Normal Launcher launches must probe public IPC for an existing Host before starting a new Host process. Host no longer owns multi-instance policy, activation prompts, or the old single-instance pipe.
+- `SecondaryActivationSucceeded` is a success terminal state. `SecondaryActivationFailed` and `RestartLockNotAcquired` may surface as failures only after public IPC recovery has failed.
+- Launcher startup errors must use FluentAvalonia resources, Fluent icons, an InfoBar recovery hint, and copyable diagnostics instead of the old hard-coded dark panel.
+
+### 6. Multi-instance behavior setting
+
+- App settings include `MultiInstanceLaunchBehavior` with default `NotifyAndOpenDesktop`.
+- General settings exposes the behavior under Basic Settings with four choices: restart app, open desktop silently, prompt only, and notify plus open desktop.
+- Launcher reads the Host `settings.json` before a normal launch and applies the selected behavior when public IPC reports an existing Host.
+- `PromptOnly` shows a Fluent Launcher prompt and does not open the desktop automatically.
+- `NotifyAndOpenDesktop` activates the existing Host and shows the already-running notice from Launcher.
+- `RestartApp` requests restart through public IPC and must not create a second Host if the restart request fails.

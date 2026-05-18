@@ -6,6 +6,10 @@ public static class IpcConstants
 
     public const string ProtocolVersion = "external-ipc-public-api.v1";
 
+    public const string AirAppLifecyclePipeName = "LanMountainDesktop.Launcher.AirApp.v1";
+
+    public const string AirAppLifecycleProtocolVersion = "air-app-lifecycle.v1";
+
     public static class Routes
     {
         public const string SessionGetInfo = "lanmountain.session.get-info";

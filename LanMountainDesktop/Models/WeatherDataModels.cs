@@ -39,6 +39,14 @@ public sealed record WeatherHourlyForecast(
     int? WeatherCode,
     string? WeatherText);
 
+public sealed record WeatherAlert(
+    string Title,
+    string? Detail,
+    string? Type,
+    string? Level,
+    DateTimeOffset? PublishedAt,
+    string? IconUri);
+
 public sealed record WeatherSnapshot(
     string Provider,
     string LocationKey,
@@ -49,4 +57,7 @@ public sealed record WeatherSnapshot(
     DateTimeOffset? ObservationTime,
     WeatherCurrentCondition Current,
     IReadOnlyList<WeatherDailyForecast> DailyForecasts,
-    IReadOnlyList<WeatherHourlyForecast> HourlyForecasts);
+    IReadOnlyList<WeatherHourlyForecast> HourlyForecasts)
+{
+    public IReadOnlyList<WeatherAlert> Alerts { get; init; } = Array.Empty<WeatherAlert>();
+}

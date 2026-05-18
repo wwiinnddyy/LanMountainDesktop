@@ -3,12 +3,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         d:DesignWidth="520"
         d:DesignHeight="360"
         x:Class="LanMountainDesktop.Launcher.Views.MigrationPromptWindow"
         x:DataType="views:MigrationPromptWindow"
-        Title="阑山桌面 - 版本迁移"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.Migration_Title}"
         Width="520"
         Height="360"
         CanResize="False"
@@ -51,7 +53,7 @@
 
         <!-- 说明文字 -->
         <TextBlock x:Name="DescriptionText"
-                   Text="检测到您的系统中安装了旧版本的阑山桌面（0.8.4）。新版本采用了全新的架构，建议卸载旧版本以获得更好的体验。"
+                   Text="{x:Static res:Strings.Migration_DetectedDesc}"
                    FontSize="14"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap"
@@ -65,7 +67,7 @@
           <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*">
             <!-- 版本号 -->
             <TextBlock Grid.Row="0" Grid.Column="0"
-                       Text="版本："
+                       Text="{x:Static res:Strings.Migration_Version}"
                        FontSize="12"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
             <TextBlock x:Name="VersionText"
@@ -77,7 +79,7 @@
 
             <!-- 安装路径 -->
             <TextBlock Grid.Row="1" Grid.Column="0"
-                       Text="位置："
+                       Text="{x:Static res:Strings.Migration_Location}"
                        FontSize="12"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                        Margin="0,4,0,0"/>
@@ -91,13 +93,13 @@
 
             <!-- 安装类型 -->
             <TextBlock Grid.Row="2" Grid.Column="0"
-                       Text="类型："
+                       Text="{x:Static res:Strings.Migration_Type}"
                        FontSize="12"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                        Margin="0,4,0,0"/>
             <TextBlock x:Name="TypeText"
                        Grid.Row="2" Grid.Column="1"
-                       Text="安装版"
+                       Text="{x:Static res:Strings.Migration_Installed}"
                        FontSize="12"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Margin="8,4,0,0"/>
@@ -105,7 +107,7 @@
         </Border>
 
         <!-- 提示信息 -->
-        <TextBlock Text="卸载旧版本不会影响新版本的使用，您的个人数据将保留。"
+        <TextBlock Text="{x:Static res:Strings.Migration_UninstallNote}"
                    FontSize="12"
                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                    TextWrapping="Wrap"
@@ -121,7 +123,7 @@
         <!-- 左侧：查看位置按钮 -->
         <Button x:Name="ShowLocationButton"
                 Grid.Column="0"
-                Content="查看位置"
+                Content="{x:Static res:Strings.Migration_ButtonViewLocation}"
                 Width="100"
                 Height="32"
                 FontSize="13"
@@ -137,7 +139,7 @@
                   Height="32"
                   FontSize="13"/>
           <Button x:Name="UninstallButton"
-                  Content="卸载旧版本"
+                  Content="{x:Static res:Strings.Migration_ButtonUninstall}"
                   Width="100"
                   Height="32"
                   FontSize="13"

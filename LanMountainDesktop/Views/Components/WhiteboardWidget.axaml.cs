@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -15,6 +16,7 @@ using Avalonia.Threading;
 using DotNetCampus.Inking;
 using DotNetCampus.Inking.Primitive;
 using FluentIcons.Avalonia;
+using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
@@ -22,22 +24,44 @@ using SkiaSharp;
 
 namespace LanMountainDesktop.Views.Components;
 
+public enum WhiteboardWidgetSurfaceMode
+{
+    Component,
+    AirApp
+}
+
+internal readonly record struct WhiteboardViewportSizeResolution(Size Size, string Source, bool IsFallback);
+
 public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
 {
     private enum WhiteboardToolMode
     {
         Pen,
-        Eraser
+        Eraser,
+        PanZoom
     }
 
-    private static readonly PropertyInfo? StrokeColorProperty = typeof(SkiaStroke).GetProperty(nameof(SkiaStroke.Color));
-    private static readonly PropertyInfo? StrokePointListProperty = typeof(SkiaStroke).GetProperty("PointList");
+    private readonly record struct PanZoomGestureBaseline(
+        WhiteboardViewportState StartViewport,
+        Point InitialCenter,
+        double InitialDistance);
+
+    private static readonly BindingFlags StrokeReflectionFlags =
+        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    private static readonly PropertyInfo? StrokeColorProperty = typeof(SkiaStroke).GetProperty(nameof(SkiaStroke.Color), StrokeReflectionFlags);
+    private static readonly PropertyInfo? StrokePointListProperty = typeof(SkiaStroke).GetProperty("PointList", StrokeReflectionFlags);
     private readonly int _baseWidthCells;
     private readonly IComponentInstanceSettingsStore _componentSettingsStore = HostComponentSettingsStoreProvider.GetOrCreate();
     private readonly IWhiteboardNotePersistenceService _notePersistenceService = new WhiteboardNotePersistenceService();
-    private readonly DispatcherTimer _noteSaveTimer = new() { Interval = TimeSpan.FromMinutes(5) };
+    private readonly DispatcherTimer _noteSaveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly Dictionary<int, Point> _panZoomPointers = [];
+    private readonly ScaleTransform _viewportScaleTransform = new();
+    private readonly TranslateTransform _viewportTranslateTransform = new();
     private double _currentCellSize = 48;
     private WhiteboardToolMode _toolMode = WhiteboardToolMode.Pen;
+    private Size _logicalCanvasSize = new(1, 1);
+    private WhiteboardViewportState _viewportState = new(WhiteboardViewportHelper.DefaultZoom, default);
+    private PanZoomGestureBaseline? _panZoomGestureBaseline;
     private bool? _isNightModeApplied;
     private SKColor _selectedInkColor = SKColors.Black;
     private bool _isUserCustomColor;
@@ -47,7 +71,13 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private int _noteRetentionDays = WhiteboardNoteRetentionPolicy.DefaultDays;
     private bool _isApplyingPersistedSnapshot;
     private bool _noteDirty;
+    private int _noteSaveRevision;
     private int _noteLoadRevision;
+    private WhiteboardWidgetSurfaceMode _surfaceMode = WhiteboardWidgetSurfaceMode.Component;
+    private Action? _airAppCloseAction;
+    private bool _isViewportLayoutSyncQueued;
+    private Size _lastSynchronizedViewportSize = default;
+    private string _lastViewportSizeSource = string.Empty;
     private bool _disposed;
 
     public WhiteboardWidget()
@@ -59,14 +89,27 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     {
         _baseWidthCells = Math.Max(1, baseWidthCells);
         InitializeComponent();
+        InkCanvas.RenderTransform = new TransformGroup
+        {
+            Children =
+            {
+                _viewportScaleTransform,
+                _viewportTranslateTransform
+            }
+        };
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ViewportRoot.SizeChanged += OnViewportRootSizeChanged;
+        ColorPickerPopup.Closed += OnColorPickerPopupClosed;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
         _noteSaveTimer.Tick += OnNoteSaveTimerTick;
 
         ConfigureInkCanvas();
+        ConfigureViewportGestures();
         ApplyCellSize(_currentCellSize);
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        ApplyViewportTransform();
         RefreshFromSettings();
         ApplyThemeVisual(force: true);
         InitializeColorPicker();
@@ -78,7 +121,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         if (InkColorPicker is not null)
         {
             InkColorPicker.Color = new Color(
-                _selectedInkColor.Alpha,
+                byte.MaxValue,
                 _selectedInkColor.Red,
                 _selectedInkColor.Green,
                 _selectedInkColor.Blue);
@@ -95,6 +138,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         ApplyThemeVisual(force: true);
+        SynchronizeViewportLayout("attached");
+        QueueViewportLayoutSync("attached-loaded");
         SchedulePersistedNoteLoad();
     }
 
@@ -106,6 +151,14 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
+        QueueViewportLayoutSync("widget-size-changed");
+    }
+
+    private void OnViewportRootSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueViewportLayoutSync("viewport-root-size-changed");
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
@@ -120,11 +173,22 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         settings.IgnorePressure = true;
         settings.InkThickness = _selectedInkThickness;
         settings.EraserSize = new Size(20, 20);
-        settings.IsBitmapCacheEnabled = true;
-        settings.MaxBitmapCacheSize = 2048;
+        settings.IsBitmapCacheEnabled = false;
         InkCanvas.StrokeCollected += OnInkCanvasStrokeCollected;
+        InkCanvas.StrokeErased += OnInkCanvasStrokeErased;
         InkCanvas.PointerReleased += OnInkCanvasPointerReleased;
         InkCanvas.PointerCaptureLost += OnInkCanvasPointerCaptureLost;
+    }
+
+    private void ConfigureViewportGestures()
+    {
+        PanZoomInputLayer.PointerPressed += OnViewportPointerPressed;
+        PanZoomInputLayer.PointerMoved += OnViewportPointerMoved;
+        PanZoomInputLayer.PointerReleased += OnViewportPointerReleased;
+        PanZoomInputLayer.PointerCaptureLost += OnViewportPointerCaptureLost;
+        PanZoomInputLayer.PointerWheelChanged += OnViewportPointerWheelChanged;
+        PanZoomInputLayer.PointerTouchPadGestureMagnify += OnViewportTouchPadGestureMagnify;
+        PanZoomInputLayer.PointerTouchPadGestureSwipe += OnViewportTouchPadGestureSwipe;
     }
 
     public void ApplyCellSize(double cellSize)
@@ -148,7 +212,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             ComponentChromeCornerRadiusHelper.SafeValue(toolbarPaddingVertical, 4, 8));
         ToolbarButtonsPanel.Spacing = toolbarSpacing;
 
-        foreach (var button in new[] { PenButton, EraserButton, ClearButton, ExportButton })
+        foreach (var button in new[] { PenButton, EraserButton, HandButton, ClearButton, FileButton, SurfaceModeButton })
         {
             button.Width = buttonSize;
             button.Height = buttonSize;
@@ -202,7 +266,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             if (InkColorPicker is not null)
             {
                 InkColorPicker.Color = new Color(
-                    _selectedInkColor.Alpha,
+                    byte.MaxValue,
                     _selectedInkColor.Red,
                     _selectedInkColor.Green,
                     _selectedInkColor.Blue);
@@ -230,6 +294,13 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         RefreshFromSettings();
         ClearAllStrokes();
         SchedulePersistedNoteLoad();
+    }
+
+    public void SetSurfaceMode(WhiteboardWidgetSurfaceMode mode, Action? airAppCloseAction = null)
+    {
+        _surfaceMode = mode;
+        _airAppCloseAction = airAppCloseAction;
+        RefreshSurfaceModeButton();
     }
 
     public void RefreshFromSettings()
@@ -264,15 +335,21 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             return;
         }
 
-        _noteDirty = false;
         _noteSaveTimer.Stop();
         var noteSnapshot = BuildNoteSnapshot();
         try
         {
-            _notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays);
+            if (_notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays))
+            {
+                _noteDirty = false;
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn(
+                "Whiteboard",
+                $"Failed to force-save whiteboard note. ComponentId='{_componentId}'; PlacementId='{_placementId}'.",
+                ex);
         }
     }
 
@@ -286,9 +363,20 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         _disposed = true;
         _noteSaveTimer.Stop();
         _noteSaveTimer.Tick -= OnNoteSaveTimerTick;
+        ViewportRoot.SizeChanged -= OnViewportRootSizeChanged;
+        ColorPickerPopup.Closed -= OnColorPickerPopupClosed;
         InkCanvas.StrokeCollected -= OnInkCanvasStrokeCollected;
+        InkCanvas.StrokeErased -= OnInkCanvasStrokeErased;
         InkCanvas.PointerReleased -= OnInkCanvasPointerReleased;
         InkCanvas.PointerCaptureLost -= OnInkCanvasPointerCaptureLost;
+        PanZoomInputLayer.PointerPressed -= OnViewportPointerPressed;
+        PanZoomInputLayer.PointerMoved -= OnViewportPointerMoved;
+        PanZoomInputLayer.PointerReleased -= OnViewportPointerReleased;
+        PanZoomInputLayer.PointerCaptureLost -= OnViewportPointerCaptureLost;
+        PanZoomInputLayer.PointerWheelChanged -= OnViewportPointerWheelChanged;
+        PanZoomInputLayer.PointerTouchPadGestureMagnify -= OnViewportTouchPadGestureMagnify;
+        PanZoomInputLayer.PointerTouchPadGestureSwipe -= OnViewportTouchPadGestureSwipe;
+        ClearPanZoomPointers();
     }
 
     private void RecolorAllStrokes(SKColor targetColor)
@@ -298,7 +386,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             TrySetStrokeColor(InkCanvas.Strokes[i], targetColor);
         }
 
-        InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
         InkCanvas.InvalidateVisual();
     }
 
@@ -366,21 +453,30 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void SetToolMode(WhiteboardToolMode mode)
     {
         _toolMode = mode;
-        InkCanvas.EditingMode = mode == WhiteboardToolMode.Pen
-            ? InkCanvasEditingMode.Ink
-            : InkCanvasEditingMode.EraseByPoint;
+        InkCanvas.EditingMode = mode switch
+        {
+            WhiteboardToolMode.Pen => InkCanvasEditingMode.Ink,
+            WhiteboardToolMode.Eraser => InkCanvasEditingMode.EraseByPoint,
+            _ => InkCanvasEditingMode.None
+        };
 
         if (mode == WhiteboardToolMode.Pen)
         {
             InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
         }
 
+        if (mode != WhiteboardToolMode.PanZoom)
+        {
+            ClearPanZoomPointers();
+        }
+
+        PanZoomInputLayer.IsHitTestVisible = mode == WhiteboardToolMode.PanZoom;
         RefreshToolButtonVisuals();
     }
 
     private void SetInkColor(SKColor color)
     {
-        _selectedInkColor = color;
+        _selectedInkColor = NormalizeInkColor(color);
         if (_toolMode == WhiteboardToolMode.Pen)
         {
             InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
@@ -397,6 +493,16 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
     }
 
+    internal static SKColor ToOpaqueInkColor(Color color)
+    {
+        return new SKColor(color.R, color.G, color.B, byte.MaxValue);
+    }
+
+    private static SKColor NormalizeInkColor(SKColor color)
+    {
+        return new SKColor(color.Red, color.Green, color.Blue, byte.MaxValue);
+    }
+
     private void RefreshToolButtonVisuals()
     {
         var isNightMode = _isNightModeApplied ?? ResolveIsNightMode();
@@ -407,8 +513,10 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
         ApplyToolButtonVisual(PenButton, _toolMode == WhiteboardToolMode.Pen, activeBackground, activeForeground, idleBackground, idleForeground);
         ApplyToolButtonVisual(EraserButton, _toolMode == WhiteboardToolMode.Eraser, activeBackground, activeForeground, idleBackground, idleForeground);
+        ApplyToolButtonVisual(HandButton, _toolMode == WhiteboardToolMode.PanZoom, activeBackground, activeForeground, idleBackground, idleForeground);
         ApplyToolButtonVisual(ClearButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
-        ApplyToolButtonVisual(ExportButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
+        ApplyToolButtonVisual(FileButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
+        ApplyToolButtonVisual(SurfaceModeButton, false, activeBackground, activeForeground, idleBackground, idleForeground);
     }
 
     private static void ApplyToolButtonVisual(
@@ -460,10 +568,51 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void OnColorPickerColorChanged(object? sender, ColorChangedEventArgs e)
     {
-        var color = e.NewColor;
-        var skColor = new SKColor(color.R, color.G, color.B, color.A);
+        var skColor = ToOpaqueInkColor(e.NewColor);
         _isUserCustomColor = skColor != SKColors.Black && skColor != SKColors.White;
         SetInkColor(skColor);
+    }
+
+    private void OnColorPickerPopupClosed(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        RestoreInkInputAfterToolPopup("color-popup-closed");
+    }
+
+    private void RestoreInkInputAfterToolPopup(string reason, int attempt = 0)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        ClearPanZoomPointers();
+        try
+        {
+            SetToolMode(WhiteboardToolMode.Pen);
+            SynchronizeViewportLayout(reason);
+            InkCanvas.Focus(NavigationMethod.Unspecified);
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (attempt >= 3)
+            {
+                AppLogger.Warn(
+                    "Whiteboard",
+                    $"Ink input restore gave up because the ink canvas stayed in input processing. Reason='{reason}'.",
+                    ex);
+                return;
+            }
+
+            AppLogger.Warn(
+                "Whiteboard",
+                $"Ink input restore was deferred because the ink canvas is still processing input. Reason='{reason}'.",
+                ex);
+            Dispatcher.UIThread.Post(
+                () => RestoreInkInputAfterToolPopup($"{reason}-deferred", attempt + 1),
+                DispatcherPriority.Background);
+        }
     }
 
     private void OnInkThicknessSliderValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
@@ -476,10 +625,299 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         SetToolMode(WhiteboardToolMode.Eraser);
     }
 
+    private void OnHandButtonClick(object? sender, RoutedEventArgs e)
+    {
+        SetToolMode(WhiteboardToolMode.PanZoom);
+    }
+
     private void OnClearButtonClick(object? sender, RoutedEventArgs e)
     {
         ClearAllStrokes();
         QueueNoteSave();
+    }
+
+    private void OnSurfaceModeButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (_surfaceMode == WhiteboardWidgetSurfaceMode.AirApp)
+        {
+            ForceSaveNote();
+            _airAppCloseAction?.Invoke();
+            return;
+        }
+
+        if (!HasValidPersistenceContext())
+        {
+            return;
+        }
+
+        AirAppLauncherServiceProvider
+            .GetOrCreate()
+            .OpenWhiteboard(_componentId, _placementId);
+    }
+
+    private void RefreshSurfaceModeButton()
+    {
+        if (SurfaceModeIcon is not null)
+        {
+            SurfaceModeIcon.Symbol = _surfaceMode == WhiteboardWidgetSurfaceMode.AirApp
+                ? Symbol.Subtract
+                : Symbol.ArrowExport;
+        }
+
+        if (SurfaceModeButton is not null)
+        {
+            ToolTip.SetTip(
+                SurfaceModeButton,
+                _surfaceMode == WhiteboardWidgetSurfaceMode.AirApp ? "Exit" : "Full screen");
+        }
+    }
+
+    private void OnViewportPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        if (e.Pointer.Type == PointerType.Mouse &&
+            !e.GetCurrentPoint(PanZoomInputLayer).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        _panZoomPointers[e.Pointer.Id] = e.GetPosition(PanZoomInputLayer);
+        TryCapturePointer(e.Pointer, PanZoomInputLayer);
+        ResetPanZoomGestureBaseline();
+        e.Handled = true;
+    }
+
+    private void OnViewportPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom ||
+            !_panZoomPointers.ContainsKey(e.Pointer.Id))
+        {
+            return;
+        }
+
+        if (e.Pointer.Type == PointerType.Mouse &&
+            !e.GetCurrentPoint(PanZoomInputLayer).Properties.IsLeftButtonPressed)
+        {
+            RemovePanZoomPointer(e.Pointer);
+            e.Handled = true;
+            return;
+        }
+
+        _panZoomPointers[e.Pointer.Id] = e.GetPosition(PanZoomInputLayer);
+        ApplyPanZoomPointerGesture();
+        e.Handled = true;
+    }
+
+    private void OnViewportPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        RemovePanZoomPointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void OnViewportPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        _panZoomPointers.Remove(e.Pointer.Id);
+        ResetPanZoomGestureBaseline();
+    }
+
+    private void OnViewportPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        var delta = e.Delta.Y;
+        if (!double.IsFinite(delta) || Math.Abs(delta) <= double.Epsilon)
+        {
+            return;
+        }
+
+        var zoomStep = Math.Clamp(delta, -4d, 4d);
+        var factor = Math.Pow(1.12d, zoomStep);
+        ZoomViewportAt(_viewportState.Zoom * factor, e.GetPosition(PanZoomInputLayer));
+        e.Handled = true;
+    }
+
+    private void OnViewportTouchPadGestureMagnify(object? sender, PointerDeltaEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        var delta = Math.Abs(e.Delta.Y) > double.Epsilon ? e.Delta.Y : e.Delta.X;
+        if (!double.IsFinite(delta) || Math.Abs(delta) <= double.Epsilon)
+        {
+            return;
+        }
+
+        var factor = Math.Clamp(1d + delta, 0.5d, 2d);
+        ZoomViewportAt(_viewportState.Zoom * factor, e.GetPosition(PanZoomInputLayer));
+        e.Handled = true;
+    }
+
+    private void OnViewportTouchPadGestureSwipe(object? sender, PointerDeltaEventArgs e)
+    {
+        if (_toolMode != WhiteboardToolMode.PanZoom)
+        {
+            return;
+        }
+
+        PanViewport(e.Delta);
+        e.Handled = true;
+    }
+
+    private void ApplyPanZoomPointerGesture()
+    {
+        if (_panZoomPointers.Count == 0)
+        {
+            _panZoomGestureBaseline = null;
+            return;
+        }
+
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        if (_panZoomGestureBaseline is null)
+        {
+            ResetPanZoomGestureBaseline();
+        }
+
+        if (_panZoomGestureBaseline is not { } baseline)
+        {
+            return;
+        }
+
+        var viewportSize = GetViewportSize();
+        if (_panZoomPointers.Count == 1)
+        {
+            var currentPoint = _panZoomPointers.Values.First();
+            var delta = currentPoint - baseline.InitialCenter;
+            SetViewportState(
+                WhiteboardViewportHelper.PanBy(
+                    baseline.StartViewport,
+                    delta,
+                    viewportSize,
+                    _logicalCanvasSize),
+                queueSave: true);
+            return;
+        }
+
+        var points = _panZoomPointers.Values.Take(2).ToArray();
+        var currentCenter = GetCenter(points[0], points[1]);
+        var currentDistance = GetDistance(points[0], points[1]);
+        if (baseline.InitialDistance <= 1d || currentDistance <= 1d)
+        {
+            return;
+        }
+
+        var targetZoom = baseline.StartViewport.Zoom * (currentDistance / baseline.InitialDistance);
+        SetViewportState(
+            WhiteboardViewportHelper.ZoomFromGestureStart(
+                baseline.StartViewport,
+                targetZoom,
+                baseline.InitialCenter,
+                currentCenter,
+                viewportSize,
+                _logicalCanvasSize),
+            queueSave: true);
+    }
+
+    private void ResetPanZoomGestureBaseline()
+    {
+        if (_panZoomPointers.Count == 0)
+        {
+            _panZoomGestureBaseline = null;
+            return;
+        }
+
+        if (_panZoomPointers.Count == 1)
+        {
+            _panZoomGestureBaseline = new PanZoomGestureBaseline(
+                _viewportState,
+                _panZoomPointers.Values.First(),
+                0d);
+            return;
+        }
+
+        var points = _panZoomPointers.Values.Take(2).ToArray();
+        _panZoomGestureBaseline = new PanZoomGestureBaseline(
+            _viewportState,
+            GetCenter(points[0], points[1]),
+            GetDistance(points[0], points[1]));
+    }
+
+    private void PanViewport(Vector delta)
+    {
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        SetViewportState(
+            WhiteboardViewportHelper.PanBy(
+                _viewportState,
+                delta,
+                GetViewportSize(),
+                _logicalCanvasSize),
+            queueSave: true);
+    }
+
+    private void ZoomViewportAt(double targetZoom, Point anchorViewportPoint)
+    {
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        SetViewportState(
+            WhiteboardViewportHelper.ZoomAt(
+                _viewportState,
+                targetZoom,
+                anchorViewportPoint,
+                GetViewportSize(),
+                _logicalCanvasSize),
+            queueSave: true);
+    }
+
+    private void RemovePanZoomPointer(IPointer pointer)
+    {
+        _panZoomPointers.Remove(pointer.Id);
+        TryCapturePointer(pointer, null);
+        ResetPanZoomGestureBaseline();
+    }
+
+    private void ClearPanZoomPointers()
+    {
+        _panZoomPointers.Clear();
+        _panZoomGestureBaseline = null;
+    }
+
+    private static Point GetCenter(Point first, Point second)
+    {
+        return new Point((first.X + second.X) * 0.5d, (first.Y + second.Y) * 0.5d);
+    }
+
+    private static double GetDistance(Point first, Point second)
+    {
+        return Math.Sqrt(Math.Pow(first.X - second.X, 2d) + Math.Pow(first.Y - second.Y, 2d));
+    }
+
+    private static void TryCapturePointer(IPointer pointer, IInputElement? target)
+    {
+        try
+        {
+            pointer.Capture(target);
+        }
+        catch
+        {
+            // Pointer capture is best-effort; the viewport still works without it.
+        }
     }
 
     private async void OnExportButtonClick(object? sender, RoutedEventArgs e)
@@ -524,10 +962,75 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         ExportSvgToStream(fileStream);
     }
 
+    private async void OnImportButtonClick(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        var storageProvider = topLevel?.StorageProvider;
+        if (storageProvider is null)
+        {
+            return;
+        }
+
+        var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open Whiteboard SVG",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("SVG image")
+                {
+                    Patterns = ["*.svg"],
+                    MimeTypes = ["image/svg+xml"]
+                }
+            ]
+        });
+
+        var importFile = files.FirstOrDefault();
+        if (importFile is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await using var stream = await importFile.OpenReadAsync();
+            EnsureLogicalCanvasSize(expandToViewport: true);
+            var importResult = WhiteboardSvgImportService.Import(
+                stream,
+                Math.Max(1d, _logicalCanvasSize.Width),
+                Math.Max(1d, _logicalCanvasSize.Height));
+
+            if (importResult.Strokes.Count == 0)
+            {
+                AppLogger.Warn(
+                    "Whiteboard",
+                    $"SVG import did not contain supported paths. SkippedPathCount={importResult.SkippedPathCount}.");
+                return;
+            }
+
+            ClearAllStrokes();
+            ApplyNoteSnapshot(new WhiteboardNoteSnapshot
+            {
+                Version = 2,
+                CanvasWidth = Math.Max(1d, _logicalCanvasSize.Width),
+                CanvasHeight = Math.Max(1d, _logicalCanvasSize.Height),
+                BackgroundColor = ToHexColor((_isNightModeApplied ?? false) ? SKColors.Black : SKColors.White),
+                Strokes = importResult.Strokes
+            });
+            ResetViewportToFit(queueSave: false);
+            QueueNoteSave();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("Whiteboard", "Failed to import SVG into whiteboard.", ex);
+        }
+    }
+
     private void ExportSvgToStream(Stream stream)
     {
-        var width = Math.Max(1d, CanvasBorder.Bounds.Width);
-        var height = Math.Max(1d, CanvasBorder.Bounds.Height);
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        var width = Math.Max(1d, _logicalCanvasSize.Width);
+        var height = Math.Max(1d, _logicalCanvasSize.Height);
         var bounds = SKRect.Create((float)width, (float)height);
 
         using var svgCanvas = SKSvgCanvas.Create(bounds, stream);
@@ -554,6 +1057,13 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     }
 
     private void OnInkCanvasStrokeCollected(object? sender, DotNetCampus.Inking.Contexts.AvaloniaSkiaInkCanvasStrokeCollectedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueNoteSave();
+    }
+
+    private void OnInkCanvasStrokeErased(object? sender, DotNetCampus.Inking.Contexts.ErasingCompletedEventArgs e)
     {
         _ = sender;
         _ = e;
@@ -593,9 +1103,26 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         var componentId = _componentId;
         var placementId = _placementId;
         var retentionDays = _noteRetentionDays;
-        _noteDirty = false;
+        var saveRevision = _noteSaveRevision;
         _noteSaveTimer.Stop();
-        _ = Task.Run(() => _notePersistenceService.SaveNote(componentId, placementId, noteSnapshot, retentionDays));
+        _ = Task.Run(() => _notePersistenceService.SaveNote(componentId, placementId, noteSnapshot, retentionDays))
+            .ContinueWith(task =>
+            {
+                var saved = task.Status == TaskStatus.RanToCompletion && task.Result;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_disposed || saveRevision != _noteSaveRevision)
+                    {
+                        return;
+                    }
+
+                    _noteDirty = !saved;
+                    if (!saved && !_noteSaveTimer.IsEnabled)
+                    {
+                        _noteSaveTimer.Start();
+                    }
+                });
+            });
     }
 
     private void QueueNoteSave()
@@ -606,10 +1133,9 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
 
         _noteDirty = true;
-        if (!_noteSaveTimer.IsEnabled)
-        {
-            _noteSaveTimer.Start();
-        }
+        _noteSaveRevision++;
+        _noteSaveTimer.Stop();
+        _noteSaveTimer.Start();
     }
 
     private void PersistNoteImmediately()
@@ -624,15 +1150,21 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             return;
         }
 
-        _noteDirty = false;
         _noteSaveTimer.Stop();
         var noteSnapshot = BuildNoteSnapshot();
         try
         {
-            _notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays);
+            if (_notePersistenceService.SaveNote(_componentId, _placementId, noteSnapshot, _noteRetentionDays))
+            {
+                _noteDirty = false;
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warn(
+                "Whiteboard",
+                $"Failed to persist whiteboard immediately. ComponentId='{_componentId}'; PlacementId='{_placementId}'.",
+                ex);
         }
     }
 
@@ -683,13 +1215,214 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         }
     }
 
+    private void ApplySnapshotCanvasAndViewport(WhiteboardNoteSnapshot snapshot)
+    {
+        var viewportSize = GetViewportSize();
+        var canvasWidth = snapshot.CanvasWidth > 0 ? snapshot.CanvasWidth : viewportSize.Width;
+        var canvasHeight = snapshot.CanvasHeight > 0 ? snapshot.CanvasHeight : viewportSize.Height;
+        SetLogicalCanvasSize(new Size(canvasWidth, canvasHeight));
+        SetViewportState(
+            new WhiteboardViewportState(
+                snapshot.ViewportZoom,
+                new Vector(snapshot.ViewportOffsetX, snapshot.ViewportOffsetY)),
+            queueSave: false);
+    }
+
+    private void ResetViewportToFit(bool queueSave)
+    {
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        SetViewportState(
+            WhiteboardViewportHelper.Fit(GetViewportSize(), _logicalCanvasSize),
+            queueSave);
+    }
+
+    private void EnsureLogicalCanvasSize(bool expandToViewport)
+    {
+        var viewportSize = GetViewportSize();
+        var normalizedCanvasSize = WhiteboardViewportHelper.NormalizeSize(_logicalCanvasSize);
+        if (_logicalCanvasSize.Width <= 1d || _logicalCanvasSize.Height <= 1d)
+        {
+            normalizedCanvasSize = viewportSize;
+        }
+        else if (expandToViewport)
+        {
+            normalizedCanvasSize = new Size(
+                Math.Max(normalizedCanvasSize.Width, viewportSize.Width),
+                Math.Max(normalizedCanvasSize.Height, viewportSize.Height));
+        }
+
+        SetLogicalCanvasSize(normalizedCanvasSize);
+    }
+
+    private void QueueViewportLayoutSync(string reason)
+    {
+        if (_disposed || _isViewportLayoutSyncQueued)
+        {
+            return;
+        }
+
+        _isViewportLayoutSyncQueued = true;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _isViewportLayoutSyncQueued = false;
+                if (_disposed)
+                {
+                    return;
+                }
+
+                SynchronizeViewportLayout(reason);
+            },
+            DispatcherPriority.Loaded);
+    }
+
+    private void SynchronizeViewportLayout(string reason)
+    {
+        var resolution = ResolveCurrentViewportSize();
+        var previousCanvasSize = _logicalCanvasSize;
+
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        SetViewportState(_viewportState, queueSave: false);
+
+        var canvasExpanded =
+            _logicalCanvasSize.Width > previousCanvasSize.Width + 0.5d ||
+            _logicalCanvasSize.Height > previousCanvasSize.Height + 0.5d;
+        var sourceChanged = !string.Equals(_lastViewportSizeSource, resolution.Source, StringComparison.Ordinal);
+        var viewportChanged = !AreSizesClose(_lastSynchronizedViewportSize, resolution.Size);
+        if (canvasExpanded || sourceChanged || viewportChanged)
+        {
+            AppLogger.Info(
+                "Whiteboard",
+                $"Viewport synchronized. ComponentId='{_componentId}'; PlacementId='{_placementId}'; Reason='{reason}'; " +
+                $"ViewportSize='{resolution.Size.Width:0.##}x{resolution.Size.Height:0.##}'; ViewportSource='{resolution.Source}'; " +
+                $"CanvasSize='{_logicalCanvasSize.Width:0.##}x{_logicalCanvasSize.Height:0.##}'; SurfaceMode='{_surfaceMode}'.");
+        }
+
+        _lastSynchronizedViewportSize = resolution.Size;
+        _lastViewportSizeSource = resolution.Source;
+    }
+
+    private void SetLogicalCanvasSize(Size canvasSize)
+    {
+        _logicalCanvasSize = WhiteboardViewportHelper.NormalizeSize(canvasSize);
+        InkCanvas.Width = _logicalCanvasSize.Width;
+        InkCanvas.Height = _logicalCanvasSize.Height;
+    }
+
+    private Size GetViewportSize()
+    {
+        return ResolveCurrentViewportSize().Size;
+    }
+
+    private WhiteboardViewportSizeResolution ResolveCurrentViewportSize()
+    {
+        return ResolveViewportSize(
+            ViewportRoot.Bounds.Size,
+            CanvasBorder.Bounds.Size,
+            Bounds.Size,
+            _currentCellSize,
+            _baseWidthCells);
+    }
+
+    internal static WhiteboardViewportSizeResolution ResolveViewportSize(
+        Size viewportRootSize,
+        Size canvasBorderSize,
+        Size widgetSize,
+        double currentCellSize,
+        int baseWidthCells)
+    {
+        if (HasUsableSize(viewportRootSize))
+        {
+            return new WhiteboardViewportSizeResolution(
+                WhiteboardViewportHelper.NormalizeSize(viewportRootSize),
+                "ViewportRoot",
+                IsFallback: false);
+        }
+
+        if (HasUsableSize(canvasBorderSize))
+        {
+            return new WhiteboardViewportSizeResolution(
+                WhiteboardViewportHelper.NormalizeSize(canvasBorderSize),
+                "CanvasBorder",
+                IsFallback: false);
+        }
+
+        var normalizedCellSize = Math.Max(1d, currentCellSize);
+        var normalizedBaseWidthCells = Math.Max(1, baseWidthCells);
+        var width = normalizedCellSize * normalizedBaseWidthCells;
+        var height = HasUsableLength(widgetSize.Height)
+            ? widgetSize.Height
+            : normalizedCellSize * Math.Max(2, normalizedBaseWidthCells);
+
+        return new WhiteboardViewportSizeResolution(
+            WhiteboardViewportHelper.NormalizeSize(new Size(width, height)),
+            "Fallback",
+            IsFallback: true);
+    }
+
+    private void SetViewportState(WhiteboardViewportState nextState, bool queueSave)
+    {
+        var next = WhiteboardViewportHelper.Clamp(nextState, GetViewportSize(), _logicalCanvasSize);
+        var changed = !AreViewportStatesClose(_viewportState, next);
+        _viewportState = next;
+        ApplyViewportTransform();
+
+        if (changed && queueSave)
+        {
+            QueueNoteSave();
+        }
+    }
+
+    private void ApplyViewportTransform()
+    {
+        SetLogicalCanvasSize(_logicalCanvasSize);
+        _viewportScaleTransform.ScaleX = _viewportState.Zoom;
+        _viewportScaleTransform.ScaleY = _viewportState.Zoom;
+        _viewportTranslateTransform.X = _viewportState.Offset.X;
+        _viewportTranslateTransform.Y = _viewportState.Offset.Y;
+        InkCanvas.InvalidateVisual();
+    }
+
+    private static bool AreViewportStatesClose(WhiteboardViewportState first, WhiteboardViewportState second)
+    {
+        const double tolerance = 0.001d;
+        return Math.Abs(first.Zoom - second.Zoom) <= tolerance &&
+               Math.Abs(first.Offset.X - second.Offset.X) <= tolerance &&
+               Math.Abs(first.Offset.Y - second.Offset.Y) <= tolerance;
+    }
+
+    private static bool AreSizesClose(Size first, Size second)
+    {
+        const double tolerance = 0.5d;
+        return Math.Abs(first.Width - second.Width) <= tolerance &&
+               Math.Abs(first.Height - second.Height) <= tolerance;
+    }
+
+    private static bool HasUsableSize(Size size)
+    {
+        return HasUsableLength(size.Width) && HasUsableLength(size.Height);
+    }
+
+    private static bool HasUsableLength(double value)
+    {
+        return double.IsFinite(value) && value > 1d;
+    }
+
     private WhiteboardNoteSnapshot BuildNoteSnapshot()
     {
+        EnsureLogicalCanvasSize(expandToViewport: true);
         return new WhiteboardNoteSnapshot
         {
+            Version = 2,
+            CanvasWidth = Math.Max(1d, _logicalCanvasSize.Width),
+            CanvasHeight = Math.Max(1d, _logicalCanvasSize.Height),
+            BackgroundColor = ToHexColor((_isNightModeApplied ?? false) ? SKColors.Black : SKColors.White),
+            ViewportZoom = _viewportState.Zoom,
+            ViewportOffsetX = _viewportState.Offset.X,
+            ViewportOffsetY = _viewportState.Offset.Y,
             Strokes = InkCanvas.Strokes
                 .Select(BuildStrokeSnapshot)
-                .Where(static stroke => stroke.Points.Count > 0)
+                .Where(static stroke => stroke.Points.Count > 0 || !string.IsNullOrWhiteSpace(stroke.PathSvgData))
                 .ToList()
         };
     }
@@ -702,6 +1435,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             Color = ToHexColor(stroke.Color),
             InkThickness = stroke.InkThickness,
             IgnorePressure = stroke.IgnorePressure,
+            PathSvgData = stroke.Path.ToSvgPathData(),
             Points = pointList
                 .Select(static point => new WhiteboardStylusPointSnapshot
                 {
@@ -717,6 +1451,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void ApplyNoteSnapshot(WhiteboardNoteSnapshot snapshot)
     {
+        ApplySnapshotCanvasAndViewport(snapshot);
+
         if (snapshot.Strokes.Count == 0)
         {
             return;
@@ -728,24 +1464,29 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             var stylusPoints = strokeSnapshot.Points
                 .Select(ConvertStylusPoint)
                 .ToList();
-            if (stylusPoints.Count == 0)
+            if (stylusPoints.Count == 0 && string.IsNullOrWhiteSpace(strokeSnapshot.PathSvgData))
             {
                 continue;
             }
 
-            var path = renderer.RenderInkToPath(stylusPoints, strokeSnapshot.InkThickness);
+            var path = BuildRestoredStrokePath(stylusPoints, strokeSnapshot, renderer);
+            if (path.IsEmpty)
+            {
+                path.Dispose();
+                continue;
+            }
+
             var staticStroke = SkiaStroke.CreateStaticStroke(
                 InkId.NewId(),
                 path,
                 new StylusPointListSpan(stylusPoints, 0, stylusPoints.Count),
                 ParseStrokeColor(strokeSnapshot.Color),
                 (float)strokeSnapshot.InkThickness,
-                strokeSnapshot.IgnorePressure,
+                true,
                 renderer);
             InkCanvas.AvaloniaSkiaInkCanvas.AddStaticStroke(staticStroke);
         }
 
-        InkCanvas.AvaloniaSkiaInkCanvas.UpdateBitmapCache();
         InkCanvas.InvalidateVisual();
     }
 
@@ -781,6 +1522,22 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         return $"#{color.Alpha:X2}{color.Red:X2}{color.Green:X2}{color.Blue:X2}";
     }
 
+    private static SKPath BuildRestoredStrokePath(
+        IReadOnlyList<InkStylusPoint> stylusPoints,
+        WhiteboardStrokeSnapshot strokeSnapshot,
+        DotNetCampus.Inking.StrokeRenderers.ISkiaInkStrokeRenderer? renderer)
+    {
+        if (stylusPoints.Count > 0)
+        {
+            return renderer?.RenderInkToPath(stylusPoints, strokeSnapshot.InkThickness) ??
+                   WhiteboardStrokePathBuilder.BuildPath(stylusPoints, strokeSnapshot.InkThickness);
+        }
+
+        return !string.IsNullOrWhiteSpace(strokeSnapshot.PathSvgData)
+            ? SKPath.ParseSvgPathData(strokeSnapshot.PathSvgData) ?? new SKPath()
+            : new SKPath();
+    }
+
     private void ClearAllStrokes()
     {
         var strokeList = InkCanvas.Strokes.ToList();
@@ -799,8 +1556,6 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             }
         }
 
-        InkCanvas.AvaloniaSkiaInkCanvas.UseBitmapCache(false);
-        InkCanvas.AvaloniaSkiaInkCanvas.InvalidateBitmapCache();
         InkCanvas.InvalidateVisual();
     }
 

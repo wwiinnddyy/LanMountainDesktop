@@ -125,9 +125,7 @@ public sealed class WeatherLocationRefreshService
 
     private static string NormalizeIconPackId(string? iconPackId)
     {
-        return string.IsNullOrWhiteSpace(iconPackId)
-            ? "HyperOS3"
-            : "HyperOS3";
+        return WeatherVisualStyleCatalog.Normalize(iconPackId);
     }
 
     private string BuildCoordinateDisplayName(string? languageCode, double latitude, double longitude)

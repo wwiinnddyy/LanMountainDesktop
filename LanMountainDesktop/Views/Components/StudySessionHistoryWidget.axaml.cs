@@ -6,7 +6,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using FluentIcons.Avalonia;
 using FluentIcons.Common;
 using LanMountainDesktop.Models;
@@ -49,6 +48,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
+    private readonly StudySnapshotRenderGate _renderGate;
 
     private double _currentCellSize = 48;
     private string _languageCode = "zh-CN";
@@ -70,6 +70,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
     public StudySessionHistoryWidget()
     {
         InitializeComponent();
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshotFromGate);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
@@ -145,26 +146,30 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
 
     private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        if (!_isAttached || !_isOnActivePage)
         {
-            if (!_isAttached)
-            {
-                return;
-            }
+            return;
+        }
 
-            if (!string.IsNullOrWhiteSpace(_loadingSessionId) &&
-                string.Equals(e.Snapshot.SelectedSessionReportId, _loadingSessionId, StringComparison.OrdinalIgnoreCase))
-            {
-                _loadingSessionId = null;
-                SetTransientStatus(L("study.session_history.loaded", "Data loaded"), 1.5);
-            }
+        _renderGate.Queue(e.Snapshot);
+    }
 
-            _currentSnapshot = e.Snapshot;
-            if (_isOnActivePage)
-            {
-                RenderSnapshot(e.Snapshot);
-            }
-        }, DispatcherPriority.Background);
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
+    }
+
+    private void ApplySnapshotFromGate(StudyAnalyticsSnapshot snapshot)
+    {
+        if (!string.IsNullOrWhiteSpace(_loadingSessionId) &&
+            string.Equals(snapshot.SelectedSessionReportId, _loadingSessionId, StringComparison.OrdinalIgnoreCase))
+        {
+            _loadingSessionId = null;
+            SetTransientStatus(L("study.session_history.loaded", "Data loaded"), 1.5);
+        }
+
+        _currentSnapshot = snapshot;
+        RenderSnapshot(snapshot);
     }
 
     private void RefreshFromService()
@@ -793,6 +798,7 @@ public partial class StudySessionHistoryWidget : UserControl, IDesktopComponentW
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        _renderGate.Dispose();
         DialogCancelButton.Click -= (_, _) => CloseDialog();
         DialogConfirmButton.Click -= (_, _) => ConfirmDialog();
         DialogRenameTextBox.KeyDown -= OnDialogRenameTextBoxKeyDown;

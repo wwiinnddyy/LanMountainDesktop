@@ -4,7 +4,6 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -52,18 +51,12 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
-    private readonly object _snapshotSync = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
-    private readonly DispatcherTimer _renderTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(33)
-    };
+    private readonly StudySnapshotRenderGate _renderGate;
 
-    private StudyAnalyticsSnapshot? _pendingSnapshot;
-    private bool _hasPendingSnapshot;
     private double _currentCellSize = 48;
     private string _languageCode = "zh-CN";
     private bool _isAttached;
@@ -86,7 +79,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
     {
         InitializeComponent();
 
-        _renderTimer.Tick += OnRenderTimerTick;
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot, AfterSnapshotRendered);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
@@ -141,14 +134,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         
         if (isOnActivePage && !wasOnActivePage)
         {
-            lock (_snapshotSync)
-            {
-                _pendingSnapshot = _studyAnalyticsService.GetSnapshot();
-                _hasPendingSnapshot = true;
-            }
+            _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
         }
-        
-        UpdateRenderLoopState();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -164,13 +151,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
         UpdateMonitoringLeaseState();
 
-        lock (_snapshotSync)
-        {
-            _pendingSnapshot = _studyAnalyticsService.GetSnapshot();
-            _hasPendingSnapshot = true;
-        }
-
-        UpdateRenderLoopState();
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -178,7 +159,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         _isAttached = false;
         _monitoringLease?.Dispose();
         _monitoringLease = null;
-        _renderTimer.Stop();
+        _renderGate.Clear();
 
         if (_isSubscribed)
         {
@@ -200,66 +181,32 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
         ApplyTypographyByBackground(panelColor);
         ApplyStatusBadgeStyle(StatusVisualKind.Default, panelColor);
 
-        lock (_snapshotSync)
-        {
-            _pendingSnapshot = _studyAnalyticsService.GetSnapshot();
-            _hasPendingSnapshot = true;
-        }
-
-        if (!_renderTimer.IsEnabled)
-        {
-            OnRenderTimerTick(this, EventArgs.Empty);
-        }
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
     }
 
     private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
-        lock (_snapshotSync)
-        {
-            _pendingSnapshot = e.Snapshot;
-            _hasPendingSnapshot = true;
-        }
-    }
-
-    private void OnRenderTimerTick(object? sender, EventArgs e)
-    {
-        StudyAnalyticsSnapshot? snapshot = null;
-        lock (_snapshotSync)
-        {
-            if (_hasPendingSnapshot)
-            {
-                snapshot = _pendingSnapshot;
-                _hasPendingSnapshot = false;
-            }
-        }
-
-        if (snapshot is null)
+        if (!_isAttached || !_isOnActivePage)
         {
             return;
         }
 
-        ApplySnapshot(snapshot);
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
+    }
+
+    private void AfterSnapshotRendered()
+    {
         _framesSinceCompaction++;
         if (_framesSinceCompaction >= 900)
         {
             ChartControl.CompactCaches();
             _framesSinceCompaction = 0;
         }
-    }
-
-    private void UpdateRenderLoopState()
-    {
-        if (_isAttached && _isOnActivePage)
-        {
-            if (!_renderTimer.IsEnabled)
-            {
-                _renderTimer.Start();
-            }
-
-            return;
-        }
-
-        _renderTimer.Stop();
     }
 
     private void UpdateMonitoringLeaseState()
@@ -271,7 +218,8 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
             return;
         }
 
-        if (_isAttached)
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
             return;
@@ -612,8 +560,7 @@ public partial class StudyNoiseCurveWidget : UserControl, IDesktopComponentWidge
 
         _isDisposed = true;
 
-        _renderTimer.Stop();
-        _renderTimer.Tick -= OnRenderTimerTick;
+        _renderGate.Dispose();
         AttachedToVisualTree -= OnAttachedToVisualTree;
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;

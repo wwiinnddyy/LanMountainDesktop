@@ -11,11 +11,13 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FluentIcons.Common;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -31,12 +33,14 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     {
         _localizationService = new();
         _languageCode = "zh-CN";
+        IsWindowsOs = OperatingSystem.IsWindows();
     }
 
     public SettingsWindowViewModel(LocalizationService localizationService, string languageCode)
     {
         _localizationService = localizationService;
         _languageCode = languageCode;
+        IsWindowsOs = OperatingSystem.IsWindows();
     }
 
     private string L(string key) => _localizationService.GetString(_languageCode, key, key);
@@ -86,6 +90,40 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen;
 
+    [ObservableProperty]
+    private bool _canGoBack;
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private string _searchPlaceholderText = string.Empty;
+
+    [ObservableProperty]
+    private string _searchNoResultsText = string.Empty;
+
+    [ObservableProperty]
+    private string _searchPageHintText = string.Empty;
+
+    [ObservableProperty]
+    private SettingsSearchResult? _selectedSearchResult;
+
+    [ObservableProperty]
+    private string _moreOptionsText = string.Empty;
+
+    [ObservableProperty]
+    private string _restartMenuItemText = string.Empty;
+
+    [ObservableProperty]
+    private string _togglePaneTooltip = string.Empty;
+
+    [ObservableProperty]
+    private string _backTooltip = string.Empty;
+
+    /// <summary>用于标题栏右侧系统按钮占位（与 SecRandom / ClassIsland 一致，仅 Windows 显示）。</summary>
+    [ObservableProperty]
+    private bool _isWindowsOs;
+
     public SettingsWindowViewModel Initialize()
     {
         RefreshLanguage(_languageCode);
@@ -106,6 +144,13 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
             "settings.restart_dialog.later",
             L("settings.restart_dialog.cancel"));
         DrawerFallbackTitle = L("settings.window.drawer_default");
+        SearchPlaceholderText = L("settings.search.placeholder");
+        SearchNoResultsText = L("settings.search.no_results");
+        SearchPageHintText = L("settings.search.page_hint");
+        MoreOptionsText = L("settings.window.more_options");
+        RestartMenuItemText = L("settings.window.restart_menu_item");
+        TogglePaneTooltip = L("settings.window.toggle_pane");
+        BackTooltip = L("settings.window.back");
 
         var nextDefaultRestartMessage = L("settings.restart_dock.description");
         if (string.IsNullOrWhiteSpace(RestartMessage) || string.Equals(RestartMessage, _defaultRestartMessage, StringComparison.Ordinal))
@@ -119,6 +164,8 @@ public sealed partial class SettingsWindowViewModel : ViewModelBase
     public string GetDefaultRestartMessage() => _defaultRestartMessage;
 
     public ObservableCollection<SettingsPageDescriptor> Pages { get; } = [];
+
+    public ObservableCollection<SettingsSearchResult> SearchResults { get; } = [];
 }
 
 public sealed class SelectionOption
@@ -132,6 +179,22 @@ public sealed class SelectionOption
     public string Value { get; }
 
     public string Label { get; }
+}
+
+public sealed class FluentIconSelectionOption
+{
+    public FluentIconSelectionOption(string value, string label, Icon icon)
+    {
+        Value = value;
+        Label = label;
+        Icon = icon;
+    }
+
+    public string Value { get; }
+
+    public string Label { get; }
+
+    public Icon Icon { get; }
 }
 
 public sealed class ThemeSeedCandidateOption
@@ -190,6 +253,11 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
         Languages = CreateLanguageOptions();
         RenderModes = CreateRenderModeOptions();
+        MultiInstanceLaunchBehaviors = CreateMultiInstanceLaunchBehaviorOptions();
+        BackToWindowsButtonDisplayModes = CreateBackToWindowsButtonDisplayModeOptions();
+        BackToWindowsIconSources = CreateBackToWindowsIconSourceOptions();
+        BackToWindowsFluentIcons = CreateBackToWindowsFluentIconOptions();
+        FilteredBackToWindowsFluentIcons = BackToWindowsFluentIcons;
         TimeZones = CreateTimeZoneOptions();
         RefreshLocalizedText();
 
@@ -206,6 +274,20 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         SelectedRenderMode = RenderModes.FirstOrDefault(option =>
             string.Equals(option.Value, normalizedRenderMode, StringComparison.OrdinalIgnoreCase))
             ?? RenderModes[0];
+        SelectedMultiInstanceLaunchBehavior = MultiInstanceLaunchBehaviors.FirstOrDefault(option =>
+            string.Equals(option.Value, appSnapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
+            ?? MultiInstanceLaunchBehaviors.First(option =>
+                string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
+        SelectedBackToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModes.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsButtonDisplayMode(appSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsButtonDisplayModes[0];
+        SelectedBackToWindowsIconSource = BackToWindowsIconSources.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsIconSource(appSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsIconSources[0];
+        SelectedBackToWindowsFluentIcon = BackToWindowsFluentIcons.FirstOrDefault(option =>
+            string.Equals(option.Value, NormalizeBackToWindowsFluentIconName(appSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase))
+            ?? BackToWindowsFluentIcons.First(option => string.Equals(option.Value, "Circle", StringComparison.OrdinalIgnoreCase));
+        BackToWindowsIconText = NormalizeBackToWindowsIconText(appSnapshot.BackToWindowsIconText);
         ApplyTransitionPreferences(appSnapshot.EnableFadeTransition, appSnapshot.EnableSlideTransition);
         ShowInTaskbar = appSnapshot.ShowInTaskbar;
         _isInitializing = false;
@@ -251,6 +333,37 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         {
             ShowInTaskbar = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
         }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedMultiInstanceLaunchBehavior = MultiInstanceLaunchBehaviors.FirstOrDefault(option =>
+                string.Equals(option.Value, snapshot.MultiInstanceLaunchBehavior.ToString(), StringComparison.OrdinalIgnoreCase))
+                ?? MultiInstanceLaunchBehaviors.First(option =>
+                    string.Equals(option.Value, MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedBackToWindowsButtonDisplayMode = BackToWindowsButtonDisplayModes.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsButtonDisplayModes[0];
+        }
+
+        if (changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsIconSource)) ||
+            changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsFluentIconName)) ||
+            changedKeys.Contains(nameof(AppSettingsSnapshot.BackToWindowsIconText)))
+        {
+            var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+            SelectedBackToWindowsIconSource = BackToWindowsIconSources.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsIconSources[0];
+            SelectedBackToWindowsFluentIcon = BackToWindowsFluentIcons.FirstOrDefault(option =>
+                string.Equals(option.Value, NormalizeBackToWindowsFluentIconName(snapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase))
+                ?? BackToWindowsFluentIcons.First(option => string.Equals(option.Value, "Circle", StringComparison.OrdinalIgnoreCase));
+            BackToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+        }
     }
 
     public event Action? RestartRequested;
@@ -258,6 +371,14 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     public IReadOnlyList<SelectionOption> Languages { get; }
 
     public IReadOnlyList<SelectionOption> RenderModes { get; }
+
+    public IReadOnlyList<SelectionOption> MultiInstanceLaunchBehaviors { get; }
+
+    public IReadOnlyList<SelectionOption> BackToWindowsButtonDisplayModes { get; }
+
+    public IReadOnlyList<SelectionOption> BackToWindowsIconSources { get; }
+
+    public IReadOnlyList<FluentIconSelectionOption> BackToWindowsFluentIcons { get; }
 
     public IReadOnlyList<TimeZoneOption> TimeZones { get; }
 
@@ -271,6 +392,28 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
     private SelectionOption _selectedRenderMode = new(AppRenderingModeHelper.Default, "Default");
 
     [ObservableProperty]
+    private SelectionOption _selectedMultiInstanceLaunchBehavior =
+        new(MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(), "Notify and open desktop");
+
+    [ObservableProperty]
+    private SelectionOption _selectedBackToWindowsButtonDisplayMode = new("IconAndText", "Icon and text");
+
+    [ObservableProperty]
+    private SelectionOption _selectedBackToWindowsIconSource = new("FluentIcon", "Fluent icon");
+
+    [ObservableProperty]
+    private FluentIconSelectionOption _selectedBackToWindowsFluentIcon = new("Circle", "Circle", Icon.Circle);
+
+    [ObservableProperty]
+    private IReadOnlyList<FluentIconSelectionOption> _filteredBackToWindowsFluentIcons = [];
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconText = "○";
+
+    [ObservableProperty]
     private bool _enableFadeTransition = true;
 
     [ObservableProperty]
@@ -278,6 +421,60 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
     [ObservableProperty]
     private bool _showInTaskbar;
+
+    [ObservableProperty]
+    private string _fadeTransitionHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _slideTransitionHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _slideTransitionDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _showInTaskbarHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _showInTaskbarDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _multiInstanceLaunchBehaviorHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _multiInstanceLaunchBehaviorDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsButtonDisplayModeHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsButtonDisplayModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconSourceHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconSourceDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsFluentIconSearchPlaceholder = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconTextHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _backToWindowsIconTextDescription = string.Empty;
+
+    public bool IsBackToWindowsFluentIconSource =>
+        string.Equals(SelectedBackToWindowsIconSource?.Value, "FluentIcon", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsBackToWindowsTextIconSource =>
+        string.Equals(SelectedBackToWindowsIconSource?.Value, "Text", StringComparison.OrdinalIgnoreCase);
 
     public bool IsSlideTransitionAvailable => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows);
 
@@ -386,6 +583,84 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         }
     }
 
+    partial void OnSelectedMultiInstanceLaunchBehaviorChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        if (!Enum.TryParse<MultiInstanceLaunchBehavior>(value.Value, ignoreCase: true, out var behavior))
+        {
+            behavior = MultiInstanceLaunchBehavior.NotifyAndOpenDesktop;
+        }
+
+        SaveField(nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), behavior);
+    }
+
+    partial void OnSelectedBackToWindowsButtonDisplayModeChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode),
+            NormalizeBackToWindowsButtonDisplayMode(value.Value));
+    }
+
+    partial void OnSelectedBackToWindowsIconSourceChanged(SelectionOption value)
+    {
+        OnPropertyChanged(nameof(IsBackToWindowsFluentIconSource));
+        OnPropertyChanged(nameof(IsBackToWindowsTextIconSource));
+
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsIconSource),
+            NormalizeBackToWindowsIconSource(value.Value));
+    }
+
+    partial void OnSelectedBackToWindowsFluentIconChanged(FluentIconSelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsFluentIconName),
+            NormalizeBackToWindowsFluentIconName(value.Value));
+    }
+
+    partial void OnBackToWindowsFluentIconSearchTextChanged(string value)
+    {
+        var query = value?.Trim() ?? string.Empty;
+        FilteredBackToWindowsFluentIcons = string.IsNullOrWhiteSpace(query)
+            ? BackToWindowsFluentIcons
+            : BackToWindowsFluentIcons
+                .Where(option => option.Label.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                 option.Value.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Take(120)
+                .ToList();
+    }
+
+    partial void OnBackToWindowsIconTextChanged(string value)
+    {
+        if (_isInitializing)
+        {
+            return;
+        }
+
+        SaveField(
+            nameof(AppSettingsSnapshot.BackToWindowsIconText),
+            NormalizeBackToWindowsIconText(value));
+    }
+
     partial void OnEnableSlideTransitionChanged(bool value)
     {
         if (_isInitializing)
@@ -476,6 +751,105 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         ];
     }
 
+    private IReadOnlyList<SelectionOption> CreateMultiInstanceLaunchBehaviorOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.RestartApp.ToString(),
+                L("settings.general.multi_instance_behavior.restart", "Restart app")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.OpenDesktopSilently.ToString(),
+                L("settings.general.multi_instance_behavior.open_silently", "Open desktop without prompt")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.PromptOnly.ToString(),
+                L("settings.general.multi_instance_behavior.prompt_only", "Show prompt only")),
+            new SelectionOption(
+                MultiInstanceLaunchBehavior.NotifyAndOpenDesktop.ToString(),
+                L("settings.general.multi_instance_behavior.notify_and_open", "Notify and open desktop"))
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateBackToWindowsButtonDisplayModeOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                "IconAndText",
+                L("settings.general.back_to_windows_button_display.icon_and_text", "Icon and text")),
+            new SelectionOption(
+                "IconOnly",
+                L("settings.general.back_to_windows_button_display.icon_only", "Icon only")),
+            new SelectionOption(
+                "TextOnly",
+                L("settings.general.back_to_windows_button_display.text_only", "Text only"))
+        ];
+    }
+
+    private IReadOnlyList<SelectionOption> CreateBackToWindowsIconSourceOptions()
+    {
+        return
+        [
+            new SelectionOption(
+                "FluentIcon",
+                L("settings.general.back_to_windows_icon_source.fluent_icon", "Fluent icon")),
+            new SelectionOption(
+                "Text",
+                L("settings.general.back_to_windows_icon_source.text", "Text icon"))
+        ];
+    }
+
+    private IReadOnlyList<FluentIconSelectionOption> CreateBackToWindowsFluentIconOptions()
+    {
+        return Enum.GetValues<Icon>()
+            .Select(icon => icon.ToString())
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .Select(name => new FluentIconSelectionOption(name, name, Enum.Parse<Icon>(name)))
+            .ToList();
+    }
+
+    private static string NormalizeBackToWindowsButtonDisplayMode(string? value)
+    {
+        return value switch
+        {
+            _ when string.Equals(value, "IconOnly", StringComparison.OrdinalIgnoreCase) => "IconOnly",
+            _ when string.Equals(value, "TextOnly", StringComparison.OrdinalIgnoreCase) => "TextOnly",
+            _ => "IconAndText"
+        };
+    }
+
+    private static string NormalizeBackToWindowsIconSource(string? value)
+    {
+        return string.Equals(value, "Text", StringComparison.OrdinalIgnoreCase)
+            ? "Text"
+            : "FluentIcon";
+    }
+
+    private static string NormalizeBackToWindowsFluentIconName(string? value)
+    {
+        return Enum.TryParse<Icon>(value, ignoreCase: true, out var icon)
+            ? icon.ToString()
+            : Icon.Circle.ToString();
+    }
+
+    private static string NormalizeBackToWindowsIconText(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value)
+            ? "○"
+            : value.Trim();
+
+        var enumerator = StringInfo.GetTextElementEnumerator(normalized);
+        var builder = new System.Text.StringBuilder();
+        var count = 0;
+        while (enumerator.MoveNext() && count < 4)
+        {
+            builder.Append(enumerator.GetTextElement());
+            count++;
+        }
+
+        return builder.Length > 0 ? builder.ToString() : "○";
+    }
+
     private IReadOnlyList<TimeZoneOption> CreateTimeZoneOptions()
     {
         return _timeZoneService
@@ -506,6 +880,48 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
         RenderModeRestartMessage = L(
             "settings.general.render_mode_restart_message",
             "Rendering mode changes require restarting the app.");
+        FadeTransitionHeader = L("settings.general.fade_transition_header", "Fade startup transition");
+        SlideTransitionHeader = L("settings.general.slide_transition_header", "Slide startup transition");
+        SlideTransitionDescription = L(
+            "settings.general.slide_transition_desc",
+            "Use a slide-in startup transition on supported Windows builds. This option disables fade transition.");
+        ShowInTaskbarHeader = L("settings.general.show_main_window_taskbar_header", "Show main desktop window in taskbar");
+        ShowInTaskbarDescription = L(
+            "settings.general.show_main_window_taskbar_desc",
+            "Keep the main desktop host window visible in the taskbar. The independent settings window always has its own taskbar entry.");
+        MultiInstanceLaunchBehaviorHeader = L(
+            "settings.general.multi_instance_behavior_header",
+            "When opening the app again");
+        MultiInstanceLaunchBehaviorDescription = L(
+            "settings.general.multi_instance_behavior_desc",
+            "Choose how Launcher handles repeated launches while LanMountain Desktop is already running.");
+        BackToWindowsButtonDisplayModeHeader = L(
+            "settings.general.back_to_windows_button_display_header",
+            "Back to platform button");
+        BackToWindowsButtonDisplayModeDescription = L(
+            "settings.general.back_to_windows_button_display_desc",
+            "Choose whether the Dock button shows its circle icon, text, or both.");
+        BackToWindowsIconSourceHeader = L(
+            "settings.general.back_to_windows_icon_source_header",
+            "Back button icon source");
+        BackToWindowsIconSourceDescription = L(
+            "settings.general.back_to_windows_icon_source_desc",
+            "Choose whether the left icon slot uses a Fluent icon or short custom text.");
+        BackToWindowsFluentIconHeader = L(
+            "settings.general.back_to_windows_fluent_icon_header",
+            "Fluent icon");
+        BackToWindowsFluentIconDescription = L(
+            "settings.general.back_to_windows_fluent_icon_desc",
+            "Search and choose a built-in Fluent icon for the left icon slot.");
+        BackToWindowsFluentIconSearchPlaceholder = L(
+            "settings.general.back_to_windows_fluent_icon_search_placeholder",
+            "Search icon");
+        BackToWindowsIconTextHeader = L(
+            "settings.general.back_to_windows_icon_text_header",
+            "Text icon");
+        BackToWindowsIconTextDescription = L(
+            "settings.general.back_to_windows_icon_text_desc",
+            "Enter up to four characters to display as the left icon.");
     }
 
     private void RefreshPreview()
@@ -561,69 +977,33 @@ public sealed partial class GeneralSettingsPageViewModel : ViewModelBase, IDispo
 
 public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
 {
-    private static readonly Color DefaultSeedColor = Color.Parse("#FF3B82F6");
-    private static readonly SolidColorBrush NeutralLightBrushValue = new(Color.Parse("#FFFFFFFF"));
-    private static readonly SolidColorBrush NeutralDarkBrushValue = new(Color.Parse("#FF000000"));
     private readonly ISettingsFacadeService _settingsFacade;
-    private readonly IAppearanceThemeService _appearanceThemeService;
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _isInitializing;
-    private string? _selectedWallpaperSeed;
 
-    public AppearanceSettingsPageViewModel(
-        ISettingsFacadeService settingsFacade,
-        IAppearanceThemeService appearanceThemeService)
+    public AppearanceSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
-        _settingsFacade = settingsFacade;
-        _appearanceThemeService = appearanceThemeService;
+        _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
         RefreshLocalizedText();
-        ThemeColorModes = CreateThemeColorModes();
         ThemeModeOptions = CreateThemeModeOptions();
 
         _isInitializing = true;
-        Load();
-        _isInitializing = false;
-
-    }
-
-    partial void OnSelectedThemeModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
+        try
         {
-            return;
+            Load();
         }
-
-        // 根据选择的主题模式更新夜间模式状态
-        var newIsNightMode = value.Value switch
+        finally
         {
-            ThemeAppearanceValues.ThemeModeDark => true,
-            ThemeAppearanceValues.ThemeModeLight => false,
-            ThemeAppearanceValues.ThemeModeFollowSystem => Application.Current?.ActualThemeVariant == ThemeVariant.Dark,
-            _ => IsNightMode
-        };
-
-        if (IsNightMode != newIsNightMode)
-        {
-            IsNightMode = newIsNightMode;
+            _isInitializing = false;
         }
-
-        PersistCurrentState(restartRequired: false);
     }
 
     public event Action<string>? RestartRequested;
 
-    public IReadOnlyList<SelectionOption> ThemeColorModes { get; }
-
-    [ObservableProperty]
-    private IReadOnlyList<SelectionOption> _systemMaterialModes = [];
-
     [ObservableProperty]
     private bool _isNightMode;
-
-    [ObservableProperty]
-    private string _themeColor = string.Empty;
 
     [ObservableProperty]
     private IReadOnlyList<SelectionOption> _themeModeOptions = [];
@@ -647,90 +1027,10 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _themeModeFollowSystemText = string.Empty;
 
     [ObservableProperty]
-    private Color _customSeedPickerValue = DefaultSeedColor;
-
-    partial void OnCustomSeedPickerValueChanged(Color value)
-    {
-        if (_isInitializing ||
-            !string.Equals(SelectedThemeColorMode?.Value, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        UpdatePreview(BuildPendingState(usePickerSeed: true));
-    }
-
-    [ObservableProperty]
     private bool _useSystemChrome;
 
     [ObservableProperty]
-    private double _globalCornerRadiusScale = GlobalAppearanceSettings.DefaultCornerRadiusScale;
-
-    [ObservableProperty]
-    private SelectionOption _selectedThemeColorMode = new(ThemeAppearanceValues.ColorModeSeedMonet, "User theme color Monet");
-
-    [ObservableProperty]
-    private SelectionOption _selectedSystemMaterialMode = new(ThemeAppearanceValues.MaterialNone, "None");
-
-    [ObservableProperty]
-    private bool _isThemeColorEditable;
-
-    [ObservableProperty]
-    private bool _isWallpaperMode;
-
-    [ObservableProperty]
-    private bool _showNeutralPreview;
-
-    [ObservableProperty]
-    private bool _showMonetPreview;
-
-    [ObservableProperty]
-    private bool _isWallpaperSeedSelectable;
-
-    [ObservableProperty]
-    private string _themeColorSourceDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialDescription = string.Empty;
-
-    [ObservableProperty]
-    private IBrush _primarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _secondarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _tertiarySwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IBrush _neutralSwatchBrush = new SolidColorBrush(Color.Parse("#FFF2F4F7"));
-
-    [ObservableProperty]
-    private IBrush _seedSwatchBrush = new SolidColorBrush(DefaultSeedColor);
-
-    [ObservableProperty]
-    private IReadOnlyList<ThemeSeedCandidateOption> _wallpaperSeedCandidates = [];
-
-    [ObservableProperty]
-    private string _pageTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _pageDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _nightModeLabel = string.Empty;
-
-    [ObservableProperty]
     private string _useSystemChromeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _themeColorLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _themeColorModeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialLabel = string.Empty;
 
     [ObservableProperty]
     private string _cornerRadiusStyleLabel = string.Empty;
@@ -742,83 +1042,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _themeHeader = string.Empty;
 
     [ObservableProperty]
-    private string _themeSourceNeutralText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceUserColorText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperText = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceDefaultDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceUserColorDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperAppDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperSystemDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _themeSourceWallpaperFallbackDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialNoneText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialMicaText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialAcrylicText = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialSwitchableDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _systemMaterialFixedDescription = string.Empty;
-
-    [ObservableProperty]
     private string _appearanceRestartMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _previewPrimaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewSecondaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewTertiaryLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewSeedLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralLightLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _previewNeutralDarkLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _seedApplyButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _wallpaperSeedFlyoutTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _wallpaperSeedCurrentText = string.Empty;
-
-    public IBrush NeutralLightPreviewBrush => NeutralLightBrushValue;
-
-    public IBrush NeutralDarkPreviewBrush => NeutralDarkBrushValue;
 
     [ObservableProperty]
     private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
@@ -832,8 +1056,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     public void Load()
     {
         var theme = _settingsFacade.Theme.Get();
-        var liveSnapshot = _appearanceThemeService.GetCurrent();
-        RefreshMaterialModeOptions(liveSnapshot);
 
         _isInitializing = true;
         try
@@ -844,8 +1066,29 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             _isInitializing = false;
         }
+    }
 
-        UpdatePreview(theme);
+    partial void OnSelectedThemeModeChanged(SelectionOption value)
+    {
+        if (_isInitializing || value is null)
+        {
+            return;
+        }
+
+        var newIsNightMode = value.Value switch
+        {
+            ThemeAppearanceValues.ThemeModeDark => true,
+            ThemeAppearanceValues.ThemeModeLight => false,
+            ThemeAppearanceValues.ThemeModeFollowSystem => Application.Current?.ActualThemeVariant == ThemeVariant.Dark,
+            _ => IsNightMode
+        };
+
+        if (IsNightMode != newIsNightMode)
+        {
+            IsNightMode = newIsNightMode;
+        }
+
+        PersistCurrentState(restartRequired: false);
     }
 
     partial void OnUseSystemChromeChanged(bool value)
@@ -855,7 +1098,7 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
             return;
         }
 
-        PersistCurrentState(restartRequired: false);
+        PersistCurrentState(restartRequired: true);
     }
 
     partial void OnSelectedCornerRadiusStyleChanged(SelectionOption? value)
@@ -869,64 +1112,8 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PersistCurrentState(restartRequired: false);
     }
 
-    partial void OnSelectedThemeColorModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        PersistCurrentState(restartRequired: true);
-    }
-
-    partial void OnSelectedSystemMaterialModeChanged(SelectionOption value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        PersistCurrentState(restartRequired: true);
-    }
-
-    [RelayCommand]
-    private void ApplyCustomSeed()
-    {
-        if (!IsThemeColorEditable)
-        {
-            return;
-        }
-
-        ThemeColor = CustomSeedPickerValue.ToString();
-        PersistCurrentState(restartRequired: false);
-    }
-
-    public void CancelCustomSeedPreview()
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SyncCustomSeedPickerWithSavedThemeColor();
-        UpdatePreview(BuildPendingState(usePickerSeed: false));
-    }
-
-    public void SelectWallpaperSeed(string value)
-    {
-        if (!IsWallpaperMode || string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        _selectedWallpaperSeed = value;
-        PersistCurrentState(restartRequired: true);
-    }
-
     private void RefreshLocalizedText()
     {
-        PageTitle = L("settings.appearance.title", "Appearance");
-        PageDescription = L("settings.appearance.description", "Adjust theme source, material background, and window chrome.");
         ThemeHeader = L("settings.appearance.theme_header", "Theme");
         ThemeModeLabel = L("settings.appearance.theme_mode_label", "Theme mode");
         ThemeModeDescription = L("settings.appearance.theme_mode_desc", "Choose light, dark, or follow system preference.");
@@ -934,76 +1121,26 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeModeDarkText = L("settings.appearance.theme_mode.dark", "Dark");
         ThemeModeFollowSystemText = L("settings.appearance.theme_mode.follow_system", "Follow system");
         UseSystemChromeLabel = L("settings.color.use_system_chrome_toggle", "Use system window chrome");
-        ThemeColorLabel = L("settings.color.theme_color_label", "Theme Accent Color");
-        ThemeColorModeLabel = L("settings.appearance.theme_color_mode_label", "Theme color source");
-        SystemMaterialLabel = L("settings.appearance.system_material_label", "System material");
         CornerRadiusStyleLabel = L("settings.appearance.corner_radius.label", "Global corner radius style");
         CornerRadiusStyleDescription = L("settings.appearance.corner_radius.description", "Select a fixed corner radius style inspired by Xiaomi HyperOS.");
-        
+        AppearanceRestartMessage = L(
+            "settings.appearance.restart_message",
+            "Window chrome changes require restarting the app.");
+
         CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
             .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
             .ToList();
-        ThemeSourceNeutralText = L("settings.appearance.theme_color_mode.neutral", "Default neutral");
-        ThemeSourceUserColorText = L("settings.appearance.theme_color_mode.user", "User theme color Monet");
-        ThemeSourceWallpaperText = L("settings.appearance.theme_color_mode.wallpaper", "Wallpaper Monet");
-        ThemeSourceDefaultDescription = L("settings.appearance.theme_color_mode_desc.neutral", "Use the standard light and dark neutral surfaces.");
-        ThemeSourceUserColorDescription = L("settings.appearance.theme_color_mode_desc.user", "Use the selected theme color as the Monet seed.");
-        ThemeSourceWallpaperDescription = L("settings.appearance.theme_color_mode_desc.wallpaper", "Use the current wallpaper palette. App wallpaper is preferred, then system wallpaper.");
-        ThemeSourceWallpaperAppDescription = L("settings.appearance.theme_color_preview.app", "Currently previewing colors extracted from the app wallpaper.");
-        ThemeSourceWallpaperSystemDescription = L("settings.appearance.theme_color_preview.system", "Currently previewing colors extracted from the system wallpaper.");
-        ThemeSourceWallpaperFallbackDescription = L("settings.appearance.theme_color_preview.fallback", "No usable wallpaper was found. The app is using a fallback accent.");
-        SystemMaterialNoneText = L("settings.appearance.system_material.none", "None");
-        SystemMaterialMicaText = L("settings.appearance.system_material.mica", "Mica");
-        SystemMaterialAcrylicText = L("settings.appearance.system_material.acrylic", "Acrylic");
-        SystemMaterialSwitchableDescription = L("settings.appearance.system_material_desc.switchable", "Apply the selected material to windows, Dock, status bar, and component hosts.");
-        SystemMaterialFixedDescription = L("settings.appearance.system_material_desc.fixed", "Your current system only exposes the available material modes listed here.");
-        AppearanceRestartMessage = L(
-            "settings.appearance.restart_message",
-            "Theme source and system material changes require restarting the app.");
-        PreviewPrimaryLabel = L("settings.appearance.preview.primary", "Primary");
-        PreviewSecondaryLabel = L("settings.appearance.preview.secondary", "Secondary");
-        PreviewTertiaryLabel = L("settings.appearance.preview.tertiary", "Tertiary");
-        PreviewNeutralLabel = L("settings.appearance.preview.neutral", "Neutral");
-        PreviewSeedLabel = L("settings.appearance.preview.seed", "Seed");
-        PreviewNeutralLightLabel = L("settings.appearance.preview.neutral_light", "White");
-        PreviewNeutralDarkLabel = L("settings.appearance.preview.neutral_dark", "Black");
-        SeedApplyButtonText = L("settings.appearance.preview.apply_seed", "Apply");
-        WallpaperSeedFlyoutTitle = L("settings.appearance.preview.wallpaper_candidates", "Wallpaper seed candidates");
-        WallpaperSeedCurrentText = L("settings.appearance.preview.wallpaper_current", "Current");
-    }
-
-    private void RefreshMaterialModeOptions(AppearanceThemeSnapshot snapshot)
-    {
-        SystemMaterialModes = snapshot.AvailableSystemMaterialModes
-            .Select(value => new SelectionOption(value, ResolveMaterialModeLabel(value)))
-            .ToList();
-        SystemMaterialDescription = snapshot.CanChangeSystemMaterial
-            ? SystemMaterialSwitchableDescription
-            : SystemMaterialFixedDescription;
     }
 
     private void ApplySavedState(ThemeAppearanceSettingsState theme)
     {
         IsNightMode = theme.IsNightMode;
-        ThemeColor = theme.ThemeColor ?? string.Empty;
         UseSystemChrome = theme.UseSystemChrome;
         CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(theme.CornerRadiusStyle);
         SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
             string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
             ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
-        _selectedWallpaperSeed = theme.SelectedWallpaperSeed;
-        SyncCustomSeedPickerWithSavedThemeColor();
 
-        var savedThemeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(theme.ThemeColorMode, theme.ThemeColor);
-        var savedSystemMaterialMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(theme.SystemMaterialMode);
-        SelectedThemeColorMode = ThemeColorModes.FirstOrDefault(option =>
-            string.Equals(option.Value, savedThemeColorMode, StringComparison.OrdinalIgnoreCase))
-            ?? ThemeColorModes[0];
-        SelectedSystemMaterialMode = SystemMaterialModes.FirstOrDefault(option =>
-            string.Equals(option.Value, savedSystemMaterialMode, StringComparison.OrdinalIgnoreCase))
-            ?? SystemMaterialModes[0];
-
-        // 应用主题模式设置
         var savedThemeMode = NormalizeThemeMode(theme.ThemeMode);
         SelectedThemeMode = ThemeModeOptions.FirstOrDefault(option =>
             string.Equals(option.Value, savedThemeMode, StringComparison.OrdinalIgnoreCase))
@@ -1017,16 +1154,18 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             return ThemeAppearanceValues.ThemeModeDark;
         }
+
         if (string.Equals(value, ThemeAppearanceValues.ThemeModeFollowSystem, StringComparison.OrdinalIgnoreCase))
         {
             return ThemeAppearanceValues.ThemeModeFollowSystem;
         }
+
         return ThemeAppearanceValues.ThemeModeLight;
     }
 
     private void PersistCurrentState(bool restartRequired)
     {
-        var pendingState = BuildPendingState(usePickerSeed: false);
+        var pendingState = BuildPendingState();
         _settingsFacade.Theme.Save(pendingState);
         var savedState = _settingsFacade.Theme.Get();
 
@@ -1039,9 +1178,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             _isInitializing = false;
         }
-
-        RefreshMaterialModeOptions(_appearanceThemeService.GetCurrent());
-        UpdatePreview(savedState);
 
         if (restartRequired)
         {
@@ -1059,107 +1195,15 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ];
     }
 
-    private ThemeAppearanceSettingsState BuildPendingState(bool usePickerSeed)
+    private ThemeAppearanceSettingsState BuildPendingState()
     {
-        var themeColorMode = ThemeAppearanceValues.NormalizeThemeColorMode(SelectedThemeColorMode?.Value, ThemeColor);
-        var themeColor = themeColorMode == ThemeAppearanceValues.ColorModeSeedMonet
-            ? (usePickerSeed ? CustomSeedPickerValue.ToString() : string.IsNullOrWhiteSpace(ThemeColor) ? null : ThemeColor)
-            : string.IsNullOrWhiteSpace(ThemeColor) ? null : ThemeColor;
-
-        return new ThemeAppearanceSettingsState(
-            IsNightMode,
-            themeColor,
-            UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
-            themeColorMode,
-            ThemeAppearanceValues.NormalizeSystemMaterialMode(SelectedSystemMaterialMode?.Value),
-            _selectedWallpaperSeed,
-            SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight);
-    }
-
-    private void UpdatePreview(ThemeAppearanceSettingsState pendingState)
-    {
-        var preview = _appearanceThemeService.BuildPreview(pendingState);
-        var normalizedMode = preview.ThemeColorMode;
-
-        ShowNeutralPreview = normalizedMode == ThemeAppearanceValues.ColorModeDefaultNeutral;
-        ShowMonetPreview = !ShowNeutralPreview;
-        IsThemeColorEditable = normalizedMode == ThemeAppearanceValues.ColorModeSeedMonet;
-        IsWallpaperMode = normalizedMode == ThemeAppearanceValues.ColorModeWallpaperMonet;
-
-        PrimarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Primary);
-        SecondarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Secondary);
-        TertiarySwatchBrush = new SolidColorBrush(preview.MonetPalette.Tertiary);
-        NeutralSwatchBrush = new SolidColorBrush(preview.MonetPalette.Neutral);
-        SeedSwatchBrush = new SolidColorBrush(preview.EffectiveSeedColor);
-
-        if (IsWallpaperMode)
+        return _settingsFacade.Theme.Get() with
         {
-            WallpaperSeedCandidates = preview.WallpaperSeedCandidates
-                .Select((color, index) => new ThemeSeedCandidateOption(
-                    color.ToString(),
-                    $"{PreviewSeedLabel} {index + 1}",
-                    color,
-                    string.Equals(color.ToString(), _selectedWallpaperSeed, StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-            if (WallpaperSeedCandidates.Count > 0 &&
-                !string.Equals(_selectedWallpaperSeed, preview.EffectiveSeedColor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                _selectedWallpaperSeed = preview.EffectiveSeedColor.ToString();
-                WallpaperSeedCandidates = preview.WallpaperSeedCandidates
-                    .Select((color, index) => new ThemeSeedCandidateOption(
-                        color.ToString(),
-                        $"{PreviewSeedLabel} {index + 1}",
-                        color,
-                        string.Equals(color.ToString(), _selectedWallpaperSeed, StringComparison.OrdinalIgnoreCase)))
-                    .ToArray();
-            }
-
-            IsWallpaperSeedSelectable = WallpaperSeedCandidates.Count > 1;
-            ThemeColorSourceDescription = preview.ResolvedSeedSource switch
-            {
-                "app_wallpaper" or "app_video" or "app_solid" => ThemeSourceWallpaperAppDescription,
-                "system_wallpaper" => ThemeSourceWallpaperSystemDescription,
-                _ => ThemeSourceWallpaperFallbackDescription
-            };
-        }
-        else
-        {
-            WallpaperSeedCandidates = [];
-            IsWallpaperSeedSelectable = false;
-            ThemeColorSourceDescription = normalizedMode switch
-            {
-                ThemeAppearanceValues.ColorModeDefaultNeutral => ThemeSourceDefaultDescription,
-                _ => ThemeSourceUserColorDescription
-            };
-        }
-    }
-
-    private string ResolveMaterialModeLabel(string value)
-    {
-        return ThemeAppearanceValues.NormalizeSystemMaterialMode(value) switch
-        {
-            ThemeAppearanceValues.MaterialMica => SystemMaterialMicaText,
-            ThemeAppearanceValues.MaterialAcrylic => SystemMaterialAcrylicText,
-            _ => SystemMaterialNoneText
+            IsNightMode = IsNightMode,
+            UseSystemChrome = UseSystemChrome,
+            CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
+            ThemeMode = SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight
         };
-    }
-
-    private void SyncCustomSeedPickerWithSavedThemeColor()
-    {
-        CustomSeedPickerValue = !string.IsNullOrWhiteSpace(ThemeColor) && Color.TryParse(ThemeColor, out var parsedColor)
-            ? parsedColor
-            : DefaultSeedColor;
-    }
-
-    private IReadOnlyList<SelectionOption> CreateThemeColorModes()
-    {
-        return
-        [
-            new SelectionOption(ThemeAppearanceValues.ColorModeDefaultNeutral, ThemeSourceNeutralText),
-            new SelectionOption(ThemeAppearanceValues.ColorModeSeedMonet, ThemeSourceUserColorText),
-            new SelectionOption(ThemeAppearanceValues.ColorModeWallpaperMonet, ThemeSourceWallpaperText)
-        ];
     }
 
     private string L(string key, string fallback)
@@ -1191,6 +1235,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private int _shortSideCells;
 
     [ObservableProperty]
+    private double _screenAspectRatio = 16.0 / 9.0;
+
+    [ObservableProperty]
     private int _edgeInsetPercent;
 
     [ObservableProperty]
@@ -1218,6 +1265,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
 
     [ObservableProperty]
+    private double _cornerRadiusPreviewValue = 24;
+
+    [ObservableProperty]
     private IReadOnlyList<SelectionOption> _cornerRadiusStyleOptions = [];
 
     [ObservableProperty]
@@ -1231,6 +1281,9 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _cornerRadiusStyleDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _cornerRadiusSpecTooltip = string.Empty;
 
     public void Load()
     {
@@ -1247,6 +1300,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
             string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
             ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
+        CornerRadiusPreviewValue = AppearanceCornerRadiusTokenFactory.Create(CornerRadiusStyle).Component.TopLeft;
     }
 
     partial void OnShortSideCellsChanged(int value)
@@ -1287,6 +1341,7 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         }
 
         CornerRadiusStyle = value.Value;
+        CornerRadiusPreviewValue = AppearanceCornerRadiusTokenFactory.Create(value.Value).Component.TopLeft;
         SaveComponentCornerRadius();
     }
 
@@ -1301,14 +1356,10 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
     private void SaveComponentCornerRadius()
     {
         var theme = _settingsFacade.Theme.Get();
-        _settingsFacade.Theme.Save(new ThemeAppearanceSettingsState(
-            theme.IsNightMode,
-            theme.ThemeColor,
-            theme.UseSystemChrome,
-            GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
-            theme.ThemeColorMode,
-            theme.SystemMaterialMode,
-            theme.SelectedWallpaperSeed));
+        _settingsFacade.Theme.Save(theme with
+        {
+            CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle)
+        });
     }
 
     private IReadOnlyList<SelectionOption> CreateSpacingPresets()
@@ -1333,6 +1384,8 @@ public sealed partial class ComponentsSettingsPageViewModel : ViewModelBase
         CornerRadiusStyleDescription = L(
             "settings.components.corner_radius.description",
             "Select a fixed corner radius style (inspired by Xiaomi HyperOS) to ensure consistency across all components.");
+        CornerRadiusSpecTooltip = L("settings.components.corner_radius.spec_tooltip", "View Corner Radius Specification");
+            
             
         CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
             .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
@@ -1584,6 +1637,18 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _renderBackendLabel = string.Empty;
 
+    [ObservableProperty]
+    private string _projectResourcesHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _linkGitHubText = string.Empty;
+
+    [ObservableProperty]
+    private string _linkIssuesText = string.Empty;
+
+    [ObservableProperty]
+    private string _copyrightLine = string.Empty;
+
     private void RefreshLocalizedText()
     {
         PageTitle = L("settings.about.title", "About");
@@ -1592,1039 +1657,14 @@ public sealed partial class AboutSettingsPageViewModel : ViewModelBase
         VersionLabel = L("settings.about.version_label", "Version");
         CodenameLabel = L("settings.about.codename_label", "Codename");
         RenderBackendLabel = L("settings.about.render_backend_label", "Render Backend");
-    }
-
-    private string L(string key, string fallback)
-        => _localizationService.GetString(_languageCode, key, fallback);
-}
-
-public sealed partial class UpdateSettingsPageViewModel : ViewModelBase
-{
-    private readonly ISettingsFacadeService _settingsFacade;
-    private readonly UpdateWorkflowService _updateWorkflowService;
-    private readonly LocalizationService _localizationService = new();
-    private readonly string _languageCode;
-    private readonly Version _currentVersion;
-    private bool _isInitializing;
-    private UpdateCheckResult? _lastCheckResult;
-
-    public IReadOnlyList<SelectionOption> UpdateChannelOptions { get; }
-
-    public IReadOnlyList<SelectionOption> UpdateModeOptions { get; }
-
-    public IReadOnlyList<SelectionOption> DownloadThreadOptions { get; }
-
-    public UpdateSettingsPageViewModel(
-        ISettingsFacadeService settingsFacade,
-        UpdateWorkflowService? updateWorkflowService = null)
-    {
-        _settingsFacade = settingsFacade;
-        _updateWorkflowService = updateWorkflowService ?? HostUpdateWorkflowServiceProvider.GetOrCreate();
-        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
-        RefreshLocalizedText();
-        UpdateChannelOptions = CreateUpdateChannelOptions();
-        UpdateModeOptions = CreateUpdateModeOptions();
-        DownloadThreadOptions = CreateDownloadThreadOptions();
-
-        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
-        _currentVersion = Version.TryParse(versionText, out var parsedVersion)
-            ? parsedVersion
-            : new Version(0, 0, 0);
-
-        CurrentVersionText = versionText;
-        LoadStateFromSettings();
-    }
-
-    [ObservableProperty]
-    private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
-
-    [ObservableProperty]
-    private string _selectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
-
-    [ObservableProperty]
-    private string _currentVersionText = "-";
-
-    [ObservableProperty]
-    private string _updateStatus = string.Empty;
-
-    [ObservableProperty]
-    private bool _isCheckingForUpdates;
-
-    [ObservableProperty]
-    private bool _isDownloading;
-
-    [ObservableProperty]
-    private double _downloadProgressValue;
-
-    [ObservableProperty]
-    private bool _isDownloadProgressVisible;
-
-    [ObservableProperty]
-    private string _downloadProgressText = string.Empty;
-
-    [ObservableProperty]
-    private string _updatePhaseText = string.Empty;
-
-    [ObservableProperty]
-    private double _phaseProgressValue;
-
-    [ObservableProperty]
-    private string _updateTypeText = string.Empty;
-
-    [ObservableProperty]
-    private bool _useGhProxyMirror;
-
-    [ObservableProperty]
-    private string _pageTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _pageDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _statusCardTitle = string.Empty;
-
-    [ObservableProperty]
-    private string _statusCardDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _preferencesHeader = string.Empty;
-
-    [ObservableProperty]
-    private string _preferencesDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _updateChannelLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _updateModeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _currentVersionLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _latestVersionLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _publishedAtLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _lastCheckedLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _updateTypeLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _checkForUpdatesButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _downloadButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _installNowButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _redownloadButtonText = string.Empty;
-
-    [ObservableProperty]
-    private string _latestVersionText = string.Empty;
-
-    [ObservableProperty]
-    private string _publishedAtText = string.Empty;
-
-    [ObservableProperty]
-    private string _lastCheckedText = string.Empty;
-
-    [ObservableProperty]
-    private bool _isLatestVersionVisible;
-
-    [ObservableProperty]
-    private bool _isPublishedAtVisible;
-
-    [ObservableProperty]
-    private bool _isLastCheckedVisible;
-
-    [ObservableProperty]
-    private bool _hasPendingInstaller;
-
-    [ObservableProperty]
-    private string _pendingUpdateTypeText = string.Empty;
-
-    [ObservableProperty]
-    private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
-
-    [ObservableProperty]
-    private string _selectedUpdateChannelDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _selectedUpdateModeDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _downloadThreadsLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _downloadThreadsDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _forceCheckUpdateLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _forceCheckUpdateDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _forceFullUpdateLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _forceFullUpdateDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _networkAccelerationLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _networkAccelerationDescription = string.Empty;
-
-    [ObservableProperty]
-    private string _stableChannelText = string.Empty;
-
-    [ObservableProperty]
-    private string _previewChannelText = string.Empty;
-
-    [ObservableProperty]
-    private string _manualModeText = string.Empty;
-
-    [ObservableProperty]
-    private string _downloadThenConfirmModeText = string.Empty;
-
-    [ObservableProperty]
-    private string _silentOnExitModeText = string.Empty;
-
-    [ObservableProperty]
-    private SelectionOption? _selectedUpdateChannelOption;
-
-    [ObservableProperty]
-    private SelectionOption? _selectedUpdateModeOption;
-
-    [ObservableProperty]
-    private SelectionOption? _selectedDownloadThreadsOption;
-
-    [ObservableProperty]
-    private string _downloadThreadsText = UpdateSettingsValues.DefaultDownloadThreads.ToString(CultureInfo.CurrentCulture);
-
-    public bool IsStableChannelSelected =>
-        string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelStable, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsPreviewChannelSelected =>
-        string.Equals(SelectedUpdateChannelValue, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsManualModeSelected =>
-        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsDownloadThenConfirmModeSelected =>
-        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeDownloadThenConfirm, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsSilentOnExitModeSelected =>
-        string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase);
-
-    public bool IsDownloadButtonVisible =>
-        !HasPendingInstaller &&
-        _lastCheckResult is { Success: true, IsUpdateAvailable: true, PreferredAsset: not null };
-
-    public bool IsInstallButtonVisible => HasPendingInstaller;
-
-    public bool IsRedownloadButtonVisible => HasPendingInstaller && !IsDownloading;
-
-    public bool IsUpdateTypeVisible => !string.IsNullOrEmpty(UpdateTypeText) && !HasPendingInstaller;
-
-    public string DownloadThreadsValueText =>
-        UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
-
-    private bool IsBusy => IsCheckingForUpdates || IsDownloading;
-
-    partial void OnSelectedUpdateChannelOptionChanged(SelectionOption? value)
-    {
-        if (value is not null &&
-            !string.Equals(SelectedUpdateChannelValue, value.Value, StringComparison.OrdinalIgnoreCase))
-        {
-            SelectedUpdateChannelValue = value.Value;
-        }
-    }
-
-    partial void OnSelectedUpdateModeOptionChanged(SelectionOption? value)
-    {
-        if (value is not null &&
-            !string.Equals(SelectedUpdateModeValue, value.Value, StringComparison.OrdinalIgnoreCase))
-        {
-            SelectedUpdateModeValue = value.Value;
-        }
-    }
-
-    partial void OnSelectedDownloadThreadsOptionChanged(SelectionOption? value)
-    {
-        if (value is null || !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-        {
-            return;
-        }
-
-        ApplyDownloadThreadsValue(parsed, !_isInitializing);
-    }
-
-    partial void OnSelectedUpdateChannelValueChanged(string value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        _lastCheckResult = null;
-        if (!HasPendingInstaller)
-        {
-            LatestVersionText = string.Empty;
-            PublishedAtText = string.Empty;
-            IsLatestVersionVisible = false;
-            IsPublishedAtVisible = false;
-        }
-
-        SaveUpdateSettings();
-        UpdateStatus = string.Format(
-            CultureInfo.CurrentCulture,
-            L("settings.update.status_channel_changed_format", "Update channel switched to {0}. Please check again."),
-            string.Equals(value, UpdateSettingsValues.ChannelPreview, StringComparison.OrdinalIgnoreCase)
-                ? L("settings.update.channel_preview", "Preview")
-                : L("settings.update.channel_stable", "Stable"));
-        SelectedUpdateChannelDescription = BuildUpdateChannelDescription(value);
-        SyncSelectedOptions();
-        RefreshActionState();
-    }
-
-    partial void OnSelectedUpdateModeValueChanged(string value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SaveUpdateSettings();
-        SelectedUpdateModeDescription = BuildUpdateModeDescription(value);
-        UpdateStatus = HasPendingInstaller
-            ? BuildPendingReadyStatus()
-            : L("settings.update.status_preferences_saved", "Update preferences saved.");
-        SyncSelectedOptions();
-        RefreshActionState();
-    }
-
-    partial void OnDownloadThreadsSliderValueChanged(double value)
-    {
-        var normalized = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(value));
-        if (Math.Abs(value - normalized) > double.Epsilon)
-        {
-            DownloadThreadsSliderValue = normalized;
-            return;
-        }
-
-        OnPropertyChanged(nameof(DownloadThreadsValueText));
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SaveUpdateSettings();
-        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
-        SyncSelectedOptions();
-    }
-
-    partial void OnDownloadThreadsTextChanged(string value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        if (!TryParseDownloadThreads(value, out var parsed))
-        {
-            return;
-        }
-
-        ApplyDownloadThreadsValue(parsed, true);
-    }
-
-    partial void OnHasPendingInstallerChanged(bool value)
-    {
-        RefreshActionState();
-        if (!value)
-        {
-            UpdateStatus = L("settings.update.status_ready", "Ready to check for updates.");
-        }
-    }
-
-    partial void OnIsCheckingForUpdatesChanged(bool value)
-    {
-        CheckForUpdatesCommand.NotifyCanExecuteChanged();
-        DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
-        InstallPendingUpdateCommand.NotifyCanExecuteChanged();
-        ForceFullUpdateCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnIsDownloadingChanged(bool value)
-    {
-        CheckForUpdatesCommand.NotifyCanExecuteChanged();
-        DownloadLatestReleaseCommand.NotifyCanExecuteChanged();
-        InstallPendingUpdateCommand.NotifyCanExecuteChanged();
-        ForceFullUpdateCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnUseGhProxyMirrorChanged(bool value)
-    {
-        if (_isInitializing)
-        {
-            return;
-        }
-
-        SaveUpdateSettings();
-        UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
-    }
-
-    [RelayCommand]
-    private void SelectStableChannel()
-    {
-        SelectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
-    }
-
-    [RelayCommand]
-    private void SelectPreviewChannel()
-    {
-        SelectedUpdateChannelValue = UpdateSettingsValues.ChannelPreview;
-    }
-
-    [RelayCommand]
-    private void SelectManualMode()
-    {
-        SelectedUpdateModeValue = UpdateSettingsValues.ModeManual;
-    }
-
-    [RelayCommand]
-    private void SelectDownloadThenConfirmMode()
-    {
-        SelectedUpdateModeValue = UpdateSettingsValues.ModeDownloadThenConfirm;
-    }
-
-    [RelayCommand]
-    private void SelectSilentOnExitMode()
-    {
-        SelectedUpdateModeValue = UpdateSettingsValues.ModeSilentOnExit;
-    }
-
-    private void SaveUpdateSettings()
-    {
-        var current = _settingsFacade.Update.Get();
-        _settingsFacade.Update.Save(current with
-        {
-            IncludePrereleaseUpdates = string.Equals(
-                SelectedUpdateChannelValue,
-                UpdateSettingsValues.ChannelPreview,
-                StringComparison.OrdinalIgnoreCase),
-            UpdateChannel = SelectedUpdateChannelValue,
-            UpdateMode = SelectedUpdateModeValue,
-            UseGhProxyMirror = UseGhProxyMirror,
-            UpdateDownloadThreads = UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue))
-        });
-    }
-
-    private bool CanCheckForUpdates() => !IsBusy;
-
-    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
-    private async Task CheckForUpdatesAsync()
-    {
-        await CheckForUpdatesCoreAsync(isForce: false);
-    }
-
-    private bool CanForceCheckUpdate() => !IsBusy;
-
-    [RelayCommand(CanExecute = nameof(CanForceCheckUpdate))]
-    private async Task ForceCheckUpdateAsync()
-    {
-        await CheckForUpdatesCoreAsync(isForce: true);
-    }
-
-    private bool CanForceFullUpdate() => !IsBusy;
-
-    [RelayCommand(CanExecute = nameof(CanForceFullUpdate))]
-    private async Task ForceFullUpdateAsync()
-    {
-        try
-        {
-            IsCheckingForUpdates = true;
-            IsDownloadProgressVisible = true;
-            UpdatePhaseText = L("settings.update.phase_force_full", "Forcing full update...");
-            PhaseProgressValue = 0;
-            DownloadProgressValue = 0;
-            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_force_full_checking", "Checking for full installer...");
-
-            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce: true);
-            _lastCheckResult = result.Success ? result : null;
-
-            if (!result.Success || result.PreferredAsset is null)
-            {
-                UpdateStatus = L("settings.update.status_force_full_failed", "No full installer available.");
-                return;
-            }
-
-            UpdateTypeText = L("settings.update.type_full", "Full Update");
-            await DownloadFullInstallerCoreAsync(result);
-        }
-        finally
-        {
-            IsCheckingForUpdates = false;
-            IsDownloadProgressVisible = false;
-        }
-    }
-
-    private async Task DownloadFullInstallerCoreAsync(UpdateCheckResult result)
-    {
-        try
-        {
-            IsDownloading = true;
-            IsDownloadProgressVisible = true;
-            UpdatePhaseText = L("settings.update.phase_downloading_full", "Downloading full installer...");
-            DownloadProgressValue = 0;
-            PhaseProgressValue = 0;
-            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_downloading_full", "Downloading full installer...");
-
-            var progress = new Progress<double>(value =>
-            {
-                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
-                PhaseProgressValue = DownloadProgressValue;
-                DownloadProgressText = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
-                    DownloadProgressValue);
-            });
-
-            var downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress, CancellationToken.None);
-            if (!downloadResult.Success)
-            {
-                UpdateStatus = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_download_failed_format", "Download failed: {0}"),
-                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
-                return;
-            }
-
-            ApplyPendingState(_settingsFacade.Update.Get());
-            UpdateStatus = downloadResult.HashVerified
-                ? BuildPendingReadyStatus()
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_downloaded_no_hash_format", "Update downloaded. Hash: {0}"),
-                    downloadResult.ActualHash ?? "N/A");
-        }
-        finally
-        {
-            IsDownloading = false;
-        }
-    }
-
-    private async Task CheckForUpdatesCoreAsync(bool isForce)
-    {
-        try
-        {
-            IsCheckingForUpdates = true;
-            IsDownloadProgressVisible = false;
-            DownloadProgressValue = 0;
-            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdatePhaseText = isForce
-                ? L("settings.update.phase_force_scanning", "Force scanning update source...")
-                : L("settings.update.phase_scanning", "Scanning update source...");
-            PhaseProgressValue = 0;
-            UpdateStatus = isForce
-                ? L("settings.update.status_force_checking", "Force checking update source...")
-                : L("settings.update.status_checking", "Checking update source...");
-
-            var result = await _updateWorkflowService.CheckForUpdatesAsync(_currentVersion, isForce);
-            _lastCheckResult = result.Success ? result : null;
-            RefreshLastCheckedFromSettings();
-
-            UpdatePhaseText = L("settings.update.phase_locating_resources", "Locating update resources...");
-            PhaseProgressValue = 10;
-
-            if (!result.Success)
-            {
-                UpdateStatus = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                    ? L("settings.update.status_check_failed", "Failed to check for updates.")
-                    : string.Format(
-                        CultureInfo.CurrentCulture,
-                        L("settings.update.status_check_failed_format", "Update check failed: {0}"),
-                        result.ErrorMessage);
-                return;
-            }
-
-            ApplyCheckResultDisplay(result);
-            UpdateTypeText = UpdateWorkflowService.IsDeltaUpdateAvailable(result)
-                ? L("settings.update.type_delta", "Incremental Update")
-                : L("settings.update.type_full", "Full Update");
-            if (!result.IsUpdateAvailable && !isForce)
-            {
-                return;
-            }
-
-            if (result.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(result))
-            {
-                UpdateStatus = isForce
-                    ? L("settings.update.status_force_no_asset", "Release found but no compatible installer available.")
-                    : L("settings.update.status_asset_missing", "A new release is available, but no compatible installer was found.");
-                return;
-            }
-
-            if (!string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
-            {
-                await DownloadLatestReleaseCoreAsync(result, invokedFromCheck: true);
-                return;
-            }
-
-            UpdateStatus = string.Format(
-                CultureInfo.CurrentCulture,
-                isForce
-                    ? L("settings.update.status_force_available_format", "Release {0} is available. Click Download & Install.")
-                    : L("settings.update.status_available_format", "New version {0} is available. Click Download & Install."),
-                result.LatestVersionText);
-        }
-        finally
-        {
-            IsCheckingForUpdates = false;
-        }
-    }
-
-    private bool CanDownloadLatestRelease() => !IsBusy && IsDownloadButtonVisible;
-
-    [RelayCommand(CanExecute = nameof(CanDownloadLatestRelease))]
-    private async Task DownloadLatestReleaseAsync()
-    {
-        await DownloadLatestReleaseCoreAsync(_lastCheckResult, invokedFromCheck: false);
-    }
-
-    private bool CanInstallPendingUpdate() => !IsBusy && HasPendingInstaller;
-
-    [RelayCommand(CanExecute = nameof(CanInstallPendingUpdate))]
-    private void InstallPendingUpdate()
-    {
-        // For delta updates, launch the Launcher with apply-update command
-        if (_updateWorkflowService.IsPendingDeltaUpdate())
-        {
-            var launchResult = _updateWorkflowService.LaunchLauncherForApplyUpdate();
-            if (launchResult)
-            {
-                UpdateStatus = L(
-                    "settings.update.status_delta_applying",
-                    "Applying incremental update. The app will close for update.");
-                HasPendingInstaller = false;
-                return;
-            }
-
-            UpdateStatus = L(
-                "settings.update.status_delta_launch_failed",
-                "Failed to launch updater for incremental update.");
-            return;
-        }
-
-        // For full installer, launch the installer executable
-        var result = _updateWorkflowService.LaunchPendingInstallerNow();
-        if (result.Success)
-        {
-            UpdateStatus = L(
-                "settings.update.status_installer_started",
-                "Installer started. The app will close for update.");
-            HasPendingInstaller = false;
-            return;
-        }
-
-        UpdateStatus = result.UserCancelledElevation
-            ? L(
-                "settings.update.status_elevation_cancelled",
-                "Administrator permission was not granted. Update was cancelled.")
-            : string.Format(
-                CultureInfo.CurrentCulture,
-                L("settings.update.status_launch_failed_format", "Failed to start installer: {0}"),
-                result.ErrorMessage ?? L("settings.update.status_installer_missing", "Installer file was not found after download."));
-    }
-
-    private bool CanRedownloadUpdate() => !IsBusy && HasPendingInstaller && _lastCheckResult is not null;
-
-    [RelayCommand(CanExecute = nameof(CanRedownloadUpdate))]
-    private async Task RedownloadUpdateAsync()
-    {
-        if (_lastCheckResult is null ||
-            !_lastCheckResult.Success ||
-            !_lastCheckResult.IsUpdateAvailable ||
-            (_lastCheckResult.PreferredAsset is null && !UpdateWorkflowService.IsDeltaUpdateAvailable(_lastCheckResult)))
-        {
-            UpdateStatus = L("settings.update.status_redownload_no_check", "Please check for updates first before redownloading.");
-            return;
-        }
-
-        try
-        {
-            IsDownloading = true;
-            IsDownloadProgressVisible = true;
-            DownloadProgressValue = 0;
-            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdateStatus = L("settings.update.status_redownloading", "Redownloading installer...");
-
-            var progress = new Progress<double>(value =>
-            {
-                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
-                DownloadProgressText = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
-                    DownloadProgressValue);
-            });
-
-            var downloadResult = await _updateWorkflowService.RedownloadReleaseAsync(_lastCheckResult, progress);
-            if (!downloadResult.Success)
-            {
-                UpdateStatus = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_redownload_failed_format", "Redownload failed: {0}"),
-                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
-                return;
-            }
-
-            ApplyPendingState(_settingsFacade.Update.Get());
-            UpdateStatus = downloadResult.HashVerified
-                ? BuildPendingReadyStatus()
-                : string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_downloaded_no_hash_format", "Update downloaded. Hash: {0}"),
-                    downloadResult.ActualHash ?? "N/A");
-        }
-        finally
-        {
-            IsDownloading = false;
-            IsDownloadProgressVisible = false;
-        }
-    }
-
-    private void RefreshLocalizedText()
-    {
-        PageTitle = L("settings.update.title", "Update");
-        PageDescription = L("settings.update.description", "Update checks and release channel preferences.");
-        StatusCardTitle = L("settings.update.status_card_title", "Update Status");
-        StatusCardDescription = L("settings.update.status_card_description", "Check for updates and review the latest release information.");
-        PreferencesHeader = L("settings.update.preferences_header", "Update Preferences");
-        PreferencesDescription = L("settings.update.preferences_description", "Choose your release channel, download source, behavior, and download speed.");
-        UpdateChannelLabel = L("settings.update.channel_label", "Update Channel");
-        UpdateModeLabel = L("settings.update.mode_label", "Update Mode");
-        DownloadThreadsLabel = L("settings.update.download_threads_label", "Download Threads");
-        DownloadThreadsDescription = L("settings.update.download_threads_desc", "Choose how many parallel download threads are used for application updates.");
-        ForceCheckUpdateLabel = L("settings.update.force_check_label", "Force Check Update");
-        ForceCheckUpdateDescription = L("settings.update.force_check_desc", "Force check for updates, ignoring version comparison.");
-        ForceFullUpdateLabel = L("settings.update.force_full_label", "Force Full Update");
-        ForceFullUpdateDescription = L("settings.update.force_full_desc", "Skip incremental update and force download the full installer. Use this if incremental update fails repeatedly.");
-        NetworkAccelerationLabel = L("settings.update.network_accel_label", "Network Acceleration");
-        NetworkAccelerationDescription = L("settings.update.network_accel_desc", "Use gh-proxy mirror to accelerate GitHub downloads. Only applies when falling back to GitHub for full updates.");
-        CheckForUpdatesButtonText = L("settings.update.check_button", "Check for Updates");
-        DownloadButtonText = L("settings.update.download_install_button", "Download & Install");
-        InstallNowButtonText = L("settings.update.install_now_button", "Install Now");
-        RedownloadButtonText = L("settings.update.redownload_button", "Redownload");
-        CurrentVersionLabel = L("settings.update.current_version_label", "Current Version");
-        LatestVersionLabel = L("settings.update.latest_version_label", "Latest Release");
-        PublishedAtLabel = L("settings.update.published_at_label", "Published At");
-        LastCheckedLabel = L("settings.update.last_checked_label", "Last Checked");
-        UpdateTypeLabel = L("settings.update.type_label", "Update Type");
-        StableChannelText = L("settings.update.channel_stable", "Stable");
-        PreviewChannelText = L("settings.update.channel_preview", "Preview");
-        ManualModeText = L("settings.update.mode_manual", "Manual Update");
-        DownloadThenConfirmModeText = L("settings.update.mode_download_then_confirm", "Silent Download");
-        SilentOnExitModeText = L("settings.update.mode_silent_on_exit", "Silent Install");
-        SelectedUpdateChannelDescription = BuildUpdateChannelDescription(SelectedUpdateChannelValue);
-        SelectedUpdateModeDescription = BuildUpdateModeDescription(SelectedUpdateModeValue);
-    }
-
-    private void LoadStateFromSettings()
-    {
-        var update = _settingsFacade.Update.Get();
-        _isInitializing = true;
-        SelectedUpdateChannelValue = UpdateSettingsValues.NormalizeChannel(update.UpdateChannel, update.IncludePrereleaseUpdates);
-        UseGhProxyMirror = update.UseGhProxyMirror;
-        SelectedUpdateModeValue = UpdateSettingsValues.NormalizeMode(update.UpdateMode);
-        DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(update.UpdateDownloadThreads);
-        DownloadThreadsText = ((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.CurrentCulture);
-        _isInitializing = false;
-
-        SyncSelectedOptions();
-        RefreshLastCheckedFromSettings();
-        ApplyPendingState(update);
-        if (!HasPendingInstaller)
-        {
-            UpdateStatus = L("settings.update.status_idle", "No update check has been performed yet.");
-        }
-
-        RefreshActionState();
-    }
-
-    private void RefreshLastCheckedFromSettings()
-    {
-        var update = _settingsFacade.Update.Get();
-        LastCheckedText = FormatTimestamp(update.LastUpdateCheckUtcMs);
-        IsLastCheckedVisible = !string.IsNullOrWhiteSpace(LastCheckedText);
-    }
-
-    private void ApplyPendingState(UpdateSettingsState update)
-    {
-        var pending = _updateWorkflowService.GetPendingUpdate();
-        HasPendingInstaller = pending is not null;
-        if (pending is null)
-        {
-            PendingUpdateTypeText = string.Empty;
-            return;
-        }
-
-        LatestVersionText = pending.VersionText;
-        IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
-        PublishedAtText = pending.PublishedAt is null ? string.Empty : FormatTimestamp(pending.PublishedAt.Value.ToUnixTimeMilliseconds());
-        IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
-        PendingUpdateTypeText = _updateWorkflowService.IsPendingDeltaUpdate()
-            ? L("settings.update.type_delta", "Incremental Update")
-            : L("settings.update.type_full", "Full Installer");
-        UpdateStatus = BuildPendingReadyStatus();
-    }
-
-    private void ApplyCheckResultDisplay(UpdateCheckResult result)
-    {
-        if (result.IsUpdateAvailable)
-        {
-            LatestVersionText = result.LatestVersionText;
-            IsLatestVersionVisible = !string.IsNullOrWhiteSpace(LatestVersionText);
-            PublishedAtText = result.Release is null || result.Release.PublishedAt == DateTimeOffset.MinValue
-                ? string.Empty
-                : FormatTimestamp(result.Release.PublishedAt.ToUnixTimeMilliseconds());
-            IsPublishedAtVisible = !string.IsNullOrWhiteSpace(PublishedAtText);
-            return;
-        }
-
-        LatestVersionText = string.Empty;
-        PublishedAtText = string.Empty;
-        IsLatestVersionVisible = false;
-        IsPublishedAtVisible = false;
-        UpdateStatus = string.Format(
-            CultureInfo.CurrentCulture,
-            L("settings.update.status_up_to_date_format", "You are up to date ({0})."),
-            result.CurrentVersionText);
-    }
-
-    private async Task DownloadLatestReleaseCoreAsync(UpdateCheckResult? result, bool invokedFromCheck)
-    {
-        if (result is null || !result.Success || !result.IsUpdateAvailable)
-        {
-            return;
-        }
-
-        try
-        {
-            IsDownloading = true;
-            IsDownloadProgressVisible = true;
-            DownloadProgressValue = 0;
-            DownloadProgressText = L("settings.update.download_progress_idle", "Download progress: -");
-            UpdatePhaseText = UpdateWorkflowService.IsDeltaUpdateAvailable(result)
-                ? L("settings.update.phase_downloading_delta", "Downloading incremental update...")
-                : L("settings.update.phase_downloading_full", "Downloading full installer...");
-
-            var progress = new Progress<double>(value =>
-            {
-                DownloadProgressValue = Math.Clamp(value * 100d, 0d, 100d);
-                PhaseProgressValue = DownloadProgressValue;
-                DownloadProgressText = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.download_progress_format", "Download progress: {0:F0}%"),
-                    DownloadProgressValue);
-            });
-
-            UpdateDownloadResult downloadResult;
-
-            // Prefer delta update if available (smaller download, faster)
-            if (UpdateWorkflowService.IsDeltaUpdateAvailable(result))
-            {
-                UpdateStatus = L("settings.update.status_downloading_delta", "Downloading incremental update...");
-                downloadResult = await _updateWorkflowService.DownloadDeltaUpdateAsync(result, progress);
-                if (!downloadResult.Success && result.PlondsPayload is null)
-                {
-                    // Delta download failed, fall back to full installer
-                    AppLogger.Warn("UpdateSettings", $"Delta update download failed: {downloadResult.ErrorMessage}. Falling back to full installer.");
-                    if (result.PreferredAsset is not null)
-                    {
-                        UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
-                        downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
-                    }
-                }
-            }
-            else if (result.PreferredAsset is not null)
-            {
-                UpdateStatus = L("settings.update.status_downloading", "Downloading installer...");
-                downloadResult = await _updateWorkflowService.DownloadReleaseAsync(result, progress);
-            }
-            else
-            {
-                UpdateStatus = L("settings.update.status_asset_missing", "A new release is available, but no compatible installer was found.");
-                return;
-            }
-
-            if (!downloadResult.Success)
-            {
-                UpdateStatus = string.Format(
-                    CultureInfo.CurrentCulture,
-                    L("settings.update.status_download_failed_format", "Download failed: {0}"),
-                    downloadResult.ErrorMessage ?? L("settings.update.status_check_failed", "Failed to check for updates."));
-                return;
-            }
-
-            ApplyPendingState(_settingsFacade.Update.Get());
-            UpdateStatus = BuildPendingReadyStatus();
-            if (!invokedFromCheck)
-            {
-                _lastCheckResult = result;
-            }
-        }
-        finally
-        {
-            IsDownloading = false;
-            IsDownloadProgressVisible = false;
-        }
-    }
-
-    private string BuildPendingReadyStatus()
-    {
-        return string.Equals(SelectedUpdateModeValue, UpdateSettingsValues.ModeSilentOnExit, StringComparison.OrdinalIgnoreCase)
-            ? L("settings.update.status_downloaded_exit", "Update downloaded. It will be installed when you exit the app.")
-            : L("settings.update.status_downloaded_confirm", "Update downloaded. Review it and choose when to install.");
-    }
-
-    private string BuildUpdateModeDescription(string? value)
-    {
-        return UpdateSettingsValues.NormalizeMode(value) switch
-        {
-            UpdateSettingsValues.ModeManual => L(
-                "settings.update.mode_manual_desc",
-                "Only check for updates. You decide when downloads and installation happen."),
-            UpdateSettingsValues.ModeSilentOnExit => L(
-                "settings.update.mode_silent_on_exit_desc",
-                "Download updates in the background and install them the next time you exit the app."),
-            _ => L(
-                "settings.update.mode_download_then_confirm_desc",
-                "Download updates in the background and ask for confirmation before installing them.")
-        };
-    }
-
-    private string BuildUpdateChannelDescription(string? value)
-    {
-        return UpdateSettingsValues.NormalizeChannel(value) switch
-        {
-            UpdateSettingsValues.ChannelPreview => L(
-                "settings.update.channel_preview_desc",
-                "Preview builds may contain newer features but can be less stable."),
-            _ => L(
-                "settings.update.channel_stable_desc",
-                "Stable builds prioritize reliability and are recommended for most users.")
-        };
-    }
-
-    private string FormatTimestamp(long? utcMs)
-    {
-        if (utcMs is not > 0)
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            return DateTimeOffset
-                .FromUnixTimeMilliseconds(utcMs.Value)
-                .ToLocalTime()
-                .ToString("g", CultureInfo.CurrentCulture);
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            return string.Empty;
-        }
-    }
-
-    private void RefreshActionState()
-    {
-        OnPropertyChanged(nameof(IsDownloadButtonVisible));
-        OnPropertyChanged(nameof(IsInstallButtonVisible));
-        OnPropertyChanged(nameof(IsRedownloadButtonVisible));
-        OnPropertyChanged(nameof(DownloadThreadsValueText));
-        RedownloadUpdateCommand.NotifyCanExecuteChanged();
-        ForceFullUpdateCommand.NotifyCanExecuteChanged();
-    }
-
-    private IReadOnlyList<SelectionOption> CreateUpdateChannelOptions()
-    {
-        return
-        [
-            new SelectionOption(UpdateSettingsValues.ChannelStable, StableChannelText),
-            new SelectionOption(UpdateSettingsValues.ChannelPreview, PreviewChannelText)
-        ];
-    }
-
-    private IReadOnlyList<SelectionOption> CreateUpdateModeOptions()
-    {
-        return
-        [
-            new SelectionOption(UpdateSettingsValues.ModeManual, ManualModeText),
-            new SelectionOption(UpdateSettingsValues.ModeDownloadThenConfirm, DownloadThenConfirmModeText),
-            new SelectionOption(UpdateSettingsValues.ModeSilentOnExit, SilentOnExitModeText)
-        ];
-    }
-
-    private IReadOnlyList<SelectionOption> CreateDownloadThreadOptions()
-    {
-        return Enumerable
-            .Range(UpdateSettingsValues.MinDownloadThreads, UpdateSettingsValues.MaxDownloadThreads)
-            .Select(value => new SelectionOption(
-                value.ToString(CultureInfo.InvariantCulture),
-                value.ToString(CultureInfo.CurrentCulture)))
-            .ToList();
-    }
-
-    private void SyncSelectedOptions()
-    {
-        SelectedUpdateChannelOption = UpdateChannelOptions.FirstOrDefault(option =>
-            string.Equals(option.Value, SelectedUpdateChannelValue, StringComparison.OrdinalIgnoreCase));
-        SelectedUpdateModeOption = UpdateModeOptions.FirstOrDefault(option =>
-            string.Equals(option.Value, SelectedUpdateModeValue, StringComparison.OrdinalIgnoreCase));
-        SelectedDownloadThreadsOption = DownloadThreadOptions.FirstOrDefault(option =>
-            string.Equals(
-                option.Value,
-                UpdateSettingsValues.NormalizeDownloadThreads((int)Math.Round(DownloadThreadsSliderValue)).ToString(CultureInfo.InvariantCulture),
-                StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ApplyDownloadThreadsValue(int value, bool saveChanges)
-    {
-        var normalized = UpdateSettingsValues.NormalizeDownloadThreads(value);
-        var normalizedText = normalized.ToString(CultureInfo.CurrentCulture);
-
-        var previousInitializing = _isInitializing;
-        _isInitializing = true;
-        DownloadThreadsSliderValue = normalized;
-        DownloadThreadsText = normalizedText;
-        _isInitializing = previousInitializing;
-        SyncSelectedOptions();
-
-        if (saveChanges)
-        {
-            SaveUpdateSettings();
-            UpdateStatus = L("settings.update.status_preferences_saved", "Update preferences saved.");
-        }
-    }
-
-    private static bool TryParseDownloadThreads(string? value, out int parsed)
-    {
-        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out parsed))
-        {
-            return true;
-        }
-
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed);
+        ProjectResourcesHeader = L("settings.about.project_resources_header", "Project resources");
+        LinkGitHubText = L("settings.about.link_github", "GitHub Repository");
+        LinkIssuesText = L("settings.about.link_issues", "Issue Tracker");
+        var year = Math.Max(2025, DateTime.UtcNow.Year);
+        CopyrightLine = string.Format(
+            System.Globalization.CultureInfo.InvariantCulture,
+            L("settings.about.copyright_format", "Copyright (c) 2024-{0} Lincube"),
+            year);
     }
 
     private string L(string key, string fallback)
@@ -3346,16 +2386,21 @@ public sealed class PluginGeneratedSettingsPageViewModel
 public sealed partial class DevSettingsPageViewModel : ViewModelBase
 {
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly LocalizationService _localizationService = new();
+    private readonly string _languageCode;
     private bool _isInitializing;
 
     public DevSettingsPageViewModel(ISettingsFacadeService settingsFacade)
     {
         _settingsFacade = settingsFacade;
+        _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
+
+        RefreshLocalizedText();
+
         _isInitializing = true;
         LoadSettings();
         _isInitializing = false;
 
-        // 监听设置变更，防止被意外重置
         _settingsFacade.Settings.Changed += OnSettingsChanged;
     }
 
@@ -3370,6 +2415,124 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _enableFusedDesktop;
+
+    [ObservableProperty]
+    private bool _enableMainWindowDesktopLayer;
+
+    [ObservableProperty]
+    private string _infoBarTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _infoBarMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _devModeHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _devModeDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _threeFingerHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _threeFingerDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _fusedHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _fusedDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _mainWindowDesktopLayerHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _mainWindowDesktopLayerDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictEnableMainMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictEnableFusedMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictConfirmText = string.Empty;
+
+    [ObservableProperty]
+    private string _desktopLayerConflictCancelText = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _pluginPathPlaceholder = string.Empty;
+
+    [ObservableProperty]
+    private string _startupArgsHeader = string.Empty;
+
+    [ObservableProperty]
+    private string _startupArgsDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _cliLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _envLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _otherArgsLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _cliExample = string.Empty;
+
+    [ObservableProperty]
+    private string _envExample = string.Empty;
+
+    [ObservableProperty]
+    private string _otherDevModeLine = string.Empty;
+
+    [ObservableProperty]
+    private string _otherHotReloadLine = string.Empty;
+
+    private void RefreshLocalizedText()
+    {
+        InfoBarTitle = L("settings.dev.infobar.title", "Preview and developer features");
+        InfoBarMessage = L("settings.dev.infobar.message", "These options are intended for debugging and local plugin development.");
+        DevModeHeader = L("settings.dev.mode_header", "Developer mode");
+        DevModeDescription = L("settings.dev.mode_description", "Enable developer-focused startup helpers and diagnostics.");
+        ThreeFingerHeader = L("settings.dev.three_finger_header", "Three-finger desktop swipe");
+        ThreeFingerDescription = L("settings.dev.three_finger_description", "Enable desktop page switching gestures when supported.");
+        FusedHeader = L("settings.dev.fused_header", "Fused desktop experience");
+        FusedDescription = L("settings.dev.fused_description", "Enable the fused desktop shell and experimental entry points.");
+        MainWindowDesktopLayerHeader = L("settings.dev.main_window_desktop_layer_header", "Prevent covering other apps");
+        MainWindowDesktopLayerDescription = L("settings.dev.main_window_desktop_layer_description", "Keep the main desktop window on the desktop layer so ordinary app windows can stay above it.");
+        DesktopLayerConflictTitle = L("settings.dev.desktop_layer_conflict_title", "Switch desktop layer mode?");
+        DesktopLayerConflictEnableMainMessage = L("settings.dev.desktop_layer_conflict_enable_main", "Main desktop layer mode and fused desktop cannot run at the same time. Enabling this option will turn off fused desktop.");
+        DesktopLayerConflictEnableFusedMessage = L("settings.dev.desktop_layer_conflict_enable_fused", "Fused desktop and main desktop layer mode cannot run at the same time. Enabling fused desktop will turn off main desktop layer mode.");
+        DesktopLayerConflictConfirmText = L("settings.dev.desktop_layer_conflict_confirm", "Switch");
+        DesktopLayerConflictCancelText = L("settings.dev.desktop_layer_conflict_cancel", "Cancel");
+        PluginPathHeader = L("settings.dev.plugin_path_header", "Development plugin path");
+        PluginPathDescription = L("settings.dev.plugin_path_description", "Load a local plugin output directory without packaging.");
+        PluginPathPlaceholder = L("settings.dev.plugin_path_placeholder", "e.g. C:\\path\\to\\plugin\\bin\\Debug\\net10.0");
+        StartupArgsHeader = L("settings.dev.startup_args_header", "Developer startup arguments");
+        StartupArgsDescription = L("settings.dev.startup_args_description", "Command-line arguments and environment variables for development.");
+        CliLabel = L("settings.dev.cli_label", "Command-line arguments:");
+        EnvLabel = L("settings.dev.env_label", "Environment variables:");
+        OtherArgsLabel = L("settings.dev.other_args_label", "Other arguments:");
+        CliExample = L("settings.dev.cli_example", "--dev-plugin <path>   or -dp <path>");
+        EnvExample = L("settings.dev.env_example", "LMD_DEV_PLUGIN=<path>");
+        OtherDevModeLine = L("settings.dev.other_dev_mode", "--dev-mode / -dev     Enable developer mode startup helpers.");
+        OtherHotReloadLine = L("settings.dev.other_hot_reload", "--hot-reload / -hr    Enable hot reload for development builds.");
+    }
+
+    private string L(string key, string fallback)
+        => _localizationService.GetString(_languageCode, key, fallback);
 
     partial void OnIsDevModeEnabledChanged(bool value)
     {
@@ -3395,6 +2558,12 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         SaveField(nameof(AppSettingsSnapshot.EnableFusedDesktop), value);
     }
 
+    partial void OnEnableMainWindowDesktopLayerChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SaveField(nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer), value);
+    }
+
     private void LoadSettings()
     {
         var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
@@ -3402,6 +2571,7 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         DevPluginPath = snapshot.DevPluginPath ?? string.Empty;
         EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
         EnableFusedDesktop = snapshot.EnableFusedDesktop;
+        EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEvent e)
@@ -3417,13 +2587,13 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
             return;
         }
 
-        // 如果是其他设置变更，重新加载我们的设置
         _isInitializing = true;
         try
         {
             var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
             EnableThreeFingerSwipe = snapshot.EnableThreeFingerSwipe;
             EnableFusedDesktop = snapshot.EnableFusedDesktop;
+            EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
         }
         finally
         {
@@ -3441,5 +2611,52 @@ public sealed partial class DevSettingsPageViewModel : ViewModelBase
         }
 
         _settingsFacade.Settings.SaveSnapshot(SettingsScope.App, snapshot, changedKeys: [key]);
+    }
+
+    public void ApplyFusedDesktopPreference(bool enabled, bool disableMainWindowDesktopLayer)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.EnableFusedDesktop = enabled;
+        if (enabled && disableMainWindowDesktopLayer)
+        {
+            snapshot.EnableMainWindowDesktopLayer = false;
+        }
+
+        SaveDesktopLayerPreferences(snapshot);
+    }
+
+    public void ApplyMainWindowDesktopLayerPreference(bool enabled, bool disableFusedDesktop)
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        snapshot.EnableMainWindowDesktopLayer = enabled;
+        if (enabled && disableFusedDesktop)
+        {
+            snapshot.EnableFusedDesktop = false;
+        }
+
+        SaveDesktopLayerPreferences(snapshot);
+    }
+
+    private void SaveDesktopLayerPreferences(AppSettingsSnapshot snapshot)
+    {
+        _settingsFacade.Settings.SaveSnapshot(
+            SettingsScope.App,
+            snapshot,
+            changedKeys:
+            [
+                nameof(AppSettingsSnapshot.EnableFusedDesktop),
+                nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer)
+            ]);
+
+        _isInitializing = true;
+        try
+        {
+            EnableFusedDesktop = snapshot.EnableFusedDesktop;
+            EnableMainWindowDesktopLayer = snapshot.EnableMainWindowDesktopLayer;
+        }
+        finally
+        {
+            _isInitializing = false;
+        }
     }
 }

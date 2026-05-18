@@ -94,13 +94,18 @@ public interface INotificationService
 
 internal sealed class NotificationService : INotificationService
 {
-    private readonly IAppearanceThemeService? _appearanceThemeService;
+    private readonly IMaterialColorService _materialColorService;
     private readonly NotificationWindowManager _windowManager;
 
-    public NotificationService(IAppearanceThemeService? appearanceThemeService = null)
+    public NotificationService(
+        IAppearanceThemeService? appearanceThemeService = null,
+        IMaterialColorService? materialColorService = null)
     {
-        _appearanceThemeService = appearanceThemeService;
+        _materialColorService = materialColorService
+            ?? appearanceThemeService as IMaterialColorService
+            ?? HostMaterialColorProvider.GetOrCreate();
         _windowManager = NotificationWindowManager.Instance;
+        _materialColorService.MaterialColorChanged += OnMaterialColorChanged;
     }
 
     public void Show(NotificationContent content)
@@ -122,7 +127,7 @@ internal sealed class NotificationService : INotificationService
     private void ShowDialogWindow(NotificationContent content)
     {
         var window = new NotificationDialogWindow();
-        window.Initialize(content, _appearanceThemeService);
+        window.Initialize(content, _materialColorService.GetMaterialColorSnapshot());
 
         Screen? screen = null;
         if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
@@ -223,6 +228,7 @@ internal sealed class NotificationService : INotificationService
 
     private void ShowCore(NotificationContent content)
     {
+        var materialColorSnapshot = _materialColorService.GetMaterialColorSnapshot();
         var viewModel = new NotificationViewModel
         {
             Title = content.Title,
@@ -253,7 +259,13 @@ internal sealed class NotificationService : INotificationService
             }
         }
 
-        _windowManager.ShowNotification(viewModel, _appearanceThemeService);
+        _windowManager.ShowNotification(viewModel, materialColorSnapshot);
+    }
+
+    private void OnMaterialColorChanged(object? sender, MaterialColorSnapshot snapshot)
+    {
+        _ = sender;
+        _windowManager.ApplyMaterialColorToAllWindows(snapshot);
     }
 
     public void ShowInfo(string title, string? message = null,
@@ -346,7 +358,7 @@ internal sealed class NotificationWindowManager
         }
     }
 
-    public void ShowNotification(NotificationViewModel viewModel, IAppearanceThemeService? themeService)
+    public void ShowNotification(NotificationViewModel viewModel, MaterialColorSnapshot materialColorSnapshot)
     {
         var position = viewModel.Position;
         var windows = _windowsByPosition[position];
@@ -362,13 +374,30 @@ internal sealed class NotificationWindowManager
         }
 
         var window = new NotificationWindow();
-        window.Initialize(viewModel, themeService);
+        window.Initialize(viewModel, materialColorSnapshot);
         window.Closed += OnWindowClosed;
 
         windows.Add(window);
         UpdateWindowPositions(position);
 
         window.ShowWithAnimationAsync();
+    }
+
+    public void ApplyMaterialColorToAllWindows(MaterialColorSnapshot snapshot)
+    {
+        foreach (var windows in _windowsByPosition.Values)
+        {
+            foreach (var window in windows.ToList())
+            {
+                try
+                {
+                    window.ApplyMaterialSnapshot(snapshot);
+                }
+                catch
+                {
+                }
+            }
+        }
     }
 
     private void OnWindowClosed(object? sender, EventArgs e)
@@ -484,20 +513,4 @@ internal sealed class NotificationWindowManager
         return null;
     }
 
-    public void ApplyThemeToAllWindows(AppearanceThemeSnapshot snapshot)
-    {
-        foreach (var windows in _windowsByPosition.Values)
-        {
-            foreach (var window in windows.ToList())
-            {
-                try
-                {
-                    window.RequestedThemeVariant = snapshot.IsNightMode ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
-                }
-                catch
-                {
-                }
-            }
-        }
-    }
 }

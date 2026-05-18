@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -184,7 +185,7 @@ public partial class SplashWindow : Window, ISplashStageReporter
             return;
         }
 
-        UpdateStatus("[Debug Mode] Splash Preview");
+        UpdateStatus(Strings.Splash_DebugPreview);
     }
 
     private void OnVersionTextClick(object? sender, PointerPressedEventArgs e)

@@ -20,9 +20,9 @@ using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.ExternalIpc;
-using LanMountainDesktop.Services.Launcher;
 using LanMountainDesktop.Services.Loading;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
@@ -57,6 +57,7 @@ public partial class App : Application
     private readonly IHostApplicationLifecycle _hostApplicationLifecycle = new HostApplicationLifecycleService();
     private readonly HostShutdownGate _shutdownGate = new();
     private readonly IDetachedComponentLibraryWindowService _detachedComponentLibraryWindowService = new DetachedComponentLibraryWindowService();
+    private readonly IMainWindowDesktopLayerService _mainWindowDesktopLayerService = MainWindowDesktopLayerServiceFactory.GetOrCreate();
     private readonly ILocationService _locationService = HostLocationServiceProvider.GetOrCreate();
     private readonly DateTimeOffset _startupAt = DateTimeOffset.UtcNow;
     private readonly string _launchSource = LauncherRuntimeMetadata.GetLaunchSource(Environment.GetCommandLineArgs()) ?? "normal";
@@ -76,12 +77,12 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private TransparentOverlayWindow? _transparentOverlayWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
+    private bool _isExitingFusedDesktopEditMode;
     private bool _mainWindowClosed;
     private DesktopShellHost? _desktopShellHost;
     private PublicIpcHostService? _publicIpcHostService;
     private LoadingStateManager? _loadingStateManager;
     private LoadingStateReporter? _loadingStateReporter;
-    private bool _singleInstanceReleased;
     private int _forcedExitScheduled;
     private volatile bool _desktopShellInitializationStarted;
     private bool _mainWindowOpened;
@@ -89,7 +90,6 @@ public partial class App : Application
     private readonly object _launcherProgressLock = new();
     private readonly List<StartupProgressMessage> _pendingLauncherProgressMessages = [];
 
-    internal static SingleInstanceService? CurrentSingleInstanceService { get; set; }
     internal static IHostApplicationLifecycle? CurrentHostApplicationLifecycle =>
         (Current as App)?._hostApplicationLifecycle;
     internal static INotificationService? CurrentNotificationService =>
@@ -211,7 +211,6 @@ public partial class App : Application
 
         LinuxDesktopEntryInstaller.EnsureInstalled();
         InitializePublicIpc();
-        CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow);
         _ = InitializeLauncherIpcAsync();
         DesktopBootstrap.InitializeApplication(this, InitializeDesktopShell);
 
@@ -366,7 +365,7 @@ public partial class App : Application
                 CreateAndAssignMainWindow(desktop, "FrameworkInitialization");
             },
             OnDesktopLifetimeExit,
-            () => CurrentSingleInstanceService?.StartActivationListener(ActivateMainWindow),
+            static () => { },
             StartWeatherLocationRefreshIfNeeded);
         _desktopShellHost.Initialize(this);
     }
@@ -375,7 +374,6 @@ public partial class App : Application
     {
         AppLogger.Info("App", "Desktop lifetime exit triggered.");
         PerformExitCleanup();
-        ReleaseSingleInstanceAfterExit("DesktopLifetimeExit");
         ScheduleForcedProcessTermination("DesktopLifetimeExit");
     }
 
@@ -394,7 +392,7 @@ public partial class App : Application
             return;
         }
 
-        RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayMenu");
+        RestoreOrCreateMainWindow("TrayMenu");
     }
 
     private void OnTrayRestartClick(object? sender, EventArgs e)
@@ -441,88 +439,132 @@ public partial class App : Application
             return;
         }
         
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(
+            () => OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: false),
+            DispatcherPriority.Send);
+    }
+
+    private void OpenFusedDesktopComponentLibraryFromUi(bool centerInWorkArea)
+    {
+        if (IsShutdownInProgress)
         {
-            if (IsShutdownInProgress)
+            AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+            return;
+        }
+
+        try
+        {
+            var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
+            fusedDesktopManager.EnterEditMode();
+
+            EnsureTransparentOverlayWindow();
+            if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
             {
-                AppLogger.Info("FusedDesktop", "Deferred Component Library open ignored because shutdown is in progress.");
+                _transparentOverlayWindow.Show();
+            }
+
+            if (_fusedComponentLibraryWindow is { } existingWindow)
+            {
+                if (_transparentOverlayWindow is not null)
+                {
+                    existingWindow.SetOverlayWindow(_transparentOverlayWindow);
+                }
+
+                if (!existingWindow.IsVisible)
+                {
+                    existingWindow.Show();
+                }
+
+                if (centerInWorkArea)
+                {
+                    existingWindow.CenterInWorkArea(_transparentOverlayWindow);
+                }
+
+                existingWindow.Activate();
                 return;
+            }
+
+            var window = new FusedDesktopComponentLibraryWindow();
+            _fusedComponentLibraryWindow = window;
+            if (_transparentOverlayWindow is not null)
+            {
+                window.SetOverlayWindow(_transparentOverlayWindow);
+            }
+
+            window.Closed += OnFusedComponentLibraryWindowClosed;
+            window.Show();
+            if (centerInWorkArea)
+            {
+                window.CenterInWorkArea(_transparentOverlayWindow);
+            }
+
+            window.Activate();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+        }
+    }
+
+    private void OnFusedComponentLibraryWindowClosed(object? sender, EventArgs e)
+    {
+        if (sender is not FusedDesktopComponentLibraryWindow window)
+        {
+            return;
+        }
+
+        window.Closed -= OnFusedComponentLibraryWindowClosed;
+        if (ReferenceEquals(_fusedComponentLibraryWindow, window))
+        {
+            _fusedComponentLibraryWindow = null;
+        }
+
+        if (!window.PreserveEditModeOnClose && !_isExitingFusedDesktopEditMode)
+        {
+            ExitFusedDesktopEditModeFromUi(closeLibrary: false);
+        }
+    }
+
+    private void ExitFusedDesktopEditModeFromUi(bool closeLibrary)
+    {
+        if (_isExitingFusedDesktopEditMode)
+        {
+            return;
+        }
+
+        _isExitingFusedDesktopEditMode = true;
+        try
+        {
+            if (closeLibrary && _fusedComponentLibraryWindow is { } libraryWindow)
+            {
+                _fusedComponentLibraryWindow = null;
+                libraryWindow.Closed -= OnFusedComponentLibraryWindowClosed;
+                libraryWindow.Close();
             }
 
             try
             {
-                if (_fusedComponentLibraryWindow is { } existingWindow)
-                {
-                    if (!existingWindow.IsVisible)
-                    {
-                        existingWindow.Show();
-                    }
-
-                    existingWindow.Activate();
-                    return;
-                }
-
-                var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
-                fusedDesktopManager.EnterEditMode();
-
-                // 纭繚閫忔槑瑕嗙洊灞傜獥鍙ｅ瓨鍦ㄥ苟鏄剧ず
-                EnsureTransparentOverlayWindow();
-                if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
-                {
-                    _transparentOverlayWindow.Show();
-                }
-                
-                var window = new FusedDesktopComponentLibraryWindow();
-                _fusedComponentLibraryWindow = window;
-                
-                if (_transparentOverlayWindow is not null)
-                {
-                    window.SetOverlayWindow(_transparentOverlayWindow);
-                }
-                
-                window.Closed += (s, ev) =>
-                {
-                    if (_transparentOverlayWindow is not null)
-                    {
-                        // 瑙﹀彂鐢诲竷淇濆瓨锛屽苟闅愯棌鐢诲竷
-                        _transparentOverlayWindow.SaveLayoutAndHide();
-                    }
-                    
-                    // 璁╃鐞嗗櫒鏍规嵁宸插瓨鍌ㄧ殑鏈€鏂板揩鐓ч噸寤虹敓鎴愭墍鏈夊疄浣撳皬缁勪欢
-                    fusedDesktopManager.ExitEditMode();
-                    if (ReferenceEquals(_fusedComponentLibraryWindow, s))
-                    {
-                        _fusedComponentLibraryWindow = null;
-                    }
-                };
-
-                window.Show();
-                window.Activate();
+                _transparentOverlayWindow?.SaveLayoutAndHide();
             }
-            catch (Exception ex)
+            catch (Exception overlayEx)
             {
-                AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
-                try
-                {
-                    _transparentOverlayWindow?.SaveLayoutAndHide();
-                }
-                catch (Exception overlayEx)
-                {
-                    AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay after library open failure.", overlayEx);
-                }
-
-                try
-                {
-                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-                }
-                catch (Exception exitEx)
-                {
-                    AppLogger.Warn("FusedDesktop", "Failed to exit edit mode after library open failure.", exitEx);
-                }
-
-                _fusedComponentLibraryWindow = null;
+                AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay.", overlayEx);
             }
-        }, DispatcherPriority.Send);
+
+            try
+            {
+                FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+            }
+            catch (Exception exitEx)
+            {
+                AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode.", exitEx);
+            }
+        }
+        finally
+        {
+            _isExitingFusedDesktopEditMode = false;
+        }
     }
 
     private void DisableAvaloniaDataAnnotationValidation()
@@ -677,7 +719,7 @@ public partial class App : Application
 
         if (_desktopShellState == DesktopShellState.TrayOnly)
         {
-            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityFailed");
+            RestoreOrCreateMainWindow("TrayAvailabilityFailed");
             return;
         }
 
@@ -688,7 +730,7 @@ public partial class App : Application
             !taskbarUsable &&
             (_desktopTrayService?.ConsecutiveRecoveryFailures ?? 0) >= 3)
         {
-            RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TrayAvailabilityRepeatedFailure");
+            RestoreOrCreateMainWindow("TrayAvailabilityRepeatedFailure");
         }
     }
 
@@ -816,39 +858,7 @@ public partial class App : Application
         Resources["AppFontFamily"] = fontFamily;
     }
 
-    internal void ActivateMainWindow()
-    {
-        AppLogger.Info("SingleInstance", $"Activation callback received. Pid={Environment.ProcessId}.");
-
-        if (!_desktopShellInitializationStarted && _mainWindow is null)
-        {
-            AppLogger.Info("SingleInstance", "Activation acknowledged while desktop shell is still initializing.");
-            return;
-        }
-
-        try
-        {
-            var restored = Dispatcher.UIThread.CheckAccess()
-                ? RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance")
-                : Dispatcher.UIThread.InvokeAsync(
-                    () => RestoreOrCreateMainWindowCore(showSingleInstanceNotice: true, source: "SingleInstance"),
-                    DispatcherPriority.Send).GetAwaiter().GetResult();
-
-            if (!restored)
-            {
-                AppLogger.Warn("SingleInstance", "Activation callback could not restore the main window yet.");
-                return;
-            }
-
-            AppLogger.Info("SingleInstance", "Activation callback completed successfully.");
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("SingleInstance", "Activation callback failed while restoring the desktop shell.", ex);
-        }
-    }
-
-    private void RestoreOrCreateMainWindow(bool showSingleInstanceNotice, string source)
+    private void RestoreOrCreateMainWindow(string source)
     {
         if (IsShutdownInProgress)
         {
@@ -858,11 +868,11 @@ public partial class App : Application
 
         Dispatcher.UIThread.Post(() =>
         {
-            _ = RestoreOrCreateMainWindowCore(showSingleInstanceNotice, source);
+            _ = RestoreOrCreateMainWindowCore(source);
         }, DispatcherPriority.Send);
     }
 
-    private bool RestoreOrCreateMainWindowCore(bool showSingleInstanceNotice, string source)
+    private bool RestoreOrCreateMainWindowCore(string source)
     {
         if (IsShutdownInProgress)
         {
@@ -888,7 +898,7 @@ public partial class App : Application
             var mainWindow = GetOrCreateMainWindow(desktop, source);
             mainWindow.PrepareEnterAnimation();
 
-            mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar();
+            mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar() && !IsMainWindowDesktopLayerEnabled();
 
             if (!mainWindow.IsVisible)
             {
@@ -908,9 +918,7 @@ public partial class App : Application
                 mainWindow.WindowState = WindowState.FullScreen;
             }
 
-            mainWindow.Activate();
-            mainWindow.Topmost = true;
-            mainWindow.Topmost = false;
+            ActivateOrRefreshMainWindowLayer(mainWindow, $"Restore:{source}");
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -920,12 +928,7 @@ public partial class App : Application
             SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"Restore:{source}");
             AppLogger.Info(
                 "DesktopShell",
-                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; ShowSingleInstanceNotice={showSingleInstanceNotice}; WindowState='{mainWindow.WindowState}'.");
-
-            if (showSingleInstanceNotice)
-            {
-                mainWindow.ShowSingleInstanceNotice();
-            }
+                $"Desktop restored. Source='{source}'; MainWindowClosed={_mainWindowClosed}; WindowState='{mainWindow.WindowState}'.");
 
             return true;
         }
@@ -943,7 +946,15 @@ public partial class App : Application
             _transparentOverlayWindow = new TransparentOverlayWindow();
             _transparentOverlayWindow.RestoreMainWindowRequested += (s, e) =>
             {
-                RestoreOrCreateMainWindow(showSingleInstanceNotice: false, source: "TransparentOverlay");
+                RestoreOrCreateMainWindow("TransparentOverlay");
+            };
+            _transparentOverlayWindow.ExitEditRequested += (s, e) =>
+            {
+                ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            };
+            _transparentOverlayWindow.RestoreComponentLibraryRequested += (s, e) =>
+            {
+                OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: true);
             };
         }
     }
@@ -990,7 +1001,6 @@ public partial class App : Application
         ScheduleForcedProcessTermination($"ShutdownRequest:{source}");
         StopShellRecoveryWatchdog();
         PerformExitCleanup();
-        ReleaseSingleInstanceAfterExit($"ShutdownRequest:{source}");
 
         try
         {
@@ -1074,7 +1084,10 @@ public partial class App : Application
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
                  (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
                   changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase)));
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeWallpaperColorSource), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.SystemWallpaperRefreshIntervalSeconds), StringComparer.OrdinalIgnoreCase)));
             var languageChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.LanguageCode), StringComparer.OrdinalIgnoreCase);
@@ -1099,7 +1112,17 @@ public partial class App : Application
 
             if (fusedDesktopChanged)
             {
+                ApplyFusedDesktopRuntimeState();
                 RefreshFusedDesktopMenuItemVisibility();
+            }
+
+            var mainWindowDesktopLayerChanged =
+                refreshAll ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.EnableMainWindowDesktopLayer), StringComparer.OrdinalIgnoreCase);
+
+            if (mainWindowDesktopLayerChanged)
+            {
+                ApplyMainWindowDesktopLayerRuntimeState("SettingsChanged");
             }
 
             var showInTaskbarChanged =
@@ -1136,33 +1159,6 @@ public partial class App : Application
     private void ApplyAdaptiveThemeResources()
     {
         _appearanceThemeService.ApplyThemeResources(Resources);
-    }
-
-    private void ReleaseSingleInstanceAfterExit(string source)
-    {
-        if (_singleInstanceReleased)
-        {
-            return;
-        }
-
-        _singleInstanceReleased = true;
-        var singleInstance = CurrentSingleInstanceService;
-        CurrentSingleInstanceService = null;
-        if (singleInstance is null)
-        {
-            AppLogger.Info("SingleInstance", $"No single-instance handle to release. Source='{source}'.");
-            return;
-        }
-
-        try
-        {
-            singleInstance.Dispose();
-            AppLogger.Info("SingleInstance", $"Released single-instance handle. Source='{source}'.");
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Warn("SingleInstance", $"Failed to release single-instance handle. Source='{source}'.", ex);
-        }
     }
 
     private void ScheduleForcedProcessTermination(string source)
@@ -1214,7 +1210,7 @@ public partial class App : Application
 
         try
         {
-            HostUpdateWorkflowServiceProvider.GetOrCreate().TryApplyPendingUpdateOnExit();
+            HostUpdateOrchestratorProvider.GetOrCreate().TryApplyOnExit();
         }
         catch (Exception ex)
         {
@@ -1326,7 +1322,7 @@ public partial class App : Application
         var mainWindow = new MainWindow
         {
             DataContext = new MainWindowViewModel(),
-            ShowInTaskbar = ShouldShowMainWindowInTaskbar()
+            ShowInTaskbar = ShouldShowMainWindowInTaskbar() && !IsMainWindowDesktopLayerEnabled()
         };
 
         _mainWindowOpened = false;
@@ -1364,6 +1360,7 @@ public partial class App : Application
         {
             mainWindow.Opened -= OnMainWindowOpened;
             _mainWindowOpened = true;
+            ApplyMainWindowDesktopLayerRuntimeState("MainWindowOpened");
             _loadingStateManager?.CompleteItem("system.init", "System initialization completed.");
 
             if (TryApplyStartupPresentation(mainWindow))
@@ -1441,6 +1438,7 @@ public partial class App : Application
 
         if (_mainWindow is not null)
         {
+            _mainWindowDesktopLayerService.Disable(_mainWindow);
             _mainWindow.Closing -= OnMainWindowClosing;
             _mainWindow.Closed -= OnMainWindowClosed;
             _mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
@@ -1486,6 +1484,7 @@ public partial class App : Application
         mainWindow.Closing -= OnMainWindowClosing;
         mainWindow.Closed -= OnMainWindowClosed;
         mainWindow.PropertyChanged -= OnMainWindowPropertyChanged;
+        _mainWindowDesktopLayerService.Disable(mainWindow);
 
         if (ReferenceEquals(_mainWindow, mainWindow))
         {
@@ -1627,16 +1626,83 @@ public partial class App : Application
             mainWindow.WindowState = WindowState.FullScreen;
         }
 
-        mainWindow.Activate();
-        mainWindow.Topmost = true;
-        mainWindow.Topmost = false;
+        ActivateOrRefreshMainWindowLayer(mainWindow, $"TrayFallbackForeground:{source}");
         SetDesktopShellState(DesktopShellState.ForegroundDesktop, $"TrayFallbackForeground:{source}");
         ReportStartupProgress(StartupStage.DesktopVisible, 100, "Desktop restored because tray was unavailable.");
     }
 
     private bool ShouldShowMainWindowInTaskbar()
     {
-        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).ShowInTaskbar;
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        return snapshot.ShowInTaskbar && !snapshot.EnableMainWindowDesktopLayer;
+    }
+
+    private bool IsMainWindowDesktopLayerEnabled()
+    {
+        return _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App).EnableMainWindowDesktopLayer;
+    }
+
+    private void ActivateOrRefreshMainWindowLayer(MainWindow mainWindow, string source)
+    {
+        if (IsMainWindowDesktopLayerEnabled())
+        {
+            mainWindow.ShowInTaskbar = false;
+            _mainWindowDesktopLayerService.EnableOrRefresh(mainWindow);
+            AppLogger.Info("DesktopShell", $"Main window kept on desktop layer. Source='{source}'.");
+            return;
+        }
+
+        _mainWindowDesktopLayerService.Disable(mainWindow);
+        mainWindow.Activate();
+        mainWindow.Topmost = true;
+        mainWindow.Topmost = false;
+    }
+
+    private void ApplyMainWindowDesktopLayerRuntimeState(string source)
+    {
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        if (IsMainWindowDesktopLayerEnabled())
+        {
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+            _mainWindow.ShowInTaskbar = false;
+            _mainWindowDesktopLayerService.EnableOrRefresh(_mainWindow);
+            AppLogger.Info("DesktopShell", $"Main window desktop layer enabled. Source='{source}'.");
+            return;
+        }
+
+        _mainWindowDesktopLayerService.Disable(_mainWindow);
+        _mainWindow.ShowInTaskbar = ShouldShowMainWindowInTaskbar();
+        AppLogger.Info("DesktopShell", $"Main window desktop layer disabled. Source='{source}'.");
+    }
+
+    private void ApplyFusedDesktopRuntimeState()
+    {
+        var snapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+        try
+        {
+            if (snapshot.EnableFusedDesktop)
+            {
+                if (_mainWindow is not null)
+                {
+                    _mainWindowDesktopLayerService.Disable(_mainWindow);
+                }
+
+                FusedDesktopManagerServiceFactory.GetOrCreate().Initialize();
+                return;
+            }
+
+            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktop", "Failed to apply fused desktop runtime state.", ex);
+        }
     }
 
     private bool EnsureTaskbarEntry(string source)
@@ -1752,7 +1818,7 @@ public partial class App : Application
                 GetPublicShellStatus());
         }
 
-        var restored = RestoreOrCreateMainWindowCore(showSingleInstanceNotice: false, source);
+        var restored = RestoreOrCreateMainWindowCore(source);
         var status = GetPublicShellStatus();
         if (restored)
         {
@@ -1881,4 +1947,3 @@ public partial class App : Application
             .ToArray();
     }
 }
-

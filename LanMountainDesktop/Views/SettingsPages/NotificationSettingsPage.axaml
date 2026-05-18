@@ -65,6 +65,50 @@
 
             <Separator Classes="settings-separator" />
 
+            <controls:IconText Icon="Alert"
+                               Text="{Binding NotificationBoxHeader}"
+                               Margin="0,0,0,4" />
+
+            <ui:FASettingsExpander Header="{Binding NotificationBoxEnabledHeader}"
+                                 Description="{Binding NotificationBoxEnabledDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF06B8;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding IsNotificationBoxEnabled}" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding NotificationBoxPrivacyHeader}"
+                                 Description="{Binding NotificationBoxPrivacyDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF03F1;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding IsNotificationBoxPrivacyMode}" />
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <ui:FASettingsExpander Header="{Binding LinuxCaptureModeHeader}"
+                                 Description="{Binding LinuxCaptureModeDescription}">
+                <ui:FASettingsExpander.IconSource>
+                    <ui:FAFontIconSource Glyph="&#xF05DC;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                </ui:FASettingsExpander.IconSource>
+                <ui:FASettingsExpander.Footer>
+                    <ComboBox Width="180"
+                              ItemsSource="{Binding LinuxCaptureModes}"
+                              SelectedItem="{Binding SelectedLinuxCaptureMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectionOption">
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </ui:FASettingsExpander.Footer>
+            </ui:FASettingsExpander>
+
+            <Separator Classes="settings-separator" />
+
             <controls:IconText Icon="Beaker"
                                Text="{Binding TestHeader}"
                                Margin="0,0,0,4" />

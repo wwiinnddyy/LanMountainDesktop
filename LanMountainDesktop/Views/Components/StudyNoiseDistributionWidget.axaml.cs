@@ -5,7 +5,6 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
@@ -39,17 +38,14 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private static readonly Color DarkSubstrate = Color.Parse("#FF0B1220");
     private static readonly Color LightSubstrate = Color.Parse("#FFF1F5FA");
 
-    private readonly object _snapshotSync = new();
     private readonly IStudyAnalyticsService _studyAnalyticsService = StudyAnalyticsServiceFactory.CreateDefault();
     private readonly StudyAnalyticsMonitoringLeaseCoordinator _monitoringLeaseCoordinator = StudyAnalyticsMonitoringLeaseCoordinatorFactory.CreateDefault();
     private LanMountainDesktop.PluginSdk.ISettingsService _settingsService = LanMountainDesktop.Services.Settings.HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
+    private readonly StudySnapshotRenderGate _renderGate;
 
     private double _currentCellSize = 48;
-    private StudyAnalyticsSnapshot? _pendingSnapshot;
     private string _languageCode = "zh-CN";
-    private bool _dispatchQueued;
-    private bool _hasPendingSnapshot;
     private bool _isAttached;
     private bool _isOnActivePage = true;
     private bool _isDisposed;
@@ -72,6 +68,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     {
         InitializeComponent();
 
+        _renderGate = new StudySnapshotRenderGate(CanRenderSnapshot, ApplySnapshot);
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
@@ -80,7 +77,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         ApplyCellSize(_currentCellSize);
         ApplyDefaultXAxisLabels();
         ApplyLocalizedAxisLabels();
-        QueueSnapshotForRender(_studyAnalyticsService.GetSnapshot());
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
     }
 
     public void ApplyCellSize(double cellSize)
@@ -99,7 +96,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
         if (isOnActivePage && !wasOnActivePage)
         {
-            QueueSnapshotForRender(_studyAnalyticsService.GetSnapshot());
+            _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
         }
     }
 
@@ -115,7 +112,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         }
 
         UpdateMonitoringLeaseState();
-        QueueSnapshotForRender(_studyAnalyticsService.GetSnapshot());
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -123,6 +120,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         _isAttached = false;
         _monitoringLease?.Dispose();
         _monitoringLease = null;
+        _renderGate.Clear();
 
         if (_isSubscribed)
         {
@@ -139,7 +137,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        QueueSnapshotForRender(_studyAnalyticsService.GetSnapshot());
+        _renderGate.Queue(_studyAnalyticsService.GetSnapshot());
     }
 
     private void UpdateMonitoringLeaseState()
@@ -151,7 +149,8 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
             return;
         }
 
-        if (_isAttached)
+        var shouldMonitor = _isAttached && _isOnActivePage;
+        if (shouldMonitor)
         {
             _monitoringLease ??= _monitoringLeaseCoordinator.AcquireLease();
             return;
@@ -164,46 +163,17 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
     private void OnStudySnapshotUpdated(object? sender, StudyAnalyticsSnapshotChangedEventArgs e)
     {
         _ = sender;
-        QueueSnapshotForRender(e.Snapshot);
-    }
-
-    private void QueueSnapshotForRender(StudyAnalyticsSnapshot snapshot)
-    {
-        lock (_snapshotSync)
-        {
-            _pendingSnapshot = snapshot;
-            _hasPendingSnapshot = true;
-            if (_dispatchQueued)
-            {
-                return;
-            }
-
-            _dispatchQueued = true;
-        }
-
-        Dispatcher.UIThread.Post(ProcessPendingSnapshot, DispatcherPriority.Background);
-    }
-
-    private void ProcessPendingSnapshot()
-    {
-        StudyAnalyticsSnapshot? snapshot = null;
-        lock (_snapshotSync)
-        {
-            _dispatchQueued = false;
-            if (_hasPendingSnapshot)
-            {
-                snapshot = _pendingSnapshot;
-                _pendingSnapshot = null;
-                _hasPendingSnapshot = false;
-            }
-        }
-
-        if (!_isAttached || !_isOnActivePage || snapshot is null)
+        if (!_isAttached || !_isOnActivePage)
         {
             return;
         }
 
-        ApplySnapshot(snapshot);
+        _renderGate.Queue(e.Snapshot);
+    }
+
+    private bool CanRenderSnapshot()
+    {
+        return _isAttached && _isOnActivePage;
     }
 
     private void ApplySnapshot(StudyAnalyticsSnapshot snapshot)
@@ -235,7 +205,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
             ? StudySessionReportProjection.BuildSyntheticRealtimePoints(snapshot.LastSessionReport, snapshot.Config)
             : snapshot.RealtimeBuffer;
 
-        ChartControl.UpdateSeries(points, snapshot.Config.BaselineDb);
+        ChartControl.UpdateSeries(points, snapshot.Config.BaselineDb, isSessionReport);
         UpdateXAxisLabels(points);
 
         var stats = ComputeDistributionStats(points, snapshot.Config.BaselineDb);
@@ -670,6 +640,7 @@ public partial class StudyNoiseDistributionWidget : UserControl, IDesktopCompone
         DetachedFromVisualTree -= OnDetachedFromVisualTree;
         SizeChanged -= OnSizeChanged;
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        _renderGate.Dispose();
 
         if (_isSubscribed)
         {

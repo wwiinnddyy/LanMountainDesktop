@@ -67,7 +67,7 @@ public static class ThemeColorSystemService
             !isLightBackground));
     }
 
-    private static AppThemePalette BuildPalette(ThemeColorContext context)
+    public static AppThemePalette BuildPalette(ThemeColorContext context)
     {
         var monetPalette = context.MonetPalette;
         var monetColors = context.MonetColors?.Where(color => color.A > 0).ToArray() ?? [];

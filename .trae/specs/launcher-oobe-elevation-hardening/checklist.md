@@ -6,3 +6,4 @@
 - [ ] `apply-update` and `plugin-install` do not auto-enter OOBE.
 - [ ] Default plugin install does not request UAC.
 - [ ] Logs include OOBE status, suppression reason, and launch source.
+- [ ] Startup presentation step inside `OobeWindow` (after data location) writes host `settings.json` and syncs Windows Run when autostart is chosen (Launcher executable).

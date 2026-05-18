@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Launcher.ViewModels;
 using LanMountainDesktop.Launcher.Views;
@@ -62,12 +63,12 @@ public partial class DevDebugWindow : Window
         {
             // 查看模式：显示模拟错误
             errorWindow.SetDebugMode(true);
-            errorWindow.SetErrorMessage("[调试模式] 这是一个模拟的错误消息，用于查看错误页面的样式和布局。");
+            errorWindow.SetErrorMessage(Strings.Preview_ErrorMessage);
         }
         else
         {
             // 功能模式：显示真实错误
-            errorWindow.SetErrorMessage("找不到阑山桌面应用程序。\n\n请检查应用安装是否完整。");
+            errorWindow.SetErrorMessage(Strings.Error_HostNotFoundMessage);
         }
         
         errorWindow.Show();
@@ -160,7 +161,7 @@ public partial class DevDebugWindow : Window
     /// </summary>
     private async Task SimulateSplashProgress(SplashWindow splashWindow)
     {
-        var stages = new[] { "初始化", "检查更新", "加载组件", "启动应用" };
+        var stages = new[] { Strings.Preview_SplashInitializing, Strings.Preview_SplashCheckingUpdates, Strings.Preview_SplashCheckingPlugins, Strings.Preview_SplashLaunchingHost };
         var reporter = (ISplashStageReporter)splashWindow;
         
         for (int i = 0; i < stages.Length; i++)

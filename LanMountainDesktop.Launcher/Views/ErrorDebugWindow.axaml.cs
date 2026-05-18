@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using LanMountainDesktop.Launcher.Resources;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -87,7 +88,7 @@ public partial class ErrorDebugWindow : Window
 
         var options = new FilePickerOpenOptions
         {
-            Title = "Select LanMountainDesktop host executable",
+            Title = Strings.DebugDebug_SelectExeDialog,
             AllowMultiple = false,
             FileTypeFilter =
             [
@@ -114,7 +115,7 @@ public partial class ErrorDebugWindow : Window
     {
         if (this.FindControl<TextBlock>("PathTextBlock") is { } pathTextBlock)
         {
-            pathTextBlock.Text = string.IsNullOrEmpty(path) ? "Not selected" : path;
+            pathTextBlock.Text = string.IsNullOrEmpty(path) ? Strings.DebugDebug_NotSelected : path;
         }
     }
 }

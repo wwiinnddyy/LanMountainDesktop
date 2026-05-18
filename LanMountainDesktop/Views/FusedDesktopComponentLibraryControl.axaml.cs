@@ -81,7 +81,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
             "all",
             L(languageCode, "component_category.all", "All"),
-            Symbol.Apps,
+            Icon.Apps,
             Array.Empty<ComponentLibraryItemViewModel>()));
 
         var usedCategories = _allDefinitions
@@ -94,29 +94,19 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
             var categoryComponents = _allDefinitions
                 .Where(definition => string.Equals(definition.Category, category, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(static definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .Select(CreateComponentItem)
+                .Select(definition => CreateComponentItem(definition, languageCode))
                 .ToArray();
+
+            var categoryDefinitions = _allDefinitions
+                .Where(definition => string.Equals(definition.Category, category, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
             _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
                 category,
                 GetLocalizedCategoryTitle(languageCode, category),
-                ResolveCategoryIcon(category),
+                ComponentCategoryIconResolver.ResolveCategoryIcon(category, categoryDefinitions),
                 categoryComponents));
         }
-    }
-
-    private static Symbol ResolveCategoryIcon(string categoryId)
-    {
-        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase)) return Symbol.Clock;
-        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase)) return Symbol.CalendarDate;
-        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase)) return Symbol.WeatherSunny;
-        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase)) return Symbol.Edit;
-        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase)) return Symbol.Play;
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase)) return Symbol.Apps;
-        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase)) return Symbol.Calculator;
-        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase)) return Symbol.Hourglass;
-        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase)) return Symbol.Folder;
-        return Symbol.Apps;
     }
 
     private string GetLocalizedCategoryTitle(string languageCode, string categoryId)
@@ -138,9 +128,11 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         return LocalizationService.GetString(languageCode, key, fallback);
     }
 
-    private static ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition)
+    private ComponentLibraryItemViewModel CreateComponentItem(DesktopComponentDefinition definition, string languageCode)
     {
-        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName);
+        var categoryTitle = GetLocalizedCategoryTitle(languageCode, definition.Category);
+        var description = $"{categoryTitle} - {Math.Max(1, definition.MinWidthCells)} x {Math.Max(1, definition.MinHeightCells)}";
+        return new ComponentLibraryItemViewModel(definition.Id, definition.DisplayName, description);
     }
 
     private void OnCategorySelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -174,7 +166,7 @@ public partial class FusedDesktopComponentLibraryControl : UserControl
         }
 
         _viewModel.SelectedComponent = selectedCategory.Components.FirstOrDefault(component => component.ComponentId == firstComponent.Id)
-            ?? CreateComponentItem(firstComponent);
+            ?? CreateComponentItem(firstComponent, _settingsFacade.Region.Get().LanguageCode);
         SetSelectedPreviewControl(CreateStaticPreviewControl(firstComponent));
     }
 

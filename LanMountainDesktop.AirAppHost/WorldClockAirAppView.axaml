@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="LanMountainDesktop.AirAppHost.WorldClockAirAppView">
+    <Grid RowDefinitions="*,Auto"
+          Margin="18,0,18,16">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8">
+            <TextBlock x:Name="TimeTextBlock"
+                       Text="00:00:00"
+                       FontSize="42"
+                       FontWeight="SemiBold"
+                       LetterSpacing="0"
+                       Foreground="{DynamicResource AirAppTitleTextBrush}"
+                       HorizontalAlignment="Center" />
+            <TextBlock x:Name="DateTextBlock"
+                       Text="0000-00-00"
+                       FontSize="14"
+                       FontWeight="Medium"
+                       Foreground="{DynamicResource AirAppSecondaryTextBrush}"
+                       HorizontalAlignment="Center" />
+            <TextBlock x:Name="TimeZoneTextBlock"
+                       Text="Local Time"
+                       FontSize="12"
+                       Foreground="{DynamicResource AirAppSecondaryTextBrush}"
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                HorizontalAlignment="Center"
+                Padding="12,7"
+                CornerRadius="999"
+                Background="#112D73E5">
+            <TextBlock x:Name="SessionTextBlock"
+                       FontSize="11"
+                       Foreground="{DynamicResource AirAppAccentBrush}" />
+        </Border>
+    </Grid>
+</UserControl>

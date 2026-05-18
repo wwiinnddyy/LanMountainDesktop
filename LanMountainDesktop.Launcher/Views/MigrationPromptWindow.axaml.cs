@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -46,15 +47,15 @@ public partial class MigrationPromptWindow : Window
         {
             typeText.Text = info.InstallType switch
             {
-                LegacyInstallType.Registry => "安装版",
-                LegacyInstallType.Portable => "便携版",
-                _ => "未知"
+                LegacyInstallType.Registry => Strings.Migration_Installed,
+                LegacyInstallType.Portable => Strings.Migration_Portable,
+                _ => Strings.Migration_Unknown
             };
         }
 
         if (descriptionText != null)
         {
-            descriptionText.Text = $"检测到您的系统中安装了旧版本的阑山桌面（{info.Version}）。新版本采用了全新的架构，建议卸载旧版本以获得更好的体验。";
+            descriptionText.Text = string.Format(Strings.Migration_DetectedDescFormat, info.Version);
         }
     }
 

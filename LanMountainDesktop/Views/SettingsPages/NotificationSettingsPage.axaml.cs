@@ -6,7 +6,7 @@ namespace LanMountainDesktop.Views.SettingsPages;
 
 [SettingsPageInfo(
     "notifications",
-    "通知",
+    "Notifications",
     SettingsPageCategory.Components,
     IconKey = "Bell",
     SortOrder = 5,

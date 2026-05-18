@@ -58,7 +58,7 @@ public partial class MainWindow : Window
 
     private sealed record ComponentLibraryCategory(
         string Id,
-        Symbol Icon,
+        Icon Icon,
         string Title,
         IReadOnlyList<ComponentLibraryComponentEntry> Components);
 
@@ -553,6 +553,11 @@ public partial class MainWindow : Window
         _taskbarLayoutMode = string.IsNullOrWhiteSpace(snapshot.TaskbarLayoutMode)
             ? TaskbarLayoutBottomFullRowMacStyle
             : snapshot.TaskbarLayoutMode;
+        _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode);
+        _backToWindowsIconSource = NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource);
+        _backToWindowsFluentIconName = NormalizeBackToWindowsFluentIcon(snapshot.BackToWindowsFluentIconName).ToString();
+        _backToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+        RefreshBackToWindowsButtonPresentation();
 
         _clockDisplayFormat = snapshot.ClockDisplayFormat == "HourMinute"
             ? ClockDisplayFormat.HourMinute
@@ -2386,9 +2391,10 @@ public partial class MainWindow : Window
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(componentId, BuiltInComponentIds.DesktopStandbyDigitalClock, StringComparison.OrdinalIgnoreCase))
         {
-            // Keep world clock widget at 2:1 ratio: 4x2, 6x3, 8x4...
+            // Keep world clock / StandBy digital clock widget at 2:1 ratio: 4x2, 6x3, 8x4...
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
@@ -2868,7 +2874,12 @@ public partial class MainWindow : Window
 
     private void OnDesktopComponentHostPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_isComponentLibraryOpen || HasActiveDesktopEditSession)
+        if (!_isComponentLibraryOpen)
+        {
+            return;
+        }
+
+        if (HasActiveDesktopEditSession)
         {
             return;
         }
@@ -3385,9 +3396,9 @@ public partial class MainWindow : Window
             var row = new RowDefinition(GridLength.Auto);
             ComponentLibraryCategoryPagesContainer.RowDefinitions.Add(row);
 
-            var icon = new SymbolIcon
+            var icon = new FluentIcon
             {
-                Symbol = category.Icon,
+                Icon = category.Icon,
                 IconVariant = IconVariant.Regular,
                 FontSize = 18,
                 VerticalAlignment = VerticalAlignment.Center
@@ -3456,60 +3467,12 @@ public partial class MainWindow : Window
         return categories
             .Select(category => new ComponentLibraryCategory(
                 category.Id,
-                ResolveComponentLibraryCategoryIcon(category.Id),
+                ComponentCategoryIconResolver.ResolveCategoryIcon(
+                    category.Id,
+                    _componentRegistry.GetAll().Where(d => string.Equals(d.Category, category.Id, StringComparison.OrdinalIgnoreCase))),
                 GetLocalizedComponentLibraryCategoryTitle(category.Id),
                 category.Components))
             .ToList();
-    }
-
-    private Symbol ResolveComponentLibraryCategoryIcon(string categoryId)
-    {
-        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Clock;
-        }
-
-        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.CalendarDate;
-        }
-
-        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.WeatherSunny;
-        }
-
-        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Edit;
-        }
-
-        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Play;
-        }
-
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Apps;
-        }
-
-        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Calculator;
-        }
-
-        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Hourglass;
-        }
-
-        if (string.Equals(categoryId, "File", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Folder;
-        }
-
-        return Symbol.Apps;
     }
 
     private string GetLocalizedComponentLibraryCategoryTitle(string categoryId)

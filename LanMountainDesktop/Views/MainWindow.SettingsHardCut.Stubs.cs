@@ -15,6 +15,7 @@ using FluentAvalonia.UI.Controls;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.Views.Components;
 
@@ -63,6 +64,23 @@ public partial class MainWindow : Window
         if (e.Scope == SettingsScope.App && e.ChangedKeys is { Count: > 0 })
         {
             var changedKeys = e.ChangedKeys.ToArray();
+            if (changedKeys.Any(key =>
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconText), StringComparison.OrdinalIgnoreCase)))
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    var snapshot = _settingsService.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
+                    _backToWindowsButtonDisplayMode = NormalizeBackToWindowsButtonDisplayMode(snapshot.BackToWindowsButtonDisplayMode);
+                    _backToWindowsIconSource = NormalizeBackToWindowsIconSource(snapshot.BackToWindowsIconSource);
+                    _backToWindowsFluentIconName = NormalizeBackToWindowsFluentIcon(snapshot.BackToWindowsFluentIconName).ToString();
+                    _backToWindowsIconText = NormalizeBackToWindowsIconText(snapshot.BackToWindowsIconText);
+                    RefreshBackToWindowsButtonPresentation();
+                }, DispatcherPriority.Normal);
+            }
+
             if (changedKeys.All(key =>
                 string.Equals(key, nameof(AppSettingsSnapshot.ThemeColorMode), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparison.OrdinalIgnoreCase) ||
@@ -78,9 +96,15 @@ public partial class MainWindow : Window
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadSource), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UseGhProxyMirror), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.UpdateDownloadThreads), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.ForceUpdateReinstall), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableThreeFingerSwipe), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableFadeTransition), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.ShowInTaskbar), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.MultiInstanceLaunchBehavior), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsButtonDisplayMode), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconSource), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsFluentIconName), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, nameof(AppSettingsSnapshot.BackToWindowsIconText), StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(key, nameof(AppSettingsSnapshot.EnableSlideTransition), StringComparison.OrdinalIgnoreCase)))
             {
                 return;
@@ -140,12 +164,15 @@ public partial class MainWindow : Window
     private void ApplyLocalization()
     {
         Title = L("app.title", "LanMountainDesktop");
-        var platformName = OperatingSystem.IsWindows() ? "Windows" 
-            : OperatingSystem.IsMacOS() ? "macOS" 
-            : "Linux";
+        var platformName = OperatingSystem.IsWindows()
+            ? L("platform.windows", "Windows")
+            : OperatingSystem.IsMacOS()
+                ? L("platform.macos", "macOS")
+                : L("platform.linux", "Linux");
         BackToWindowsTextBlock.Text = Lf("button.back_to_platform", "Back to {0}", platformName);
         ToolTip.SetTip(BackToWindowsButton, Lf("tooltip.back_to_platform", "Back to {0}", platformName));
         ComponentLibraryTitleTextBlock.Text = L("component_library.title", "Widgets");
+        ComponentLibraryEmptyTextBlock.Text = L("component_library.components_none", "No components.");
         LauncherTitleTextBlock.Text = L("launcher.title", "App Launcher");
         LauncherSubtitleTextBlock.Text = OperatingSystem.IsLinux()
             ? L("launcher.subtitle_linux", "Displays installed apps discovered from Linux desktop entries.")
@@ -177,8 +204,13 @@ public partial class MainWindow : Window
         _weatherLongitude = snapshot.WeatherLongitude;
         _weatherAutoRefreshLocation = snapshot.WeatherAutoRefreshLocation;
         _weatherExcludedAlertsRaw = snapshot.WeatherExcludedAlerts ?? string.Empty;
-        _weatherIconPackId = string.IsNullOrWhiteSpace(snapshot.WeatherIconPackId) ? "HyperOS3" : snapshot.WeatherIconPackId;
+        _weatherIconPackId = NormalizeWeatherIconPackId(snapshot.WeatherIconPackId);
         _weatherNoTlsRequests = snapshot.WeatherNoTlsRequests;
+    }
+
+    private static string NormalizeWeatherIconPackId(string? iconPackId)
+    {
+        return WeatherVisualStyleCatalog.Normalize(iconPackId);
     }
 
     private void InitializeAutoStartWithWindowsSetting(AppSettingsSnapshot snapshot)
@@ -474,28 +506,14 @@ public partial class MainWindow : Window
 
     private void TriggerAutoUpdateCheckIfEnabled()
     {
-        var versionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
-        if (!Version.TryParse(versionText, out var currentVersion))
-        {
-            currentVersion = new Version(0, 0, 0);
-        }
-
-        var major = Math.Max(0, currentVersion.Major);
-        var minor = Math.Max(0, currentVersion.Minor);
-        var build = Math.Max(0, currentVersion.Build >= 0 ? currentVersion.Build : 0);
-        var revision = Math.Max(0, currentVersion.Revision >= 0 ? currentVersion.Revision : 0);
-        var normalizedVersion = revision > 0
-            ? new Version(major, minor, build, revision)
-            : new Version(major, minor, build);
-
         DispatcherTimer.RunOnce(
             async () =>
             {
                 try
                 {
-                    await HostUpdateWorkflowServiceProvider
+                    await HostUpdateOrchestratorProvider
                         .GetOrCreate()
-                        .AutoCheckIfEnabledAsync(normalizedVersion);
+                        .AutoCheckIfEnabledAsync(default);
                 }
                 catch (Exception ex)
                 {
@@ -632,6 +650,8 @@ public partial class MainWindow : Window
             ThemeColorMode = latestThemeState.ThemeColorMode,
             SystemMaterialMode = latestThemeState.SystemMaterialMode,
             SelectedWallpaperSeed = latestThemeState.SelectedWallpaperSeed,
+            ThemeWallpaperColorSource = latestThemeState.ThemeWallpaperColorSource,
+            UseNativeWallpaperChangeEvents = latestThemeState.UseNativeWallpaperChangeEvents,
             UseSystemChrome = latestThemeState.UseSystemChrome,
             CornerRadiusStyle = latestThemeState.CornerRadiusStyle,
             WallpaperPath = latestWallpaperState.WallpaperPath,
@@ -662,6 +682,7 @@ public partial class MainWindow : Window
             UpdateMode = latestUpdateState.UpdateMode,
             UpdateDownloadSource = latestUpdateState.UpdateDownloadSource,
             UpdateDownloadThreads = latestUpdateState.UpdateDownloadThreads,
+            ForceUpdateReinstall = latestUpdateState.ForceUpdateReinstall,
             UseGhProxyMirror = latestUpdateState.UseGhProxyMirror,
             PendingUpdateInstallerPath = latestUpdateState.PendingUpdateInstallerPath,
             PendingUpdateVersion = latestUpdateState.PendingUpdateVersion,
@@ -671,6 +692,10 @@ public partial class MainWindow : Window
             PinnedTaskbarActions = [.. _pinnedTaskbarActions.Select(v => v.ToString())],
             EnableDynamicTaskbarActions = _enableDynamicTaskbarActions,
             TaskbarLayoutMode = _taskbarLayoutMode,
+            BackToWindowsButtonDisplayMode = existingSnapshot.BackToWindowsButtonDisplayMode,
+            BackToWindowsIconSource = existingSnapshot.BackToWindowsIconSource,
+            BackToWindowsFluentIconName = existingSnapshot.BackToWindowsFluentIconName,
+            BackToWindowsIconText = existingSnapshot.BackToWindowsIconText,
             ClockDisplayFormat = _clockDisplayFormat == ClockDisplayFormat.HourMinute ? "HourMinute" : "HourMinuteSecond",
             StatusBarClockTransparentBackground = _statusBarClockTransparentBackground,
             ClockPosition = _clockPosition,
@@ -695,6 +720,7 @@ public partial class MainWindow : Window
             EnableFadeTransition = existingSnapshot.EnableFadeTransition,
             EnableSlideTransition = existingSnapshot.EnableSlideTransition,
             ShowInTaskbar = existingSnapshot.ShowInTaskbar,
+            MultiInstanceLaunchBehavior = existingSnapshot.MultiInstanceLaunchBehavior,
             EnableFusedDesktop = existingSnapshot.EnableFusedDesktop,
             DisabledPluginIds = existingSnapshot.DisabledPluginIds,
             StudyFrameMs = existingSnapshot.StudyFrameMs,

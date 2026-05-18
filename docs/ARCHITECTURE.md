@@ -35,7 +35,7 @@
 
 启动入口在 `LanMountainDesktop/Program.cs`：
 
-1. 初始化日志、单实例锁和启动诊断
+1. 初始化日志、启动诊断和 Host 桌面生命周期
 2. 初始化遥测身份、崩溃遥测与使用遥测
 3. 构建 Avalonia `AppBuilder`
 4. 进入 `LanMountainDesktop/App.axaml.cs`
@@ -227,6 +227,39 @@ For the detailed design, migration path, UI strategy, and residual risks, see `d
 - Host remains the single external IPC entry point even when a capability is contributed by a plugin.
 
 See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration model.
+
+## Air APP Lifecycle
+
+- Launcher is the lifecycle bridge between the desktop host and Air APP processes.
+- The desktop host requests built-in Air APP operations through `IAirAppLifecycleService` on `LanMountainDesktop.Launcher.AirApp.v1`.
+- If that pipe is not available because the desktop host was started directly from IDE/dev tooling, the host starts `LanMountainDesktop.Launcher.exe air-app-broker --requester-pid <pid>` and retries the request.
+- `air-app-broker` is an internal hidden command that starts only the Air APP lifecycle IPC broker and does not run OOBE, Splash, debug preview windows, or normal desktop launch.
+- Launcher owns Air APP process creation, activation, instance-key de-duplication, registration tracking, and exited-process cleanup.
+- `LanMountainDesktop.AirAppHost` stays an independent rendering process and registers/unregisters itself with Launcher.
+- Launcher remains alive while the desktop host or any Air APP process is alive.
+- Air APP windows are ordinary application windows: they do not use fused desktop bottom-most services and do not use global `Topmost` promotion.
+
+## Fused Desktop Window Layer
+
+- `TransparentOverlayWindow` and `DesktopWidgetWindow` are desktop-surface windows.
+- On Windows, desktop-surface windows may attach to the desktop icon host through `IWindowBottomMostService`, or fall back to `HWND_BOTTOM`.
+- Fused desktop windows refresh their bottom-most layer after being opened, shown, or reloaded so they do not cover ordinary apps.
+
+## Main Window Desktop Layer
+
+- The main desktop host window has a separate developer option, `EnableMainWindowDesktopLayer`.
+- This mode is mutually exclusive with fused desktop because fused desktop manages component windows while main-window desktop layer manages the host window itself.
+- The main-window service is `IMainWindowDesktopLayerService`; it attaches only the main window to the desktop icon host on Windows and falls back to `HWND_BOTTOM`.
+- The main-window service does not use fused desktop click-through region logic, so the main desktop window remains interactive.
+- Main-window restore paths refresh the desktop-layer attachment instead of using temporary `Topmost` foreground promotion while this mode is enabled.
+- Air APP windows remain ordinary application windows and are not handled by either desktop-layer service.
+
+## Air APP Window Chrome
+
+- `LanMountainDesktop.AirAppHost` owns Air APP window chrome through `AirAppWindowDescriptor`.
+- Supported chrome modes are `Standard`, `Borderless`, `FullScreen`, `Tool`, and reserved `BackgroundOnly`.
+- Built-in `world-clock` uses `Standard` chrome with FluentAvalonia `FAAppWindow` title-bar controls.
+- Built-in `whiteboard` uses `FullScreen` chrome and supplies its own in-app exit affordance.
 
 ## Launcher OOBE / Elevation Contract
 

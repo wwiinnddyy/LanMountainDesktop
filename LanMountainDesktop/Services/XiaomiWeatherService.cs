@@ -375,6 +375,10 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         var hourlyNode = TryGetNode(payload, "forecastHourly") ??
                          TryGetNode(payload, "hourly") ??
                          TryGetNode(payload, "hourlyForecast");
+        var alertsNode = TryGetNode(payload, "alerts") ??
+                         TryGetNode(payload, "alert") ??
+                         TryGetNode(payload, "warning") ??
+                         TryGetNode(payload, "warnings");
 
         var weatherCode = ReadWeatherCode(currentNode);
 
@@ -422,7 +426,84 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
             ObservationTime: observationTime,
             Current: current,
             DailyForecasts: forecasts,
-            HourlyForecasts: hourlyForecasts);
+            HourlyForecasts: hourlyForecasts)
+        {
+            Alerts = ParseAlerts(alertsNode)
+        };
+    }
+
+    private static IReadOnlyList<WeatherAlert> ParseAlerts(JsonElement? alertsNode)
+    {
+        if (!alertsNode.HasValue)
+        {
+            return Array.Empty<WeatherAlert>();
+        }
+
+        var array = alertsNode.Value.ValueKind == JsonValueKind.Array
+            ? alertsNode
+            : ReadArray(alertsNode.Value, "value") ??
+              ReadArray(alertsNode.Value, "alerts") ??
+              ReadArray(alertsNode.Value, "alert") ??
+              (alertsNode.Value.ValueKind == JsonValueKind.Object ? alertsNode : null);
+
+        if (!array.HasValue)
+        {
+            return Array.Empty<WeatherAlert>();
+        }
+
+        var alerts = new List<WeatherAlert>();
+        if (array.Value.ValueKind == JsonValueKind.Object)
+        {
+            AddAlert(array.Value, alerts);
+            return alerts;
+        }
+
+        if (array.Value.ValueKind != JsonValueKind.Array)
+        {
+            return Array.Empty<WeatherAlert>();
+        }
+
+        foreach (var item in array.Value.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.Object)
+            {
+                AddAlert(item, alerts);
+            }
+        }
+
+        return alerts;
+    }
+
+    private static void AddAlert(JsonElement item, ICollection<WeatherAlert> alerts)
+    {
+        var title = ReadString(item, "title") ??
+                    ReadString(item, "name") ??
+                    ReadString(item, "headline") ??
+                    ReadString(item, "text");
+        var detail = ReadString(item, "detail") ??
+                     ReadString(item, "description") ??
+                     ReadString(item, "content") ??
+                     ReadString(item, "desc");
+
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(detail))
+        {
+            return;
+        }
+
+        alerts.Add(new WeatherAlert(
+            string.IsNullOrWhiteSpace(title) ? Truncate(detail, 60) : title.Trim(),
+            string.IsNullOrWhiteSpace(detail) ? null : detail.Trim(),
+            NullIfWhiteSpace(ReadString(item, "type") ?? ReadString(item, "category")),
+            NullIfWhiteSpace(ReadString(item, "level") ?? ReadString(item, "severity")),
+            ParseTime(ReadString(item, "pubTime") ??
+                      ReadString(item, "publishTime") ??
+                      ReadString(item, "publishedAt") ??
+                      ReadString(item, "time")),
+            NullIfWhiteSpace(ReadString(item, "images", "icon") ??
+                             ReadString(item, "image", "icon") ??
+                             ReadString(item, "icon") ??
+                             ReadString(item, "iconUri") ??
+                             ReadString(item, "iconUrl"))));
     }
 
     private IReadOnlyList<WeatherDailyForecast> ParseDailyForecasts(JsonElement? dailyNode, int days, string locale)
@@ -976,5 +1057,10 @@ public sealed class XiaomiWeatherService : IWeatherDataService, IDisposable
         return text.Length <= maxLength
             ? text
             : $"{text[..maxLength]}...";
+    }
+
+    private static string? NullIfWhiteSpace(string? text)
+    {
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
     }
 }

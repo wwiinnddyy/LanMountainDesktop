@@ -334,14 +334,19 @@
                                                 BorderThickness="0"
                                                 Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                                 Click="OnMinimizeClick">
-                                            <StackPanel Orientation="Horizontal"
+                                            <StackPanel x:Name="BackToWindowsContentPanel"
+                                                        Orientation="Horizontal"
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
                                                         Spacing="8">
-                                                <fi:FluentIcon x:Name="BackToWindowsIcon"
-                                                               Icon="Window"
-                                                               IconVariant="Regular" />
+                                                <Border x:Name="BackToWindowsIconCircle"
+                                                        Background="Transparent">
+                                                    <ContentControl x:Name="BackToWindowsIconHost"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center" />
+                                                </Border>
                                                 <TextBlock x:Name="BackToWindowsTextBlock"
+                                                           VerticalAlignment="Center"
                                                            Foreground="{DynamicResource AdaptiveTextPrimaryBrush}" />
                                             </StackPanel>
                                         </Button>

@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using LanMountainDesktop.Launcher.Resources;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -87,12 +88,12 @@ public partial class UpdateWindow : Window
 
             if (success)
             {
-                statusText.Text = "更新完成";
+                statusText.Text = Strings.Update_Complete;
             }
             else
             {
-                titleText.Text = "更新失败";
-                statusText.Text = errorMessage ?? "更新过程中发生错误";
+                titleText.Text = Strings.Update_Failed;
+                statusText.Text = errorMessage ?? Strings.Update_FailedMessage;
             }
         });
     }
@@ -115,8 +116,8 @@ public partial class UpdateWindow : Window
 
             if (isDebugMode)
             {
-                titleText.Text = "[调试模式] 更新页面";
-                statusText.Text = "预览更新进度界面";
+                titleText.Text = Strings.Update_DebugTitle;
+                statusText.Text = Strings.Update_DebugMessage;
             }
         });
     }

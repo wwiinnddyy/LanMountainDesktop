@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Avalonia.Controls;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
@@ -71,6 +73,82 @@ public sealed class DesktopComponentRenderModeTests
         var probe = Assert.IsType<ProbeControl>(control);
         Assert.Equal(DesktopComponentRenderMode.LibraryPreview, probe.RuntimeContext?.RenderMode);
         Assert.Null(probe.RuntimeContext?.PlacementId);
+    }
+
+    [Fact]
+    public void DefaultRuntimeRegistrations_IncludeMaterialWeatherComponents()
+    {
+        var componentIds = DesktopComponentRuntimeRegistry.GetDefaultRegistrations()
+            .Select(registration => registration.ComponentId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains(BuiltInComponentIds.DesktopWeatherClock, componentIds);
+        Assert.Contains(BuiltInComponentIds.DesktopWeather, componentIds);
+        Assert.Contains(BuiltInComponentIds.DesktopHourlyWeather, componentIds);
+        Assert.Contains(BuiltInComponentIds.DesktopMultiDayWeather, componentIds);
+        Assert.Contains(BuiltInComponentIds.DesktopExtendedWeather, componentIds);
+    }
+
+    [Fact]
+    public void WeatherVisualStyleCatalog_NormalizesLegacyAndSupportedIds()
+    {
+        Assert.Equal(WeatherVisualStyleId.GoogleWeatherV4, WeatherVisualStyleCatalog.Normalize(null));
+        Assert.Equal(WeatherVisualStyleId.GoogleWeatherV4, WeatherVisualStyleCatalog.Normalize("DefaultWeather"));
+        Assert.Equal(WeatherVisualStyleId.GoogleWeatherV4, WeatherVisualStyleCatalog.Normalize("HyperOS3"));
+        Assert.Equal(WeatherVisualStyleId.Geometric, WeatherVisualStyleCatalog.Normalize("Geometric"));
+        Assert.Equal(WeatherVisualStyleId.Breezy, WeatherVisualStyleCatalog.Normalize("Breezy"));
+        Assert.Equal(WeatherVisualStyleId.LemonFlutter, WeatherVisualStyleCatalog.Normalize("LemonFlutter"));
+        Assert.Equal(WeatherVisualStyleId.GoogleWeatherV4, WeatherVisualStyleCatalog.Normalize("MissingPack"));
+    }
+
+    [Theory]
+    [InlineData(WeatherVisualStyleId.GoogleWeatherV4)]
+    [InlineData(WeatherVisualStyleId.Geometric)]
+    [InlineData(WeatherVisualStyleId.Breezy)]
+    [InlineData(WeatherVisualStyleId.LemonFlutter)]
+    public void WeatherIconAssetResolver_ResolvesCoreWeatherStates(string styleId)
+    {
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 0, "Clear", isDaylight: true));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 1, "Partly cloudy", isDaylight: false));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 7, "Rain", isDaylight: true));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 4, "Thunderstorm", isDaylight: true));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 13, "Snow", isDaylight: true));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 18, "Fog", isDaylight: true));
+        Assert.NotNull(WeatherIconAssetResolver.ResolveAssetUri(styleId, 999, "Unknown", isDaylight: true));
+    }
+
+    [Theory]
+    [InlineData(WeatherVisualStyleId.GoogleWeatherV4, "google")]
+    [InlineData(WeatherVisualStyleId.Geometric, "geometric")]
+    [InlineData(WeatherVisualStyleId.Breezy, "breezy")]
+    [InlineData(WeatherVisualStyleId.LemonFlutter, "lemon")]
+    public void WeatherSceneProfileResolver_UsesDistinctRendererPerVisualStyle(string styleId, string expectedRenderer)
+    {
+        var profile = WeatherSceneProfileResolver.Resolve(styleId, MaterialWeatherCondition.Rain, isNight: false, isLive: true);
+
+        Assert.Equal(expectedRenderer, profile.RendererId);
+        Assert.Equal("rain", profile.WeatherLayerId);
+        Assert.True(profile.IsLive);
+    }
+
+    [Theory]
+    [InlineData(MaterialWeatherCondition.Clear, "clear")]
+    [InlineData(MaterialWeatherCondition.PartlyCloudy, "partly-cloudy")]
+    [InlineData(MaterialWeatherCondition.Cloudy, "cloudy")]
+    [InlineData(MaterialWeatherCondition.Rain, "rain")]
+    [InlineData(MaterialWeatherCondition.Storm, "storm")]
+    [InlineData(MaterialWeatherCondition.Snow, "snow")]
+    [InlineData(MaterialWeatherCondition.Fog, "fog")]
+    [InlineData(MaterialWeatherCondition.Haze, "haze")]
+    [InlineData(MaterialWeatherCondition.Unknown, "ambient")]
+    public void WeatherSceneProfileResolver_UsesDistinctWeatherLayerPerCondition(MaterialWeatherCondition condition, string expectedLayer)
+    {
+        var profile = WeatherSceneProfileResolver.Resolve(WeatherVisualStyleId.Breezy, condition, isNight: true, isLive: false);
+
+        Assert.Equal("breezy", profile.RendererId);
+        Assert.Equal(expectedLayer, profile.WeatherLayerId);
+        Assert.True(profile.IsNight);
+        Assert.False(profile.IsLive);
     }
 
     private static DesktopComponentRuntimeDescriptor CreateDescriptor()

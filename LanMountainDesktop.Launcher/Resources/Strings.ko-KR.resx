@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" use="optional" />
+              <xsd:attribute name="mimetype" type="xsd:string" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Splash_Title" xml:space="preserve"><value>란산 데스크톱</value></data>
+  <data name="Splash_AppName" xml:space="preserve"><value>란산 데스크톱</value></data>
+  <data name="Splash_StatusInitializing" xml:space="preserve"><value>초기화 중...</value></data>
+  <data name="Splash_DebugPreview" xml:space="preserve"><value>[디버그 모드] 스플래시 미리보기</value></data>
+  <data name="Error_Title" xml:space="preserve"><value>란산 데스크톱</value></data>
+  <data name="Error_TitleCannotConfirm" xml:space="preserve"><value>런처가 시작을 확인할 수 없습니다</value></data>
+  <data name="Error_MessageNotReached" xml:space="preserve"><value>란산 데스크톱이 예상된 시작 상태에 도달하지 못했습니다.</value></data>
+  <data name="Error_SuggestionTitle" xml:space="preserve"><value>시작 복구</value></data>
+  <data name="Error_SuggestionMessage" xml:space="preserve"><value>로그를 검사하거나, 현재 프로세스를 대기하거나, 실행 중인 데스크톱 인스턴스를 활성화할 수 있습니다.</value></data>
+  <data name="Error_DiagnosticHeader" xml:space="preserve"><value>진단 세부정보</value></data>
+  <data name="Error_ButtonOpenLogs" xml:space="preserve"><value>로그 열기</value></data>
+  <data name="Error_ButtonCopy" xml:space="preserve"><value>복사</value></data>
+  <data name="Error_ButtonWait" xml:space="preserve"><value>대기</value></data>
+  <data name="Error_ButtonExit" xml:space="preserve"><value>종료</value></data>
+  <data name="Error_ButtonRetry" xml:space="preserve"><value>재시도</value></data>
+  <data name="Error_ButtonActivate" xml:space="preserve"><value>활성화</value></data>
+  <data name="Error_DebugTitle" xml:space="preserve"><value>[디버그] 런처 오류</value></data>
+  <data name="Error_HostNotFoundTitle" xml:space="preserve"><value>런처가 데스크톱 실행 파일을 찾을 수 없습니다</value></data>
+  <data name="Error_HostNotFoundMessage" xml:space="preserve"><value>디버그 모드에서 다른 실행 파일을 선택하거나, 로그를 검사하거나, 배포 경로를 수정한 후 재시도하세요.</value></data>
+  <data name="Error_GenericRetryMessage" xml:space="preserve"><value>로그를 검사한 후 이전 시작 시도가 완전히 끝나면 재시도하세요.</value></data>
+  <data name="Error_GenericNoRetryMessage" xml:space="preserve"><value>로그를 검사하거나 종료하세요. 이전 프로세스가 여전히 실행 중인 동안 런처는 새 데스크톱 프로세스를 생성하지 않습니다.</value></data>
+  <data name="Error_PendingTitle" xml:space="preserve"><value>시작이 아직 보류 중입니다</value></data>
+  <data name="Error_PendingMessage" xml:space="preserve"><value>데스크톱 프로세스가 여전히 실행 중이므로 런처는 두 번째 인스턴스를 시작하지 않습니다.</value></data>
+  <data name="Error_PendingMessageWithPid" xml:space="preserve"><value>데스크톱 프로세스가 여전히 실행 중이므로 런처는 두 번째 인스턴스를 시작하지 않습니다. 현재 호스트 PID: {0}.</value></data>
+  <data name="MultiInstance_Title" xml:space="preserve"><value>란산 데스크톱</value></data>
+  <data name="MultiInstance_AlreadyRunning" xml:space="preserve"><value>란산 데스크톱이 이미 실행 중입니다</value></data>
+  <data name="MultiInstance_AlreadyRunningMessage" xml:space="preserve"><value>런처가 기존 데스크톱 인스턴스를 감지하여 새 프로세스를 시작하지 않았습니다.</value></data>
+  <data name="MultiInstance_RepeatedLaunchTitle" xml:space="preserve"><value>중복 실행</value></data>
+  <data name="MultiInstance_RepeatedLaunchMessage" xml:space="preserve"><value>현재 설정은 데스크톱을 자동으로 열지 않고 이 프롬프트를 표시하는 것입니다.</value></data>
+  <data name="MultiInstance_NoSecondProcess" xml:space="preserve"><value>두 번째 호스트 프로세스가 생성되지 않았습니다.</value></data>
+  <data name="MultiInstance_ButtonCopy" xml:space="preserve"><value>복사</value></data>
+  <data name="MultiInstance_ButtonClose" xml:space="preserve"><value>닫기</value></data>
+  <data name="MultiInstance_ButtonOpenDesktop" xml:space="preserve"><value>데스크톱 열기</value></data>
+  <data name="MultiInstance_DetailsFormat" xml:space="preserve"><value>기존 호스트 PID: {0}&#10;셸 상태: {1}&#10;두 번째 호스트 프로세스가 생성되지 않았습니다.</value></data>
+  <data name="DataLocation_Title" xml:space="preserve"><value>데이터 저장 위치 선택</value></data>
+  <data name="DataLocation_ChooseLocation" xml:space="preserve"><value>데이터 저장 위치 선택</value></data>
+  <data name="DataLocation_ChooseLocationDesc" xml:space="preserve"><value>런처와 데스크톱 데이터가 저장될 위치를 선택하세요. 나중에 설정에서 변경할 수 있습니다.</value></data>
+  <data name="DataLocation_NotWritable" xml:space="preserve"><value>앱 폴더에 쓸 수 없습니다</value></data>
+  <data name="DataLocation_NotWritableDesc" xml:space="preserve"><value>현재 설치 디렉토리는 상승된 권한이 필요합니다. 데이터는 시스템 사용자 프로필에 저장됩니다.</value></data>
+  <data name="DataLocation_SystemProfile" xml:space="preserve"><value>시스템 사용자 프로필에 저장 (권장)</value></data>
+  <data name="DataLocation_SystemProfileDesc" xml:space="preserve"><value>데이터는 현재 Windows 사용자에 연결되며, 앱 재설치 및 업데이트 후에도 그대로 유지됩니다.</value></data>
+  <data name="DataLocation_Portable" xml:space="preserve"><value>앱 옆에 저장 (휴대용)</value></data>
+  <data name="DataLocation_PortableDesc" xml:space="preserve"><value>휴대용 설치에 유용합니다. 전체 앱 폴더를 데이터와 함께 다른 컴퓨터로 이동할 수 있습니다.</value></data>
+  <data name="DataLocation_ButtonCancel" xml:space="preserve"><value>취소</value></data>
+  <data name="DataLocation_ButtonConfirm" xml:space="preserve"><value>확인</value></data>
+  <data name="DataLocation_MigrateWarning" xml:space="preserve"><value>기존 시스템 데이터가 감지되었습니다. 휴대용 모드를 선택하면 현재 데이터가 자동으로 마이그레이션됩니다.</value></data>
+  <data name="Loading_Title" xml:space="preserve"><value>란산 데스크톱 - 로딩 세부정보</value></data>
+  <data name="Loading_StartingDesktop" xml:space="preserve"><value>란산 데스크톱 시작 중</value></data>
+  <data name="Loading_StatusInitializing" xml:space="preserve"><value>초기화 중...</value></data>
+  <data name="Loading_StatusPreparing" xml:space="preserve"><value>구성 요소 준비 중</value></data>
+  <data name="Loading_LoadingItems" xml:space="preserve"><value>로딩 항목</value></data>
+  <data name="Loading_Done" xml:space="preserve"><value>완료</value></data>
+  <data name="Loading_ErrorOccurred" xml:space="preserve"><value>로딩 중 오류가 발생했습니다.</value></data>
+  <data name="Loading_ButtonDetails" xml:space="preserve"><value>세부정보</value></data>
+  <data name="Loading_ButtonCancel" xml:space="preserve"><value>취소</value></data>
+  <data name="Loading_StageReady" xml:space="preserve"><value>준비 완료</value></data>
+  <data name="Loading_ItemPlugin" xml:space="preserve"><value>플러그인 로딩 중...</value></data>
+  <data name="Loading_ItemComponent" xml:space="preserve"><value>구성 요소 로딩 중...</value></data>
+  <data name="Loading_ItemResource" xml:space="preserve"><value>리소스 로딩 중...</value></data>
+  <data name="Loading_ItemData" xml:space="preserve"><value>데이터 로딩 중...</value></data>
+  <data name="Loading_ItemDownload" xml:space="preserve"><value>다운로드 중...</value></data>
+  <data name="Loading_ItemProcess" xml:space="preserve"><value>처리 중...</value></data>
+  <data name="Loading_ItemComplete" xml:space="preserve"><value>완료</value></data>
+  <data name="Loading_TypePlugin" xml:space="preserve"><value>플러그인</value></data>
+  <data name="Loading_TypeComponent" xml:space="preserve"><value>구성 요소</value></data>
+  <data name="Loading_TypeResource" xml:space="preserve"><value>리소스</value></data>
+  <data name="Loading_TypeData" xml:space="preserve"><value>데이터</value></data>
+  <data name="Loading_TypeNetwork" xml:space="preserve"><value>네트워크</value></data>
+  <data name="Loading_TypeSettings" xml:space="preserve"><value>설정</value></data>
+  <data name="Loading_TypeSystem" xml:space="preserve"><value>시스템</value></data>
+  <data name="Loading_TypeOther" xml:space="preserve"><value>기타</value></data>
+  <data name="Update_Title" xml:space="preserve"><value>란산 데스크톱 - 업데이트</value></data>
+  <data name="Update_AppName" xml:space="preserve"><value>란산 데스크톱</value></data>
+  <data name="Update_StatusUpdate" xml:space="preserve"><value>업데이트</value></data>
+  <data name="Update_StatusUpdating" xml:space="preserve"><value>업데이트 중, 잠시 기다려 주세요...</value></data>
+  <data name="Update_Complete" xml:space="preserve"><value>업데이트 완료</value></data>
+  <data name="Update_Failed" xml:space="preserve"><value>업데이트 실패</value></data>
+  <data name="Update_FailedMessage" xml:space="preserve"><value>업데이트 중 오류가 발생했습니다</value></data>
+  <data name="Update_DebugTitle" xml:space="preserve"><value>[디버그 모드] 업데이트 페이지</value></data>
+  <data name="Update_DebugMessage" xml:space="preserve"><value>업데이트 진행 인터페이스 미리보기</value></data>
+  <data name="Update_Verifying" xml:space="preserve"><value>업데이트 확인 중...</value></data>
+  <data name="Update_ApplyingPlugins" xml:space="preserve"><value>플러그인 업그레이드 적용 중...</value></data>
+  <data name="Update_CleaningUp" xml:space="preserve"><value>이전 배포 정리 중...</value></data>
+  <data name="DebugDebug_Title" xml:space="preserve"><value>디버그 모드</value></data>
+  <data name="DebugDebug_SettingsTitle" xml:space="preserve"><value>디버그 설정</value></data>
+  <data name="DebugDebug_DevMode" xml:space="preserve"><value>개발자 모드</value></data>
+  <data name="DebugDebug_DevModeDesc" xml:space="preserve"><value>활성화 시 개발 디렉토리 자동 스캔</value></data>
+  <data name="DebugDebug_On" xml:space="preserve"><value>켜기</value></data>
+  <data name="DebugDebug_Off" xml:space="preserve"><value>끄기</value></data>
+  <data name="DebugDebug_AppPath" xml:space="preserve"><value>앱 경로</value></data>
+  <data name="DebugDebug_NotSelected" xml:space="preserve"><value>선택 안 됨</value></data>
+  <data name="DebugDebug_Browse" xml:space="preserve"><value>찾아보기...</value></data>
+  <data name="DebugDebug_Warning" xml:space="preserve"><value>이 기능은 개발자 전용입니다</value></data>
+  <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>취소</value></data>
+  <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>확인</value></data>
+  <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>란산 데스크톱 호스트 실행 파일 선택</value></data>
+  <data name="Oobe_Title" xml:space="preserve"><value>란산 데스크톱에 오신 것을 환영합니다</value></data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>란산 데스크톱에 오신 것을 환영합니다</value></data>
+  <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>당신의 데스크톱, 한 면이 아닙니다</value></data>
+  <data name="Oobe_ButtonGetStarted" xml:space="preserve"><value>시작하기</value></data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve"><value>데스크톱 개인화</value></data>
+  <data name="Oobe_AppearanceDesc" xml:space="preserve"><value>원하는 테마 스타일을 선택하세요. 설정에서 언제든 변경할 수 있습니다.</value></data>
+  <data name="Oobe_AppearanceMode" xml:space="preserve"><value>외관 모드</value></data>
+  <data name="Oobe_LightMode" xml:space="preserve"><value>라이트 모드</value></data>
+  <data name="Oobe_DarkMode" xml:space="preserve"><value>다크 모드</value></data>
+  <data name="Oobe_ThemeColor" xml:space="preserve"><value>테마 색상</value></data>
+  <data name="Oobe_MonetSource" xml:space="preserve"><value>Monet 색상 소스</value></data>
+  <data name="Oobe_MonetFromWallpaper" xml:space="preserve"><value>바탕 화면에서 추출</value></data>
+  <data name="Oobe_MonetFromCustomImage" xml:space="preserve"><value>사용자 지정 이미지에서 추출</value></data>
+  <data name="Oobe_MonetDisabled" xml:space="preserve"><value>Monet 색상 사용 안 함</value></data>
+  <data name="Oobe_DataLocationTitle" xml:space="preserve"><value>데이터 저장 위치 선택</value></data>
+  <data name="Oobe_SystemProfile" xml:space="preserve"><value>시스템 사용자 프로필에 저장 (권장)</value></data>
+  <data name="Oobe_SystemProfileDesc" xml:space="preserve"><value>데이터는 현재 Windows 사용자에 연결되며, 앱 재설치 및 업데이트 후에도 그대로 유지됩니다.</value></data>
+  <data name="Oobe_Portable" xml:space="preserve"><value>앱 옆에 저장 (휴대용)</value></data>
+  <data name="Oobe_PortableDesc" xml:space="preserve"><value>휴대용 설치에 유용합니다. 전체 앱 폴더를 데이터와 함께 다른 컴퓨터로 이동할 수 있습니다.</value></data>
+  <data name="Oobe_NotWritable" xml:space="preserve"><value>앱 디렉토리에 저장할 수 없습니다</value></data>
+  <data name="Oobe_NotWritableDesc" xml:space="preserve"><value>현재 설치 디렉토리는 상승된 권한이 필요합니다. 데이터는 시스템 사용자 프로필에 저장됩니다.</value></data>
+  <data name="Oobe_StartupTitle" xml:space="preserve"><value>시작 및 표시</value></data>
+  <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>작업 표시줄에 기본 데스크톱 창 표시</value></data>
+  <data name="Oobe_SlideTransition" xml:space="preserve"><value>슬라이드 전환으로 기본 창 표시</value></data>
+  <data name="Oobe_FadeTransition" xml:space="preserve"><value>시작 시 페이드인 전환 사용</value></data>
+  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>퓨즈드 데스크톱 및 스와이프 제스처</value></data>
+  <data name="Oobe_AutoStart" xml:space="preserve"><value>Windows 로그인 시 란산 데스크톱 자동 시작</value></data>
+  <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>정보 및 개인정보</value></data>
+  <data name="Oobe_CrashReports" xml:space="preserve"><value>익명 크래시 보고서 보내기</value></data>
+  <data name="Oobe_UsageStats" xml:space="preserve"><value>익명 사용 통계 보내기</value></data>
+  <data name="Oobe_PrivacyTrackingId" xml:space="preserve"><value>개인정보 추적 ID</value></data>
+  <data name="Oobe_Agree" xml:space="preserve"><value>동의</value></data>
+  <data name="Oobe_PrivacyPolicyLink" xml:space="preserve"><value>란산 데스크톱 원격 측정 개인정보 데이터 수집 동의서</value></data>
+  <data name="Oobe_ButtonBack" xml:space="preserve"><value>뒤로</value></data>
+  <data name="Oobe_ButtonNext" xml:space="preserve"><value>다음</value></data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve"><value>란산 데스크톱에 오신 것을 환영합니다</value></data>
+  <data name="Oobe_CompleteSubtitle" xml:space="preserve"><value>당신의 데스크톱, 한 면이 아닙니다</value></data>
+  <data name="Oobe_MonetDesc" xml:space="preserve"><value>바탕 화면에서 테마 색상을 자동 추출하여 데스크톱과 완벽하게 융합</value></data>
+  <data name="Oobe_MonetFromWallpaperDesc" xml:space="preserve"><value>현재 바탕 화면 색상을 분석하여 테마 생성</value></data>
+  <data name="Oobe_MonetFromCustomImageDesc" xml:space="preserve"><value>이미지를 선택하여 색상 소스로 사용</value></data>
+  <data name="Oobe_MonetDisabledDesc" xml:space="preserve"><value>고정된 프리셋 테마 색상 사용</value></data>
+  <data name="Oobe_DataLocationDesc" xml:space="preserve"><value>앱 데이터를 저장할 위치를 결정하세요. 설정에서 언제든 변경할 수 있습니다.</value></data>
+  <data name="Oobe_StartupDesc" xml:space="preserve"><value>이 옵션은 데스크톱 앱 설정에서 언제든 변경할 수 있습니다. 슬라이드 인은 Windows에서만 사용 가능합니다.</value></data>
+  <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>활성화하면 최소화 시 작업 표시줄에 항목이 유지됩니다. 비활성화하면 트레이 아이콘에 더 의존합니다.</value></data>
+  <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>화면 가장자리에서 슬라이드 인. 페이드 인과 상호 배타적.</value></data>
+  <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>슬라이드 인이 비활성화된 경우 권장.</value></data>
+  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>퓨즈드 데스크톱과 세 손가락 스와이프 제스처를 활성화하여 에지 팝인 및 관련 실험 기능을 사용합니다(설정의 개발자 옵션과 동일).</value></data>
+  <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>이 런처를 현재 사용자의 시작 프로그램으로 등록합니다(설치 프로그램의 선택적 작업과 동일한 레지스트리 항목).</value></data>
+  <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>이 플랫폼에서는 설정만 저장됩니다. 자동 시작은 시스템의 앱 자동 시작 설정을 사용하세요.</value></data>
+  <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>원격 측정 프로그램 참여 여부를 선택하고 개인정보 정책을 확인</value></data>
+  <data name="Oobe_CrashReportsDesc" xml:space="preserve"><value>앱 안정성 개선에 도움. 개인 식별 정보는 포함되지 않습니다</value></data>
+  <data name="Oobe_UsageStatsDesc" xml:space="preserve"><value>기능 사용 현황을 파악하여 제품 경험 최적화</value></data>
+  <data name="Oobe_PrivacyTrackingIdDesc" xml:space="preserve"><value>이 ID는 기기를 익명으로 식별하는 데 사용되며 개인 정보는 포함되지 않습니다</value></data>
+  <data name="Oobe_PrivacyAgreementNote" xml:space="preserve"><value>원격 측정 기능을 활성화하려면 먼저 개인정보 정책을 읽고 동의해야 합니다. 원격 측정 데이터는 앱 안정성 개선 및 제품 경험 최적화에만 사용되며 개인 식별 정보는 포함되지 않습니다.</value></data>
+  <data name="Oobe_TypingAppName" xml:space="preserve"><value>란산 데스크톱 LanMountain Desktop</value></data>
+  <data name="Oobe_TypingNextGen" xml:space="preserve"><value>차세대</value></data>
+  <data name="Oobe_TypingDashboard" xml:space="preserve"><value>인터랙티브 대시보드</value></data>
+  <data name="Oobe_MigrationDetected" xml:space="preserve"><value>기존 데이터가 감지되었습니다. 휴대용 모드 선택 시 자동으로 마이그레이션됩니다.</value></data>
+  <data name="Migration_Title" xml:space="preserve"><value>란산 데스크톱 - 버전 마이그레이션</value></data>
+  <data name="Migration_DetectedOldVersion" xml:space="preserve"><value>이전 버전 감지됨</value></data>
+  <data name="Migration_DetectedDesc" xml:space="preserve"><value>시스템에 이전 버전의 란산 데스크톱(0.8.4)이 감지되었습니다. 충돌을 방지하기 위해 제거를 권장합니다.</value></data>
+  <data name="Migration_Version" xml:space="preserve"><value>버전: </value></data>
+  <data name="Migration_Location" xml:space="preserve"><value>위치: </value></data>
+  <data name="Migration_Type" xml:space="preserve"><value>유형: </value></data>
+  <data name="Migration_Installed" xml:space="preserve"><value>설치 버전</value></data>
+  <data name="Migration_UninstallNote" xml:space="preserve"><value>이전 버전을 제거해도 새 버전에는 영향을 미치지 않습니다. 개인 데이터는 보존됩니다.</value></data>
+  <data name="Migration_ButtonViewLocation" xml:space="preserve"><value>위치 보기</value></data>
+  <data name="Migration_ButtonSkip" xml:space="preserve"><value>나중에</value></data>
+  <data name="Migration_ButtonUninstall" xml:space="preserve"><value>이전 버전 제거</value></data>
+  <data name="Migration_Portable" xml:space="preserve"><value>휴대용 버전</value></data>
+  <data name="Migration_Unknown" xml:space="preserve"><value>알 수 없음</value></data>
+  <data name="Migration_DetectedDescFormat" xml:space="preserve"><value>시스템에 이전 버전의 란산 데스크톱({0})이 감지되었습니다. 새 버전은 완전히 새로운 아키텍처를 사용합니다. 더 나은 경험을 위해 이전 버전 제거를 권장합니다.</value></data>
+  <data name="Privacy_Title" xml:space="preserve"><value>란산 데스크톱 원격 측정 개인정보 데이터 수집 동의서</value></data>
+  <data name="Privacy_Header" xml:space="preserve"><value>란산 데스크톱 원격 측정 개인정보 데이터 수집 동의서</value></data>
+  <data name="Privacy_Description" xml:space="preserve"><value>데이터의 수집, 사용 및 보호 방법을 이해하기 위해 다음 동의서를 주의 깊게 읽어주세요</value></data>
+  <data name="Privacy_ButtonClose" xml:space="preserve"><value>닫기</value></data>
+  <data name="DevDebug_Title" xml:space="preserve"><value>개발자 디버그 창</value></data>
+  <data name="DevDebug_Splash" xml:space="preserve"><value>시작 화면</value></data>
+  <data name="DevDebug_Error" xml:space="preserve"><value>오류 페이지</value></data>
+  <data name="DevDebug_Update" xml:space="preserve"><value>업데이트 페이지</value></data>
+  <data name="DevDebug_Oobe" xml:space="preserve"><value>OOBE 페이지</value></data>
+  <data name="DevDebug_DataLocation" xml:space="preserve"><value>데이터 위치</value></data>
+  <data name="DevDebug_EnableFeature" xml:space="preserve"><value>기능 활성화</value></data>
+  <data name="DevDebug_Open" xml:space="preserve"><value>열기</value></data>
+  <data name="DevDebug_SetAllViewMode" xml:space="preserve"><value>모두 보기 모드로 설정</value></data>
+  <data name="DevDebug_SetAllFunctionMode" xml:space="preserve"><value>모두 기능 모드로 설정</value></data>
+  <data name="DevDebug_Close" xml:space="preserve"><value>닫기</value></data>
+  <data name="Coordinator_SlowDeviceMessage" xml:space="preserve"><value>장치가 느려 여전히 시작 중입니다. 잠시 기다려주세요.</value></data>
+  <data name="Coordinator_RunningHostMessage" xml:space="preserve"><value>데스크톱 프로세스가 여전히 실행 중입니다. 런처는 계속 대기하며 다시 시작하지 않습니다.</value></data>
+  <data name="Preview_SplashInitializing" xml:space="preserve"><value>초기화 중...</value></data>
+  <data name="Preview_SplashCheckingUpdates" xml:space="preserve"><value>업데이트 확인 중...</value></data>
+  <data name="Preview_SplashCheckingPlugins" xml:space="preserve"><value>플러그인 확인 중...</value></data>
+  <data name="Preview_SplashLaunchingHost" xml:space="preserve"><value>호스트 시작 중...</value></data>
+  <data name="Preview_SplashReady" xml:space="preserve"><value>준비 완료</value></data>
+  <data name="Preview_ErrorMessage" xml:space="preserve"><value>[미리보기] 런처 오류 창 미리보기입니다.</value></data>
+  <data name="Preview_UpdateProcessing" xml:space="preserve"><value>{0} 처리 중...</value></data>
+  <data name="Preview_ActivationConnecting" xml:space="preserve"><value>활성 런처에 연결 중...</value></data>
+</root>

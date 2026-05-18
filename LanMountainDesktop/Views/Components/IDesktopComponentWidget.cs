@@ -1,10 +1,15 @@
-﻿using LanMountainDesktop.Services;
+using LanMountainDesktop.Services;
 
 namespace LanMountainDesktop.Views.Components;
 
 public interface IDesktopComponentWidget
 {
     void ApplyCellSize(double cellSize);
+}
+
+public interface IDesktopComponentLifecycleWidget
+{
+    void OnWidgetDestroyed();
 }
 
 public interface ITimeZoneAwareComponentWidget

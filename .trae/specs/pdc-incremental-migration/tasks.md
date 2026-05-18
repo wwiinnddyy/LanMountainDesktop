@@ -3,13 +3,19 @@
 - [x] Remove VeloPack packaging from release workflow.
 - [x] Keep signed FileMap path as interim compatibility fallback.
 - [x] Remove launcher/runtime Velopack branching.
-- [ ] Add `phainon.yml` for PDCC publish configuration.
-- [ ] Add PDCC installation + publish steps in `release.yml`.
-- [ ] Upload app payload artifacts for PDCC consumption in release build jobs.
-- [ ] Publish PDC metadata + object repo to S3 path root `lanmountain/update/`.
-- [ ] Mirror installers to `lanmountain/update/installers/<platform>/<arch>/`.
-- [ ] Replace update source canonical value with `stcn` (keep legacy `pdc` compatibility).
-- [ ] Add PDC payload model into host update check result.
-- [ ] Add host download path for PDC payload (`pdc-filemap.json` + signature + metadata).
-- [ ] Add launcher PDC FileMap apply path with rollback-compatible semantics.
-- [ ] Keep old `files.json + update.zip` path behind compatibility fallback.
+- [x] Add `phainon.yml` for PDCC publish configuration.
+- [ ] Add PDCC installation + publish steps in `release.yml` (deferred; active path is GitHub Actions PloNDS static publish).
+- [x] Upload app payload artifacts for PloNDS delta generation in release build jobs.
+- [x] Publish PloNDS metadata + sha256 object repo to S3 path root `lanmountain/update/`.
+- [x] Mirror installers to `lanmountain/update/installers/<platform>/<version>/`.
+- [x] Keep update source compatibility (`pdc`/`stcn` normalize to active PloNDS source).
+- [x] Add PloNDS static payload model into host update check result.
+- [x] Add host download path for PloNDS payload (`plonds-filemap.json` + signature + object repo).
+- [x] Add launcher PloNDS FileMap apply path with rollback-compatible semantics.
+- [x] Keep old `files.json + update.zip` path behind compatibility fallback.
+- [x] Keep rollback deployment directories after successful apply and prune by bounded retention.
+- [x] Return structured failure when manual rollback snapshot source is missing.
+- [x] Verify static S3 layout, filemap/signature, distribution, latest pointer, and at least one object in CI workflows.
+- [x] Add regression tests for PloNDS success rollback, hash-failure auto rollback, missing rollback source, static NS3 manifest, and manifest field mapping.
+- [ ] Attach live CI run proving the full release matrix passes.
+- [ ] Verify N-1 -> N incremental update on Windows x86 and Linux x64 in release artifacts.

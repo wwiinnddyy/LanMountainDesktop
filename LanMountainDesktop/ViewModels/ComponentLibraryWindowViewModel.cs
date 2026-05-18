@@ -33,7 +33,7 @@ public sealed class ComponentLibraryCategoryViewModel
     public ComponentLibraryCategoryViewModel(
         string id,
         string title,
-        Symbol icon,
+        Icon icon,
         IReadOnlyList<ComponentLibraryItemViewModel> components)
     {
         Id = id;
@@ -46,7 +46,7 @@ public sealed class ComponentLibraryCategoryViewModel
 
     public string Title { get; }
 
-    public Symbol Icon { get; }
+    public Icon Icon { get; }
 
     public IReadOnlyList<ComponentLibraryItemViewModel> Components { get; }
 }

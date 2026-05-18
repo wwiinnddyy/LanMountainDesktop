@@ -1,5 +1,7 @@
 # UI Design System Guide (design.md)
 
+> Settings window shell-specific rules live in `docs/ai/SETTINGS_WINDOW_DESIGN.md`.
+
 > **目标**: 让 AI 正确使用 Fluent Avalonia / Fluent Icons / Material Avalonia，避免窗口套窗口、容器套容器
 >
 > **最后更新**: 2026-04-11

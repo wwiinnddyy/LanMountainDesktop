@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" use="optional" />
+              <xsd:attribute name="mimetype" type="xsd:string" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Splash_Title" xml:space="preserve"><value>蘭山デスクトップ</value></data>
+  <data name="Splash_AppName" xml:space="preserve"><value>蘭山デスクトップ</value></data>
+  <data name="Splash_StatusInitializing" xml:space="preserve"><value>初期化中...</value></data>
+  <data name="Splash_DebugPreview" xml:space="preserve"><value>[デバッグモード] スプラッシュプレビュー</value></data>
+  <data name="Error_Title" xml:space="preserve"><value>蘭山デスクトップ</value></data>
+  <data name="Error_TitleCannotConfirm" xml:space="preserve"><value>ランチャーは起動を確認できませんでした</value></data>
+  <data name="Error_MessageNotReached" xml:space="preserve"><value>蘭山デスクトップが予期された起動状態に達しませんでした。</value></data>
+  <data name="Error_SuggestionTitle" xml:space="preserve"><value>起動の回復</value></data>
+  <data name="Error_SuggestionMessage" xml:space="preserve"><value>ログを確認するか、現在のプロセスを待機するか、実行中のデスクトップインスタンスをアクティブ化できます。</value></data>
+  <data name="Error_DiagnosticHeader" xml:space="preserve"><value>診断の詳細</value></data>
+  <data name="Error_ButtonOpenLogs" xml:space="preserve"><value>ログを開く</value></data>
+  <data name="Error_ButtonCopy" xml:space="preserve"><value>コピー</value></data>
+  <data name="Error_ButtonWait" xml:space="preserve"><value>待機</value></data>
+  <data name="Error_ButtonExit" xml:space="preserve"><value>終了</value></data>
+  <data name="Error_ButtonRetry" xml:space="preserve"><value>再試行</value></data>
+  <data name="Error_ButtonActivate" xml:space="preserve"><value>アクティブ化</value></data>
+  <data name="Error_DebugTitle" xml:space="preserve"><value>[デバッグ] ランチャーエラー</value></data>
+  <data name="Error_HostNotFoundTitle" xml:space="preserve"><value>ランチャーはデスクトップ実行可能ファイルを見つけられませんでした</value></data>
+  <data name="Error_HostNotFoundMessage" xml:space="preserve"><value>デバッグモードで別の実行可能ファイルを選択するか、ログを確認するか、デプロイパスを修正して再試行してください。</value></data>
+  <data name="Error_GenericRetryMessage" xml:space="preserve"><value>ログを確認し、前回の起動試行が完全に終了してから再試行してください。</value></data>
+  <data name="Error_GenericNoRetryMessage" xml:space="preserve"><value>ログを確認するか終了してください。古いプロセスがまだ実行中の場合、ランチャーは新しいデスクトッププロセスを作成しません。</value></data>
+  <data name="Error_PendingTitle" xml:space="preserve"><value>起動はまだ保留中です</value></data>
+  <data name="Error_PendingMessage" xml:space="preserve"><value>デスクトッププロセスがまだ実行中のため、ランチャーは2番目のインスタンスを起動しません。</value></data>
+  <data name="Error_PendingMessageWithPid" xml:space="preserve"><value>デスクトッププロセスがまだ実行中のため、ランチャーは2番目のインスタンスを起動しません。現在のホスト PID: {0}。</value></data>
+  <data name="MultiInstance_Title" xml:space="preserve"><value>蘭山デスクトップ</value></data>
+  <data name="MultiInstance_AlreadyRunning" xml:space="preserve"><value>蘭山デスクトップは既に実行中です</value></data>
+  <data name="MultiInstance_AlreadyRunningMessage" xml:space="preserve"><value>ランチャーは既存のデスクトップインスタンスを検出し、新しいプロセスを起動しませんでした。</value></data>
+  <data name="MultiInstance_RepeatedLaunchTitle" xml:space="preserve"><value>重複起動</value></data>
+  <data name="MultiInstance_RepeatedLaunchMessage" xml:space="preserve"><value>現在の設定では、デスクトップを自動的に開かずにこのプロンプトを表示します。</value></data>
+  <data name="MultiInstance_NoSecondProcess" xml:space="preserve"><value>2番目のホストプロセスは作成されませんでした。</value></data>
+  <data name="MultiInstance_ButtonCopy" xml:space="preserve"><value>コピー</value></data>
+  <data name="MultiInstance_ButtonClose" xml:space="preserve"><value>閉じる</value></data>
+  <data name="MultiInstance_ButtonOpenDesktop" xml:space="preserve"><value>デスクトップを開く</value></data>
+  <data name="MultiInstance_DetailsFormat" xml:space="preserve"><value>既存のホスト PID: {0}&#10;シェル状態: {1}&#10;2番目のホストプロセスは作成されませんでした。</value></data>
+  <data name="DataLocation_Title" xml:space="preserve"><value>データ保存場所の選択</value></data>
+  <data name="DataLocation_ChooseLocation" xml:space="preserve"><value>データ保存場所の選択</value></data>
+  <data name="DataLocation_ChooseLocationDesc" xml:space="preserve"><value>ランチャーとデスクトップデータの保存場所を選択してください。後から設定で変更できます。</value></data>
+  <data name="DataLocation_NotWritable" xml:space="preserve"><value>アプリフォルダに書き込みできません</value></data>
+  <data name="DataLocation_NotWritableDesc" xml:space="preserve"><value>現在のインストールディレクトリには昇格された権限が必要です。データはシステムユーザープロファイルに保存されます。</value></data>
+  <data name="DataLocation_SystemProfile" xml:space="preserve"><value>システムユーザープロファイルに保存（推奨）</value></data>
+  <data name="DataLocation_SystemProfileDesc" xml:space="preserve"><value>データは現在のWindowsユーザーに紐付けられ、アプリの再インストールや更新後も保持されます。</value></data>
+  <data name="DataLocation_Portable" xml:space="preserve"><value>アプリの横に保存（ポータブル）</value></data>
+  <data name="DataLocation_PortableDesc" xml:space="preserve"><value>ポータブルインストールに便利です。アプリフォルダ全体をデータと一緒に別のマシンに移動できます。</value></data>
+  <data name="DataLocation_ButtonCancel" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="DataLocation_ButtonConfirm" xml:space="preserve"><value>確認</value></data>
+  <data name="DataLocation_MigrateWarning" xml:space="preserve"><value>既存のシステムデータが検出されました。ポータブルモードを選択すると、現在のデータが自動的に移行されます。</value></data>
+  <data name="Loading_Title" xml:space="preserve"><value>蘭山デスクトップ - 読み込み詳細</value></data>
+  <data name="Loading_StartingDesktop" xml:space="preserve"><value>蘭山デスクトップを起動中</value></data>
+  <data name="Loading_StatusInitializing" xml:space="preserve"><value>初期化中...</value></data>
+  <data name="Loading_StatusPreparing" xml:space="preserve"><value>コンポーネントを準備中</value></data>
+  <data name="Loading_LoadingItems" xml:space="preserve"><value>読み込み項目</value></data>
+  <data name="Loading_Done" xml:space="preserve"><value>完了</value></data>
+  <data name="Loading_ErrorOccurred" xml:space="preserve"><value>読み込み中にエラーが発生しました。</value></data>
+  <data name="Loading_ButtonDetails" xml:space="preserve"><value>詳細</value></data>
+  <data name="Loading_ButtonCancel" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="Loading_StageReady" xml:space="preserve"><value>準備完了</value></data>
+  <data name="Loading_ItemPlugin" xml:space="preserve"><value>プラグインを読み込み中...</value></data>
+  <data name="Loading_ItemComponent" xml:space="preserve"><value>コンポーネントを読み込み中...</value></data>
+  <data name="Loading_ItemResource" xml:space="preserve"><value>リソースを読み込み中...</value></data>
+  <data name="Loading_ItemData" xml:space="preserve"><value>データを読み込み中...</value></data>
+  <data name="Loading_ItemDownload" xml:space="preserve"><value>ダウンロード中...</value></data>
+  <data name="Loading_ItemProcess" xml:space="preserve"><value>処理中...</value></data>
+  <data name="Loading_ItemComplete" xml:space="preserve"><value>完了</value></data>
+  <data name="Loading_TypePlugin" xml:space="preserve"><value>プラグイン</value></data>
+  <data name="Loading_TypeComponent" xml:space="preserve"><value>コンポーネント</value></data>
+  <data name="Loading_TypeResource" xml:space="preserve"><value>リソース</value></data>
+  <data name="Loading_TypeData" xml:space="preserve"><value>データ</value></data>
+  <data name="Loading_TypeNetwork" xml:space="preserve"><value>ネットワーク</value></data>
+  <data name="Loading_TypeSettings" xml:space="preserve"><value>設定</value></data>
+  <data name="Loading_TypeSystem" xml:space="preserve"><value>システム</value></data>
+  <data name="Loading_TypeOther" xml:space="preserve"><value>その他</value></data>
+  <data name="Update_Title" xml:space="preserve"><value>蘭山デスクトップ - 更新</value></data>
+  <data name="Update_AppName" xml:space="preserve"><value>蘭山デスクトップ</value></data>
+  <data name="Update_StatusUpdate" xml:space="preserve"><value>更新</value></data>
+  <data name="Update_StatusUpdating" xml:space="preserve"><value>更新中、お待ちください...</value></data>
+  <data name="Update_Complete" xml:space="preserve"><value>更新完了</value></data>
+  <data name="Update_Failed" xml:space="preserve"><value>更新失敗</value></data>
+  <data name="Update_FailedMessage" xml:space="preserve"><value>更新中にエラーが発生しました</value></data>
+  <data name="Update_DebugTitle" xml:space="preserve"><value>[デバッグモード] 更新ページ</value></data>
+  <data name="Update_DebugMessage" xml:space="preserve"><value>更新進行インターフェースのプレビュー</value></data>
+  <data name="Update_Verifying" xml:space="preserve"><value>更新を検証中...</value></data>
+  <data name="Update_ApplyingPlugins" xml:space="preserve"><value>プラグインのアップグレードを適用中...</value></data>
+  <data name="Update_CleaningUp" xml:space="preserve"><value>古いデプロイメントをクリーンアップ中...</value></data>
+  <data name="DebugDebug_Title" xml:space="preserve"><value>デバッグモード</value></data>
+  <data name="DebugDebug_SettingsTitle" xml:space="preserve"><value>デバッグ設定</value></data>
+  <data name="DebugDebug_DevMode" xml:space="preserve"><value>開発者モード</value></data>
+  <data name="DebugDebug_DevModeDesc" xml:space="preserve"><value>有効にすると開発ディレクトリを自動スキャンします</value></data>
+  <data name="DebugDebug_On" xml:space="preserve"><value>オン</value></data>
+  <data name="DebugDebug_Off" xml:space="preserve"><value>オフ</value></data>
+  <data name="DebugDebug_AppPath" xml:space="preserve"><value>アプリパス</value></data>
+  <data name="DebugDebug_NotSelected" xml:space="preserve"><value>未選択</value></data>
+  <data name="DebugDebug_Browse" xml:space="preserve"><value>参照...</value></data>
+  <data name="DebugDebug_Warning" xml:space="preserve"><value>この機能は開発者専用です</value></data>
+  <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>OK</value></data>
+  <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>蘭山デスクトップホスト実行可能ファイルを選択</value></data>
+  <data name="Oobe_Title" xml:space="preserve"><value>蘭山デスクトップへようこそ</value></data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>蘭山デスクトップへようこそ</value></data>
+  <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>あなたのデスクトップ、一面だけじゃない</value></data>
+  <data name="Oobe_ButtonGetStarted" xml:space="preserve"><value>始める</value></data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve"><value>デスクトップをカスタマイズ</value></data>
+  <data name="Oobe_AppearanceDesc" xml:space="preserve"><value>お好みのテーマスタイルを選択してください。設定でいつでも変更できます。</value></data>
+  <data name="Oobe_AppearanceMode" xml:space="preserve"><value>外観モード</value></data>
+  <data name="Oobe_LightMode" xml:space="preserve"><value>ライトモード</value></data>
+  <data name="Oobe_DarkMode" xml:space="preserve"><value>ダークモード</value></data>
+  <data name="Oobe_ThemeColor" xml:space="preserve"><value>テーマカラー</value></data>
+  <data name="Oobe_MonetSource" xml:space="preserve"><value>Monet カラーソース</value></data>
+  <data name="Oobe_MonetFromWallpaper" xml:space="preserve"><value>壁紙から抽出</value></data>
+  <data name="Oobe_MonetFromCustomImage" xml:space="preserve"><value>カスタム画像から抽出</value></data>
+  <data name="Oobe_MonetDisabled" xml:space="preserve"><value>Monet カラーを使用しない</value></data>
+  <data name="Oobe_DataLocationTitle" xml:space="preserve"><value>データ保存場所の選択</value></data>
+  <data name="Oobe_SystemProfile" xml:space="preserve"><value>システムユーザープロファイルに保存（推奨）</value></data>
+  <data name="Oobe_SystemProfileDesc" xml:space="preserve"><value>データは現在のWindowsユーザーに紐付けられ、アプリの再インストールや更新後も保持されます。</value></data>
+  <data name="Oobe_Portable" xml:space="preserve"><value>アプリの横に保存（ポータブル）</value></data>
+  <data name="Oobe_PortableDesc" xml:space="preserve"><value>ポータブルインストールに便利です。アプリフォルダ全体をデータと一緒に別のマシンに移動できます。</value></data>
+  <data name="Oobe_NotWritable" xml:space="preserve"><value>アプリディレクトリに保存できません</value></data>
+  <data name="Oobe_NotWritableDesc" xml:space="preserve"><value>現在のインストールディレクトリには昇格された権限が必要です。データはシステムユーザープロファイルに保存されます。</value></data>
+  <data name="Oobe_StartupTitle" xml:space="preserve"><value>起動と表示</value></data>
+  <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>タスクバーにメインデスクトップウィンドウを表示</value></data>
+  <data name="Oobe_SlideTransition" xml:space="preserve"><value>スライド遷移でメインウィンドウを表示</value></data>
+  <data name="Oobe_FadeTransition" xml:space="preserve"><value>起動時にフェードイン遷移を使用</value></data>
+  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>フューズドデスクトップとスワイプジェスチャー</value></data>
+  <data name="Oobe_AutoStart" xml:space="preserve"><value>Windowsログイン時に蘭山デスクトップを自動起動</value></data>
+  <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>情報とプライバシー</value></data>
+  <data name="Oobe_CrashReports" xml:space="preserve"><value>匿名クラッシュレポートを送信</value></data>
+  <data name="Oobe_UsageStats" xml:space="preserve"><value>匿名使用統計を送信</value></data>
+  <data name="Oobe_PrivacyTrackingId" xml:space="preserve"><value>プライバシー追跡 ID</value></data>
+  <data name="Oobe_Agree" xml:space="preserve"><value>同意する</value></data>
+  <data name="Oobe_PrivacyPolicyLink" xml:space="preserve"><value>蘭山デスクトップテレメトリプライバシーデータ収集同意書</value></data>
+  <data name="Oobe_ButtonBack" xml:space="preserve"><value>戻る</value></data>
+  <data name="Oobe_ButtonNext" xml:space="preserve"><value>次へ</value></data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve"><value>蘭山デスクトップへようこそ</value></data>
+  <data name="Oobe_CompleteSubtitle" xml:space="preserve"><value>あなたのデスクトップ、一面だけじゃない</value></data>
+  <data name="Oobe_MonetDesc" xml:space="preserve"><value>壁紙からテーマカラーを自動抽出し、デスクトップとシームレスに融合</value></data>
+  <data name="Oobe_MonetFromWallpaperDesc" xml:space="preserve"><value>現在の壁紙の色を分析してテーマを生成</value></data>
+  <data name="Oobe_MonetFromCustomImageDesc" xml:space="preserve"><value>画像を選択してカラーソースにする</value></data>
+  <data name="Oobe_MonetDisabledDesc" xml:space="preserve"><value>固定のプリセットテーマカラーを使用</value></data>
+  <data name="Oobe_DataLocationDesc" xml:space="preserve"><value>アプリデータの保存場所を決定します。設定でいつでも変更できます。</value></data>
+  <data name="Oobe_StartupDesc" xml:space="preserve"><value>これらのオプションはデスクトップアプリの設定でいつでも変更できます。スライドインはWindowsでのみ利用可能です。</value></data>
+  <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>有効にすると最小化時にタスクバーにエントリが残ります。無効にするとトレイアイコンに依存します。</value></data>
+  <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>画面端からスライドイン。フェードインとは排他的。</value></data>
+  <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>スライドインが無効の場合に推奨。</value></data>
+  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>フューズドデスクトップと三本指スワイプジェスチャーを有効にし、エッジポップインと関連実験機能を使用します（設定の開発者オプションと同じ）。</value></data>
+  <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>このランチャーを現在のユーザーのスタートアップ項目として登録します（インストーラーのオプションタスクと同じレジストリエントリ）。</value></data>
+  <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>このプラットフォームでは設定のみ保存されます。自動起動にはシステムのアプリ自動起動設定を使用してください。</value></data>
+  <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>テレメトリプログラムへの参加を選択し、プライバシーポリシーを確認</value></data>
+  <data name="Oobe_CrashReportsDesc" xml:space="preserve"><value>アプリの安定性向上に協力。個人情報は含まれません</value></data>
+  <data name="Oobe_UsageStatsDesc" xml:space="preserve"><value>機能の使用状況を把握し、製品体験を最適化</value></data>
+  <data name="Oobe_PrivacyTrackingIdDesc" xml:space="preserve"><value>このIDはデバイスを匿名で識別するために使用され、個人情報は含まれません</value></data>
+  <data name="Oobe_PrivacyAgreementNote" xml:space="preserve"><value>テレメトリ機能を有効にする前に、プライバシーポリシーを読んで同意する必要があります。テレメトリデータはアプリの安定性向上と製品体験の最適化にのみ使用され、個人情報は含まれません。</value></data>
+  <data name="Oobe_TypingAppName" xml:space="preserve"><value>蘭山デスクトップ LanMountain Desktop</value></data>
+  <data name="Oobe_TypingNextGen" xml:space="preserve"><value>次世代</value></data>
+  <data name="Oobe_TypingDashboard" xml:space="preserve"><value>インタラクティブダッシュボード</value></data>
+  <data name="Oobe_MigrationDetected" xml:space="preserve"><value>既存データが検出されました。ポータブルモード選択時に自動移行されます。</value></data>
+  <data name="Migration_Title" xml:space="preserve"><value>蘭山デスクトップ - バージョン移行</value></data>
+  <data name="Migration_DetectedOldVersion" xml:space="preserve"><value>旧バージョンを検出</value></data>
+  <data name="Migration_DetectedDesc" xml:space="preserve"><value>システムに旧バージョンの蘭山デスクトップ（0.8.4）が検出されました。競合を避けるためにアンインストールをお勧めします。</value></data>
+  <data name="Migration_Version" xml:space="preserve"><value>バージョン：</value></data>
+  <data name="Migration_Location" xml:space="preserve"><value>場所：</value></data>
+  <data name="Migration_Type" xml:space="preserve"><value>タイプ：</value></data>
+  <data name="Migration_Installed" xml:space="preserve"><value>インストール版</value></data>
+  <data name="Migration_UninstallNote" xml:space="preserve"><value>旧バージョンをアンインストールしても新バージョンには影響しません。個人データは保持されます。</value></data>
+  <data name="Migration_ButtonViewLocation" xml:space="preserve"><value>場所を表示</value></data>
+  <data name="Migration_ButtonSkip" xml:space="preserve"><value>後で</value></data>
+  <data name="Migration_ButtonUninstall" xml:space="preserve"><value>旧バージョンをアンインストール</value></data>
+  <data name="Migration_Portable" xml:space="preserve"><value>ポータブル版</value></data>
+  <data name="Migration_Unknown" xml:space="preserve"><value>不明</value></data>
+  <data name="Migration_DetectedDescFormat" xml:space="preserve"><value>システムに旧バージョンの蘭山デスクトップ（{0}）が検出されました。新バージョンは完全に新しいアーキテクチャを採用しています。より良い体験のために旧バージョンのアンインストールをお勧めします。</value></data>
+  <data name="Privacy_Title" xml:space="preserve"><value>蘭山デスクトップテレメトリプライバシーデータ収集同意書</value></data>
+  <data name="Privacy_Header" xml:space="preserve"><value>蘭山デスクトップテレメトリプライバシーデータ収集同意書</value></data>
+  <data name="Privacy_Description" xml:space="preserve"><value>以下の同意書をよくお読みになり、データの収集、使用、保護についてご理解ください</value></data>
+  <data name="Privacy_ButtonClose" xml:space="preserve"><value>閉じる</value></data>
+  <data name="DevDebug_Title" xml:space="preserve"><value>開発者デバッグウィンドウ</value></data>
+  <data name="DevDebug_Splash" xml:space="preserve"><value>スプラッシュ画面</value></data>
+  <data name="DevDebug_Error" xml:space="preserve"><value>エラーページ</value></data>
+  <data name="DevDebug_Update" xml:space="preserve"><value>更新ページ</value></data>
+  <data name="DevDebug_Oobe" xml:space="preserve"><value>OOBEページ</value></data>
+  <data name="DevDebug_DataLocation" xml:space="preserve"><value>データ保存場所</value></data>
+  <data name="DevDebug_EnableFeature" xml:space="preserve"><value>機能を有効化</value></data>
+  <data name="DevDebug_Open" xml:space="preserve"><value>開く</value></data>
+  <data name="DevDebug_SetAllViewMode" xml:space="preserve"><value>すべて表示モードに設定</value></data>
+  <data name="DevDebug_SetAllFunctionMode" xml:space="preserve"><value>すべて機能モードに設定</value></data>
+  <data name="DevDebug_Close" xml:space="preserve"><value>閉じる</value></data>
+  <data name="Coordinator_SlowDeviceMessage" xml:space="preserve"><value>デバイスの動作が遅く、まだ起動中です。お待ちください。</value></data>
+  <data name="Coordinator_RunningHostMessage" xml:space="preserve"><value>デスクトッププロセスがまだ実行中です。ランチャーは待機を続け、再起動しません。</value></data>
+  <data name="Preview_SplashInitializing" xml:space="preserve"><value>初期化中...</value></data>
+  <data name="Preview_SplashCheckingUpdates" xml:space="preserve"><value>更新を確認中...</value></data>
+  <data name="Preview_SplashCheckingPlugins" xml:space="preserve"><value>プラグインを確認中...</value></data>
+  <data name="Preview_SplashLaunchingHost" xml:space="preserve"><value>ホストを起動中...</value></data>
+  <data name="Preview_SplashReady" xml:space="preserve"><value>準備完了</value></data>
+  <data name="Preview_ErrorMessage" xml:space="preserve"><value>[プレビュー] ランチャーエラーウィンドウのプレビューです。</value></data>
+  <data name="Preview_UpdateProcessing" xml:space="preserve"><value>{0} を処理中...</value></data>
+  <data name="Preview_ActivationConnecting" xml:space="preserve"><value>アクティブなランチャーに接続中...</value></data>
+</root>

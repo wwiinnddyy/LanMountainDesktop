@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using LanMountainDesktop.Models;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Theme;
 using LanMountainDesktop.ViewModels;
@@ -32,41 +33,57 @@ public partial class NotificationWindow : Window
 
     public void Initialize(NotificationViewModel viewModel, IAppearanceThemeService? themeService = null)
     {
+        Initialize(viewModel, themeService is IMaterialColorService materialColorService
+            ? materialColorService.GetMaterialColorSnapshot()
+            : themeService is null
+                ? null
+                : HostMaterialColorProvider.GetOrCreate().GetMaterialColorSnapshot());
+    }
+
+    public void Initialize(NotificationViewModel viewModel, MaterialColorSnapshot? materialColorSnapshot)
+    {
         _viewModel = viewModel;
         DataContext = viewModel;
-        
+
         _remainingDuration = viewModel.Duration;
-        
-        ApplyTheme(themeService);
+
+        ApplyTheme(materialColorSnapshot);
         ApplySeverityColor();
     }
 
-    private void ApplyTheme(IAppearanceThemeService? themeService)
+    public void ApplyMaterialSnapshot(MaterialColorSnapshot materialColorSnapshot)
     {
-        if (themeService is null) return;
+        ApplyTheme(materialColorSnapshot);
+        ApplySeverityColor();
+    }
 
-        var snapshot = themeService.GetCurrent();
-        RequestedThemeVariant = snapshot.IsNightMode ? ThemeVariant.Dark : ThemeVariant.Light;
+    private void ApplyTheme(MaterialColorSnapshot? materialColorSnapshot)
+    {
+        // Notification windows must always stay transparent, regardless of whether
+        // we have a live material snapshot.
+        Background = Brushes.Transparent;
+        TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
+
+        if (materialColorSnapshot is null) return;
+
+        RequestedThemeVariant = materialColorSnapshot.IsNightMode ? ThemeVariant.Dark : ThemeVariant.Light;
 
         // Apply glass effect resources directly to window resources
         // This ensures the notification card has proper background/border colors
-        var context = CreateThemeContext(snapshot);
+        var context = CreateThemeContext(materialColorSnapshot);
         GlassEffectService.ApplyGlassResources(Resources, context);
 
         // IMPORTANT: Do NOT call ApplyWindowMaterial for notification windows!
         // ApplyWindowMaterial sets Background to White when MaterialMode is "None",
         // which causes the white border around the notification card.
-        // Notification windows must always have transparent background.
-        Background = Brushes.Transparent;
-        TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
     }
 
-    private ThemeColorContext CreateThemeContext(AppearanceThemeSnapshot snapshot)
+    private ThemeColorContext CreateThemeContext(MaterialColorSnapshot snapshot)
     {
         // Create theme context for glass effect resources
         // Note: IsLightBackground and IsLightNavBackground are derived from IsNightMode
         // UseNeutralSurfaces is determined by ThemeColorMode
-        var useNeutralSurfaces = snapshot.ThemeColorMode == "Neutral";
+        var useNeutralSurfaces = snapshot.ThemeColorMode == ThemeAppearanceValues.ColorModeDefaultNeutral;
         var monetColors = snapshot.WallpaperSeedCandidates;
 
         return new ThemeColorContext(

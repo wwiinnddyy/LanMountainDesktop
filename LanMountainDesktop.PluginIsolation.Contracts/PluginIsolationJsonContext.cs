@@ -22,6 +22,7 @@ namespace LanMountainDesktop.PluginIsolation.Contracts;
 [JsonSerializable(typeof(PluginSettingsWriteResponse))]
 [JsonSerializable(typeof(PluginSettingsChangedNotification))]
 [JsonSerializable(typeof(PluginAppearanceSnapshotRequest))]
+[JsonSerializable(typeof(PluginMaterialSurfaceSnapshot))]
 [JsonSerializable(typeof(PluginAppearanceSnapshot))]
 [JsonSerializable(typeof(PluginAppearanceChangedNotification))]
 [JsonSerializable(typeof(PluginUiSurfaceDescriptor))]

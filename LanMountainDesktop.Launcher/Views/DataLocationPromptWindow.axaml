@@ -4,12 +4,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         d:DesignWidth="520"
         d:DesignHeight="480"
         x:Class="LanMountainDesktop.Launcher.Views.DataLocationPromptWindow"
         x:DataType="views:DataLocationPromptWindow"
-        Title="Choose Data Location"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.DataLocation_Title}"
         Width="520"
         Height="480"
         CanResize="False"
@@ -24,11 +26,11 @@
     </Grid.RenderTransform>
     <Grid Margin="36" RowDefinitions="Auto,*,Auto">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,20">
-        <TextBlock Text="Choose Data Location"
+        <TextBlock Text="{x:Static res:Strings.DataLocation_ChooseLocation}"
                    FontSize="22"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="Choose where launcher and desktop data should be stored. You can change this later in settings."
+        <TextBlock Text="{x:Static res:Strings.DataLocation_ChooseLocationDesc}"
                    FontSize="13"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -45,7 +47,7 @@
               <fi:SymbolIcon Symbol="Important"
                              FontSize="16"
                              Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
-              <TextBlock Text="App folder is not writable"
+              <TextBlock Text="{x:Static res:Strings.DataLocation_NotWritable}"
                          FontWeight="SemiBold"
                          FontSize="13"
                          Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -71,11 +73,11 @@
                          GroupName="DataLocation"
                          IsChecked="True" />
             <StackPanel Grid.Column="1" Spacing="4">
-              <TextBlock Text="Store in the system user profile (Recommended)"
+              <TextBlock Text="{x:Static res:Strings.DataLocation_SystemProfile}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="Data stays tied to the current Windows user and remains intact across app reinstalls and updates."
+              <TextBlock Text="{x:Static res:Strings.DataLocation_SystemProfileDesc}"
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -102,11 +104,11 @@
                          GroupName="DataLocation"
                          IsEnabled="False" />
             <StackPanel Grid.Column="1" Spacing="4">
-              <TextBlock Text="Store next to the app"
+              <TextBlock Text="{x:Static res:Strings.DataLocation_Portable}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="Useful for portable installs. The whole app folder can be moved to another machine together with its data."
+              <TextBlock Text="{x:Static res:Strings.DataLocation_PortableDesc}"
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -146,7 +148,7 @@
                 Theme="{DynamicResource ButtonTheme}"
                 IsVisible="False" />
         <Button x:Name="ConfirmButton"
-                Content="Confirm"
+                Content="{x:Static res:Strings.DataLocation_ButtonConfirm}"
                 Theme="{DynamicResource AccentButtonTheme}" />
       </StackPanel>
     </Grid>

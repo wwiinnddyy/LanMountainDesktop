@@ -199,6 +199,60 @@ function Add-LinuxDesktopAssets {
     Copy-Item -LiteralPath $installScriptSource -Destination (Join-Path $PublishedDirectory "install.sh") -Force
 }
 
+function Invoke-PublishPayloadOptimization {
+    param(
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$Rid
+    )
+
+    $optimizer = Join-Path $scriptRoot "Optimize-PublishPayload.ps1"
+    if (-not (Test-Path -LiteralPath $optimizer)) {
+        throw "Publish payload optimizer is missing: $optimizer"
+    }
+
+    & $optimizer `
+        -PublishDir $PublishedDirectory `
+        -RuntimeIdentifier $Rid `
+        -AssertClean `
+        -KeepSymbols:$KeepSymbols
+    if ($LASTEXITCODE -ne 0) {
+        throw "Publish payload optimization failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Publish-AirAppHostPayload {
+    param(
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$Rid,
+        [Parameter(Mandatory = $true)][string]$VersionValue
+    )
+
+    $airAppHostProject = Join-Path $repoRoot "..\LanMountainDesktop.AirAppHost\LanMountainDesktop.AirAppHost.csproj"
+    $airAppHostProject = Resolve-ExistingPath -PathValue $airAppHostProject
+    Write-Host "Publishing AirAppHost payload..."
+    $airPublishArgs = @(
+        "publish",
+        $airAppHostProject,
+        "-c", $Configuration,
+        "-r", $Rid,
+        "--self-contained", "false",
+        "-p:PublishSingleFile=false",
+        "-p:PublishTrimmed=false",
+        "-p:PublishReadyToRun=false",
+        "-p:DebugType=None",
+        "-p:DebugSymbols=false",
+        "-p:BuildingAirAppHost=true",
+        "-p:SkipAirAppHostBuild=true",
+        "-p:Version=$VersionValue",
+        "-o", $PublishedDirectory
+    )
+
+    & dotnet @airPublishArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "AirAppHost publish failed with exit code $LASTEXITCODE."
+    }
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-ExistingPath -PathValue (Join-Path $scriptRoot "..")
 
@@ -231,6 +285,7 @@ $publishArgs = @(
     "-p:PublishTrimmed=false",
     "-p:DebugType=None",
     "-p:DebugSymbols=false",
+    "-p:SkipAirAppHostBuild=true",
     "-p:Version=$Version",
     "-o", $PublishDir
 )
@@ -240,6 +295,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
+Publish-AirAppHostPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
 Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
 Remove-LegacyOutputArtifacts -TargetDirectory $PublishDir
 
@@ -247,11 +303,7 @@ if ($RuntimeIdentifier -like "linux-*") {
     Add-LinuxDesktopAssets -PublishedDirectory $PublishDir -RepoRoot $repoRoot
 }
 
-if (-not $KeepSymbols) {
-    Get-ChildItem -Path $PublishDir -Recurse -File -Filter "*.pdb" | ForEach-Object {
-        [System.IO.File]::Delete($_.FullName)
-    }
-}
+Invoke-PublishPayloadOptimization -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
 
 if (Is-WindowsRuntimeIdentifier -Rid $RuntimeIdentifier) {
     if (-not $InstallerOutputDir) {

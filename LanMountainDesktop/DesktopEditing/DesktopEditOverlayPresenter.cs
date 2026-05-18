@@ -27,11 +27,14 @@ internal sealed class DesktopEditOverlayPresenter
     private readonly DesktopEditGhostView _ghostView;
     private readonly Border _candidateOutline;
     private readonly ScaleTransform _candidateScale = new(1, 1);
+    private readonly CompositionVisualAnimationService _visualAnimationService;
 
     private Rect? _previewRect;
     private Rect? _candidateRect;
     private bool _isInvalid;
     private bool _isVisible;
+    private bool _ghostUsesCompositionOffset;
+    private bool _candidateUsesCompositionOffset;
     private int _dismissVersion;
 
     private readonly SolidColorBrush _candidateBrush = new(Color.Parse("#FF0A84FF"));
@@ -40,7 +43,14 @@ internal sealed class DesktopEditOverlayPresenter
     private readonly SolidColorBrush _candidateInvalidFillBrush = new(Color.Parse("#14FF3B30"));
 
     public DesktopEditOverlayPresenter()
+        : this(new CompositionVisualAnimationService())
     {
+    }
+
+    internal DesktopEditOverlayPresenter(CompositionVisualAnimationService visualAnimationService)
+    {
+        _visualAnimationService = visualAnimationService;
+
         _ghostView = new DesktopEditGhostView
         {
             IsHitTestVisible = false,
@@ -56,8 +66,11 @@ internal sealed class DesktopEditOverlayPresenter
             CornerRadius = new CornerRadius(22),
             Opacity = 0,
             RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            RenderTransform = _candidateScale,
-            Transitions = new Transitions
+            RenderTransform = _candidateScale
+        };
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            _candidateOutline.Transitions = new Transitions
             {
                 new DoubleTransition
                 {
@@ -65,13 +78,13 @@ internal sealed class DesktopEditOverlayPresenter
                     Duration = FastDuration,
                     Easing = StandardEasing
                 }
-            }
-        };
-        _candidateScale.Transitions = new Transitions
-        {
-            CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
-            CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
-        };
+            };
+            _candidateScale.Transitions = new Transitions
+            {
+                CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
+                CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
+            };
+        }
 
         _candidateOutline.SetValue(Panel.ZIndexProperty, 0);
         _ghostView.SetValue(Panel.ZIndexProperty, 1);
@@ -89,10 +102,13 @@ internal sealed class DesktopEditOverlayPresenter
             }
         };
 
-        _root.Transitions = new Transitions
+        if (Dispatcher.UIThread.CheckAccess())
         {
-            CreateOpacityTransition(FastDuration)
-        };
+            _root.Transitions = new Transitions
+            {
+                CreateOpacityTransition(FastDuration)
+            };
+        }
     }
 
     public Control Root => _root;
@@ -276,8 +292,7 @@ internal sealed class DesktopEditOverlayPresenter
         var rect = _previewRect.Value;
         _ghostView.Width = Math.Max(1, rect.Width);
         _ghostView.Height = Math.Max(1, rect.Height);
-        Canvas.SetLeft(_ghostView, rect.X);
-        Canvas.SetTop(_ghostView, rect.Y);
+        SetOverlayOffset(_ghostView, new Point(rect.X, rect.Y), ref _ghostUsesCompositionOffset);
         _ghostView.UpdatePreviewMetrics(rect.Width, rect.Height);
     }
 
@@ -294,8 +309,7 @@ internal sealed class DesktopEditOverlayPresenter
         _candidateOutline.IsVisible = true;
         _candidateOutline.Width = Math.Max(1, rect.Width);
         _candidateOutline.Height = Math.Max(1, rect.Height);
-        Canvas.SetLeft(_candidateOutline, rect.X);
-        Canvas.SetTop(_candidateOutline, rect.Y);
+        SetOverlayOffset(_candidateOutline, new Point(rect.X, rect.Y), ref _candidateUsesCompositionOffset);
 
         var cornerRadius = Math.Clamp(Math.Min(rect.Width, rect.Height) * 0.11, 14, 26);
         _candidateOutline.CornerRadius = new CornerRadius(cornerRadius);
@@ -323,6 +337,26 @@ internal sealed class DesktopEditOverlayPresenter
         var width = Math.Max(1, rect.Width);
         var height = Math.Max(1, rect.Height);
         return new Rect(rect.X, rect.Y, width, height);
+    }
+
+    private void SetOverlayOffset(Control target, Point position, ref bool usesCompositionOffset)
+    {
+        if (_visualAnimationService.TrySetOffset(target, position))
+        {
+            Canvas.SetLeft(target, 0);
+            Canvas.SetTop(target, 0);
+            usesCompositionOffset = true;
+            return;
+        }
+
+        if (usesCompositionOffset)
+        {
+            _visualAnimationService.TryResetOffset(target);
+            usesCompositionOffset = false;
+        }
+
+        Canvas.SetLeft(target, position.X);
+        Canvas.SetTop(target, position.Y);
     }
 
     private static DoubleTransition CreateScaleTransition(AvaloniaProperty property, TimeSpan duration) =>

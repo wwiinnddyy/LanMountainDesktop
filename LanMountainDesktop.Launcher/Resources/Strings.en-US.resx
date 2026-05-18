@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" use="optional" />
+              <xsd:attribute name="mimetype" type="xsd:string" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Splash_Title" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="Splash_AppName" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="Splash_StatusInitializing" xml:space="preserve"><value>Initializing...</value></data>
+  <data name="Splash_DebugPreview" xml:space="preserve"><value>[Debug Mode] Splash Preview</value></data>
+  <data name="Error_Title" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="Error_TitleCannotConfirm" xml:space="preserve"><value>Launcher could not confirm startup</value></data>
+  <data name="Error_MessageNotReached" xml:space="preserve"><value>LanMountain Desktop did not reach the expected startup state.</value></data>
+  <data name="Error_SuggestionTitle" xml:space="preserve"><value>Startup recovery</value></data>
+  <data name="Error_SuggestionMessage" xml:space="preserve"><value>You can inspect logs, wait for the current process, or activate the running desktop instance.</value></data>
+  <data name="Error_DiagnosticHeader" xml:space="preserve"><value>Diagnostic details</value></data>
+  <data name="Error_ButtonOpenLogs" xml:space="preserve"><value>Open Logs</value></data>
+  <data name="Error_ButtonCopy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Error_ButtonWait" xml:space="preserve"><value>Wait</value></data>
+  <data name="Error_ButtonExit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Error_ButtonRetry" xml:space="preserve"><value>Retry</value></data>
+  <data name="Error_ButtonActivate" xml:space="preserve"><value>Activate</value></data>
+  <data name="Error_DebugTitle" xml:space="preserve"><value>[Debug] Launcher error</value></data>
+  <data name="Error_HostNotFoundTitle" xml:space="preserve"><value>Launcher could not find the desktop executable</value></data>
+  <data name="Error_HostNotFoundMessage" xml:space="preserve"><value>Pick another executable in debug mode, inspect logs, or retry after fixing the deployment path.</value></data>
+  <data name="Error_GenericRetryMessage" xml:space="preserve"><value>Inspect logs, then retry once the previous startup attempt has fully finished.</value></data>
+  <data name="Error_GenericNoRetryMessage" xml:space="preserve"><value>Inspect logs or exit. Launcher will avoid creating another desktop process while the old one is still running.</value></data>
+  <data name="Error_PendingTitle" xml:space="preserve"><value>Startup is still pending</value></data>
+  <data name="Error_PendingMessage" xml:space="preserve"><value>The desktop process is still running, so Launcher will not start a second instance.</value></data>
+  <data name="Error_PendingMessageWithPid" xml:space="preserve"><value>The desktop process is still running, so Launcher will not start a second instance. Current host PID: {0}.</value></data>
+  <data name="MultiInstance_Title" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="MultiInstance_AlreadyRunning" xml:space="preserve"><value>LanMountain Desktop is already running</value></data>
+  <data name="MultiInstance_AlreadyRunningMessage" xml:space="preserve"><value>Launcher found an existing desktop instance and did not start another process.</value></data>
+  <data name="MultiInstance_RepeatedLaunchTitle" xml:space="preserve"><value>Repeated launch</value></data>
+  <data name="MultiInstance_RepeatedLaunchMessage" xml:space="preserve"><value>Your current setting is to show this prompt without opening the desktop automatically.</value></data>
+  <data name="MultiInstance_NoSecondProcess" xml:space="preserve"><value>No second Host process was created.</value></data>
+  <data name="MultiInstance_ButtonCopy" xml:space="preserve"><value>Copy</value></data>
+  <data name="MultiInstance_ButtonClose" xml:space="preserve"><value>Close</value></data>
+  <data name="MultiInstance_ButtonOpenDesktop" xml:space="preserve"><value>Open desktop</value></data>
+  <data name="MultiInstance_DetailsFormat" xml:space="preserve"><value>Existing host PID: {0}&#10;Shell state: {1}&#10;No second Host process was created.</value></data>
+  <data name="DataLocation_Title" xml:space="preserve"><value>Choose Data Location</value></data>
+  <data name="DataLocation_ChooseLocation" xml:space="preserve"><value>Choose Data Location</value></data>
+  <data name="DataLocation_ChooseLocationDesc" xml:space="preserve"><value>Choose where launcher and desktop data should be stored. You can change this later in settings.</value></data>
+  <data name="DataLocation_NotWritable" xml:space="preserve"><value>App folder is not writable</value></data>
+  <data name="DataLocation_NotWritableDesc" xml:space="preserve"><value>The current install directory requires elevated permissions. Data will be stored in the system user profile instead.</value></data>
+  <data name="DataLocation_SystemProfile" xml:space="preserve"><value>Store in the system user profile (Recommended)</value></data>
+  <data name="DataLocation_SystemProfileDesc" xml:space="preserve"><value>Data stays tied to the current Windows user and remains intact across app reinstalls and updates.</value></data>
+  <data name="DataLocation_Portable" xml:space="preserve"><value>Store next to the app</value></data>
+  <data name="DataLocation_PortableDesc" xml:space="preserve"><value>Useful for portable installs. The whole app folder can be moved to another machine together with its data.</value></data>
+  <data name="DataLocation_ButtonCancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="DataLocation_ButtonConfirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="DataLocation_MigrateWarning" xml:space="preserve"><value>Existing system data was detected. Choosing portable mode will migrate the current data automatically.</value></data>
+  <data name="Loading_Title" xml:space="preserve"><value>LanMountain Desktop - Loading Details</value></data>
+  <data name="Loading_StartingDesktop" xml:space="preserve"><value>Starting LanMountain Desktop</value></data>
+  <data name="Loading_StatusInitializing" xml:space="preserve"><value>Initializing...</value></data>
+  <data name="Loading_StatusPreparing" xml:space="preserve"><value>Preparing components</value></data>
+  <data name="Loading_LoadingItems" xml:space="preserve"><value>Loading Items</value></data>
+  <data name="Loading_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Loading_ErrorOccurred" xml:space="preserve"><value>An error occurred while loading.</value></data>
+  <data name="Loading_ButtonDetails" xml:space="preserve"><value>Details</value></data>
+  <data name="Loading_ButtonCancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Loading_StageReady" xml:space="preserve"><value>Ready</value></data>
+  <data name="Loading_ItemPlugin" xml:space="preserve"><value>Loading plugins...</value></data>
+  <data name="Loading_ItemComponent" xml:space="preserve"><value>Loading components...</value></data>
+  <data name="Loading_ItemResource" xml:space="preserve"><value>Loading resources...</value></data>
+  <data name="Loading_ItemData" xml:space="preserve"><value>Loading data...</value></data>
+  <data name="Loading_ItemDownload" xml:space="preserve"><value>Downloading...</value></data>
+  <data name="Loading_ItemProcess" xml:space="preserve"><value>Processing...</value></data>
+  <data name="Loading_ItemComplete" xml:space="preserve"><value>Done</value></data>
+  <data name="Loading_TypePlugin" xml:space="preserve"><value>Plugin</value></data>
+  <data name="Loading_TypeComponent" xml:space="preserve"><value>Component</value></data>
+  <data name="Loading_TypeResource" xml:space="preserve"><value>Resource</value></data>
+  <data name="Loading_TypeData" xml:space="preserve"><value>Data</value></data>
+  <data name="Loading_TypeNetwork" xml:space="preserve"><value>Network</value></data>
+  <data name="Loading_TypeSettings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Loading_TypeSystem" xml:space="preserve"><value>System</value></data>
+  <data name="Loading_TypeOther" xml:space="preserve"><value>Other</value></data>
+  <data name="Update_Title" xml:space="preserve"><value>LanMountain Desktop - Update</value></data>
+  <data name="Update_AppName" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="Update_StatusUpdate" xml:space="preserve"><value>Update</value></data>
+  <data name="Update_StatusUpdating" xml:space="preserve"><value>Updating, please wait...</value></data>
+  <data name="Update_Complete" xml:space="preserve"><value>Update complete</value></data>
+  <data name="Update_Failed" xml:space="preserve"><value>Update failed</value></data>
+  <data name="Update_FailedMessage" xml:space="preserve"><value>An error occurred during the update</value></data>
+  <data name="Update_DebugTitle" xml:space="preserve"><value>[Debug Mode] Update Page</value></data>
+  <data name="Update_DebugMessage" xml:space="preserve"><value>Preview update progress interface</value></data>
+  <data name="Update_Verifying" xml:space="preserve"><value>Verifying update...</value></data>
+  <data name="Update_ApplyingPlugins" xml:space="preserve"><value>Applying plugin upgrades...</value></data>
+  <data name="Update_CleaningUp" xml:space="preserve"><value>Cleaning up old deployments...</value></data>
+  <data name="DebugDebug_Title" xml:space="preserve"><value>Debug Mode</value></data>
+  <data name="DebugDebug_SettingsTitle" xml:space="preserve"><value>Debug Settings</value></data>
+  <data name="DebugDebug_DevMode" xml:space="preserve"><value>Developer Mode</value></data>
+  <data name="DebugDebug_DevModeDesc" xml:space="preserve"><value>Automatically scan dev directories when enabled</value></data>
+  <data name="DebugDebug_On" xml:space="preserve"><value>On</value></data>
+  <data name="DebugDebug_Off" xml:space="preserve"><value>Off</value></data>
+  <data name="DebugDebug_AppPath" xml:space="preserve"><value>App Path</value></data>
+  <data name="DebugDebug_NotSelected" xml:space="preserve"><value>Not selected</value></data>
+  <data name="DebugDebug_Browse" xml:space="preserve"><value>Browse...</value></data>
+  <data name="DebugDebug_Warning" xml:space="preserve"><value>This feature is for developers only</value></data>
+  <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>OK</value></data>
+  <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>Select LanMountainDesktop host executable</value></data>
+  <data name="Oobe_Title" xml:space="preserve"><value>Welcome to LanMountain Desktop</value></data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>Welcome to LanMountain Desktop</value></data>
+  <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>Your desktop, more than one side</value></data>
+  <data name="Oobe_ButtonGetStarted" xml:space="preserve"><value>Get Started</value></data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve"><value>Personalize Your Desktop</value></data>
+  <data name="Oobe_AppearanceDesc" xml:space="preserve"><value>Choose your preferred theme style. You can change it anytime in settings.</value></data>
+  <data name="Oobe_AppearanceMode" xml:space="preserve"><value>Appearance Mode</value></data>
+  <data name="Oobe_LightMode" xml:space="preserve"><value>Light Mode</value></data>
+  <data name="Oobe_DarkMode" xml:space="preserve"><value>Dark Mode</value></data>
+  <data name="Oobe_ThemeColor" xml:space="preserve"><value>Theme Color</value></data>
+  <data name="Oobe_MonetSource" xml:space="preserve"><value>Monet Color Source</value></data>
+  <data name="Oobe_MonetFromWallpaper" xml:space="preserve"><value>Extract from wallpaper</value></data>
+  <data name="Oobe_MonetFromCustomImage" xml:space="preserve"><value>Extract from custom image</value></data>
+  <data name="Oobe_MonetDisabled" xml:space="preserve"><value>Don't use Monet colors</value></data>
+  <data name="Oobe_DataLocationTitle" xml:space="preserve"><value>Choose Data Location</value></data>
+  <data name="Oobe_SystemProfile" xml:space="preserve"><value>Store in the system user profile (Recommended)</value></data>
+  <data name="Oobe_SystemProfileDesc" xml:space="preserve"><value>Data stays tied to the current Windows user and remains intact across app reinstalls and updates.</value></data>
+  <data name="Oobe_Portable" xml:space="preserve"><value>Store next to the app</value></data>
+  <data name="Oobe_PortableDesc" xml:space="preserve"><value>Useful for portable installs. The whole app folder can be moved to another machine together with its data.</value></data>
+  <data name="Oobe_NotWritable" xml:space="preserve"><value>Cannot save to app directory</value></data>
+  <data name="Oobe_NotWritableDesc" xml:space="preserve"><value>The current install directory requires elevated permissions. Data will be stored in the system user profile instead.</value></data>
+  <data name="Oobe_StartupTitle" xml:space="preserve"><value>Startup &amp; Display</value></data>
+  <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>Show main desktop window in taskbar</value></data>
+  <data name="Oobe_SlideTransition" xml:space="preserve"><value>Show main window with slide transition</value></data>
+  <data name="Oobe_FadeTransition" xml:space="preserve"><value>Use fade-in transition on startup</value></data>
+  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>Fused desktop with swipe gesture</value></data>
+  <data name="Oobe_AutoStart" xml:space="preserve"><value>Automatically start LanMountain Desktop on Windows login</value></data>
+  <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>Information &amp; Privacy</value></data>
+  <data name="Oobe_CrashReports" xml:space="preserve"><value>Send anonymous crash reports</value></data>
+  <data name="Oobe_UsageStats" xml:space="preserve"><value>Send anonymous usage statistics</value></data>
+  <data name="Oobe_PrivacyTrackingId" xml:space="preserve"><value>Privacy Tracking ID</value></data>
+  <data name="Oobe_Agree" xml:space="preserve"><value>Agree</value></data>
+  <data name="Oobe_PrivacyPolicyLink" xml:space="preserve"><value>LanMountain Desktop Telemetry Privacy Data Collection Agreement</value></data>
+  <data name="Oobe_ButtonBack" xml:space="preserve"><value>Back</value></data>
+  <data name="Oobe_ButtonNext" xml:space="preserve"><value>Next</value></data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve"><value>Welcome to LanMountain Desktop</value></data>
+  <data name="Oobe_CompleteSubtitle" xml:space="preserve"><value>Your desktop, more than one side</value></data>
+  <data name="Oobe_MonetDesc" xml:space="preserve"><value>Automatically extract theme colors from your wallpaper for a seamless desktop experience</value></data>
+  <data name="Oobe_MonetFromWallpaperDesc" xml:space="preserve"><value>Analyze current wallpaper colors to generate a theme</value></data>
+  <data name="Oobe_MonetFromCustomImageDesc" xml:space="preserve"><value>Choose an image as the color source</value></data>
+  <data name="Oobe_MonetDisabledDesc" xml:space="preserve"><value>Use a fixed preset theme color</value></data>
+  <data name="Oobe_DataLocationDesc" xml:space="preserve"><value>Decide where to store app data. You can change this anytime in settings.</value></data>
+  <data name="Oobe_StartupDesc" xml:space="preserve"><value>These options can be changed anytime in the desktop app Settings. Slide-in entrance is only available on Windows.</value></data>
+  <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>When enabled, a taskbar entry remains when minimized; when disabled, rely more on the tray icon.</value></data>
+  <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>Slide in from screen edge; mutually exclusive with fade-in.</value></data>
+  <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>Recommended when slide-in is not enabled.</value></data>
+  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>Enable fused desktop and three-finger swipe gesture for edge pop-in and related experimental features (same as developer options in Settings).</value></data>
+  <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>Register this launcher as the current user's startup item (same registry entry as the optional installer task).</value></data>
+  <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>Only the preference is saved on this platform; use the system's app auto-start settings for actual auto-start behavior.</value></data>
+  <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>Choose whether to participate in the telemetry program and review the privacy policy</value></data>
+  <data name="Oobe_CrashReportsDesc" xml:space="preserve"><value>Help improve app stability; no personal identity information is included</value></data>
+  <data name="Oobe_UsageStatsDesc" xml:space="preserve"><value>Help understand feature usage and optimize product experience</value></data>
+  <data name="Oobe_PrivacyTrackingIdDesc" xml:space="preserve"><value>This ID is used to anonymously identify your device and does not contain any personal information</value></data>
+  <data name="Oobe_PrivacyAgreementNote" xml:space="preserve"><value>You must read and agree to the privacy policy before enabling telemetry features. Telemetry data is used solely to improve app stability and optimize product experience, and does not contain any personal identity information.</value></data>
+  <data name="Oobe_TypingAppName" xml:space="preserve"><value>LanMountain Desktop</value></data>
+  <data name="Oobe_TypingNextGen" xml:space="preserve"><value>Next Gen</value></data>
+  <data name="Oobe_TypingDashboard" xml:space="preserve"><value>Interactive Dashboard</value></data>
+  <data name="Oobe_MigrationDetected" xml:space="preserve"><value>Existing data detected. It will be migrated automatically when portable mode is selected.</value></data>
+  <data name="Migration_Title" xml:space="preserve"><value>LanMountain Desktop - Version Migration</value></data>
+  <data name="Migration_DetectedOldVersion" xml:space="preserve"><value>Old version detected</value></data>
+  <data name="Migration_DetectedDesc" xml:space="preserve"><value>An older version of LanMountain Desktop (0.8.4) was detected on your system. Uninstalling it is recommended to avoid conflicts.</value></data>
+  <data name="Migration_Version" xml:space="preserve"><value>Version: </value></data>
+  <data name="Migration_Location" xml:space="preserve"><value>Location: </value></data>
+  <data name="Migration_Type" xml:space="preserve"><value>Type: </value></data>
+  <data name="Migration_Installed" xml:space="preserve"><value>Installed</value></data>
+  <data name="Migration_UninstallNote" xml:space="preserve"><value>Uninstalling the old version will not affect the new version. Your personal data will be preserved.</value></data>
+  <data name="Migration_ButtonViewLocation" xml:space="preserve"><value>View Location</value></data>
+  <data name="Migration_ButtonSkip" xml:space="preserve"><value>Skip for now</value></data>
+  <data name="Migration_ButtonUninstall" xml:space="preserve"><value>Uninstall Old Version</value></data>
+  <data name="Migration_Portable" xml:space="preserve"><value>Portable</value></data>
+  <data name="Migration_Unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="Migration_DetectedDescFormat" xml:space="preserve"><value>An older version of LanMountain Desktop ({0}) was detected on your system. The new version uses a completely new architecture. Uninstalling the old version is recommended for a better experience.</value></data>
+  <data name="Privacy_Title" xml:space="preserve"><value>LanMountain Desktop Telemetry Privacy Data Collection Agreement</value></data>
+  <data name="Privacy_Header" xml:space="preserve"><value>LanMountain Desktop Telemetry Privacy Data Collection Agreement</value></data>
+  <data name="Privacy_Description" xml:space="preserve"><value>Please read the following agreement carefully to understand how we collect, use, and protect your data</value></data>
+  <data name="Privacy_ButtonClose" xml:space="preserve"><value>Close</value></data>
+  <data name="DevDebug_Title" xml:space="preserve"><value>Developer Debug Window</value></data>
+  <data name="DevDebug_Splash" xml:space="preserve"><value>Splash Screen</value></data>
+  <data name="DevDebug_Error" xml:space="preserve"><value>Error Page</value></data>
+  <data name="DevDebug_Update" xml:space="preserve"><value>Update Page</value></data>
+  <data name="DevDebug_Oobe" xml:space="preserve"><value>OOBE Page</value></data>
+  <data name="DevDebug_DataLocation" xml:space="preserve"><value>Data Location</value></data>
+  <data name="DevDebug_EnableFeature" xml:space="preserve"><value>Enable Feature</value></data>
+  <data name="DevDebug_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="DevDebug_SetAllViewMode" xml:space="preserve"><value>Set All to View Mode</value></data>
+  <data name="DevDebug_SetAllFunctionMode" xml:space="preserve"><value>Set All to Function Mode</value></data>
+  <data name="DevDebug_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Coordinator_SlowDeviceMessage" xml:space="preserve"><value>The device is slow and still starting up. Please wait.</value></data>
+  <data name="Coordinator_RunningHostMessage" xml:space="preserve"><value>The desktop process is still running. Launcher will continue waiting and will not start again.</value></data>
+  <data name="Preview_SplashInitializing" xml:space="preserve"><value>Initializing...</value></data>
+  <data name="Preview_SplashCheckingUpdates" xml:space="preserve"><value>Checking updates...</value></data>
+  <data name="Preview_SplashCheckingPlugins" xml:space="preserve"><value>Checking plugins...</value></data>
+  <data name="Preview_SplashLaunchingHost" xml:space="preserve"><value>Launching host...</value></data>
+  <data name="Preview_SplashReady" xml:space="preserve"><value>Ready</value></data>
+  <data name="Preview_ErrorMessage" xml:space="preserve"><value>[Preview] This is the launcher error window preview.</value></data>
+  <data name="Preview_UpdateProcessing" xml:space="preserve"><value>Processing {0}...</value></data>
+  <data name="Preview_ActivationConnecting" xml:space="preserve"><value>Connecting to the active launcher...</value></data>
+</root>

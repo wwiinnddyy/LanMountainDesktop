@@ -9,18 +9,16 @@
             Background="Transparent"
             ClipToBounds="True">
         <Grid>
-            <!-- 涓诲崱鐗?-->
             <Border x:Name="CardBorder"
                     Background="#FCFCFD"
                     CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
                     Padding="12,10">
                 <Grid RowDefinitions="Auto,*,Auto">
-                    <!-- 澶撮儴 -->
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <fi:SymbolIcon x:Name="HeaderIcon" Symbol="{x:Static symbol:Symbol.MailInbox}" FontSize="16" />
                             <TextBlock x:Name="HeaderTextBlock"
-                                       Text="娑堟伅鐩掑瓙"
+                                       Text="消息盒子"
                                        FontSize="15"
                                        FontWeight="SemiBold" />
                             <Border x:Name="UnreadBadge"
@@ -46,24 +44,32 @@
                         </Button>
                     </Grid>
 
-                    <!-- 閫氱煡鍒楄〃 -->
                     <ScrollViewer Grid.Row="1"
                                   Margin="0,8,0,0"
                                   VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="NotificationListPanel" Spacing="6" />
                     </ScrollViewer>
 
-                    <!-- 绌虹姸鎬?-->
-                    <TextBlock x:Name="EmptyStateText"
-                               Grid.Row="1"
-                               Text="鏆傛棤閫氱煡"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="#8B95A5"
-                               FontSize="13"
-                               IsVisible="False" />
+                    <StackPanel x:Name="EmptyStatePanel"
+                                Grid.Row="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                IsVisible="False">
+                        <TextBlock x:Name="EmptyStateText"
+                                   Text="暂无通知"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#8B95A5"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center" />
+                        <Button x:Name="PermissionButton"
+                                Content="请求权限"
+                                HorizontalAlignment="Center"
+                                Click="OnPermissionButtonClick"
+                                IsVisible="False" />
+                    </StackPanel>
 
-                    <!-- 闅愮妯″紡閬僵 -->
                     <Border x:Name="PrivacyOverlay"
                             Grid.Row="1"
                             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
@@ -73,13 +79,12 @@
                                     VerticalAlignment="Center"
                                     Spacing="6">
                             <fi:SymbolIcon Symbol="{x:Static symbol:Symbol.EyeOff}" FontSize="24" Foreground="#8B95A5" />
-                            <TextBlock Text="鎮ㄦ湁鏂扮殑閫氱煡"
+                            <TextBlock Text="隐私模式已隐藏通知内容"
                                        Foreground="#8B95A5"
                                        FontSize="12" />
                         </StackPanel>
                     </Border>
 
-                    <!-- 搴曢儴鐘舵€?-->
                     <TextBlock x:Name="StatusTextBlock"
                                Grid.Row="2"
                                FontSize="11"

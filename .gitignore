@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Local NuGet global packages (NuGet.Config globalPackagesFolder)
+.nuget/packages/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -515,3 +518,4 @@ nul
 /velopack-output-local-verify
 /velopack-output-local
 /test-aot-publish
+/.claude/worktrees

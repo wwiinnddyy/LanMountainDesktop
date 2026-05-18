@@ -71,7 +71,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         _window ??= CreateWindow();
         var appearanceSnapshot = _appearanceThemeService.GetCurrent();
         _window.ApplyChromeMode(appearanceSnapshot.UseSystemChrome);
-        ApplyTheme(_window);
+        ApplyThemeVariantAndResources(_window);
 
         var targetPageId = request.PageId ?? _window.ViewModel.CurrentPageId;
         _window.ReloadPages(targetPageId);
@@ -79,6 +79,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         if (!_window.IsVisible)
         {
             CenterWindow(_window, request);
+            _appearanceThemeService.ApplyWindowMaterial(_window, MaterialSurfaceRole.SettingsWindowBackground);
             _window.Show();
             NotifyStateChanged();
             CenterWindowLater(_window, request);
@@ -90,6 +91,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             _window.WindowState = WindowState.Normal;
         }
 
+        _appearanceThemeService.ApplyWindowMaterial(_window, MaterialSurfaceRole.SettingsWindowBackground);
         _window.Activate();
     }
 
@@ -113,7 +115,6 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             _pageRegistry,
             _hostApplicationLifecycle,
             useSystemChrome);
-        ApplyTheme(window);
         window.ShowInTaskbar = true;
         window.Closed += (_, _) =>
         {
@@ -233,12 +234,18 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             var themeChanged =
                 refreshAll ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.IsNightMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColorMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.SystemMaterialMode), StringComparer.OrdinalIgnoreCase) ||
+                changedKeys.Contains(nameof(AppSettingsSnapshot.CornerRadiusStyle), StringComparer.OrdinalIgnoreCase) ||
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeSeedMonet, StringComparison.OrdinalIgnoreCase) &&
                  changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeColor), StringComparer.OrdinalIgnoreCase)) ||
                 (string.Equals(liveAppearance.ThemeColorMode, ThemeAppearanceValues.ColorModeWallpaperMonet, StringComparison.OrdinalIgnoreCase) &&
                  (changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperPath), StringComparer.OrdinalIgnoreCase) ||
                   changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperType), StringComparer.OrdinalIgnoreCase) ||
-                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase))) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.WallpaperColor), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.ThemeWallpaperColorSource), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.UseNativeWallpaperChangeEvents), StringComparer.OrdinalIgnoreCase) ||
+                  changedKeys.Contains(nameof(AppSettingsSnapshot.SystemWallpaperRefreshIntervalSeconds), StringComparer.OrdinalIgnoreCase))) ||
                 changedKeys.Contains(nameof(AppSettingsSnapshot.UseSystemChrome), StringComparer.OrdinalIgnoreCase);
 
             if (languageChanged || devModeChanged)
@@ -285,13 +292,23 @@ internal sealed class SettingsWindowService : ISettingsWindowService
         }, DispatcherPriority.Background);
     }
 
-    private void ApplyTheme(SettingsWindow window)
+    private static void ApplyThemeVariantAndResources(SettingsWindow window, IAppearanceThemeService appearanceThemeService)
     {
-        var appearanceSnapshot = _appearanceThemeService.GetCurrent();
+        var appearanceSnapshot = appearanceThemeService.GetCurrent();
         window.RequestedThemeVariant = appearanceSnapshot.IsNightMode
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
-        _appearanceThemeService.ApplyThemeResources(window.Resources);
+        appearanceThemeService.ApplyThemeResources(window.Resources);
+    }
+
+    private void ApplyThemeVariantAndResources(SettingsWindow window)
+    {
+        ApplyThemeVariantAndResources(window, _appearanceThemeService);
+    }
+
+    private void ApplyTheme(SettingsWindow window)
+    {
+        ApplyThemeVariantAndResources(window, _appearanceThemeService);
         _appearanceThemeService.ApplyWindowMaterial(window, MaterialSurfaceRole.SettingsWindowBackground);
     }
 

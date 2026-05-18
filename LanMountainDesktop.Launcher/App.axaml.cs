@@ -5,7 +5,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Services.AirApp;
 using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -61,6 +63,13 @@ public partial class App : Application
                 return;
             }
 
+            if (context.IsAirAppBrokerCommand)
+            {
+                _ = RunAirAppBrokerAsync(desktop, context);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             // 调试模式：只显示 DevDebugWindow，不走正常启动流程
             // 避免启动主程序后 Launcher 自动退出，导致开发者无法预览 UI
             if (context.IsDebugMode && !context.IsPreviewCommand &&
@@ -90,6 +99,47 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    private static async Task RunAirAppBrokerAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        CommandContext context)
+    {
+        var appRoot = Commands.ResolveAppRoot(context);
+        var requesterPid = context.GetIntOption("requester-pid", 0);
+        var dataLocationResolver = new DataLocationResolver(appRoot);
+        Logger.Info($"Air APP broker starting. AppRoot='{appRoot}'; RequesterPid={requesterPid}.");
+
+        using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
+            new LauncherAirAppLifecycleService(
+                new AirAppProcessStarter(
+                    new AirAppHostLocator(),
+                    () => appRoot,
+                    () => null,
+                    () => dataLocationResolver.ResolveDataRoot())));
+        airAppIpcHost.Start();
+
+        await WaitForAirAppBrokerExitAsync(requesterPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
+
+        Logger.Info("Air APP broker exiting.");
+        await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(0), DispatcherPriority.Background);
+    }
+
+    internal static async Task WaitForAirAppBrokerExitAsync(
+        int requesterPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        while (ShouldKeepAirAppBrokerAlive(requesterPid, airAppLifecycleService))
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        }
+    }
+
+    internal static bool ShouldKeepAirAppBrokerAlive(
+        int requesterPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        return TryGetLiveProcess(requesterPid) || airAppLifecycleService.HasLiveAirApps();
+    }
+
     private bool HandlePreviewCommand(CommandContext context, IClassicDesktopStyleApplicationLifetime desktop)
     {
         switch (context.Command.ToLowerInvariant())
@@ -107,9 +157,18 @@ public partial class App : Application
             {
                 Logger.Info("Preview command: error.");
                 var errorWindow = new ErrorWindow();
-                errorWindow.SetErrorMessage("[Preview] This is the launcher error window preview.");
+                errorWindow.SetErrorMessage(Strings.Preview_ErrorMessage);
                 errorWindow.Show();
                 _ = WaitForWindowCloseAsync(desktop, errorWindow);
+                return true;
+            }
+            case "preview-multi-instance":
+            {
+                Logger.Info("Preview command: multi-instance prompt.");
+                var promptWindow = new MultiInstancePromptWindow();
+                promptWindow.SetDetails(Environment.ProcessId, "ForegroundDesktop");
+                promptWindow.Show();
+                _ = WaitForWindowCloseAsync(desktop, promptWindow);
                 return true;
             }
             case "preview-update":
@@ -165,7 +224,7 @@ public partial class App : Application
     private async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
     {
         var stages = new[] { "initializing", "update", "plugins", "launch", "ready" };
-        var messages = new[] { "Initializing...", "Checking updates...", "Checking plugins...", "Launching host...", "Ready" };
+        var messages = new[] { Strings.Preview_SplashInitializing, Strings.Preview_SplashCheckingUpdates, Strings.Preview_SplashCheckingPlugins, Strings.Preview_SplashLaunchingHost, Strings.Preview_SplashReady };
         var reporter = (ISplashStageReporter)window;
 
         for (var i = 0; i < stages.Length; i++)
@@ -184,7 +243,7 @@ public partial class App : Application
 
         for (var i = 0; i < stages.Length; i++)
         {
-            window.Report(stages[i], $"Processing {stages[i]}...", (i + 1) * 20);
+            window.Report(stages[i], string.Format(Strings.Preview_UpdateProcessing, stages[i]), (i + 1) * 20);
             await Task.Delay(600).ConfigureAwait(false);
         }
 
@@ -224,10 +283,10 @@ public partial class App : Application
         LauncherResult result;
         SplashWindow? currentSplashWindow = splashWindow;
         var appRoot = Commands.ResolveAppRoot(context);
+        var dataLocationResolver = new DataLocationResolver(appRoot);
         var startupAttemptRegistry = new StartupAttemptRegistry();
         var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
         var successPolicy = LauncherFlowCoordinator.ResolveSuccessPolicyKey(context);
-
         if (!startupAttemptRegistry.TryReserveCoordinator(
                 context.LaunchSource,
                 successPolicy,
@@ -247,6 +306,15 @@ public partial class App : Application
             await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
             return;
         }
+
+        using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
+            new LauncherAirAppLifecycleService(
+                new AirAppProcessStarter(
+                    new AirAppHostLocator(),
+                    () => appRoot,
+                    () => null,
+                    () => dataLocationResolver.ResolveDataRoot())));
+        airAppIpcHost.Start();
 
         using var coordinatorServer = new LauncherCoordinatorIpcServer(
             coordinatorPipeName,
@@ -325,7 +393,43 @@ public partial class App : Application
         await WriteLauncherResultAsync(context, result).ConfigureAwait(false);
 
         Environment.ExitCode = result.Success ? 0 : 1;
+        if (result.Success)
+        {
+            var hostPid = ResolveManagedHostPid(result, startupAttemptRegistry.GetOwnedAttempt()?.HostPid ?? 0);
+            await WaitForManagedProcessesToExitAsync(hostPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
+        }
+
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
+    }
+
+    private static int ResolveManagedHostPid(LauncherResult result, int fallbackHostPid)
+    {
+        if (result.Details.TryGetValue("hostPid", out var hostPidText) &&
+            int.TryParse(hostPidText, out var hostPid))
+        {
+            return hostPid;
+        }
+
+        if (result.Details.TryGetValue("existingHostPid", out var existingHostPidText) &&
+            int.TryParse(existingHostPidText, out var existingHostPid))
+        {
+            return existingHostPid;
+        }
+
+        return fallbackHostPid;
+    }
+
+    private static async Task WaitForManagedProcessesToExitAsync(
+        int hostPid,
+        LauncherAirAppLifecycleService airAppLifecycleService)
+    {
+        Logger.Info($"Launcher entering managed background lifetime. HostPid={hostPid}.");
+        while (TryGetLiveProcess(hostPid) || airAppLifecycleService.HasLiveAirApps())
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        }
+
+        Logger.Info("Launcher managed background lifetime completed; no host or Air APP process remains.");
     }
 
     private static async Task<LauncherResult> AttachToExistingCoordinatorAsync(
@@ -334,7 +438,7 @@ public partial class App : Application
         StartupAttemptRecord? activeCoordinatorAttempt)
     {
         var reporter = splashWindow as ISplashStageReporter;
-        reporter?.Report("activation", "Connecting to the active launcher...");
+        reporter?.Report("activation", Strings.Preview_ActivationConnecting);
 
         if (activeCoordinatorAttempt is not null &&
             !string.IsNullOrWhiteSpace(activeCoordinatorAttempt.CoordinatorPipeName))
@@ -691,7 +795,7 @@ public partial class App : Application
 
         try
         {
-            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", "Verifying update...", 10));
+            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", Strings.Update_Verifying, 10));
             var updateResult = await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
             if (!updateResult.Success)
             {
@@ -701,7 +805,7 @@ public partial class App : Application
 
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", "Applying plugin upgrades...", 60));
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", Strings.Update_ApplyingPlugins, 60));
                 var pluginsDir = context.GetOption("plugins-dir") ?? Path.Combine(appRoot, "plugins");
                 var queueResult = pluginUpgrades.ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success && queueResult.Code != "noop")
@@ -712,7 +816,7 @@ public partial class App : Application
 
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", "Cleaning up old deployments...", 90));
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", Strings.Update_CleaningUp, 90));
                 deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
             }
         }

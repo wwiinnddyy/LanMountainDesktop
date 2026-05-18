@@ -7,9 +7,10 @@ namespace LanMountainDesktop.Services;
 
 public static class GlassEffectService
 {
+    private static readonly IMaterialSurfaceService MaterialSurfaceService = new MaterialSurfaceService();
+
     public static void ApplyGlassResources(IResourceDictionary resources, ThemeColorContext context)
     {
-        var materialSurfaceService = new MaterialSurfaceService();
         var monetPalette = context.MonetPalette;
         var monetColors = context.MonetColors?.Where(color => color.A > 0).ToArray() ?? [];
         var primary = context.UseNeutralSurfaces
@@ -48,13 +49,13 @@ public static class GlassEffectService
                 ColorMath.Blend(buttonBackground, primary, context.IsNightMode ? 0.24 : 0.16),
                 context.IsNightMode ? (byte)0xF8 : (byte)0xFF));
 
-        var windowSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.WindowBackground);
-        var settingsWindowSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.SettingsWindowBackground);
-        var dockSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.DockBackground);
-        var statusBarSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarBackground);
-        var desktopComponentSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.DesktopComponentHost);
-        var statusBarComponentSurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarComponentHost);
-        var overlaySurface = materialSurfaceService.GetSurface(context, MaterialSurfaceRole.OverlayPanel);
+        var windowSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.WindowBackground);
+        var settingsWindowSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.SettingsWindowBackground);
+        var dockSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.DockBackground);
+        var statusBarSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarBackground);
+        var desktopComponentSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.DesktopComponentHost);
+        var statusBarComponentSurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.StatusBarComponentHost);
+        var overlaySurface = MaterialSurfaceService.GetSurface(context, MaterialSurfaceRole.OverlayPanel);
         var strongSurfaceColor = ColorMath.Blend(
             desktopComponentSurface.BackgroundColor,
             overlaySurface.BackgroundColor,
@@ -69,6 +70,15 @@ public static class GlassEffectService
         resources["AdaptiveWindowBackgroundBrush"] = new SolidColorBrush(windowSurface.BackgroundColor);
         resources["AdaptiveWindowBorderBrush"] = new SolidColorBrush(windowSurface.BorderColor);
         resources["AdaptiveSettingsWindowBackgroundBrush"] = new SolidColorBrush(settingsWindowSurface.BackgroundColor);
+        // 可选：叠在内容区上的可读性 tint（半透明）；不改变 AdaptiveSettingsWindowBackgroundBrush 的语义权重，供 P1 绑定内容层。
+        var settingsTintBase = settingsWindowSurface.BackgroundColor;
+        var settingsTintAlpha = ResolveSettingsWindowTintAlpha(context);
+        resources["AdaptiveSettingsWindowTintBrush"] = new SolidColorBrush(
+            Color.FromArgb(
+                settingsTintAlpha,
+                settingsTintBase.R,
+                settingsTintBase.G,
+                settingsTintBase.B));
         resources["AdaptiveSettingsWindowBorderBrush"] = new SolidColorBrush(settingsWindowSurface.BorderColor);
         resources["AdaptiveDockBackgroundBrush"] = new SolidColorBrush(dockSurface.BackgroundColor);
         resources["AdaptiveDockBorderBrush"] = new SolidColorBrush(dockSurface.BorderColor);
@@ -99,5 +109,17 @@ public static class GlassEffectService
         resources["AdaptiveStatusBarOpacity"] = statusBarSurface.Opacity;
         resources["AdaptiveDesktopComponentHostOpacity"] = desktopComponentSurface.Opacity;
         resources["AdaptiveStatusBarComponentHostOpacity"] = statusBarComponentSurface.Opacity;
+    }
+
+    /// <summary>可选内容叠层 alpha，与设置窗表面色相一致；None 为 0 避免重复染色。</summary>
+    private static byte ResolveSettingsWindowTintAlpha(ThemeColorContext context)
+    {
+        var mode = ThemeAppearanceValues.ResolveEffectiveSystemMaterialMode(context.SystemMaterialMode);
+        return mode switch
+        {
+            ThemeAppearanceValues.MaterialAcrylic => context.IsNightMode ? (byte)0x58 : (byte)0x4C,
+            ThemeAppearanceValues.MaterialMica => context.IsNightMode ? (byte)0x50 : (byte)0x44,
+            _ => (byte)0x00
+        };
     }
 }

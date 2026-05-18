@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="384"
+             d:DesignHeight="192"
+             x:Class="LanMountainDesktop.Views.Components.StandbyDigitalClockWidget">
+
+    <Border x:Name="RootBorder"
+            CornerRadius="{DynamicResource DesignCornerRadiusComponent}"
+            ClipToBounds="True"
+            Padding="16">
+        <Viewbox Stretch="Uniform">
+            <Grid Width="420"
+                  Height="210">
+                <!-- Irregular free-form digit layout: each digit has unique vertical offset,
+                     horizontal offset, and rotation — like stickers casually placed -->
+                <StackPanel VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="0">
+
+                    <!-- H1 digit — tilted left, shifted right and up -->
+                    <Border x:Name="H1Clip"
+                            ClipToBounds="True"
+                            Width="88"
+                            Height="130"
+                            Margin="6,-10,0,0">
+                        <Border.RenderTransform>
+                            <RotateTransform Angle="-4" />
+                        </Border.RenderTransform>
+                        <StackPanel x:Name="H1Stack"
+                                    Orientation="Vertical">
+                            <TextBlock x:Name="H1Text"
+                                       Text="0"
+                                       FontSize="120"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AdaptiveAccentBrush}"
+                                       Width="88"
+                                       Height="130"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       LineHeight="130" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- H2 digit — tilted right, shifted left and down -->
+                    <Border x:Name="H2Clip"
+                            ClipToBounds="True"
+                            Width="88"
+                            Height="130"
+                            Margin="-2,10,0,0">
+                        <Border.RenderTransform>
+                            <RotateTransform Angle="3" />
+                        </Border.RenderTransform>
+                        <StackPanel x:Name="H2Stack"
+                                    Orientation="Vertical">
+                            <TextBlock x:Name="H2Text"
+                                       Text="0"
+                                       FontSize="120"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AdaptiveAccentBrush}"
+                                       Width="88"
+                                       Height="130"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       LineHeight="130" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Colon — slightly rotated, a bit lower -->
+                    <TextBlock x:Name="ColonText"
+                               Text=":"
+                               FontSize="100"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource AdaptiveAccentBrush}"
+                               Width="36"
+                               Height="130"
+                               TextAlignment="Center"
+                               VerticalAlignment="Center"
+                               LineHeight="130"
+                               Margin="0,8,0,0">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform Angle="-1" />
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+
+                    <!-- M1 digit — slightly tilted left, shifted right and slightly up -->
+                    <Border x:Name="M1Clip"
+                            ClipToBounds="True"
+                            Width="88"
+                            Height="130"
+                            Margin="4,-3,0,0">
+                        <Border.RenderTransform>
+                            <RotateTransform Angle="-2" />
+                        </Border.RenderTransform>
+                        <StackPanel x:Name="M1Stack"
+                                    Orientation="Vertical">
+                            <TextBlock x:Name="M1Text"
+                                       Text="0"
+                                       FontSize="120"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AdaptiveAccentBrush}"
+                                       Width="88"
+                                       Height="130"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       LineHeight="130" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- M2 digit — tilted right more, shifted left and down -->
+                    <Border x:Name="M2Clip"
+                            ClipToBounds="True"
+                            Width="88"
+                            Height="130"
+                            Margin="-2,12,0,0">
+                        <Border.RenderTransform>
+                            <RotateTransform Angle="5" />
+                        </Border.RenderTransform>
+                        <StackPanel x:Name="M2Stack"
+                                    Orientation="Vertical">
+                            <TextBlock x:Name="M2Text"
+                                       Text="0"
+                                       FontSize="120"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AdaptiveAccentBrush}"
+                                       Width="88"
+                                       Height="130"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       LineHeight="130" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Date line -->
+                <TextBlock x:Name="DateTextBlock"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AdaptiveTextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,6" />
+            </Grid>
+        </Viewbox>
+    </Border>
+</UserControl>

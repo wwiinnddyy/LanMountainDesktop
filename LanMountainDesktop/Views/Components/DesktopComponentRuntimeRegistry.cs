@@ -341,6 +341,10 @@ public sealed class DesktopComponentRuntimeRegistry
                     "component.world_clock",
                     () => new WorldClockWidget()),
                 new DesktopComponentRuntimeRegistration(
+                    BuiltInComponentIds.DesktopStandbyDigitalClock,
+                    "component.standby_digital_clock",
+                    () => new StandbyDigitalClockWidget()),
+                new DesktopComponentRuntimeRegistration(
                     BuiltInComponentIds.DesktopTimer,
                     "component.desktop_timer",
                     () => new TimerWidget()),

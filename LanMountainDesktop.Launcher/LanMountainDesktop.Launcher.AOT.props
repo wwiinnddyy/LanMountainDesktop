@@ -44,6 +44,8 @@
     <!-- 保留 Avalonia 必要的类型 -->
     <TrimmerRootAssembly Include="Avalonia" />
     <TrimmerRootAssembly Include="Avalonia.Desktop" />
+
+    <TrimmerRootAssembly Include="LanMountainDesktop.Launcher" />
     
     <!-- 保留动态序列化类型 -->
     <TrimmerRootAssembly Include="System.Text.Json" />

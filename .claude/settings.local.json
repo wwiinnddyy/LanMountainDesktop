@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"/d/github/LanMountainDesktop/.claude/worktrees/agent-a4c5412322421ab67\" && ls -la \"/d/github/LanMountainDesktop\" && ls -la \"/d/github\")",
+      "Read(//d/github/**)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(python -)",
+      "Bash(py -3 -c \"from pathlib import Path; p=Path\\(r'd:/github/LanMountainDesktop/LanMountainDesktop/ViewModels/SettingsViewModels.cs'\\); t=p.read_text\\(encoding='utf-8'\\); s=t.find\\('public sealed partial class UpdateSettingsPageViewModel : ViewModelBase'\\); e=t.find\\('public sealed partial class StudySettingsPageViewModel : ViewModelBase', s\\); assert s!=-1 and e!=-1; p.write_text\\(t[:s]+t[e:], encoding='utf-8'\\); print\\('ok'\\)\")",
+      "Bash(perl -0777 -i -pe \"s/public sealed partial class UpdateSettingsPageViewModel : ViewModelBase\\\\R\\\\{.*?\\\\R\\\\}\\\\R\\\\Rpublic sealed partial class StudySettingsPageViewModel : ViewModelBase/public sealed partial class StudySettingsPageViewModel : ViewModelBase/s\" \"d:/github/LanMountainDesktop/LanMountainDesktop/ViewModels/SettingsViewModels.cs\")"
+    ]
+  }
+}

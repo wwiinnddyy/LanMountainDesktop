@@ -6,7 +6,11 @@ namespace LanMountainDesktop.Shared.IPC;
 
 public sealed class LanMountainDesktopIpcClient : IDisposable
 {
+    private const int ConnectRetryCount = 3;
+    private const int ConnectRetryBaseDelayMs = 500;
+
     private bool _started;
+    private bool _disposed;
 
     public LanMountainDesktopIpcClient(string? clientPipeName = null)
     {
@@ -27,6 +31,21 @@ public sealed class LanMountainDesktopIpcClient : IDisposable
     public async Task ConnectAsync(string pipeName = IpcConstants.DefaultPipeName)
     {
         EnsureStarted();
+
+        for (var attempt = 1; attempt <= ConnectRetryCount; attempt++)
+        {
+            try
+            {
+                Peer = await Provider.GetAndConnectToPeerAsync(pipeName).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (attempt < ConnectRetryCount)
+            {
+                var delay = ConnectRetryBaseDelayMs * attempt + Random.Shared.Next(0, 200);
+                await Task.Delay(delay).ConfigureAwait(false);
+            }
+        }
+
         Peer = await Provider.GetAndConnectToPeerAsync(pipeName).ConfigureAwait(false);
     }
 
@@ -91,6 +110,13 @@ public sealed class LanMountainDesktopIpcClient : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        Peer = null;
         Provider.Dispose();
     }
 }

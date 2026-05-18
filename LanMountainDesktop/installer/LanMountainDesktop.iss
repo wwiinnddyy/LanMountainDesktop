@@ -129,11 +129,11 @@ Name: "startup"; Description: "{cm:StartupTaskDescription}"; GroupDescription: "
 Name: "{app}\log"; Permissions: users-modify
 
 [InstallDelete]
-Type: files; Name: "{app}\LanMontainDesktop.exe"
-Type: files; Name: "{app}\LanMontainDesktop.dll"
-Type: files; Name: "{app}\LanMontainDesktop.deps.json"
-Type: files; Name: "{app}\LanMontainDesktop.runtimeconfig.json"
-Type: files; Name: "{app}\LanMontainDesktop.pdb"
+Type: files; Name: "{app}\LanMountainDesktop.exe"
+Type: files; Name: "{app}\LanMountainDesktop.dll"
+Type: files; Name: "{app}\LanMountainDesktop.deps.json"
+Type: files; Name: "{app}\LanMountainDesktop.runtimeconfig.json"
+Type: files; Name: "{app}\LanMountainDesktop.pdb"
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -146,7 +146,11 @@ Name: "{autodesktop}\{cm:AppShortcutName}"; Filename: "{app}\{#MyAppExeName}"; T
 Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Tasks: startup; Flags: uninsdeletevalue
 
 [Run]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (Get-Command Add-AppxPackage -ErrorAction SilentlyContinue) {{ try {{ Add-AppxPackage -Register '{app}\WindowsIdentity\AppxManifest.xml' -ExternalLocation '{app}' -ForceApplicationShutdown -ErrorAction Stop }} catch {{ Write-Host $_.Exception.Message }} }}"""; Flags: runhidden
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--launch-source postinstall"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue) {{ Get-AppxPackage -Name 'LanMountainDesktop.NotificationIdentity' | Remove-AppxPackage -ErrorAction SilentlyContinue }}"""; Flags: runhidden
 
 [Code]
 const
@@ -390,10 +394,6 @@ begin
   if WizardSilent then
   begin
     Params := Params + ' /SILENT';
-  end;
-  if WizardVerySilent then
-  begin
-    Params := Params + ' /VERYSILENT';
   end;
   
   { 重启安装程序并退出当前实例 }

@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
-public sealed record InstallResult(bool Success, string? ErrorMessage, bool UserCancelledElevation);
+public sealed record InstallResult(bool Success, string? ErrorMessage, bool UserCancelledElevation, string? ErrorCode = null);
 
 internal sealed class UpdateInstallGateway
 {
@@ -31,12 +32,17 @@ internal sealed class UpdateInstallGateway
                 0,
                 0));
 
+            if (!VerifyDeploymentLock(payloadKind, launcherRoot, out var lockErrorCode, out var lockError))
+            {
+                return new InstallResult(false, lockError, false, lockErrorCode);
+            }
+
             if (payloadKind is UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy)
             {
                 var launched = LaunchLauncherForApplyUpdate(launcherRoot);
                 if (!launched)
                 {
-                    return new InstallResult(false, "Failed to launch Launcher for delta update application.", false);
+                    return new InstallResult(false, "Failed to launch Launcher for delta update application.", false, "apply_failed");
                 }
 
                 progress?.Report(new InstallProgressReport(
@@ -50,10 +56,10 @@ internal sealed class UpdateInstallGateway
                 return new InstallResult(true, null, false);
             }
 
-            var installerPath = FindPendingInstaller(launcherRoot);
+            var installerPath = FindPendingInstaller(launcherRoot, payloadKind, ct);
             if (installerPath is null)
             {
-                return new InstallResult(false, "No pending installer found.", false);
+                return new InstallResult(false, "No pending installer found.", false, "staging_incomplete");
             }
 
             var installerLaunched = LaunchFullInstaller(installerPath);
@@ -81,6 +87,43 @@ internal sealed class UpdateInstallGateway
             AppLogger.Warn("UpdateInstallGateway", $"Install failed: {ex.Message}");
             return new InstallResult(false, ex.Message, false);
         }
+    }
+
+    private static bool VerifyDeploymentLock(UpdatePayloadKind payloadKind, string launcherRoot, out string? errorCode, out string? error)
+    {
+        errorCode = null;
+        error = null;
+        var deploymentLock = DeploymentLockService.ReadLock(launcherRoot);
+        if (deploymentLock is null)
+        {
+            errorCode = "lock_conflict";
+            error = "Deployment lock is missing. Please redownload the update.";
+            return false;
+        }
+
+        if (deploymentLock.SchemaVersion != 1)
+        {
+            errorCode = "lock_conflict";
+            error = "Deployment lock schema is unsupported. Please redownload the update.";
+            return false;
+        }
+
+        var expectedKind = payloadKind is UpdatePayloadKind.DeltaLegacy or UpdatePayloadKind.DeltaPlonds ? "delta" : "full";
+        if (!string.Equals(deploymentLock.Kind, expectedKind, StringComparison.OrdinalIgnoreCase))
+        {
+            errorCode = "lock_conflict";
+            error = "Deployment lock payload type mismatch. Please redownload the update.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(deploymentLock.PayloadPath) || !File.Exists(deploymentLock.PayloadPath))
+        {
+            errorCode = "staging_incomplete";
+            error = "Deployment lock payload path is missing. Please redownload the update.";
+            return false;
+        }
+
+        return true;
     }
 
     private bool LaunchLauncherForApplyUpdate(string launcherRoot)
@@ -145,15 +188,27 @@ internal sealed class UpdateInstallGateway
         }
     }
 
-    private static string? FindPendingInstaller(string launcherRoot)
+    private static string? FindPendingInstaller(string launcherRoot, UpdatePayloadKind payloadKind, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+
         var incomingDir = UpdatePaths.GetIncomingDirectory(launcherRoot);
         if (!Directory.Exists(incomingDir))
         {
             return null;
         }
 
-        var executables = Directory.GetFiles(incomingDir, "*.exe");
-        return executables.Length > 0 ? executables[0] : null;
+        var executables = new DirectoryInfo(incomingDir)
+            .EnumerateFiles("*.exe", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .ThenBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (executables.Length == 0)
+        {
+            return null;
+        }
+
+        return executables[0].FullName;
     }
 }

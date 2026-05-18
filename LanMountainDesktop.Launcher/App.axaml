@@ -5,5 +5,8 @@
              RequestedThemeVariant="Default">
   <Application.Styles>
     <sty:FluentAvaloniaTheme />
+    <Style Selector="Window">
+      <Setter Property="Topmost" Value="True" />
+    </Style>
   </Application.Styles>
 </Application>

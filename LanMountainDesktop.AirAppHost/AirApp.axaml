@@ -1,0 +1,82 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sty="using:FluentAvalonia.Styling"
+             xmlns:fi="using:FluentIcons.Avalonia"
+             x:Class="LanMountainDesktop.AirAppHost.AirApp"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <sty:FluentAvaloniaTheme />
+
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        </Style>
+
+        <Style Selector="UserControl">
+            <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        </Style>
+
+        <Style Selector="TextBlock">
+            <Setter Property="FontFeatures" Value="tnum" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontFeatures" Value="tnum" />
+            <Setter Property="FontWeight" Value="Normal" />
+        </Style>
+
+        <Style Selector="ScrollViewer">
+            <Setter Property="ScrollViewer.IsScrollInertiaEnabled" Value="False" />
+        </Style>
+
+        <Style Selector="fi|SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="fi|FluentIcon">
+            <Setter Property="Foreground" Value="{DynamicResource AdaptiveTextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="fi|SymbolIcon.icon-s, fi|FluentIcon.icon-s">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="fi|SymbolIcon.icon-m, fi|FluentIcon.icon-m">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+
+        <Style Selector="fi|SymbolIcon.icon-l, fi|FluentIcon.icon-l">
+            <Setter Property="FontSize" Value="20" />
+        </Style>
+    </Application.Styles>
+
+    <Application.Resources>
+        <FontFamily x:Key="AppFontFamily">MiSans VF, avares://LanMountainDesktop.AirAppHost/Assets/Fonts#MiSans</FontFamily>
+        <Color x:Key="AirAppWindowBackgroundColor">#FFF7F9FC</Color>
+        <Color x:Key="AirAppWindowBorderColor">#22000000</Color>
+        <Color x:Key="AirAppTitleTextColor">#FF171A20</Color>
+        <Color x:Key="AirAppSecondaryTextColor">#FF657080</Color>
+        <Color x:Key="AirAppAccentColor">#FF2D73E5</Color>
+        <SolidColorBrush x:Key="AirAppWindowBackgroundBrush" Color="{StaticResource AirAppWindowBackgroundColor}" />
+        <SolidColorBrush x:Key="AirAppWindowBorderBrush" Color="{StaticResource AirAppWindowBorderColor}" />
+        <SolidColorBrush x:Key="AirAppTitleTextBrush" Color="{StaticResource AirAppTitleTextColor}" />
+        <SolidColorBrush x:Key="AirAppSecondaryTextBrush" Color="{StaticResource AirAppSecondaryTextColor}" />
+        <SolidColorBrush x:Key="AirAppAccentBrush" Color="{StaticResource AirAppAccentColor}" />
+        <SolidColorBrush x:Key="AdaptiveSurfaceRaisedBrush" Color="#FFF1F4F9" />
+        <SolidColorBrush x:Key="AdaptiveButtonBorderBrush" Color="#16000000" />
+        <SolidColorBrush x:Key="AdaptiveSurfaceBaseBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="SystemControlForegroundBaseMediumLowBrush" Color="#55000000" />
+        <SolidColorBrush x:Key="AdaptiveAccentBrush" Color="#FF2D73E5" />
+        <SolidColorBrush x:Key="AdaptiveOnAccentBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AdaptiveTextPrimaryBrush" Color="#FF0F172A" />
+        <CornerRadius x:Key="DesignCornerRadiusComponent">18</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusSm">10</CornerRadius>
+        <CornerRadius x:Key="DesignCornerRadiusXs">8</CornerRadius>
+    </Application.Resources>
+</Application>

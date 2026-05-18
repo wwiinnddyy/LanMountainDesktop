@@ -53,7 +53,13 @@ public sealed class PlondsDeltaBuilder
             ? new Dictionary<string, PayloadUtilities.FileFingerprint>(StringComparer.OrdinalIgnoreCase)
             : PayloadUtilities.ScanDirectory(baselineExtractRoot);
         var currentManifest = PayloadUtilities.ScanDirectory(currentExtractRoot);
-        var fileEntries = BuildFileEntries(previousManifest, currentManifest, objectsRoot);
+        var updateBaseUrl = string.IsNullOrWhiteSpace(options.UpdateBaseUrl)
+            ? null
+            : options.UpdateBaseUrl.TrimEnd('/');
+        var repoBaseUrl = string.IsNullOrWhiteSpace(updateBaseUrl)
+            ? null
+            : $"{updateBaseUrl}/repo/sha256";
+        var fileEntries = BuildFileEntries(previousManifest, currentManifest, objectsRoot, repoBaseUrl);
 
         var updateAssetName = $"update-{options.Platform}.zip";
         var fileMapAssetName = $"plonds-filemap-{options.Platform}.json";
@@ -76,6 +82,7 @@ public sealed class PlondsDeltaBuilder
             ["isFullPayload"] = useFullPayload ? "true" : "false"
         };
 
+        var generatedAt = DateTimeOffset.UtcNow;
         var component = new ComponentDocument(
             Name: "app",
             Version: options.CurrentVersion,
@@ -95,13 +102,27 @@ public sealed class PlondsDeltaBuilder
             Platform: options.Platform,
             Arch: PayloadUtilities.ResolveArch(options.Platform),
             Channel: options.Channel,
-            GeneratedAt: DateTimeOffset.UtcNow,
+            GeneratedAt: generatedAt,
             Metadata: metadata,
             Components: [component],
             Files: fileEntries);
 
         PayloadUtilities.WriteJson(fileMapPath, fileMap);
         _signer.SignFile(fileMapPath, options.PrivateKeyPath, fileMapSignaturePath);
+
+        if (!string.IsNullOrWhiteSpace(options.StaticOutputRoot) && !string.IsNullOrWhiteSpace(updateBaseUrl))
+        {
+            WriteStaticLayout(
+                options,
+                component,
+                objectsRoot,
+                distributionId,
+                fileMapPath,
+                fileMapSignaturePath,
+                Path.GetFullPath(options.StaticOutputRoot),
+                updateBaseUrl,
+                generatedAt);
+        }
 
         var summary = new PlondsReleasePlatformEntry(
             Platform: options.Platform,
@@ -135,7 +156,8 @@ public sealed class PlondsDeltaBuilder
     private static List<FileEntryDocument> BuildFileEntries(
         IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> previousManifest,
         IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> currentManifest,
-        string objectsRoot)
+        string objectsRoot,
+        string? repoBaseUrl)
     {
         var result = new List<FileEntryDocument>();
 
@@ -152,12 +174,16 @@ public sealed class PlondsDeltaBuilder
                     Size: current.Size,
                     ObjectPath: null,
                     ObjectKey: null,
+                    ObjectUrl: null,
                     Metadata: null));
                 continue;
             }
 
             var action = previousManifest.ContainsKey(path) ? "replace" : "add";
             var objectPath = PayloadUtilities.CopyObject(current.FullPath, objectsRoot, current.Sha256);
+            var objectUrl = string.IsNullOrWhiteSpace(repoBaseUrl)
+                ? null
+                : $"{repoBaseUrl.TrimEnd('/')}/{objectPath}";
             var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["mode"] = "file-object"
@@ -174,6 +200,7 @@ public sealed class PlondsDeltaBuilder
                 Size: current.Size,
                 ObjectPath: objectPath,
                 ObjectKey: objectPath,
+                ObjectUrl: objectUrl,
                 Metadata: metadata));
         }
 
@@ -191,10 +218,85 @@ public sealed class PlondsDeltaBuilder
                 Size: 0,
                 ObjectPath: null,
                 ObjectKey: null,
+                ObjectUrl: null,
                 Metadata: null));
         }
 
         return result;
+    }
+
+    private static void WriteStaticLayout(
+        PlondsDeltaBuildOptions options,
+        ComponentDocument component,
+        string objectsRoot,
+        string distributionId,
+        string fileMapPath,
+        string fileMapSignaturePath,
+        string staticOutputRoot,
+        string updateBaseUrl,
+        DateTimeOffset generatedAt)
+    {
+        var repoRoot = Path.Combine(staticOutputRoot, "repo", "sha256");
+        var manifestRoot = Path.Combine(staticOutputRoot, "manifests", distributionId);
+        var distributionRoot = Path.Combine(staticOutputRoot, "meta", "distributions");
+        var channelRoot = Path.Combine(staticOutputRoot, "meta", "channels", options.Channel, options.Platform);
+
+        CopyDirectory(objectsRoot, repoRoot);
+        Directory.CreateDirectory(manifestRoot);
+        File.Copy(fileMapPath, Path.Combine(manifestRoot, "plonds-filemap.json"), overwrite: true);
+        File.Copy(fileMapSignaturePath, Path.Combine(manifestRoot, "plonds-filemap.json.sig"), overwrite: true);
+
+        var fileMapUrl = $"{updateBaseUrl}/manifests/{Uri.EscapeDataString(distributionId)}/plonds-filemap.json";
+        var distribution = new DistributionDocument(
+            DistributionId: distributionId,
+            Version: options.CurrentVersion,
+            SourceVersion: options.BaselineVersion ?? "0.0.0",
+            Channel: options.Channel,
+            Platform: options.Platform,
+            Arch: PayloadUtilities.ResolveArch(options.Platform),
+            PublishedAt: generatedAt,
+            FileMapUrl: fileMapUrl,
+            FileMapSignatureUrl: fileMapUrl + ".sig",
+            Components: [component],
+            InstallerMirrors: [],
+            Capabilities: ["file-object"],
+            Metadata: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["protocol"] = "PLONDS",
+                ["releaseTag"] = options.CurrentTag,
+                ["baselineTag"] = options.BaselineTag ?? string.Empty,
+                ["baselineVersion"] = options.BaselineVersion ?? "0.0.0",
+                ["targetVersion"] = options.CurrentVersion,
+                ["isFullPayload"] = options.IsFullPayload ? "true" : "false"
+            });
+
+        var latest = new LatestPointerDocument(
+            DistributionId: distributionId,
+            Version: options.CurrentVersion,
+            Channel: options.Channel,
+            Platform: options.Platform,
+            PublishedAt: generatedAt);
+
+        PayloadUtilities.WriteJson(Path.Combine(distributionRoot, distributionId + ".json"), distribution);
+        PayloadUtilities.WriteJson(Path.Combine(channelRoot, "latest.json"), latest);
+    }
+
+    private static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+        foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDir, directory);
+            Directory.CreateDirectory(Path.Combine(destinationDir, relativePath));
+        }
+
+        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDir, file);
+            var destinationPath = Path.Combine(destinationDir, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(file, destinationPath, overwrite: true);
+        }
     }
 
     private sealed record FileMapDocument(
@@ -224,5 +326,35 @@ public sealed class PlondsDeltaBuilder
         long Size,
         string? ObjectPath,
         string? ObjectKey,
+        string? ObjectUrl,
         IReadOnlyDictionary<string, string>? Metadata);
+
+    private sealed record DistributionDocument(
+        string DistributionId,
+        string Version,
+        string SourceVersion,
+        string Channel,
+        string Platform,
+        string Arch,
+        DateTimeOffset PublishedAt,
+        string FileMapUrl,
+        string FileMapSignatureUrl,
+        IReadOnlyList<ComponentDocument> Components,
+        IReadOnlyList<InstallerMirrorDocument> InstallerMirrors,
+        IReadOnlyList<string> Capabilities,
+        IReadOnlyDictionary<string, string>? Metadata);
+
+    private sealed record LatestPointerDocument(
+        string DistributionId,
+        string Version,
+        string Channel,
+        string Platform,
+        DateTimeOffset PublishedAt);
+
+    private sealed record InstallerMirrorDocument(
+        string Platform,
+        string? Url,
+        string? FileName,
+        string? Sha256,
+        long Size);
 }

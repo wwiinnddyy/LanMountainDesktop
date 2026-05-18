@@ -58,7 +58,9 @@ public partial class ComponentLibraryWindow : Window
             _viewModel.Categories.Add(new ComponentLibraryCategoryViewModel(
                 category.Id,
                 GetLocalizedCategoryTitle(category.Id),
-                ResolveCategoryIcon(category.Id),
+                ComponentCategoryIconResolver.ResolveCategoryIcon(
+                    category.Id,
+                    _componentLibraryService.GetDefinitions().Where(d => string.Equals(d.Category, category.Id, StringComparison.OrdinalIgnoreCase))),
                 itemModels));
         }
 
@@ -176,50 +178,6 @@ public partial class ComponentLibraryWindow : Window
         }
     }
 
-    private Symbol ResolveCategoryIcon(string categoryId)
-    {
-        if (string.Equals(categoryId, "Clock", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Clock;
-        }
-
-        if (string.Equals(categoryId, "Date", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.CalendarDate;
-        }
-
-        if (string.Equals(categoryId, "Weather", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.WeatherSunny;
-        }
-
-        if (string.Equals(categoryId, "Board", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Edit;
-        }
-
-        if (string.Equals(categoryId, "Media", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Play;
-        }
-
-        if (string.Equals(categoryId, "Info", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Info;
-        }
-
-        if (string.Equals(categoryId, "Calculator", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Calculator;
-        }
-
-        if (string.Equals(categoryId, "Study", StringComparison.OrdinalIgnoreCase))
-        {
-            return Symbol.Hourglass;
-        }
-
-        return Symbol.Apps;
-    }
 
     private string GetLocalizedCategoryTitle(string categoryId)
     {

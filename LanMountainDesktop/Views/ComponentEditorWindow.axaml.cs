@@ -80,7 +80,7 @@ public partial class ComponentEditorWindow : Window
         _materialTheme.SecondaryColor = palette.SecondaryColor;
 
         SetBrushResource("EditorPrimaryBrush", palette.PrimaryColor);
-        SetBrushResource("EditorOnPrimaryBrush", palette.IsNightMode ? Colors.Black : Colors.White);
+        SetBrushResource("EditorOnPrimaryBrush", palette.OnPrimaryColor);
         SetBrushResource("EditorSecondaryBrush", palette.SecondaryColor);
         SetBrushResource("EditorTertiaryBrush", palette.TertiaryColor);
         SetBrushResource("EditorWindowBackgroundBrush", palette.WindowBackgroundColor);
