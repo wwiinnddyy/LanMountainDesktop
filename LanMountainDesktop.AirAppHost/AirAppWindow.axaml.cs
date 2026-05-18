@@ -1,7 +1,7 @@
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
+using FluentAvalonia.UI.Windowing;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Shared.IPC;
@@ -10,7 +10,7 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.AirAppHost;
 
-public sealed partial class AirAppWindow : Window
+public sealed partial class AirAppWindow : FAAppWindow
 {
     private readonly AirAppLaunchOptions _options;
     private readonly AirAppWindowDescriptor _descriptor;
@@ -36,7 +36,7 @@ public sealed partial class AirAppWindow : Window
 
         if (string.Equals(_options.AppId, AirAppLaunchOptions.WorldClockAppId, StringComparison.OrdinalIgnoreCase))
         {
-            ContentHost.Content = new WorldClockAirAppView(_options);
+            ContentHost.Content = new ClockAirAppView(_options);
             return;
         }
 
@@ -56,41 +56,41 @@ public sealed partial class AirAppWindow : Window
     private void ApplyWindowDescriptor(AirAppWindowDescriptor descriptor)
     {
         Title = descriptor.Title;
-        TitleTextBlock.Text = descriptor.TitleText;
-        SubtitleTextBlock.Text = descriptor.SubtitleText;
         Width = descriptor.Width;
         Height = descriptor.Height;
         MinWidth = descriptor.MinWidth;
         MinHeight = descriptor.MinHeight;
         ShowInTaskbar = descriptor.ShowInTaskbar;
         CanResize = descriptor.CanResize;
-        WindowDecorations = WindowDecorations.None;
-        ExtendClientAreaToDecorationsHint = true;
-        ExtendClientAreaTitleBarHeightHint = -1;
-
-        TitleBar.IsVisible = true;
-        Grid.SetRow(ContentHost, 1);
-        Grid.SetRowSpan(ContentHost, 1);
+        ShowAsDialog = descriptor.ShowAsDialog;
         WindowState = WindowState.Normal;
+        WindowRoot.Background = this.TryFindResource("AirAppWindowBackgroundBrush", out var brush) && brush is IBrush backgroundBrush
+            ? backgroundBrush
+            : Brushes.White;
+        ConfigureTitleBar(descriptor);
 
         switch (descriptor.ChromeMode)
         {
             case AirAppWindowChromeMode.Standard:
+                WindowDecorations = WindowDecorations.Full;
+                TitleBar.ExtendsContentIntoTitleBar = false;
                 break;
 
             case AirAppWindowChromeMode.Borderless:
-                HideCustomTitleBar();
+                WindowDecorations = WindowDecorations.None;
+                TitleBar.ExtendsContentIntoTitleBar = true;
                 break;
 
             case AirAppWindowChromeMode.FullScreen:
-                HideCustomTitleBar();
-                WindowShell.CornerRadius = new Avalonia.CornerRadius(0);
-                WindowShell.BorderThickness = new Avalonia.Thickness(0);
-                WindowShell.BoxShadow = default;
+                WindowDecorations = WindowDecorations.None;
+                TitleBar.ExtendsContentIntoTitleBar = true;
+                ShowAsDialog = false;
                 WindowState = WindowState.FullScreen;
                 break;
 
             case AirAppWindowChromeMode.Tool:
+                WindowDecorations = WindowDecorations.Full;
+                TitleBar.ExtendsContentIntoTitleBar = false;
                 ShowInTaskbar = false;
                 CanResize = false;
                 break;
@@ -102,11 +102,18 @@ public sealed partial class AirAppWindow : Window
         }
     }
 
-    private void HideCustomTitleBar()
+    private void ConfigureTitleBar(AirAppWindowDescriptor descriptor)
     {
-        TitleBar.IsVisible = false;
-        Grid.SetRow(ContentHost, 0);
-        Grid.SetRowSpan(ContentHost, 2);
+        TitleBar.Height = descriptor.ChromeMode == AirAppWindowChromeMode.Tool ? 36 : 40;
+        TitleBar.BackgroundColor = Colors.Transparent;
+        TitleBar.ForegroundColor = Color.FromRgb(32, 32, 32);
+        TitleBar.InactiveBackgroundColor = Colors.Transparent;
+        TitleBar.InactiveForegroundColor = Color.FromRgb(96, 96, 96);
+        TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(23, 0, 0, 0);
+        TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(52, 0, 0, 0);
+        TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonInactiveForegroundColor = Colors.Gray;
     }
 
     private void ConfigureWhiteboardWindow()
@@ -147,25 +154,17 @@ public sealed partial class AirAppWindow : Window
         }, DispatcherPriority.Background);
     }
 
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        SaveWhiteboard();
+        base.OnClosing(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         SaveAndDisposeWhiteboard();
         _ = UnregisterWithLauncherAsync();
         base.OnClosed(e);
-    }
-
-    private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            BeginMoveDrag(e);
-        }
-    }
-
-    private void OnCloseClick(object? sender, RoutedEventArgs e)
-    {
-        SaveWhiteboard();
-        Close();
     }
 
     private void SaveAndDisposeWhiteboard()
@@ -257,6 +256,11 @@ public sealed partial class AirAppWindow : Window
         if (!string.IsNullOrWhiteSpace(_options.InstanceKey))
         {
             return _options.InstanceKey.Trim();
+        }
+
+        if (string.Equals(_options.AppId, AirAppLaunchOptions.WorldClockAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{AirAppLaunchOptions.WorldClockAppId}:clock-suite:global";
         }
 
         var componentId = string.IsNullOrWhiteSpace(_options.SourceComponentId)

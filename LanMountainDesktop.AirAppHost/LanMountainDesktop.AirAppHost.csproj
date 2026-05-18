@@ -12,6 +12,9 @@
   <ItemGroup>
     <AvaloniaResource Include="..\LanMountainDesktop\Assets\Fonts\**" Link="Assets\Fonts\%(RecursiveDir)%(Filename)%(Extension)" />
     <AvaloniaResource Include="..\LanMountainDesktop\Assets\logo_nightly.png" Link="Assets\logo_nightly.png" />
+    <None Include="..\LanMountainDesktop\Localization\*.json"
+          Link="Localization\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

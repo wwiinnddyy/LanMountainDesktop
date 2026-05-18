@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -13,8 +14,8 @@ internal sealed class LauncherFlowCoordinator
 {
     private static readonly TimeSpan StartupSoftTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan StartupHardTimeout = TimeSpan.FromSeconds(30);
-    private const string SoftTimeoutStatusMessage = "设备较慢，仍在启动，请稍候。";
-    private const string SoftTimeoutDetailsMessage = "桌面主进程仍在运行，Launcher 会继续等待，不会重复启动。";
+    private static readonly string SoftTimeoutStatusMessage = Strings.Coordinator_SlowDeviceMessage;
+    private static readonly string SoftTimeoutDetailsMessage = Strings.Coordinator_RunningHostMessage;
 
     private readonly CommandContext _context;
     private readonly DeploymentLocator _deploymentLocator;

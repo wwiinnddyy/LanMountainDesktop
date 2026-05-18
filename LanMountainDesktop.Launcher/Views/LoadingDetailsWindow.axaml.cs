@@ -3,6 +3,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using System.Collections.ObjectModel;
@@ -57,7 +58,7 @@ public partial class LoadingDetailsWindow : Window
     }
 
     /// <summary>
-    /// 更新加载状�?    /// </summary>
+    /// 更新加载状�?    /// </summary>
     public void UpdateLoadingState(LoadingStateMessage state)
     {
         Dispatcher.UIThread.Post(() =>
@@ -120,7 +121,7 @@ public partial class LoadingDetailsWindow : Window
     }
 
     /// <summary>
-    /// 更新当前活动�?    /// </summary>
+    /// 更新当前活动�?    /// </summary>
     private void UpdateCurrentItem(LoadingStateMessage state)
     {
         var currentItem = state.ActiveItems.FirstOrDefault();
@@ -181,7 +182,7 @@ public partial class LoadingDetailsWindow : Window
             }
         }
 
-        // 按状态排序：进行�?-> 等待�?-> 已完�?-> 失败
+        // 按状态排序：进行�?-> 等待�?-> 已完�?-> 失败
         var sortedItems = _items.OrderBy(i => GetStatePriority(i.State)).ToList();
         _items.Clear();
         foreach (var item in sortedItems)
@@ -234,20 +235,20 @@ public partial class LoadingDetailsWindow : Window
     /// </summary>
     private static string GetStageDescription(StartupStage stage) => stage switch
     {
-        StartupStage.Initializing => "���ڳ�ʼ��ϵͳ...",
-        StartupStage.LoadingSettings => "���ڼ�������...",
-        StartupStage.LoadingPlugins => "���ڼ��ز��...",
-        StartupStage.InitializingUI => "���ڳ�ʼ������...",
-        StartupStage.ShellInitialized => "��������ѳ�ʼ��",
-        StartupStage.DesktopVisible => "�����Ѿ��ɼ�",
-        StartupStage.ActivationRedirected => "�Ѽ�������ʵ��",
-        StartupStage.ActivationFailed => "����ʵ������ʧ��",
-        StartupStage.Ready => "�������",
-        _ => "���ڼ���..."
+        StartupStage.Initializing => "正在初始化系统...",
+        StartupStage.LoadingSettings => "正在加载设置...",
+        StartupStage.LoadingPlugins => "正在加载插件...",
+        StartupStage.InitializingUI => "正在初始化界面...",
+        StartupStage.ShellInitialized => "桌面程序已初始化",
+        StartupStage.DesktopVisible => "桌面已经可见",
+        StartupStage.ActivationRedirected => "已激活到现有实例",
+        StartupStage.ActivationFailed => "激活现有实例失败",
+        StartupStage.Ready => Strings.Loading_StageReady,
+        _ => "正在加载..."
     };
 
     /// <summary>
-    /// 获取项描�?    /// </summary>
+    /// 获取项描�?    /// </summary>
     private static string GetItemDescription(LoadingItem item)
     {
         if (!string.IsNullOrEmpty(item.Description))
@@ -255,17 +256,17 @@ public partial class LoadingDetailsWindow : Window
 
         return item.Type switch
         {
-            LoadingItemType.Plugin => "正在加载插件...",
-            LoadingItemType.Component => "正在加载组件...",
-            LoadingItemType.Resource => "正在加载资源...",
-            LoadingItemType.Data => "正在加载数据...",
-            LoadingItemType.Network => "正在下载...",
-            _ => "正在处理..."
+            LoadingItemType.Plugin => Strings.Loading_ItemPlugin,
+            LoadingItemType.Component => Strings.Loading_ItemComponent,
+            LoadingItemType.Resource => Strings.Loading_ItemResource,
+            LoadingItemType.Data => Strings.Loading_ItemData,
+            LoadingItemType.Network => Strings.Loading_ItemDownload,
+            _ => Strings.Loading_ItemProcess
         };
     }
 
     /// <summary>
-    /// 获取项图�?    /// </summary>
+    /// 获取项图�?    /// </summary>
     private static string GetItemIcon(LoadingItemType type) => type switch
     {
         LoadingItemType.Plugin => "\uE768",
@@ -294,7 +295,7 @@ public partial class LoadingDetailsWindow : Window
 }
 
 /// <summary>
-/// 加载项视图模�?/// </summary>
+/// 加载项视图模�?/// </summary>
 public class LoadingItemViewModel : INotifyPropertyChanged
 {
     public string Id { get; }
@@ -306,7 +307,7 @@ public class LoadingItemViewModel : INotifyPropertyChanged
 
     public string StatusIcon => GetStatusIcon(State);
     public IBrush StatusColor => GetStatusColor(State);
-    public string ProgressText => State == LoadingState.Completed ? "完成" : $"{ProgressPercent}%";
+    public string ProgressText => State == LoadingState.Completed ? Strings.Loading_ItemComplete : $"{ProgressPercent}%";
     public string TypeLabel => GetTypeLabel(Type);
     public IBrush TypeBackground => GetTypeBackground(Type);
     public IBrush TypeForeground => GetTypeForeground(Type);
@@ -359,14 +360,14 @@ public class LoadingItemViewModel : INotifyPropertyChanged
 
     private static string GetTypeLabel(LoadingItemType type) => type switch
     {
-        LoadingItemType.Plugin => "插件",
-        LoadingItemType.Component => "组件",
-        LoadingItemType.Resource => "资源",
-        LoadingItemType.Data => "数据",
-        LoadingItemType.Network => "网络",
-        LoadingItemType.Settings => "设置",
-        LoadingItemType.System => "系统",
-        _ => "其他"
+        LoadingItemType.Plugin => Strings.Loading_TypePlugin,
+        LoadingItemType.Component => Strings.Loading_TypeComponent,
+        LoadingItemType.Resource => Strings.Loading_TypeResource,
+        LoadingItemType.Data => Strings.Loading_TypeData,
+        LoadingItemType.Network => Strings.Loading_TypeNetwork,
+        LoadingItemType.Settings => Strings.Loading_TypeSettings,
+        LoadingItemType.System => Strings.Loading_TypeSystem,
+        _ => Strings.Loading_TypeOther
     };
 
     private static IBrush GetTypeBackground(LoadingItemType type) => type switch

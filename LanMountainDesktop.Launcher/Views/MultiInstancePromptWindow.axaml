@@ -5,10 +5,12 @@
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Launcher.Views.MultiInstancePromptWindow"
         x:DataType="views:MultiInstancePromptWindow"
-        Title="LanMountain Desktop"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.MultiInstance_Title}"
         Width="620"
         Height="360"
         MinWidth="560"
@@ -44,13 +46,13 @@
 
       <StackPanel Grid.Column="1"
                   Spacing="8">
-        <TextBlock Text="LanMountain Desktop is already running"
+        <TextBlock Text="{x:Static res:Strings.MultiInstance_AlreadyRunning}"
                    FontSize="22"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    TextWrapping="Wrap" />
         <TextBlock x:Name="MessageText"
-                   Text="Launcher found an existing desktop instance and did not start another process."
+                   Text="{x:Static res:Strings.MultiInstance_AlreadyRunningMessage}"
                    FontSize="14"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap"
@@ -64,8 +66,8 @@
                     IsOpen="True"
                     IsClosable="False"
                     Severity="Informational"
-                    Title="Repeated launch"
-                    Message="Your current setting is to show this prompt without opening the desktop automatically.">
+                    Title="{x:Static res:Strings.MultiInstance_RepeatedLaunchTitle}"
+                    Message="{x:Static res:Strings.MultiInstance_RepeatedLaunchMessage}">
         <ui:FAInfoBar.IconSource>
           <ui:FAFontIconSource Glyph="&#xF0288;"
                                FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -79,7 +81,7 @@
                  FontSize="12"
                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                  TextWrapping="Wrap"
-                 Text="No second Host process was created." />
+                 Text="{x:Static res:Strings.MultiInstance_NoSecondProcess}" />
     </Grid>
 
     <Border Grid.Row="1"
@@ -93,7 +95,7 @@
                 HorizontalAlignment="Left">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <fi:SymbolIcon Symbol="Copy" IconVariant="Regular" FontSize="16"/>
-            <TextBlock Text="Copy"/>
+            <TextBlock Text="{x:Static res:Strings.MultiInstance_ButtonCopy}"/>
           </StackPanel>
         </Button>
 
@@ -105,7 +107,7 @@
                   Height="34">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <fi:SymbolIcon Symbol="Dismiss" IconVariant="Regular" FontSize="16"/>
-              <TextBlock Text="Close"/>
+              <TextBlock Text="{x:Static res:Strings.MultiInstance_ButtonClose}"/>
             </StackPanel>
           </Button>
           <Button x:Name="OpenDesktopButton"
@@ -114,7 +116,7 @@
                   Height="34">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <fi:SymbolIcon Symbol="ArrowRight" IconVariant="Regular" FontSize="16"/>
-              <TextBlock Text="Open desktop"/>
+              <TextBlock Text="{x:Static res:Strings.MultiInstance_ButtonOpenDesktop}"/>
             </StackPanel>
           </Button>
         </StackPanel>

@@ -34,6 +34,11 @@ public static class Program
             }
 
             LauncherRuntimeContext.Current = commandContext;
+
+            var appRoot = Commands.ResolveAppRoot(commandContext);
+            var languageCode = LanguagePreferenceService.ResolveLanguageCode(appRoot);
+            LanguagePreferenceService.ApplyLanguage(languageCode);
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return Environment.ExitCode;
         }

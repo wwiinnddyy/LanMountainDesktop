@@ -1,64 +1,16 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="LanMountainDesktop.AirAppHost.AirAppWindow"
-        Width="520"
-        Height="360"
-        MinWidth="360"
-        MinHeight="260"
-        WindowStartupLocation="CenterScreen"
-        WindowDecorations="None"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1"
-        TransparencyLevelHint="Transparent"
-        Background="Transparent"
-        FontFamily="{DynamicResource AppFontFamily}"
-        Title="Air APP">
-    <Border x:Name="WindowShell"
-            Background="{DynamicResource AirAppWindowBackgroundBrush}"
-            BorderBrush="{DynamicResource AirAppWindowBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="18"
-            ClipToBounds="True"
-            BoxShadow="0 18 44 #22000000">
-        <Grid RowDefinitions="52,*">
-            <Grid x:Name="TitleBar"
-                  ColumnDefinitions="*,Auto"
-                  Background="Transparent"
-                  PointerPressed="OnTitleBarPointerPressed">
-                <StackPanel Margin="18,0,0,0"
-                            VerticalAlignment="Center"
-                            Spacing="2">
-                    <TextBlock x:Name="TitleTextBlock"
-                               Text="Air APP"
-                               FontSize="15"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AirAppTitleTextBrush}" />
-                    <TextBlock x:Name="SubtitleTextBlock"
-                               Text="LanMountainDesktop"
-                               FontSize="11"
-                               Foreground="{DynamicResource AirAppSecondaryTextBrush}" />
-                </StackPanel>
-
-                <Button Grid.Column="1"
-                        Width="36"
-                        Height="36"
-                        Margin="0,8,10,8"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderBrush="Transparent"
-                        BorderThickness="0"
-                        Click="OnCloseClick">
-                    <TextBlock Text="X"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource AirAppTitleTextBrush}" />
-                </Button>
-            </Grid>
-
-            <ContentControl x:Name="ContentHost"
-                            Grid.Row="1" />
-        </Grid>
-    </Border>
-</Window>
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         x:Class="LanMountainDesktop.AirAppHost.AirAppWindow"
+                         Width="520"
+                         Height="360"
+                         MinWidth="360"
+                         MinHeight="260"
+                         WindowStartupLocation="CenterScreen"
+                         FontFamily="{DynamicResource AppFontFamily}"
+                         Title="Air APP">
+    <Grid x:Name="WindowRoot"
+          Background="{DynamicResource AirAppWindowBackgroundBrush}">
+        <ContentControl x:Name="ContentHost" />
+    </Grid>
+</faWindowing:FAAppWindow>

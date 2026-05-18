@@ -5,10 +5,12 @@
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Launcher.Views.ErrorWindow"
         x:DataType="views:ErrorWindow"
-        Title="LanMountain Desktop"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.Error_Title}"
         Width="760"
         Height="460"
         MinWidth="640"
@@ -46,14 +48,14 @@
       <StackPanel Grid.Column="1"
                   Spacing="8">
         <TextBlock x:Name="TitleText"
-                   Text="Launcher could not confirm startup"
+                   Text="{x:Static res:Strings.Error_TitleCannotConfirm}"
                    FontSize="22"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    TextWrapping="Wrap" />
 
         <TextBlock x:Name="ErrorMessageText"
-                   Text="LanMountain Desktop did not reach the expected startup state."
+                   Text="{x:Static res:Strings.Error_MessageNotReached}"
                    FontSize="14"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap"
@@ -68,8 +70,8 @@
                     IsOpen="True"
                     IsClosable="False"
                     Severity="Warning"
-                    Title="Startup recovery"
-                    Message="You can inspect logs, wait for the current process, or activate the running desktop instance.">
+                    Title="{x:Static res:Strings.Error_SuggestionTitle}"
+                    Message="{x:Static res:Strings.Error_SuggestionMessage}">
         <ui:FAInfoBar.IconSource>
           <ui:FAFontIconSource Glyph="&#xF0288;"
                                FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
@@ -79,7 +81,7 @@
       <Expander Grid.Row="2"
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
-                Header="Diagnostic details"
+                Header="{x:Static res:Strings.Error_DiagnosticHeader}"
                 IsExpanded="True">
         <TextBox x:Name="ErrorDetailsTextBox"
                  Margin="0,10,0,0"
@@ -108,7 +110,7 @@
                   Height="34">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <fi:SymbolIcon Symbol="FolderOpen" IconVariant="Regular" FontSize="16"/>
-              <TextBlock Text="Open Logs"/>
+              <TextBlock Text="{x:Static res:Strings.Error_ButtonOpenLogs}"/>
             </StackPanel>
           </Button>
 
@@ -117,7 +119,7 @@
                   Height="34">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <fi:SymbolIcon Symbol="Copy" IconVariant="Regular" FontSize="16"/>
-              <TextBlock Text="Copy"/>
+              <TextBlock Text="{x:Static res:Strings.Error_ButtonCopy}"/>
             </StackPanel>
           </Button>
         </StackPanel>
@@ -126,7 +128,7 @@
                     Orientation="Horizontal"
                     Spacing="8">
           <Button x:Name="SecondaryActionButton"
-                  Content="Wait"
+                  Content="{x:Static res:Strings.Error_ButtonWait}"
                   MinWidth="96"
                   Height="34"
                   IsVisible="False" />
@@ -136,13 +138,13 @@
                   Height="34">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <fi:SymbolIcon Symbol="Dismiss" IconVariant="Regular" FontSize="16"/>
-              <TextBlock Text="Exit"/>
+              <TextBlock Text="{x:Static res:Strings.Error_ButtonExit}"/>
             </StackPanel>
           </Button>
 
           <Button x:Name="PrimaryActionButton"
                   Classes="accent"
-                  Content="Retry"
+                  Content="{x:Static res:Strings.Error_ButtonRetry}"
                   MinWidth="112"
                   Height="34" />
         </StackPanel>

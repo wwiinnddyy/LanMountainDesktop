@@ -7,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -272,7 +273,7 @@ public partial class OobeWindow : Window
         if (typingTextBlock == null || cursorBorder == null) return;
 
         // 打字机效果：阑山桌面 LanMountain Desktop（在同一行）
-        var fullText = "阑山桌面 LanMountain Desktop";
+        var fullText = Strings.Oobe_TypingAppName;
         for (int i = 0; i <= fullText.Length; i++)
         {
             typingTextBlock.Text = fullText.Substring(0, i);
@@ -375,7 +376,7 @@ public partial class OobeWindow : Window
         }
 
         // 打字机效果：下一代
-        var nextGenText = "下一代";
+        var nextGenText = Strings.Oobe_TypingNextGen;
         for (int i = 0; i <= nextGenText.Length; i++)
         {
             nextGenTextBlock.Text = nextGenText.Substring(0, i);
@@ -392,7 +393,7 @@ public partial class OobeWindow : Window
         }
 
         // 打字机效果：互动信息看板
-        var dashboardText = "互动信息看板";
+        var dashboardText = Strings.Oobe_TypingDashboard;
         for (int i = 0; i <= dashboardText.Length; i++)
         {
             dashboardTextBlock.Text = dashboardText.Substring(0, i);
@@ -531,8 +532,8 @@ public partial class OobeWindow : Window
         if (this.FindControl<TextBlock>("OobeAutoStartDescriptionText") is { } autoStartDesc)
         {
             autoStartDesc.Text = OperatingSystem.IsWindows()
-                ? "通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。"
-                : "当前平台仅保存偏好；是否随系统自启动请使用系统提供的应用自启动设置。";
+                ? Strings.Oobe_AutoStartDesc
+                : Strings.Oobe_AutoStartDescNonWindows;
         }
 
         _suppressOobeStartupTransitionHandlers = true;
@@ -770,7 +771,7 @@ public partial class OobeWindow : Window
             }
             if (this.FindControl<TextBlock>("MigrationInfoText") is { } migrationText)
             {
-                migrationText.Text = "检测到现有数据，选择便携模式时将自动迁移。";
+                migrationText.Text = Strings.Oobe_MigrationDetected;
             }
         }
     }

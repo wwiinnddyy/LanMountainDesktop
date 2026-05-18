@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using LanMountainDesktop.Launcher.Resources;
 
 namespace LanMountainDesktop.Launcher.Views;
 
@@ -9,7 +10,7 @@ public partial class MultiInstancePromptWindow : Window
 {
     private readonly TaskCompletionSource<MultiInstancePromptResult> _completionSource =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private string _details = "LanMountain Desktop is already running.";
+    private string _details = Strings.MultiInstance_AlreadyRunning;
 
     public MultiInstancePromptWindow()
     {
@@ -22,7 +23,7 @@ public partial class MultiInstancePromptWindow : Window
 
     public void SetDetails(int processId, string shellState)
     {
-        _details = $"Existing host PID: {processId}\nShell state: {shellState}\nNo second Host process was created.";
+        _details = string.Format(Strings.MultiInstance_DetailsFormat, processId, shellState);
 
         if (this.FindControl<TextBlock>("DetailsText") is { } detailsText)
         {

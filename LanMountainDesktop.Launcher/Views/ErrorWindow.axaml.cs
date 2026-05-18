@@ -5,6 +5,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using FluentAvalonia.UI.Controls;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -36,7 +37,7 @@ public partial class ErrorWindow : Window
     public void SetErrorMessage(string message)
     {
         var normalizedMessage = string.IsNullOrWhiteSpace(message)
-            ? "LanMountain Desktop did not reach the expected startup state."
+            ? Strings.Error_MessageNotReached
             : message.Trim();
         var firstLine = normalizedMessage
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
@@ -58,16 +59,16 @@ public partial class ErrorWindow : Window
         _isDebugMode = isDebugMode;
         if (isDebugMode && this.FindControl<TextBlock>("TitleText") is { } titleText)
         {
-            titleText.Text = "[Debug] Launcher error";
+            titleText.Text = Strings.Error_DebugTitle;
         }
     }
 
     public void ConfigureForHostNotFound()
     {
         ApplyActionLayout(
-            title: "Launcher could not find the desktop executable",
-            suggestion: "Pick another executable in debug mode, inspect logs, or retry after fixing the deployment path.",
-            primaryLabel: "Retry",
+            title: Strings.Error_HostNotFoundTitle,
+            suggestion: Strings.Error_HostNotFoundMessage,
+            primaryLabel: Strings.Error_ButtonRetry,
             primaryAction: ErrorWindowResult.Retry,
             secondaryLabel: null,
             secondaryAction: null);
@@ -76,25 +77,27 @@ public partial class ErrorWindow : Window
     public void ConfigureForGenericFailure(bool allowRetry)
     {
         ApplyActionLayout(
-            title: "Launcher could not confirm startup",
+            title: Strings.Error_TitleCannotConfirm,
             suggestion: allowRetry
-                ? "Inspect logs, then retry once the previous startup attempt has fully finished."
-                : "Inspect logs or exit. Launcher will avoid creating another desktop process while the old one is still running.",
-            primaryLabel: allowRetry ? "Retry" : "Activate",
+                ? Strings.Error_GenericRetryMessage
+                : Strings.Error_GenericNoRetryMessage,
+            primaryLabel: allowRetry ? Strings.Error_ButtonRetry : Strings.Error_ButtonActivate,
             primaryAction: allowRetry ? ErrorWindowResult.Retry : ErrorWindowResult.ActivateExisting,
-            secondaryLabel: allowRetry ? null : "Wait",
+            secondaryLabel: allowRetry ? null : Strings.Error_ButtonWait,
             secondaryAction: allowRetry ? null : ErrorWindowResult.ContinueWaiting);
     }
 
     public void ConfigureForRunningHostFailure(int? hostPid)
     {
-        var pidHint = hostPid is > 0 ? $" Current host PID: {hostPid}." : string.Empty;
+        var suggestion = hostPid is > 0
+            ? string.Format(Strings.Error_PendingMessageWithPid, hostPid)
+            : Strings.Error_PendingMessage;
         ApplyActionLayout(
-            title: "Startup is still pending",
-            suggestion: $"The desktop process is still running, so Launcher will not start a second instance.{pidHint}",
-            primaryLabel: "Activate",
+            title: Strings.Error_PendingTitle,
+            suggestion: suggestion,
+            primaryLabel: Strings.Error_ButtonActivate,
             primaryAction: ErrorWindowResult.ActivateExisting,
-            secondaryLabel: "Wait",
+            secondaryLabel: Strings.Error_ButtonWait,
             secondaryAction: ErrorWindowResult.ContinueWaiting);
     }
 

@@ -32,6 +32,32 @@ public sealed class LauncherAirAppLifecycleServiceTests
     }
 
     [Fact]
+    public async Task OpenAsync_ReusesGlobalClockSuiteAcrossClockComponents()
+    {
+        var starter = new TestAirAppProcessStarter(Process.GetCurrentProcess());
+        var service = new LauncherAirAppLifecycleService(starter);
+
+        var first = await service.OpenAsync(new AirAppOpenRequest(
+            "world-clock",
+            BuiltInComponentIds.DesktopClock,
+            "analog-placement",
+            Environment.ProcessId));
+        var second = await service.OpenAsync(new AirAppOpenRequest(
+            "world-clock",
+            BuiltInComponentIds.DesktopWorldClock,
+            "world-placement",
+            Environment.ProcessId));
+
+        Assert.True(first.Accepted);
+        Assert.True(second.Accepted);
+        Assert.Equal("started", first.Code);
+        Assert.Equal("activated_existing", second.Code);
+        Assert.Equal("world-clock:clock-suite:global", first.Instance!.InstanceKey);
+        Assert.Equal(first.Instance.InstanceKey, second.Instance!.InstanceKey);
+        Assert.Equal(1, starter.StartCount);
+    }
+
+    [Fact]
     public async Task OpenAsync_PrunesExitedRegisteredInstanceBeforeRestart()
     {
         var starter = new TestAirAppProcessStarter(Process.GetCurrentProcess());

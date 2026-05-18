@@ -64,6 +64,11 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
     internal static string BuildSingleInstanceKey(string appId, string? sourceComponentId, string? sourcePlacementId)
     {
         var normalizedAppId = string.IsNullOrWhiteSpace(appId) ? "unknown" : appId.Trim();
+        if (string.Equals(normalizedAppId, WorldClockAppId, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{normalizedAppId}:clock-suite:global";
+        }
+
         var normalizedComponentId = string.IsNullOrWhiteSpace(sourceComponentId) ? "none" : sourceComponentId.Trim();
         var normalizedPlacementId = string.IsNullOrWhiteSpace(sourcePlacementId) ? "none" : sourcePlacementId.Trim();
         return $"{normalizedAppId}:{normalizedComponentId}:{normalizedPlacementId}";

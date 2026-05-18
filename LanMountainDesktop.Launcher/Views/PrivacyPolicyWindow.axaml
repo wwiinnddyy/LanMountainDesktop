@@ -4,10 +4,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Launcher.Views.PrivacyPolicyWindow"
         x:DataType="views:PrivacyPolicyViewModel"
-        Title="阑山桌面遥测隐私数据收集协议"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.Privacy_Title}"
         Width="800"
         Height="600"
         MinWidth="600"
@@ -25,11 +27,11 @@
             BorderThickness="0,0,0,1"
             Padding="24,16">
       <StackPanel Spacing="4">
-        <TextBlock Text="阑山桌面遥测隐私数据收集协议"
+        <TextBlock Text="{x:Static res:Strings.Privacy_Header}"
                    FontSize="20"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="请仔细阅读以下协议内容，了解我们如何收集、使用和保护您的数据"
+        <TextBlock Text="{x:Static res:Strings.Privacy_Description}"
                    FontSize="13"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
       </StackPanel>
@@ -54,7 +56,7 @@
                   HorizontalAlignment="Right"
                   Spacing="12">
         <Button x:Name="CloseButton"
-                Content="关闭"
+                Content="{x:Static res:Strings.Privacy_ButtonClose}"
                 Theme="{DynamicResource AccentButtonTheme}"
                 Width="100" />
       </StackPanel>

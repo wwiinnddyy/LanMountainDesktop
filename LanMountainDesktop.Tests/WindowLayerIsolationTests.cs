@@ -17,6 +17,22 @@ public sealed class WindowLayerIsolationTests
     }
 
     [Fact]
+    public void AirAppWindow_UsesFluentAvaloniaChromeInsteadOfHandRolledTitleBar()
+    {
+        var xaml = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppWindow.axaml");
+        var source = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppWindow.axaml.cs");
+
+        Assert.Contains("<faWindowing:FAAppWindow", xaml);
+        Assert.Contains(": FAAppWindow", source);
+        Assert.Contains("ShowAsDialog", source);
+        Assert.Contains("TitleBar.ExtendsContentIntoTitleBar", source);
+        Assert.DoesNotContain("OnTitleBarPointerPressed", source);
+        Assert.DoesNotContain("BeginMoveDrag", source);
+        Assert.DoesNotContain("OnCloseClick", source);
+        Assert.DoesNotContain("PointerPressed=\"OnTitleBarPointerPressed\"", xaml);
+    }
+
+    [Fact]
     public void AirAppWindowDescriptor_DefinesSupportedChromeModes()
     {
         var source = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppWindowDescriptor.cs");
@@ -36,10 +52,27 @@ public sealed class WindowLayerIsolationTests
 
         Assert.Contains("AirAppLaunchOptions.WorldClockAppId", source);
         Assert.Contains("AirAppWindowChromeMode.Standard", source);
-        Assert.Contains("width: 360", source);
-        Assert.Contains("height: 220", source);
+        Assert.Contains("width: 780", source);
+        Assert.Contains("height: 560", source);
+        Assert.Contains("minWidth: 680", source);
+        Assert.Contains("minHeight: 480", source);
+        Assert.Contains("canResize: true", source);
+        Assert.Contains("showAsDialog: false", source);
         Assert.Contains("AirAppLaunchOptions.WhiteboardAppId", source);
         Assert.Contains("AirAppWindowChromeMode.FullScreen", source);
+    }
+
+    [Fact]
+    public void AirAppWindow_LoadsClockSuiteForWorldClockApp()
+    {
+        var source = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppWindow.axaml.cs");
+        var viewXaml = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "ClockAirAppView.axaml");
+        var projectFile = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "LanMountainDesktop.AirAppHost.csproj");
+
+        Assert.Contains("new ClockAirAppView(_options)", source);
+        Assert.Contains("clock-suite:global", source);
+        Assert.Contains("ClockAirAppView", viewXaml);
+        Assert.Contains("Localization\\*.json", projectFile);
     }
 
     [Fact]

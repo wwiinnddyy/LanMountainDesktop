@@ -258,7 +258,7 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 
 - `LanMountainDesktop.AirAppHost` owns Air APP window chrome through `AirAppWindowDescriptor`.
 - Supported chrome modes are `Standard`, `Borderless`, `FullScreen`, `Tool`, and reserved `BackgroundOnly`.
-- Built-in `world-clock` uses `Standard` chrome with the LanMountain custom title bar.
+- Built-in `world-clock` uses `Standard` chrome with FluentAvalonia `FAAppWindow` title-bar controls.
 - Built-in `whiteboard` uses `FullScreen` chrome and supplies its own in-app exit affordance.
 
 ## Launcher OOBE / Elevation Contract

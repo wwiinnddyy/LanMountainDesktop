@@ -7,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Views;
@@ -106,7 +107,7 @@ internal partial class DataLocationPromptWindow : Window
 
         if (migrationInfoText is not null && hasExistingData)
         {
-            migrationInfoText.Text = "Existing system data was detected. Choosing portable mode will migrate the current data automatically.";
+            migrationInfoText.Text = Strings.DataLocation_MigrateWarning;
         }
     }
 

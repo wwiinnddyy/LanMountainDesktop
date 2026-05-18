@@ -3,10 +3,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         x:Class="LanMountainDesktop.Launcher.Views.SplashWindow"
         x:DataType="views:SplashWindow"
-        Title="LanMountain Desktop"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.Splash_Title}"
         Width="480"
         Height="320"
         CanResize="False"
@@ -66,7 +68,7 @@
                      FontSize="11"
                      Foreground="#B9C0CC"
                      HorizontalAlignment="Right"
-                     Text="Initializing..." />
+                     Text="{x:Static res:Strings.Splash_StatusInitializing}" />
         </Grid>
 
         <ProgressBar x:Name="ProgressIndicator"

@@ -5,12 +5,14 @@
         xmlns:views="clr-namespace:LanMountainDesktop.Launcher.Views"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:fi="using:FluentIcons.Avalonia"
+        xmlns:res="clr-namespace:LanMountainDesktop.Launcher.Resources"
         mc:Ignorable="d"
         d:DesignWidth="850"
         d:DesignHeight="650"
         x:Class="LanMountainDesktop.Launcher.Views.OobeWindow"
         x:DataType="views:OobeWindow"
-        Title="欢迎使用阑山桌面"
+        x:CompileBindings="False"
+        Title="{x:Static res:Strings.Oobe_Title}"
         Width="850"
         Height="650"
         CanResize="False"
@@ -149,7 +151,7 @@
           <Button.RenderTransform>
             <ScaleTransform ScaleX="0.1" ScaleY="0.1" />
           </Button.RenderTransform>
-          <TextBlock Text="开始使用"
+          <TextBlock Text="{x:Static res:Strings.Oobe_ButtonGetStarted}"
                      FontSize="16"
                      FontWeight="SemiBold" />
         </Button>
@@ -173,11 +175,11 @@
     <!-- 步骤 2: 主题选择页面 -->
     <Grid x:Name="ThemeStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
-        <TextBlock Text="个性化你的桌面"
+        <TextBlock Text="{x:Static res:Strings.Oobe_AppearanceTitle}"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="选择你喜欢的主题样式，可随时在设置中更改"
+        <TextBlock Text="{x:Static res:Strings.Oobe_AppearanceDesc}"
                    FontSize="13"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
       </StackPanel>
@@ -189,7 +191,7 @@
                   CornerRadius="{DynamicResource DesignCornerRadiusMd}"
                   Padding="16">
             <StackPanel Spacing="12">
-              <TextBlock Text="外观模式"
+              <TextBlock Text="{x:Static res:Strings.Oobe_AppearanceMode}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -215,7 +217,7 @@
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="浅色模式"
+                    <TextBlock Text="{x:Static res:Strings.Oobe_LightMode}"
                                FontSize="13"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -247,7 +249,7 @@
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"/>
                     </Border>
-                    <TextBlock Text="深色模式"
+                    <TextBlock Text="{x:Static res:Strings.Oobe_DarkMode}"
                                FontSize="13"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -265,7 +267,7 @@
                   CornerRadius="{DynamicResource DesignCornerRadiusMd}"
                   Padding="16">
             <StackPanel Spacing="12">
-              <TextBlock Text="主题色"
+              <TextBlock Text="{x:Static res:Strings.Oobe_ThemeColor}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -335,11 +337,11 @@
                   CornerRadius="{DynamicResource DesignCornerRadiusMd}"
                   Padding="16">
             <StackPanel Spacing="12">
-              <TextBlock Text="莫奈取色来源"
+              <TextBlock Text="{x:Static res:Strings.Oobe_MonetSource}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="从壁纸自动提取主题色，让界面与桌面完美融合"
+              <TextBlock Text="{x:Static res:Strings.Oobe_MonetDesc}"
                          FontSize="12"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
@@ -359,11 +361,11 @@
                                  VerticalAlignment="Center"
                                  Margin="0,0,12,0" />
                     <StackPanel Grid.Column="1" Spacing="4">
-                      <TextBlock Text="从桌面壁纸取色"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetFromWallpaper}"
                                  FontSize="13"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                      <TextBlock Text="自动分析当前壁纸颜色生成主题"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetFromWallpaperDesc}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -384,11 +386,11 @@
                                  VerticalAlignment="Center"
                                  Margin="0,0,12,0" />
                     <StackPanel Grid.Column="1" Spacing="4">
-                      <TextBlock Text="自定义图片取色"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetFromCustomImage}"
                                  FontSize="13"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                      <TextBlock Text="选择一张图片作为取色来源"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetFromCustomImageDesc}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -409,11 +411,11 @@
                                  VerticalAlignment="Center"
                                  Margin="0,0,12,0" />
                     <StackPanel Grid.Column="1" Spacing="4">
-                      <TextBlock Text="不使用莫奈取色"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetDisabled}"
                                  FontSize="13"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                      <TextBlock Text="使用固定的预设主题色"
+                      <TextBlock Text="{x:Static res:Strings.Oobe_MonetDisabledDesc}"
                                  FontSize="11"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -431,10 +433,10 @@
                   Spacing="12"
                   Margin="0,24,0,0">
         <Button x:Name="ThemeBackButton"
-                Content="返回"
+                Content="{x:Static res:Strings.Oobe_ButtonBack}"
                 Theme="{DynamicResource ButtonTheme}" />
         <Button x:Name="ThemeNextButton"
-                Content="下一步"
+                Content="{x:Static res:Strings.Oobe_ButtonNext}"
                 Theme="{DynamicResource AccentButtonTheme}" />
       </StackPanel>
     </Grid>
@@ -442,11 +444,11 @@
     <!-- 步骤 3: 数据位置选择页面 -->
     <Grid x:Name="DataLocationStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,32">
-        <TextBlock Text="选择数据保存位置"
+        <TextBlock Text="{x:Static res:Strings.Oobe_DataLocationTitle}"
                    FontSize="28"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="决定将应用数据保存在哪里，可随时在设置中更改"
+        <TextBlock Text="{x:Static res:Strings.Oobe_DataLocationDesc}"
                    FontSize="14"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
       </StackPanel>
@@ -462,12 +464,12 @@
               <fi:SymbolIcon Symbol="ShieldError"
                              FontSize="20"
                              Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
-              <TextBlock Text="无法保存到应用目录"
+              <TextBlock Text="{x:Static res:Strings.Oobe_NotWritable}"
                          FontWeight="SemiBold"
                          FontSize="14"
                          Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
             </StackPanel>
-            <TextBlock Text="当前安装目录需要管理员权限才能写入，数据将自动保存到系统用户目录。"
+            <TextBlock Text="{x:Static res:Strings.Oobe_NotWritableDesc}"
                        FontSize="13"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -494,12 +496,12 @@
                  <fi:SymbolIcon Symbol="Folder"
                                 FontSize="24"
                                 Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
-                 <TextBlock Text="保存在系统用户目录（推荐）"
+                 <TextBlock Text="{x:Static res:Strings.Oobe_SystemProfile}"
                             FontSize="16"
                             FontWeight="SemiBold"
                             Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                </StackPanel>
-              <TextBlock Text="数据与当前 Windows 用户绑定，重装应用或更新后数据不会丢失。适合大多数用户。"
+              <TextBlock Text="{x:Static res:Strings.Oobe_SystemProfileDesc}"
                          FontSize="13"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -537,12 +539,12 @@
                  <fi:SymbolIcon Symbol="Save"
                                 FontSize="24"
                                 Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                 <TextBlock Text="保存在应用安装目录（便携模式）"
+                 <TextBlock Text="{x:Static res:Strings.Oobe_Portable}"
                             FontSize="16"
                             FontWeight="SemiBold"
                             Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                </StackPanel>
-              <TextBlock Text="便于携带，可随应用文件夹整体移动到其他电脑。适合在多台电脑间使用或需要便携运行的场景。"
+              <TextBlock Text="{x:Static res:Strings.Oobe_PortableDesc}"
                          FontSize="13"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -584,12 +586,12 @@
                   Spacing="12"
                   Margin="0,32,0,0">
         <Button x:Name="DataLocationBackButton"
-                Content="返回"
+                Content="{x:Static res:Strings.Oobe_ButtonBack}"
                 Theme="{DynamicResource ButtonTheme}"
                 Width="100"
                 Height="36" />
         <Button x:Name="DataLocationNextButton"
-                Content="下一步"
+                Content="{x:Static res:Strings.Oobe_ButtonNext}"
                 Theme="{DynamicResource AccentButtonTheme}"
                 Width="100"
                 Height="36" />
@@ -599,11 +601,11 @@
     <!-- 步骤 4: 启动与展示（紧接数据保存位置） -->
     <Grid x:Name="StartupPresentationStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
-        <TextBlock Text="启动与展示"
+        <TextBlock Text="{x:Static res:Strings.Oobe_StartupTitle}"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="这些选项可随时在桌面应用的「设置」中更改。主窗口滑动入场仅在 Windows 上可用。"
+        <TextBlock Text="{x:Static res:Strings.Oobe_StartupDesc}"
                    FontSize="13"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -616,11 +618,11 @@
                   Padding="16">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="在任务栏显示主桌面窗口"
+                <TextBlock Text="{x:Static res:Strings.Oobe_ShowInTaskbar}"
                            FontSize="14"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <TextBlock Text="开启后最小化时可在任务栏保留条目；关闭则更多依赖托盘图标。"
+                <TextBlock Text="{x:Static res:Strings.Oobe_ShowInTaskbarDesc}"
                            FontSize="12"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -638,11 +640,11 @@
             <StackPanel Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
-                  <TextBlock Text="以滑动方式显示主窗口"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_SlideTransition}"
                              FontSize="14"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                  <TextBlock Text="自屏幕边缘滑入；与「淡入」二选一。"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_SlideTransitionDesc}"
                              FontSize="12"
                              TextWrapping="Wrap"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -653,11 +655,11 @@
               </Grid>
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
-                  <TextBlock Text="启动时使用淡入过渡"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_FadeTransition}"
                              FontSize="14"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                  <TextBlock Text="在未启用滑动入场时建议使用。"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_FadeTransitionDesc}"
                              FontSize="12"
                              TextWrapping="Wrap"
                              Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -678,12 +680,12 @@
                   <fi:SymbolIcon Symbol="SlideLayout"
                                  FontSize="20"
                                  Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
-                  <TextBlock Text="融合桌面与弹入手势"
+                  <TextBlock Text="{x:Static res:Strings.Oobe_FusedDesktop}"
                              FontSize="14"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 </StackPanel>
-                <TextBlock Text="同时启用融合桌面与三指滑动手势，以便使用边缘弹入与相关实验特性（与设置中开发者选项一致）。"
+                <TextBlock Text="{x:Static res:Strings.Oobe_FusedDesktopDesc}"
                            FontSize="12"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -699,12 +701,12 @@
                   Padding="16">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="4">
-                <TextBlock Text="登录 Windows 时自动启动阑山桌面"
+                <TextBlock Text="{x:Static res:Strings.Oobe_AutoStart}"
                            FontSize="14"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 <TextBlock x:Name="OobeAutoStartDescriptionText"
-                           Text="通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。"
+                           Text="{x:Static res:Strings.Oobe_AutoStartDesc}"
                            FontSize="12"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -723,10 +725,10 @@
                   Spacing="12"
                   Margin="0,24,0,0">
         <Button x:Name="StartupPresentationBackButton"
-                Content="返回"
+                Content="{x:Static res:Strings.Oobe_ButtonBack}"
                 Theme="{DynamicResource ButtonTheme}" />
         <Button x:Name="StartupPresentationNextButton"
-                Content="下一步"
+                Content="{x:Static res:Strings.Oobe_ButtonNext}"
                 Theme="{DynamicResource AccentButtonTheme}" />
       </StackPanel>
     </Grid>
@@ -734,11 +736,11 @@
     <!-- 步骤 5: 信息与隐私页面 -->
     <Grid x:Name="PrivacyStep" Margin="48" RowDefinitions="Auto,*,Auto" IsVisible="False">
       <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
-        <TextBlock Text="信息与隐私"
+        <TextBlock Text="{x:Static res:Strings.Oobe_PrivacyTitle}"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-        <TextBlock Text="选择是否参与遥测计划，查看隐私政策"
+        <TextBlock Text="{x:Static res:Strings.Oobe_PrivacyDesc}"
                    FontSize="13"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
       </StackPanel>
@@ -750,11 +752,11 @@
                 Padding="16">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="4">
-              <TextBlock Text="发送匿名崩溃报告"
+              <TextBlock Text="{x:Static res:Strings.Oobe_CrashReports}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="帮助改进应用稳定性，不包含个人身份信息"
+              <TextBlock Text="{x:Static res:Strings.Oobe_CrashReportsDesc}"
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -773,11 +775,11 @@
                 Padding="16">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Grid.Column="0" Spacing="4">
-              <TextBlock Text="发送匿名使用统计"
+              <TextBlock Text="{x:Static res:Strings.Oobe_UsageStats}"
                          FontSize="14"
                          FontWeight="SemiBold"
                          Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-              <TextBlock Text="帮助了解功能使用情况，优化产品体验"
+              <TextBlock Text="{x:Static res:Strings.Oobe_UsageStatsDesc}"
                          FontSize="12"
                          TextWrapping="Wrap"
                          Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -795,11 +797,11 @@
                 CornerRadius="{DynamicResource DesignCornerRadiusMd}"
                 Padding="16">
           <StackPanel Spacing="8">
-            <TextBlock Text="隐私追踪 ID"
+            <TextBlock Text="{x:Static res:Strings.Oobe_PrivacyTrackingId}"
                        FontSize="14"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-            <TextBlock Text="此 ID 用于匿名标识您的设备，不包含任何个人信息"
+            <TextBlock Text="{x:Static res:Strings.Oobe_PrivacyTrackingIdDesc}"
                        FontSize="12"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -823,12 +825,12 @@
               <CheckBox x:Name="PrivacyAgreementCheckBox"
                         VerticalAlignment="Center" />
               <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                <TextBlock Text="同意"
+                <TextBlock Text="{x:Static res:Strings.Oobe_Agree}"
                            FontSize="13"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                 <Button x:Name="ViewPrivacyPolicyButton"
-                        Content="《阑山桌面遥测隐私数据收集协议》"
+                        Content="{x:Static res:Strings.Oobe_PrivacyPolicyLink}"
                         Background="Transparent"
                         BorderThickness="0"
                         Padding="0"
@@ -844,7 +846,7 @@
             </StackPanel>
 
             <!-- 提示文本 -->
-            <TextBlock Text="您必须阅读并同意隐私协议后，才能开启遥测功能。遥测数据仅用于改进应用稳定性和优化产品体验，不包含任何个人身份信息。"
+            <TextBlock Text="{x:Static res:Strings.Oobe_PrivacyAgreementNote}"
                        FontSize="12"
                        TextWrapping="Wrap"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -858,10 +860,10 @@
                   Spacing="12"
                   Margin="0,24,0,0">
         <Button x:Name="PrivacyBackButton"
-                Content="返回"
+                Content="{x:Static res:Strings.Oobe_ButtonBack}"
                 Theme="{DynamicResource ButtonTheme}" />
         <Button x:Name="PrivacyNextButton"
-                Content="下一步"
+                Content="{x:Static res:Strings.Oobe_ButtonNext}"
                 Theme="{DynamicResource AccentButtonTheme}" />
       </StackPanel>
     </Grid>
@@ -887,12 +889,12 @@
         </Border>
 
         <StackPanel Spacing="12" HorizontalAlignment="Center">
-          <TextBlock Text="欢迎使用阑山桌面"
+          <TextBlock Text="{x:Static res:Strings.Oobe_CompleteTitle}"
                      FontSize="32"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                      HorizontalAlignment="Center" />
-          <TextBlock Text="你的桌面，不止一面"
+          <TextBlock Text="{x:Static res:Strings.Oobe_CompleteSubtitle}"
                      FontSize="16"
                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                      HorizontalAlignment="Center" />

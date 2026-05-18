@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Resources;
 using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Launcher.Services.AirApp;
 using LanMountainDesktop.Launcher.Services.Ipc;
@@ -156,7 +157,7 @@ public partial class App : Application
             {
                 Logger.Info("Preview command: error.");
                 var errorWindow = new ErrorWindow();
-                errorWindow.SetErrorMessage("[Preview] This is the launcher error window preview.");
+                errorWindow.SetErrorMessage(Strings.Preview_ErrorMessage);
                 errorWindow.Show();
                 _ = WaitForWindowCloseAsync(desktop, errorWindow);
                 return true;
@@ -223,7 +224,7 @@ public partial class App : Application
     private async Task SimulateSplashPreviewAsync(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow window)
     {
         var stages = new[] { "initializing", "update", "plugins", "launch", "ready" };
-        var messages = new[] { "Initializing...", "Checking updates...", "Checking plugins...", "Launching host...", "Ready" };
+        var messages = new[] { Strings.Preview_SplashInitializing, Strings.Preview_SplashCheckingUpdates, Strings.Preview_SplashCheckingPlugins, Strings.Preview_SplashLaunchingHost, Strings.Preview_SplashReady };
         var reporter = (ISplashStageReporter)window;
 
         for (var i = 0; i < stages.Length; i++)
@@ -242,7 +243,7 @@ public partial class App : Application
 
         for (var i = 0; i < stages.Length; i++)
         {
-            window.Report(stages[i], $"Processing {stages[i]}...", (i + 1) * 20);
+            window.Report(stages[i], string.Format(Strings.Preview_UpdateProcessing, stages[i]), (i + 1) * 20);
             await Task.Delay(600).ConfigureAwait(false);
         }
 
@@ -437,7 +438,7 @@ public partial class App : Application
         StartupAttemptRecord? activeCoordinatorAttempt)
     {
         var reporter = splashWindow as ISplashStageReporter;
-        reporter?.Report("activation", "Connecting to the active launcher...");
+        reporter?.Report("activation", Strings.Preview_ActivationConnecting);
 
         if (activeCoordinatorAttempt is not null &&
             !string.IsNullOrWhiteSpace(activeCoordinatorAttempt.CoordinatorPipeName))
@@ -794,7 +795,7 @@ public partial class App : Application
 
         try
         {
-            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", "Verifying update...", 10));
+            await Dispatcher.UIThread.InvokeAsync(() => window.Report("verify", Strings.Update_Verifying, 10));
             var updateResult = await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false);
             if (!updateResult.Success)
             {
@@ -804,7 +805,7 @@ public partial class App : Application
 
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", "Applying plugin upgrades...", 60));
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("plugins", Strings.Update_ApplyingPlugins, 60));
                 var pluginsDir = context.GetOption("plugins-dir") ?? Path.Combine(appRoot, "plugins");
                 var queueResult = pluginUpgrades.ApplyPendingUpgrades(pluginsDir);
                 if (!queueResult.Success && queueResult.Code != "noop")
@@ -815,7 +816,7 @@ public partial class App : Application
 
             if (success)
             {
-                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", "Cleaning up old deployments...", 90));
+                await Dispatcher.UIThread.InvokeAsync(() => window.Report("cleanup", Strings.Update_CleaningUp, 90));
                 deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
             }
         }

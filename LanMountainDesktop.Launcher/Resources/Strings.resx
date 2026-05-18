@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" use="optional" />
+              <xsd:attribute name="mimetype" type="xsd:string" use="optional" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Splash_Title" xml:space="preserve"><value>阑山桌面</value></data>
+  <data name="Splash_AppName" xml:space="preserve"><value>阑山桌面</value></data>
+  <data name="Splash_StatusInitializing" xml:space="preserve"><value>正在初始化...</value></data>
+  <data name="Splash_DebugPreview" xml:space="preserve"><value>[调试模式] 启动画面预览</value></data>
+  <data name="Error_Title" xml:space="preserve"><value>阑山桌面</value></data>
+  <data name="Error_TitleCannotConfirm" xml:space="preserve"><value>启动器无法确认启动状态</value></data>
+  <data name="Error_MessageNotReached" xml:space="preserve"><value>阑山桌面未达到预期的启动状态。</value></data>
+  <data name="Error_SuggestionTitle" xml:space="preserve"><value>启动恢复</value></data>
+  <data name="Error_SuggestionMessage" xml:space="preserve"><value>您可以检查日志、等待当前进程或激活正在运行的桌面实例。</value></data>
+  <data name="Error_DiagnosticHeader" xml:space="preserve"><value>诊断详情</value></data>
+  <data name="Error_ButtonOpenLogs" xml:space="preserve"><value>打开日志</value></data>
+  <data name="Error_ButtonCopy" xml:space="preserve"><value>复制</value></data>
+  <data name="Error_ButtonWait" xml:space="preserve"><value>等待</value></data>
+  <data name="Error_ButtonExit" xml:space="preserve"><value>退出</value></data>
+  <data name="Error_ButtonRetry" xml:space="preserve"><value>重试</value></data>
+  <data name="Error_ButtonActivate" xml:space="preserve"><value>激活</value></data>
+  <data name="Error_DebugTitle" xml:space="preserve"><value>[调试] 启动器错误</value></data>
+  <data name="Error_HostNotFoundTitle" xml:space="preserve"><value>启动器找不到桌面可执行文件</value></data>
+  <data name="Error_HostNotFoundMessage" xml:space="preserve"><value>在调试模式下选择另一个可执行文件、检查日志，或在修复部署路径后重试。</value></data>
+  <data name="Error_GenericRetryMessage" xml:space="preserve"><value>检查日志后重试，等待上一次启动尝试完全结束。</value></data>
+  <data name="Error_GenericNoRetryMessage" xml:space="preserve"><value>检查日志或退出。旧进程仍在运行时，启动器不会创建新的桌面进程。</value></data>
+  <data name="Error_PendingTitle" xml:space="preserve"><value>启动仍在进行中</value></data>
+  <data name="Error_PendingMessage" xml:space="preserve"><value>桌面进程仍在运行，启动器不会启动第二个实例。</value></data>
+  <data name="Error_PendingMessageWithPid" xml:space="preserve"><value>桌面进程仍在运行，启动器不会启动第二个实例。当前主进程 PID: {0}。</value></data>
+  <data name="MultiInstance_Title" xml:space="preserve"><value>阑山桌面</value></data>
+  <data name="MultiInstance_AlreadyRunning" xml:space="preserve"><value>阑山桌面已在运行</value></data>
+  <data name="MultiInstance_AlreadyRunningMessage" xml:space="preserve"><value>启动器检测到已存在的桌面实例，未启动新进程。</value></data>
+  <data name="MultiInstance_RepeatedLaunchTitle" xml:space="preserve"><value>重复启动</value></data>
+  <data name="MultiInstance_RepeatedLaunchMessage" xml:space="preserve"><value>您当前的设置为显示此提示而不自动打开桌面。</value></data>
+  <data name="MultiInstance_NoSecondProcess" xml:space="preserve"><value>未创建第二个主进程。</value></data>
+  <data name="MultiInstance_ButtonCopy" xml:space="preserve"><value>复制</value></data>
+  <data name="MultiInstance_ButtonClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="MultiInstance_ButtonOpenDesktop" xml:space="preserve"><value>打开桌面</value></data>
+  <data name="MultiInstance_DetailsFormat" xml:space="preserve"><value>现有主进程 PID: {0}&#10;Shell 状态: {1}&#10;未创建第二个主进程。</value></data>
+  <data name="DataLocation_Title" xml:space="preserve"><value>选择数据保存位置</value></data>
+  <data name="DataLocation_ChooseLocation" xml:space="preserve"><value>选择数据保存位置</value></data>
+  <data name="DataLocation_ChooseLocationDesc" xml:space="preserve"><value>选择启动器和桌面数据的存储位置。您可以稍后在设置中更改。</value></data>
+  <data name="DataLocation_NotWritable" xml:space="preserve"><value>应用目录不可写入</value></data>
+  <data name="DataLocation_NotWritableDesc" xml:space="preserve"><value>当前安装目录需要管理员权限才能写入。数据将存储在系统用户目录中。</value></data>
+  <data name="DataLocation_SystemProfile" xml:space="preserve"><value>保存在系统用户目录（推荐）</value></data>
+  <data name="DataLocation_SystemProfileDesc" xml:space="preserve"><value>数据与当前 Windows 用户绑定，在应用重新安装和更新后保持完整。</value></data>
+  <data name="DataLocation_Portable" xml:space="preserve"><value>保存在应用安装目录（便携模式）</value></data>
+  <data name="DataLocation_PortableDesc" xml:space="preserve"><value>适用于便携安装。整个应用文件夹可以连同数据一起移动到另一台机器。</value></data>
+  <data name="DataLocation_ButtonCancel" xml:space="preserve"><value>取消</value></data>
+  <data name="DataLocation_ButtonConfirm" xml:space="preserve"><value>确认</value></data>
+  <data name="DataLocation_MigrateWarning" xml:space="preserve"><value>检测到已有的系统数据。选择便携模式将自动迁移当前数据。</value></data>
+  <data name="Loading_Title" xml:space="preserve"><value>阑山桌面 - 加载详情</value></data>
+  <data name="Loading_StartingDesktop" xml:space="preserve"><value>正在启动阑山桌面</value></data>
+  <data name="Loading_StatusInitializing" xml:space="preserve"><value>正在初始化...</value></data>
+  <data name="Loading_StatusPreparing" xml:space="preserve"><value>正在准备组件</value></data>
+  <data name="Loading_LoadingItems" xml:space="preserve"><value>加载项目</value></data>
+  <data name="Loading_Done" xml:space="preserve"><value>完成</value></data>
+  <data name="Loading_ErrorOccurred" xml:space="preserve"><value>加载时发生错误。</value></data>
+  <data name="Loading_ButtonDetails" xml:space="preserve"><value>详情</value></data>
+  <data name="Loading_ButtonCancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Loading_StageReady" xml:space="preserve"><value>准备就绪</value></data>
+  <data name="Loading_ItemPlugin" xml:space="preserve"><value>正在加载插件...</value></data>
+  <data name="Loading_ItemComponent" xml:space="preserve"><value>正在加载组件...</value></data>
+  <data name="Loading_ItemResource" xml:space="preserve"><value>正在加载资源...</value></data>
+  <data name="Loading_ItemData" xml:space="preserve"><value>正在加载数据...</value></data>
+  <data name="Loading_ItemDownload" xml:space="preserve"><value>正在下载...</value></data>
+  <data name="Loading_ItemProcess" xml:space="preserve"><value>正在处理...</value></data>
+  <data name="Loading_ItemComplete" xml:space="preserve"><value>完成</value></data>
+  <data name="Loading_TypePlugin" xml:space="preserve"><value>插件</value></data>
+  <data name="Loading_TypeComponent" xml:space="preserve"><value>组件</value></data>
+  <data name="Loading_TypeResource" xml:space="preserve"><value>资源</value></data>
+  <data name="Loading_TypeData" xml:space="preserve"><value>数据</value></data>
+  <data name="Loading_TypeNetwork" xml:space="preserve"><value>网络</value></data>
+  <data name="Loading_TypeSettings" xml:space="preserve"><value>设置</value></data>
+  <data name="Loading_TypeSystem" xml:space="preserve"><value>系统</value></data>
+  <data name="Loading_TypeOther" xml:space="preserve"><value>其他</value></data>
+  <data name="Update_Title" xml:space="preserve"><value>阑山桌面 - 更新</value></data>
+  <data name="Update_AppName" xml:space="preserve"><value>阑山桌面</value></data>
+  <data name="Update_StatusUpdate" xml:space="preserve"><value>更新</value></data>
+  <data name="Update_StatusUpdating" xml:space="preserve"><value>正在更新，请稍候...</value></data>
+  <data name="Update_Complete" xml:space="preserve"><value>更新完成</value></data>
+  <data name="Update_Failed" xml:space="preserve"><value>更新失败</value></data>
+  <data name="Update_FailedMessage" xml:space="preserve"><value>更新过程中发生错误</value></data>
+  <data name="Update_DebugTitle" xml:space="preserve"><value>[调试模式] 更新页面</value></data>
+  <data name="Update_DebugMessage" xml:space="preserve"><value>预览更新进度界面</value></data>
+  <data name="Update_Verifying" xml:space="preserve"><value>正在验证更新...</value></data>
+  <data name="Update_ApplyingPlugins" xml:space="preserve"><value>正在应用插件升级...</value></data>
+  <data name="Update_CleaningUp" xml:space="preserve"><value>正在清理旧部署...</value></data>
+  <data name="DebugDebug_Title" xml:space="preserve"><value>调试模式</value></data>
+  <data name="DebugDebug_SettingsTitle" xml:space="preserve"><value>调试设置</value></data>
+  <data name="DebugDebug_DevMode" xml:space="preserve"><value>开发模式</value></data>
+  <data name="DebugDebug_DevModeDesc" xml:space="preserve"><value>启用后自动扫描开发目录</value></data>
+  <data name="DebugDebug_On" xml:space="preserve"><value>开</value></data>
+  <data name="DebugDebug_Off" xml:space="preserve"><value>关</value></data>
+  <data name="DebugDebug_AppPath" xml:space="preserve"><value>应用路径</value></data>
+  <data name="DebugDebug_NotSelected" xml:space="preserve"><value>未选择</value></data>
+  <data name="DebugDebug_Browse" xml:space="preserve"><value>浏览...</value></data>
+  <data name="DebugDebug_Warning" xml:space="preserve"><value>此功能仅供开发人员使用</value></data>
+  <data name="DebugDebug_ButtonCancel" xml:space="preserve"><value>取消</value></data>
+  <data name="DebugDebug_ButtonOk" xml:space="preserve"><value>确定</value></data>
+  <data name="DebugDebug_SelectExeDialog" xml:space="preserve"><value>选择阑山桌面主程序可执行文件</value></data>
+  <data name="Oobe_Title" xml:space="preserve"><value>欢迎使用阑山桌面</value></data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve"><value>欢迎使用阑山桌面</value></data>
+  <data name="Oobe_WelcomeSubtitle" xml:space="preserve"><value>你的桌面，不止一面</value></data>
+  <data name="Oobe_ButtonGetStarted" xml:space="preserve"><value>开始使用</value></data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve"><value>个性化你的桌面</value></data>
+  <data name="Oobe_AppearanceDesc" xml:space="preserve"><value>选择你喜欢的主题样式，可随时在设置中更改</value></data>
+  <data name="Oobe_AppearanceMode" xml:space="preserve"><value>外观模式</value></data>
+  <data name="Oobe_LightMode" xml:space="preserve"><value>浅色模式</value></data>
+  <data name="Oobe_DarkMode" xml:space="preserve"><value>深色模式</value></data>
+  <data name="Oobe_ThemeColor" xml:space="preserve"><value>主题色</value></data>
+  <data name="Oobe_MonetSource" xml:space="preserve"><value>莫奈取色来源</value></data>
+  <data name="Oobe_MonetFromWallpaper" xml:space="preserve"><value>从桌面壁纸取色</value></data>
+  <data name="Oobe_MonetFromCustomImage" xml:space="preserve"><value>自定义图片取色</value></data>
+  <data name="Oobe_MonetDisabled" xml:space="preserve"><value>不使用莫奈取色</value></data>
+  <data name="Oobe_DataLocationTitle" xml:space="preserve"><value>选择数据保存位置</value></data>
+  <data name="Oobe_SystemProfile" xml:space="preserve"><value>保存在系统用户目录（推荐）</value></data>
+  <data name="Oobe_SystemProfileDesc" xml:space="preserve"><value>数据与当前 Windows 用户绑定，在应用重新安装和更新后保持完整。</value></data>
+  <data name="Oobe_Portable" xml:space="preserve"><value>保存在应用安装目录（便携模式）</value></data>
+  <data name="Oobe_PortableDesc" xml:space="preserve"><value>适用于便携安装。整个应用文件夹可以连同数据一起移动到另一台机器。</value></data>
+  <data name="Oobe_NotWritable" xml:space="preserve"><value>无法保存到应用目录</value></data>
+  <data name="Oobe_NotWritableDesc" xml:space="preserve"><value>当前安装目录需要管理员权限才能写入。数据将存储在系统用户目录中。</value></data>
+  <data name="Oobe_StartupTitle" xml:space="preserve"><value>启动与展示</value></data>
+  <data name="Oobe_ShowInTaskbar" xml:space="preserve"><value>在任务栏显示主桌面窗口</value></data>
+  <data name="Oobe_SlideTransition" xml:space="preserve"><value>以滑动方式显示主窗口</value></data>
+  <data name="Oobe_FadeTransition" xml:space="preserve"><value>启动时使用淡入过渡</value></data>
+  <data name="Oobe_FusedDesktop" xml:space="preserve"><value>融合桌面与弹入手势</value></data>
+  <data name="Oobe_AutoStart" xml:space="preserve"><value>登录 Windows 时自动启动阑山桌面</value></data>
+  <data name="Oobe_PrivacyTitle" xml:space="preserve"><value>信息与隐私</value></data>
+  <data name="Oobe_CrashReports" xml:space="preserve"><value>发送匿名崩溃报告</value></data>
+  <data name="Oobe_UsageStats" xml:space="preserve"><value>发送匿名使用统计</value></data>
+  <data name="Oobe_PrivacyTrackingId" xml:space="preserve"><value>隐私追踪 ID</value></data>
+  <data name="Oobe_Agree" xml:space="preserve"><value>同意</value></data>
+  <data name="Oobe_PrivacyPolicyLink" xml:space="preserve"><value>《阑山桌面遥测隐私数据收集协议》</value></data>
+  <data name="Oobe_ButtonBack" xml:space="preserve"><value>返回</value></data>
+  <data name="Oobe_ButtonNext" xml:space="preserve"><value>下一步</value></data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve"><value>欢迎使用阑山桌面</value></data>
+  <data name="Oobe_CompleteSubtitle" xml:space="preserve"><value>你的桌面，不止一面</value></data>
+  <data name="Oobe_MonetDesc" xml:space="preserve"><value>从壁纸自动提取主题色，让界面与桌面完美融合</value></data>
+  <data name="Oobe_MonetFromWallpaperDesc" xml:space="preserve"><value>自动分析当前壁纸颜色生成主题</value></data>
+  <data name="Oobe_MonetFromCustomImageDesc" xml:space="preserve"><value>选择一张图片作为取色来源</value></data>
+  <data name="Oobe_MonetDisabledDesc" xml:space="preserve"><value>使用固定的预设主题色</value></data>
+  <data name="Oobe_DataLocationDesc" xml:space="preserve"><value>决定将应用数据保存在哪里，可随时在设置中更改</value></data>
+  <data name="Oobe_StartupDesc" xml:space="preserve"><value>这些选项可随时在桌面应用的「设置」中更改。主窗口滑动入场仅在 Windows 上可用。</value></data>
+  <data name="Oobe_ShowInTaskbarDesc" xml:space="preserve"><value>开启后最小化时可在任务栏保留条目；关闭则更多依赖托盘图标。</value></data>
+  <data name="Oobe_SlideTransitionDesc" xml:space="preserve"><value>自屏幕边缘滑入；与「淡入」二选一。</value></data>
+  <data name="Oobe_FadeTransitionDesc" xml:space="preserve"><value>在未启用滑动入场时建议使用。</value></data>
+  <data name="Oobe_FusedDesktopDesc" xml:space="preserve"><value>同时启用融合桌面与三指滑动手势，以便使用边缘弹入与相关实验特性（与设置中开发者选项一致）。</value></data>
+  <data name="Oobe_AutoStartDesc" xml:space="preserve"><value>通过当前用户的启动项注册本启动器（与安装程序可选任务使用同一注册表项）。</value></data>
+  <data name="Oobe_AutoStartDescNonWindows" xml:space="preserve"><value>当前平台仅保存偏好；是否随系统自启动请使用系统提供的应用自启动设置。</value></data>
+  <data name="Oobe_PrivacyDesc" xml:space="preserve"><value>选择是否参与遥测计划，查看隐私政策</value></data>
+  <data name="Oobe_CrashReportsDesc" xml:space="preserve"><value>帮助改进应用稳定性，不包含个人身份信息</value></data>
+  <data name="Oobe_UsageStatsDesc" xml:space="preserve"><value>帮助了解功能使用情况，优化产品体验</value></data>
+  <data name="Oobe_PrivacyTrackingIdDesc" xml:space="preserve"><value>此 ID 用于匿名标识您的设备，不包含任何个人信息</value></data>
+  <data name="Oobe_PrivacyAgreementNote" xml:space="preserve"><value>您必须阅读并同意隐私协议后，才能开启遥测功能。遥测数据仅用于改进应用稳定性和优化产品体验，不包含任何个人身份信息。</value></data>
+  <data name="Oobe_TypingAppName" xml:space="preserve"><value>阑山桌面 LanMountain Desktop</value></data>
+  <data name="Oobe_TypingNextGen" xml:space="preserve"><value>下一代</value></data>
+  <data name="Oobe_TypingDashboard" xml:space="preserve"><value>互动信息看板</value></data>
+  <data name="Oobe_MigrationDetected" xml:space="preserve"><value>检测到现有数据，选择便携模式时将自动迁移。</value></data>
+  <data name="Migration_Title" xml:space="preserve"><value>阑山桌面 - 版本迁移</value></data>
+  <data name="Migration_DetectedOldVersion" xml:space="preserve"><value>检测到旧版本</value></data>
+  <data name="Migration_DetectedDesc" xml:space="preserve"><value>检测到您的系统中安装了旧版本的阑山桌面（0.8.4），建议卸载以避免冲突。</value></data>
+  <data name="Migration_Version" xml:space="preserve"><value>版本：</value></data>
+  <data name="Migration_Location" xml:space="preserve"><value>位置：</value></data>
+  <data name="Migration_Type" xml:space="preserve"><value>类型：</value></data>
+  <data name="Migration_Installed" xml:space="preserve"><value>安装版</value></data>
+  <data name="Migration_UninstallNote" xml:space="preserve"><value>卸载旧版本不会影响新版本的使用，您的个人数据将保留。</value></data>
+  <data name="Migration_ButtonViewLocation" xml:space="preserve"><value>查看位置</value></data>
+  <data name="Migration_ButtonSkip" xml:space="preserve"><value>暂不处理</value></data>
+  <data name="Migration_ButtonUninstall" xml:space="preserve"><value>卸载旧版本</value></data>
+  <data name="Migration_Portable" xml:space="preserve"><value>便携版</value></data>
+  <data name="Migration_Unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="Migration_DetectedDescFormat" xml:space="preserve"><value>检测到您的系统中安装了旧版本的阑山桌面（{0}）。新版本采用了全新的架构，建议卸载旧版本以获得更好的体验。</value></data>
+  <data name="Privacy_Title" xml:space="preserve"><value>阑山桌面遥测隐私数据收集协议</value></data>
+  <data name="Privacy_Header" xml:space="preserve"><value>阑山桌面遥测隐私数据收集协议</value></data>
+  <data name="Privacy_Description" xml:space="preserve"><value>请仔细阅读以下协议内容，了解我们如何收集、使用和保护您的数据</value></data>
+  <data name="Privacy_ButtonClose" xml:space="preserve"><value>关闭</value></data>
+  <data name="DevDebug_Title" xml:space="preserve"><value>开发调试窗口</value></data>
+  <data name="DevDebug_Splash" xml:space="preserve"><value>启动画面</value></data>
+  <data name="DevDebug_Error" xml:space="preserve"><value>错误页面</value></data>
+  <data name="DevDebug_Update" xml:space="preserve"><value>更新页面</value></data>
+  <data name="DevDebug_Oobe" xml:space="preserve"><value>OOBE页面</value></data>
+  <data name="DevDebug_DataLocation" xml:space="preserve"><value>数据位置选择</value></data>
+  <data name="DevDebug_EnableFeature" xml:space="preserve"><value>启用功能</value></data>
+  <data name="DevDebug_Open" xml:space="preserve"><value>打开</value></data>
+  <data name="DevDebug_SetAllViewMode" xml:space="preserve"><value>全部设为查看模式</value></data>
+  <data name="DevDebug_SetAllFunctionMode" xml:space="preserve"><value>全部设为功能模式</value></data>
+  <data name="DevDebug_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Coordinator_SlowDeviceMessage" xml:space="preserve"><value>设备较慢，仍在启动，请稍候。</value></data>
+  <data name="Coordinator_RunningHostMessage" xml:space="preserve"><value>桌面主进程仍在运行，Launcher 会继续等待，不会重复启动。</value></data>
+  <data name="Preview_SplashInitializing" xml:space="preserve"><value>正在初始化...</value></data>
+  <data name="Preview_SplashCheckingUpdates" xml:space="preserve"><value>正在检查更新...</value></data>
+  <data name="Preview_SplashCheckingPlugins" xml:space="preserve"><value>正在检查插件...</value></data>
+  <data name="Preview_SplashLaunchingHost" xml:space="preserve"><value>正在启动主程序...</value></data>
+  <data name="Preview_SplashReady" xml:space="preserve"><value>准备就绪</value></data>
+  <data name="Preview_ErrorMessage" xml:space="preserve"><value>[预览] 这是启动器错误窗口预览。</value></data>
+  <data name="Preview_UpdateProcessing" xml:space="preserve"><value>正在处理 {0}...</value></data>
+  <data name="Preview_ActivationConnecting" xml:space="preserve"><value>正在连接到活跃的启动器...</value></data>
+</root>

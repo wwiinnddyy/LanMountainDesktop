@@ -80,6 +80,22 @@ public sealed class AirAppLauncherServiceTests
     }
 
     [Fact]
+    public void BuildSingleInstanceKey_UsesGlobalClockSuiteForWorldClock()
+    {
+        var analogKey = AirAppLauncherService.BuildSingleInstanceKey(
+            AirAppLauncherService.WorldClockAppId,
+            BuiltInComponentIds.DesktopClock,
+            "analog-placement");
+        var worldKey = AirAppLauncherService.BuildSingleInstanceKey(
+            AirAppLauncherService.WorldClockAppId,
+            BuiltInComponentIds.DesktopWorldClock,
+            "world-placement");
+
+        Assert.Equal("world-clock:clock-suite:global", analogKey);
+        Assert.Equal(analogKey, worldKey);
+    }
+
+    [Fact]
     public void CreateBrokerStartInfo_UsesAirAppBrokerCommandAndRequesterPid()
     {
         var startInfo = AirAppLauncherService.CreateBrokerStartInfo(

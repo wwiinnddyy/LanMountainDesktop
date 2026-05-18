@@ -7,6 +7,7 @@ public sealed record AirAppWindowDescriptor(
     AirAppWindowChromeMode ChromeMode,
     bool CanResize,
     bool ShowInTaskbar,
+    bool ShowAsDialog,
     double Width,
     double Height,
     double MinWidth,
@@ -23,13 +24,15 @@ public sealed record AirAppWindowDescriptor(
         if (string.Equals(options.AppId, AirAppLaunchOptions.WorldClockAppId, StringComparison.OrdinalIgnoreCase))
         {
             return Standard(
-                "World Clock - Air APP",
-                "World Clock",
+                "Clock - Air APP",
+                "Clock",
                 "Air APP",
-                width: 360,
-                height: 220,
-                minWidth: 320,
-                minHeight: 220);
+                width: 780,
+                height: 560,
+                minWidth: 680,
+                minHeight: 480,
+                canResize: true,
+                showAsDialog: false);
         }
 
         if (string.Equals(options.AppId, AirAppLaunchOptions.WhiteboardAppId, StringComparison.OrdinalIgnoreCase))
@@ -53,15 +56,18 @@ public sealed record AirAppWindowDescriptor(
         double width = 520,
         double height = 360,
         double minWidth = 360,
-        double minHeight = 260)
+        double minHeight = 260,
+        bool canResize = true,
+        bool showAsDialog = false)
     {
         return new AirAppWindowDescriptor(
             windowTitle,
             titleBarTitle,
             titleBarSubtitle,
             AirAppWindowChromeMode.Standard,
-            CanResize: true,
+            CanResize: canResize,
             ShowInTaskbar: true,
+            ShowAsDialog: showAsDialog,
             width,
             height,
             minWidth,
@@ -80,6 +86,7 @@ public sealed record AirAppWindowDescriptor(
             AirAppWindowChromeMode.FullScreen,
             CanResize: false,
             ShowInTaskbar: true,
+            ShowAsDialog: false,
             Width: 1280,
             Height: 720,
             MinWidth: 360,
@@ -98,6 +105,7 @@ public sealed record AirAppWindowDescriptor(
             AirAppWindowChromeMode.Borderless,
             CanResize: true,
             ShowInTaskbar: true,
+            ShowAsDialog: false,
             width,
             height,
             MinWidth: 240,
@@ -118,6 +126,7 @@ public sealed record AirAppWindowDescriptor(
             AirAppWindowChromeMode.Tool,
             CanResize: false,
             ShowInTaskbar: false,
+            ShowAsDialog: true,
             width,
             height,
             MinWidth: 240,
@@ -133,6 +142,7 @@ public sealed record AirAppWindowDescriptor(
             AirAppWindowChromeMode.BackgroundOnly,
             CanResize: false,
             ShowInTaskbar: false,
+            ShowAsDialog: false,
             Width: 1,
             Height: 1,
             MinWidth: 1,
