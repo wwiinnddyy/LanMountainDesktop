@@ -36,8 +36,77 @@ public sealed class WindowLayerIsolationTests
 
         Assert.Contains("AirAppLaunchOptions.WorldClockAppId", source);
         Assert.Contains("AirAppWindowChromeMode.Standard", source);
+        Assert.Contains("width: 360", source);
+        Assert.Contains("height: 220", source);
         Assert.Contains("AirAppLaunchOptions.WhiteboardAppId", source);
         Assert.Contains("AirAppWindowChromeMode.FullScreen", source);
+    }
+
+    [Fact]
+    public void DesktopComponentHost_DoesNotInterceptLivePointerInputForAirApps()
+    {
+        var source = ReadRepositoryFile("LanMountainDesktop", "Views", "MainWindow.ComponentSystem.cs");
+        var handlerSource = ExtractMethodSource(source, "OnDesktopComponentHostPointerPressed");
+
+        Assert.DoesNotContain("TryOpenAirAppFromDesktopComponent", source);
+        Assert.DoesNotContain("OpenWorldClock(placement.PlacementId", source);
+        Assert.DoesNotContain("OpenWhiteboard(", handlerSource);
+        Assert.DoesNotContain("OpenWorldClock(", handlerSource);
+    }
+
+    [Fact]
+    public void AnalogClockWidget_OpensWorldClockOnlyInLiveMode()
+    {
+        var source = ReadRepositoryFile("LanMountainDesktop", "Views", "Components", "AnalogClockWidget.axaml.cs");
+
+        Assert.Contains("IComponentRuntimeContextAware", source);
+        Assert.Contains("DesktopComponentRenderMode.Live", source);
+        Assert.Contains("OpenWorldClock(_componentId, _placementId)", source);
+        Assert.Contains("BuiltInComponentIds.DesktopClock", source);
+    }
+
+    [Fact]
+    public void AirAppWindow_WhiteboardBranchReusesWidgetAndSavesOnClose()
+    {
+        var source = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppWindow.axaml.cs");
+
+        Assert.Contains("new WhiteboardWidget(baseWidthCells)", source);
+        Assert.Contains("SetComponentPlacementContext(componentId, _options.SourcePlacementId)", source);
+        Assert.Contains("SetSurfaceMode(", source);
+        Assert.Contains("WhiteboardWidgetSurfaceMode.AirApp", source);
+        Assert.Contains("ForceSaveNote()", source);
+        Assert.Contains("widget.Dispose()", source);
+    }
+
+    [Fact]
+    public void AirAppHost_LoadsHostThemeForWhiteboardToolFlyouts()
+    {
+        var appXaml = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirApp.axaml");
+        var projectFile = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "LanMountainDesktop.AirAppHost.csproj");
+
+        Assert.Contains("<sty:FluentAvaloniaTheme", appXaml);
+        Assert.DoesNotContain("<FluentTheme", appXaml);
+        Assert.Contains("Style Selector=\"fi|SymbolIcon\"", appXaml);
+        Assert.Contains("Style Selector=\"ScrollViewer\"", appXaml);
+        Assert.Contains("AppFontFamily", appXaml);
+        Assert.Contains("FluentIcons.Avalonia", projectFile);
+    }
+
+    [Fact]
+    public void AirAppHost_ParsesAndReceivesSharedDataRoot()
+    {
+        var optionsSource = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppLaunchOptions.cs");
+        var programSource = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "Program.cs");
+        var starterSource = ReadRepositoryFile("LanMountainDesktop.Launcher", "Services", "AirApp", "IAirAppProcessStarter.cs");
+        var dataPathSource = ReadRepositoryFile("LanMountainDesktop", "Services", "AppDataPathProvider.cs");
+
+        Assert.Contains("DataRoot", optionsSource);
+        Assert.Contains("IndexOf('=')", optionsSource);
+        Assert.Contains("data-root", optionsSource);
+        Assert.Contains("AppDataPathProvider.Initialize(args)", programSource);
+        Assert.Contains("--data-root", starterSource);
+        Assert.Contains("Path.GetFullPath(dataRoot)", starterSource);
+        Assert.Contains("string.Equals(arg, \"--data-root\"", dataPathSource);
     }
 
     [Fact]

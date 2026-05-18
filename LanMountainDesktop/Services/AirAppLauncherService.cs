@@ -12,6 +12,8 @@ public interface IAirAppLauncherService
 {
     void OpenWorldClock(string? sourcePlacementId);
 
+    void OpenWorldClock(string sourceComponentId, string? sourcePlacementId);
+
     void OpenWhiteboard(string componentId, string? sourcePlacementId);
 }
 
@@ -24,11 +26,25 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
 
     public void OpenWorldClock(string? sourcePlacementId)
     {
-        _ = OpenAsync(WorldClockAppId, BuiltInComponentIds.DesktopWorldClock, sourcePlacementId);
+        OpenWorldClock(BuiltInComponentIds.DesktopWorldClock, sourcePlacementId);
+    }
+
+    public void OpenWorldClock(string sourceComponentId, string? sourcePlacementId)
+    {
+        var componentId = string.IsNullOrWhiteSpace(sourceComponentId)
+            ? BuiltInComponentIds.DesktopWorldClock
+            : sourceComponentId.Trim();
+        AppLogger.Info(
+            "AirAppLauncher",
+            $"World Clock Air APP requested. ComponentId='{componentId}'; PlacementId='{sourcePlacementId ?? string.Empty}'.");
+        _ = OpenAsync(WorldClockAppId, componentId, sourcePlacementId);
     }
 
     public void OpenWhiteboard(string componentId, string? sourcePlacementId)
     {
+        AppLogger.Info(
+            "AirAppLauncher",
+            $"Whiteboard Air APP requested. ComponentId='{componentId}'; PlacementId='{sourcePlacementId ?? string.Empty}'.");
         _ = OpenAsync(WhiteboardAppId, componentId, sourcePlacementId);
     }
 

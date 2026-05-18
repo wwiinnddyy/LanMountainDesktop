@@ -25,7 +25,11 @@ public sealed record AirAppWindowDescriptor(
             return Standard(
                 "World Clock - Air APP",
                 "World Clock",
-                "Air APP");
+                "Air APP",
+                width: 360,
+                height: 220,
+                minWidth: 320,
+                minHeight: 220);
         }
 
         if (string.Equals(options.AppId, AirAppLaunchOptions.WhiteboardAppId, StringComparison.OrdinalIgnoreCase))

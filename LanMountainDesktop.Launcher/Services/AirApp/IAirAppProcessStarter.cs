@@ -12,15 +12,18 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
     private readonly AirAppHostLocator _locator;
     private readonly Func<string?> _packageRootProvider;
     private readonly Func<string?> _hostPathProvider;
+    private readonly Func<string?> _dataRootProvider;
 
     public AirAppProcessStarter(
         AirAppHostLocator locator,
         Func<string?> packageRootProvider,
-        Func<string?> hostPathProvider)
+        Func<string?> hostPathProvider,
+        Func<string?> dataRootProvider)
     {
         _locator = locator;
         _packageRootProvider = packageRootProvider;
         _hostPathProvider = hostPathProvider;
+        _dataRootProvider = dataRootProvider;
     }
 
     public Process? Start(
@@ -52,6 +55,11 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
         AddArgument(startInfo, "--session-id", sessionId);
         AddArgument(startInfo, "--instance-key", instanceKey);
         AddArgument(startInfo, "--launcher-pipe", LanMountainDesktop.Shared.IPC.IpcConstants.AirAppLifecyclePipeName);
+        var dataRoot = _dataRootProvider();
+        if (!string.IsNullOrWhiteSpace(dataRoot))
+        {
+            AddArgument(startInfo, "--data-root", Path.GetFullPath(dataRoot));
+        }
 
         if (!string.IsNullOrWhiteSpace(sourceComponentId))
         {
@@ -63,7 +71,27 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
             AddArgument(startInfo, "--source-placement-id", sourcePlacementId.Trim());
         }
 
-        return Process.Start(startInfo);
+        LanMountainDesktop.Launcher.Services.Logger.Info(
+            $"Starting AirAppHost. AppId='{appId}'; InstanceKey='{instanceKey}'; HostPath='{hostPath}'; DataRoot='{dataRoot ?? string.Empty}'.");
+        var process = Process.Start(startInfo);
+        if (process is not null)
+        {
+            process.EnableRaisingEvents = true;
+            process.Exited += (_, _) =>
+            {
+                try
+                {
+                    LanMountainDesktop.Launcher.Services.Logger.Info(
+                        $"AirAppHost exited. AppId='{appId}'; InstanceKey='{instanceKey}'; ProcessId={process.Id}; ExitCode={process.ExitCode}.");
+                }
+                catch (Exception ex)
+                {
+                    LanMountainDesktop.Launcher.Services.Logger.Warn($"Failed to log AirAppHost exit: {ex.Message}");
+                }
+            };
+        }
+
+        return process;
     }
 
     private static void AddArgument(ProcessStartInfo startInfo, string name, string value)

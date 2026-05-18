@@ -6,7 +6,8 @@ public sealed record AirAppLaunchOptions(
     string? SourceComponentId,
     string? SourcePlacementId,
     string? LauncherPipeName,
-    string? InstanceKey)
+    string? InstanceKey,
+    string? DataRoot)
 {
     public const string WorldClockAppId = "world-clock";
     public const string WhiteboardAppId = "whiteboard";
@@ -28,6 +29,19 @@ public sealed record AirAppLaunchOptions(
                 continue;
             }
 
+            var equalsIndex = key.IndexOf('=');
+            if (equalsIndex > 0)
+            {
+                var inlineValue = key[(equalsIndex + 1)..];
+                key = key[..equalsIndex].Trim();
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    values[key] = inlineValue;
+                }
+
+                continue;
+            }
+
             if (index + 1 < args.Count && !args[index + 1].StartsWith("--", StringComparison.Ordinal))
             {
                 values[key] = args[index + 1];
@@ -45,7 +59,8 @@ public sealed record AirAppLaunchOptions(
             GetOptionalValue(values, "source-component-id"),
             GetOptionalValue(values, "source-placement-id"),
             GetOptionalValue(values, "launcher-pipe"),
-            GetOptionalValue(values, "instance-key"));
+            GetOptionalValue(values, "instance-key"),
+            GetOptionalValue(values, "data-root"));
     }
 
     private static string GetValue(IReadOnlyDictionary<string, string> values, string key, string fallback)

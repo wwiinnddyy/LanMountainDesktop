@@ -2391,9 +2391,10 @@ public partial class MainWindow : Window
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
         }
 
-        if (string.Equals(componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(componentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(componentId, BuiltInComponentIds.DesktopStandbyDigitalClock, StringComparison.OrdinalIgnoreCase))
         {
-            // Keep world clock widget at 2:1 ratio: 4x2, 6x3, 8x4...
+            // Keep world clock / StandBy digital clock widget at 2:1 ratio: 4x2, 6x3, 8x4...
             return SnapSpanToScaleRules(
                 span,
                 new ComponentScaleRule(WidthUnit: 2, HeightUnit: 1, MinScale: 2));
@@ -2875,7 +2876,6 @@ public partial class MainWindow : Window
     {
         if (!_isComponentLibraryOpen)
         {
-            TryOpenAirAppFromDesktopComponent(sender, e);
             return;
         }
 
@@ -2920,29 +2920,6 @@ public partial class MainWindow : Window
         }
 
         BeginDesktopComponentMoveDrag(host, placement, e);
-        e.Handled = true;
-    }
-
-    private void TryOpenAirAppFromDesktopComponent(object? sender, PointerPressedEventArgs e)
-    {
-        if (HasActiveDesktopEditSession ||
-            DesktopPagesViewport is null ||
-            sender is not Border host ||
-            host.Tag is not string placementId ||
-            !e.GetCurrentPoint(host).Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
-
-        var placement = _desktopComponentPlacements.FirstOrDefault(p =>
-            string.Equals(p.PlacementId, placementId, StringComparison.OrdinalIgnoreCase));
-        if (placement is null ||
-            !string.Equals(placement.ComponentId, BuiltInComponentIds.DesktopWorldClock, StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        _airAppLauncherService.OpenWorldClock(placement.PlacementId);
         e.Handled = true;
     }
 

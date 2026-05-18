@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -15,7 +16,7 @@ using LanMountainDesktop.Services.Settings;
 
 namespace LanMountainDesktop.Views.Components;
 
-public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware
+public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, ITimeZoneAwareComponentWidget, IComponentPlacementContextAware, IComponentRuntimeContextAware
 {
     private static readonly IReadOnlyDictionary<string, string> ZhCityNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -60,6 +61,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private const double Center = DialSize / 2;
     private string _componentId = BuiltInComponentIds.DesktopClock;
     private string _placementId = string.Empty;
+    private DesktopComponentRenderMode _renderMode = DesktopComponentRenderMode.Live;
 
     private ISettingsService _settingsService = HostSettingsFacadeProvider.GetOrCreate().Settings;
     private readonly LocalizationService _localizationService = new();
@@ -83,6 +85,7 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        PointerReleased += OnPointerReleased;
 
         InitializeDialIfNeeded();
         InitializeHandsIfNeeded();
@@ -126,6 +129,15 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
         RefreshFromSettings();
     }
 
+    public void SetComponentRuntimeContext(DesktopComponentRuntimeContext context)
+    {
+        _componentId = string.IsNullOrWhiteSpace(context.ComponentId)
+            ? BuiltInComponentIds.DesktopClock
+            : context.ComponentId.Trim();
+        _placementId = context.PlacementId?.Trim() ?? string.Empty;
+        _renderMode = context.RenderMode;
+    }
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         InitializeDialIfNeeded();
@@ -154,6 +166,23 @@ public partial class AnalogClockWidget : UserControl, IDesktopComponentWidget, I
     private void OnTimeZoneChanged(object? sender, EventArgs e)
     {
         UpdateClock();
+    }
+
+    private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        if (e.InitialPressMouseButton != MouseButton.Left ||
+            _renderMode != DesktopComponentRenderMode.Live ||
+            !string.Equals(_componentId, BuiltInComponentIds.DesktopClock, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        AppLogger.Info(
+            "AirAppLauncher",
+            $"Analog clock component clicked. ComponentId='{_componentId}'; PlacementId='{_placementId}'.");
+        AirAppLauncherServiceProvider.GetOrCreate().OpenWorldClock(_componentId, _placementId);
+        e.Handled = true;
     }
 
     private void InitializeDialIfNeeded()

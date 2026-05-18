@@ -58,6 +58,15 @@ public sealed class ComponentRegistry
                 AllowStatusBarPlacement: false,
                 AllowDesktopPlacement: true),
             new DesktopComponentDefinition(
+                BuiltInComponentIds.DesktopStandbyDigitalClock,
+                "StandBy Clock",
+                "Clock",
+                "Clock",
+                MinWidthCells: 4,
+                MinHeightCells: 2,
+                AllowStatusBarPlacement: false,
+                AllowDesktopPlacement: true),
+            new DesktopComponentDefinition(
                 BuiltInComponentIds.DesktopTimer,
                 "Timer",
                 "Timer",

@@ -25,5 +25,6 @@
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="FluentAvaloniaUI" />
+    <PackageReference Include="FluentIcons.Avalonia" />
   </ItemGroup>
 </Project>

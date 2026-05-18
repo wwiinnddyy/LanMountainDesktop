@@ -53,11 +53,19 @@ public static class AppDataPathProvider
     private static string? ResolveDataRootFromArgs(string[] args)
     {
         const string prefix = "--data-root=";
-        foreach (var arg in args)
+        for (var index = 0; index < args.Length; index++)
         {
+            var arg = args[index];
             if (arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 return arg[prefix.Length..];
+            }
+
+            if (string.Equals(arg, "--data-root", StringComparison.OrdinalIgnoreCase) &&
+                index + 1 < args.Length &&
+                !args[index + 1].StartsWith("--", StringComparison.Ordinal))
+            {
+                return args[index + 1];
             }
         }
 

@@ -30,6 +30,8 @@ public enum WhiteboardWidgetSurfaceMode
     AirApp
 }
 
+internal readonly record struct WhiteboardViewportSizeResolution(Size Size, string Source, bool IsFallback);
+
 public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IComponentPlacementContextAware, IDisposable
 {
     private enum WhiteboardToolMode
@@ -73,6 +75,9 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private int _noteLoadRevision;
     private WhiteboardWidgetSurfaceMode _surfaceMode = WhiteboardWidgetSurfaceMode.Component;
     private Action? _airAppCloseAction;
+    private bool _isViewportLayoutSyncQueued;
+    private Size _lastSynchronizedViewportSize = default;
+    private string _lastViewportSizeSource = string.Empty;
     private bool _disposed;
 
     public WhiteboardWidget()
@@ -95,6 +100,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         SizeChanged += OnSizeChanged;
+        ViewportRoot.SizeChanged += OnViewportRootSizeChanged;
+        ColorPickerPopup.Closed += OnColorPickerPopupClosed;
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
         _noteSaveTimer.Tick += OnNoteSaveTimerTick;
 
@@ -114,7 +121,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         if (InkColorPicker is not null)
         {
             InkColorPicker.Color = new Color(
-                _selectedInkColor.Alpha,
+                byte.MaxValue,
                 _selectedInkColor.Red,
                 _selectedInkColor.Green,
                 _selectedInkColor.Blue);
@@ -131,8 +138,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         ApplyThemeVisual(force: true);
-        EnsureLogicalCanvasSize(expandToViewport: true);
-        SetViewportState(_viewportState, queueSave: false);
+        SynchronizeViewportLayout("attached");
+        QueueViewportLayoutSync("attached-loaded");
         SchedulePersistedNoteLoad();
     }
 
@@ -144,8 +151,14 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
         ApplyCellSize(_currentCellSize);
-        EnsureLogicalCanvasSize(expandToViewport: true);
-        SetViewportState(_viewportState, queueSave: false);
+        QueueViewportLayoutSync("widget-size-changed");
+    }
+
+    private void OnViewportRootSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        QueueViewportLayoutSync("viewport-root-size-changed");
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)
@@ -253,7 +266,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
             if (InkColorPicker is not null)
             {
                 InkColorPicker.Color = new Color(
-                    _selectedInkColor.Alpha,
+                    byte.MaxValue,
                     _selectedInkColor.Red,
                     _selectedInkColor.Green,
                     _selectedInkColor.Blue);
@@ -350,6 +363,8 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         _disposed = true;
         _noteSaveTimer.Stop();
         _noteSaveTimer.Tick -= OnNoteSaveTimerTick;
+        ViewportRoot.SizeChanged -= OnViewportRootSizeChanged;
+        ColorPickerPopup.Closed -= OnColorPickerPopupClosed;
         InkCanvas.StrokeCollected -= OnInkCanvasStrokeCollected;
         InkCanvas.StrokeErased -= OnInkCanvasStrokeErased;
         InkCanvas.PointerReleased -= OnInkCanvasPointerReleased;
@@ -461,7 +476,7 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void SetInkColor(SKColor color)
     {
-        _selectedInkColor = color;
+        _selectedInkColor = NormalizeInkColor(color);
         if (_toolMode == WhiteboardToolMode.Pen)
         {
             InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkColor = _selectedInkColor;
@@ -476,6 +491,16 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         {
             InkCanvas.AvaloniaSkiaInkCanvas.Settings.InkThickness = _selectedInkThickness;
         }
+    }
+
+    internal static SKColor ToOpaqueInkColor(Color color)
+    {
+        return new SKColor(color.R, color.G, color.B, byte.MaxValue);
+    }
+
+    private static SKColor NormalizeInkColor(SKColor color)
+    {
+        return new SKColor(color.Red, color.Green, color.Blue, byte.MaxValue);
     }
 
     private void RefreshToolButtonVisuals()
@@ -543,10 +568,51 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private void OnColorPickerColorChanged(object? sender, ColorChangedEventArgs e)
     {
-        var color = e.NewColor;
-        var skColor = new SKColor(color.R, color.G, color.B, color.A);
+        var skColor = ToOpaqueInkColor(e.NewColor);
         _isUserCustomColor = skColor != SKColors.Black && skColor != SKColors.White;
         SetInkColor(skColor);
+    }
+
+    private void OnColorPickerPopupClosed(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        RestoreInkInputAfterToolPopup("color-popup-closed");
+    }
+
+    private void RestoreInkInputAfterToolPopup(string reason, int attempt = 0)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        ClearPanZoomPointers();
+        try
+        {
+            SetToolMode(WhiteboardToolMode.Pen);
+            SynchronizeViewportLayout(reason);
+            InkCanvas.Focus(NavigationMethod.Unspecified);
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (attempt >= 3)
+            {
+                AppLogger.Warn(
+                    "Whiteboard",
+                    $"Ink input restore gave up because the ink canvas stayed in input processing. Reason='{reason}'.",
+                    ex);
+                return;
+            }
+
+            AppLogger.Warn(
+                "Whiteboard",
+                $"Ink input restore was deferred because the ink canvas is still processing input. Reason='{reason}'.",
+                ex);
+            Dispatcher.UIThread.Post(
+                () => RestoreInkInputAfterToolPopup($"{reason}-deferred", attempt + 1),
+                DispatcherPriority.Background);
+        }
     }
 
     private void OnInkThicknessSliderValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
@@ -1188,6 +1254,54 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         SetLogicalCanvasSize(normalizedCanvasSize);
     }
 
+    private void QueueViewportLayoutSync(string reason)
+    {
+        if (_disposed || _isViewportLayoutSyncQueued)
+        {
+            return;
+        }
+
+        _isViewportLayoutSyncQueued = true;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _isViewportLayoutSyncQueued = false;
+                if (_disposed)
+                {
+                    return;
+                }
+
+                SynchronizeViewportLayout(reason);
+            },
+            DispatcherPriority.Loaded);
+    }
+
+    private void SynchronizeViewportLayout(string reason)
+    {
+        var resolution = ResolveCurrentViewportSize();
+        var previousCanvasSize = _logicalCanvasSize;
+
+        EnsureLogicalCanvasSize(expandToViewport: true);
+        SetViewportState(_viewportState, queueSave: false);
+
+        var canvasExpanded =
+            _logicalCanvasSize.Width > previousCanvasSize.Width + 0.5d ||
+            _logicalCanvasSize.Height > previousCanvasSize.Height + 0.5d;
+        var sourceChanged = !string.Equals(_lastViewportSizeSource, resolution.Source, StringComparison.Ordinal);
+        var viewportChanged = !AreSizesClose(_lastSynchronizedViewportSize, resolution.Size);
+        if (canvasExpanded || sourceChanged || viewportChanged)
+        {
+            AppLogger.Info(
+                "Whiteboard",
+                $"Viewport synchronized. ComponentId='{_componentId}'; PlacementId='{_placementId}'; Reason='{reason}'; " +
+                $"ViewportSize='{resolution.Size.Width:0.##}x{resolution.Size.Height:0.##}'; ViewportSource='{resolution.Source}'; " +
+                $"CanvasSize='{_logicalCanvasSize.Width:0.##}x{_logicalCanvasSize.Height:0.##}'; SurfaceMode='{_surfaceMode}'.");
+        }
+
+        _lastSynchronizedViewportSize = resolution.Size;
+        _lastViewportSizeSource = resolution.Source;
+    }
+
     private void SetLogicalCanvasSize(Size canvasSize)
     {
         _logicalCanvasSize = WhiteboardViewportHelper.NormalizeSize(canvasSize);
@@ -1197,14 +1311,53 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
 
     private Size GetViewportSize()
     {
-        var width = CanvasBorder.Bounds.Width > 1d
-            ? CanvasBorder.Bounds.Width
-            : Math.Max(1d, _currentCellSize * _baseWidthCells);
-        var height = CanvasBorder.Bounds.Height > 1d
-            ? CanvasBorder.Bounds.Height
-            : Math.Max(1d, Bounds.Height > 1d ? Bounds.Height : _currentCellSize * Math.Max(2, _baseWidthCells));
+        return ResolveCurrentViewportSize().Size;
+    }
 
-        return WhiteboardViewportHelper.NormalizeSize(new Size(width, height));
+    private WhiteboardViewportSizeResolution ResolveCurrentViewportSize()
+    {
+        return ResolveViewportSize(
+            ViewportRoot.Bounds.Size,
+            CanvasBorder.Bounds.Size,
+            Bounds.Size,
+            _currentCellSize,
+            _baseWidthCells);
+    }
+
+    internal static WhiteboardViewportSizeResolution ResolveViewportSize(
+        Size viewportRootSize,
+        Size canvasBorderSize,
+        Size widgetSize,
+        double currentCellSize,
+        int baseWidthCells)
+    {
+        if (HasUsableSize(viewportRootSize))
+        {
+            return new WhiteboardViewportSizeResolution(
+                WhiteboardViewportHelper.NormalizeSize(viewportRootSize),
+                "ViewportRoot",
+                IsFallback: false);
+        }
+
+        if (HasUsableSize(canvasBorderSize))
+        {
+            return new WhiteboardViewportSizeResolution(
+                WhiteboardViewportHelper.NormalizeSize(canvasBorderSize),
+                "CanvasBorder",
+                IsFallback: false);
+        }
+
+        var normalizedCellSize = Math.Max(1d, currentCellSize);
+        var normalizedBaseWidthCells = Math.Max(1, baseWidthCells);
+        var width = normalizedCellSize * normalizedBaseWidthCells;
+        var height = HasUsableLength(widgetSize.Height)
+            ? widgetSize.Height
+            : normalizedCellSize * Math.Max(2, normalizedBaseWidthCells);
+
+        return new WhiteboardViewportSizeResolution(
+            WhiteboardViewportHelper.NormalizeSize(new Size(width, height)),
+            "Fallback",
+            IsFallback: true);
     }
 
     private void SetViewportState(WhiteboardViewportState nextState, bool queueSave)
@@ -1236,6 +1389,23 @@ public partial class WhiteboardWidget : UserControl, IDesktopComponentWidget, IC
         return Math.Abs(first.Zoom - second.Zoom) <= tolerance &&
                Math.Abs(first.Offset.X - second.Offset.X) <= tolerance &&
                Math.Abs(first.Offset.Y - second.Offset.Y) <= tolerance;
+    }
+
+    private static bool AreSizesClose(Size first, Size second)
+    {
+        const double tolerance = 0.5d;
+        return Math.Abs(first.Width - second.Width) <= tolerance &&
+               Math.Abs(first.Height - second.Height) <= tolerance;
+    }
+
+    private static bool HasUsableSize(Size size)
+    {
+        return HasUsableLength(size.Width) && HasUsableLength(size.Height);
+    }
+
+    private static bool HasUsableLength(double value)
+    {
+        return double.IsFinite(value) && value > 1d;
     }
 
     private WhiteboardNoteSnapshot BuildNoteSnapshot()

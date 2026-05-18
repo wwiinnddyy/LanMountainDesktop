@@ -104,6 +104,7 @@ public partial class App : Application
     {
         var appRoot = Commands.ResolveAppRoot(context);
         var requesterPid = context.GetIntOption("requester-pid", 0);
+        var dataLocationResolver = new DataLocationResolver(appRoot);
         Logger.Info($"Air APP broker starting. AppRoot='{appRoot}'; RequesterPid={requesterPid}.");
 
         using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
@@ -111,7 +112,8 @@ public partial class App : Application
                 new AirAppProcessStarter(
                     new AirAppHostLocator(),
                     () => appRoot,
-                    () => null)));
+                    () => null,
+                    () => dataLocationResolver.ResolveDataRoot())));
         airAppIpcHost.Start();
 
         await WaitForAirAppBrokerExitAsync(requesterPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
@@ -280,6 +282,7 @@ public partial class App : Application
         LauncherResult result;
         SplashWindow? currentSplashWindow = splashWindow;
         var appRoot = Commands.ResolveAppRoot(context);
+        var dataLocationResolver = new DataLocationResolver(appRoot);
         var startupAttemptRegistry = new StartupAttemptRegistry();
         var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
         var successPolicy = LauncherFlowCoordinator.ResolveSuccessPolicyKey(context);
@@ -308,7 +311,8 @@ public partial class App : Application
                 new AirAppProcessStarter(
                     new AirAppHostLocator(),
                     () => appRoot,
-                    () => null)));
+                    () => null,
+                    () => dataLocationResolver.ResolveDataRoot())));
         airAppIpcHost.Start();
 
         using var coordinatorServer = new LauncherCoordinatorIpcServer(

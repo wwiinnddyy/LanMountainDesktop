@@ -66,8 +66,11 @@ internal sealed class DesktopEditOverlayPresenter
             CornerRadius = new CornerRadius(22),
             Opacity = 0,
             RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            RenderTransform = _candidateScale,
-            Transitions = new Transitions
+            RenderTransform = _candidateScale
+        };
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            _candidateOutline.Transitions = new Transitions
             {
                 new DoubleTransition
                 {
@@ -75,13 +78,13 @@ internal sealed class DesktopEditOverlayPresenter
                     Duration = FastDuration,
                     Easing = StandardEasing
                 }
-            }
-        };
-        _candidateScale.Transitions = new Transitions
-        {
-            CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
-            CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
-        };
+            };
+            _candidateScale.Transitions = new Transitions
+            {
+                CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
+                CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
+            };
+        }
 
         _candidateOutline.SetValue(Panel.ZIndexProperty, 0);
         _ghostView.SetValue(Panel.ZIndexProperty, 1);
@@ -99,10 +102,13 @@ internal sealed class DesktopEditOverlayPresenter
             }
         };
 
-        _root.Transitions = new Transitions
+        if (Dispatcher.UIThread.CheckAccess())
         {
-            CreateOpacityTransition(FastDuration)
-        };
+            _root.Transitions = new Transitions
+            {
+                CreateOpacityTransition(FastDuration)
+            };
+        }
     }
 
     public Control Root => _root;

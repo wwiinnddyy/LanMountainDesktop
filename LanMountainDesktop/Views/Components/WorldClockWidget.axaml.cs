@@ -342,7 +342,10 @@ public partial class WorldClockWidget : UserControl,
             return;
         }
 
-        AirAppLauncherServiceProvider.GetOrCreate().OpenWorldClock(_placementId);
+        AppLogger.Info(
+            "AirAppLauncher",
+            $"World clock component clicked. ComponentId='{_componentId}'; PlacementId='{_placementId}'.");
+        AirAppLauncherServiceProvider.GetOrCreate().OpenWorldClock(_componentId, _placementId);
         e.Handled = true;
     }
 

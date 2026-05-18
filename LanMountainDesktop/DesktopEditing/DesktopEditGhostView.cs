@@ -5,6 +5,7 @@ using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 
 namespace LanMountainDesktop.DesktopEditing;
 
@@ -51,15 +52,18 @@ internal sealed class DesktopEditGhostView : Border
         ClipToBounds = true;
         RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
         RenderTransform = _scaleTransform;
-        Transitions = new Transitions
+        if (Dispatcher.UIThread.CheckAccess())
         {
-            CreateOpacityTransition(FastDuration)
-        };
-        _scaleTransform.Transitions = new Transitions
-        {
-            CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
-            CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
-        };
+            Transitions = new Transitions
+            {
+                CreateOpacityTransition(FastDuration)
+            };
+            _scaleTransform.Transitions = new Transitions
+            {
+                CreateScaleTransition(ScaleTransform.ScaleXProperty, FastDuration),
+                CreateScaleTransition(ScaleTransform.ScaleYProperty, FastDuration)
+            };
+        }
 
         _accentDot = new Border
         {

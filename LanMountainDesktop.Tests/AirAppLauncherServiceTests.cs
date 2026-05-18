@@ -22,6 +22,21 @@ public sealed class AirAppLauncherServiceTests
     }
 
     [Fact]
+    public void BuildOpenRequest_IncludesAnalogClockSourceContext()
+    {
+        var request = AirAppLauncherService.BuildOpenRequest(
+            AirAppLauncherService.WorldClockAppId,
+            BuiltInComponentIds.DesktopClock,
+            "analog-placement",
+            43);
+
+        Assert.Equal("world-clock", request.AppId);
+        Assert.Equal(BuiltInComponentIds.DesktopClock, request.SourceComponentId);
+        Assert.Equal("analog-placement", request.SourcePlacementId);
+        Assert.Equal(43, request.RequesterProcessId);
+    }
+
+    [Fact]
     public void BuildOpenRequest_NormalizesEmptyOptionalContext()
     {
         var request = AirAppLauncherService.BuildOpenRequest(

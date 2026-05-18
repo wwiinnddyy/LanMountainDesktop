@@ -14,6 +14,7 @@ public sealed partial class AirAppWindow : Window
 {
     private readonly AirAppLaunchOptions _options;
     private readonly AirAppWindowDescriptor _descriptor;
+    private WhiteboardWidget? _whiteboardWidget;
     private string _instanceKey = string.Empty;
 
     public AirAppWindow()
@@ -117,6 +118,7 @@ public sealed partial class AirAppWindow : Window
             ? 4
             : 2;
         var widget = new WhiteboardWidget(baseWidthCells);
+        _whiteboardWidget = widget;
         widget.SetComponentPlacementContext(componentId, _options.SourcePlacementId);
         widget.SetSurfaceMode(
             WhiteboardWidgetSurfaceMode.AirApp,
@@ -127,6 +129,9 @@ public sealed partial class AirAppWindow : Window
             });
 
         ContentHost.Content = widget;
+        AppLogger.Info(
+            "AirAppWindow",
+            $"Whiteboard content created. ComponentId='{componentId}'; PlacementId='{_options.SourcePlacementId ?? string.Empty}'.");
     }
 
     protected override void OnOpened(EventArgs e)
@@ -144,6 +149,7 @@ public sealed partial class AirAppWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        SaveAndDisposeWhiteboard();
         _ = UnregisterWithLauncherAsync();
         base.OnClosed(e);
     }
@@ -158,7 +164,43 @@ public sealed partial class AirAppWindow : Window
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
+        SaveWhiteboard();
         Close();
+    }
+
+    private void SaveAndDisposeWhiteboard()
+    {
+        var widget = _whiteboardWidget;
+        if (widget is null)
+        {
+            return;
+        }
+
+        SaveWhiteboard();
+        if (ContentHost.Content == widget)
+        {
+            ContentHost.Content = null;
+        }
+
+        widget.Dispose();
+        _whiteboardWidget = null;
+    }
+
+    private void SaveWhiteboard()
+    {
+        if (_whiteboardWidget is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _whiteboardWidget.ForceSaveNote();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("AirAppWindow", "Failed to force-save whiteboard before closing Air APP.", ex);
+        }
     }
 
     private async Task RegisterWithLauncherAsync()
