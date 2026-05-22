@@ -358,7 +358,9 @@ internal sealed class SettingsService : ISettingsService
                 Directory.CreateDirectory(directory);
             }
 
-            File.WriteAllText(_pluginSettingsPath, JsonSerializer.Serialize(document, SerializerOptions));
+            var tempPath = $"{_pluginSettingsPath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(document, SerializerOptions));
+            File.Move(tempPath, _pluginSettingsPath, overwrite: true);
         }
         catch (Exception ex)
         {

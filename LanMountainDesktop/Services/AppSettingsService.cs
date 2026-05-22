@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using LanMountainDesktop.Models;
@@ -82,7 +82,9 @@ public sealed class AppSettingsService
             }
 
             var json = JsonSerializer.Serialize(snapshotToPersist, SerializerOptions);
-            File.WriteAllText(_settingsPath, json);
+            var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, json);
+            File.Move(tempPath, _settingsPath, overwrite: true);
 
             var writeTimeUtc = File.Exists(_settingsPath)
                 ? File.GetLastWriteTimeUtc(_settingsPath)

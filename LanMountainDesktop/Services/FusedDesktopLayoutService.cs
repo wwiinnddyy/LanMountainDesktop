@@ -100,8 +100,9 @@ internal sealed class FusedDesktopLayoutService : IFusedDesktopLayoutService
                     Directory.CreateDirectory(directory);
                 }
                 
-                var json = JsonSerializer.Serialize(snapshot, JsonOptions);
-                File.WriteAllText(ConfigFilePath, json);
+                var tempPath = $"{ConfigFilePath}.{Guid.NewGuid():N}.tmp";
+                File.WriteAllText(tempPath, JsonSerializer.Serialize(snapshot, JsonOptions));
+                File.Move(tempPath, ConfigFilePath, overwrite: true);
             }
             catch (Exception ex)
             {

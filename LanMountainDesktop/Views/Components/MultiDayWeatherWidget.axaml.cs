@@ -66,9 +66,9 @@ public partial class MultiDayWeatherWidget : WeatherWidgetBase
         row.Children.Add(new WeatherIconView { Width = 24, Height = 24, Source = WeatherIconAssetResolver.LoadIcon(CurrentVisualStyleId, item.DayWeatherCode, item.DayWeatherText), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
         row.Children.Add(new TextBlock { Text = ResolveDayLabel(item.Date), Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, FontSize = 12 });
         Grid.SetColumn(row.Children[^1], 1);
-        row.Children.Add(new TextBlock { Text = FormatTemperature(item.HighTemperatureC), Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, FontSize = 12 });
+        row.Children.Add(new TextBlock { Text = FormatTemperature(item.HighTemperatureC), Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, FontSize = 12, ClipToBounds = false });
         Grid.SetColumn(row.Children[^1], 2);
-        row.Children.Add(new TextBlock { Text = FormatTemperature(item.LowTemperatureC), Foreground = Brush(CurrentPalette.TextSecondary), FontWeight = Avalonia.Media.FontWeight.Medium, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, FontSize = 12 });
+        row.Children.Add(new TextBlock { Text = FormatTemperature(item.LowTemperatureC), Foreground = Brush(CurrentPalette.TextSecondary), FontWeight = Avalonia.Media.FontWeight.Medium, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, FontSize = 12, ClipToBounds = false });
         Grid.SetColumn(row.Children[^1], 3);
         
         rowPanel.Children.Add(row);

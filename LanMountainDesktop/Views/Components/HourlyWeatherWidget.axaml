@@ -10,7 +10,7 @@
             <Border x:Name="OverlayBorder" />
             <Grid x:Name="ContentGrid" RowDefinitions="Auto,*" Margin="18,14" RowSpacing="12">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
-                    <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="42" FontWeight="Bold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="42" FontWeight="Bold" VerticalAlignment="Center" ClipToBounds="False" Padding="0,1,0,0" />
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                         <TextBlock x:Name="LocationTextBlock" Text="Weather" FontSize="12" FontWeight="Medium" Opacity="0.72" TextTrimming="CharacterEllipsis" />
