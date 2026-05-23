@@ -4,11 +4,13 @@
 
 为了确保桌面组件在不同尺寸、缩放比例下都能保持视觉一致性和美感，阑山桌面采用了 **固定圆角风格预设 (Fixed Corner Radius Styles)**，全面参考小米澎湃OS (Xiaomi HyperOS) 的设计语言。
 
+此外，阑山桌面引入了 **Fluent** 预设，遵循 Microsoft Fluent Design System 规范。设置窗口始终使用 Fluent 圆角，独立于用户选择的全局圆角风格。
+
 所有的组件和容器必须使用统一的资源键，禁止在 XAML 或代码中使用硬编码的像素值。
 
 ## 预设风格 (Preset Styles)
 
-用户可以在设置中选择以下四种风格之一。系统会自动根据选中的风格动态映射全局圆角 Token。
+用户可以在设置中选择以下五种风格之一。系统会自动根据选中的风格动态映射全局圆角 Token。
 
 | 风格 (ID) | 名称 (Local) | 组件圆角 (Component) | 设计语义 |
 | :--- | :--- | :--- | :--- |
@@ -16,21 +18,33 @@
 | **Balanced** | 平衡 | 24px | **默认值**。和谐、自然、普适 |
 | **Rounded** | 圆润 | 28px | 保守、柔和、亲切 |
 | **Open** | 开放 | 32px | 现代、沉浸、夸张 |
+| **Fluent** | Fluent | 8px | Microsoft Fluent Design System。标准、规范、一致 |
 
 ## Token 阶梯映射 (Token Step Mapping)
 
 每个风格都定义了一套完整的圆角阶梯，以确保在大容器包裹小元素时满足 **圆角嵌套一致性 (Nesting Consistency)**。
 
-| Token | Sharp | Balanced | Rounded | Open | 典型场景 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Micro** | 4px | 6px | 8px | 10px | 小图标容器、角标 (Badge) |
-| **Xs** | 8px | 12px | 14px | 16px | 小标签 (Tag)、输入框 |
-| **Sm** | 10px | 14px | 16px | 20px | 普通按钮、搜索栏、复选框 |
-| **Md** | 14px | 20px | 24px | 28px | 悬浮菜单、小提示框、子卡片 |
-| **Lg** | 20px | 28px | 32px | 36px | 普通面板、对话框内容区 |
-| **Xl** | 24px | 32px | 36px | 40px | 大尺寸容器、设置中心页面 |
-| **Island** | 28px | 36px | 40px | 44px | 任务栏、全局大悬浮容器 |
-| **Component** | **20px** | **24px** | **28px** | **32px** | **所有桌面组件 (Widget) 的主边框** |
+| Token | Sharp | Balanced | Rounded | Open | Fluent | 典型场景 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Micro** | 4px | 6px | 8px | 10px | 2px | 小图标容器、角标 (Badge) |
+| **Xs** | 8px | 12px | 14px | 16px | 4px | 小标签 (Tag)、输入框 |
+| **Sm** | 10px | 14px | 16px | 20px | 4px | 普通按钮、搜索栏、复选框 |
+| **Md** | 14px | 20px | 24px | 28px | 8px | 悬浮菜单、小提示框、子卡片 |
+| **Lg** | 20px | 28px | 32px | 36px | 8px | 普通面板、对话框内容区 |
+| **Xl** | 24px | 32px | 36px | 40px | 12px | 大尺寸容器、设置中心页面 |
+| **Island** | 28px | 36px | 40px | 44px | 16px | 任务栏、全局大悬浮容器 |
+| **Component** | **20px** | **24px** | **28px** | **32px** | **8px** | **所有桌面组件 (Widget) 的主边框** |
+
+## Fluent Design System 参考 (Fluent Reference)
+
+Fluent 预设的核心值来源于 Microsoft 官方规范：
+
+- **ControlCornerRadius = 4px**：用于标准持久 UI 元素（按钮、复选框、输入框等）
+- **OverlayCornerRadius = 8px**：用于临时覆盖 UI 元素（对话框、浮出菜单等）
+
+> [!IMPORTANT]
+> **设置窗口强制约束**：
+> 设置窗口 (`SettingsWindow`) 始终使用 Fluent 圆角 Token，不受用户全局圆角设置影响。这确保设置 UI 作为标准 Windows 应用窗口与 Fluent Design 一致。
 
 ## 开发准则 (Implementation Rules)
 

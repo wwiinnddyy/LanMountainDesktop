@@ -10,9 +10,11 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
+using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.ViewModels;
 using Symbol = FluentIcons.Common.Symbol;
 
@@ -69,6 +71,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         InitializeComponent();
         SetValue(Window.IconProperty, _appLogoService.CreateWindowIcon());
         ApplyChromeMode(useSystemChrome);
+        ApplyFluentCornerRadius();
 
         if (RootNavigationView is not null)
         {
@@ -796,6 +799,30 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         Opened -= OnOpened;
         SizeChanged -= OnWindowSizeChanged;
         TelemetryServices.Usage?.TrackSettingsWindowClosed("SettingsWindow.OnClosed", ViewModel.CurrentPageId);
+    }
+
+    /// <summary>
+    /// Override global corner radius tokens on the settings window root grid
+    /// so all child controls use Microsoft Fluent Design System values,
+    /// independent of the user's global corner radius preference.
+    /// </summary>
+    private void ApplyFluentCornerRadius()
+    {
+        if (RootGrid is null)
+        {
+            return;
+        }
+
+        var tokens = AppearanceCornerRadiusTokenFactory.Create(
+            GlobalAppearanceSettings.CornerRadiusStyleFluent);
+        RootGrid.Resources["DesignCornerRadiusMicro"] = tokens.Micro;
+        RootGrid.Resources["DesignCornerRadiusXs"] = tokens.Xs;
+        RootGrid.Resources["DesignCornerRadiusSm"] = tokens.Sm;
+        RootGrid.Resources["DesignCornerRadiusMd"] = tokens.Md;
+        RootGrid.Resources["DesignCornerRadiusLg"] = tokens.Lg;
+        RootGrid.Resources["DesignCornerRadiusXl"] = tokens.Xl;
+        RootGrid.Resources["DesignCornerRadiusIsland"] = tokens.Island;
+        RootGrid.Resources["DesignCornerRadiusComponent"] = tokens.Component;
     }
 
     private void OnTitleBarDragZonePointerPressed(object? sender, PointerPressedEventArgs e)

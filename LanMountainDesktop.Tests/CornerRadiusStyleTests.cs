@@ -13,11 +13,29 @@ public sealed class CornerRadiusStyleTests
     [InlineData("Balanced", "Balanced")]
     [InlineData("Rounded", "Rounded")]
     [InlineData("Open", "Open")]
+    [InlineData("Fluent", "Fluent")]
     [InlineData("Unknown", "Balanced")]
     [InlineData(null, "Balanced")]
     public void NormalizeCornerRadiusStyle_ReturnsValidStyleOrDefault(string? input, string expected)
     {
         Assert.Equal(expected, GlobalAppearanceSettings.NormalizeCornerRadiusStyle(input));
+    }
+
+    [Fact]
+    public void FluentStyle_ReturnsFluentDesignSystemValues()
+    {
+        var tokens = LanMountainDesktop.Appearance.AppearanceCornerRadiusTokenFactory.Create(
+            GlobalAppearanceSettings.CornerRadiusStyleFluent);
+
+        // Microsoft Fluent Design System: ControlCornerRadius = 4px, OverlayCornerRadius = 8px
+        Assert.Equal(new CornerRadius(2), tokens.Micro);
+        Assert.Equal(new CornerRadius(4), tokens.Xs);
+        Assert.Equal(new CornerRadius(4), tokens.Sm);
+        Assert.Equal(new CornerRadius(8), tokens.Md);
+        Assert.Equal(new CornerRadius(8), tokens.Lg);
+        Assert.Equal(new CornerRadius(12), tokens.Xl);
+        Assert.Equal(new CornerRadius(16), tokens.Island);
+        Assert.Equal(new CornerRadius(8), tokens.Component);
     }
 
     [Fact]

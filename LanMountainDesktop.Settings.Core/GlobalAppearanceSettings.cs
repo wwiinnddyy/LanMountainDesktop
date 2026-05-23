@@ -6,6 +6,7 @@ public static class GlobalAppearanceSettings
     public const string CornerRadiusStyleBalanced = "Balanced";
     public const string CornerRadiusStyleRounded = "Rounded";
     public const string CornerRadiusStyleOpen = "Open";
+    public const string CornerRadiusStyleFluent = "Fluent";
     public const string DefaultCornerRadiusStyle = CornerRadiusStyleBalanced;
 
     /// <summary>
@@ -43,6 +44,11 @@ public static class GlobalAppearanceSettings
             return CornerRadiusStyleOpen;
         }
 
+        if (string.Equals(trimmed, CornerRadiusStyleFluent, StringComparison.OrdinalIgnoreCase))
+        {
+            return CornerRadiusStyleFluent;
+        }
+
         return DefaultCornerRadiusStyle;
     }
 
@@ -51,7 +57,8 @@ public static class GlobalAppearanceSettings
         CornerRadiusStyleSharp,
         CornerRadiusStyleBalanced,
         CornerRadiusStyleRounded,
-        CornerRadiusStyleOpen
+        CornerRadiusStyleOpen,
+        CornerRadiusStyleFluent
     ];
 
     /// <summary>
