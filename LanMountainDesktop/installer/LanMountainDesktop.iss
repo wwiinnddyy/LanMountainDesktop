@@ -24,10 +24,6 @@
   #define MyAppSuffix ""
 #endif
 
-#ifndef IsSelfContained
-  #define IsSelfContained "true"
-#endif
-
 [Setup]
 AppId={#MyAppId}
 AppName={#MyAppName}
@@ -112,6 +108,14 @@ english.DotNetRuntimeMissingMessage=This application requires .NET 10.0 Desktop 
 chinesesimplified.DotNetRuntimeMissingMessage=此应用程序需要 .NET 10.0 Desktop Runtime 才能运行。
 english.DotNetRuntimeMissingAction=Click "Yes" to open the official download page. Install it first, then run this installer again.
 chinesesimplified.DotNetRuntimeMissingAction=单击"是"打开官方下载页面。请先完成安装，然后重新运行此安装程序。
+english.DotNetRuntimeDownloadCaption=Installing .NET 10 Desktop Runtime
+chinesesimplified.DotNetRuntimeDownloadCaption=Installing .NET 10 Desktop Runtime
+english.DotNetRuntimeDownloadDescription=Setup is downloading the required Microsoft .NET runtime.
+chinesesimplified.DotNetRuntimeDownloadDescription=Setup is downloading the required Microsoft .NET runtime.
+english.DotNetRuntimeInstallFailed=Setup could not install the required .NET 10 Desktop Runtime.
+chinesesimplified.DotNetRuntimeInstallFailed=Setup could not install the required .NET 10 Desktop Runtime.
+english.DotNetRuntimeStillMissing=The .NET 10 Desktop Runtime is still not detected after installation.
+chinesesimplified.DotNetRuntimeStillMissing=The .NET 10 Desktop Runtime is still not detected after installation.
 english.DotNetRuntimeOpenFailedMessage=Unable to open the download page automatically.
 chinesesimplified.DotNetRuntimeOpenFailedMessage=无法自动打开下载页面。
 english.DotNetRuntimeOpenFailedAction=Please open this URL manually:
@@ -157,7 +161,8 @@ const
   UninstallRegSubkey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#MyAppRegistryId}_is1';
   WebView2RuntimeKeyPath = 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
   WebView2RuntimeDownloadUrl = 'https://go.microsoft.com/fwlink/p/?LinkId=2124703';
-  DotNetRuntimeDownloadUrl = 'https://dotnet.microsoft.com/download/dotnet/10.0';
+  DotNetRuntimeDownloadUrlX64 = 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe';
+  DotNetRuntimeDownloadUrlX86 = 'https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x86.exe';
   UpgradeChoiceInPlace = 0;
   UpgradeChoiceRelocate = 1;
 
@@ -547,78 +552,112 @@ begin
   end;
 end;
 
-// Returns True when the .NET 10 Desktop Runtime (or the .NET 10 Core Runtime
-// which is sufficient for Avalonia apps) is found on the system.
-// We check both Microsoft.WindowsDesktop.App and Microsoft.NETCore.App because
-// the runtimeconfig.json may reference either framework depending on the
-// publish mode and the app only needs the one it actually references.
-function IsDotNetDesktopRuntimeInstalled(): Boolean;
-var
-  BasePath: String;
+function GetTargetDotNetDesktopRuntimePath(): String;
 begin
-  Result := False;
-
-  // Check 64-bit Program Files
-  BasePath := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  if IsDotNet10RuntimePresent(BasePath) then
+  if '{#MyAppArch}' = 'x64' then
   begin
-    Result := True;
+    Result := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  end;
+  else
+  begin
+    Result := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  end;
+end;
+
+function GetDotNetRuntimeDownloadUrl(): String;
+begin
+  if '{#MyAppArch}' = 'x64' then
+  begin
+    Result := DotNetRuntimeDownloadUrlX64;
+  end;
+  else
+  begin
+    Result := DotNetRuntimeDownloadUrlX86;
+  end;
+end;
+
+function GetDotNetRuntimeInstallerFileName(): String;
+begin
+  if '{#MyAppArch}' = 'x64' then
+  begin
+    Result := 'windowsdesktop-runtime-win-x64.exe';
+  end
+  else
+  begin
+    Result := 'windowsdesktop-runtime-win-x86.exe';
+  end;
+end;
+
+function IsDotNetDesktopRuntimeInstalled(): Boolean;
+begin
+  Result := IsDotNet10RuntimePresent(GetTargetDotNetDesktopRuntimePath());
+end;
+
+function DotNetDownloadProgress(
+  const Url, FileName: String;
+  const Progress, ProgressMax: Int64): Boolean;
+begin
+  Result := True;
+end;
+
+function EnsureDotNetDesktopRuntimeInstalled(var NeedsRestart: Boolean): String;
+var
+  DownloadPage: TDownloadWizardPage;
+  InstallerPath: String;
+  ExitCode: Integer;
+begin
+  Result := '';
+
+  if IsDotNetDesktopRuntimeInstalled() then
+  begin
     exit;
   end;
 
-  BasePath := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.NETCore.App');
-  if IsDotNet10RuntimePresent(BasePath) then
+  DownloadPage := CreateDownloadPage(
+    CustomMessage('DotNetRuntimeDownloadCaption'),
+    CustomMessage('DotNetRuntimeDownloadDescription'),
+    @DotNetDownloadProgress);
+  try
+    DownloadPage.Add(GetDotNetRuntimeDownloadUrl(), GetDotNetRuntimeInstallerFileName(), '');
+    DownloadPage.Show;
+    try
+      DownloadPage.Download;
+    except
+      Result := CustomMessage('DotNetRuntimeInstallFailed') + #13#10 + GetExceptionMessage;
+      exit;
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+
+  InstallerPath := ExpandConstant('{tmp}\' + GetDotNetRuntimeInstallerFileName());
+  if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
   begin
-    Result := True;
+    Result := CustomMessage('DotNetRuntimeInstallFailed');
     exit;
   end;
 
-  // Check 32-bit Program Files
-  BasePath := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  if IsDotNet10RuntimePresent(BasePath) then
+  if (ExitCode <> 0) and (ExitCode <> 3010) then
   begin
-    Result := True;
+    Result := CustomMessage('DotNetRuntimeInstallFailed') + ' Exit code: ' + IntToStr(ExitCode);
     exit;
   end;
 
-  BasePath := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.NETCore.App');
-  if IsDotNet10RuntimePresent(BasePath) then
+  if ExitCode = 3010 then
   begin
-    Result := True;
-    exit;
+    NeedsRestart := True;
+  end;
+
+  if not IsDotNetDesktopRuntimeInstalled() then
+  begin
+    Result := CustomMessage('DotNetRuntimeStillMissing') + #13#10 + GetTargetDotNetDesktopRuntimePath();
   end;
 end;
 
 function InitializeSetup(): Boolean;
 var
   ErrorCode: Integer;
-  IsSelfContainedBuild: Boolean;
 begin
-  IsSelfContainedBuild := ('{#IsSelfContained}' = 'true');
-
-  if not IsSelfContainedBuild then
-  begin
-    if not IsDotNetDesktopRuntimeInstalled() then
-    begin
-      if MsgBox(
-        CustomMessage('DotNetRuntimeMissingMessage') + #13#10#13#10 +
-        CustomMessage('DotNetRuntimeMissingAction'),
-        mbConfirmation,
-        MB_YESNO) = IDYES then
-      begin
-        if not ShellExec('open', DotNetRuntimeDownloadUrl, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
-        begin
-          MsgBox(
-            CustomMessage('DotNetRuntimeOpenFailedMessage') + #13#10 +
-            CustomMessage('DotNetRuntimeOpenFailedAction') + #13#10 + DotNetRuntimeDownloadUrl,
-            mbError,
-            MB_OK);
-        end;
-      end;
-      Result := False;
-      exit;
-    end;
-  end;
 
   if IsWebView2RuntimeInstalled() then
   begin
@@ -643,6 +682,11 @@ begin
   end;
 
   Result := False;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := EnsureDotNetDesktopRuntimeInstalled(NeedsRestart);
 end;
 
 procedure InitializeWizard;

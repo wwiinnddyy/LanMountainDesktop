@@ -164,9 +164,21 @@ function Assert-WindowsPayloadClean {
 
     $violations = [System.Collections.Generic.List[string]]::new()
     $forbiddenExtensions = @(".pdb", ".so", ".dylib", ".a")
+    $forbiddenBundledRuntimeFiles = @(
+        "coreclr.dll",
+        "hostfxr.dll",
+        "hostpolicy.dll",
+        "System.Private.CoreLib.dll"
+    )
 
     Get-ChildItem -LiteralPath $Root -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $forbiddenExtensions -contains $_.Extension.ToLowerInvariant() } |
+        ForEach-Object {
+            $violations.Add((Get-RelativePathCompat -Root $Root -Path $_.FullName))
+        }
+
+    Get-ChildItem -LiteralPath $Root -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $forbiddenBundledRuntimeFiles -contains $_.Name } |
         ForEach-Object {
             $violations.Add((Get-RelativePathCompat -Root $Root -Path $_.FullName))
         }

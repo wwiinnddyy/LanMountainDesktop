@@ -236,6 +236,7 @@ function Publish-AirAppHostPayload {
         "-c", $Configuration,
         "-r", $Rid,
         "--self-contained", "false",
+        "-p:SelfContained=false",
         "-p:PublishSingleFile=false",
         "-p:PublishTrimmed=false",
         "-p:PublishReadyToRun=false",
@@ -250,6 +251,70 @@ function Publish-AirAppHostPayload {
     & dotnet @airPublishArgs
     if ($LASTEXITCODE -ne 0) {
         throw "AirAppHost publish failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Publish-LauncherPayload {
+    param(
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$Rid,
+        [Parameter(Mandatory = $true)][string]$VersionValue
+    )
+
+    $launcherProject = Join-Path $repoRoot "..\LanMountainDesktop.Launcher\LanMountainDesktop.Launcher.csproj"
+    $launcherProject = Resolve-ExistingPath -PathValue $launcherProject
+    Write-Host "Publishing Launcher AOT payload..."
+    $launcherPublishArgs = @(
+        "publish",
+        $launcherProject,
+        "-c", $Configuration,
+        "-r", $Rid,
+        "--self-contained",
+        "-p:PublishAot=true",
+        "-p:PublishSingleFile=true",
+        "-p:IncludeNativeLibrariesForSelfExtract=true",
+        "-p:EnableCompressionInSingleFile=true",
+        "-p:DebugType=None",
+        "-p:DebugSymbols=false",
+        "-p:Version=$VersionValue",
+        "-o", $PublishedDirectory
+    )
+
+    & dotnet @launcherPublishArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Launcher publish failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Publish-MainAppFrameworkDependentPayload {
+    param(
+        [Parameter(Mandatory = $true)][string]$ProjectFile,
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$Rid,
+        [Parameter(Mandatory = $true)][string]$VersionValue
+    )
+
+    Write-Host "Publishing framework-dependent main app payload..."
+    $publishArgs = @(
+        "publish",
+        $ProjectFile,
+        "-c", $Configuration,
+        "-r", $Rid,
+        "--self-contained", "false",
+        "-p:SelfContained=false",
+        "-p:PublishSingleFile=false",
+        "-p:PublishTrimmed=false",
+        "-p:PublishReadyToRun=false",
+        "-p:DebugType=None",
+        "-p:DebugSymbols=false",
+        "-p:SkipAirAppHostBuild=true",
+        "-p:Version=$VersionValue",
+        "-o", $PublishedDirectory
+    )
+
+    & dotnet @publishArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed with exit code $LASTEXITCODE."
     }
 }
 
@@ -274,33 +339,46 @@ if (-not [System.IO.Path]::IsPathRooted($PublishDir)) {
 }
 Clear-DirectoryContents -TargetDirectory $PublishDir
 
-Write-Host "Publishing project..."
-$publishArgs = @(
-    "publish",
-    $projectPath,
-    "-c", $Configuration,
-    "-r", $RuntimeIdentifier,
-    "--self-contained", "true",
-    "-p:PublishSingleFile=false",
-    "-p:PublishTrimmed=false",
-    "-p:DebugType=None",
-    "-p:DebugSymbols=false",
-    "-p:SkipAirAppHostBuild=true",
-    "-p:Version=$Version",
-    "-o", $PublishDir
-)
+if (Is-WindowsRuntimeIdentifier -Rid $RuntimeIdentifier) {
+    $appPublishDir = Join-Path $PublishDir "app-$Version"
+    [System.IO.Directory]::CreateDirectory($appPublishDir) | Out-Null
 
-& dotnet @publishArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish failed with exit code $LASTEXITCODE."
-}
+    Publish-LauncherPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    Publish-MainAppFrameworkDependentPayload -ProjectFile $projectPath -PublishedDirectory $appPublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    Publish-AirAppHostPayload -PublishedDirectory $appPublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    New-Item -ItemType File -Path (Join-Path $appPublishDir ".current") -Force | Out-Null
 
-Publish-AirAppHostPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
-Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
-Remove-LegacyOutputArtifacts -TargetDirectory $PublishDir
+    Remove-LibVlcForOtherArch -PublishedDirectory $appPublishDir -Rid $RuntimeIdentifier
+    Remove-LegacyOutputArtifacts -TargetDirectory $appPublishDir
+} else {
+    Write-Host "Publishing project..."
+    $publishArgs = @(
+        "publish",
+        $projectPath,
+        "-c", $Configuration,
+        "-r", $RuntimeIdentifier,
+        "--self-contained", "true",
+        "-p:PublishSingleFile=false",
+        "-p:PublishTrimmed=false",
+        "-p:DebugType=None",
+        "-p:DebugSymbols=false",
+        "-p:SkipAirAppHostBuild=true",
+        "-p:Version=$Version",
+        "-o", $PublishDir
+    )
 
-if ($RuntimeIdentifier -like "linux-*") {
-    Add-LinuxDesktopAssets -PublishedDirectory $PublishDir -RepoRoot $repoRoot
+    & dotnet @publishArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed with exit code $LASTEXITCODE."
+    }
+
+    Publish-AirAppHostPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
+    Remove-LegacyOutputArtifacts -TargetDirectory $PublishDir
+
+    if ($RuntimeIdentifier -like "linux-*") {
+        Add-LinuxDesktopAssets -PublishedDirectory $PublishDir -RepoRoot $repoRoot
+    }
 }
 
 Invoke-PublishPayloadOptimization -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
