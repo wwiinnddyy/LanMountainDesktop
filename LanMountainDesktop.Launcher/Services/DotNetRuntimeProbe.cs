@@ -26,6 +26,8 @@ internal sealed record DotNetRuntimeProbeOptions
 
     public string? ProgramFilesX86Path { get; init; }
 
+    public string? LocalAppDataPath { get; init; }
+
     public IReadOnlyList<string>? DotNetHostCandidates { get; init; }
 
     public bool IncludeRegistry { get; init; } = true;
@@ -63,6 +65,13 @@ internal sealed record DotNetRuntimeProbeResult(
 internal static class DotNetRuntimeProbe
 {
     public const string RequiredSharedFrameworkName = "Microsoft.NETCore.App";
+    public const string WindowsDesktopSharedFrameworkName = "Microsoft.WindowsDesktop.App";
+
+    private static readonly string[] RequiredSharedFrameworkNames =
+    [
+        RequiredSharedFrameworkName,
+        WindowsDesktopSharedFrameworkName
+    ];
 
     public static DotNetRuntimeProbeResult Probe(DotNetRuntimeProbeOptions? options = null)
     {
@@ -71,10 +80,25 @@ internal static class DotNetRuntimeProbe
         var searchedPaths = new List<string>();
         var detected = new List<DotNetRuntimeInfo>();
         var requiredMajor = options.RequiredMajorVersion;
-        var sharedFrameworkDirectory = GetSharedFrameworkDirectory(options, RequiredSharedFrameworkName);
-        searchedPaths.Add(sharedFrameworkDirectory);
 
-        AddDirectoryRuntimes(sharedFrameworkDirectory, RequiredSharedFrameworkName, "shared-framework-directory", detected);
+        var localAppDataRoot = GetLocalAppDataPath(options);
+        var perUserDotnetRoot = !string.IsNullOrWhiteSpace(localAppDataRoot)
+            ? Path.Combine(localAppDataRoot, "dotnet")
+            : null;
+
+        foreach (var frameworkName in RequiredSharedFrameworkNames)
+        {
+            foreach (var basePath in EnumerateDotNetInstallRoots(options))
+            {
+                var sharedFrameworkDirectory = Path.Combine(basePath, "shared", frameworkName);
+                searchedPaths.Add(sharedFrameworkDirectory);
+                var isPerUser = perUserDotnetRoot is not null &&
+                    string.Equals(basePath, perUserDotnetRoot, StringComparison.OrdinalIgnoreCase);
+                AddDirectoryRuntimes(sharedFrameworkDirectory, frameworkName,
+                    isPerUser ? "shared-framework-directory-per-user" : "shared-framework-directory",
+                    detected);
+            }
+        }
 
         string? dotNetHostPath = null;
         foreach (var candidate in EnumerateDotNetHostCandidates(options))
@@ -88,12 +112,15 @@ internal static class DotNetRuntimeProbe
 
         if (OperatingSystem.IsWindows() && options.IncludeRegistry)
         {
-            AddRegistryRuntimes(options.Architecture, RequiredSharedFrameworkName, detected);
+            foreach (var frameworkName in RequiredSharedFrameworkNames)
+            {
+                AddRegistryRuntimes(options.Architecture, frameworkName, detected);
+            }
         }
 
         if (options.IncludeDotNetCli)
         {
-            AddDotNetCliRuntimes(dotNetHostPath, RequiredSharedFrameworkName, detected);
+            AddDotNetCliRuntimes(dotNetHostPath, detected);
         }
 
         var isAvailable = detected.Any(runtime =>
@@ -162,13 +189,23 @@ internal static class DotNetRuntimeProbe
                !File.Exists(Path.Combine(directory, "System.Private.CoreLib.dll"));
     }
 
-    private static string GetSharedFrameworkDirectory(DotNetRuntimeProbeOptions options, string sharedFrameworkName)
+    private static IEnumerable<string> EnumerateDotNetInstallRoots(DotNetRuntimeProbeOptions options)
     {
-        var root = options.Architecture == DotNetRuntimeArchitecture.X86
+        var programFilesRoot = options.Architecture == DotNetRuntimeArchitecture.X86
             ? GetProgramFilesX86Path(options)
             : GetProgramFilesPath(options);
 
-        return Path.Combine(root, "dotnet", "shared", sharedFrameworkName);
+        yield return Path.Combine(programFilesRoot, "dotnet");
+
+        var localAppData = GetLocalAppDataPath(options);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            var perUserDotnet = Path.Combine(localAppData, "dotnet");
+            if (!string.Equals(perUserDotnet, Path.Combine(programFilesRoot, "dotnet"), StringComparison.OrdinalIgnoreCase))
+            {
+                yield return perUserDotnet;
+            }
+        }
     }
 
     private static IEnumerable<string> EnumerateDotNetHostCandidates(DotNetRuntimeProbeOptions options)
@@ -186,11 +223,21 @@ internal static class DotNetRuntimeProbe
             yield break;
         }
 
-        var root = options.Architecture == DotNetRuntimeArchitecture.X86
+        var programFilesRoot = options.Architecture == DotNetRuntimeArchitecture.X86
             ? GetProgramFilesX86Path(options)
             : GetProgramFilesPath(options);
 
-        yield return Path.Combine(root, "dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+        yield return Path.Combine(programFilesRoot, "dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+
+        var localAppData = GetLocalAppDataPath(options);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+        {
+            var perUserHost = Path.Combine(localAppData, "dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+            if (!string.Equals(perUserHost, Path.Combine(programFilesRoot, "dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet"), StringComparison.OrdinalIgnoreCase))
+            {
+                yield return perUserHost;
+            }
+        }
     }
 
     private static string GetProgramFilesPath(DotNetRuntimeProbeOptions options)
@@ -213,6 +260,16 @@ internal static class DotNetRuntimeProbe
 
         return Environment.GetEnvironmentVariable("ProgramFiles(x86)") ??
                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+    }
+
+    private static string GetLocalAppDataPath(DotNetRuntimeProbeOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.LocalAppDataPath))
+        {
+            return Path.GetFullPath(options.LocalAppDataPath);
+        }
+
+        return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     }
 
     private static void AddDirectoryRuntimes(
@@ -271,7 +328,6 @@ internal static class DotNetRuntimeProbe
 
     private static void AddDotNetCliRuntimes(
         string? dotNetHostPath,
-        string sharedFrameworkName,
         List<DotNetRuntimeInfo> detected)
     {
         if (string.IsNullOrWhiteSpace(dotNetHostPath) || !File.Exists(dotNetHostPath))
@@ -300,7 +356,7 @@ internal static class DotNetRuntimeProbe
             {
                 var parsed = ParseListRuntimeLine(line);
                 if (parsed is not null &&
-                    string.Equals(parsed.Value.Name, sharedFrameworkName, StringComparison.OrdinalIgnoreCase))
+                    RequiredSharedFrameworkNames.Contains(parsed.Value.Name, StringComparer.OrdinalIgnoreCase))
                 {
                     detected.Add(new DotNetRuntimeInfo(
                         parsed.Value.Name,

@@ -564,6 +564,11 @@ begin
   end;
 end;
 
+function GetPerUserDotNetDesktopRuntimePath(): String;
+begin
+  Result := ExpandConstant('{localappdata}\dotnet\shared\Microsoft.WindowsDesktop.App');
+end;
+
 function GetDotNetRuntimeDownloadUrl(): String;
 begin
   if '{#MyAppArch}' = 'x64' then
@@ -590,7 +595,8 @@ end;
 
 function IsDotNetDesktopRuntimeInstalled(): Boolean;
 begin
-  Result := IsDotNet10RuntimePresent(GetTargetDotNetDesktopRuntimePath());
+  Result := IsDotNet10RuntimePresent(GetTargetDotNetDesktopRuntimePath()) or
+            IsDotNet10RuntimePresent(GetPerUserDotNetDesktopRuntimePath());
 end;
 
 function DotNetDownloadProgress(

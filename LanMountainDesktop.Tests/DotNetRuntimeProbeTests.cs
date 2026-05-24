@@ -8,14 +8,17 @@ public sealed class DotNetRuntimeProbeTests : IDisposable
     private readonly string _root;
     private readonly string _programFiles;
     private readonly string _programFilesX86;
+    private readonly string _localAppData;
 
     public DotNetRuntimeProbeTests()
     {
         _root = Path.Combine(Path.GetTempPath(), "LanMountainDesktop.DotNetRuntimeProbeTests", Guid.NewGuid().ToString("N"));
         _programFiles = Path.Combine(_root, "ProgramFiles");
         _programFilesX86 = Path.Combine(_root, "ProgramFilesX86");
+        _localAppData = Path.Combine(_root, "LocalAppData");
         Directory.CreateDirectory(_programFiles);
         Directory.CreateDirectory(_programFilesX86);
+        Directory.CreateDirectory(_localAppData);
     }
 
     [Fact]
@@ -59,6 +62,104 @@ public sealed class DotNetRuntimeProbeTests : IDisposable
         var result = DotNetRuntimeProbe.Probe(CreateOptions(DotNetRuntimeArchitecture.X64));
 
         Assert.False(result.IsAvailable);
+    }
+
+    [Fact]
+    public void Probe_DetectsPerUserRuntime()
+    {
+        CreateRuntime(_localAppData, "10.0.5", DotNetRuntimeProbe.RequiredSharedFrameworkName);
+
+        var result = DotNetRuntimeProbe.Probe(CreateOptions(DotNetRuntimeArchitecture.X64));
+
+        Assert.True(result.IsAvailable);
+        Assert.Contains(result.DetectedRuntimes, runtime =>
+            runtime.Version == "10.0.5" &&
+            runtime.Source == "shared-framework-directory-per-user");
+    }
+
+    [Fact]
+    public void Probe_DetectsWindowsDesktopRuntime()
+    {
+        CreateRuntime(_programFiles, "10.0.5", DotNetRuntimeProbe.WindowsDesktopSharedFrameworkName);
+
+        var result = DotNetRuntimeProbe.Probe(CreateOptions(DotNetRuntimeArchitecture.X64));
+
+        Assert.False(result.IsAvailable);
+        Assert.Contains(result.DetectedRuntimes, runtime =>
+            runtime.Name == DotNetRuntimeProbe.WindowsDesktopSharedFrameworkName &&
+            runtime.Version == "10.0.5");
+    }
+
+    [Fact]
+    public void Probe_DetectsPerUserWindowsDesktopRuntime()
+    {
+        CreateRuntime(_localAppData, "10.0.5", DotNetRuntimeProbe.WindowsDesktopSharedFrameworkName);
+
+        var result = DotNetRuntimeProbe.Probe(CreateOptions(DotNetRuntimeArchitecture.X64));
+
+        Assert.Contains(result.DetectedRuntimes, runtime =>
+            runtime.Name == DotNetRuntimeProbe.WindowsDesktopSharedFrameworkName &&
+            runtime.Version == "10.0.5" &&
+            runtime.Source == "shared-framework-directory-per-user");
+    }
+
+    [Fact]
+    public void Probe_FindsDotNetHost_InPerUserPath()
+    {
+        var dotnetDir = Path.Combine(_localAppData, "dotnet");
+        Directory.CreateDirectory(dotnetDir);
+        File.WriteAllText(Path.Combine(dotnetDir, "dotnet.exe"), string.Empty);
+
+        var result = DotNetRuntimeProbe.Probe(new DotNetRuntimeProbeOptions
+        {
+            Architecture = DotNetRuntimeArchitecture.X64,
+            ProgramFilesPath = _programFiles,
+            ProgramFilesX86Path = _programFilesX86,
+            LocalAppDataPath = _localAppData,
+            IncludeRegistry = false,
+            IncludeDotNetCli = false
+        });
+
+        Assert.NotNull(result.DotNetHostPath);
+        Assert.Contains("LocalAppData", result.DotNetHostPath);
+    }
+
+    [Fact]
+    public void Probe_PrefersProgramFilesHost_OverPerUserHost()
+    {
+        var systemDotnetDir = Path.Combine(_programFiles, "dotnet");
+        Directory.CreateDirectory(systemDotnetDir);
+        File.WriteAllText(Path.Combine(systemDotnetDir, "dotnet.exe"), string.Empty);
+
+        var perUserDotnetDir = Path.Combine(_localAppData, "dotnet");
+        Directory.CreateDirectory(perUserDotnetDir);
+        File.WriteAllText(Path.Combine(perUserDotnetDir, "dotnet.exe"), string.Empty);
+
+        var result = DotNetRuntimeProbe.Probe(new DotNetRuntimeProbeOptions
+        {
+            Architecture = DotNetRuntimeArchitecture.X64,
+            ProgramFilesPath = _programFiles,
+            ProgramFilesX86Path = _programFilesX86,
+            LocalAppDataPath = _localAppData,
+            IncludeRegistry = false,
+            IncludeDotNetCli = false
+        });
+
+        Assert.NotNull(result.DotNetHostPath);
+        Assert.Contains("ProgramFiles", result.DotNetHostPath);
+    }
+
+    [Fact]
+    public void Probe_CombinesSystemAndPerUserRuntimes()
+    {
+        CreateRuntime(_programFiles, "10.0.5");
+        CreateRuntime(_localAppData, "10.0.3");
+
+        var result = DotNetRuntimeProbe.Probe(CreateOptions(DotNetRuntimeArchitecture.X64));
+
+        Assert.True(result.IsAvailable);
+        Assert.Contains(result.DetectedRuntimes, runtime => runtime.Version == "10.0.5");
+        Assert.Contains(result.DetectedRuntimes, runtime => runtime.Version == "10.0.3");
     }
 
     [Fact]
@@ -109,19 +210,21 @@ public sealed class DotNetRuntimeProbeTests : IDisposable
             Architecture = architecture,
             ProgramFilesPath = _programFiles,
             ProgramFilesX86Path = _programFilesX86,
+            LocalAppDataPath = _localAppData,
             DotNetHostCandidates = [],
             IncludeRegistry = false,
             IncludeDotNetCli = false
         };
     }
 
-    private static void CreateRuntime(string programFilesRoot, string version)
+    private static void CreateRuntime(string root, string version, string? frameworkName = null)
     {
+        frameworkName ??= DotNetRuntimeProbe.RequiredSharedFrameworkName;
         Directory.CreateDirectory(Path.Combine(
-            programFilesRoot,
+            root,
             "dotnet",
             "shared",
-            DotNetRuntimeProbe.RequiredSharedFrameworkName,
+            frameworkName,
             version));
     }
 
