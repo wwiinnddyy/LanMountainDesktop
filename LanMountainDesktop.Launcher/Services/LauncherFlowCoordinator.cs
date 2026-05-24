@@ -930,6 +930,44 @@ internal sealed class LauncherFlowCoordinator
         return LaunchHostWithResolvedPathAsync(resolution, forceDirectMode, retryTag);
     }
 
+    internal static LauncherResult? ValidateDotNetRuntimePrerequisite(
+        HostLaunchPlan plan,
+        HostResolutionResult resolution,
+        DotNetRuntimeProbeOptions? probeOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(resolution);
+
+        if (!DotNetRuntimeProbe.IsFrameworkDependentWindowsApp(plan.HostPath))
+        {
+            return null;
+        }
+
+        var runtime = DotNetRuntimeProbe.Probe(probeOptions);
+        Logger.Info(
+            $"Runtime prerequisite check completed. Available={runtime.IsAvailable}; " +
+            $"Architecture={runtime.Architecture}; Message='{runtime.Message}'.");
+
+        if (runtime.IsAvailable)
+        {
+            return null;
+        }
+
+        var details = BuildResolutionDetails(resolution, null, null, "runtime");
+        foreach (var pair in runtime.ToDetails())
+        {
+            details[pair.Key] = pair.Value;
+        }
+
+        return BuildResult(
+            success: false,
+            stage: "launchHost",
+            code: "dotnet_runtime_missing",
+            message: ".NET 10 Desktop Runtime is required before LanMountainDesktop can start.",
+            details: details,
+            errorMessage: runtime.Message);
+    }
+
     private async Task<HostLaunchOutcome> LaunchHostWithResolvedPathAsync(
         HostResolutionResult resolution,
         bool forceDirectMode,
@@ -937,6 +975,12 @@ internal sealed class LauncherFlowCoordinator
     {
         var dataRoot = _dataLocationResolver.ResolveDataRoot();
         var plan = HostLaunchPlanBuilder.Build(_context, _deploymentLocator, resolution, dataRoot);
+        var prerequisiteFailure = ValidateDotNetRuntimePrerequisite(plan, resolution);
+        if (prerequisiteFailure is not null)
+        {
+            return HostLaunchOutcome.FromResult(prerequisiteFailure);
+        }
+
         var hostPath = plan.HostPath;
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {

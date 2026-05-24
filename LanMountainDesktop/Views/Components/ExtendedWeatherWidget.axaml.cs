@@ -89,7 +89,7 @@ public partial class ExtendedWeatherWidget : WeatherWidgetBase
             var inner = (StackPanel)panel.Child!;
             inner.Children.Add(new TextBlock { Text = FormatTime(item.Time), Foreground = Brush(CurrentPalette.TextSecondary), FontSize = 10, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center });
             inner.Children.Add(new WeatherIconView { Width = 26, Height = 26, Source = WeatherIconAssetResolver.LoadIcon(CurrentVisualStyleId, item.WeatherCode, item.WeatherText) });
-            inner.Children.Add(new TextBlock { Text = FormatTemperature(item.TemperatureC), Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 12 });
+            inner.Children.Add(new TextBlock { Text = FormatTemperature(item.TemperatureC), Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 12, ClipToBounds = false });
             HourlyGrid.Children.Add(panel);
         }
     }
@@ -111,7 +111,7 @@ public partial class ExtendedWeatherWidget : WeatherWidgetBase
             var inner = (StackPanel)panel.Child!;
             inner.Children.Add(new TextBlock { Text = ResolveDayLabel(item.Date), Foreground = Brush(CurrentPalette.TextSecondary), FontSize = 10, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center });
             inner.Children.Add(new WeatherIconView { Width = 26, Height = 26, Source = WeatherIconAssetResolver.LoadIcon(CurrentVisualStyleId, item.DayWeatherCode, item.DayWeatherText) });
-            inner.Children.Add(new TextBlock { Text = $"{FormatTemperature(item.HighTemperatureC)} / {FormatTemperature(item.LowTemperatureC)}", Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 11 });
+            inner.Children.Add(new TextBlock { Text = $"{FormatTemperature(item.HighTemperatureC)} / {FormatTemperature(item.LowTemperatureC)}", Foreground = Brush(CurrentPalette.TextPrimary), FontWeight = Avalonia.Media.FontWeight.SemiBold, TextAlignment = Avalonia.Media.TextAlignment.Center, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 11, ClipToBounds = false });
             DailyGrid.Children.Add(panel);
         }
     }

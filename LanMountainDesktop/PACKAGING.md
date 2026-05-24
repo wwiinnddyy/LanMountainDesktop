@@ -44,6 +44,13 @@ pwsh ./scripts/package.ps1 -RuntimeIdentifier osx-x64 -Version 1.0.1
 
 This guide covers local packaging and CI packaging for LanMountainDesktop.
 
+### Current Windows runtime policy
+
+- Windows installers do not bundle the .NET shared runtime.
+- `LanMountainDesktop.Launcher.exe` remains a Native AOT/self-contained bootstrapper at the package root.
+- `LanMountainDesktop.exe` and `LanMountainDesktop.AirAppHost.exe` are published as framework-dependent, RID-specific apps under `app-<version>/`.
+- The Inno installer downloads and silently installs the matching .NET 10 Desktop Runtime (`win-x64` or `win-x86`) before copying/launching the app.
+
 ### Key points
 
 - use `scripts/package.ps1` with the target runtime identifier

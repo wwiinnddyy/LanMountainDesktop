@@ -57,7 +57,9 @@ public sealed class ClockAirAppSettingsStore
                 Directory.CreateDirectory(directory);
             }
 
-            File.WriteAllText(_settingsPath, JsonSerializer.Serialize(normalized, SerializerOptions));
+            var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(normalized, SerializerOptions));
+            File.Move(tempPath, _settingsPath, overwrite: true);
         }
         catch (Exception ex)
         {

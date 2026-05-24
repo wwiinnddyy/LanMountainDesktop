@@ -15,7 +15,7 @@
                         <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <components:WeatherIconView x:Name="MainIcon" Grid.Column="1" Width="56" Height="56" Margin="0,0,10,0" />
-                    <TextBlock x:Name="TemperatureTextBlock" Grid.Column="2" Text="--°" FontSize="56" FontWeight="Bold" VerticalAlignment="Center" />
+                    <TextBlock x:Name="TemperatureTextBlock" Grid.Column="2" Text="--°" FontSize="56" FontWeight="Bold" VerticalAlignment="Center" ClipToBounds="False" Padding="0,2,0,0" />
                 </Grid>
                 <UniformGrid x:Name="MetricGrid" Grid.Row="1" Rows="1" Columns="3" />
                 <Border Grid.Row="2" Background="{DynamicResource SurfaceColor}" CornerRadius="{DynamicResource DesignCornerRadiusMd}" Padding="10,8">

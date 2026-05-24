@@ -440,7 +440,9 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(_manifestPath)!);
-            File.WriteAllText(_manifestPath, JsonSerializer.Serialize(manifest, JsonOptions));
+            var tempPath = $"{_manifestPath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(manifest, JsonOptions));
+            File.Move(tempPath, _manifestPath, overwrite: true);
         }
     }
 
@@ -469,7 +471,9 @@ public sealed class ZhiJiaoHubCacheService : IDisposable
             manifest.Entries[source] = new CacheEntry(images, DateTimeOffset.UtcNow);
 
             Directory.CreateDirectory(Path.GetDirectoryName(_manifestPath)!);
-            File.WriteAllText(_manifestPath, JsonSerializer.Serialize(manifest, JsonOptions));
+            var tempPath = $"{_manifestPath}.{Guid.NewGuid():N}.tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(manifest, JsonOptions));
+            File.Move(tempPath, _manifestPath, overwrite: true);
         }
     }
 

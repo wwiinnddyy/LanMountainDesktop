@@ -73,7 +73,7 @@ public partial class HourlyWeatherWidget : WeatherWidgetBase
         var inner = (StackPanel)panel.Child!;
         inner.Children.Add(new TextBlock { Text = item.Label, FontSize = 10, Foreground = Brush(CurrentPalette.TextSecondary), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, TextAlignment = Avalonia.Media.TextAlignment.Center });
         inner.Children.Add(new WeatherIconView { Width = 24, Height = 24, Source = WeatherIconAssetResolver.LoadIcon(CurrentVisualStyleId, item.WeatherCode, item.WeatherText) });
-        inner.Children.Add(new TextBlock { Text = item.Value, FontWeight = Avalonia.Media.FontWeight.SemiBold, Foreground = Brush(CurrentPalette.TextPrimary), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 11, TextAlignment = Avalonia.Media.TextAlignment.Center });
+        inner.Children.Add(new TextBlock { Text = item.Value, FontWeight = Avalonia.Media.FontWeight.SemiBold, Foreground = Brush(CurrentPalette.TextPrimary), HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, FontSize = 11, TextAlignment = Avalonia.Media.TextAlignment.Center, ClipToBounds = false });
         return panel;
     }
 

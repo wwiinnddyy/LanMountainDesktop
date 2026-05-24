@@ -38,6 +38,15 @@ public static class AppearanceCornerRadiusTokenFactory
                 Xl: new CornerRadius(40),
                 Island: new CornerRadius(44),
                 Component: new CornerRadius(32)),
+            GlobalAppearanceSettings.CornerRadiusStyleFluent => new AppearanceCornerRadiusTokens(
+                Micro: new CornerRadius(2),
+                Xs: new CornerRadius(4),
+                Sm: new CornerRadius(4),
+                Md: new CornerRadius(8),
+                Lg: new CornerRadius(8),
+                Xl: new CornerRadius(12),
+                Island: new CornerRadius(16),
+                Component: new CornerRadius(8)),
             // Balanced (default)
             _ => new AppearanceCornerRadiusTokens(
                 Micro: new CornerRadius(6),

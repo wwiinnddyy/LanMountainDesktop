@@ -98,10 +98,8 @@ jobs:
       matrix:
         include:
           - arch: x64
-            self_contained: true
             suffix: ''
           - arch: x86
-            self_contained: true
             suffix: ''
     name: Build_Windows_${{ matrix.arch }}${{ matrix.suffix }}
 
@@ -167,41 +165,48 @@ jobs:
 
       - name: Publish Main App
         run: |
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
-          $publishDir = if ($selfContained) { "publish/windows-${{ matrix.arch }}" } else { "publish/windows-${{ matrix.arch }}-lite" }
+          $publishDir = "publish/windows-${{ matrix.arch }}"
 
-          if ($selfContained) {
-            dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
-              -c Release `
-              -o ./$publishDir `
-              --self-contained `
-              -r win-${{ matrix.arch }} `
-              -p:PublishSingleFile=false `
-              -p:DebugType=none `
-              -p:DebugSymbols=false `
-              -p:SkipAirAppHostBuild=true `
-              -p:PublishTrimmed=false `
-              -p:PublishReadyToRun=false `
-              -p:Version=${{ needs.prepare.outputs.version }} `
-              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
-              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
-              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
-          } else {
-            dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
-              -c Release `
-              -o ./$publishDir `
-              --self-contained:false `
-              -p:PublishSingleFile=false `
-              -p:DebugType=none `
-              -p:DebugSymbols=false `
-              -p:SkipAirAppHostBuild=true `
-              -p:PublishTrimmed=false `
-              -p:PublishReadyToRun=false `
-              -p:Version=${{ needs.prepare.outputs.version }} `
-              -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
-              -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
-              -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
-          }
+          dotnet publish LanMountainDesktop/LanMountainDesktop.csproj `
+            -c Release `
+            -o ./$publishDir `
+            --self-contained:false `
+            -r win-${{ matrix.arch }} `
+            -p:SelfContained=false `
+            -p:PublishSingleFile=false `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:SkipAirAppHostBuild=true `
+            -p:PublishTrimmed=false `
+            -p:PublishReadyToRun=false `
+            -p:Version=${{ needs.prepare.outputs.version }} `
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+        shell: pwsh
+
+      - name: Publish AirAppHost
+        run: |
+          $arch = "${{ matrix.arch }}"
+          $publishDir = "publish/windows-$arch"
+
+          dotnet publish LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj `
+            -c Release `
+            -o ./$publishDir `
+            --self-contained:false `
+            -r win-$arch `
+            -p:SelfContained=false `
+            -p:PublishSingleFile=false `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:PublishTrimmed=false `
+            -p:PublishReadyToRun=false `
+            -p:BuildingAirAppHost=true `
+            -p:SkipAirAppHostBuild=true `
+            -p:Version=${{ needs.prepare.outputs.version }} `
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
         shell: pwsh
 
       - name: Publish AirAppHost
@@ -250,8 +255,7 @@ jobs:
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
-          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+          $publishDir = "publish/windows-$arch"
           $launcherPublishDir = "publish/launcher-win-$arch"
           $appDir = "app-$version"
           $newStructure = "publish-launcher/windows-$arch"
@@ -274,8 +278,7 @@ jobs:
       - name: Optimize and Guard Windows Payload
         run: |
           $arch = "${{ matrix.arch }}"
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
-          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+          $publishDir = "publish/windows-$arch"
 
           ./LanMountainDesktop/scripts/Optimize-PublishPayload.ps1 `
             -PublishDir $publishDir `
@@ -294,8 +297,7 @@ jobs:
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
           $suffix = "${{ matrix.suffix }}"
-          $selfContained = "${{ matrix.self_contained }}" -eq "true"
-          $publishDir = if ($selfContained) { "publish/windows-$arch" } else { "publish/windows-$arch-lite" }
+          $publishDir = "publish/windows-$arch"
           $outputDir = "build-installer"
           $installerScript = "LanMountainDesktop/installer/LanMountainDesktop.iss"
 
@@ -329,7 +331,6 @@ jobs:
             "/DMyOutputDir=$outputDir",
             "/DMyAppArch=$arch",
             "/DMyAppSuffix=$suffix",
-            "/DIsSelfContained=$selfContained",
             $installerScript
           )
 

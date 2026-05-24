@@ -197,7 +197,9 @@ public sealed class LauncherSettingsService
         }
 
         var json = JsonSerializer.Serialize(snapshot, SerializerOptions);
-        File.WriteAllText(_settingsPath, json);
+        var tempPath = $"{_settingsPath}.{Guid.NewGuid():N}.tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, _settingsPath, overwrite: true);
 
         return File.Exists(_settingsPath)
             ? File.GetLastWriteTimeUtc(_settingsPath)

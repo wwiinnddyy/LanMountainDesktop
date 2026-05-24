@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LanMountainDesktop.Launcher.Services;
 
 namespace LanMountainDesktop.Launcher.Services.AirApp;
 
@@ -13,17 +14,20 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
     private readonly Func<string?> _packageRootProvider;
     private readonly Func<string?> _hostPathProvider;
     private readonly Func<string?> _dataRootProvider;
+    private readonly DotNetRuntimeProbeOptions? _runtimeProbeOptions;
 
     public AirAppProcessStarter(
         AirAppHostLocator locator,
         Func<string?> packageRootProvider,
         Func<string?> hostPathProvider,
-        Func<string?> dataRootProvider)
+        Func<string?> dataRootProvider,
+        DotNetRuntimeProbeOptions? runtimeProbeOptions = null)
     {
         _locator = locator;
         _packageRootProvider = packageRootProvider;
         _hostPathProvider = hostPathProvider;
         _dataRootProvider = dataRootProvider;
+        _runtimeProbeOptions = runtimeProbeOptions;
     }
 
     public Process? Start(
@@ -34,22 +38,7 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
         string? sourcePlacementId)
     {
         var hostPath = _locator.Resolve(_packageRootProvider(), _hostPathProvider());
-        var startInfo = new ProcessStartInfo
-        {
-            UseShellExecute = false,
-            WorkingDirectory = Path.GetDirectoryName(hostPath) ?? AppContext.BaseDirectory
-        };
-
-        if (OperatingSystem.IsWindows() &&
-            string.Equals(Path.GetExtension(hostPath), ".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            startInfo.FileName = hostPath;
-        }
-        else
-        {
-            startInfo.FileName = "dotnet";
-            startInfo.ArgumentList.Add(hostPath);
-        }
+        var startInfo = CreateStartInfo(hostPath, _runtimeProbeOptions);
 
         AddArgument(startInfo, "--app-id", appId);
         AddArgument(startInfo, "--session-id", sessionId);
@@ -93,6 +82,54 @@ internal sealed class AirAppProcessStarter : IAirAppProcessStarter
 
         return process;
     }
+
+    internal static ProcessStartInfo CreateStartInfo(
+        string hostPath,
+        DotNetRuntimeProbeOptions? runtimeProbeOptions = null)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            UseShellExecute = false,
+            WorkingDirectory = Path.GetDirectoryName(hostPath) ?? AppContext.BaseDirectory
+        };
+
+        if (OperatingSystem.IsWindows())
+        {
+            if (string.Equals(Path.GetExtension(hostPath), ".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                if (DotNetRuntimeProbe.IsFrameworkDependentWindowsApp(hostPath))
+                {
+                    var executableRuntime = DotNetRuntimeProbe.Probe(runtimeProbeOptions);
+                    if (!executableRuntime.IsAvailable)
+                    {
+                        throw new InvalidOperationException(
+                            "Unable to start AirAppHost because the architecture-matched .NET 10 runtime was not found. " +
+                            executableRuntime.Message);
+                    }
+                }
+
+                startInfo.FileName = hostPath;
+                return startInfo;
+            }
+
+            var runtime = DotNetRuntimeProbe.Probe(runtimeProbeOptions);
+            if (!runtime.IsAvailable || string.IsNullOrWhiteSpace(runtime.DotNetHostPath))
+            {
+                throw new InvalidOperationException(
+                    "Unable to start AirAppHost because the architecture-matched .NET 10 runtime was not found. " +
+                    runtime.Message);
+            }
+
+            startInfo.FileName = runtime.DotNetHostPath;
+            startInfo.ArgumentList.Add(hostPath);
+            return startInfo;
+        }
+
+        startInfo.FileName = "dotnet";
+        startInfo.ArgumentList.Add(hostPath);
+        return startInfo;
+    }
+
 
     private static void AddArgument(ProcessStartInfo startInfo, string name, string value)
     {

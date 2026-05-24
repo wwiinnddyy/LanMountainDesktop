@@ -11,7 +11,7 @@
             <Grid x:Name="ContentGrid" RowDefinitions="*,Auto" Margin="20,16,20,14">
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel VerticalAlignment="Center" Spacing="4">
-                        <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="72" FontWeight="Bold" />
+                        <TextBlock x:Name="TemperatureTextBlock" Text="--°" FontSize="72" FontWeight="Bold" ClipToBounds="False" Padding="0,2,0,0" />
                         <TextBlock x:Name="ConditionTextBlock" Text="Loading" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                     <components:WeatherIconView x:Name="MainIcon" Grid.Column="1" Width="72" Height="72" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,4" />
