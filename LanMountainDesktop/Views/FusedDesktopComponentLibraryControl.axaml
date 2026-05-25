@@ -108,7 +108,7 @@
                             Click="OnFindMoreComponentsClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <fi:FluentIcon Icon="Globe" IconVariant="Regular" FontSize="14"/>
-                            <TextBlock Text="查找更多组件" FontSize="12"/>
+                            <TextBlock Text="查找更多小组件" FontSize="12"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -132,6 +132,7 @@
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource AdaptiveTextPrimaryBrush}"
                                    Text="{Binding SelectedComponent.DisplayName}"
+                                   HorizontalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
 
                         <TextBlock Grid.Row="1"
@@ -141,6 +142,7 @@
                                    Foreground="{DynamicResource AdaptiveTextSecondaryBrush}"
                                    Opacity="0.82"
                                    Text="{Binding SelectedComponent.Description}"
+                                   HorizontalAlignment="Center"
                                    TextWrapping="Wrap"
                                    TextTrimming="CharacterEllipsis"/>
 
@@ -176,7 +178,7 @@
                                 Click="OnAddComponentClick">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <fi:FluentIcon Icon="Add" IconVariant="Regular" FontSize="16"/>
-                                <TextBlock Text="添加" FontWeight="SemiBold"/>
+                                <TextBlock Text="添加小组件" FontWeight="SemiBold"/>
                             </StackPanel>
                         </Button>
                     </Grid>
