@@ -4,7 +4,7 @@
 
 为了确保桌面组件在不同尺寸、缩放比例下都能保持视觉一致性和美感，阑山桌面采用了 **固定圆角风格预设 (Fixed Corner Radius Styles)**，全面参考小米澎湃OS (Xiaomi HyperOS) 的设计语言。
 
-此外，阑山桌面引入了 **Fluent** 预设，遵循 Microsoft Fluent Design System 规范。设置窗口始终使用 Fluent 圆角，独立于用户选择的全局圆角风格。
+此外，在系统管理与控制面板等特定区域，阑山桌面引入了 **Fluent** 预设，完全遵循 Microsoft Fluent Design System 规范，以便与宿主操作系统的应用视觉保持一致。
 
 所有的组件和容器必须使用统一的资源键，禁止在 XAML 或代码中使用硬编码的像素值。
 
@@ -35,28 +35,52 @@
 | **Island** | 28px | 36px | 40px | 44px | 16px | 任务栏、全局大悬浮容器 |
 | **Component** | **20px** | **24px** | **28px** | **32px** | **8px** | **所有桌面组件 (Widget) 的主边框** |
 
-## Fluent Design System 参考 (Fluent Reference)
-
-Fluent 预设的核心值来源于 Microsoft 官方规范：
-
-- **ControlCornerRadius = 4px**：用于标准持久 UI 元素（按钮、复选框、输入框等）
-- **OverlayCornerRadius = 8px**：用于临时覆盖 UI 元素（对话框、浮出菜单等）
+## 系统设计特例约束 (System Design Exceptions)
 
 > [!IMPORTANT]
-> **设置窗口强制约束**：
-> 设置窗口 (`SettingsWindow`) 始终使用 Fluent 圆角 Token，不受用户全局圆角设置影响。这确保设置 UI 作为标准 Windows 应用窗口与 Fluent Design 一致。
+> **局部作用域隔离原则 (Scope Isolation)**
+> 为了确保系统级配置面板、向导及管理界面的设计规范性，部分特例区域必须**始终使用 Microsoft Fluent Design System 预设**，不受用户在“外观设置 -> 全局圆角”中所选风格的影响：
+> 
+> 1. **设置窗口 (`SettingsWindow`)**：作为主配置中心，强制应用 Fluent 圆角，使其展现标准 Windows 应用的高级感与一致性。
+> 2. **融合桌面组件库 (`FusedDesktopComponentLibraryWindow` / `FusedDesktopComponentLibraryControl`)**：小组件库的管理添加窗口本身属于系统级向导，强制采用 Fluent 圆角设计（如外壳圆角为 `DesignCornerRadiusLg`，内部按钮为 `DesignCornerRadiusSm`），保证交互的高级感与系统级管理界面对齐。
+
+### 实现机制 (Implementation Mechanism)
+
+在上述特例窗口的初始化过程中，通过在其根网格/容器元素（如 `RootGrid`）下调用 `ApplyFluentCornerRadius()`，在局部作用域内覆盖所有的 `DesignCornerRadiusXxx` 资源键为 Fluent 阶梯对应的值：
+
+```csharp
+private void ApplyFluentCornerRadius()
+{
+    if (RootGrid is null) return;
+
+    var tokens = AppearanceCornerRadiusTokenFactory.Create(
+        GlobalAppearanceSettings.CornerRadiusStyleFluent);
+    
+    RootGrid.Resources["DesignCornerRadiusMicro"] = tokens.Micro;
+    RootGrid.Resources["DesignCornerRadiusXs"] = tokens.Xs;
+    RootGrid.Resources["DesignCornerRadiusSm"] = tokens.Sm;
+    RootGrid.Resources["DesignCornerRadiusMd"] = tokens.Md;
+    RootGrid.Resources["DesignCornerRadiusLg"] = tokens.Lg;
+    RootGrid.Resources["DesignCornerRadiusXl"] = tokens.Xl;
+    RootGrid.Resources["DesignCornerRadiusIsland"] = tokens.Island;
+    RootGrid.Resources["DesignCornerRadiusComponent"] = tokens.Component;
+}
+```
+
+这样使得所有内部子控件使用 `DynamicResource` 引用这些圆角资源时，解析到的都是隔离后且固定的 Fluent 设计弧度，实现不受全局用户偏好影响的精准渲染。
 
 ## 开发准则 (Implementation Rules)
 
 > [!IMPORTANT]
 > **1. 桌面组件强制约束**：
-> 所有桌面组件（Widget / Desktop Component）的根容器边框必须使用 `{DynamicResource DesignCornerRadiusComponent}`。严禁对其进行任何比例运算或系数乘积（如 `* scale`），必须保持固定。
+> 所有桌面普通组件（Widget / Desktop Component）的根容器边框在设计时，必须统一且仅使用 `{DynamicResource DesignCornerRadiusComponent}`。严禁对其进行任何比例运算或系数乘积（如 `* scale`），以确保用户的全局圆角缩放设置能被正确、成比例地应用。
 
 > [!TIP]
 > **2. 圆角嵌套规则**：
 > 当一个容器包裹另一个元素时，外层圆角应比内层圆角大一个阶梯。例如：
-> - 外部使用 `DesignCornerRadiusLg`
-> - 内部紧贴边缘的内容应使用 `DesignCornerRadiusMd`
+> - 外部大容器使用 `DesignCornerRadiusLg`
+> - 内部小卡片使用 `DesignCornerRadiusMd`
+> - 内部紧贴边缘的小图标或按钮使用 `DesignCornerRadiusSm`
 > 这样可以保证两条圆弧的圆心趋于重合，视觉重心更稳固。
 
 > [!CAUTION]
@@ -65,7 +89,7 @@ Fluent 预设的核心值来源于 Microsoft 官方规范：
 
 ## 常用资源键 (Common Resource Keys)
 
-- `DesignCornerRadiusComponent` (最常用)
+- `DesignCornerRadiusComponent` (桌面组件主框专用)
 - `DesignCornerRadiusMicro`
 - `DesignCornerRadiusSm`
 - `DesignCornerRadiusMd`
