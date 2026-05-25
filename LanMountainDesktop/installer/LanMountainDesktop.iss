@@ -557,7 +557,7 @@ begin
   if '{#MyAppArch}' = 'x64' then
   begin
     Result := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
-  end;
+  end
   else
   begin
     Result := ExpandConstant('{commonpf}\dotnet\shared\Microsoft.WindowsDesktop.App');
@@ -574,7 +574,7 @@ begin
   if '{#MyAppArch}' = 'x64' then
   begin
     Result := DotNetRuntimeDownloadUrlX64;
-  end;
+  end
   else
   begin
     Result := DotNetRuntimeDownloadUrlX86;
