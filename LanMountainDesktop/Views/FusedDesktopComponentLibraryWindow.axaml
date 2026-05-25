@@ -23,6 +23,7 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Padding="0"
+                CornerRadius="{DynamicResource DesignCornerRadiusLg}"
                 ClipToBounds="True">
             <Grid RowDefinitions="Auto,*,Auto">
                 <Border Height="64"

@@ -4,7 +4,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using LanMountainDesktop.Appearance;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Settings.Core;
 
 namespace LanMountainDesktop.Views;
 
@@ -15,12 +17,32 @@ public partial class FusedDesktopComponentLibraryWindow : Window
     public FusedDesktopComponentLibraryWindow()
     {
         InitializeComponent();
+        ApplyFluentCornerRadius();
 
         LibraryControl.AddComponentRequested += OnAddComponentRequested;
         KeyDown += OnWindowKeyDown;
 
         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindow;
         mainWindow?.RegisterFusedLibraryWindow(this);
+    }
+
+    private void ApplyFluentCornerRadius()
+    {
+        if (RootGrid is null)
+        {
+            return;
+        }
+
+        var tokens = AppearanceCornerRadiusTokenFactory.Create(
+            GlobalAppearanceSettings.CornerRadiusStyleFluent);
+        RootGrid.Resources["DesignCornerRadiusMicro"] = tokens.Micro;
+        RootGrid.Resources["DesignCornerRadiusXs"] = tokens.Xs;
+        RootGrid.Resources["DesignCornerRadiusSm"] = tokens.Sm;
+        RootGrid.Resources["DesignCornerRadiusMd"] = tokens.Md;
+        RootGrid.Resources["DesignCornerRadiusLg"] = tokens.Lg;
+        RootGrid.Resources["DesignCornerRadiusXl"] = tokens.Xl;
+        RootGrid.Resources["DesignCornerRadiusIsland"] = tokens.Island;
+        RootGrid.Resources["DesignCornerRadiusComponent"] = tokens.Component;
     }
 
     public bool PreserveEditModeOnClose { get; private set; }

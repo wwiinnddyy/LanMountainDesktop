@@ -54,7 +54,7 @@
                                     Background="{DynamicResource AdaptiveNavItemBackgroundBrush}">
                                 <Grid ColumnDefinitions="Auto,*"
                                       ColumnSpacing="8">
-                                    <fi:SymbolIcon Symbol="{Binding Icon}"
+                                    <fi:FluentIcon Icon="{Binding Icon}"
                                                    IconVariant="Regular"
                                                    FontSize="16" />
                                     <TextBlock Grid.Column="1"

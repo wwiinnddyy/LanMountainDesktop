@@ -107,4 +107,18 @@ public sealed class ComponentCategoryIconResolverTests
         var result = ComponentCategoryIconResolver.ResolveCategoryIcon("File", components);
         Assert.Equal(Icon.Folder, result);
     }
+
+    [Fact]
+    public void ResolveCategoryIcon_Date_ResolvesCorrectly()
+    {
+        var result = ComponentCategoryIconResolver.ResolveCategoryIcon("Date", []);
+        Assert.Equal(Icon.Calendar, result);
+    }
+
+    [Fact]
+    public void ResolveCategoryIcon_Study_ResolvesCorrectly()
+    {
+        var result = ComponentCategoryIconResolver.ResolveCategoryIcon("Study", []);
+        Assert.Equal(Icon.Book, result);
+    }
 }
