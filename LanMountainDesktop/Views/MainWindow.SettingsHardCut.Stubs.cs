@@ -511,9 +511,7 @@ public partial class MainWindow : Window
             {
                 try
                 {
-                    await HostUpdateOrchestratorProvider
-                        .GetOrCreate()
-                        .AutoCheckIfEnabledAsync(default);
+                    await _updateSettingsService.AutoCheckIfEnabledAsync(default);
                 }
                 catch (Exception ex)
                 {

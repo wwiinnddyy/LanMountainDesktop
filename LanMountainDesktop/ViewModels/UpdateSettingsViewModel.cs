@@ -6,7 +6,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
-using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Shared.Contracts.Update;
 using UpdateSettingsValues = LanMountainDesktop.Services.UpdateSettingsValues;
 
@@ -14,27 +13,28 @@ namespace LanMountainDesktop.ViewModels;
 
 public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 {
-    private readonly UpdateOrchestrator _orchestrator;
     private readonly ISettingsFacadeService _settingsFacade;
+    private readonly IUpdateSettingsService _updateSettingsService;
     private readonly LocalizationService _localizationService;
     private readonly string _languageCode;
+    private bool _suppressPreferenceSave;
     private bool _disposed;
 
-    public UpdateSettingsViewModel(UpdateOrchestrator orchestrator, ISettingsFacadeService settingsFacade)
+    public UpdateSettingsViewModel(ISettingsFacadeService settingsFacade)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _settingsFacade = settingsFacade ?? throw new ArgumentNullException(nameof(settingsFacade));
+        _updateSettingsService = _settingsFacade.Update;
         _localizationService = new LocalizationService();
         _languageCode = _localizationService.NormalizeLanguageCode(_settingsFacade.Region.Get().LanguageCode);
 
-        CurrentPhase = _orchestrator.CurrentPhase;
+        CurrentPhase = _updateSettingsService.CurrentPhase;
         CurrentVersionText = _settingsFacade.ApplicationInfo.GetAppVersionText();
         RefreshLocalizedText();
         LoadPreferenceState();
         StatusMessage = GetPhaseStatusText(CurrentPhase);
 
-        _orchestrator.PhaseChanged += OnOrchestratorPhaseChanged;
-        _orchestrator.ProgressChanged += OnOrchestratorProgressChanged;
+        _updateSettingsService.PhaseChanged += OnUpdatePhaseChanged;
+        _updateSettingsService.ProgressChanged += OnUpdateProgressChanged;
     }
 
     [ObservableProperty] private UpdatePhase _currentPhase = UpdatePhase.Idle;
@@ -208,7 +208,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     private async Task CheckAsync()
     {
         StatusMessage = GetCheckingStatusText();
-        var report = await _orchestrator.CheckAsync(CancellationToken.None);
+        var report = await _updateSettingsService.CheckAsync(CancellationToken.None);
         LastCheckedText = string.Format(
             CultureInfo.CurrentCulture,
             L("settings.update.last_checked_format", "Last checked: {0}"),
@@ -244,7 +244,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     private async Task DownloadAsync()
     {
         StatusMessage = GetDownloadingStatusText();
-        var result = await _orchestrator.DownloadAsync(CancellationToken.None);
+        var result = await _updateSettingsService.DownloadAsync(CancellationToken.None);
         if (result.Success)
         {
             StatusMessage = GetDownloadCompleteStatusText();
@@ -263,7 +263,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     private async Task InstallAsync()
     {
         StatusMessage = GetInstallingStatusText();
-        var result = await _orchestrator.InstallAsync(CancellationToken.None);
+        var result = await _updateSettingsService.InstallAsync(CancellationToken.None);
         if (result.Success)
         {
             StatusMessage = GetInstallSuccessStatusText();
@@ -278,14 +278,14 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     private async Task RollbackAsync()
     {
         StatusMessage = GetRollingBackStatusText();
-        await _orchestrator.RollbackAsync(CancellationToken.None);
+        await _updateSettingsService.RollbackAsync(CancellationToken.None);
         StatusMessage = GetRollbackCompleteStatusText();
     }
 
     [RelayCommand(CanExecute = nameof(CanPause))]
     private async Task PauseAsync()
     {
-        await _orchestrator.PauseAsync();
+        await _updateSettingsService.PauseAsync();
         StatusMessage = GetPausedStatusText();
     }
 
@@ -293,7 +293,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     private async Task ResumeAsync()
     {
         StatusMessage = GetResumingStatusText();
-        var result = await _orchestrator.ResumeAsync(CancellationToken.None);
+        var result = await _updateSettingsService.ResumeAsync(CancellationToken.None);
         if (result.Success)
         {
             StatusMessage = GetResumeCompleteStatusText();
@@ -307,18 +307,18 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private async Task CancelAsync()
     {
-        await _orchestrator.CancelAsync();
+        await _updateSettingsService.CancelAsync();
         StatusMessage = GetCancelStatusText();
         ProgressDetail = string.Empty;
         ProgressFraction = 0;
     }
 
-    private void OnOrchestratorPhaseChanged(UpdatePhase phase)
+    private void OnUpdatePhaseChanged(UpdatePhase phase)
     {
         CurrentPhase = phase;
     }
 
-    private void OnOrchestratorProgressChanged(UpdateProgressReport report)
+    private void OnUpdateProgressChanged(UpdateProgressReport report)
     {
         ProgressFraction = report.ProgressFraction;
 
@@ -348,14 +348,54 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
     private void LoadPreferenceState()
     {
-        var state = _settingsFacade.Update.Get();
-        SelectedUpdateChannelValue = state.UpdateChannel;
-        SelectedUpdateSourceValue = state.UpdateDownloadSource;
-        SelectedUpdateModeValue = state.UpdateMode;
-        DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
-        ForceReinstall = state.ForceUpdateReinstall;
+        var state = _updateSettingsService.Get();
+        _suppressPreferenceSave = true;
+        try
+        {
+            SelectedUpdateChannelValue = state.UpdateChannel;
+            SelectedUpdateSourceValue = state.UpdateDownloadSource;
+            SelectedUpdateModeValue = state.UpdateMode;
+            DownloadThreadsSliderValue = UpdateSettingsValues.NormalizeDownloadThreads(state.UpdateDownloadThreads);
+            ForceReinstall = state.ForceUpdateReinstall;
+            ApplyPersistedUpdateState(state);
+        }
+        finally
+        {
+            _suppressPreferenceSave = false;
+        }
 
         SyncComboBoxSelections();
+    }
+
+    private void ApplyPersistedUpdateState(LanMountainDesktop.Services.Settings.UpdateSettingsState state)
+    {
+        if (!string.IsNullOrWhiteSpace(state.PendingUpdateVersion))
+        {
+            IsUpdateAvailable = true;
+            LatestVersionText = state.PendingUpdateVersion;
+            PublishedAtText = state.PendingUpdatePublishedAtUtcMs is > 0
+                ? DateTimeOffset
+                    .FromUnixTimeMilliseconds(state.PendingUpdatePublishedAtUtcMs.Value)
+                    .ToLocalTime()
+                    .ToString("g", CultureInfo.CurrentCulture)
+                : string.Empty;
+            UpdateTypeText = ForceReinstall
+                ? L("settings.update.type_reinstall", "Reinstall")
+                : UpdateTypeText;
+        }
+
+        if (state.LastUpdateCheckUtcMs is > 0)
+        {
+            LastCheckedText = string.Format(
+                CultureInfo.CurrentCulture,
+                L("settings.update.last_checked_format", "Last checked: {0}"),
+                DateTimeOffset
+                    .FromUnixTimeMilliseconds(state.LastUpdateCheckUtcMs.Value)
+                    .ToLocalTime()
+                    .ToString("g", CultureInfo.CurrentCulture));
+        }
+
+        OnPropertyChanged(nameof(LatestVersionDisplayText));
     }
 
     private void SyncComboBoxSelections()
@@ -463,8 +503,13 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
     private void SavePreferenceState()
     {
-        var current = _settingsFacade.Update.Get();
-        _settingsFacade.Update.Save(current with
+        if (_suppressPreferenceSave)
+        {
+            return;
+        }
+
+        var current = _updateSettingsService.Get();
+        _updateSettingsService.Save(current with
         {
             UpdateChannel = SelectedUpdateChannelValue,
             UpdateDownloadSource = SelectedUpdateSourceValue,
@@ -599,7 +644,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
         }
 
         _disposed = true;
-        _orchestrator.PhaseChanged -= OnOrchestratorPhaseChanged;
-        _orchestrator.ProgressChanged -= OnOrchestratorProgressChanged;
+        _updateSettingsService.PhaseChanged -= OnUpdatePhaseChanged;
+        _updateSettingsService.ProgressChanged -= OnUpdateProgressChanged;
     }
 }

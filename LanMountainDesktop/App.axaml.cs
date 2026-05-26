@@ -1210,7 +1210,7 @@ public partial class App : Application
 
         try
         {
-            HostUpdateOrchestratorProvider.GetOrCreate().TryApplyOnExit();
+            _settingsFacade.Update.TryApplyOnExit();
         }
         catch (Exception ex)
         {
