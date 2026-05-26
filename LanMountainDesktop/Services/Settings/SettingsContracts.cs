@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Services.PluginMarket;
 using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Settings
 {
@@ -356,8 +358,21 @@ public interface IPrivacySettingsService
 
 public interface IUpdateSettingsService
 {
+    UpdatePhase CurrentPhase { get; }
+    event Action<UpdatePhase>? PhaseChanged;
+    event Action<UpdateProgressReport>? ProgressChanged;
+
     UpdateSettingsState Get();
     void Save(UpdateSettingsState state);
+    Task<UpdateCheckReport> CheckAsync(CancellationToken cancellationToken = default);
+    Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadAsync(CancellationToken cancellationToken = default);
+    Task<InstallResult> InstallAsync(CancellationToken cancellationToken = default);
+    Task RollbackAsync(CancellationToken cancellationToken = default);
+    Task PauseAsync();
+    Task<LanMountainDesktop.Services.Update.DownloadResult> ResumeAsync(CancellationToken cancellationToken = default);
+    Task CancelAsync();
+    Task AutoCheckIfEnabledAsync(CancellationToken cancellationToken = default);
+    bool TryApplyOnExit();
     Task<UpdateCheckResult> CheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
     Task<UpdateCheckResult> ForceCheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default);
     Task<PlondsUpdatePayload?> GetPlondsUpdatePayloadAsync(Version currentVersion, bool includePrerelease, bool isForce = false, CancellationToken cancellationToken = default);

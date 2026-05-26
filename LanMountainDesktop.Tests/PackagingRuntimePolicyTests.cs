@@ -28,6 +28,26 @@ public sealed class PackagingRuntimePolicyTests
     }
 
     [Fact]
+    public void WindowsPayloadGuard_RequiresLauncherMainAndAirAppHost()
+    {
+        var script = ReadRepositoryFile("LanMountainDesktop", "scripts", "Optimize-PublishPayload.ps1");
+
+        Assert.Contains("Assert-WindowsPayloadContainsRequiredHosts", script);
+        Assert.Contains("LanMountainDesktop.Launcher.exe", script);
+        Assert.Contains("LanMountainDesktop.exe", script);
+        Assert.Contains("LanMountainDesktop.AirAppHost.exe", script);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_VerifiesAirAppHostBeforePublishingInstaller()
+    {
+        var workflow = ReadRepositoryFile(".github", "workflows", "release.yml");
+
+        Assert.Contains("Verify Windows app host payload", workflow);
+        Assert.Contains("LanMountainDesktop.AirAppHost.exe", workflow);
+    }
+
+    [Fact]
     public void Installer_DownloadsArchitectureSpecificDesktopRuntime()
     {
         var installer = ReadRepositoryFile("LanMountainDesktop", "installer", "LanMountainDesktop.iss");

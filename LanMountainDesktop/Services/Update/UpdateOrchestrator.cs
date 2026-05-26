@@ -25,13 +25,13 @@ internal static class HostUpdateOrchestratorProvider
 
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
             var githubProvider = new GithubReleaseManifestProvider("wwiinnddyy", "LanMountainDesktop");
-            var staticProvider = new PlondsApiManifestProvider("https://api.classisland.tech");
-            var compositeProvider = new CompositeManifestProvider(staticProvider, githubProvider);
+            var plondsProvider = new PlondsApiManifestProvider("https://api.classisland.tech");
+            var manifestProvider = new SettingsUpdateManifestProvider(settingsFacade, plondsProvider, githubProvider);
             var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            var downloadEngine = new UpdateDownloadEngine(compositeProvider, new ResumableDownloadService(httpClient));
+            var downloadEngine = new UpdateDownloadEngine(manifestProvider, new ResumableDownloadService(httpClient));
             var installGateway = new UpdateInstallGateway();
             var stateStore = new UpdateStateStore(settingsFacade);
-            _instance = new UpdateOrchestrator(compositeProvider, downloadEngine, installGateway, stateStore);
+            _instance = new UpdateOrchestrator(manifestProvider, downloadEngine, installGateway, stateStore);
             return _instance;
         }
     }
@@ -106,8 +106,7 @@ public sealed class UpdateOrchestrator : IDisposable
 
             var settings = _stateStore.GetSettings();
             var channel = UpdateSettingsValues.NormalizeChannel(settings.UpdateChannel);
-            var currentVersionText = _stateStore.GetSettings().PendingUpdateVersion
-                ?? AppVersionProvider.ResolveForCurrentProcess().Version;
+            var currentVersionText = AppVersionProvider.ResolveForCurrentProcess().Version;
 
             if (!TryParseVersion(currentVersionText, out var currentVersion))
             {
@@ -166,12 +165,14 @@ public sealed class UpdateOrchestrator : IDisposable
             if (manifest is null)
             {
                 _stateStore.TransitionTo(UpdatePhase.Checked);
+                SaveLastChecked();
                 return new UpdateCheckReport(
                     false, null, currentVersionText, null, null, null, null, null, null, null);
             }
 
             _stateStore.PendingManifest = manifest;
             _stateStore.TransitionTo(UpdatePhase.Checked);
+            SaveLastChecked();
 
             long? totalBytes = manifest.IsDelta ? manifest.EstimatedDeltaBytes : null;
             long? installerBytes = manifest.InstallerMirrors?.Count > 0
@@ -262,6 +263,7 @@ public sealed class UpdateOrchestrator : IDisposable
                         manifest,
                         destinationPath,
                         maxThreads,
+                        settings.UpdateDownloadSource,
                         downloadProgress,
                         operationToken);
                 }
@@ -569,15 +571,12 @@ public sealed class UpdateOrchestrator : IDisposable
             return false;
         }
 
-        var manifest = _stateStore.PendingManifest;
-        if (manifest is null)
-        {
-            return false;
-        }
-
         var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        var manifest = _stateStore.PendingManifest;
+        var deploymentLock = DeploymentLockService.ReadLock(launcherRoot);
 
-        if (manifest.IsDelta)
+        if (manifest?.IsDelta == true ||
+            string.Equals(deploymentLock?.Kind, "delta", StringComparison.OrdinalIgnoreCase))
         {
             AppLogger.Info("UpdateOrchestrator", "Delta update pending. Launching Launcher to apply on exit.");
             var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
@@ -636,6 +635,15 @@ public sealed class UpdateOrchestrator : IDisposable
             AppLogger.Warn("UpdateOrchestrator", $"Failed to launch installer on exit: {ex.Message}");
             return false;
         }
+    }
+
+    private void SaveLastChecked()
+    {
+        var state = _stateStore.GetSettings();
+        _stateStore.SaveSettings(state with
+        {
+            LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
     }
 
     private static void CleanupIncomingArtifacts(string launcherRoot)

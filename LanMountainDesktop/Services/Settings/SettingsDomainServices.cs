@@ -10,8 +10,10 @@ using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Services.PluginMarket;
+using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Settings;
 
@@ -784,10 +786,40 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
     private readonly PlondsStaticUpdateService _plondsStaticUpdateService = new();
     private readonly PlondsReleaseUpdateService _plondsReleaseUpdateService = new();
+    private readonly Lazy<UpdateOrchestrator> _orchestrator;
 
-    public UpdateSettingsService(ISettingsService settingsService)
+    public UpdateSettingsService(ISettingsService settingsService, Func<UpdateOrchestrator>? orchestratorFactory = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _orchestrator = new Lazy<UpdateOrchestrator>(
+            orchestratorFactory ?? HostUpdateOrchestratorProvider.GetOrCreate,
+            LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
+    public UpdatePhase CurrentPhase => _orchestrator.Value.CurrentPhase;
+
+    public event Action<UpdatePhase>? PhaseChanged
+    {
+        add => _orchestrator.Value.PhaseChanged += value;
+        remove
+        {
+            if (_orchestrator.IsValueCreated)
+            {
+                _orchestrator.Value.PhaseChanged -= value;
+            }
+        }
+    }
+
+    public event Action<UpdateProgressReport>? ProgressChanged
+    {
+        add => _orchestrator.Value.ProgressChanged += value;
+        remove
+        {
+            if (_orchestrator.IsValueCreated)
+            {
+                _orchestrator.Value.ProgressChanged -= value;
+            }
+        }
     }
 
     public UpdateSettingsState Get()
@@ -860,6 +892,51 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
                 nameof(AppSettingsSnapshot.LastUpdateCheckUtcMs),
                 nameof(AppSettingsSnapshot.PendingUpdateSha256)
             ]);
+    }
+
+    public Task<UpdateCheckReport> CheckAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.CheckAsync(cancellationToken);
+    }
+
+    public Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.DownloadAsync(cancellationToken);
+    }
+
+    public Task<InstallResult> InstallAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.InstallAsync(cancellationToken);
+    }
+
+    public Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.RollbackAsync(cancellationToken);
+    }
+
+    public Task PauseAsync()
+    {
+        return _orchestrator.Value.PauseAsync();
+    }
+
+    public Task<LanMountainDesktop.Services.Update.DownloadResult> ResumeAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.ResumeAsync(cancellationToken);
+    }
+
+    public Task CancelAsync()
+    {
+        return _orchestrator.Value.CancelAsync();
+    }
+
+    public Task AutoCheckIfEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        return _orchestrator.Value.AutoCheckIfEnabledAsync(cancellationToken);
+    }
+
+    public bool TryApplyOnExit()
+    {
+        return _orchestrator.Value.TryApplyOnExit();
     }
 
     public Task<UpdateCheckResult> CheckForUpdatesAsync(
@@ -945,6 +1022,15 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool isForce,
         CancellationToken cancellationToken)
     {
+        var source = UpdateSettingsValues.NormalizeDownloadSource(Get().UpdateDownloadSource);
+        if (string.Equals(source, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(source, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase))
+        {
+            return isForce
+                ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
+                : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        }
+
         var staticResult = isForce
             ? await _plondsStaticUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
             : await _plondsStaticUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);

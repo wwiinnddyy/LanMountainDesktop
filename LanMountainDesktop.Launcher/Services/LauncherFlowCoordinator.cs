@@ -12,8 +12,8 @@ namespace LanMountainDesktop.Launcher.Services;
 
 internal sealed class LauncherFlowCoordinator
 {
-    private static readonly TimeSpan StartupSoftTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan StartupHardTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan StartupSoftTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan StartupHardTimeout = TimeSpan.FromSeconds(120);
     private static readonly string SoftTimeoutStatusMessage = Strings.Coordinator_SlowDeviceMessage;
     private static readonly string SoftTimeoutDetailsMessage = Strings.Coordinator_RunningHostMessage;
 

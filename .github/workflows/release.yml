@@ -244,6 +244,27 @@ jobs:
             -AssertClean
         shell: pwsh
 
+      - name: Verify Windows app host payload
+        run: |
+          $version = "${{ needs.prepare.outputs.version }}"
+          $arch = "${{ matrix.arch }}"
+          $publishDir = "publish/windows-$arch"
+          $appDir = Join-Path $publishDir "app-$version"
+
+          $requiredFiles = @(
+            (Join-Path $publishDir "LanMountainDesktop.Launcher.exe"),
+            (Join-Path $appDir "LanMountainDesktop.exe"),
+            (Join-Path $appDir "LanMountainDesktop.AirAppHost.exe")
+          )
+
+          foreach ($path in $requiredFiles) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              Write-Error "Required release payload file is missing: $path"
+              exit 1
+            }
+          }
+        shell: pwsh
+
       - name: Install Inno Setup and 7z
         run: |
           choco install innosetup -y --no-progress

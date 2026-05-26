@@ -96,6 +96,13 @@ internal static class UpdateManifestMapper
                 ArchiveSha256: null,
                 Metadata: null));
 
+            mirrors.Add(new UpdateMirrorAsset(
+                Platform: platform,
+                Url: installerAsset.BrowserDownloadUrl,
+                Name: installerAsset.Name,
+                Sha256: installerAsset.Sha256,
+                Size: installerAsset.SizeBytes));
+
             foreach (var asset in release.Assets)
             {
                 if (IsInstallerAsset(asset) && asset != installerAsset)

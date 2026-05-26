@@ -201,6 +201,52 @@ function Assert-WindowsPayloadClean {
     Write-Host "Windows payload guard passed for $Rid."
 }
 
+function Assert-WindowsPayloadContainsRequiredHosts {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    $violations = [System.Collections.Generic.List[string]]::new()
+
+    $launcherPath = Join-Path $Root "LanMountainDesktop.Launcher.exe"
+    if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
+        $violations.Add("LanMountainDesktop.Launcher.exe")
+    }
+
+    $deploymentDirs = @(Get-ChildItem -LiteralPath $Root -Directory -Filter "app-*" -ErrorAction SilentlyContinue |
+        Where-Object {
+            -not (Test-Path -LiteralPath (Join-Path $_.FullName ".partial")) -and
+            -not (Test-Path -LiteralPath (Join-Path $_.FullName ".destroy"))
+        })
+
+    if ($deploymentDirs.Count -eq 0) {
+        $violations.Add("app-*/")
+    }
+
+    foreach ($deploymentDir in $deploymentDirs) {
+        $mainHostPath = Join-Path $deploymentDir.FullName "LanMountainDesktop.exe"
+        if (-not (Test-Path -LiteralPath $mainHostPath -PathType Leaf)) {
+            $violations.Add((Join-Path $deploymentDir.Name "LanMountainDesktop.exe"))
+        }
+
+        $airAppHostCandidates = @(
+            (Join-Path $deploymentDir.FullName "LanMountainDesktop.AirAppHost.exe"),
+            (Join-Path $deploymentDir.FullName "LanMountainDesktop.AirAppHost.dll"),
+            (Join-Path (Join-Path $deploymentDir.FullName "AirAppHost") "LanMountainDesktop.AirAppHost.exe"),
+            (Join-Path (Join-Path $deploymentDir.FullName "AirAppHost") "LanMountainDesktop.AirAppHost.dll")
+        )
+
+        if (-not ($airAppHostCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1)) {
+            $violations.Add((Join-Path $deploymentDir.Name "LanMountainDesktop.AirAppHost.exe"))
+        }
+    }
+
+    if ($violations.Count -gt 0) {
+        $sample = ($violations | Select-Object -First 50) -join [Environment]::NewLine
+        throw "Windows publish payload is missing required Launcher/Main/AirAppHost files:$([Environment]::NewLine)$sample"
+    }
+
+    Write-Host "Windows required host guard passed."
+}
+
 $resolvedPublishDir = [System.IO.Path]::GetFullPath($PublishDir)
 if (-not (Test-Path -LiteralPath $resolvedPublishDir)) {
     throw "Publish directory not found: $resolvedPublishDir"
@@ -213,4 +259,7 @@ Write-PayloadAudit -Root $resolvedPublishDir
 
 if ($AssertClean) {
     Assert-WindowsPayloadClean -Root $resolvedPublishDir -Rid $RuntimeIdentifier
+    if ($RuntimeIdentifier -like "win-*") {
+        Assert-WindowsPayloadContainsRequiredHosts -Root $resolvedPublishDir
+    }
 }

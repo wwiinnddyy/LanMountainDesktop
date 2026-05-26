@@ -232,6 +232,7 @@ internal sealed class UpdateDownloadEngine
         UpdateManifest manifest,
         string destinationPath,
         int maxThreads,
+        string? downloadSource,
         IProgress<DownloadProgressReport>? progress,
         CancellationToken ct)
     {
@@ -281,7 +282,7 @@ internal sealed class UpdateDownloadEngine
             ct.ThrowIfCancellationRequested();
 
             var result = await _downloadService.DownloadAsync(
-                mirror.Url,
+                ApplyDownloadSource(mirror.Url, downloadSource),
                 destinationPath,
                 new DownloadOptions(MaxParallelSegments: Math.Max(1, maxThreads)),
                 downloadProgress,
@@ -384,6 +385,22 @@ internal sealed class UpdateDownloadEngine
         }
 
         throw lastError!;
+    }
+
+    internal static string ApplyDownloadSource(string browserDownloadUrl, string? downloadSource)
+    {
+        if (!string.Equals(
+                UpdateSettingsValues.NormalizeDownloadSource(downloadSource),
+                UpdateSettingsValues.DownloadSourceGhProxy,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return browserDownloadUrl;
+        }
+
+        var normalizedBase = UpdateSettingsValues.DefaultGhProxyBaseUrl.TrimEnd('/') + "/";
+        return browserDownloadUrl.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase)
+            ? browserDownloadUrl
+            : normalizedBase + browserDownloadUrl;
     }
 
     private static async Task<string> ComputeFileSha256Async(string filePath, CancellationToken ct)
