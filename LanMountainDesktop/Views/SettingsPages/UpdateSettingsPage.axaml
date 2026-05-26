@@ -86,7 +86,7 @@
 
             <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding LatestVersionLabel}">
               <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0B4E;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                <ui:FAFontIconSource Glyph="&#xF0288;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
               </ui:FASettingsExpander.IconSource>
               <ui:FASettingsExpander.Footer>
                 <TextBlock Classes="settings-item-description" Text="{Binding LatestVersionDisplayText}" />
@@ -134,7 +134,7 @@
 
             <ui:FASettingsExpander Classes="settings-expander-card" Header="{Binding SourceLabel}" Description="{Binding SourceDescription}">
               <ui:FASettingsExpander.IconSource>
-                <ui:FAFontIconSource Glyph="&#xF0B4E;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
+                <ui:FAFontIconSource Glyph="&#xF0168;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
               </ui:FASettingsExpander.IconSource>
               <ui:FASettingsExpander.Footer>
                 <ComboBox Width="220" ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}">
