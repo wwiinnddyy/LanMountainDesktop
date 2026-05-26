@@ -269,4 +269,25 @@
         <Setter Property="Opacity" Value="{DynamicResource AdaptiveGlassOverlayOpacity}" />
     </Style>
 
+    <!-- 强制所有程序化弹出的对话框遵循 Fluent Design System 圆角规范 -->
+    <Style Selector="ui|FAContentDialog">
+        <Style.Resources>
+            <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusSm">4</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusLg">8</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusIsland">16</CornerRadius>
+            <CornerRadius x:Key="DesignCornerRadiusComponent">8</CornerRadius>
+        </Style.Resources>
+    </Style>
+
+    <!-- 强制对话框中的按钮使用 Fluent 标准的 4px (DesignCornerRadiusSm) 圆角 -->
+    <Style Selector="ui|FAContentDialog Button">
+        <Setter Property="CornerRadius" Value="{DynamicResource DesignCornerRadiusSm}" />
+    </Style>
+
 </Styles>

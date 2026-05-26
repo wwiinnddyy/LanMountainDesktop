@@ -43,6 +43,8 @@
 > 
 > 1. **设置窗口 (`SettingsWindow`)**：作为主配置中心，强制应用 Fluent 圆角，使其展现标准 Windows 应用的高级感与一致性。
 > 2. **融合桌面组件库 (`FusedDesktopComponentLibraryWindow` / `FusedDesktopComponentLibraryControl`)**：小组件库的管理添加窗口本身属于系统级向导，强制采用 Fluent 圆角设计（如外壳圆角为 `DesignCornerRadiusLg`，内部按钮为 `DesignCornerRadiusSm`），保证交互的高级感与系统级管理界面对齐。
+> 3. **系统弹出对话框 (`ContentDialog` / `FAContentDialog`)**：例如设置界面的重启确认、编辑桌面时的删除页面二级确认、电源菜单的二次确认等，通过全局 XAML 样式统一覆盖其所使用的 `OverlayCornerRadius` (8px)、`ControlCornerRadius` (4px) 以及相关的 `DesignCornerRadiusXxx` 令牌，以确保这些高优先级确认弹窗在任意窗口上层弹出时均保持 Fluent 风格。
+> 4. **多开提示窗口 (`MultiInstancePromptWindow`)**：当多次启动软件时弹出的二级拦截警示窗口，属于独立启动器进程中的系统级安全提示，强制在 Window Resources 中硬编码重载为 Fluent 风格对应的圆角参数（如边角 8px，交互按钮 4px）。
 
 ### 实现机制 (Implementation Mechanism)
 

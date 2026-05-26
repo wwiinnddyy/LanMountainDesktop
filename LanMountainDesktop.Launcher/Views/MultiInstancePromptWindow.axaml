@@ -20,6 +20,21 @@
         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
         TransparencyLevelHint="Mica, AcrylicBlur, None"
         Icon="/Assets/logo.ico">
+
+  <Window.Resources>
+    <!-- Override design corner radius to Fluent values for robustness -->
+    <CornerRadius x:Key="DesignCornerRadiusMicro">2</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXs">4</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusSm">4</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusLg">8</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusXl">12</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusIsland">16</CornerRadius>
+    <CornerRadius x:Key="DesignCornerRadiusComponent">8</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+  </Window.Resources>
+
   <Design.DataContext>
     <views:MultiInstancePromptWindow />
   </Design.DataContext>
