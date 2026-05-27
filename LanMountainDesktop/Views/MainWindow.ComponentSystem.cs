@@ -1536,6 +1536,7 @@ public partial class MainWindow : Window
             PlacementId = placement.PlacementId,
             PageIndex = placement.PageIndex,
             ComponentId = placement.ComponentId,
+            ComponentName = placement.ComponentName,
             Row = placement.Row,
             Column = placement.Column,
             WidthCells = placement.WidthCells,

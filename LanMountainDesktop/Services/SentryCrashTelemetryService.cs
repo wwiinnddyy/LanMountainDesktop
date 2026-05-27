@@ -104,7 +104,7 @@ public sealed class SentryCrashTelemetryService : IDisposable
 
         var eventId = SentrySdk.CaptureException(exception, scope =>
         {
-            ApplyCommonScope(scope, source, "unhandled_exception", includeLogTail: true);
+            ApplyCommonScope(scope, source, TelemetryEventNames.SentryUnhandledException, includeLogTail: true);
             scope.Level = isTerminating ? SentryLevel.Fatal : SentryLevel.Error;
             scope.SetTag("exception_source", source);
             scope.SetTag("is_terminating", isTerminating.ToString());
@@ -136,7 +136,7 @@ public sealed class SentryCrashTelemetryService : IDisposable
 
         var eventId = SentrySdk.CaptureException(exception, scope =>
         {
-            ApplyCommonScope(scope, source, "task_exception", includeLogTail: true);
+            ApplyCommonScope(scope, source, TelemetryEventNames.SentryTaskException, includeLogTail: true);
             scope.Level = SentryLevel.Error;
             scope.SetTag("exception_source", source);
         });
@@ -155,9 +155,9 @@ public sealed class SentryCrashTelemetryService : IDisposable
             }
         }
 
-        var eventId = SentrySdk.CaptureMessage("application_shutdown", scope =>
+        var eventId = SentrySdk.CaptureMessage(TelemetryEventNames.SentryShutdown, scope =>
         {
-            ApplyCommonScope(scope, source, "shutdown", includeLogTail: true);
+            ApplyCommonScope(scope, source, TelemetryEventNames.SentryShutdown, includeLogTail: true);
             scope.Level = SentryLevel.Info;
             scope.SetTag("shutdown_intent", isRestart ? "restart" : "exit");
             scope.SetExtra("shutdown_intent", isRestart ? "restart" : "exit");
@@ -209,7 +209,7 @@ public sealed class SentryCrashTelemetryService : IDisposable
             options.Dsn = SentryDsn;
             options.AutoSessionTracking = true;
             options.AttachStacktrace = true;
-            options.SendDefaultPii = true;
+            options.SendDefaultPii = false;
             options.MaxBreadcrumbs = 100;
             options.Release = TelemetryEnvironmentInfo.GetAppVersion();
             options.Environment = TelemetryEnvironmentInfo.GetEnvironment();
@@ -293,27 +293,19 @@ public sealed class SentryCrashTelemetryService : IDisposable
 
         scope.User = new SentryUser
         {
-            Id = telemetryId,
-            IpAddress = AutoIpAddress
+            Id = telemetryId
         };
 
         scope.SetTag("telemetry_channel", "sentry");
         scope.SetTag("event_type", eventType);
+        scope.SetTag("event_display_name", TelemetryEventNames.DisplayName(eventType));
         scope.SetTag("source", source);
-        scope.SetTag("install_id", installId);
-        scope.SetTag("telemetry_id", telemetryId);
         scope.SetTag("app_version", TelemetryEnvironmentInfo.GetAppVersion());
         scope.SetTag("environment", TelemetryEnvironmentInfo.GetEnvironment());
         scope.SetTag("os_name", TelemetryEnvironmentInfo.GetOsName());
         scope.SetTag("os_version", TelemetryEnvironmentInfo.GetOsVersion());
-        scope.SetTag("os_build", TelemetryEnvironmentInfo.GetOsBuild());
-        scope.SetTag("device_model", TelemetryEnvironmentInfo.GetDeviceModel());
-        scope.SetTag("device_arch", TelemetryEnvironmentInfo.GetDeviceArchitecture());
-        scope.SetTag("processor_count", TelemetryEnvironmentInfo.GetProcessorCount().ToString());
-        scope.SetTag("total_memory_mb", TelemetryEnvironmentInfo.GetTotalMemoryMB().ToString());
-        scope.SetTag("runtime_version", TelemetryEnvironmentInfo.GetRuntimeVersion());
-        scope.SetTag("clr_version", TelemetryEnvironmentInfo.GetClrVersion());
         scope.SetTag("language", TelemetryEnvironmentInfo.GetSystemLanguage());
+
         scope.SetExtra("install_id", installId);
         scope.SetExtra("telemetry_id", telemetryId);
         scope.SetExtra("app_version", TelemetryEnvironmentInfo.GetAppVersion());
@@ -328,6 +320,8 @@ public sealed class SentryCrashTelemetryService : IDisposable
         scope.SetExtra("runtime_version", TelemetryEnvironmentInfo.GetRuntimeVersion());
         scope.SetExtra("clr_version", TelemetryEnvironmentInfo.GetClrVersion());
         scope.SetExtra("language", TelemetryEnvironmentInfo.GetSystemLanguage());
+        scope.SetExtra("language_display_name", TelemetryEnvironmentInfo.GetSystemLanguageDisplayName());
+        scope.SetExtra("render_mode", TelemetryEnvironmentInfo.GetRenderMode());
         scope.SetExtra("log_file_path", AppLogger.LogFilePath);
 
         if (includeLogTail)

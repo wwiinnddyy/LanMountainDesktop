@@ -127,7 +127,37 @@ internal static class TelemetryEnvironmentInfo
 
     public static string GetClrVersion()
     {
-        return Environment.Version.ToString();
+        try
+        {
+            return System.Runtime.InteropServices.RuntimeEnvironment.GetSystemVersion() ?? "Unknown";
+        }
+        catch
+        {
+            return "Unknown";
+        }
+    }
+
+    public static string GetSystemLanguageDisplayName()
+    {
+        try
+        {
+            var culture = CultureInfo.CurrentUICulture;
+            return culture.NativeName ?? culture.Name ?? "Unknown";
+        }
+        catch
+        {
+            return "Unknown";
+        }
+    }
+
+    public static string GetRenderMode()
+    {
+        return Program.StartupRenderMode ?? "Unknown";
+    }
+
+    public static string GetScreenInfo()
+    {
+        return "requires_ui_thread";
     }
 
     public static string GetLocalDayPart(DateTimeOffset timestamp)

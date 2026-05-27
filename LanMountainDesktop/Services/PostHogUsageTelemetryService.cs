@@ -103,57 +103,57 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     public void TrackMainWindowOpened(string source, bool isVisible, string windowState)
     {
         CaptureEvent(
-            "main_window_opened",
+            TelemetryEventNames.MainWindowOpened,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
                 ["is_visible"] = isVisible,
                 ["window_state"] = windowState
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackMainWindowClosed(string source, bool wasVisible, string windowState)
     {
         CaptureEvent(
-            "main_window_closed",
+            TelemetryEventNames.MainWindowClosed,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
                 ["was_visible"] = wasVisible,
                 ["window_state"] = windowState
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackSettingsWindowOpened(string source, string? currentPageId)
     {
         CaptureEvent(
-            "settings_window_opened",
+            TelemetryEventNames.SettingsWindowOpened,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
                 ["current_page_id"] = currentPageId
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackSettingsWindowClosed(string source, string? currentPageId)
     {
         CaptureEvent(
-            "settings_window_closed",
+            TelemetryEventNames.SettingsWindowClosed,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
                 ["current_page_id"] = currentPageId
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackSettingsNavigation(string? fromPageId, string? toPageId, string source)
     {
         CaptureEvent(
-            "settings_navigation",
+            TelemetryEventNames.SettingsNavigation,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
@@ -167,37 +167,37 @@ public sealed class PostHogUsageTelemetryService : IDisposable
     public void TrackSettingsDrawerOpened(string? pageId, string? drawerTitle)
     {
         CaptureEvent(
-            "settings_drawer_opened",
+            TelemetryEventNames.SettingsDrawerOpened,
             new Dictionary<string, object?>
             {
                 ["page_id"] = pageId,
                 ["drawer_title"] = drawerTitle
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackSettingsDrawerClosed(string? pageId, string? drawerTitle)
     {
         CaptureEvent(
-            "settings_drawer_closed",
+            TelemetryEventNames.SettingsDrawerClosed,
             new Dictionary<string, object?>
             {
                 ["page_id"] = pageId,
                 ["drawer_title"] = drawerTitle
             },
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackDesktopComponentPlaced(DesktopComponentPlacementSnapshot placement, string source)
     {
         CaptureEvent(
-            "desktop_component_placed",
+            TelemetryEventNames.DesktopComponentPlaced,
             new Dictionary<string, object?>
             {
                 ["source"] = source
             },
             stateAfter: DescribePlacement(placement),
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackDesktopComponentMoved(
@@ -206,14 +206,14 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         string source)
     {
         CaptureEvent(
-            "desktop_component_moved",
+            TelemetryEventNames.DesktopComponentMoved,
             new Dictionary<string, object?>
             {
                 ["source"] = source
             },
             stateBefore: DescribePlacement(before),
             stateAfter: DescribePlacement(after),
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackDesktopComponentResized(
@@ -222,38 +222,38 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         string source)
     {
         CaptureEvent(
-            "desktop_component_resized",
+            TelemetryEventNames.DesktopComponentResized,
             new Dictionary<string, object?>
             {
                 ["source"] = source
             },
             stateBefore: DescribePlacement(before),
             stateAfter: DescribePlacement(after),
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackDesktopComponentDeleted(DesktopComponentPlacementSnapshot before, string source)
     {
         CaptureEvent(
-            "desktop_component_deleted",
+            TelemetryEventNames.DesktopComponentDeleted,
             new Dictionary<string, object?>
             {
                 ["source"] = source
             },
             stateBefore: DescribePlacement(before),
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackDesktopComponentEditorOpened(DesktopComponentPlacementSnapshot placement, string source)
     {
         CaptureEvent(
-            "desktop_component_editor_opened",
+            TelemetryEventNames.DesktopComponentEditorOpened,
             new Dictionary<string, object?>
             {
                 ["source"] = source
             },
             stateBefore: DescribePlacement(placement),
-            forceFlush: true);
+            forceFlush: false);
     }
 
     public void TrackSessionStarted(string source)
@@ -310,24 +310,29 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 return;
             }
 
-            var distinctId = identity.InstallId;
+            var distinctId = identity.TelemetryId;
             var personProps = new Dictionary<string, object?>
             {
                 ["install_id"] = identity.InstallId,
+                ["telemetry_id"] = identity.TelemetryId,
                 ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
                 ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
                 ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
                 ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
                 ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
                 ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
-                ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage()
+                ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage(),
+                ["os_build"] = TelemetryEnvironmentInfo.GetOsBuild(),
+                ["clr_version"] = TelemetryEnvironmentInfo.GetClrVersion(),
+                ["language_display_name"] = TelemetryEnvironmentInfo.GetSystemLanguageDisplayName(),
+                ["render_mode"] = TelemetryEnvironmentInfo.GetRenderMode()
             };
 
             _ = _client.IdentifyAsync(distinctId, personProps, null, _cts.Token);
 
             _client.Capture(
                 distinctId,
-                "app_first_launch",
+                TelemetryEventNames.AppFirstLaunch,
                 personProps,
                 groups: null,
                 sendFeatureFlags: false);
@@ -360,7 +365,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         _sequence = 0;
 
         CaptureEvent(
-            "app_session_start",
+            TelemetryEventNames.AppSessionStart,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
@@ -368,12 +373,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
                 ["session_start_utc"] = _sessionStartUtc.ToString("o"),
                 ["local_hour"] = _sessionStartUtc.ToLocalTime().Hour,
                 ["day_part"] = TelemetryEnvironmentInfo.GetLocalDayPart(_sessionStartUtc),
-                ["timezone"] = TimeZoneInfo.Local.Id,
-                ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
-                ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
-                ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
-                ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
-                ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture()
+                ["timezone"] = TimeZoneInfo.Local.Id
             },
             forceFlush: true);
 
@@ -391,7 +391,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         var durationMs = Math.Max(0, (long)(endUtc - _sessionStartUtc).TotalMilliseconds);
 
         CaptureEvent(
-            "app_session_end",
+            TelemetryEventNames.AppSessionEnd,
             new Dictionary<string, object?>
             {
                 ["source"] = source,
@@ -456,20 +456,14 @@ public sealed class PostHogUsageTelemetryService : IDisposable
             ["session_id"] = _sessionId,
             ["sequence"] = seq,
             ["timestamp_utc"] = DateTimeOffset.UtcNow.ToString("o"),
-            ["app_version"] = TelemetryEnvironmentInfo.GetAppVersion(),
-            ["os_name"] = TelemetryEnvironmentInfo.GetOsName(),
-            ["os_version"] = TelemetryEnvironmentInfo.GetOsVersion(),
-            ["device_model"] = TelemetryEnvironmentInfo.GetDeviceModel(),
-            ["device_arch"] = TelemetryEnvironmentInfo.GetDeviceArchitecture(),
-            ["runtime_version"] = TelemetryEnvironmentInfo.GetRuntimeVersion(),
-            ["language"] = TelemetryEnvironmentInfo.GetSystemLanguage()
+            ["event_display_name"] = TelemetryEventNames.DisplayName(eventName)
         };
 
         if (payload is not null)
         {
             foreach (var kvp in payload)
             {
-                properties[$"payload_{kvp.Key}"] = kvp.Value;
+                properties[kvp.Key] = kvp.Value;
             }
         }
 
@@ -516,6 +510,7 @@ public sealed class PostHogUsageTelemetryService : IDisposable
         {
             ["placement_id"] = placement.PlacementId,
             ["component_id"] = placement.ComponentId,
+            ["component_name"] = placement.ComponentName ?? placement.ComponentId,
             ["page_index"] = placement.PageIndex,
             ["row"] = placement.Row,
             ["column"] = placement.Column,

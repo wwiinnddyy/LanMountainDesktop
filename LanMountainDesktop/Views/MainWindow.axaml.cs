@@ -517,6 +517,7 @@ public partial class MainWindow : Window
             "MainWindow.OnOpened",
             IsVisible,
             WindowState.ToString());
+        TelemetryServices.Usage?.TrackSessionStarted("MainWindow.OnOpened");
         DesktopHost.SizeChanged += OnDesktopHostSizeChanged;
         RebuildDesktopGrid();
         LoadLauncherEntriesAsync();

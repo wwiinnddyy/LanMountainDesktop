@@ -1,4 +1,4 @@
-﻿namespace LanMountainDesktop.Models;
+namespace LanMountainDesktop.Models;
 
 public sealed class DesktopComponentPlacementSnapshot
 {
@@ -7,7 +7,7 @@ public sealed class DesktopComponentPlacementSnapshot
     public int PageIndex { get; set; }
 
     public string ComponentId { get; set; } = string.Empty;
-
+    public string ComponentName { get; set; } = string.Empty;
     public int Row { get; set; }
 
     public int Column { get; set; }

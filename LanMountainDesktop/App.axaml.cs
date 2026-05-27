@@ -1199,6 +1199,7 @@ public partial class App : Application
 
         try
         {
+            TelemetryServices.Usage?.TrackSessionEnded("App.PerformExitCleanup");
             TelemetryServices.Usage?.Shutdown(
                 _shutdownIntent == ShutdownIntent.RestartRequested,
                 "App.PerformExitCleanup");
