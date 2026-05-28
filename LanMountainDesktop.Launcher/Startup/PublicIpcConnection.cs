@@ -1,4 +1,3 @@
-using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Shared.IPC;
 
 namespace LanMountainDesktop.Launcher.Startup;

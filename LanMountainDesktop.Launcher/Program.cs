@@ -1,7 +1,5 @@
 using Avalonia;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Services;
-
 namespace LanMountainDesktop.Launcher;
 
 public static class Program

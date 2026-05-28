@@ -28,7 +28,7 @@ public partial class OobeWindow : Window
     private bool _migrateExistingData;
     
     // 主题选择
-    private Services.ThemeMode _selectedThemeMode = Services.ThemeMode.Light;
+    private ThemeMode _selectedThemeMode = ThemeMode.Light;
     private string _selectedAccentColor = "#0078D4";
     private MonetSource _selectedMonetSource = MonetSource.Wallpaper;
 
@@ -82,19 +82,19 @@ public partial class OobeWindow : Window
         // 浅色/深色模式选择
         if (this.FindControl<Border>("LightModeOption") is { } lightModeOption)
         {
-            lightModeOption.PointerPressed += (s, e) => SelectThemeMode(Services.ThemeMode.Light);
+            lightModeOption.PointerPressed += (s, e) => SelectThemeMode(ThemeMode.Light);
         }
 
         if (this.FindControl<Border>("DarkModeOption") is { } darkModeOption)
         {
-            darkModeOption.PointerPressed += (s, e) => SelectThemeMode(Services.ThemeMode.Dark);
+            darkModeOption.PointerPressed += (s, e) => SelectThemeMode(ThemeMode.Dark);
         }
 
         if (this.FindControl<RadioButton>("LightModeRadio") is { } lightModeRadio)
         {
             lightModeRadio.IsCheckedChanged += (s, e) =>
             {
-                if (lightModeRadio.IsChecked == true) SelectThemeMode(Services.ThemeMode.Light);
+                if (lightModeRadio.IsChecked == true) SelectThemeMode(ThemeMode.Light);
             };
         }
 
@@ -102,7 +102,7 @@ public partial class OobeWindow : Window
         {
             darkModeRadio.IsCheckedChanged += (s, e) =>
             {
-                if (darkModeRadio.IsChecked == true) SelectThemeMode(Services.ThemeMode.Dark);
+                if (darkModeRadio.IsChecked == true) SelectThemeMode(ThemeMode.Dark);
             };
         }
 
@@ -812,7 +812,7 @@ public partial class OobeWindow : Window
     }
 
     // 主题选择方法
-    private void SelectThemeMode(Services.ThemeMode mode)
+    private void SelectThemeMode(ThemeMode mode)
     {
         _selectedThemeMode = mode;
 
@@ -821,30 +821,30 @@ public partial class OobeWindow : Window
 
         if (this.FindControl<RadioButton>("LightModeRadio") is { } lightModeRadio)
         {
-            lightModeRadio.IsChecked = mode == Services.ThemeMode.Light;
+            lightModeRadio.IsChecked = mode == ThemeMode.Light;
         }
 
         if (this.FindControl<RadioButton>("DarkModeRadio") is { } darkModeRadio)
         {
-            darkModeRadio.IsChecked = mode == Services.ThemeMode.Dark;
+            darkModeRadio.IsChecked = mode == ThemeMode.Dark;
         }
 
         if (this.FindControl<Border>("LightModeOption") is { } lightModeOption)
         {
-            lightModeOption.BorderBrush = mode == Services.ThemeMode.Light
+            lightModeOption.BorderBrush = mode == ThemeMode.Light
                 ? Application.Current?.Resources["AccentFillColorDefaultBrush"] as IBrush
                 : Application.Current?.Resources["CardStrokeColorDefaultBrush"] as IBrush;
-            lightModeOption.BorderThickness = mode == Services.ThemeMode.Light
+            lightModeOption.BorderThickness = mode == ThemeMode.Light
                 ? new Thickness(2)
                 : new Thickness(1);
         }
 
         if (this.FindControl<Border>("DarkModeOption") is { } darkModeOption)
         {
-            darkModeOption.BorderBrush = mode == Services.ThemeMode.Dark
+            darkModeOption.BorderBrush = mode == ThemeMode.Dark
                 ? Application.Current?.Resources["AccentFillColorDefaultBrush"] as IBrush
                 : Application.Current?.Resources["CardStrokeColorDefaultBrush"] as IBrush;
-            darkModeOption.BorderThickness = mode == Services.ThemeMode.Dark
+            darkModeOption.BorderThickness = mode == ThemeMode.Dark
                 ? new Thickness(2)
                 : new Thickness(1);
         }

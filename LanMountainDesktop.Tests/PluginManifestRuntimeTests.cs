@@ -18,7 +18,7 @@ public sealed class PluginManifestRuntimeTests
             """;
 
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var manifest = PluginManifest.Load(stream, "plugin.json");
+        var manifest = LanMountainDesktop.PluginSdk.PluginManifest.Load(stream, "plugin.json");
 
         Assert.NotNull(manifest.Runtime);
         Assert.Equal(PluginRuntimeModes.InProcess, manifest.Runtime!.Mode);
@@ -40,7 +40,7 @@ public sealed class PluginManifestRuntimeTests
             """;
 
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
-        var ex = Assert.Throws<InvalidOperationException>(() => PluginManifest.Load(stream, "plugin.json"));
+        var ex = Assert.Throws<InvalidOperationException>(() => LanMountainDesktop.PluginSdk.PluginManifest.Load(stream, "plugin.json"));
 
         Assert.Contains("runtime.mode", ex.Message);
         Assert.Contains("shared-worker", ex.Message);

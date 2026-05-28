@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Startup;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -185,115 +184,18 @@ internal sealed partial class LauncherFlowCoordinator
         }
     }
 
+    private static async Task<PublicShellStatus?> TryGetPublicShellStatusAsync(
+        LanMountainDesktopIpcClient ipcClient) =>
+        await HostStartupMonitor.TryGetPublicShellStatusAsync(ipcClient).ConfigureAwait(false);
+
     private static async Task<StartupSuccessState?> TryRecoverActivationThroughExistingHostAsync(
         LanMountainDesktopIpcClient ipcClient,
         StartupSuccessTracker startupSuccessTracker,
-        TimeSpan timeout)
-    {
-        var activation = await TryActivateExistingHostWithStatusAsync(ipcClient, timeout).ConfigureAwait(false);
-        if (activation is null)
-        {
-            return null;
-        }
-
-        if (startupSuccessTracker.TryResolve(activation.Status, out var shellSuccess))
-        {
-            return shellSuccess;
-        }
-
-        if (activation.Accepted)
-        {
-            return startupSuccessTracker.BuildRecoverySuccessState();
-        }
-
-        return HostActivationPolicy.IsRecoverableActivationFailure(activation)
-            ? new StartupSuccessState(
-                StartupStage.Ready,
-                "startup_pending",
-                activation.Message)
-            : null;
-    }
-
-    private static async Task<PublicShellStatus?> TryGetPublicShellStatusAsync(
-        LanMountainDesktopIpcClient ipcClient)
-    {
-        try
-        {
-            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            return await shellProxy.GetShellStatusAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Failed to query public shell status: {ex.Message}");
-            return null;
-        }
-    }
-
-    private static async Task<StartupSuccessState?> TryRecoverWithPublicActivationAsync(
-        LanMountainDesktopIpcClient ipcClient,
-        Process hostProcess,
-        Task<StartupSuccessState> successTask,
-        StartupSuccessTracker startupSuccessTracker)
-    {
-        try
-        {
-            var shellProxy = ipcClient.CreateProxy<IPublicShellControlService>();
-            var activation = await shellProxy.ActivateMainWindowWithStatusAsync().ConfigureAwait(false);
-            StartupDiagnostics.TraceShellStatus("recovery_activation", activation.Status);
-            if (startupSuccessTracker.TryResolve(activation.Status, out var shellSuccess))
-            {
-                return shellSuccess;
-            }
-
-            var completedTask = await Task.WhenAny(successTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
-            if (completedTask == successTask)
-            {
-                return await successTask.ConfigureAwait(false);
-            }
-
-            if (!hostProcess.HasExited && (activation.Accepted || HostActivationPolicy.IsRecoverableActivationFailure(activation)))
-            {
-                return startupSuccessTracker.BuildRecoverySuccessState();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn($"Public activation recovery failed: {ex.Message}");
-        }
-
-        return null;
-    }
-
-    private static LoadingStateMessage BuildDelayedLoadingState(
-        LoadingStateMessage loadingState,
-        string summaryMessage,
-        string detailMessage,
-        DateTimeOffset startedAtUtc)
-    {
-        var delayedItems = loadingState.ActiveItems
-            .Where(item => !string.Equals(item.Id, "launcher-soft-timeout", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        delayedItems.Insert(0, new LoadingItem
-        {
-            Id = "launcher-soft-timeout",
-            Type = LoadingItemType.System,
-            Name = "Startup still in progress",
-            Description = detailMessage,
-            State = LoadingState.Delayed,
-            ProgressPercent = Math.Max(loadingState.OverallProgressPercent, 1),
-            Message = detailMessage,
-            StartTime = startedAtUtc
-        });
-
-        return loadingState with
-        {
-            ActiveItems = delayedItems,
-            Message = summaryMessage,
-            Timestamp = DateTimeOffset.UtcNow,
-            TotalCount = Math.Max(loadingState.TotalCount, delayedItems.Count)
-        };
-    }
+        TimeSpan timeout) =>
+        await HostStartupMonitor.TryRecoverActivationThroughExistingHostAsync(
+            ipcClient,
+            startupSuccessTracker,
+            timeout).ConfigureAwait(false);
 
     private static Dictionary<string, string> BuildAttemptDetails(
         StartupAttemptRecord? trackedAttempt,

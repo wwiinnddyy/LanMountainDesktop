@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;

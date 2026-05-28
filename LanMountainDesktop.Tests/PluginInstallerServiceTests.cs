@@ -1,4 +1,4 @@
-using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Plugins;
 using System.IO.Compression;
 using Xunit;
 
