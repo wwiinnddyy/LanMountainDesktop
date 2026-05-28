@@ -33,7 +33,7 @@ internal sealed class HostStartupMonitor
         string ActivationFailureReason,
         bool SoftTimeoutShown,
         Action<bool?, bool, bool> PublishCoordinatorStatus,
-        Func<bool, bool, bool, Dictionary<string, string>> ComposeLaunchDetails);
+        Func<bool, bool, Dictionary<string, string>> ComposeLaunchDetails);
 
     internal sealed record Outcome(
         bool Success,
