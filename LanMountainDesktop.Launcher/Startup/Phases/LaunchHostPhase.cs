@@ -1,4 +1,5 @@
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Shell;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
 namespace LanMountainDesktop.Launcher.Startup;

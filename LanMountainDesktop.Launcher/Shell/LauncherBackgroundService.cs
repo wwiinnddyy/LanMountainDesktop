@@ -1,6 +1,6 @@
 using Avalonia.Media.Imaging;
 
-namespace LanMountainDesktop.Launcher.Infrastructure;
+namespace LanMountainDesktop.Launcher.Shell;
 
 /// <summary>
 /// 启动器背景图片服务

@@ -64,9 +64,9 @@ dotnet test LanMountainDesktop.slnx -c Debug
 
 ### 调试建议
 
-- **Launcher 启动问题优先看 `LanMountainDesktop.Launcher/Program.cs` 和 `Services/LauncherFlowCoordinator.cs`**
-- **版本管理问题优先看 `LanMountainDesktop.Launcher/Services/DeploymentLocator.cs`**
-- **更新系统问题优先看 `LanMountainDesktop.Launcher/Services/UpdateEngineService.cs` 和 `UpdateCheckService.cs`**
+- **Launcher 启动问题优先看 `LanMountainDesktop.Launcher/Program.cs`、`Shell/LauncherOrchestrator.cs` 和 `Startup/LaunchPipeline.cs`**
+- **版本管理问题优先看 `LanMountainDesktop.Launcher/Deployment/DeploymentLocator.cs`**
+- **更新系统问题优先看 `LanMountainDesktop.Launcher/Update/UpdateEngineFacade.cs`、`Update/LegacyUpdateApplier.cs`、`Update/PlondsUpdateApplier.cs` 和 `UpdateCheckService.cs`**
 - 启动问题优先看 `LanMountainDesktop/Program.cs` 和 `LanMountainDesktop/App.axaml.cs`
 - 设置窗口和设置页问题优先看 `LanMountainDesktop/Views/`、`ViewModels/` 与相关 `Services/`
 - 插件加载与安装问题优先看 `LanMountainDesktop/plugins/`

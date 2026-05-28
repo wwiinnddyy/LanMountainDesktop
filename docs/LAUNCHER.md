@@ -142,7 +142,7 @@ Task<UpdateCheckResult> CheckForUpdateAsync(
 - `Preview` - 检查所有版本 (包括 `prerelease=true`)
 
 ### IUpdateEngine / UpdateEngineFacade
-**职责**: 下载、验证、应用更新（实现位于 `Update/UpdateEngineFacade.cs`，契约 `Update/IUpdateEngine.cs`）
+**职责**: `UpdateEngineFacade` 是 `IUpdateEngine` 薄门面；pending 检测、签名、Legacy/PLONDS apply、快照、checkpoint、回滚和清理分别位于 `Update/` 策略/基础设施类。
 
 **关键方法**:
 ```csharp
@@ -325,68 +325,37 @@ static async Task<int> Main(string[] args)
 }
 ```
 
-**App.axaml.cs**:
+**App.axaml.cs / Shell 入口**:
 ```csharp
 public override void OnFrameworkInitializationCompleted()
 {
-    var appRoot = Commands.ResolveAppRoot(context);
-    var deploymentLocator = new DeploymentLocator(appRoot);
-    var updateCheckService = new UpdateCheckService("owner", "repo");
-    
-    var coordinator = new LauncherFlowCoordinator(
-        context,
-        deploymentLocator,
-        new OobeStateService(appRoot),
-        new UpdateEngineService(deploymentLocator),
-        updateCheckService,
-        new PluginInstallerService());
-    
-    _ = RunCoordinatorAsync(desktop, coordinator);
+    var splashWindow = LaunchEntryHandler.CreateSplashWindow();
+    splashWindow.Show();
+    _ = LauncherCompositionRoot.RunOrchestratorWithSplashAsync(desktop, context, splashWindow);
 }
 ```
 
-**LauncherFlowCoordinator.RunAsync()**:
+**LaunchPipeline**:
 ```csharp
-public async Task<LauncherResult> RunAsync()
+internal sealed class LaunchPipeline
 {
-    // 1. 清理旧版本
-    _deploymentLocator.CleanupDestroyedDeployments();
-    
-    // 2. OOBE
-    if (_oobeStateService.IsFirstRun())
+    public async Task<LauncherResult> ExecuteAsync(LaunchContext context, CancellationToken cancellationToken = default)
     {
-        foreach (var step in _oobeSteps)
-            await step.RunAsync(CancellationToken.None);
-    }
-    
-    // 3. Splash
-    var splashWindow = await Dispatcher.UIThread.InvokeAsync(() =>
-    {
-        var window = new SplashWindow();
-        window.Show();
-        return window;
-    });
-    
-    try
-    {
-        // 4. 应用更新
-        var updateResult = await _updateEngine.ApplyPendingUpdateAsync();
-        if (!updateResult.Success)
-            Logger.Warn("Update apply failed, will try to launch existing version.");
+        foreach (var phase in _phases)
+        {
+            var result = await phase.ExecuteAsync(context, cancellationToken);
+            if (result.Status == LaunchPhaseStatus.Completed)
+            {
+                return result.Result!;
+            }
+        }
 
-        // 5. 启动主程序（插件 pending 由 Host 应用，不在 Launcher 启动步骤处理）
-        var hostResult = await LaunchHostWithIpcAsync();
-        if (!hostResult.Success)
-            return hostResult;
-        
-        return new LauncherResult { Success = true };
-    }
-    finally
-    {
-        await Dispatcher.UIThread.InvokeAsync(() => splashWindow.Close());
+        return LaunchResultBuilder.BuildFailure("launch", "pipeline_incomplete", "Launch pipeline finished without producing a result.");
     }
 }
 ```
+
+`LauncherFlowCoordinator` 已删除。GUI 顶层生命周期由 `LauncherGuiCoordinator` 处理，启动阶段由 `LaunchPipeline` 和各 `ILaunchPhase` 承载；更新 apply 通过 `IUpdateEngine` 门面进入 `Update/` 策略类。
 
 ## 命令行接口
 
@@ -505,7 +474,7 @@ public class MyOobeStep : IOobeStep
 }
 ```
 
-2. 在 `LauncherFlowCoordinator` 中注册:
+2. 在 `Shell/LauncherOrchestrator.cs` 的 OOBE step 组装处注册，或通过后续 `ILaunchPhase`/OOBE 装配点接入：
 ```csharp
 _oobeSteps = [
     new WelcomeOobeStep(_oobeStateService),

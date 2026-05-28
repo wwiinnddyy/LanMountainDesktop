@@ -22,7 +22,7 @@ internal static class LauncherServiceRegistration
         services.AddSingleton(new DeploymentLocator(appRoot));
         services.AddSingleton(sp => new OobeStateService(appRoot));
         services.AddSingleton(sp => new DataLocationResolver(appRoot));
-        services.AddSingleton<IUpdateEngine>(sp => new UpdateEngineFacade(sp.GetRequiredService<DeploymentLocator>()));
+        services.AddSingleton(sp => UpdateEngineFactory.Create(sp.GetRequiredService<DeploymentLocator>()));
         services.AddSingleton<HostLaunchService>();
         services.AddSingleton<StartupAttemptRegistry>();
         services.AddSingleton<ILaunchPhase, CleanupDeploymentsPhase>();

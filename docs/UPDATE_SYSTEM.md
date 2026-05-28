@@ -36,7 +36,7 @@ UpdateCheckService.CheckForUpdateAsync()
     ↓
 有新版本? ──No→ 继续启动
     ↓ Yes
-UpdateEngineService.DownloadAsync()
+IUpdateEngine.DownloadAsync() / UpdateEngineFacade
     ├─ 下载 files-{version}.json
     ├─ 下载 files-{version}.json.sig
     └─ 下载 delta-{old}-to-{new}.zip (或完整包)
@@ -45,17 +45,13 @@ UpdateEngineService.DownloadAsync()
     ↓
 下次启动时
     ↓
-UpdateEngineService.ApplyPendingUpdate()
-    ├─ 验证签名
-    ├─ 创建 app-{new}/ 目录
-    ├─ 标记 .partial
-    ├─ 解压增量包
-    ├─ 从旧版本复用未变更文件
-    ├─ 验证所有文件 SHA256
-    ├─ 删除 .partial
-    ├─ 添加 .current 到新版本
-    ├─ 标记旧版本 .destroy
-    └─ 保存更新快照
+IUpdateEngine.ApplyPendingUpdateAsync() / UpdateEngineFacade
+    ├─ PendingUpdateDetector 识别 Legacy/PLONDS pending 更新
+    ├─ UpdateSignatureVerifier 验证签名和哈希
+    ├─ LegacyUpdateApplier 或 PlondsUpdateApplier 应用文件
+    ├─ DeploymentActivator 切换 .current/.partial/.destroy
+    ├─ UpdateSnapshotStore / InstallCheckpointStore 记录快照和断点
+    └─ IncomingArtifactsCleaner 清理 incoming 缓存
     ↓
 启动新版本
     ↓
@@ -448,4 +444,3 @@ private static void EnsurePathWithinRoot(string targetPath, string rootPath)
 - Release pipeline now produces VeloPack native assets (eleases.win.json, *.nupkg, RELEASES).
 - Launcher remains the installer and rollback authority; only package generation moved to VeloPack.
 - Legacy iles.json + update.zip generation remains available only as a disabled fallback path in CI.
-

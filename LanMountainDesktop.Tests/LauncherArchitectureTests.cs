@@ -1,23 +1,22 @@
-using System.Reflection;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
 public sealed class LauncherArchitectureTests
 {
-    private static readonly string LauncherAssemblyName = "LanMountainDesktop.Launcher";
-
     [Fact]
-    public void Deployment_Update_Startup_Infrastructure_DoNotReferenceAvalonia()
+    public void CoreLauncherFolders_DoNotUseAvaloniaNamespaces()
     {
         var forbidden = new[] { "Deployment", "Update", "Startup", "Infrastructure" };
-        foreach (var nsSuffix in forbidden)
+        foreach (var folder in forbidden.Select(folder => Path.Combine(LauncherProjectRoot, folder)))
         {
-            var types = GetLauncherTypes($"LanMountainDesktop.Launcher.{nsSuffix}");
-            var assembly = types.First().Assembly;
-            Assert.DoesNotContain(
-                assembly.GetReferencedAssemblies(),
-                a => string.Equals(a.Name, "Avalonia", StringComparison.OrdinalIgnoreCase));
+            var offenders = Directory
+                .EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories)
+                .Where(file => File.ReadAllText(file).Contains("using Avalonia", StringComparison.Ordinal))
+                .Select(RelativeToRepo)
+                .ToArray();
+
+            Assert.Empty(offenders);
         }
     }
 
@@ -29,13 +28,59 @@ public sealed class LauncherArchitectureTests
         Assert.Null(coordinator);
     }
 
-    private static IEnumerable<Type> GetLauncherTypes(string namespacePrefix)
+    [Fact]
+    public void CliAndShellEntryHandlers_DoNotDependOnConcreteUpdateEngineFacade()
     {
-        var assembly = AppDomain.CurrentDomain.GetAssemblies()
-            .FirstOrDefault(a => string.Equals(a.GetName().Name, LauncherAssemblyName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException("Launcher assembly not loaded.");
+        var guardedFiles = new[]
+        {
+            Path.Combine(LauncherProjectRoot, "Infrastructure", "Commands.cs"),
+            Path.Combine(LauncherProjectRoot, "Shell", "ApplyUpdateGuiFlow.cs")
+        }.Concat(Directory.EnumerateFiles(
+            Path.Combine(LauncherProjectRoot, "Shell", "EntryHandlers"),
+            "*.cs",
+            SearchOption.AllDirectories));
 
-        return assembly.GetTypes()
-            .Where(t => t.Namespace is not null && t.Namespace.StartsWith(namespacePrefix, StringComparison.Ordinal));
+        var offenders = guardedFiles
+            .Where(file => File.ReadAllText(file).Contains("UpdateEngineFacade", StringComparison.Ordinal))
+            .Select(RelativeToRepo)
+            .ToArray();
+
+        Assert.Empty(offenders);
     }
+
+    [Fact]
+    public void LauncherFacadeAndCompositionRootStayThin()
+    {
+        AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Update", "UpdateEngineFacade.cs"), 140);
+        AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Shell", "LauncherCompositionRoot.cs"), 80);
+    }
+
+    private static string LauncherProjectRoot => Path.Combine(RepoRoot, "LanMountainDesktop.Launcher");
+
+    private static string RepoRoot
+    {
+        get
+        {
+            var current = new DirectoryInfo(AppContext.BaseDirectory);
+            while (current is not null)
+            {
+                if (File.Exists(Path.Combine(current.FullName, "LanMountainDesktop.slnx")))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new InvalidOperationException("Unable to locate repository root.");
+        }
+    }
+
+    private static void AssertFileLineCountAtMost(string path, int maxLines)
+    {
+        var lineCount = File.ReadLines(path).Count();
+        Assert.True(lineCount <= maxLines, $"{RelativeToRepo(path)} has {lineCount} lines; expected <= {maxLines}.");
+    }
+
+    private static string RelativeToRepo(string path) => Path.GetRelativePath(RepoRoot, path);
 }

@@ -36,7 +36,7 @@ internal static class Commands
     {
         var appRoot = ResolveAppRoot(context);
         var deploymentLocator = new DeploymentLocator(appRoot);
-        var updateEngine = new UpdateEngineFacade(deploymentLocator);
+        var updateEngine = UpdateEngineFactory.Create(deploymentLocator);
         var pluginInstaller = new PluginInstallerService();
         var pluginUpgrades = new PluginUpgradeQueueService(pluginInstaller);
 
@@ -63,7 +63,7 @@ internal static class Commands
 
     private static async Task<LauncherResult> ExecuteCoreAsync(
         CommandContext context,
-        UpdateEngineFacade updateEngine,
+        IUpdateEngine updateEngine,
         PluginInstallerService pluginInstaller,
         PluginUpgradeQueueService pluginUpgrades)
     {
@@ -84,7 +84,7 @@ internal static class Commands
         }
     }
 
-    private static async Task<LauncherResult> ExecuteUpdateAsync(CommandContext context, UpdateEngineFacade updateEngine)
+    private static async Task<LauncherResult> ExecuteUpdateAsync(CommandContext context, IUpdateEngine updateEngine)
     {
         return context.SubCommand.ToLowerInvariant() switch
         {
@@ -102,7 +102,7 @@ internal static class Commands
         };
     }
 
-    private static async Task<LauncherResult> DownloadUpdatePayloadAsync(CommandContext context, UpdateEngineFacade updateEngine)
+    private static async Task<LauncherResult> DownloadUpdatePayloadAsync(CommandContext context, IUpdateEngine updateEngine)
     {
         return await updateEngine.DownloadAsync(
             context.GetOption("manifest-url") ?? throw new InvalidOperationException("Missing --manifest-url."),
