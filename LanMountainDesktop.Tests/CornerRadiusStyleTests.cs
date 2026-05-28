@@ -69,7 +69,7 @@ public sealed class CornerRadiusStyleTests
             ThemeVariant: "Dark"));
 
         var context = new PluginDesktopComponentContext(
-            new PluginManifest("plugin.id", "Plugin Name", "plugin.dll"),
+            new LanMountainDesktop.PluginSdk.PluginManifest("plugin.id", "Plugin Name", "plugin.dll"),
             "C:\\Plugins\\plugin.id",
             "C:\\Data\\plugin.id",
             new NullServiceProvider(),

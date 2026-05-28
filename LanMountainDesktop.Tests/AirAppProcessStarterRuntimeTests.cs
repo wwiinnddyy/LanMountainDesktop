@@ -1,5 +1,5 @@
-using LanMountainDesktop.Launcher.Services;
-using LanMountainDesktop.Launcher.Services.AirApp;
+using LanMountainDesktop.Launcher.AirApp;
+using LanMountainDesktop.Launcher.Infrastructure;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;

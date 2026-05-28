@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Launcher;
-using LanMountainDesktop.Launcher.Services.AirApp;
+using LanMountainDesktop.Launcher.AirApp;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using Xunit;
 

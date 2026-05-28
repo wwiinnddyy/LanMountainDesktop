@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Services.Ipc;
 using LanMountainDesktop.Launcher.Startup;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
@@ -340,7 +339,7 @@ internal sealed partial class LauncherFlowCoordinator
                     {
                         softTimeoutShown = true;
                         reporter.Report("delayed", SoftTimeoutStatusMessage);
-                        loadingState = BuildDelayedLoadingState(
+                        loadingState = HostStartupMonitor.BuildDelayedLoadingState(
                             loadingState,
                             SoftTimeoutStatusMessage,
                             SoftTimeoutDetailsMessage,
