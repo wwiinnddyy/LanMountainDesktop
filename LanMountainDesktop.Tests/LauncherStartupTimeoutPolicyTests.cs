@@ -7,11 +7,10 @@ public sealed class LauncherStartupTimeoutPolicyTests
     [Fact]
     public void LauncherStartupTimeouts_MatchSlowStartupContract()
     {
-        var source = ReadRepositoryFile("LanMountainDesktop.Launcher", "Services", "LauncherFlowCoordinator.cs");
+        var source = ReadRepositoryFile("LanMountainDesktop.Launcher", "Startup", "StartupTimeoutPolicy.cs");
 
-        Assert.Contains("StartupSoftTimeout = TimeSpan.FromSeconds(30)", source);
-        Assert.Contains("StartupHardTimeout = TimeSpan.FromSeconds(120)", source);
-        Assert.DoesNotContain("StartupHardTimeout = TimeSpan.FromSeconds(30)", source);
+        Assert.Contains("SoftTimeout = TimeSpan.FromSeconds(30)", source);
+        Assert.Contains("HardTimeout = TimeSpan.FromSeconds(120)", source);
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)

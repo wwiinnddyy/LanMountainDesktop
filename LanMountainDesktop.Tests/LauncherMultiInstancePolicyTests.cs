@@ -1,5 +1,5 @@
 using LanMountainDesktop.Launcher;
-using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Startup;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
@@ -22,7 +22,7 @@ public sealed class LauncherMultiInstancePolicyTests
     {
         var context = CommandContext.FromArgs(["launch"]);
 
-        Assert.True(LauncherFlowCoordinator.ShouldProbeExistingHostBeforeLaunch(context));
+        Assert.True(HostActivationPolicy.ShouldProbeExistingHostBeforeLaunch(context));
     }
 
     [Fact]
@@ -33,16 +33,16 @@ public sealed class LauncherMultiInstancePolicyTests
             $"--{LauncherIpcConstants.LaunchSourceOptionName}=restart"
         ]);
 
-        Assert.False(LauncherFlowCoordinator.ShouldProbeExistingHostBeforeLaunch(context));
+        Assert.False(HostActivationPolicy.ShouldProbeExistingHostBeforeLaunch(context));
     }
 
     [Fact]
     public void ActivationExitCodes_AreClassifiedSeparatelyFromEarlyHostExit()
     {
-        Assert.True(LauncherFlowCoordinator.IsSuccessfulActivationExitCode(HostExitCodes.SecondaryActivationSucceeded));
-        Assert.True(LauncherFlowCoordinator.IsFailedActivationExitCode(HostExitCodes.SecondaryActivationFailed));
-        Assert.True(LauncherFlowCoordinator.IsFailedActivationExitCode(HostExitCodes.RestartLockNotAcquired));
-        Assert.False(LauncherFlowCoordinator.IsFailedActivationExitCode(1));
+        Assert.True(HostActivationPolicy.IsSuccessfulActivationExitCode(HostExitCodes.SecondaryActivationSucceeded));
+        Assert.True(HostActivationPolicy.IsFailedActivationExitCode(HostExitCodes.SecondaryActivationFailed));
+        Assert.True(HostActivationPolicy.IsFailedActivationExitCode(HostExitCodes.RestartLockNotAcquired));
+        Assert.False(HostActivationPolicy.IsFailedActivationExitCode(1));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class LauncherMultiInstancePolicyTests
                 mainWindowOpened: false,
                 desktopVisible: false));
 
-        Assert.True(LauncherFlowCoordinator.IsRecoverableActivationFailure(activation));
+        Assert.True(HostActivationPolicy.IsRecoverableActivationFailure(activation));
     }
 
     [Fact]
@@ -72,18 +72,18 @@ public sealed class LauncherMultiInstancePolicyTests
                 mainWindowOpened: false,
                 desktopVisible: false));
 
-        Assert.False(LauncherFlowCoordinator.IsRecoverableActivationFailure(activation));
+        Assert.False(HostActivationPolicy.IsRecoverableActivationFailure(activation));
     }
 
     [Fact]
     public void IsExistingHostReadyForLauncherDecision_RequiresPublicIpcReady()
     {
-        Assert.False(LauncherFlowCoordinator.IsExistingHostReadyForLauncherDecision(null));
-        Assert.False(LauncherFlowCoordinator.IsExistingHostReadyForLauncherDecision(CreateShellStatus(
+        Assert.False(HostActivationPolicy.IsExistingHostReadyForLauncherDecision(null));
+        Assert.False(HostActivationPolicy.IsExistingHostReadyForLauncherDecision(CreateShellStatus(
             publicIpcReady: false,
             mainWindowOpened: true,
             desktopVisible: true)));
-        Assert.True(LauncherFlowCoordinator.IsExistingHostReadyForLauncherDecision(CreateShellStatus(
+        Assert.True(HostActivationPolicy.IsExistingHostReadyForLauncherDecision(CreateShellStatus(
             publicIpcReady: true,
             mainWindowOpened: true,
             desktopVisible: true)));
