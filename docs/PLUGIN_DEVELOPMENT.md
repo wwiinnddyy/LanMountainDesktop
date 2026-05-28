@@ -524,6 +524,8 @@ LanMountainDesktop.Launcher.exe plugin install MyAwesomePlugin-1.0.0.laapp
 LanMountainDesktop.Launcher.exe launch
 ```
 
+应用内插件市场不会调用 Launcher 安装插件。市场安装会把 `.laapp` 下载到当前用户的 pending 队列，并在下一次 Host 启动、插件发现前应用；上面的 Launcher 命令仅作为本地维护/兼容入口保留。
+
 ### 4. 发布插件
 
 **选项 1: GitHub Release**

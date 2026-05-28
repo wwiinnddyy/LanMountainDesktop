@@ -27,9 +27,8 @@
 3. 首次启动显示 OOBE 引导 (`OobeWindow`)
 4. 显示 Splash 启动动画 (`SplashWindow`)
 5. 检查并应用待处理的更新 (`UpdateEngineService.ApplyPendingUpdate`)
-6. 处理插件升级队列 (`PluginUpgradeQueueService`)
-7. 启动主程序 `app-{version}/LanMountainDesktop.exe`
-8. 清理标记为 `.destroy` 的旧版本
+6. 启动主程序 `app-{version}/LanMountainDesktop.exe`（待处理插件安装/升级由 Host 在 `PluginRuntimeService.ApplyPendingPluginOperations()` 中应用，而非 Launcher 启动流程）
+7. 清理标记为 `.destroy` 的旧版本
 
 **主程序启动流程 (LanMountainDesktop.exe):**
 
@@ -98,12 +97,11 @@
 | 服务 | 职责 |
 |------|------|
 | `DeploymentLocator` | 扫描和定位 `app-*` 版本目录,选择最佳版本 |
-| `UpdateCheckService` | 调用 GitHub Release API 检查更新,支持 Stable/Preview 频道 |
 | `UpdateEngineService` | 下载、验证、应用增量更新,支持原子化更新和回滚 |
-| `LauncherFlowCoordinator` | 协调 OOBE → Splash → 更新 → 插件 → 启动主程序的完整流程 |
+| `LauncherFlowCoordinator` | 协调 OOBE → Splash → 更新 → 启动主程序的完整流程 |
 | `OobeStateService` | 管理首次运行状态 |
-| `PluginInstallerService` | 处理 `.laapp` 插件包安装 |
-| `PluginUpgradeQueueService` | 批量处理插件升级队列 |
+| `PluginInstallerService` | CLI 维护：`plugin install` 直接安装 `.laapp` |
+| `PluginUpgradeQueueService` | CLI 维护：`plugin update` 应用待处理队列（正常市场安装/升级由 Host 处理） |
 
 #### 版本管理机制
 
@@ -191,7 +189,7 @@ GitHub Release Assets:
 
 This repository is organized around a desktop host app plus a host-side plugin ecosystem. `LanMountainDesktop/` contains the application entry points, UI, services, component system, and plugin runtime integration. The surrounding projects provide the public SDK, shared contracts, appearance infrastructure, settings primitives, host abstractions, runtime support, and tests.
 
-**Launcher Architecture**: `LanMountainDesktop.Launcher/` serves as the single entry point, managing OOBE, splash screen, multi-version deployment, incremental updates, and plugin installation. It uses a version directory structure (`app-{version}/`) with marker files (`.current`, `.partial`, `.destroy`) to enable atomic updates and rollback capabilities. See the Chinese section above for detailed architecture documentation.
+**Launcher Architecture**: `LanMountainDesktop.Launcher/` serves as the single entry point, managing OOBE, splash screen, multi-version deployment, and incremental updates. In-app plugin market installation is Host-owned: packages are downloaded into the current user's pending plugin queue and applied by the Host before plugin discovery on the next startup. The Launcher still keeps plugin CLI commands as maintenance compatibility entry points. It uses a version directory structure (`app-{version}/`) with marker files (`.current`, `.partial`, `.destroy`) to enable atomic updates and rollback capabilities. See the Chinese section above for detailed architecture documentation.
 
 The runtime flow starts with the Launcher selecting the best version, then proceeds into `Program.cs`, into `App.axaml.cs`, initializes settings/theme/localization services, then boots the desktop shell, tray, windows, and plugin runtime. The most important behavior boundaries are component registration, plugin activation, appearance resources, and settings persistence.
 
@@ -272,3 +270,4 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 - `apply-update`, `plugin-install`, and `debug-preview` must not auto-open OOBE.
 - Elevation is allowed only for the installer, full installer update application, and user-confirmed legacy uninstall.
 - Default plugin install should stay inside the user's LocalAppData scope and should not ask for UAC.
+- Marketplace plugin installs are queued under the user's data root and take effect after restart; they do not use Launcher elevation.
