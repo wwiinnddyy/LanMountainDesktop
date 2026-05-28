@@ -50,6 +50,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     private AirAppMarketIndexDocument? _document;
     private AirAppMarketPluginEntry? _selectedPlugin;
     private Dictionary<string, PluginCatalogEntry> _installedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pendingRestartPluginIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _readmeContents = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _readmeErrors = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Bitmap?> _iconBitmaps = new(StringComparer.OrdinalIgnoreCase);
@@ -717,7 +718,9 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
             Content = isThisInstalling
                 ? T("market.button.installing", "Installing...")
                 : T(ButtonKey(installState), ButtonFallback(installState)),
-            IsEnabled = !_isInstalling && isCompatible && installState != AirAppMarketInstallState.Installed,
+            IsEnabled = !_isInstalling &&
+                        isCompatible &&
+                        installState is not AirAppMarketInstallState.Installed and not AirAppMarketInstallState.RestartRequired,
             MinWidth = minWidth,
             HorizontalAlignment = HorizontalAlignment.Right
         };
@@ -787,12 +790,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
 
             if (result.RestartRequired)
             {
+                _pendingRestartPluginIds.Add(result.Manifest.Id);
                 SetStatus(
                     F(
-                        "market.status.upgrade_staged_format",
-                        "Plugin '{0}' v{1} has been downloaded. Restart to complete the upgrade.",
-                        result.Manifest.Name,
-                        result.Manifest.Version),
+                        "market.status.install_success_format",
+                        "Plugin '{0}' has been staged. Restart the app to apply it.",
+                        result.Manifest.Name),
                     WarningBrush);
                 PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
             }
@@ -1001,6 +1004,12 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
         AirAppMarketPluginEntry plugin,
         out PluginCatalogEntry? installedPlugin)
     {
+        if (_pendingRestartPluginIds.Contains(plugin.Id))
+        {
+            installedPlugin = null;
+            return AirAppMarketInstallState.RestartRequired;
+        }
+
         if (!_installedPlugins.TryGetValue(plugin.Id, out installedPlugin))
         {
             return AirAppMarketInstallState.NotInstalled;
@@ -1268,6 +1277,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
+            AirAppMarketInstallState.RestartRequired => "market.detail.state.restart_required",
             AirAppMarketInstallState.UpdateAvailable => "market.detail.state.update_available",
             AirAppMarketInstallState.Installed => "market.detail.state.installed",
             _ => "market.detail.state.not_installed"
@@ -1278,6 +1288,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
+            AirAppMarketInstallState.RestartRequired => "Restart required",
             AirAppMarketInstallState.UpdateAvailable => "Update available",
             AirAppMarketInstallState.Installed => "Installed",
             _ => "Not installed"
@@ -1288,6 +1299,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
+            AirAppMarketInstallState.RestartRequired => "market.button.restart",
             AirAppMarketInstallState.UpdateAvailable => "market.button.update",
             AirAppMarketInstallState.Installed => "market.button.installed",
             _ => "market.button.install"
@@ -1298,6 +1310,7 @@ internal sealed class PluginMarketEmbeddedView : UserControl, IDisposable
     {
         return state switch
         {
+            AirAppMarketInstallState.RestartRequired => "Restart to apply",
             AirAppMarketInstallState.UpdateAvailable => "Update",
             AirAppMarketInstallState.Installed => "Installed",
             _ => "Install"

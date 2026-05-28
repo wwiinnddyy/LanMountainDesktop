@@ -1,160 +1,124 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
+using System.IO.Compression;
+using LanMountainDesktop.PluginPackaging;
+using LanMountainDesktop.PluginSdk;
 
 namespace LanMountainDesktop.Services;
 
 public sealed class PendingPluginUpgradeService
 {
-    private const string PendingUpgradesFileName = ".pending-plugin-upgrades.json";
-    private static readonly Lock Gate = new();
-    private readonly string _pendingUpgradesFilePath;
+    private readonly string _pluginsDirectory;
+    private readonly PendingPluginUpgradeStore _store;
+    private readonly PluginPackageInstaller _installer = new();
 
     public PendingPluginUpgradeService(string pluginsDirectory)
     {
-        _pendingUpgradesFilePath = Path.Combine(pluginsDirectory, PendingUpgradesFileName);
+        _pluginsDirectory = Path.GetFullPath(pluginsDirectory);
+        _store = new PendingPluginUpgradeStore(_pluginsDirectory);
     }
 
-    public IReadOnlyList<PendingPluginUpgrade> GetPendingUpgrades()
-    {
-        lock (Gate)
-        {
-            return ReadPendingUpgradesCore();
-        }
-    }
+    public IReadOnlyList<PendingPluginUpgrade> GetPendingUpgrades() => _store.GetPendingUpgrades();
 
     public void AddPendingUpgrade(string pluginId, string sourcePackagePath, string targetVersion)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePackagePath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(targetVersion);
+        AddPendingInstallOrUpgrade(pluginId, sourcePackagePath, targetVersion);
+    }
 
-        lock (Gate)
-        {
-            var upgrades = ReadPendingUpgradesCore().ToList();
-
-            upgrades.RemoveAll(u =>
-                string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
-
-            upgrades.Add(new PendingPluginUpgrade(
-                pluginId,
-                Path.GetFullPath(sourcePackagePath),
-                targetVersion,
-                DateTimeOffset.UtcNow));
-
-            SavePendingUpgradesCore(upgrades);
-
-            AppLogger.Info(
-                "PendingPluginUpgrade",
-                $"Added pending upgrade. PluginId='{pluginId}'; TargetVersion='{targetVersion}'; SourcePath='{sourcePackagePath}'.");
-        }
+    public void AddPendingInstallOrUpgrade(string pluginId, string sourcePackagePath, string targetVersion)
+    {
+        _store.AddPendingInstallOrUpgrade(pluginId, sourcePackagePath, targetVersion);
+        AppLogger.Info(
+            "PendingPluginUpgrade",
+            $"Added pending plugin operation. PluginId='{pluginId}'; TargetVersion='{targetVersion}'; Operation='{PendingPluginOperation.InstallOrUpgrade}'; SourcePath='{sourcePackagePath}'.");
     }
 
     public void RemovePendingUpgrade(string pluginId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pluginId);
-
-        lock (Gate)
+        var hadPending = _store.GetPendingUpgrades()
+            .Any(u => string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+        _store.RemovePendingUpgrade(pluginId);
+        if (hadPending)
         {
-            var upgrades = ReadPendingUpgradesCore().ToList();
-            var removed = upgrades.RemoveAll(u =>
-                string.Equals(u.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
-
-            if (removed > 0)
-            {
-                SavePendingUpgradesCore(upgrades);
-                AppLogger.Info(
-                    "PendingPluginUpgrade",
-                    $"Removed pending upgrade. PluginId='{pluginId}'.");
-            }
+            AppLogger.Info("PendingPluginUpgrade", $"Removed pending upgrade. PluginId='{pluginId}'.");
         }
     }
 
     public void ClearPendingUpgrades()
     {
-        lock (Gate)
+        _store.ClearPendingUpgrades();
+        AppLogger.Info("PendingPluginUpgrade", "Cleared all pending upgrades.");
+    }
+
+    public bool HasPendingUpgrades() => _store.HasPendingUpgrades();
+
+    public PendingPluginOperationApplySummary ApplyPendingOperations(
+        Action<PluginManifest>? prepareManifest = null)
+    {
+        var pending = _store.GetPendingUpgrades();
+        if (pending.Count == 0)
         {
-            if (File.Exists(_pendingUpgradesFilePath))
+            return new PendingPluginOperationApplySummary(0, 0, []);
+        }
+
+        Directory.CreateDirectory(_pluginsDirectory);
+        var succeeded = new List<PendingPluginUpgrade>();
+        var failures = new List<PendingPluginOperationFailure>();
+
+        foreach (var operation in pending)
+        {
+            try
             {
-                File.Delete(_pendingUpgradesFilePath);
-                AppLogger.Info("PendingPluginUpgrade", "Cleared all pending upgrades.");
+                if (operation.Operation != PendingPluginOperation.InstallOrUpgrade)
+                {
+                    throw new InvalidOperationException($"Unsupported pending plugin operation '{operation.Operation}'.");
+                }
+
+                var manifest = ReadManifestFromPackage(operation.SourcePackagePath);
+                prepareManifest?.Invoke(manifest);
+                _installer.Install(operation.SourcePackagePath, _pluginsDirectory);
+                succeeded.Add(operation);
+                AppLogger.Info(
+                    "PendingPluginUpgrade",
+                    $"Applied pending plugin operation. PluginId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.");
+            }
+            catch (Exception ex)
+            {
+                failures.Add(new PendingPluginOperationFailure(
+                    operation.PluginId,
+                    operation.Operation,
+                    ex.Message));
+                AppLogger.Warn(
+                    "PendingPluginUpgrade",
+                    $"Failed to apply pending plugin operation. PluginId='{operation.PluginId}'; TargetVersion='{operation.TargetVersion}'; Operation='{operation.Operation}'.",
+                    ex);
             }
         }
+
+        foreach (var operation in succeeded)
+        {
+            _store.RemovePendingUpgrade(operation.PluginId);
+        }
+
+        return new PendingPluginOperationApplySummary(succeeded.Count, failures.Count, failures);
     }
 
-    public bool HasPendingUpgrades()
+    private static PluginManifest ReadManifestFromPackage(string packagePath)
     {
-        lock (Gate)
-        {
-            return ReadPendingUpgradesCore().Count > 0;
-        }
-    }
+        using var archive = ZipFile.OpenRead(packagePath);
+        var entries = archive.Entries
+            .Where(entry => string.Equals(entry.Name, PluginSdkInfo.ManifestFileName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
-    private List<PendingPluginUpgrade> ReadPendingUpgradesCore()
-    {
-        if (!File.Exists(_pendingUpgradesFilePath))
+        if (entries.Length == 0)
         {
-            return [];
+            throw new InvalidOperationException($"Plugin package '{packagePath}' does not contain '{PluginSdkInfo.ManifestFileName}'.");
         }
 
-        try
+        if (entries.Length > 1)
         {
-            var json = File.ReadAllText(_pendingUpgradesFilePath);
-            var upgrades = JsonSerializer.Deserialize<List<PendingPluginUpgrade>>(json);
-            return upgrades?.Where(u => u.IsValid()).ToList() ?? [];
+            throw new InvalidOperationException($"Plugin package '{packagePath}' contains multiple '{PluginSdkInfo.ManifestFileName}' files.");
         }
-        catch (Exception ex)
-        {
-            AppLogger.Warn(
-                "PendingPluginUpgrade",
-                $"Failed to read pending upgrades from '{_pendingUpgradesFilePath}'.",
-                ex);
-            return [];
-        }
-    }
 
-    private void SavePendingUpgradesCore(List<PendingPluginUpgrade> upgrades)
-    {
-        try
-        {
-            var directory = Path.GetDirectoryName(_pendingUpgradesFilePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var json = JsonSerializer.Serialize(upgrades, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-
-            File.WriteAllText(_pendingUpgradesFilePath, json);
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Error(
-                "PendingPluginUpgrade",
-                $"Failed to save pending upgrades to '{_pendingUpgradesFilePath}'.",
-                ex);
-            throw;
-        }
-    }
-}
-
-public sealed record PendingPluginUpgrade(
-    string PluginId,
-    string SourcePackagePath,
-    string TargetVersion,
-    DateTimeOffset CreatedAt)
-{
-    public bool IsValid()
-    {
-        return !string.IsNullOrWhiteSpace(PluginId) &&
-               !string.IsNullOrWhiteSpace(SourcePackagePath) &&
-               !string.IsNullOrWhiteSpace(TargetVersion) &&
-               File.Exists(SourcePackagePath);
+        using var stream = entries[0].Open();
+        return PluginManifest.Load(stream, $"{packagePath}!/{entries[0].FullName}");
     }
 }

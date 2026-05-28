@@ -191,23 +191,20 @@ void MarkCompleted()
 ```
 
 ### PluginInstallerService
-**职责**: 处理插件安装
+**职责**: CLI 维护命令下的插件包安装（`plugin install`）。应用内插件市场安装由 Host 在启动时应用 pending 队列，不经过 Launcher 正常启动流程。
 
 **关键方法**:
 ```csharp
-// 安装插件包
-Task<PluginInstallResult> InstallAsync(
-    string packagePath,
-    string targetDirectory,
-    CancellationToken cancellationToken = default)
+// 安装插件包（CLI 维护）
+LauncherResult InstallPackage(string sourcePath, string pluginsDirectory)
 ```
 
 ### PluginUpgradeQueueService
-**职责**: 批量处理插件升级队列
+**职责**: CLI 维护命令下的待处理插件升级（`plugin update`）。Launcher 正常 GUI 启动流程不再应用 pending 队列；Host 在 `PluginRuntimeService.ApplyPendingPluginOperations()` 中统一处理。
 
 **关键方法**:
 ```csharp
-// 应用待处理的插件升级
+// 应用待处理的插件升级（CLI 维护）
 LauncherResult ApplyPendingUpgrades(string pluginsDirectory)
 ```
 
@@ -381,19 +378,12 @@ public async Task<LauncherResult> RunAsync()
     try
     {
         // 4. 应用更新
-        var updateResult = _updateEngine.ApplyPendingUpdate();
+        var updateResult = await _updateEngine.ApplyPendingUpdateAsync();
         if (!updateResult.Success)
-            return updateResult;
-        
-        // 5. 插件升级
-        var pluginsDir = Path.Combine(_deploymentLocator.GetAppRoot(), "plugins");
-        var queueResult = new PluginUpgradeQueueService(_pluginInstallerService)
-            .ApplyPendingUpgrades(pluginsDir);
-        if (!queueResult.Success)
-            return queueResult;
-        
-        // 6. 启动主程序
-        var hostResult = LaunchHost();
+            Logger.Warn("Update apply failed, will try to launch existing version.");
+
+        // 5. 启动主程序（插件 pending 由 Host 应用，不在 Launcher 启动步骤处理）
+        var hostResult = await LaunchHostWithIpcAsync();
         if (!hostResult.Success)
             return hostResult;
         
@@ -454,7 +444,7 @@ LanMountainDesktop.Launcher.exe update rollback
 LanMountainDesktop.Launcher.exe plugin install <path-to-plugin.laapp>
 ```
 
-安装 `.laapp` 插件包。
+维护兼容入口：直接把 `.laapp` 插件包写入指定插件目录。应用内插件市场不再使用 Launcher 做普通插件安装；市场安装会先把包下载到当前用户的 pending 队列，并在下一次 Host 启动、插件发现前应用。
 
 ## 开发指南
 
@@ -561,6 +551,7 @@ var updateCheckService = new UpdateCheckService(
 - `apply-update`, `plugin-install`, and `debug-preview` must not auto-enter OOBE.
 - Allowed elevation paths are limited to the installer itself, full installer update application, and user-confirmed legacy uninstall.
 - Default plugin installation targets the current user's LocalAppData scope and must not request elevation by default.
+- In-app market installs are deferred Host-side operations: download and verify now, apply from the per-user pending queue on the next Host startup.
 
 ## Public IPC Baseline
 

@@ -92,8 +92,9 @@ public sealed class PluginRuntimeService : IDisposable
     public void LoadInstalledPlugins()
     {
         Directory.CreateDirectory(PluginsDirectory);
-        ApplyPendingPluginDeletions();
         UnloadInstalledPlugins();
+        ApplyPendingPluginDeletions();
+        ApplyPendingPluginOperations();
         MergeDevSettingsFromSnapshot();
         AppLogger.Info("PluginRuntime", $"Loading installed plugins from '{PluginsDirectory}'.");
 
@@ -839,6 +840,27 @@ public sealed class PluginRuntimeService : IDisposable
 
         SavePendingPluginDeletions(remainingPaths);
         CleanupPendingDeletionDirectory();
+    }
+
+    private void ApplyPendingPluginOperations()
+    {
+        var pendingService = new PendingPluginUpgradeService(PluginsDirectory);
+        var result = pendingService.ApplyPendingOperations(manifest => _sharedContractManager.EnsureInstalled(manifest));
+        if (result.SuccessCount == 0 && result.FailureCount == 0)
+        {
+            return;
+        }
+
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Pending plugin operations applied before discovery. Success={result.SuccessCount}; Failure={result.FailureCount}; PluginsDirectory='{PluginsDirectory}'.");
+
+        foreach (var failure in result.Failures)
+        {
+            AppLogger.Warn(
+                "PluginRuntime",
+                $"Pending plugin operation failed and will remain queued. PluginId='{failure.PluginId}'; Operation='{failure.Operation}'; Error='{failure.ErrorMessage}'.");
+        }
     }
 
     private void CleanupPendingDeletionDirectory()

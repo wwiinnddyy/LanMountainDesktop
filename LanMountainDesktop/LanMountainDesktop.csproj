@@ -37,6 +37,7 @@
     <ProjectReference Include="..\LanMountainDesktop.Appearance\LanMountainDesktop.Appearance.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopComponents.Runtime\LanMountainDesktop.DesktopComponents.Runtime.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.DesktopHost\LanMountainDesktop.DesktopHost.csproj" />
+    <ProjectReference Include="..\LanMountainDesktop.PluginPackaging\LanMountainDesktop.PluginPackaging.csproj" />
     <ProjectReference Include="..\LanMountainDesktop.PluginSdk\LanMountainDesktop.PluginSdk.csproj" />
     <!-- Launcher 引用已移除 - Launcher 现在是独立应用 -->
   </ItemGroup>

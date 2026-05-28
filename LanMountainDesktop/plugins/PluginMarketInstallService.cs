@@ -15,7 +15,6 @@ namespace LanMountainDesktop.Services.PluginMarket;
 internal sealed class AirAppMarketInstallService : IDisposable
 {
     private readonly PluginRuntimeService _runtime;
-    private readonly LauncherClient _launcherClient = new();
     private readonly HttpClient _httpClient;
     private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
@@ -65,85 +64,62 @@ internal sealed class AirAppMarketInstallService : IDisposable
             return new AirAppMarketInstallResult(false, null, compatibilityError);
         }
 
-        var isUpgrade = IsPluginInstalled(plugin.Id);
-        if (isUpgrade)
-        {
-            return await InstallUpgradeAsync(plugin, sources, cancellationToken).ConfigureAwait(false);
-        }
-
-        return await InstallNewAsync(plugin, sources, cancellationToken).ConfigureAwait(false);
+        return await StageInstallOrUpgradeAsync(
+            plugin,
+            sources,
+            IsPluginInstalled(plugin.Id),
+            cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<AirAppMarketInstallResult> InstallNewAsync(
+    private async Task<AirAppMarketInstallResult> StageInstallOrUpgradeAsync(
         AirAppMarketPluginEntry plugin,
         IReadOnlyList<AirAppMarketPluginPackageSourceEntry> sources,
+        bool isUpgrade,
         CancellationToken cancellationToken)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
-            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
-            {
-                return new AirAppMarketInstallResult(
-                    false,
-                    null,
-                    "Launcher executable was not found. Expected it to be located in the application root directory (sibling to the app-* deployment folder).");
-            }
-        }
+        AppLogger.Info(
+            "PluginMarket",
+            $"Detected {(isUpgrade ? "upgrade" : "new install")} scenario. Downloading package for deferred install. PluginId='{plugin.Id}'.");
 
         var sourceErrors = new List<string>();
         foreach (var source in sources)
         {
-            var attemptResult = await TryInstallFromSourceAsync(plugin, source, cancellationToken).ConfigureAwait(false);
-            if (attemptResult.Success)
+            var downloadResult = await DownloadPackageAsync(plugin, source, cancellationToken).ConfigureAwait(false);
+            if (!downloadResult.Success || string.IsNullOrWhiteSpace(downloadResult.PackagePath))
             {
-                return new AirAppMarketInstallResult(true, attemptResult.Manifest, null);
+                if (!string.IsNullOrWhiteSpace(downloadResult.ErrorMessage))
+                {
+                    sourceErrors.Add($"{source.SourceKind}: {downloadResult.ErrorMessage}");
+                }
+
+                continue;
             }
 
-            if (attemptResult.Fatal)
+            try
             {
-                return new AirAppMarketInstallResult(false, null, attemptResult.ErrorMessage);
-            }
+                var manifest = ReadManifestFromPackage(downloadResult.PackagePath);
+                _pendingUpgradeService.AddPendingInstallOrUpgrade(
+                    manifest.Id,
+                    downloadResult.PackagePath,
+                    manifest.Version ?? plugin.Version);
 
-            if (!string.IsNullOrWhiteSpace(attemptResult.ErrorMessage))
+                AppLogger.Info(
+                    "PluginMarket",
+                    $"Plugin package queued for next restart. PluginId='{manifest.Id}'; Version='{manifest.Version ?? plugin.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
+
+                return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
+            }
+            catch (Exception ex)
             {
-                sourceErrors.Add($"{source.SourceKind}: {attemptResult.ErrorMessage}");
+                TryDeleteFile(downloadResult.PackagePath);
+                sourceErrors.Add($"{source.SourceKind}: {ex.Message}");
             }
         }
 
         var combinedMessage = sourceErrors.Count == 0
-            ? $"Failed to install plugin '{plugin.Id}' from all available package sources."
-            : $"Failed to install plugin '{plugin.Id}' from all available package sources. {string.Join(" ", sourceErrors)}";
+            ? $"Failed to stage plugin '{plugin.Id}' from all available package sources."
+            : $"Failed to stage plugin '{plugin.Id}' from all available package sources. {string.Join(" ", sourceErrors)}";
         return new AirAppMarketInstallResult(false, null, combinedMessage);
-    }
-
-    private async Task<AirAppMarketInstallResult> InstallUpgradeAsync(
-        AirAppMarketPluginEntry plugin,
-        IReadOnlyList<AirAppMarketPluginPackageSourceEntry> sources,
-        CancellationToken cancellationToken)
-    {
-        AppLogger.Info("PluginMarket", $"Detected upgrade scenario. Downloading package for deferred upgrade. PluginId='{plugin.Id}'.");
-
-        foreach (var source in sources)
-        {
-            var downloadResult = await DownloadPackageAsync(plugin, source, cancellationToken).ConfigureAwait(false);
-            if (downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.PackagePath))
-            {
-                _pendingUpgradeService.AddPendingUpgrade(plugin.Id, downloadResult.PackagePath, plugin.Version);
-
-                AppLogger.Info(
-                    "PluginMarket",
-                    $"Upgrade staged for next restart. PluginId='{plugin.Id}'; Version='{plugin.Version}'; PackagePath='{downloadResult.PackagePath}'.");
-
-                var manifest = ReadManifestFromPackage(downloadResult.PackagePath);
-                return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
-            }
-        }
-
-        return new AirAppMarketInstallResult(
-            false,
-            null,
-            $"Failed to download upgrade package for plugin '{plugin.Id}' from all available sources.");
     }
 
     private bool IsPluginInstalled(string pluginId)
@@ -197,83 +173,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
         }
 
         return null;
-    }
-
-    private async Task<AirAppMarketInstallAttemptResult> TryInstallFromSourceAsync(
-        AirAppMarketPluginEntry plugin,
-        AirAppMarketPluginPackageSourceEntry source,
-        CancellationToken cancellationToken = default)
-    {
-        var attemptPath = Path.Combine(
-            _downloadsDirectory,
-            $"{SanitizeFileName(plugin.Id)}-{SanitizeFileName(plugin.Version)}-{SanitizeFileName(source.SourceKind.ToString())}-{Guid.NewGuid():N}.laapp");
-
-        try
-        {
-            var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false);
-            AppLogger.Warn(
-                "PluginMarket",
-                $"Resolved package source for '{plugin.Id}' to '{resolvedDownloadUrl}' using '{source.SourceKind}'.");
-
-            var acquireResult = await AcquirePackageAsync(plugin, source, resolvedDownloadUrl, attemptPath, cancellationToken).ConfigureAwait(false);
-            if (!acquireResult.Success)
-            {
-                TryDeleteFile(attemptPath);
-                return new AirAppMarketInstallAttemptResult(false, false, null, acquireResult.ErrorMessage);
-            }
-
-            var verificationResult = await VerifyPackageAsync(plugin, attemptPath, cancellationToken).ConfigureAwait(false);
-            if (!verificationResult.Success)
-            {
-                TryDeleteFile(attemptPath);
-                return new AirAppMarketInstallAttemptResult(false, false, null, verificationResult.ErrorMessage);
-            }
-
-            PluginManifest manifest;
-            if (OperatingSystem.IsWindows())
-            {
-                var helperResult = await _launcherClient.InstallPackageAsync(
-                    attemptPath,
-                    _runtime.PluginsDirectory,
-                    cancellationToken).ConfigureAwait(false);
-                if (!helperResult.Success || string.IsNullOrWhiteSpace(helperResult.InstalledPackagePath))
-                {
-                    var helperMessage = helperResult.ErrorMessage ?? "Launcher plugin install failed.";
-                    AppLogger.Error(
-                        "PluginMarket",
-                        $"Windows launcher install failed for plugin '{plugin.Id}' from source '{source.SourceKind}'. " +
-                        $"Code='{helperResult.Code}'; Message='{helperMessage}'.");
-                    return new AirAppMarketInstallAttemptResult(false, true, null, helperMessage);
-                }
-
-                manifest = _runtime.RegisterInstalledPluginPackage(helperResult.InstalledPackagePath);
-            }
-            else
-            {
-                manifest = _runtime.InstallPluginPackage(attemptPath);
-            }
-
-            AppLogger.Info(
-                "PluginMarket",
-                $"Install staged successfully. PluginId='{manifest.Id}'; InstalledName='{manifest.Name}'; PackagePath='{attemptPath}'; SourceKind='{source.SourceKind}'.");
-            return new AirAppMarketInstallAttemptResult(true, true, manifest, null);
-        }
-        catch (OperationCanceledException)
-        {
-            AppLogger.Warn(
-                "PluginMarket",
-                $"Install canceled. PluginId='{plugin.Id}'; Version='{plugin.Version}'; SourceKind='{source.SourceKind}'; DownloadPath='{attemptPath}'.");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            AppLogger.Error(
-                "PluginMarket",
-                $"Install attempt failed. PluginId='{plugin.Id}'; Version='{plugin.Version}'; SourceKind='{source.SourceKind}'; DownloadPath='{attemptPath}'.",
-                ex);
-            TryDeleteFile(attemptPath);
-            return new AirAppMarketInstallAttemptResult(false, false, null, ex.Message);
-        }
     }
 
     private async Task<AirAppMarketAcquisitionResult> AcquirePackageAsync(
@@ -391,7 +290,7 @@ internal sealed class AirAppMarketInstallService : IDisposable
             var resolvedDownloadUrl = await _releaseResolverService.ResolveDownloadUrlAsync(plugin, source, cancellationToken).ConfigureAwait(false);
             AppLogger.Info(
                 "PluginMarket",
-                $"Downloading upgrade package for '{plugin.Id}' from '{resolvedDownloadUrl}'.");
+                $"Downloading package for deferred plugin install. PluginId='{plugin.Id}'; Source='{resolvedDownloadUrl}'.");
 
             var acquireResult = await AcquirePackageAsync(plugin, source, resolvedDownloadUrl, packagePath, cancellationToken).ConfigureAwait(false);
             if (!acquireResult.Success)
@@ -452,12 +351,6 @@ internal sealed class AirAppMarketInstallService : IDisposable
         var invalidChars = Path.GetInvalidFileNameChars();
         return new string(value.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
     }
-
-    private sealed record AirAppMarketInstallAttemptResult(
-        bool Success,
-        bool Fatal,
-        PluginManifest? Manifest,
-        string? ErrorMessage);
 
     private sealed record AirAppMarketAcquisitionResult(
         bool Success,

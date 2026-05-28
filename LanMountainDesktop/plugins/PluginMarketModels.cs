@@ -291,7 +291,8 @@ internal enum AirAppMarketInstallState
 {
     NotInstalled = 0,
     UpdateAvailable = 1,
-    Installed = 2
+    Installed = 2,
+    RestartRequired = 3
 }
 
 internal sealed record AirAppMarketLoadResult(

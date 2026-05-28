@@ -139,7 +139,7 @@ public sealed partial class PluginCatalogItemViewModel : ViewModelBase
         RefreshActionPresentation();
     }
 
-    public void ApplyInstallState(InstalledPluginInfo? installedPlugin, Version? hostVersion)
+    public void ApplyInstallState(InstalledPluginInfo? installedPlugin, Version? hostVersion, bool hasPendingRestart = false)
     {
         var isCompatible = hostVersion is null
             || !System.Version.TryParse(MinHostVersion, out var minHostVersion)
@@ -147,10 +147,11 @@ public sealed partial class PluginCatalogItemViewModel : ViewModelBase
 
         var isInstalled = installedPlugin is not null;
         var isUpdateAvailable = installedPlugin is not null && CompareVersions(Version, installedPlugin.Manifest.Version) > 0;
-        var requiresRestart = installedPlugin is not null &&
-                              installedPlugin.IsEnabled &&
-                              !installedPlugin.IsLoaded &&
-                              string.IsNullOrWhiteSpace(installedPlugin.ErrorMessage);
+        var requiresRestart = hasPendingRestart ||
+                              (installedPlugin is not null &&
+                               installedPlugin.IsEnabled &&
+                               !installedPlugin.IsLoaded &&
+                               string.IsNullOrWhiteSpace(installedPlugin.ErrorMessage));
 
         IsCompatibleWithHost = isCompatible;
         IsInstalled = isInstalled;
@@ -384,6 +385,7 @@ public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
     private readonly AirAppMarketReadmeService _readmeService;
     private readonly string _languageCode;
     private readonly Dictionary<string, InstalledPluginInfo> _installedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pendingRestartPluginIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly Version? _hostVersion;
     private bool _isInitialized;
     private bool _hasLoadedCatalog;
@@ -572,6 +574,7 @@ public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
             var result = await _pluginCatalog.InstallAsync(item.PluginId);
             if (result.Success)
             {
+                _pendingRestartPluginIds.Add(result.PluginId ?? item.PluginId);
                 RefreshInstalledSnapshot();
                 RefreshItemStates();
                 
@@ -579,7 +582,7 @@ public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
                 var pluginName = result.PluginName ?? item.Name;
                 StatusMessage = string.Format(
                     CultureInfo.CurrentCulture,
-                    L("market.status.install_success_restart_format", "✓ Plugin '{0}' installed successfully! Please restart the application to activate it."),
+                    L("market.status.install_success_restart_format", "Plugin '{0}' has been staged. Restart the app to apply it."),
                     pluginName);
                 
                 // 触发重启提醒
@@ -616,7 +619,10 @@ public sealed partial class PluginCatalogSettingsPageViewModel : ViewModelBase
     {
         foreach (var item in CatalogPlugins)
         {
-            item.ApplyInstallState(ResolveInstalledPlugin(item.PluginId), _hostVersion);
+            item.ApplyInstallState(
+                ResolveInstalledPlugin(item.PluginId),
+                _hostVersion,
+                _pendingRestartPluginIds.Contains(item.PluginId));
         }
 
         ApplyFilter();
