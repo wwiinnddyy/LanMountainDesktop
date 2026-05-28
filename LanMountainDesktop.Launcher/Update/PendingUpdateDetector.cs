@@ -12,23 +12,23 @@ internal sealed class PendingUpdateDetector(
     {
         if (File.Exists(paths.PlondsFileMapPath) && File.Exists(paths.PlondsSignaturePath))
         {
-            var pdcFileMapText = File.ReadAllText(paths.PlondsFileMapPath);
-            var pdcFileMap = JsonSerializer.Deserialize(pdcFileMapText, AppJsonContext.Default.PlondsFileMap);
-            if (pdcFileMap is null)
+            var plondsFileMapText = File.ReadAllText(paths.PlondsFileMapPath);
+            var plondsFileMap = JsonSerializer.Deserialize(plondsFileMapText, AppJsonContext.Default.PlondsFileMap);
+            if (plondsFileMap is null)
             {
                 return UpdateEngineResults.Failed("update.check", "invalid_manifest", "plonds-filemap.json is invalid.");
             }
 
-            var pdcVerified = signatureVerifier.Verify(
+            var plondsVerified = signatureVerifier.Verify(
                 paths.PlondsFileMapPath,
                 paths.PlondsSignaturePath,
                 UpdateEnginePaths.PlondsSignatureFileName);
-            if (!pdcVerified.Success)
+            if (!plondsVerified.Success)
             {
-                return UpdateEngineResults.Failed("update.check", "signature_failed", pdcVerified.Message);
+                return UpdateEngineResults.Failed("update.check", "signature_failed", plondsVerified.Message);
             }
 
-            var pdcMetadata = PlondsManifestParser.LoadMetadata(paths.PlondsUpdateMetadataPath);
+            var plondsMetadata = PlondsManifestParser.LoadMetadata(paths.PlondsUpdateMetadataPath);
             return new LauncherResult
             {
                 Success = true,
@@ -36,7 +36,7 @@ internal sealed class PendingUpdateDetector(
                 Code = "available",
                 Message = "Pending PLONDS update is available.",
                 CurrentVersion = deploymentLocator.GetCurrentVersion(),
-                TargetVersion = PlondsManifestParser.ResolveTargetVersion(pdcFileMap, pdcMetadata)
+                TargetVersion = PlondsManifestParser.ResolveTargetVersion(plondsFileMap, plondsMetadata)
             };
         }
 

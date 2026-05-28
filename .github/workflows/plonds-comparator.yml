@@ -1,4 +1,4 @@
-﻿name: PLONDS
+﻿name: PLONDS Comparator
 
 concurrency:
   group: plonds-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
@@ -87,13 +87,11 @@ jobs:
         env:
           UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
           PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
-          PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
         shell: bash
         run: |
           set -euo pipefail
           KEY="${PLONDS_SIGNING_KEY:-}"
           if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
-          if [[ -z "$KEY" ]]; then KEY="${PDC_SIGNING_KEY:-}"; fi
           if [[ -z "$KEY" ]]; then
             echo "No signing key is configured."
             exit 1

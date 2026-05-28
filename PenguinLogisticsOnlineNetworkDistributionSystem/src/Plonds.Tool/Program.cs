@@ -38,8 +38,8 @@ internal static class PlondsCli
                 case "build-index":
                     RunBuildIndex(options);
                     return Task.FromResult(0);
-                case "build-ddss":
-                    RunBuildDdss(options);
+                case "build-plonds":
+                    RunBuildPlonds(options);
                     return Task.FromResult(0);
                 default:
                     Console.Error.WriteLine($"Unknown command: {command}");
@@ -157,10 +157,10 @@ internal static class PlondsCli
         Console.WriteLine(manifestPath);
     }
 
-    private static void RunBuildDdss(Dictionary<string, string> options)
+    private static void RunBuildPlonds(Dictionary<string, string> options)
     {
-        var builder = new DdssManifestBuilder();
-        var manifestPath = builder.Build(new DdssBuildOptions(
+        var builder = new PlondsManifestBuilder();
+        var manifestPath = builder.Build(new PlondsBuildOptions(
             ReleaseTag: Require(options, "release-tag"),
             AssetsDirectory: Require(options, "assets-dir"),
             OutputRoot: Require(options, "output-dir"),
@@ -215,7 +215,7 @@ internal static class PlondsCli
         Console.WriteLine("  pack-payload --source-dir <dir> --output-zip <file>");
         Console.WriteLine("  build-delta --platform <platform> --current-version <v> --current-tag <tag> --current-zip <file> --output-dir <dir> --private-key <pem> [--baseline-tag <tag>] [--baseline-version <v>] [--baseline-zip <file>] [--is-full-payload] [--static-output-dir <dir>] [--update-base-url <url>]");
         Console.WriteLine("  build-index --release-tag <tag> --version <v> --platform-summaries-dir <dir> --output-dir <dir> --private-key <pem> [--channel <channel>]");
-        Console.WriteLine("  build-ddss --release-tag <tag> --assets-dir <dir> --output-dir <dir> --private-key <pem> --repository <owner/repo> [--s3-base-url <url>]");
+        Console.WriteLine("  build-plonds --release-tag <tag> --assets-dir <dir> --output-dir <dir> --private-key <pem> --repository <owner/repo> [--s3-base-url <url>]");
         Console.WriteLine("  sign --manifest <file> --private-key <pem> [--output <file>]");
         Console.WriteLine("  generate --current-version <v> --current-dir <dir> --platform <platform> --output-dir <dir> [--previous-version <v>] [--previous-dir <dir>]");
         Console.WriteLine("  publish --version <v> --app-artifacts-root <dir> --installer-artifacts-root <dir> --output-dir <dir> --private-key <pem> [--baseline-root <dir>]");

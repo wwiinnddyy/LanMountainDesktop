@@ -1,8 +1,8 @@
 ﻿namespace Plonds.Shared.Models;
 
-public sealed record DdssAssetEntry(
+public sealed record PlondsAssetEntry(
     string AssetId,
     string FileName,
     string Sha256,
     long Size,
-    IReadOnlyList<DdssMirrorEntry> Mirrors);
+    IReadOnlyList<PlondsMirrorEntry> Mirrors);

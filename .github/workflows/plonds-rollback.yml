@@ -1,4 +1,4 @@
-name: DDSS Rollback
+name: PLONDS Rollback
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
       contents: read
 
     concurrency:
-      group: ddss-rollback-${{ github.event.inputs.channel }}
+      group: plonds-rollback-${{ github.event.inputs.channel }}
       cancel-in-progress: false
 
     steps:
@@ -63,7 +63,7 @@ jobs:
           echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
           echo "S3_PUBLIC_BASE_URL=${PUBLIC_BASE}" >> "$GITHUB_ENV"
           echo "S3_BASE_URL=${PUBLIC_BASE}/releases/${TAG}/assets" >> "$GITHUB_ENV"
-          echo "DDSS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/ddss-latest.json" >> "$GITHUB_ENV"
+          echo "PLONDS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/plonds-latest.json" >> "$GITHUB_ENV"
 
       - name: Validate rollback target assets
         env:
@@ -77,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          for name in ddss.json ddss.json.sig; do
+          for name in plonds.json plonds.json.sig; do
             key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
             aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
               --bucket "$S3_BUCKET" \
@@ -90,10 +90,10 @@ jobs:
           set -euo pipefail
 
           mkdir -p rollback-output
-          pointer_file="rollback-output/ddss-latest.json"
+          pointer_file="rollback-output/plonds-latest.json"
 
-          manifest_url="${S3_BASE_URL}/ddss.json"
-          sig_url="${S3_BASE_URL}/ddss.json.sig"
+          manifest_url="${S3_BASE_URL}/plonds.json"
+          sig_url="${S3_BASE_URL}/plonds.json.sig"
           version="${RELEASE_TAG#v}"
           updated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -125,22 +125,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          pointer_file="rollback-output/ddss-latest.json"
+          pointer_file="rollback-output/plonds-latest.json"
 
           aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
             --bucket "$S3_BUCKET" \
-            --key "$DDSS_CHANNEL_POINTER_KEY" \
+            --key "$PLONDS_CHANNEL_POINTER_KEY" \
             --body "$pointer_file"
 
           aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
             --bucket "$S3_BUCKET" \
-            --key "$DDSS_CHANNEL_POINTER_KEY" >/dev/null
+            --key "$PLONDS_CHANNEL_POINTER_KEY" >/dev/null
 
-          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json" >/dev/null
+          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/plonds-latest.json" >/dev/null
 
       - name: Print rollback summary
         shell: bash
         run: |
           set -euo pipefail
           echo "Rolled back channel '${RELEASE_CHANNEL}' to '${RELEASE_TAG}'."
-          echo "Pointer: ${S3_PUBLIC_BASE_URL}/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json"
+          echo "Pointer: ${S3_PUBLIC_BASE_URL}/meta/channels/${RELEASE_CHANNEL}/plonds-latest.json"
