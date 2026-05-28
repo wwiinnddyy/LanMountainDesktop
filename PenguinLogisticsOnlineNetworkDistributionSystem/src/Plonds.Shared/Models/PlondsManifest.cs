@@ -1,7 +1,7 @@
 ﻿namespace Plonds.Shared.Models;
 
-public sealed record DdssManifest(
+public sealed record PlondsManifest(
     string FormatVersion,
     string ReleaseTag,
     DateTimeOffset GeneratedAt,
-    IReadOnlyList<DdssAssetEntry> Assets);
+    IReadOnlyList<PlondsAssetEntry> Assets);

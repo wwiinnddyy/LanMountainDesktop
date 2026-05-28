@@ -22,7 +22,6 @@ public enum UpdatePhase
 public enum UpdatePayloadKind
 {
     DeltaPlonds,
-    DeltaLegacy,
     FullInstaller
 }
 

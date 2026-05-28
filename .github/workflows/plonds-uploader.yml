@@ -1,13 +1,13 @@
-﻿name: DDSS
+﻿name: PLONDS Publisher
 
 concurrency:
-  group: ddss-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
+  group: plonds-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: false
 
 on:
   workflow_run:
     workflows:
-      - PLONDS
+      - PLONDS Comparator
     types:
       - completed
   workflow_dispatch:
@@ -61,7 +61,7 @@ jobs:
             CHANNEL="stable"
           fi
           echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
-          echo "DDSS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/ddss-latest.json" >> "$GITHUB_ENV"
+          echo "PLONDS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/plonds-latest.json" >> "$GITHUB_ENV"
           PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
           if [[ -z "$PUBLIC_BASE" ]]; then
             PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
@@ -80,13 +80,11 @@ jobs:
         env:
           UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
           PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
-          PDC_SIGNING_KEY: ${{ secrets.PDC_SIGNING_KEY }}
         shell: bash
         run: |
           set -euo pipefail
           KEY="${PLONDS_SIGNING_KEY:-}"
           if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
-          if [[ -z "$KEY" ]]; then KEY="${PDC_SIGNING_KEY:-}"; fi
           if [[ -z "$KEY" ]]; then
             echo "No signing key is configured."
             exit 1
@@ -141,7 +139,7 @@ jobs:
           for file in release-assets/*; do
             [[ -f "$file" ]] || continue
             name="$(basename "$file")"
-            if [[ "$name" == "ddss.json" || "$name" == "ddss.json.sig" ]]; then
+            if [[ "$name" == "plonds.json" || "$name" == "plonds.json.sig" ]]; then
               continue
             fi
             key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
@@ -211,21 +209,21 @@ jobs:
               --metadata "sha256=$sha256"
           done
 
-      - name: Build DDSS manifest
+      - name: Build PLONDS manifest
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p ddss-output
+          mkdir -p plonds-output
           dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- \
-            build-ddss \
+            build-plonds \
             --release-tag "$RELEASE_TAG" \
             --assets-dir release-assets \
-            --output-dir ddss-output \
+            --output-dir plonds-output \
             --private-key "$UPDATE_PRIVATE_KEY_PATH" \
             --repository "${{ github.repository }}" \
             --s3-base-url "$S3_BASE_URL"
 
-      - name: Validate DDSS asset references in Rainyun S3
+      - name: Validate PLONDS asset references in Rainyun S3
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -236,12 +234,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          keys=$(jq -r '.assets[]?.mirrors[]?.url // empty' ddss-output/ddss.json \
+          keys=$(jq -r '.assets[]?.mirrors[]?.url // empty' plonds-output/plonds.json \
             | sed -n 's#^.*/lanmountain/update/\(.*\)$#lanmountain/update/\1#p' \
             | sort -u)
 
           if [[ -z "$keys" ]]; then
-            echo "No S3-backed asset URLs found in ddss.json"
+            echo "No S3-backed asset URLs found in plonds.json"
             exit 1
           fi
 
@@ -252,15 +250,15 @@ jobs:
               --key "$key" >/dev/null
           done <<< "$keys"
 
-      - name: Upload DDSS manifest to release
+      - name: Upload PLONDS manifest to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" ddss-output/ddss.json ddss-output/ddss.json.sig --clobber
+          gh release upload "$RELEASE_TAG" plonds-output/plonds.json plonds-output/plonds.json.sig --clobber
 
-      - name: Upload DDSS manifest to Rainyun S3 staging
+      - name: Upload PLONDS manifest to Rainyun S3 staging
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -271,7 +269,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in ddss-output/ddss.json ddss-output/ddss.json.sig; do
+          for file in plonds-output/plonds.json plonds-output/plonds.json.sig; do
             name="$(basename "$file")"
             key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
             sha256="$(sha256sum "$file" | awk '{print $1}')"
@@ -282,11 +280,11 @@ jobs:
               --metadata "sha256=$sha256"
           done
 
-      - name: Prepare DDSS channel pointer
+      - name: Prepare PLONDS channel pointer
         shell: bash
         run: |
           set -euo pipefail
-          pointer_file="ddss-output/ddss-latest.json"
+          pointer_file="plonds-output/plonds-latest.json"
           cat > "$pointer_file" <<'JSON'
           {
             "schemaVersion": 1,
@@ -301,8 +299,8 @@ jobs:
           }
           JSON
 
-          manifest_url="${S3_BASE_URL}/ddss.json"
-          sig_url="${S3_BASE_URL}/ddss.json.sig"
+          manifest_url="${S3_BASE_URL}/plonds.json"
+          sig_url="${S3_BASE_URL}/plonds.json.sig"
           version="${RELEASE_TAG#v}"
           updated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -315,7 +313,7 @@ jobs:
 
           jq -e . "$pointer_file" >/dev/null
 
-      - name: Atomically publish DDSS channel pointer
+      - name: Atomically publish PLONDS channel pointer
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
@@ -326,8 +324,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pointer_file="ddss-output/ddss-latest.json"
-          staging_key="lanmountain/update/releases/${RELEASE_TAG}/assets/ddss-latest.json"
+          pointer_file="plonds-output/plonds-latest.json"
+          staging_key="lanmountain/update/releases/${RELEASE_TAG}/assets/plonds-latest.json"
 
           aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
             --bucket "$S3_BUCKET" \
@@ -336,14 +334,14 @@ jobs:
 
           aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
             --bucket "$S3_BUCKET" \
-            --key "$DDSS_CHANNEL_POINTER_KEY" \
+            --key "$PLONDS_CHANNEL_POINTER_KEY" \
             --body "$pointer_file"
 
           aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
             --bucket "$S3_BUCKET" \
-            --key "$DDSS_CHANNEL_POINTER_KEY" >/dev/null
+            --key "$PLONDS_CHANNEL_POINTER_KEY" >/dev/null
 
-          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/ddss-latest.json" >/dev/null
+          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/plonds-latest.json" >/dev/null
 
       - name: Verify Rainyun S3 PLONDS output
         env:

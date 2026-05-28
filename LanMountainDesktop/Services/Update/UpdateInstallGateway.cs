@@ -37,7 +37,7 @@ internal sealed class UpdateInstallGateway
                 return new InstallResult(false, lockError, false, lockErrorCode);
             }
 
-            if (payloadKind is UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy)
+            if (payloadKind is UpdatePayloadKind.DeltaPlonds)
             {
                 var launched = LaunchLauncherForApplyUpdate(launcherRoot);
                 if (!launched)
@@ -108,7 +108,7 @@ internal sealed class UpdateInstallGateway
             return false;
         }
 
-        var expectedKind = payloadKind is UpdatePayloadKind.DeltaLegacy or UpdatePayloadKind.DeltaPlonds ? "delta" : "full";
+        var expectedKind = payloadKind is UpdatePayloadKind.DeltaPlonds ? "delta" : "full";
         if (!string.Equals(deploymentLock.Kind, expectedKind, StringComparison.OrdinalIgnoreCase))
         {
             errorCode = "lock_conflict";

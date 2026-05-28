@@ -15,7 +15,7 @@ public sealed record UpdateManifest(
     IReadOnlyList<UpdateMirrorAsset>? InstallerMirrors,
     IReadOnlyDictionary<string, string> Metadata)
 {
-    public bool IsDelta => Kind is UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy;
+    public bool IsDelta => Kind is UpdatePayloadKind.DeltaPlonds;
 
     public long EstimatedDeltaBytes
     {

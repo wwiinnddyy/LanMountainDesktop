@@ -1,6 +1,6 @@
 ﻿namespace Plonds.Core.Publishing;
 
-public sealed record DdssBuildOptions(
+public sealed record PlondsBuildOptions(
     string ReleaseTag,
     string AssetsDirectory,
     string OutputRoot,

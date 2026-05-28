@@ -39,11 +39,11 @@ internal sealed class PlondsUpdateApplier(
             return UpdateEngineResults.Failed("update.apply", "invalid_manifest", "No PLONDS file entries were found.");
         }
 
-        var pdcMetadata = PlondsManifestParser.LoadMetadata(paths.PlondsUpdateMetadataPath);
+        var plondsMetadata = PlondsManifestParser.LoadMetadata(paths.PlondsUpdateMetadataPath);
         var currentDeployment = deploymentLocator.FindCurrentDeploymentDirectory();
         var currentVersion = deploymentLocator.GetCurrentVersion();
         var sourceVersion = string.IsNullOrWhiteSpace(currentVersion) ? "0.0.0" : currentVersion;
-        var expectedSourceVersion = PlondsManifestParser.ResolveSourceVersion(fileMap, pdcMetadata);
+        var expectedSourceVersion = PlondsManifestParser.ResolveSourceVersion(fileMap, plondsMetadata);
         if (!string.IsNullOrWhiteSpace(expectedSourceVersion) &&
             !string.Equals(expectedSourceVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
         {
@@ -53,7 +53,7 @@ internal sealed class PlondsUpdateApplier(
                 $"PLONDS update requires source version {expectedSourceVersion} but current is {sourceVersion}.");
         }
 
-        var targetVersion = PlondsManifestParser.ResolveTargetVersion(fileMap, pdcMetadata);
+        var targetVersion = PlondsManifestParser.ResolveTargetVersion(fileMap, plondsMetadata);
         if (string.IsNullOrWhiteSpace(targetVersion))
         {
             targetVersion = sourceVersion;

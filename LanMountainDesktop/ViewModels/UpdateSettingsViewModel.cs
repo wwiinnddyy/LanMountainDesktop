@@ -99,7 +99,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _forceReinstall;
 
     [ObservableProperty] private string _selectedUpdateChannelValue = UpdateSettingsValues.ChannelStable;
-    [ObservableProperty] private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePdc;
+    [ObservableProperty] private string _selectedUpdateSourceValue = UpdateSettingsValues.DownloadSourcePlonds;
     [ObservableProperty] private string _selectedUpdateModeValue = UpdateSettingsValues.ModeSilentDownload;
     [ObservableProperty] private double _downloadThreadsSliderValue = UpdateSettingsValues.DefaultDownloadThreads;
 
@@ -220,7 +220,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
             LatestVersionText = report.LatestVersion ?? string.Empty;
             PublishedAtText = report.PublishedAt?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture) ?? string.Empty;
             UpdateTypeText = GetUpdateTypeText(report.PayloadKind);
-            IsDeltaUpdate = report.PayloadKind is UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy;
+            IsDeltaUpdate = report.PayloadKind is UpdatePayloadKind.DeltaPlonds;
             StatusMessage = report.LatestVersion is null
                 ? GetUpdateAvailableStatusText(string.Empty)
                 : string.Format(CultureInfo.CurrentCulture, L("settings.update.status_available_format", "New version {0} is available. Click Download and Install."), report.LatestVersion);
@@ -627,7 +627,7 @@ public sealed partial class UpdateSettingsViewModel : ViewModelBase, IDisposable
 
         return payloadKind switch
         {
-            UpdatePayloadKind.DeltaPlonds or UpdatePayloadKind.DeltaLegacy => L("settings.update.type_delta", "Incremental Update"),
+            UpdatePayloadKind.DeltaPlonds => L("settings.update.type_delta", "Incremental Update"),
             UpdatePayloadKind.FullInstaller => L("settings.update.type_reinstall", "Reinstall"),
             _ => string.Empty
         };
