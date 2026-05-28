@@ -1,5 +1,6 @@
 using Avalonia;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Shell;
 namespace LanMountainDesktop.Launcher;
 
 public static class Program
@@ -32,6 +33,7 @@ public static class Program
             }
 
             LauncherRuntimeContext.Current = commandContext;
+            LauncherServiceRegistration.Initialize(commandContext);
 
             var appRoot = Commands.ResolveAppRoot(commandContext);
             var languageCode = LanguagePreferenceService.ResolveLanguageCode(appRoot);

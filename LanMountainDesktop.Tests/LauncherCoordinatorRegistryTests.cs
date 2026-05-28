@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using Xunit;
 

@@ -1,7 +1,6 @@
 using System.Text.Json;
 using LanMountainDesktop.Launcher;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Services;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;

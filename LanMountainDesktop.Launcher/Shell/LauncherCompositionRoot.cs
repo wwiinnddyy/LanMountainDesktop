@@ -19,17 +19,8 @@ internal static class LauncherCompositionRoot
         CommandContext context,
         string appRoot,
         StartupAttemptRegistry startupAttemptRegistry,
-        LauncherCoordinatorIpcServer coordinatorServer)
-    {
-        var deploymentLocator = new DeploymentLocator(appRoot);
-        return new LauncherOrchestrator(
-            context,
-            deploymentLocator,
-            new OobeStateService(appRoot),
-            new UpdateEngineService(deploymentLocator),
-            startupAttemptRegistry,
-            coordinatorServer);
-    }
+        LauncherCoordinatorIpcServer coordinatorServer) =>
+        LauncherServiceRegistration.CreateOrchestrator(context, startupAttemptRegistry, coordinatorServer);
 
     public static async Task RunOrchestratorWithSplashAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
@@ -161,7 +152,7 @@ internal static class LauncherCompositionRoot
     {
         var appRoot = Commands.ResolveAppRoot(context);
         var deploymentLocator = new DeploymentLocator(appRoot);
-        var updateEngine = new UpdateEngineService(deploymentLocator);
+        var updateEngine = new UpdateEngineFacade(deploymentLocator);
         var pluginInstaller = new PluginInstallerService();
         var pluginUpgrades = new PluginUpgradeQueueService(pluginInstaller);
 

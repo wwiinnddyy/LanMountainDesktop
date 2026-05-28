@@ -6,4 +6,3 @@ global using LanMountainDesktop.Launcher.Oobe;
 global using LanMountainDesktop.Launcher.Plugins;
 global using LanMountainDesktop.Launcher.Startup;
 global using LanMountainDesktop.Launcher.Update;
-global using LanMountainDesktop.Launcher.Services;

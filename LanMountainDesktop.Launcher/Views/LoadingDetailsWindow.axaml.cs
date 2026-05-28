@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Infrastructure;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using System.Collections.ObjectModel;
 using System.ComponentModel;

@@ -5,7 +5,6 @@ using System.Text.Json;
 using LanMountainDesktop;
 using LanMountainDesktop.Launcher;
 using LanMountainDesktop.Launcher.Models;
-using LanMountainDesktop.Launcher.Services;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Shared.Contracts.Update;
@@ -25,7 +24,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
 
         _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, Sha256Hex(newState));
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.True(result.Success, result.ErrorMessage);
@@ -49,7 +48,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
 
         _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, new string('0', 64));
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.False(result.Success);
@@ -71,7 +70,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
             targetVersion: "1.1.0",
             targetDirectory: Path.Combine(_directory.AppRoot, "app-1.1.0-0"));
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = service.RollbackLatest();
 
         Assert.False(result.Success);
@@ -87,7 +86,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
         _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, Sha256Hex(newState));
         _directory.WriteStaleInstallCheckpoint("9.9.9", "1.1.0");
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.False(result.Success);
@@ -101,7 +100,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
         _directory.StageLegacyUpdate("1.0.0", "1.1.0", "new-state");
         _directory.WriteStaleInstallCheckpoint("9.9.9", "1.1.0");
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.False(result.Success);
@@ -116,7 +115,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
         _directory.StagePlondsUpdate("1.0.0", "1.1.0", newState, Sha256Hex(newState));
         _directory.WriteValidPlondsResumeCheckpoint("1.0.0", "1.1.0");
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.True(result.Success, result.ErrorMessage);
@@ -135,7 +134,7 @@ public sealed class UpdateEngineRollbackRegressionTests : IDisposable
         _directory.StageLegacyUpdate("1.0.0", "1.1.0", "new-state");
         _directory.WriteValidLegacyResumeCheckpoint("1.0.0", "1.1.0");
 
-        var service = new UpdateEngineService(new DeploymentLocator(_directory.AppRoot));
+        var service = new UpdateEngineFacade(new DeploymentLocator(_directory.AppRoot));
         var result = await service.ApplyPendingUpdateAsync();
 
         Assert.True(result.Success, result.ErrorMessage);

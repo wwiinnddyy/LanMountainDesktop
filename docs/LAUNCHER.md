@@ -141,42 +141,34 @@ Task<UpdateCheckResult> CheckForUpdateAsync(
 - `Stable` - 只检查 `prerelease=false` 的版本
 - `Preview` - 检查所有版本 (包括 `prerelease=true`)
 
-### UpdateEngineService
-**职责**: 下载、验证、应用更新
+### IUpdateEngine / UpdateEngineFacade
+**职责**: 下载、验证、应用更新（实现位于 `Update/UpdateEngineFacade.cs`，契约 `Update/IUpdateEngine.cs`）
 
 **关键方法**:
 ```csharp
-// 检查待处理的更新
 LauncherResult CheckPendingUpdate()
-
-// 下载更新
-Task<LauncherResult> DownloadAsync(
-    string manifestUrl,
-    string signatureUrl,
-    string archiveUrl,
-    CancellationToken cancellationToken)
-
-// 应用待处理的更新
-LauncherResult ApplyPendingUpdate()
-
-// 回退到上一个版本
+Task<LauncherResult> DownloadAsync(...)
+Task<LauncherResult> ApplyPendingUpdateAsync()
 LauncherResult RollbackLatest()
-
-// 清理待删除的部署
 void CleanupDestroyedDeployments()
+void CleanupIncomingArtifacts()
 ```
 
-### LauncherFlowCoordinator
-**职责**: 协调完整的启动流程
+### LauncherOrchestrator / LaunchPipeline
+**职责**: 协调完整的启动流程（`Shell/LauncherOrchestrator.cs` + `Startup/LaunchPipeline.cs`）
 
-**启动流程**:
-1. 清理待删除的旧版本
-2. 检查是否首次运行,显示 OOBE
-3. 显示 Splash 窗口
-4. 应用待处理的更新
-5. 处理插件升级队列
-6. 启动主程序
-7. 关闭 Splash 窗口
+**启动阶段 (ILaunchPhase)**:
+1. `CleanupDeploymentsPhase` — 清理旧部署
+2. `ExistingHostProbePhase` — 多实例 / 现有 Host 探测
+3. `ApplyPendingUpdatePhase` — 应用 pending 更新
+4. `OobeGatePhase` — OOBE 步骤
+5. `LaunchHostPhase` — 启动 Host
+6. `MonitorStartupPhase` — IPC 启动监控
+
+**GUI 入口**: `Shell/LauncherCompositionRoot` + `Shell/LauncherServiceRegistration`（MS DI 轻量装配）
+
+### ~~LauncherFlowCoordinator~~ (已移除)
+已由 `LauncherOrchestrator` + `LaunchPipeline` 替代。
 
 ### OobeStateService
 **职责**: 管理首次运行状态

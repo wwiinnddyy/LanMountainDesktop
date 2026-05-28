@@ -6,7 +6,7 @@ using ContractsUpdate = LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Launcher.Update;
 
-internal sealed class UpdateEngineService
+internal sealed class UpdateEngineFacade : IUpdateEngine
 {
     private const string UpdateDirectoryName = "update";
     private const string IncomingDirectoryName = "incoming";
@@ -28,7 +28,7 @@ internal sealed class UpdateEngineService
     private readonly string _snapshotsRoot;
     private readonly string _installCheckpointPath;
 
-    public UpdateEngineService(DeploymentLocator deploymentLocator, IUpdateProgressReporter? progressReporter = null)
+    public UpdateEngineFacade(DeploymentLocator deploymentLocator, IUpdateProgressReporter? progressReporter = null)
     {
         _deploymentLocator = deploymentLocator;
         _progressReporter = progressReporter ?? new NullUpdateProgressReporter();
@@ -1674,7 +1674,7 @@ internal sealed class UpdateEngineService
 
     private sealed record RollbackAttemptResult(bool Success, string? ErrorMessage);
 
-    internal void CleanupIncomingArtifacts()
+    public void CleanupIncomingArtifacts()
     {
         foreach (var path in new[]
                  {

@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Services;
+using LanMountainDesktop.Launcher.Infrastructure;
 using LanMountainDesktop.Launcher.ViewModels;
 using LanMountainDesktop.Launcher.Views;
 
