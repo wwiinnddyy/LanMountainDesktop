@@ -2,6 +2,7 @@ using System.Diagnostics;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Launcher;
 using LanMountainDesktop.Launcher.AirApp;
+using LanMountainDesktop.Launcher.Shell.EntryHandlers;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using Xunit;
 
@@ -115,7 +116,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
     {
         var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(null));
 
-        Assert.True(LanMountainDesktop.Launcher.App.ShouldKeepAirAppBrokerAlive(Environment.ProcessId, service));
+        Assert.True(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(Environment.ProcessId, service));
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
     {
         var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(null));
 
-        Assert.False(LanMountainDesktop.Launcher.App.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
+        Assert.False(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
             BuiltInComponentIds.DesktopWorldClock,
             "clock-2"));
 
-        Assert.True(LanMountainDesktop.Launcher.App.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
+        Assert.True(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
     }
 
     [Fact]
