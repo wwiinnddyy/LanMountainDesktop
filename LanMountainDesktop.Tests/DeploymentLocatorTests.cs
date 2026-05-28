@@ -1,5 +1,4 @@
 using LanMountainDesktop.Launcher;
-using LanMountainDesktop.Launcher.Services;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;

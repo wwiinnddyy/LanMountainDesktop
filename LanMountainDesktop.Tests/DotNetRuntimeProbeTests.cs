@@ -1,4 +1,3 @@
-using LanMountainDesktop.Launcher.Services;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -192,7 +191,7 @@ public sealed class DotNetRuntimeProbeTests : IDisposable
             SearchedPaths = [hostPath]
         };
 
-        var result = LauncherFlowCoordinator.ValidateDotNetRuntimePrerequisite(
+        var result = HostLaunchService.ValidateDotNetRuntimePrerequisite(
             plan,
             resolution,
             CreateOptions(DotNetRuntimeArchitecture.X64));

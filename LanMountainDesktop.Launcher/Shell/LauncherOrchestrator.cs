@@ -13,7 +13,7 @@ internal sealed class LauncherOrchestrator
     private readonly CommandContext _context;
     private readonly DeploymentLocator _deploymentLocator;
     private readonly OobeStateService _oobeStateService;
-    private readonly UpdateEngineService _updateEngine;
+    private readonly IUpdateEngine _updateEngine;
     private readonly StartupAttemptRegistry _startupAttemptRegistry;
     private readonly LauncherCoordinatorIpcServer? _coordinatorIpcServer;
     private readonly DataLocationResolver _dataLocationResolver;
@@ -24,9 +24,10 @@ internal sealed class LauncherOrchestrator
         CommandContext context,
         DeploymentLocator deploymentLocator,
         OobeStateService oobeStateService,
-        UpdateEngineService updateEngine,
+        IUpdateEngine updateEngine,
         StartupAttemptRegistry startupAttemptRegistry,
-        LauncherCoordinatorIpcServer? coordinatorIpcServer = null)
+        LauncherCoordinatorIpcServer? coordinatorIpcServer = null,
+        LaunchPipeline? pipeline = null)
     {
         _context = context;
         _deploymentLocator = deploymentLocator;
@@ -40,7 +41,7 @@ internal sealed class LauncherOrchestrator
             new WelcomeOobeStep(_oobeStateService, _context),
             new DataLocationOobeStep(_dataLocationResolver)
         ];
-        _pipeline = new LaunchPipeline(
+        _pipeline = pipeline ?? new LaunchPipeline(
         [
             new CleanupDeploymentsPhase(),
             new ExistingHostProbePhase(),
