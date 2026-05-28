@@ -8,7 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Models;
 using LanMountainDesktop.Launcher.Resources;
-using LanMountainDesktop.Launcher.Infrastructure;
+using LanMountainDesktop.Launcher.Shell;
 
 namespace LanMountainDesktop.Launcher.Views;
 

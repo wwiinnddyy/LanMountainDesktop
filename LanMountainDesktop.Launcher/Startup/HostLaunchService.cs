@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using LanMountainDesktop.Launcher.Models;
+using LanMountainDesktop.Launcher.Shell;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 

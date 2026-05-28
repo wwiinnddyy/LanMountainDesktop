@@ -37,7 +37,7 @@ internal static class ApplyUpdateEntryHandler
         IClassicDesktopStyleApplicationLifetime desktop,
         CommandContext context,
         UpdateWindow window) =>
-        LauncherCompositionRoot.RunApplyUpdateWithWindowAsync(desktop, context, window);
+        ApplyUpdateGuiFlow.RunAsync(desktop, context, window);
 }
 
 internal static class AirAppBrokerEntryHandler

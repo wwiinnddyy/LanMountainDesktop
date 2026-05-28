@@ -26,7 +26,7 @@
 2. Launcher 扫描 `app-*` 目录,选择最佳版本 (优先 `.current` 标记,然后按版本号降序)
 3. 首次启动显示 OOBE 引导 (`OobeWindow`)
 4. 显示 Splash 启动动画 (`SplashWindow`)
-5. 检查并应用待处理的更新 (`UpdateEngineService.ApplyPendingUpdate`)
+5. 检查并应用待处理的更新 (`IUpdateEngine.ApplyPendingUpdateAsync` / `UpdateEngineFacade`)
 6. 启动主程序 `app-{version}/LanMountainDesktop.exe`（待处理插件安装/升级由 Host 在 `PluginRuntimeService.ApplyPendingPluginOperations()` 中应用，而非 Launcher 启动流程）
 7. 清理标记为 `.destroy` 的旧版本
 
@@ -97,8 +97,8 @@
 | 服务 | 职责 |
 |------|------|
 | `DeploymentLocator` | 扫描和定位 `app-*` 版本目录,选择最佳版本 |
-| `UpdateEngineService` | 下载、验证、应用增量更新,支持原子化更新和回滚 |
-| `LauncherFlowCoordinator` | 协调 OOBE → Splash → 更新 → 启动主程序的完整流程 |
+| `IUpdateEngine` / `UpdateEngineFacade` | 更新门面；pending 检测、签名、Legacy/PLONDS apply、回滚、清理委托给 `Update/` 策略类 |
+| `LauncherOrchestrator` / `LaunchPipeline` | 协调 OOBE → Splash → 更新 → 启动主程序的完整流程 |
 | `OobeStateService` | 管理首次运行状态 |
 | `PluginInstallerService` | CLI 维护：`plugin install` 直接安装 `.laapp` |
 | `PluginUpgradeQueueService` | CLI 维护：`plugin update` 应用待处理队列（正常市场安装/升级由 Host 处理） |

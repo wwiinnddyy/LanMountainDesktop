@@ -4,10 +4,20 @@ using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
-namespace LanMountainDesktop.Launcher.Startup;
+namespace LanMountainDesktop.Launcher.Shell;
 
 internal static class LaunchUiPresenter
 {
+    public static async Task HideSplashAsync(SplashWindow splashWindow)
+    {
+        await Dispatcher.UIThread.InvokeAsync(splashWindow.Hide);
+    }
+
+    public static async Task ShowSplashAsync(SplashWindow splashWindow)
+    {
+        await Dispatcher.UIThread.InvokeAsync(splashWindow.Show);
+    }
+
     public static async Task CloseWindowsAsync(SplashWindow splashWindow, LoadingDetailsWindow? loadingDetailsWindow)
     {
         try

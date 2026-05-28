@@ -1,7 +1,7 @@
 using Avalonia.Threading;
 using LanMountainDesktop.Launcher.Views;
 
-namespace LanMountainDesktop.Launcher.Infrastructure;
+namespace LanMountainDesktop.Launcher.Shell;
 
 internal sealed class DeferredSplashStageReporter : ISplashStageReporter
 {

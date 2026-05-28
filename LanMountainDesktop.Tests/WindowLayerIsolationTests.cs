@@ -130,7 +130,7 @@ public sealed class WindowLayerIsolationTests
     {
         var optionsSource = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "AirAppLaunchOptions.cs");
         var programSource = ReadRepositoryFile("LanMountainDesktop.AirAppHost", "Program.cs");
-        var starterSource = ReadRepositoryFile("LanMountainDesktop.Launcher", "Services", "AirApp", "IAirAppProcessStarter.cs");
+        var starterSource = ReadRepositoryFile("LanMountainDesktop.Launcher", "AirApp", "IAirAppProcessStarter.cs");
         var dataPathSource = ReadRepositoryFile("LanMountainDesktop", "Services", "AppDataPathProvider.cs");
 
         Assert.Contains("DataRoot", optionsSource);

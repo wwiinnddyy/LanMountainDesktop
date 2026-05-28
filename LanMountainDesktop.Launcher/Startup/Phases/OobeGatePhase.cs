@@ -1,4 +1,4 @@
-using Avalonia.Threading;
+using LanMountainDesktop.Launcher.Shell;
 
 namespace LanMountainDesktop.Launcher.Startup;
 
@@ -10,13 +10,13 @@ internal sealed class OobeGatePhase : ILaunchPhase
     {
         if (context.OobeDecision.ShouldShowOobe)
         {
-            await Dispatcher.UIThread.InvokeAsync(() => context.SplashWindow.Hide());
+            await LaunchUiPresenter.HideSplashAsync(context.SplashWindow).ConfigureAwait(false);
             foreach (var step in context.OobeSteps)
             {
                 await step.RunAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() => context.SplashWindow.Show());
+            await LaunchUiPresenter.ShowSplashAsync(context.SplashWindow).ConfigureAwait(false);
         }
 
         return new LaunchPhaseResult(LaunchPhaseStatus.Continue);

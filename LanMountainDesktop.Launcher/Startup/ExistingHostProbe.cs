@@ -1,3 +1,4 @@
+using LanMountainDesktop.Launcher.Shell;
 using LanMountainDesktop.Launcher.Views;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 using LanMountainDesktop.Shared.IPC;

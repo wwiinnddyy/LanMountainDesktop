@@ -1,3 +1,5 @@
+using LanMountainDesktop.Launcher.Shell;
+
 namespace LanMountainDesktop.Launcher.Startup;
 
 internal sealed class MonitorStartupPhase : ILaunchPhase

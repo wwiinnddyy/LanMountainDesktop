@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Styling;
 using FluentAvalonia.Styling;
 
-namespace LanMountainDesktop.Launcher.Infrastructure;
+namespace LanMountainDesktop.Launcher.Shell;
 
 /// <summary>
 /// 主题服务，管理启动器的主题设置
