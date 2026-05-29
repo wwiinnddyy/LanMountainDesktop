@@ -1,11 +1,10 @@
 using System.Text.Json;
-using LanMountainDesktop.Launcher.Models;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
-internal sealed class InstallCheckpointStore(UpdateEnginePaths paths)
+internal sealed class ApplyInstallCheckpointStore(PlondsApplyPaths paths)
 {
-    public InstallCheckpoint? Load()
+    public ApplyInstallCheckpoint? Load()
     {
         if (!File.Exists(paths.InstallCheckpointPath))
         {
@@ -20,7 +19,7 @@ internal sealed class InstallCheckpointStore(UpdateEnginePaths paths)
                 return null;
             }
 
-            return JsonSerializer.Deserialize(text, AppJsonContext.Default.InstallCheckpoint);
+            return JsonSerializer.Deserialize(text, UpdateApplyJsonContext.Default.ApplyInstallCheckpoint);
         }
         catch
         {
@@ -28,9 +27,9 @@ internal sealed class InstallCheckpointStore(UpdateEnginePaths paths)
         }
     }
 
-    public void Save(InstallCheckpoint checkpoint)
+    public void Save(ApplyInstallCheckpoint checkpoint)
     {
-        File.WriteAllText(paths.InstallCheckpointPath, JsonSerializer.Serialize(checkpoint, AppJsonContext.Default.InstallCheckpoint));
+        File.WriteAllText(paths.InstallCheckpointPath, JsonSerializer.Serialize(checkpoint, UpdateApplyJsonContext.Default.ApplyInstallCheckpoint));
     }
 
     public void Delete()

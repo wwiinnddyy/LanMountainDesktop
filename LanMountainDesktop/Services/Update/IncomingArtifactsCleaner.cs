@@ -1,6 +1,6 @@
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
-internal sealed class IncomingArtifactsCleaner(UpdateEnginePaths paths)
+internal sealed class IncomingArtifactsCleaner(PlondsApplyPaths paths)
 {
     public void Cleanup()
     {
@@ -12,7 +12,8 @@ internal sealed class IncomingArtifactsCleaner(UpdateEnginePaths paths)
                      paths.PlondsFileMapPath,
                      paths.PlondsSignaturePath,
                      paths.PlondsUpdateMetadataPath,
-                     paths.InstallCheckpointPath
+                     paths.InstallCheckpointPath,
+                     paths.DownloadMarkerPath
                  })
         {
             TryDeleteFile(path);

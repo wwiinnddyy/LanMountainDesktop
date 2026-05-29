@@ -33,8 +33,7 @@ public sealed class LauncherArchitectureTests
     {
         var guardedFiles = new[]
         {
-            Path.Combine(LauncherProjectRoot, "Infrastructure", "Commands.cs"),
-            Path.Combine(LauncherProjectRoot, "Shell", "ApplyUpdateGuiFlow.cs")
+            Path.Combine(LauncherProjectRoot, "Infrastructure", "Commands.cs")
         }.Concat(Directory.EnumerateFiles(
             Path.Combine(LauncherProjectRoot, "Shell", "EntryHandlers"),
             "*.cs",
@@ -49,9 +48,8 @@ public sealed class LauncherArchitectureTests
     }
 
     [Fact]
-    public void LauncherFacadeAndCompositionRootStayThin()
+    public void LauncherCompositionRootStaysThin()
     {
-        AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Update", "UpdateEngineFacade.cs"), 140);
         AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Shell", "LauncherCompositionRoot.cs"), 80);
     }
 

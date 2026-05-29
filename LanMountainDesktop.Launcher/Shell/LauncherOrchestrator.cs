@@ -13,7 +13,6 @@ internal sealed class LauncherOrchestrator
     private readonly CommandContext _context;
     private readonly DeploymentLocator _deploymentLocator;
     private readonly OobeStateService _oobeStateService;
-    private readonly IUpdateEngine _updateEngine;
     private readonly StartupAttemptRegistry _startupAttemptRegistry;
     private readonly LauncherCoordinatorIpcServer? _coordinatorIpcServer;
     private readonly DataLocationResolver _dataLocationResolver;
@@ -24,7 +23,6 @@ internal sealed class LauncherOrchestrator
         CommandContext context,
         DeploymentLocator deploymentLocator,
         OobeStateService oobeStateService,
-        IUpdateEngine updateEngine,
         StartupAttemptRegistry startupAttemptRegistry,
         LauncherCoordinatorIpcServer? coordinatorIpcServer = null,
         LaunchPipeline? pipeline = null)
@@ -32,7 +30,6 @@ internal sealed class LauncherOrchestrator
         _context = context;
         _deploymentLocator = deploymentLocator;
         _oobeStateService = oobeStateService;
-        _updateEngine = updateEngine;
         _startupAttemptRegistry = startupAttemptRegistry;
         _coordinatorIpcServer = coordinatorIpcServer;
         _dataLocationResolver = new DataLocationResolver(deploymentLocator.GetAppRoot());
@@ -45,7 +42,6 @@ internal sealed class LauncherOrchestrator
         [
             new CleanupDeploymentsPhase(),
             new ExistingHostProbePhase(),
-            new ApplyPendingUpdatePhase(),
             new OobeGatePhase(),
             new LaunchHostPhase(),
             new MonitorStartupPhase()
@@ -217,7 +213,6 @@ internal sealed class LauncherOrchestrator
                 CommandContext = _context,
                 DeploymentLocator = _deploymentLocator,
                 OobeStateService = _oobeStateService,
-                UpdateEngine = _updateEngine,
                 StartupAttemptRegistry = _startupAttemptRegistry,
                 CoordinatorIpcServer = _coordinatorIpcServer,
                 DataLocationResolver = _dataLocationResolver,

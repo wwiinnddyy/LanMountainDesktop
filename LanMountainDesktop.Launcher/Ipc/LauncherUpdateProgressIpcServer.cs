@@ -6,6 +6,12 @@ using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Launcher.Ipc;
 
+internal interface IUpdateProgressReporter
+{
+    void ReportProgress(InstallProgressReport report);
+    void ReportComplete(InstallCompleteReport report);
+}
+
 internal sealed class LauncherUpdateProgressIpcServer : IUpdateProgressReporter, IDisposable
 {
     private const int LengthPrefixSize = 4;

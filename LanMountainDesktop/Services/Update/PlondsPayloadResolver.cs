@@ -1,11 +1,10 @@
 using System.IO.Compression;
-using LanMountainDesktop.Launcher.Models;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
-internal sealed class PlondsPayloadResolver(UpdateEnginePaths paths)
+internal sealed class PlondsPayloadResolver(PlondsApplyPaths paths)
 {
-    public string ResolveObjectPath(PlondsFileEntry file)
+    public string ResolveObjectPath(ApplyPlondsFileEntry file)
     {
         var candidates = new List<string>();
         AddPathCandidates(candidates, file.ObjectPath);
@@ -18,14 +17,14 @@ internal sealed class PlondsPayloadResolver(UpdateEnginePaths paths)
             PlondsManifestParser.TryGetExpectedSha512(file, out expectedSha512))
         {
             var hashHex = Convert.ToHexString(expectedSha512).ToLowerInvariant();
-            AddPathCandidates(candidates, Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, hashHex));
+            AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex));
             if (hashHex.Length > 2)
             {
-                AddPathCandidates(candidates, Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex));
-                AddPathCandidates(candidates, Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex[2..]));
+                AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex));
+                AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, hashHex[..2], hashHex[2..]));
             }
 
-            AddPathCandidates(candidates, Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, $"{hashHex}.gz"));
+            AddPathCandidates(candidates, Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, $"{hashHex}.gz"));
         }
 
         foreach (var relativePath in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -83,15 +82,15 @@ internal sealed class PlondsPayloadResolver(UpdateEnginePaths paths)
         normalized = normalized.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         candidates.Add(normalized);
 
-        if (!normalized.StartsWith($"{UpdateEnginePaths.PlondsObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith($"{PlondsApplyPaths.PlondsObjectsDirectoryName}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
         {
-            candidates.Add(Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, normalized));
+            candidates.Add(Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, normalized));
         }
 
         var fileName = Path.GetFileName(normalized);
         if (!string.IsNullOrWhiteSpace(fileName))
         {
-            candidates.Add(Path.Combine(UpdateEnginePaths.PlondsObjectsDirectoryName, fileName));
+            candidates.Add(Path.Combine(PlondsApplyPaths.PlondsObjectsDirectoryName, fileName));
         }
     }
 }

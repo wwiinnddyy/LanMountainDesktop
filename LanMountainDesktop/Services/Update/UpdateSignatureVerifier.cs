@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
-internal sealed class UpdateSignatureVerifier(UpdateEnginePaths paths)
+internal sealed class UpdateSignatureVerifier(PlondsApplyPaths paths)
 {
     public (bool Success, string Message) Verify(string payloadPath, string signaturePath, string signatureName)
     {

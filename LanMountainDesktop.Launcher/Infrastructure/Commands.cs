@@ -35,15 +35,14 @@ internal static class Commands
     public static async Task<int> RunCliCommandAsync(CommandContext context)
     {
         var appRoot = ResolveAppRoot(context);
-        var deploymentLocator = new DeploymentLocator(appRoot);
-        var updateEngine = UpdateEngineFactory.Create(deploymentLocator);
+        _ = new DeploymentLocator(appRoot);
         var pluginInstaller = new PluginInstallerService();
         var pluginUpgrades = new PluginUpgradeQueueService(pluginInstaller);
 
         LauncherResult result;
         try
         {
-            result = await ExecuteCoreAsync(context, updateEngine, pluginInstaller, pluginUpgrades).ConfigureAwait(false);
+            result = ExecuteCore(context, pluginInstaller, pluginUpgrades);
         }
         catch (Exception ex)
         {
@@ -61,16 +60,13 @@ internal static class Commands
         return result.Success ? 0 : 1;
     }
 
-    private static async Task<LauncherResult> ExecuteCoreAsync(
+    private static LauncherResult ExecuteCore(
         CommandContext context,
-        IUpdateEngine updateEngine,
         PluginInstallerService pluginInstaller,
         PluginUpgradeQueueService pluginUpgrades)
     {
         switch (context.Command.ToLowerInvariant())
         {
-            case "update":
-                return await ExecuteUpdateAsync(context, updateEngine).ConfigureAwait(false);
             case "plugin":
                 return ExecutePluginCommand(context, pluginInstaller, pluginUpgrades);
             default:
@@ -82,33 +78,6 @@ internal static class Commands
                     Message = $"Unsupported command '{context.Command}'."
                 };
         }
-    }
-
-    private static async Task<LauncherResult> ExecuteUpdateAsync(CommandContext context, IUpdateEngine updateEngine)
-    {
-        return context.SubCommand.ToLowerInvariant() switch
-        {
-            "check" => updateEngine.CheckPendingUpdate(),
-            "apply" => await updateEngine.ApplyPendingUpdateAsync().ConfigureAwait(false),
-            "rollback" => updateEngine.RollbackLatest(),
-            "download" => await DownloadUpdatePayloadAsync(context, updateEngine).ConfigureAwait(false),
-            _ => new LauncherResult
-            {
-                Success = false,
-                Stage = "update",
-                Code = "unsupported_subcommand",
-                Message = $"Unsupported update sub-command '{context.SubCommand}'."
-            }
-        };
-    }
-
-    private static async Task<LauncherResult> DownloadUpdatePayloadAsync(CommandContext context, IUpdateEngine updateEngine)
-    {
-        return await updateEngine.DownloadAsync(
-            context.GetOption("manifest-url") ?? throw new InvalidOperationException("Missing --manifest-url."),
-            context.GetOption("signature-url") ?? throw new InvalidOperationException("Missing --signature-url."),
-            context.GetOption("archive-url") ?? throw new InvalidOperationException("Missing --archive-url."),
-            CancellationToken.None).ConfigureAwait(false);
     }
 
     private static LauncherResult ExecutePluginCommand(

@@ -1,8 +1,6 @@
-using LanMountainDesktop.Launcher.Models;
+namespace LanMountainDesktop.Services.Update;
 
-namespace LanMountainDesktop.Launcher.Update;
-
-internal sealed class DeploymentActivator(DeploymentLocator deploymentLocator)
+internal sealed class DeploymentActivator(AppDeploymentLocator deploymentLocator)
 {
     public void Activate(string fromDeployment, string toDeployment)
     {
@@ -13,24 +11,14 @@ internal sealed class DeploymentActivator(DeploymentLocator deploymentLocator)
         var toPartial = Path.Combine(toDeployment, ".partial");
 
         File.WriteAllText(toCurrent, string.Empty);
-        if (File.Exists(toDestroy))
-        {
-            File.Delete(toDestroy);
-        }
-
-        if (File.Exists(fromCurrent))
-        {
-            File.Delete(fromCurrent);
-        }
+        if (File.Exists(toDestroy)) File.Delete(toDestroy);
+        if (File.Exists(fromCurrent)) File.Delete(fromCurrent);
 
         File.WriteAllText(fromDestroy, string.Empty);
-        if (File.Exists(toPartial))
-        {
-            File.Delete(toPartial);
-        }
+        if (File.Exists(toPartial)) File.Delete(toPartial);
     }
 
-    public RollbackAttemptResult TryRollbackOnFailure(SnapshotMetadata snapshot)
+    public RollbackAttemptResult TryRollbackOnFailure(ApplySnapshotMetadata snapshot)
     {
         try
         {
@@ -45,16 +33,10 @@ internal sealed class DeploymentActivator(DeploymentLocator deploymentLocator)
             }
 
             var destroyMarker = Path.Combine(snapshot.SourceDirectory, ".destroy");
-            if (File.Exists(destroyMarker))
-            {
-                File.Delete(destroyMarker);
-            }
+            if (File.Exists(destroyMarker)) File.Delete(destroyMarker);
 
             var currentMarker = Path.Combine(snapshot.SourceDirectory, ".current");
-            if (!File.Exists(currentMarker))
-            {
-                File.WriteAllText(currentMarker, string.Empty);
-            }
+            if (!File.Exists(currentMarker)) File.WriteAllText(currentMarker, string.Empty);
 
             return new RollbackAttemptResult(true, null);
         }
@@ -64,10 +46,7 @@ internal sealed class DeploymentActivator(DeploymentLocator deploymentLocator)
         }
     }
 
-    public void RetainDeploymentsForRollback()
-    {
-        deploymentLocator.CleanupOldDeployments(minVersionsToKeep: 3);
-    }
+    public void RetainDeploymentsForRollback() => deploymentLocator.CleanupOldDeployments(3);
 }
 
 internal sealed record RollbackAttemptResult(bool Success, string? ErrorMessage);

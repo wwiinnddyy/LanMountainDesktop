@@ -12,7 +12,6 @@ internal sealed class CommandContext
     [
         "launch",
         AirAppBrokerCommand,
-        "apply-update",
         "preview-splash",
         "preview-error",
         "preview-update",
@@ -70,7 +69,6 @@ internal sealed class CommandContext
         GuiCommands.Contains(Command, StringComparer.OrdinalIgnoreCase);
 
     public bool IsMaintenanceCommand =>
-        string.Equals(LaunchSource, "apply-update", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(LaunchSource, "plugin-install", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Command, "update", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase);
@@ -118,11 +116,6 @@ internal sealed class CommandContext
             return "debug-preview";
         }
 
-        if (string.Equals(Command, "apply-update", StringComparison.OrdinalIgnoreCase))
-        {
-            return "apply-update";
-        }
-
         if (IsLegacyPluginInstall || string.Equals(Command, "plugin", StringComparison.OrdinalIgnoreCase))
         {
             return "plugin-install";
@@ -143,7 +136,6 @@ internal sealed class CommandContext
             "normal" => "normal",
             "restart" => "restart",
             "postinstall" => "postinstall",
-            "apply-update" => "apply-update",
             "plugin-install" => "plugin-install",
             "debug-preview" => "debug-preview",
             _ => null

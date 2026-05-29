@@ -27,7 +27,6 @@ internal sealed class LaunchContext
     public required CommandContext CommandContext { get; init; }
     public required DeploymentLocator DeploymentLocator { get; init; }
     public required OobeStateService OobeStateService { get; init; }
-    public required IUpdateEngine UpdateEngine { get; init; }
     public required StartupAttemptRegistry StartupAttemptRegistry { get; init; }
     public LauncherCoordinatorIpcServer? CoordinatorIpcServer { get; init; }
     public required DataLocationResolver DataLocationResolver { get; init; }
