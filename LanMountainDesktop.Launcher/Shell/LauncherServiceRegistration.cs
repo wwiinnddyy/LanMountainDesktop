@@ -22,12 +22,10 @@ internal static class LauncherServiceRegistration
         services.AddSingleton(new DeploymentLocator(appRoot));
         services.AddSingleton(sp => new OobeStateService(appRoot));
         services.AddSingleton(sp => new DataLocationResolver(appRoot));
-        services.AddSingleton(sp => UpdateEngineFactory.Create(sp.GetRequiredService<DeploymentLocator>()));
         services.AddSingleton<HostLaunchService>();
         services.AddSingleton<StartupAttemptRegistry>();
         services.AddSingleton<ILaunchPhase, CleanupDeploymentsPhase>();
         services.AddSingleton<ILaunchPhase, ExistingHostProbePhase>();
-        services.AddSingleton<ILaunchPhase, ApplyPendingUpdatePhase>();
         services.AddSingleton<ILaunchPhase, OobeGatePhase>();
         services.AddSingleton<ILaunchPhase, LaunchHostPhase>();
         services.AddSingleton<ILaunchPhase, MonitorStartupPhase>();
@@ -47,7 +45,6 @@ internal static class LauncherServiceRegistration
             context,
             services.GetRequiredService<DeploymentLocator>(),
             services.GetRequiredService<OobeStateService>(),
-            services.GetRequiredService<IUpdateEngine>(),
             startupAttemptRegistry,
             coordinatorServer,
             services.GetRequiredService<LaunchPipeline>());

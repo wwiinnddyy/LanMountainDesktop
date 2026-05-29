@@ -31,15 +31,6 @@ internal static class LaunchEntryHandler
         LauncherCompositionRoot.RunOrchestratorWithSplashAsync(desktop, context, splashWindow);
 }
 
-internal static class ApplyUpdateEntryHandler
-{
-    public static Task RunAsync(
-        IClassicDesktopStyleApplicationLifetime desktop,
-        CommandContext context,
-        UpdateWindow window) =>
-        ApplyUpdateGuiFlow.RunAsync(desktop, context, window);
-}
-
 internal static class AirAppBrokerEntryHandler
 {
     public static async Task RunAsync(IClassicDesktopStyleApplicationLifetime desktop, CommandContext context)

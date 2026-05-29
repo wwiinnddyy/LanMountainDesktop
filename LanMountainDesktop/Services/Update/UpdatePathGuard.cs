@@ -1,4 +1,4 @@
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
 internal static class UpdatePathGuard
 {

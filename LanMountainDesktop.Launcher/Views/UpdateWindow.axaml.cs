@@ -6,7 +6,7 @@ using LanMountainDesktop.Launcher.Resources;
 namespace LanMountainDesktop.Launcher.Views;
 
 /// <summary>
-/// 更新进度窗口 - 用于 apply-update 命令模式下显示更新/插件升级进度
+/// 更新进度窗口 - 用于预览模式显示更新/插件升级进度
 /// </summary>
 public partial class UpdateWindow : Window
 {

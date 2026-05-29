@@ -134,13 +134,13 @@ public sealed class PendingPluginUpgradeServiceTests : IDisposable
         return packagePath;
     }
 
-    private static PluginManifest ReadManifestFromPackage(string packagePath)
+    private static LanMountainDesktop.PluginSdk.PluginManifest ReadManifestFromPackage(string packagePath)
     {
         using var archive = ZipFile.OpenRead(packagePath);
         var entry = archive.GetEntry(PluginSdkInfo.ManifestFileName)
             ?? throw new InvalidOperationException("Missing plugin manifest.");
         using var stream = entry.Open();
-        return PluginManifest.Load(stream, $"{packagePath}!/{entry.FullName}");
+        return LanMountainDesktop.PluginSdk.PluginManifest.Load(stream, $"{packagePath}!/{entry.FullName}");
     }
 
     public void Dispose()

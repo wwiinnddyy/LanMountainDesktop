@@ -9,7 +9,7 @@ public sealed class CommandContextTests
     {
         { [], "normal" },
         { ["preview-oobe"], "debug-preview" },
-        { ["apply-update"], "apply-update" },
+        { ["apply-update"], "normal" },
         { ["--source", "plugin.lmdp", "--plugins-dir", "plugins", "--result", "result.json"], "plugin-install" },
         { ["launch", "--launch-source", "postinstall"], "postinstall" }
     };

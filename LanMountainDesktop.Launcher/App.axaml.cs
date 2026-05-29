@@ -67,8 +67,7 @@ public partial class App : Application
             return;
         }
 
-        if (context.IsDebugMode && !context.IsPreviewCommand &&
-            !string.Equals(context.Command, "apply-update", StringComparison.OrdinalIgnoreCase))
+        if (context.IsDebugMode && !context.IsPreviewCommand)
         {
             Logger.Info("Debug mode active; showing DevDebugWindow instead of normal launch flow.");
             new DevDebugWindow().Show();
@@ -76,18 +75,9 @@ public partial class App : Application
             return;
         }
 
-        if (string.Equals(context.Command, "apply-update", StringComparison.OrdinalIgnoreCase))
-        {
-            var updateWindow = new UpdateWindow();
-            updateWindow.Show();
-            _ = ApplyUpdateEntryHandler.RunAsync(desktop, context, updateWindow);
-        }
-        else
-        {
-            var splashWindow = LaunchEntryHandler.CreateSplashWindow();
-            splashWindow.Show();
-            _ = LauncherCompositionRoot.RunOrchestratorWithSplashAsync(desktop, context, splashWindow);
-        }
+        var splashWindow = LaunchEntryHandler.CreateSplashWindow();
+        splashWindow.Show();
+        _ = LauncherCompositionRoot.RunOrchestratorWithSplashAsync(desktop, context, splashWindow);
 
         base.OnFrameworkInitializationCompleted();
     }

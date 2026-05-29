@@ -1,18 +1,17 @@
 using System.Text.Json;
-using LanMountainDesktop.Launcher.Models;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
-internal sealed class UpdateSnapshotStore(UpdateEnginePaths paths)
+internal sealed class UpdateSnapshotStore(PlondsApplyPaths paths)
 {
     public string CreateSnapshotPath(string snapshotId) => paths.GetSnapshotPath(snapshotId);
 
-    public void Save(string path, SnapshotMetadata snapshot)
+    public void Save(string path, ApplySnapshotMetadata snapshot)
     {
-        File.WriteAllText(path, JsonSerializer.Serialize(snapshot, AppJsonContext.Default.SnapshotMetadata));
+        File.WriteAllText(path, JsonSerializer.Serialize(snapshot, UpdateApplyJsonContext.Default.ApplySnapshotMetadata));
     }
 
-    public (string Path, SnapshotMetadata Snapshot)? LoadLatest()
+    public (string Path, ApplySnapshotMetadata Snapshot)? LoadLatest()
     {
         if (!Directory.Exists(paths.SnapshotsRoot))
         {
@@ -28,7 +27,7 @@ internal sealed class UpdateSnapshotStore(UpdateEnginePaths paths)
             return null;
         }
 
-        var snapshot = JsonSerializer.Deserialize(File.ReadAllText(snapshotPath), AppJsonContext.Default.SnapshotMetadata);
+        var snapshot = JsonSerializer.Deserialize(File.ReadAllText(snapshotPath), UpdateApplyJsonContext.Default.ApplySnapshotMetadata);
         return snapshot is null ? null : (snapshotPath, snapshot);
     }
 }

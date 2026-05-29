@@ -1,13 +1,12 @@
 using System.Text.Json;
-using LanMountainDesktop.Launcher.Models;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
 
 internal static class PlondsManifestParser
 {
-    public static List<PlondsFileEntry> CollectFileEntries(PlondsFileMap fileMap)
+    public static List<ApplyPlondsFileEntry> CollectFileEntries(ApplyPlondsFileMap fileMap)
     {
-        var files = new List<PlondsFileEntry>();
+        var files = new List<ApplyPlondsFileEntry>();
         if (fileMap.Files is { Count: > 0 })
         {
             files.AddRange(fileMap.Files);
@@ -29,7 +28,7 @@ internal static class PlondsManifestParser
         return files;
     }
 
-    public static void PopulateFromRawJson(string fileMapJson, PlondsFileMap fileMap, ICollection<PlondsFileEntry> files)
+    public static void PopulateFromRawJson(string fileMapJson, ApplyPlondsFileMap fileMap, ICollection<ApplyPlondsFileEntry> files)
     {
         if (string.IsNullOrWhiteSpace(fileMapJson))
         {
@@ -62,7 +61,7 @@ internal static class PlondsManifestParser
         }
     }
 
-    public static PlondsUpdateMetadata? LoadMetadata(string path)
+    public static ApplyPlondsUpdateMetadata? LoadMetadata(string path)
     {
         if (!File.Exists(path))
         {
@@ -74,7 +73,7 @@ internal static class PlondsManifestParser
             var text = File.ReadAllText(path);
             return string.IsNullOrWhiteSpace(text)
                 ? null
-                : JsonSerializer.Deserialize(text, AppJsonContext.Default.PlondsUpdateMetadata);
+                : JsonSerializer.Deserialize(text, UpdateApplyJsonContext.Default.ApplyPlondsUpdateMetadata);
         }
         catch
         {
@@ -82,7 +81,7 @@ internal static class PlondsManifestParser
         }
     }
 
-    public static string? ResolveSourceVersion(PlondsFileMap fileMap, PlondsUpdateMetadata? metadata)
+    public static string? ResolveSourceVersion(ApplyPlondsFileMap fileMap, ApplyPlondsUpdateMetadata? metadata)
     {
         return FirstNonEmpty(
             metadata?.FromVersion,
@@ -91,7 +90,7 @@ internal static class PlondsManifestParser
             TryGetMetadataValue(fileMap.Metadata, "sourceVersion"));
     }
 
-    public static string? ResolveTargetVersion(PlondsFileMap fileMap, PlondsUpdateMetadata? metadata)
+    public static string? ResolveTargetVersion(ApplyPlondsFileMap fileMap, ApplyPlondsUpdateMetadata? metadata)
     {
         return FirstNonEmpty(
             metadata?.ToVersion,
@@ -101,7 +100,7 @@ internal static class PlondsManifestParser
             TryGetMetadataValue(fileMap.Metadata, "targetVersion"));
     }
 
-    public static bool TryGetExpectedSha512(PlondsFileEntry file, out byte[] expected)
+    public static bool TryGetExpectedSha512(ApplyPlondsFileEntry file, out byte[] expected)
     {
         expected = [];
         if (file.Sha512Bytes is { Length: > 0 })
@@ -134,7 +133,7 @@ internal static class PlondsManifestParser
         return UpdateHash.TryParseHashBytes(file.Sha512Base64, out expected);
     }
 
-    public static bool TryGetExpectedObjectSha512(PlondsFileEntry file, out byte[] expected)
+    public static bool TryGetExpectedObjectSha512(ApplyPlondsFileEntry file, out byte[] expected)
     {
         expected = [];
         if (file.Hash is null)
@@ -157,7 +156,7 @@ internal static class PlondsManifestParser
         return UpdateHash.TryParseHashBytes(file.Hash.Value, out expected);
     }
 
-    private static void ParseComponentsNode(JsonElement componentsNode, ICollection<PlondsFileEntry> files)
+    private static void ParseComponentsNode(JsonElement componentsNode, ICollection<ApplyPlondsFileEntry> files)
     {
         if (componentsNode.ValueKind == JsonValueKind.Object)
         {
@@ -193,7 +192,7 @@ internal static class PlondsManifestParser
         }
     }
 
-    private static void ParseFilesNode(JsonElement filesNode, string? componentName, ICollection<PlondsFileEntry> files)
+    private static void ParseFilesNode(JsonElement filesNode, string? componentName, ICollection<ApplyPlondsFileEntry> files)
     {
         if (filesNode.ValueKind == JsonValueKind.Object)
         {
@@ -224,9 +223,9 @@ internal static class PlondsManifestParser
         }
     }
 
-    private static bool TryCreateFileEntry(string? fallbackPath, string? componentName, JsonElement node, out PlondsFileEntry entry)
+    private static bool TryCreateFileEntry(string? fallbackPath, string? componentName, JsonElement node, out ApplyPlondsFileEntry entry)
     {
-        entry = new PlondsFileEntry();
+        entry = new ApplyPlondsFileEntry();
         var path = ReadStringIgnoreCase(node, "path");
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -240,7 +239,7 @@ internal static class PlondsManifestParser
 
         var archiveSha512 = ReadByteArrayIgnoreCase(node, "archivesha512");
         var archiveSha512Text = ReadStringIgnoreCase(node, "archivesha512");
-        entry = new PlondsFileEntry
+        entry = new ApplyPlondsFileEntry
         {
             Path = path,
             Action = FirstNonEmpty(ReadStringIgnoreCase(node, "action"), "replace"),
@@ -257,7 +256,7 @@ internal static class PlondsManifestParser
 
         if (archiveSha512 is { Length: > 0 } || !string.IsNullOrWhiteSpace(archiveSha512Text))
         {
-            entry.Hash = new PlondsHashDescriptor
+            entry.Hash = new ApplyPlondsHashDescriptor
             {
                 Algorithm = "sha512",
                 Bytes = archiveSha512,
@@ -268,7 +267,7 @@ internal static class PlondsManifestParser
         }
         else if (TryGetPropertyIgnoreCase(node, "hash", out var hashNode) && hashNode.ValueKind == JsonValueKind.Object)
         {
-            entry.Hash = new PlondsHashDescriptor
+            entry.Hash = new ApplyPlondsHashDescriptor
             {
                 Algorithm = ReadStringIgnoreCase(hashNode, "algorithm"),
                 Value = ReadStringIgnoreCase(hashNode, "value"),

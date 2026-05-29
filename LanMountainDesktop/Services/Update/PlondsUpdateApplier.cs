@@ -1,32 +1,54 @@
 using System.Text.Json;
-using LanMountainDesktop.Launcher.Models;
-using ContractsUpdate = LanMountainDesktop.Shared.Contracts.Update;
+using LanMountainDesktop.Shared.Contracts.Update;
 
-namespace LanMountainDesktop.Launcher.Update;
+namespace LanMountainDesktop.Services.Update;
+
+internal interface IUpdateProgressReporter
+{
+    void ReportProgress(InstallProgressReport report);
+    void ReportComplete(InstallCompleteReport report);
+}
+
+internal sealed class InstallProgressBridge(IProgress<InstallProgressReport>? progress) : IUpdateProgressReporter
+{
+    private InstallCompleteReport? _complete;
+
+    public InstallCompleteReport? CompleteReport => _complete;
+
+    public void ReportProgress(InstallProgressReport report)
+    {
+        progress?.Report(report);
+    }
+
+    public void ReportComplete(InstallCompleteReport report)
+    {
+        _complete = report;
+    }
+}
 
 internal sealed class PlondsUpdateApplier(
-    DeploymentLocator deploymentLocator,
-    UpdateEnginePaths paths,
+    AppDeploymentLocator deploymentLocator,
+    PlondsApplyPaths paths,
     UpdateSignatureVerifier signatureVerifier,
     IUpdateProgressReporter progressReporter,
     UpdateSnapshotStore snapshotStore,
-    InstallCheckpointStore checkpointStore,
+    ApplyInstallCheckpointStore checkpointStore,
     DeploymentActivator deploymentActivator,
     IncomingArtifactsCleaner incomingCleaner,
     PlondsPayloadResolver payloadResolver)
 {
-    public async Task<LauncherResult> ApplyAsync()
+    public async Task<ApplyUpdateResult> ApplyAsync()
     {
-        progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifySignature, "Verifying PLONDS signature...", 0, null, 0, 0));
-        var verifyResult = signatureVerifier.Verify(paths.PlondsFileMapPath, paths.PlondsSignaturePath, UpdateEnginePaths.PlondsSignatureFileName);
+        progressReporter.ReportProgress(new InstallProgressReport(InstallStage.VerifySignature, "Verifying PLONDS signature...", 0, null, 0, 0));
+        var verifyResult = signatureVerifier.Verify(paths.PlondsFileMapPath, paths.PlondsSignaturePath, PlondsApplyPaths.PlondsSignatureFileName);
         if (!verifyResult.Success)
         {
-            progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, verifyResult.Message, false));
-            return UpdateEngineResults.Failed("update.apply", "signature_failed", verifyResult.Message);
+            progressReporter.ReportComplete(new InstallCompleteReport(false, null, null, verifyResult.Message, false));
+            return ApplyUpdateResults.Failed("update.apply", "signature_failed", verifyResult.Message);
         }
 
         var fileMapText = await File.ReadAllTextAsync(paths.PlondsFileMapPath).ConfigureAwait(false);
-        var fileMap = JsonSerializer.Deserialize(fileMapText, AppJsonContext.Default.PlondsFileMap) ?? new PlondsFileMap();
+        var fileMap = JsonSerializer.Deserialize(fileMapText, UpdateApplyJsonContext.Default.ApplyPlondsFileMap) ?? new ApplyPlondsFileMap();
         var fileEntries = PlondsManifestParser.CollectFileEntries(fileMap);
         if (fileEntries.Count == 0)
         {
@@ -35,8 +57,8 @@ internal sealed class PlondsUpdateApplier(
 
         if (fileEntries.Count == 0)
         {
-            progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, null, null, "No PLONDS file entries were found.", false));
-            return UpdateEngineResults.Failed("update.apply", "invalid_manifest", "No PLONDS file entries were found.");
+            progressReporter.ReportComplete(new InstallCompleteReport(false, null, null, "No PLONDS file entries were found.", false));
+            return ApplyUpdateResults.Failed("update.apply", "invalid_manifest", "No PLONDS file entries were found.");
         }
 
         var plondsMetadata = PlondsManifestParser.LoadMetadata(paths.PlondsUpdateMetadataPath);
@@ -47,17 +69,11 @@ internal sealed class PlondsUpdateApplier(
         if (!string.IsNullOrWhiteSpace(expectedSourceVersion) &&
             !string.Equals(expectedSourceVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return UpdateEngineResults.Failed(
-                "update.apply",
-                "version_mismatch",
-                $"PLONDS update requires source version {expectedSourceVersion} but current is {sourceVersion}.");
+            return ApplyUpdateResults.Failed("update.apply", "version_mismatch", $"PLONDS update requires source version {expectedSourceVersion} but current is {sourceVersion}.");
         }
 
         var targetVersion = PlondsManifestParser.ResolveTargetVersion(fileMap, plondsMetadata);
-        if (string.IsNullOrWhiteSpace(targetVersion))
-        {
-            targetVersion = sourceVersion;
-        }
+        if (string.IsNullOrWhiteSpace(targetVersion)) targetVersion = sourceVersion;
 
         var isInitialDeployment = string.IsNullOrWhiteSpace(currentDeployment);
         var existingCheckpoint = checkpointStore.Load();
@@ -70,29 +86,21 @@ internal sealed class PlondsUpdateApplier(
 
         if (existingCheckpoint is not null && !canResume)
         {
-            return UpdateEngineResults.Failed("update.apply", "resume_state_invalid", "Install checkpoint is stale or invalid. Please cancel and redownload update payload.");
+            return ApplyUpdateResults.Failed("update.apply", "resume_state_invalid", "Install checkpoint is stale or invalid. Please cancel and redownload update payload.");
         }
 
-        var targetDeployment = canResume
-            ? existingCheckpoint!.TargetDirectory
-            : deploymentLocator.BuildNextDeploymentDirectory(targetVersion!);
+        var targetDeployment = canResume ? existingCheckpoint!.TargetDirectory : deploymentLocator.BuildNextDeploymentDirectory(targetVersion!);
         var snapshot = BuildSnapshot(canResume, existingCheckpoint, sourceVersion, targetVersion, currentDeployment, targetDeployment);
         var snapshotPath = snapshotStore.CreateSnapshotPath(snapshot.SnapshotId);
-        var checkpoint = canResume
-            ? existingCheckpoint!
-            : BuildCheckpoint(snapshot, sourceVersion, targetVersion, currentDeployment, targetDeployment, isInitialDeployment);
+        var checkpoint = canResume ? existingCheckpoint! : BuildCheckpoint(snapshot, sourceVersion, targetVersion, currentDeployment, targetDeployment, isInitialDeployment);
 
         try
         {
             snapshotStore.Save(snapshotPath, snapshot);
             if (!canResume)
             {
-                if (Directory.Exists(targetDeployment))
-                {
-                    Directory.Delete(targetDeployment, true);
-                }
-
-                progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
+                if (Directory.Exists(targetDeployment)) Directory.Delete(targetDeployment, true);
+                progressReporter.ReportProgress(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 20, null, 0, fileEntries.Count));
                 Directory.CreateDirectory(targetDeployment);
                 File.WriteAllText(Path.Combine(targetDeployment, ".partial"), string.Empty);
             }
@@ -105,14 +113,11 @@ internal sealed class PlondsUpdateApplier(
             {
                 File.WriteAllText(Path.Combine(targetDeployment, ".current"), string.Empty);
                 var partialMarker = Path.Combine(targetDeployment, ".partial");
-                if (File.Exists(partialMarker))
-                {
-                    File.Delete(partialMarker);
-                }
+                if (File.Exists(partialMarker)) File.Delete(partialMarker);
             }
             else
             {
-                progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileEntries.Count, fileEntries.Count));
+                progressReporter.ReportProgress(new InstallProgressReport(InstallStage.ActivateDeployment, "Activating deployment...", 85, null, fileEntries.Count, fileEntries.Count));
                 deploymentActivator.Activate(currentDeployment!, targetDeployment);
             }
 
@@ -121,10 +126,10 @@ internal sealed class PlondsUpdateApplier(
             incomingCleaner.Cleanup();
             deploymentActivator.RetainDeploymentsForRollback();
 
-            progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileEntries.Count, fileEntries.Count));
-            progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(true, sourceVersion, targetVersion, null, false));
+            progressReporter.ReportProgress(new InstallProgressReport(InstallStage.Completed, $"Updated to {targetVersion}.", 100, null, fileEntries.Count, fileEntries.Count));
+            progressReporter.ReportComplete(new InstallCompleteReport(true, sourceVersion, targetVersion, null, false));
 
-            return new LauncherResult
+            return new ApplyUpdateResult
             {
                 Success = true,
                 Stage = "update.apply",
@@ -144,48 +149,42 @@ internal sealed class PlondsUpdateApplier(
         }
     }
 
-    private void ApplyFiles(IReadOnlyList<PlondsFileEntry> fileEntries, string? currentDeployment, string targetDeployment, InstallCheckpoint checkpoint)
+    private void ApplyFiles(IReadOnlyList<ApplyPlondsFileEntry> fileEntries, string? currentDeployment, string targetDeployment, ApplyInstallCheckpoint checkpoint)
     {
-        progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30, null, checkpoint.AppliedCount, fileEntries.Count));
+        progressReporter.ReportProgress(new InstallProgressReport(InstallStage.ApplyFiles, "Applying PLONDS files...", 30, null, checkpoint.AppliedCount, fileEntries.Count));
         for (var fileIndex = checkpoint.AppliedCount; fileIndex < fileEntries.Count; fileIndex++)
         {
             var entry = fileEntries[fileIndex];
             ApplyFileEntry(entry, currentDeployment, targetDeployment);
             checkpoint.AppliedCount = fileIndex + 1;
             checkpointStore.Save(checkpoint);
-            progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.ApplyFiles, "Applying PLONDS files...", 30 + (checkpoint.AppliedCount * 30 / fileEntries.Count), entry.Path, checkpoint.AppliedCount, fileEntries.Count));
+            progressReporter.ReportProgress(new InstallProgressReport(InstallStage.ApplyFiles, "Applying PLONDS files...", 30 + (checkpoint.AppliedCount * 30 / fileEntries.Count), entry.Path, checkpoint.AppliedCount, fileEntries.Count));
         }
     }
 
-    private void VerifyFiles(IReadOnlyList<PlondsFileEntry> fileEntries, string targetDeployment, InstallCheckpoint checkpoint)
+    private void VerifyFiles(IReadOnlyList<ApplyPlondsFileEntry> fileEntries, string targetDeployment, ApplyInstallCheckpoint checkpoint)
     {
-        progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65, null, checkpoint.VerifiedCount, fileEntries.Count));
+        progressReporter.ReportProgress(new InstallProgressReport(InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65, null, checkpoint.VerifiedCount, fileEntries.Count));
         for (var verifyIndex = checkpoint.VerifiedCount; verifyIndex < fileEntries.Count; verifyIndex++)
         {
             var entry = fileEntries[verifyIndex];
             VerifyFileEntry(entry, targetDeployment);
             checkpoint.VerifiedCount = verifyIndex + 1;
             checkpointStore.Save(checkpoint);
-            progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65 + (checkpoint.VerifiedCount * 15 / fileEntries.Count), entry.Path, checkpoint.VerifiedCount, fileEntries.Count));
+            progressReporter.ReportProgress(new InstallProgressReport(InstallStage.VerifyHashes, "Verifying PLONDS hashes...", 65 + (checkpoint.VerifiedCount * 15 / fileEntries.Count), entry.Path, checkpoint.VerifiedCount, fileEntries.Count));
         }
     }
 
-    private void ApplyFileEntry(PlondsFileEntry file, string? currentDeployment, string targetDeployment)
+    private void ApplyFileEntry(ApplyPlondsFileEntry file, string? currentDeployment, string targetDeployment)
     {
         var normalizedPath = UpdatePathGuard.NormalizeRelativePath(file.Path);
         var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
-        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
+        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase)) return;
 
         var targetPath = Path.Combine(targetDeployment, normalizedPath);
         UpdatePathGuard.EnsurePathWithinRoot(targetPath, targetDeployment);
         var targetDir = Path.GetDirectoryName(targetPath);
-        if (!string.IsNullOrWhiteSpace(targetDir))
-        {
-            Directory.CreateDirectory(targetDir);
-        }
+        if (!string.IsNullOrWhiteSpace(targetDir)) Directory.CreateDirectory(targetDir);
 
         if (string.Equals(action, "reuse", StringComparison.OrdinalIgnoreCase))
         {
@@ -200,47 +199,30 @@ internal sealed class PlondsUpdateApplier(
         ApplyUnixFileModeIfPresent(targetPath, file);
     }
 
-    private static void CopyReusedFile(PlondsFileEntry file, string? currentDeployment, string normalizedPath, string targetPath)
+    private static void CopyReusedFile(ApplyPlondsFileEntry file, string? currentDeployment, string normalizedPath, string targetPath)
     {
-        if (string.IsNullOrWhiteSpace(currentDeployment))
-        {
-            throw new FileNotFoundException($"Cannot reuse file '{file.Path}' because no source deployment is available.");
-        }
-
+        if (string.IsNullOrWhiteSpace(currentDeployment)) throw new FileNotFoundException($"Cannot reuse file '{file.Path}' because no source deployment is available.");
         var sourcePath = Path.Combine(currentDeployment, normalizedPath);
         UpdatePathGuard.EnsurePathWithinRoot(sourcePath, currentDeployment);
-        if (!File.Exists(sourcePath))
-        {
-            throw new FileNotFoundException($"Cannot reuse file '{file.Path}' because it was not found in current deployment.");
-        }
+        if (!File.Exists(sourcePath)) throw new FileNotFoundException($"Cannot reuse file '{file.Path}' because it was not found in current deployment.");
 
         File.Copy(sourcePath, targetPath, overwrite: true);
         ApplyUnixFileModeIfPresent(targetPath, file);
     }
 
-    private static void VerifyFileEntry(PlondsFileEntry file, string targetDeployment)
+    private static void VerifyFileEntry(ApplyPlondsFileEntry file, string targetDeployment)
     {
         var action = string.IsNullOrWhiteSpace(file.Action) ? "replace" : file.Action!;
-        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
+        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase)) return;
 
         var targetPath = Path.Combine(targetDeployment, UpdatePathGuard.NormalizeRelativePath(file.Path));
         UpdatePathGuard.EnsurePathWithinRoot(targetPath, targetDeployment);
-        if (!File.Exists(targetPath))
-        {
-            throw new FileNotFoundException($"Expected target file was not created: {file.Path}");
-        }
+        if (!File.Exists(targetPath)) throw new FileNotFoundException($"Expected target file was not created: {file.Path}");
 
         if (PlondsManifestParser.TryGetExpectedSha512(file, out var expectedSha512))
         {
             var actualSha512 = UpdateHash.ComputeSha512(targetPath);
-            if (!actualSha512.AsSpan().SequenceEqual(expectedSha512))
-            {
-                throw new InvalidOperationException($"SHA-512 mismatch for '{file.Path}'.");
-            }
-
+            if (!actualSha512.AsSpan().SequenceEqual(expectedSha512)) throw new InvalidOperationException($"SHA-512 mismatch for '{file.Path}'.");
             return;
         }
 
@@ -248,29 +230,19 @@ internal sealed class PlondsUpdateApplier(
         {
             var expectedSha256 = UpdateHash.NormalizeHashText(file.Sha256);
             var actualSha256 = UpdateHash.ComputeSha256Hex(targetPath);
-            if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"SHA-256 mismatch for '{file.Path}'.");
-            }
+            if (!string.Equals(actualSha256, expectedSha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException($"SHA-256 mismatch for '{file.Path}'.");
         }
     }
 
-    private LauncherResult HandleFailure(
-        Exception ex,
-        bool isInitialDeployment,
-        string targetDeployment,
-        SnapshotMetadata snapshot,
-        string snapshotPath,
-        string sourceVersion,
-        string targetVersion)
+    private ApplyUpdateResult HandleFailure(Exception ex, bool isInitialDeployment, string targetDeployment, ApplySnapshotMetadata snapshot, string snapshotPath, string sourceVersion, string targetVersion)
     {
         if (isInitialDeployment)
         {
             TryDeleteDirectory(targetDeployment);
             snapshot.Status = "failed";
             snapshotStore.Save(snapshotPath, snapshot);
-            progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, "0.0.0", targetVersion, ex.Message, false));
-            return new LauncherResult
+            progressReporter.ReportComplete(new InstallCompleteReport(false, "0.0.0", targetVersion, ex.Message, false));
+            return new ApplyUpdateResult
             {
                 Success = false,
                 Stage = "update.apply",
@@ -282,35 +254,27 @@ internal sealed class PlondsUpdateApplier(
             };
         }
 
-        progressReporter.ReportProgress(new ContractsUpdate.InstallProgressReport(ContractsUpdate.InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
+        progressReporter.ReportProgress(new InstallProgressReport(InstallStage.RollingBack, "Rolling back...", 0, null, 0, 0));
         var rollbackResult = deploymentActivator.TryRollbackOnFailure(snapshot);
         snapshot.Status = rollbackResult.Success ? "rolled_back" : "rollback_failed";
         snapshotStore.Save(snapshotPath, snapshot);
-        var errorMessage = rollbackResult.Success
-            ? ex.Message
-            : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
-        progressReporter.ReportComplete(new ContractsUpdate.InstallCompleteReport(false, sourceVersion, targetVersion, errorMessage, rollbackResult.Success));
-        return new LauncherResult
+
+        var errorMessage = rollbackResult.Success ? ex.Message : $"{ex.Message}; rollback failed: {rollbackResult.ErrorMessage}";
+        progressReporter.ReportComplete(new InstallCompleteReport(false, sourceVersion, targetVersion, errorMessage, rollbackResult.Success));
+
+        return new ApplyUpdateResult
         {
             Success = false,
             Stage = "update.apply",
             Code = rollbackResult.Success ? "apply_failed" : "rollback_failed",
-            Message = rollbackResult.Success
-                ? "Failed to apply PLONDS update. Rolled back to previous version."
-                : "Failed to apply PLONDS update and rollback failed.",
+            Message = rollbackResult.Success ? "Failed to apply PLONDS update. Rolled back to previous version." : "Failed to apply PLONDS update and rollback failed.",
             ErrorMessage = errorMessage,
             CurrentVersion = sourceVersion,
             RolledBackTo = rollbackResult.Success ? sourceVersion : null
         };
     }
 
-    private static SnapshotMetadata BuildSnapshot(
-        bool canResume,
-        InstallCheckpoint? existingCheckpoint,
-        string sourceVersion,
-        string targetVersion,
-        string? currentDeployment,
-        string targetDeployment) =>
+    private static ApplySnapshotMetadata BuildSnapshot(bool canResume, ApplyInstallCheckpoint? existingCheckpoint, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment) =>
         new()
         {
             SnapshotId = canResume ? existingCheckpoint!.SnapshotId : Guid.NewGuid().ToString("N"),
@@ -322,13 +286,7 @@ internal sealed class PlondsUpdateApplier(
             Status = "pending"
         };
 
-    private static InstallCheckpoint BuildCheckpoint(
-        SnapshotMetadata snapshot,
-        string sourceVersion,
-        string targetVersion,
-        string? currentDeployment,
-        string targetDeployment,
-        bool isInitialDeployment) =>
+    private static ApplyInstallCheckpoint BuildCheckpoint(ApplySnapshotMetadata snapshot, string sourceVersion, string targetVersion, string? currentDeployment, string targetDeployment, bool isInitialDeployment) =>
         new()
         {
             SnapshotId = snapshot.SnapshotId,
@@ -339,15 +297,9 @@ internal sealed class PlondsUpdateApplier(
             IsInitialDeployment = isInitialDeployment
         };
 
-    private static void ApplyUnixFileModeIfPresent(string targetPath, PlondsFileEntry file)
+    private static void ApplyUnixFileModeIfPresent(string targetPath, ApplyPlondsFileEntry file)
     {
-        if (OperatingSystem.IsWindows() ||
-            !file.Metadata.TryGetValue("unixFileMode", out var rawMode) ||
-            string.IsNullOrWhiteSpace(rawMode))
-        {
-            return;
-        }
-
+        if (OperatingSystem.IsWindows() || !file.Metadata.TryGetValue("unixFileMode", out var rawMode) || string.IsNullOrWhiteSpace(rawMode)) return;
         try
         {
             var modeValue = Convert.ToInt32(rawMode.Trim(), 8);
@@ -362,10 +314,7 @@ internal sealed class PlondsUpdateApplier(
     {
         try
         {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, true);
-            }
+            if (Directory.Exists(path)) Directory.Delete(path, true);
         }
         catch
         {
