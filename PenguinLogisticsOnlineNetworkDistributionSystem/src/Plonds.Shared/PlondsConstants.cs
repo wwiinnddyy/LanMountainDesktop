@@ -11,13 +11,13 @@ public static class PlondsConstants
     public const string ActionReuse = "reuse";
     public const string ActionDelete = "delete";
 
-    public const string CompareMethodFileCompare = "file-compare";
-    public const string CompareMethodCommitAnalyze = "commit-analyze";
-
     public const string HashAlgorithmSha256 = "sha256";
     public const string HashAlgorithmMd5 = "md5";
 
     public const string DefaultLauncherRelativePath = "LanMountainDesktop.Launcher.exe";
+
+    public const string CompareMethodFileCompare = "file-compare";
+    public const string CompareMethodCommitAnalyze = "commit-analyze";
 
     public static readonly string[] SupportedActions =
     [
@@ -33,9 +33,14 @@ public static class PlondsConstants
         HashAlgorithmMd5
     ];
 
-    public static readonly string[] SupportedCompareMethods =
+    public static readonly string[] DefaultSourceDirs =
     [
-        CompareMethodFileCompare,
-        CompareMethodCommitAnalyze
+        "LanMountainDesktop",
+        "LanMountainDesktop.Launcher",
+        "LanMountainDesktop.Shared.Contracts",
+        "LanMountainDesktop.PluginSdk",
+        "LanMountainDesktop.Appearance",
+        "LanMountainDesktop.Settings.Core",
+        "LanMountainDesktop.ComponentSystem"
     ];
 }

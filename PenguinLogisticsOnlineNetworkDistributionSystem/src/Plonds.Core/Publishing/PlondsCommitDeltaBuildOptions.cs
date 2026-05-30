@@ -8,7 +8,7 @@ public sealed record PlondsCommitDeltaBuildOptions(
     string Channel,
     string BaselineTag,
     string CurrentTag,
+    string HashAlgorithm = "sha256",
+    string? SourceDirs = null,
     string? FallbackBaselineZip = null,
-    string? BaselineVersion = null,
-    string LauncherRelativePath = "LanMountainDesktop.Launcher.exe",
-    string HashAlgorithm = "sha256");
+    string LauncherRelativePath = "LanMountainDesktop.Launcher.exe");

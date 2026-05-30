@@ -28,7 +28,7 @@ on:
           - stable
           - preview
       compare_method:
-        description: '比较方法'
+        description: 'Compare method'
         required: false
         type: choice
         default: file-compare
@@ -36,7 +36,7 @@ on:
           - file-compare
           - commit-analyze
       hash_algorithm:
-        description: '哈希算法（仅 file-compare 模式）'
+        description: 'Hash algorithm (file-compare only)'
         required: false
         type: choice
         default: sha256
@@ -157,8 +157,8 @@ jobs:
           mv plonds-input/files-windows-x64.zip plonds-input/current-files-windows-x64.zip
 
           if [[ -n "$BASELINE_TAG" ]]; then
-            gh release download "$BASELINE_TAG" -p "files-windows-x64.zip" -D /tmp/baseline-dl
-            mv /tmp/baseline-dl/files-windows-x64.zip plonds-input/baseline-files-windows-x64.zip
+            gh release download "$BASELINE_TAG" -p "files-windows-x64.zip" -D plonds-input
+            mv plonds-input/files-windows-x64.zip plonds-input/baseline-files-windows-x64.zip
           fi
 
       - name: Run build-delta (file-compare)
@@ -205,14 +205,13 @@ jobs:
             '--current-zip' "$PWD/plonds-input/current-files-windows-x64.zip"
             '--output-dir' "$PWD/plonds-output"
             '--channel' "$RELEASE_CHANNEL"
-            '--baseline-tag' "${BASELINE_TAG:-v0.0.0}"
+            '--baseline-tag' "${BASELINE_TAG:-$RELEASE_TAG}"
             '--current-tag' "$RELEASE_TAG"
             '--hash-algorithm' "$HASH_ALGORITHM"
           )
 
           if [[ -n "$BASELINE_TAG" ]]; then
             ARGS+=(
-              '--baseline-version' "$BASELINE_VERSION"
               '--fallback-zip' "$PWD/plonds-input/baseline-files-windows-x64.zip"
             )
           fi
@@ -246,12 +245,14 @@ jobs:
         run: |
           mkdir -p plonds-run-metadata
           printf '%s' "$RELEASE_TAG" > plonds-run-metadata/tag.txt
-          printf '%s' "$COMPARE_METHOD" >> plonds-run-metadata/tag.txt
+          printf '%s' "$COMPARE_METHOD" > plonds-run-metadata/compare-method.txt
 
       - name: Upload run metadata artifact
         uses: actions/upload-artifact@v4
         with:
           name: plonds-run-metadata
-          path: plonds-run-metadata/tag.txt
+          path: |
+            plonds-run-metadata/tag.txt
+            plonds-run-metadata/compare-method.txt
           if-no-files-found: error
           retention-days: 7
