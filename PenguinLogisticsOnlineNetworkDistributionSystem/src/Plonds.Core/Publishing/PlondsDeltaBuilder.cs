@@ -1,15 +1,23 @@
-﻿using Plonds.Core.Security;
+using System.Security.Cryptography;
+using System.Text.Json;
+using Plonds.Shared;
 using Plonds.Shared.Models;
 
 namespace Plonds.Core.Publishing;
 
 public sealed class PlondsDeltaBuilder
 {
-    private readonly RsaFileSigner _signer = new();
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
 
     public PlondsDeltaBuildResult Build(PlondsDeltaBuildOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+
+        var hashAlgorithm = ValidateHashAlgorithmInternal(options.HashAlgorithm);
 
         var currentPayloadZip = Path.GetFullPath(options.CurrentPayloadZip);
         if (!File.Exists(currentPayloadZip))
@@ -29,332 +37,200 @@ public sealed class PlondsDeltaBuilder
         var workRoot = Path.Combine(outputRoot, "work", options.Platform);
         var currentExtractRoot = Path.Combine(workRoot, "current");
         var baselineExtractRoot = Path.Combine(workRoot, "baseline");
-        var objectsRoot = Path.Combine(workRoot, "objects");
-        var releaseAssetsRoot = Path.Combine(outputRoot, "release-assets");
-        var summaryRoot = Path.Combine(outputRoot, "platform-summaries");
 
-        Directory.CreateDirectory(releaseAssetsRoot);
-        Directory.CreateDirectory(summaryRoot);
+        Directory.CreateDirectory(outputRoot);
         PayloadUtilities.ExtractZip(currentPayloadZip, currentExtractRoot);
 
-        var useFullPayload = options.IsFullPayload || string.IsNullOrWhiteSpace(baselinePayloadZip);
-        if (useFullPayload)
-        {
-            PayloadUtilities.EnsureCleanDirectory(baselineExtractRoot);
-        }
-        else
+        var isFullUpdate = string.IsNullOrWhiteSpace(baselinePayloadZip);
+        if (!isFullUpdate)
         {
             PayloadUtilities.ExtractZip(baselinePayloadZip!, baselineExtractRoot);
         }
 
-        PayloadUtilities.EnsureCleanDirectory(objectsRoot);
-
-        var previousManifest = useFullPayload
+        var previousManifest = isFullUpdate
             ? new Dictionary<string, PayloadUtilities.FileFingerprint>(StringComparer.OrdinalIgnoreCase)
             : PayloadUtilities.ScanDirectory(baselineExtractRoot);
         var currentManifest = PayloadUtilities.ScanDirectory(currentExtractRoot);
-        var updateBaseUrl = string.IsNullOrWhiteSpace(options.UpdateBaseUrl)
-            ? null
-            : options.UpdateBaseUrl.TrimEnd('/');
-        var repoBaseUrl = string.IsNullOrWhiteSpace(updateBaseUrl)
-            ? null
-            : $"{updateBaseUrl}/repo/sha256";
-        var fileEntries = BuildFileEntries(previousManifest, currentManifest, objectsRoot, repoBaseUrl);
 
-        var updateAssetName = $"update-{options.Platform}.zip";
-        var fileMapAssetName = $"plonds-filemap-{options.Platform}.json";
-        var fileMapSignatureAssetName = fileMapAssetName + ".sig";
-        var distributionId = $"plonds-{options.CurrentVersion}-{options.Platform}";
-        var updateArchivePath = Path.Combine(releaseAssetsRoot, updateAssetName);
-        var fileMapPath = Path.Combine(releaseAssetsRoot, fileMapAssetName);
-        var fileMapSignaturePath = Path.Combine(releaseAssetsRoot, fileMapSignatureAssetName);
+        var filesMap = BuildFilesMap(previousManifest, currentManifest, hashAlgorithm);
+        var changedFilesMap = BuildChangedFilesMap(filesMap, hashAlgorithm);
 
-        PayloadUtilities.CreatePayloadZip(objectsRoot, updateArchivePath);
+        var changedZipPath = CreateChangedZip(currentExtractRoot, filesMap, outputRoot, options.Platform);
 
-        var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["protocol"] = "PLONDS",
-            ["channel"] = options.Channel,
-            ["releaseTag"] = options.CurrentTag,
-            ["baselineTag"] = options.BaselineTag ?? string.Empty,
-            ["baselineVersion"] = options.BaselineVersion ?? "0.0.0",
-            ["targetVersion"] = options.CurrentVersion,
-            ["isFullPayload"] = useFullPayload ? "true" : "false"
-        };
+        var launcherChanged = DetectLauncherChange(previousManifest, currentManifest, options.LauncherRelativePath);
+        var requiresCleanInstall = launcherChanged && !isFullUpdate;
 
-        var generatedAt = DateTimeOffset.UtcNow;
-        var component = new ComponentDocument(
-            Name: "app",
-            Version: options.CurrentVersion,
-            Metadata: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["component"] = "app",
-                ["mode"] = "file-object"
-            },
-            Files: fileEntries);
+        var changedZipMd5 = ComputeMd5Hex(changedZipPath);
 
-        var fileMap = new FileMapDocument(
-            FormatVersion: "1.0",
-            DistributionId: distributionId,
-            FromVersion: options.BaselineVersion ?? "0.0.0",
-            ToVersion: options.CurrentVersion,
-            Version: options.CurrentVersion,
-            Platform: options.Platform,
-            Arch: PayloadUtilities.ResolveArch(options.Platform),
-            Channel: options.Channel,
-            GeneratedAt: generatedAt,
-            Metadata: metadata,
-            Components: [component],
-            Files: fileEntries);
-
-        PayloadUtilities.WriteJson(fileMapPath, fileMap);
-        _signer.SignFile(fileMapPath, options.PrivateKeyPath, fileMapSignaturePath);
-
-        if (!string.IsNullOrWhiteSpace(options.StaticOutputRoot) && !string.IsNullOrWhiteSpace(updateBaseUrl))
-        {
-            WriteStaticLayout(
-                options,
-                component,
-                objectsRoot,
-                distributionId,
-                fileMapPath,
-                fileMapSignaturePath,
-                Path.GetFullPath(options.StaticOutputRoot),
-                updateBaseUrl,
-                generatedAt);
-        }
-
-        var summary = new PlondsReleasePlatformEntry(
-            Platform: options.Platform,
-            DistributionId: distributionId,
-            BaselineTag: options.BaselineTag,
-            BaselineVersion: options.BaselineVersion ?? "0.0.0",
-            TargetVersion: options.CurrentVersion,
-            IsFullPayload: useFullPayload,
-            FilesZipAsset: $"files-{options.Platform}.zip",
-            UpdateZipAsset: updateAssetName,
-            FileMapAsset: fileMapAssetName,
-            FileMapSignatureAsset: fileMapSignatureAssetName,
-            Sha256: PayloadUtilities.ComputeSha256(updateArchivePath));
-
-        var summaryPath = Path.Combine(summaryRoot, $"platform-summary-{options.Platform}.json");
-        PayloadUtilities.WriteJson(summaryPath, summary);
-
-        return new PlondsDeltaBuildResult(
-            options.Platform,
-            distributionId,
-            updateArchivePath,
-            fileMapPath,
-            fileMapSignaturePath,
-            summaryPath,
-            useFullPayload,
-            options.BaselineTag,
-            options.BaselineVersion,
-            options.CurrentVersion);
-    }
-
-    private static List<FileEntryDocument> BuildFileEntries(
-        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> previousManifest,
-        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> currentManifest,
-        string objectsRoot,
-        string? repoBaseUrl)
-    {
-        var result = new List<FileEntryDocument>();
-
-        foreach (var path in currentManifest.Keys.OrderBy(static x => x, StringComparer.OrdinalIgnoreCase))
-        {
-            var current = currentManifest[path];
-            if (previousManifest.TryGetValue(path, out var previous) &&
-                string.Equals(current.Sha256, previous.Sha256, StringComparison.OrdinalIgnoreCase))
-            {
-                result.Add(new FileEntryDocument(
-                    Path: path,
-                    Action: "reuse",
-                    Sha256: current.Sha256,
-                    Size: current.Size,
-                    ObjectPath: null,
-                    ObjectKey: null,
-                    ObjectUrl: null,
-                    Metadata: null));
-                continue;
-            }
-
-            var action = previousManifest.ContainsKey(path) ? "replace" : "add";
-            var objectPath = PayloadUtilities.CopyObject(current.FullPath, objectsRoot, current.Sha256);
-            var objectUrl = string.IsNullOrWhiteSpace(repoBaseUrl)
-                ? null
-                : $"{repoBaseUrl.TrimEnd('/')}/{objectPath}";
-            var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["mode"] = "file-object"
-            };
-            if (!string.IsNullOrWhiteSpace(current.UnixFileMode))
-            {
-                metadata["unixFileMode"] = current.UnixFileMode!;
-            }
-
-            result.Add(new FileEntryDocument(
-                Path: path,
-                Action: action,
-                Sha256: current.Sha256,
-                Size: current.Size,
-                ObjectPath: objectPath,
-                ObjectKey: objectPath,
-                ObjectUrl: objectUrl,
-                Metadata: metadata));
-        }
-
-        foreach (var path in previousManifest.Keys.OrderBy(static x => x, StringComparer.OrdinalIgnoreCase))
-        {
-            if (currentManifest.ContainsKey(path))
-            {
-                continue;
-            }
-
-            result.Add(new FileEntryDocument(
-                Path: path,
-                Action: "delete",
-                Sha256: string.Empty,
-                Size: 0,
-                ObjectPath: null,
-                ObjectKey: null,
-                ObjectUrl: null,
-                Metadata: null));
-        }
-
-        return result;
-    }
-
-    private static void WriteStaticLayout(
-        PlondsDeltaBuildOptions options,
-        ComponentDocument component,
-        string objectsRoot,
-        string distributionId,
-        string fileMapPath,
-        string fileMapSignaturePath,
-        string staticOutputRoot,
-        string updateBaseUrl,
-        DateTimeOffset generatedAt)
-    {
-        var repoRoot = Path.Combine(staticOutputRoot, "repo", "sha256");
-        var manifestRoot = Path.Combine(staticOutputRoot, "manifests", distributionId);
-        var distributionRoot = Path.Combine(staticOutputRoot, "meta", "distributions");
-        var channelRoot = Path.Combine(staticOutputRoot, "meta", "channels", options.Channel, options.Platform);
-
-        CopyDirectory(objectsRoot, repoRoot);
-        Directory.CreateDirectory(manifestRoot);
-        File.Copy(fileMapPath, Path.Combine(manifestRoot, "plonds-filemap.json"), overwrite: true);
-        File.Copy(fileMapSignaturePath, Path.Combine(manifestRoot, "plonds-filemap.json.sig"), overwrite: true);
-
-        var fileMapUrl = $"{updateBaseUrl}/manifests/{Uri.EscapeDataString(distributionId)}/plonds-filemap.json";
-        var distribution = new DistributionDocument(
-            DistributionId: distributionId,
-            Version: options.CurrentVersion,
-            SourceVersion: options.BaselineVersion ?? "0.0.0",
+        var manifest = new PlondsManifest(
+            FormatVersion: PlondsConstants.FormatVersion,
+            CurrentVersion: options.CurrentVersion,
+            PreviousVersion: options.BaselineVersion ?? "0.0.0",
+            IsFullUpdate: isFullUpdate,
+            RequiresCleanInstall: requiresCleanInstall,
             Channel: options.Channel,
             Platform: options.Platform,
-            Arch: PayloadUtilities.ResolveArch(options.Platform),
-            PublishedAt: generatedAt,
-            FileMapUrl: fileMapUrl,
-            FileMapSignatureUrl: fileMapUrl + ".sig",
-            Components: [component],
-            InstallerMirrors: [],
-            Capabilities: ["file-object"],
-            Metadata: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            UpdatedAt: DateTimeOffset.UtcNow,
+            CompareMethod: PlondsConstants.CompareMethodFileCompare,
+            HashAlgorithm: hashAlgorithm,
+            FilesMap: filesMap,
+            ChangedFilesMap: changedFilesMap,
+            Checksums: new Dictionary<string, string>
             {
-                ["protocol"] = "PLONDS",
-                ["releaseTag"] = options.CurrentTag,
-                ["baselineTag"] = options.BaselineTag ?? string.Empty,
-                ["baselineVersion"] = options.BaselineVersion ?? "0.0.0",
-                ["targetVersion"] = options.CurrentVersion,
-                ["isFullPayload"] = options.IsFullPayload ? "true" : "false"
+                ["changed.zip"] = $"md5:{changedZipMd5}"
             });
 
-        var latest = new LatestPointerDocument(
-            DistributionId: distributionId,
-            Version: options.CurrentVersion,
-            Channel: options.Channel,
+        var manifestPath = Path.Combine(outputRoot, "PLONDS.json");
+        var manifestJson = JsonSerializer.Serialize(manifest, JsonOptions);
+        File.WriteAllText(manifestPath, manifestJson);
+
+        return new PlondsDeltaBuildResult(
             Platform: options.Platform,
-            PublishedAt: generatedAt);
-
-        PayloadUtilities.WriteJson(Path.Combine(distributionRoot, distributionId + ".json"), distribution);
-        PayloadUtilities.WriteJson(Path.Combine(channelRoot, "latest.json"), latest);
+            ChangedZipPath: changedZipPath,
+            ManifestPath: manifestPath,
+            IsFullUpdate: isFullUpdate,
+            RequiresCleanInstall: requiresCleanInstall,
+            CurrentVersion: options.CurrentVersion,
+            BaselineVersion: options.BaselineVersion);
     }
 
-    private static void CopyDirectory(string sourceDir, string destinationDir)
+    internal static string ValidateHashAlgorithmInternal(string algorithm)
     {
-        Directory.CreateDirectory(destinationDir);
-        foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
+        var normalized = algorithm.Trim().ToLowerInvariant();
+        if (normalized is not (PlondsConstants.HashAlgorithmSha256 or PlondsConstants.HashAlgorithmMd5))
         {
-            var relativePath = Path.GetRelativePath(sourceDir, directory);
-            Directory.CreateDirectory(Path.Combine(destinationDir, relativePath));
+            throw new ArgumentException($"Unsupported hash algorithm: {algorithm}. Supported: sha256, md5");
         }
 
-        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(sourceDir, file);
-            var destinationPath = Path.Combine(destinationDir, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-            File.Copy(file, destinationPath, overwrite: true);
-        }
+        return normalized;
     }
 
-    private sealed record FileMapDocument(
-        string FormatVersion,
-        string DistributionId,
-        string FromVersion,
-        string ToVersion,
-        string Version,
-        string Platform,
-        string Arch,
-        string Channel,
-        DateTimeOffset GeneratedAt,
-        IReadOnlyDictionary<string, string> Metadata,
-        IReadOnlyList<ComponentDocument> Components,
-        IReadOnlyList<FileEntryDocument> Files);
+    private static Dictionary<string, PlondsFileEntry> BuildFilesMap(
+        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> previousManifest,
+        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> currentManifest,
+        string hashAlgorithm)
+    {
+        var filesMap = new Dictionary<string, PlondsFileEntry>(StringComparer.OrdinalIgnoreCase);
 
-    private sealed record ComponentDocument(
-        string Name,
-        string Version,
-        IReadOnlyDictionary<string, string>? Metadata,
-        IReadOnlyList<FileEntryDocument> Files);
+        foreach (var path in currentManifest.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            var current = currentManifest[path];
+            var currentHash = GetHash(current, hashAlgorithm);
 
-    private sealed record FileEntryDocument(
-        string Path,
-        string Action,
-        string Sha256,
-        long Size,
-        string? ObjectPath,
-        string? ObjectKey,
-        string? ObjectUrl,
-        IReadOnlyDictionary<string, string>? Metadata);
+            if (previousManifest.TryGetValue(path, out var previous))
+            {
+                var previousHash = GetHash(previous, hashAlgorithm);
+                if (string.Equals(currentHash, previousHash, StringComparison.OrdinalIgnoreCase))
+                {
+                    filesMap[path] = new PlondsFileEntry(PlondsConstants.ActionReuse, currentHash, current.Size, hashAlgorithm);
+                    continue;
+                }
+            }
 
-    private sealed record DistributionDocument(
-        string DistributionId,
-        string Version,
-        string SourceVersion,
-        string Channel,
-        string Platform,
-        string Arch,
-        DateTimeOffset PublishedAt,
-        string FileMapUrl,
-        string FileMapSignatureUrl,
-        IReadOnlyList<ComponentDocument> Components,
-        IReadOnlyList<InstallerMirrorDocument> InstallerMirrors,
-        IReadOnlyList<string> Capabilities,
-        IReadOnlyDictionary<string, string>? Metadata);
+            var action = previousManifest.ContainsKey(path)
+                ? PlondsConstants.ActionReplace
+                : PlondsConstants.ActionAdd;
+            filesMap[path] = new PlondsFileEntry(action, currentHash, current.Size, hashAlgorithm);
+        }
 
-    private sealed record LatestPointerDocument(
-        string DistributionId,
-        string Version,
-        string Channel,
-        string Platform,
-        DateTimeOffset PublishedAt);
+        foreach (var path in previousManifest.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!currentManifest.ContainsKey(path))
+            {
+                filesMap[path] = new PlondsFileEntry(PlondsConstants.ActionDelete, string.Empty, 0, hashAlgorithm);
+            }
+        }
 
-    private sealed record InstallerMirrorDocument(
-        string Platform,
-        string? Url,
-        string? FileName,
-        string? Sha256,
-        long Size);
+        return filesMap;
+    }
+
+    private static string GetHash(PayloadUtilities.FileFingerprint fingerprint, string hashAlgorithm)
+    {
+        if (hashAlgorithm == PlondsConstants.HashAlgorithmMd5)
+        {
+            return ComputeMd5Hex(fingerprint.FullPath);
+        }
+
+        return fingerprint.Sha256;
+    }
+
+    private static Dictionary<string, PlondsChangedFileEntry> BuildChangedFilesMap(
+        IReadOnlyDictionary<string, PlondsFileEntry> filesMap,
+        string hashAlgorithm)
+    {
+        var changedFilesMap = new Dictionary<string, PlondsChangedFileEntry>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (path, entry) in filesMap)
+        {
+            if (entry.Action is PlondsConstants.ActionAdd or PlondsConstants.ActionReplace)
+            {
+                changedFilesMap[path] = new PlondsChangedFileEntry(path, entry.Hash, entry.Size, hashAlgorithm);
+            }
+        }
+
+        return changedFilesMap;
+    }
+
+    private static string CreateChangedZip(
+        string currentExtractRoot,
+        IReadOnlyDictionary<string, PlondsFileEntry> filesMap,
+        string outputRoot,
+        string platform)
+    {
+        var changedZipPath = Path.Combine(outputRoot, "changed.zip");
+        var stagingRoot = Path.Combine(outputRoot, "work", platform, "staging");
+        PayloadUtilities.EnsureCleanDirectory(stagingRoot);
+
+        foreach (var (path, entry) in filesMap)
+        {
+            if (entry.Action is not (PlondsConstants.ActionAdd or PlondsConstants.ActionReplace))
+            {
+                continue;
+            }
+
+            var sourcePath = Path.Combine(currentExtractRoot, path);
+            if (!File.Exists(sourcePath))
+            {
+                continue;
+            }
+
+            var destPath = Path.Combine(stagingRoot, path);
+            var destDir = Path.GetDirectoryName(destPath);
+            if (!string.IsNullOrWhiteSpace(destDir))
+            {
+                Directory.CreateDirectory(destDir);
+            }
+
+            File.Copy(sourcePath, destPath, overwrite: true);
+        }
+
+        PayloadUtilities.CreatePayloadZip(stagingRoot, changedZipPath);
+        return changedZipPath;
+    }
+
+    private static bool DetectLauncherChange(
+        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> previousManifest,
+        IReadOnlyDictionary<string, PayloadUtilities.FileFingerprint> currentManifest,
+        string launcherRelativePath)
+    {
+        var normalizedPath = launcherRelativePath.Replace('\\', '/');
+
+        if (!currentManifest.TryGetValue(normalizedPath, out var current))
+        {
+            return false;
+        }
+
+        if (!previousManifest.TryGetValue(normalizedPath, out var previous))
+        {
+            return true;
+        }
+
+        return !string.Equals(current.Sha256, previous.Sha256, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ComputeMd5Hex(string filePath)
+    {
+        using var stream = File.OpenRead(filePath);
+        return Convert.ToHexString(MD5.HashData(stream)).ToLowerInvariant();
+    }
 }

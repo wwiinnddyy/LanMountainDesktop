@@ -1,5 +1,4 @@
-﻿using Plonds.Core.Publishing;
-using Plonds.Core.Security;
+using Plonds.Core.Publishing;
 
 return await PlondsCli.RunAsync(args);
 
@@ -20,26 +19,14 @@ internal static class PlondsCli
         {
             switch (command)
             {
-                case "generate":
-                    RunGenerate(options);
-                    return Task.FromResult(0);
-                case "sign":
-                    RunSign(options);
-                    return Task.FromResult(0);
-                case "publish":
-                    RunPublish(options);
-                    return Task.FromResult(0);
-                case "pack-payload":
-                    RunPackPayload(options);
-                    return Task.FromResult(0);
                 case "build-delta":
                     RunBuildDelta(options);
                     return Task.FromResult(0);
-                case "build-index":
-                    RunBuildIndex(options);
+                case "build-delta-from-commits":
+                    RunBuildDeltaFromCommits(options);
                     return Task.FromResult(0);
-                case "build-plonds":
-                    RunBuildPlonds(options);
+                case "pack-payload":
+                    RunPackPayload(options);
                     return Task.FromResult(0);
                 default:
                     Console.Error.WriteLine($"Unknown command: {command}");
@@ -54,63 +41,51 @@ internal static class PlondsCli
         }
     }
 
-    private static void RunGenerate(Dictionary<string, string> options)
+    private static void RunBuildDelta(Dictionary<string, string> options)
     {
-        var generator = new PlondsGenerator();
-        var result = generator.Generate(new PlondsGenerateOptions(
-            CurrentVersion: Require(options, "current-version"),
-            CurrentDirectory: Require(options, "current-dir"),
+        var builder = new PlondsDeltaBuilder();
+        var result = builder.Build(new PlondsDeltaBuildOptions(
             Platform: Require(options, "platform"),
+            CurrentVersion: Require(options, "current-version"),
+            CurrentPayloadZip: Require(options, "current-zip"),
             OutputRoot: Require(options, "output-dir"),
-            PreviousVersion: Get(options, "previous-version", "0.0.0") ?? "0.0.0",
-            PreviousDirectory: Get(options, "previous-dir"),
             Channel: Get(options, "channel", "stable") ?? "stable",
-            DistributionId: Get(options, "distribution-id"),
-            RepoBaseUrl: Get(options, "repo-base-url"),
-            FileMapUrl: Get(options, "file-map-url"),
-            FileMapSignatureUrl: Get(options, "file-map-signature-url"),
-            InstallerDirectory: Get(options, "installer-directory"),
-            InstallerBaseUrl: Get(options, "installer-base-url")));
-
-        Console.WriteLine($"Generated PLONDS artifacts for {result.Platform}: {result.DistributionId}");
-        Console.WriteLine(result.FileMapPath);
-    }
-
-    private static void RunSign(Dictionary<string, string> options)
-    {
-        var signer = new RsaFileSigner();
-        var signaturePath = signer.SignFile(
-            Require(options, "manifest"),
-            Require(options, "private-key"),
-            Get(options, "output"));
-        Console.WriteLine(signaturePath);
-    }
-
-    private static void RunPublish(Dictionary<string, string> options)
-    {
-        var publisher = new PlondsPublisher();
-        var results = publisher.Publish(new PlondsPublishOptions(
-            Version: Require(options, "version"),
-            AppArtifactsRoot: Require(options, "app-artifacts-root"),
-            InstallerArtifactsRoot: Require(options, "installer-artifacts-root"),
-            OutputRoot: Require(options, "output-dir"),
-            PrivateKeyPath: Require(options, "private-key"),
-            Channel: Get(options, "channel", "stable") ?? "stable",
-            BaselineRoot: Get(options, "baseline-root"),
-            RepoBaseUrl: Get(options, "repo-base-url"),
-            InstallerBaseUrl: Get(options, "installer-base-url"),
-            IncrementalStrategy: Get(options, "incremental-strategy", "release-payload") ?? "release-payload",
             BaselineVersion: Get(options, "baseline-version"),
-            BaselineRef: Get(options, "baseline-ref"),
-            SourceCommit: Get(options, "source-commit"),
-            IsFullPayloadRelease: bool.TryParse(Get(options, "is-full-payload-release", "false"), out var isFullPayloadRelease) && isFullPayloadRelease,
-            CommitRangeStart: Get(options, "commit-range-start"),
-            CommitRangeEnd: Get(options, "commit-range-end")));
+            BaselinePayloadZip: Get(options, "baseline-zip"),
+            LauncherRelativePath: Get(options, "launcher-path", "LanMountainDesktop.Launcher.exe") ?? "LanMountainDesktop.Launcher.exe",
+            HashAlgorithm: Get(options, "hash-algorithm", "sha256") ?? "sha256"));
 
-        foreach (var result in results)
-        {
-            Console.WriteLine($"{result.Platform}: {result.DistributionId}");
-        }
+        Console.WriteLine($"Built PLONDS delta for {result.Platform}:");
+        Console.WriteLine($"  IsFullUpdate:          {result.IsFullUpdate}");
+        Console.WriteLine($"  RequiresCleanInstall:  {result.RequiresCleanInstall}");
+        Console.WriteLine($"  ChangedZip:            {result.ChangedZipPath}");
+        Console.WriteLine($"  Manifest:              {result.ManifestPath}");
+    }
+
+    private static void RunBuildDeltaFromCommits(Dictionary<string, string> options)
+    {
+        var builder = new PlondsCommitDeltaBuilder();
+        var result = builder.Build(new PlondsCommitDeltaBuildOptions(
+            Platform: Require(options, "platform"),
+            CurrentVersion: Require(options, "current-version"),
+            CurrentPayloadZip: Require(options, "current-zip"),
+            OutputRoot: Require(options, "output-dir"),
+            Channel: Require(options, "channel"),
+            BaselineTag: Require(options, "baseline-tag"),
+            CurrentTag: Require(options, "current-tag"),
+            FallbackBaselineZip: Get(options, "fallback-zip"),
+            BaselineVersion: Get(options, "baseline-version"),
+            LauncherRelativePath: Get(options, "launcher-path", "LanMountainDesktop.Launcher.exe") ?? "LanMountainDesktop.Launcher.exe",
+            HashAlgorithm: Get(options, "hash-algorithm", "sha256") ?? "sha256"));
+
+        Console.WriteLine($"Built PLONDS commit-delta for {result.Platform}:");
+        Console.WriteLine($"  IsFullUpdate:          {result.IsFullUpdate}");
+        Console.WriteLine($"  RequiresCleanInstall:  {result.RequiresCleanInstall}");
+        Console.WriteLine($"  FellBackToFileCompare: {result.FellBackToFileCompare}");
+        Console.WriteLine($"  ChangedSourceFiles:    {result.ChangedSourceFiles.Count}");
+        Console.WriteLine($"  MappedArtifactFiles:   {result.MappedArtifactFiles.Count}");
+        Console.WriteLine($"  ChangedZip:            {result.ChangedZipPath}");
+        Console.WriteLine($"  Manifest:              {result.ManifestPath}");
     }
 
     private static void RunPackPayload(Dictionary<string, string> options)
@@ -119,56 +94,6 @@ internal static class PlondsCli
         var outputZip = Require(options, "output-zip");
         PayloadUtilities.CreatePayloadZip(sourceDirectory, outputZip);
         Console.WriteLine(outputZip);
-    }
-
-    private static void RunBuildDelta(Dictionary<string, string> options)
-    {
-        var builder = new PlondsDeltaBuilder();
-        var result = builder.Build(new PlondsDeltaBuildOptions(
-            Platform: Require(options, "platform"),
-            CurrentVersion: Require(options, "current-version"),
-            CurrentTag: Require(options, "current-tag"),
-            CurrentPayloadZip: Require(options, "current-zip"),
-            OutputRoot: Require(options, "output-dir"),
-            PrivateKeyPath: Require(options, "private-key"),
-            Channel: Get(options, "channel", "stable") ?? "stable",
-            BaselineVersion: Get(options, "baseline-version"),
-            BaselineTag: Get(options, "baseline-tag"),
-            BaselinePayloadZip: Get(options, "baseline-zip"),
-            IsFullPayload: bool.TryParse(Get(options, "is-full-payload", "false"), out var isFullPayload) && isFullPayload,
-            StaticOutputRoot: Get(options, "static-output-dir"),
-            UpdateBaseUrl: Get(options, "update-base-url")));
-
-        Console.WriteLine($"Built PLONDS delta for {result.Platform}: {result.UpdateArchivePath}");
-        Console.WriteLine(result.FileMapPath);
-    }
-
-    private static void RunBuildIndex(Dictionary<string, string> options)
-    {
-        var builder = new PlondsReleaseIndexBuilder();
-        var manifestPath = builder.Build(new PlondsReleaseIndexOptions(
-            ReleaseTag: Require(options, "release-tag"),
-            Version: Require(options, "version"),
-            Channel: Get(options, "channel", "stable") ?? "stable",
-            PlatformSummariesDirectory: Require(options, "platform-summaries-dir"),
-            OutputRoot: Require(options, "output-dir"),
-            PrivateKeyPath: Require(options, "private-key")));
-
-        Console.WriteLine(manifestPath);
-    }
-
-    private static void RunBuildPlonds(Dictionary<string, string> options)
-    {
-        var builder = new PlondsManifestBuilder();
-        var manifestPath = builder.Build(new PlondsBuildOptions(
-            ReleaseTag: Require(options, "release-tag"),
-            AssetsDirectory: Require(options, "assets-dir"),
-            OutputRoot: Require(options, "output-dir"),
-            PrivateKeyPath: Require(options, "private-key"),
-            Repository: Require(options, "repository"),
-            S3BaseUrl: Get(options, "s3-base-url")));
-
-        Console.WriteLine(manifestPath);
     }
 
     private static Dictionary<string, string> ParseOptions(string[] args)
@@ -212,12 +137,8 @@ internal static class PlondsCli
     private static void PrintUsage()
     {
         Console.WriteLine("PLONDS Tool");
+        Console.WriteLine("  build-delta --platform <p> --current-version <v> --current-zip <file> --output-dir <dir> [--channel <ch>] [--baseline-version <v>] [--baseline-zip <file>] [--launcher-path <path>] [--hash-algorithm sha256|md5]");
+        Console.WriteLine("  build-delta-from-commits --platform <p> --current-version <v> --current-zip <file> --output-dir <dir> --channel <ch> --baseline-tag <tag> --current-tag <tag> [--fallback-zip <file>] [--baseline-version <v>] [--launcher-path <path>] [--hash-algorithm sha256|md5]");
         Console.WriteLine("  pack-payload --source-dir <dir> --output-zip <file>");
-        Console.WriteLine("  build-delta --platform <platform> --current-version <v> --current-tag <tag> --current-zip <file> --output-dir <dir> --private-key <pem> [--baseline-tag <tag>] [--baseline-version <v>] [--baseline-zip <file>] [--is-full-payload] [--static-output-dir <dir>] [--update-base-url <url>]");
-        Console.WriteLine("  build-index --release-tag <tag> --version <v> --platform-summaries-dir <dir> --output-dir <dir> --private-key <pem> [--channel <channel>]");
-        Console.WriteLine("  build-plonds --release-tag <tag> --assets-dir <dir> --output-dir <dir> --private-key <pem> --repository <owner/repo> [--s3-base-url <url>]");
-        Console.WriteLine("  sign --manifest <file> --private-key <pem> [--output <file>]");
-        Console.WriteLine("  generate --current-version <v> --current-dir <dir> --platform <platform> --output-dir <dir> [--previous-version <v>] [--previous-dir <dir>]");
-        Console.WriteLine("  publish --version <v> --app-artifacts-root <dir> --installer-artifacts-root <dir> --output-dir <dir> --private-key <pem> [--baseline-root <dir>]");
     }
 }

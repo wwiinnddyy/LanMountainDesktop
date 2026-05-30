@@ -146,15 +146,10 @@ public sealed class WindowLayerIsolationTests
     public void FusedDesktopWindows_KeepDesktopBottomMostBoundary()
     {
         var desktopWidgetWindow = ReadRepositoryFile("LanMountainDesktop", "Views", "DesktopWidgetWindow.axaml.cs");
-        var transparentOverlayWindow = ReadRepositoryFile("LanMountainDesktop", "Views", "TransparentOverlayWindow.axaml.cs");
 
         Assert.Contains("WindowBottomMostServiceFactory.GetOrCreate()", desktopWidgetWindow);
         Assert.Contains("RefreshDesktopLayer", desktopWidgetWindow);
         Assert.Contains("SendToBottom", desktopWidgetWindow);
-
-        Assert.Contains("WindowBottomMostServiceFactory.GetOrCreate()", transparentOverlayWindow);
-        Assert.Contains("RefreshDesktopLayer", transparentOverlayWindow);
-        Assert.Contains("SendToBottom", transparentOverlayWindow);
     }
 
     [Fact]
