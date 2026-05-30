@@ -134,10 +134,6 @@ function Remove-NonTargetRuntimeDirectories {
         [Parameter(Mandatory = $true)][string]$Rid
     )
 
-    if ($Rid -notlike "win-*") {
-        return
-    }
-
     $runtimeRoots = @(Get-ChildItem -LiteralPath $Root -Recurse -Directory -Filter "runtimes" -ErrorAction SilentlyContinue)
     $removed = 0
     foreach ($runtimeRoot in $runtimeRoots) {
@@ -152,24 +148,42 @@ function Remove-NonTargetRuntimeDirectories {
     Write-Host "Removed non-target runtime directories: $removed"
 }
 
-function Assert-WindowsPayloadClean {
+function Assert-PayloadClean {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
         [Parameter(Mandatory = $true)][string]$Rid
     )
 
-    if ($Rid -notlike "win-*") {
+    $violations = [System.Collections.Generic.List[string]]::new()
+
+    if ($Rid -like "win-*") {
+        $forbiddenExtensions = @(".pdb", ".so", ".dylib", ".a")
+        $forbiddenBundledRuntimeFiles = @(
+            "coreclr.dll",
+            "hostfxr.dll",
+            "hostpolicy.dll",
+            "System.Private.CoreLib.dll"
+        )
+    } elseif ($Rid -like "osx-*") {
+        $forbiddenExtensions = @(".pdb", ".so", ".a")
+        $forbiddenBundledRuntimeFiles = @(
+            "libcoreclr.dylib",
+            "libhostfxr.dylib",
+            "libhostpolicy.dylib",
+            "System.Private.CoreLib.dll"
+        )
+    } elseif ($Rid -like "linux-*") {
+        $forbiddenExtensions = @(".pdb", ".dylib", ".dll", ".a")
+        $forbiddenBundledRuntimeFiles = @(
+            "libcoreclr.so",
+            "libhostfxr.so",
+            "libhostpolicy.so",
+            "System.Private.CoreLib.dll"
+        )
+    } else {
+        Write-Host "Unknown RID platform for payload clean assertion: $Rid — skipping."
         return
     }
-
-    $violations = [System.Collections.Generic.List[string]]::new()
-    $forbiddenExtensions = @(".pdb", ".so", ".dylib", ".a")
-    $forbiddenBundledRuntimeFiles = @(
-        "coreclr.dll",
-        "hostfxr.dll",
-        "hostpolicy.dll",
-        "System.Private.CoreLib.dll"
-    )
 
     Get-ChildItem -LiteralPath $Root -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $forbiddenExtensions -contains $_.Extension.ToLowerInvariant() } |
@@ -183,7 +197,6 @@ function Assert-WindowsPayloadClean {
             $violations.Add((Get-RelativePathCompat -Root $Root -Path $_.FullName))
         }
 
-
     Get-ChildItem -LiteralPath $Root -Recurse -Directory -Filter "runtimes" -ErrorAction SilentlyContinue |
         ForEach-Object {
             Get-ChildItem -LiteralPath $_.FullName -Directory -ErrorAction SilentlyContinue |
@@ -195,10 +208,10 @@ function Assert-WindowsPayloadClean {
 
     if ($violations.Count -gt 0) {
         $sample = ($violations | Select-Object -First 50) -join [Environment]::NewLine
-        throw "Windows publish payload contains forbidden files or runtime directories for ${Rid}:$([Environment]::NewLine)$sample"
+        throw "Publish payload contains forbidden files or runtime directories for ${Rid}:$([Environment]::NewLine)$sample"
     }
 
-    Write-Host "Windows payload guard passed for $Rid."
+    Write-Host "Payload guard passed for $Rid."
 }
 
 function Assert-WindowsPayloadContainsRequiredHosts {
@@ -258,7 +271,7 @@ Remove-NonTargetRuntimeDirectories -Root $resolvedPublishDir -Rid $RuntimeIdenti
 Write-PayloadAudit -Root $resolvedPublishDir
 
 if ($AssertClean) {
-    Assert-WindowsPayloadClean -Root $resolvedPublishDir -Rid $RuntimeIdentifier
+    Assert-PayloadClean -Root $resolvedPublishDir -Rid $RuntimeIdentifier
     if ($RuntimeIdentifier -like "win-*") {
         Assert-WindowsPayloadContainsRequiredHosts -Root $resolvedPublishDir
     }
