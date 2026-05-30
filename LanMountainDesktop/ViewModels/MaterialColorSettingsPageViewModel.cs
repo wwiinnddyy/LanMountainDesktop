@@ -54,6 +54,7 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
     private readonly LocalizationService _localizationService = new();
     private readonly string _languageCode;
     private bool _isInitializing;
+    private bool _isSynchronizingSystemMaterialMode;
     private string? _selectedWallpaperSeed;
 
     public MaterialColorSettingsPageViewModel(
@@ -307,7 +308,7 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
 
     partial void OnSelectedSystemMaterialModeChanged(SelectionOption value)
     {
-        if (_isInitializing || value is null)
+        if (_isInitializing || _isSynchronizingSystemMaterialMode || value is null)
         {
             return;
         }
@@ -452,15 +453,33 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
 
     private void RefreshMaterialModes(MaterialColorSnapshot snapshot)
     {
-        SystemMaterialModes = snapshot.AvailableSystemMaterialModes
+        var selectedValue = ThemeAppearanceValues.NormalizeSystemMaterialMode(
+            SelectedSystemMaterialMode?.Value ?? snapshot.SystemMaterialMode);
+        var snapshotValue = ThemeAppearanceValues.NormalizeSystemMaterialMode(snapshot.SystemMaterialMode);
+
+        SystemMaterialModes = ThemeAppearanceValues.NormalizeAvailableMaterialModes(snapshot.AvailableSystemMaterialModes)
             .Select(value => new SelectionOption(value, ResolveMaterialLabel(value)))
             .ToArray();
 
-        if (!SystemMaterialModes.Any(option =>
-                string.Equals(option.Value, SelectedSystemMaterialMode?.Value, StringComparison.OrdinalIgnoreCase)))
+        var nextSelection = SystemMaterialModes.FirstOrDefault(option =>
+                string.Equals(option.Value, selectedValue, StringComparison.OrdinalIgnoreCase))
+            ?? SystemMaterialModes.FirstOrDefault(option =>
+                string.Equals(option.Value, snapshotValue, StringComparison.OrdinalIgnoreCase))
+            ?? SystemMaterialModes.FirstOrDefault()
+            ?? new SelectionOption(ThemeAppearanceValues.MaterialNone, MaterialNoneText);
+
+        if (!string.Equals(SelectedSystemMaterialMode?.Value, nextSelection.Value, StringComparison.OrdinalIgnoreCase) ||
+            !ReferenceEquals(SelectedSystemMaterialMode, nextSelection))
         {
-            SelectedSystemMaterialMode = SystemMaterialModes.FirstOrDefault()
-                ?? new SelectionOption(ThemeAppearanceValues.MaterialNone, MaterialNoneText);
+            _isSynchronizingSystemMaterialMode = true;
+            try
+            {
+                SelectedSystemMaterialMode = nextSelection;
+            }
+            finally
+            {
+                _isSynchronizingSystemMaterialMode = false;
+            }
         }
     }
 
