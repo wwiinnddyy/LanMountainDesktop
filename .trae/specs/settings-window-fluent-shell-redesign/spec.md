@@ -8,7 +8,10 @@ Rebuild the settings window as an independent Fluent shell with a custom titleba
 
 - Keep the existing independent settings-window lifecycle: open-or-focus, no owner anchor, own taskbar entry.
 - Use a 48 DIP titlebar with Back, pane toggle, icon/title, search, restart action, more menu, and caption-button spacer.
+- Keep the titlebar and content area on one shared full-window background layer; the custom titlebar must remain transparent and must not paint a contrasting strip.
+- Avoid a visible titlebar bottom divider that makes the titlebar read as a separate color band.
 - Keep `FANavigationView` as the primary navigation surface with `OpenPaneLength` around 283 DIP.
+- Keep `FANavigationView` pane and content template backgrounds transparent in the settings shell so the navigation control does not reintroduce a second surface color.
 - Move the compact/minimal pane toggle from the navigation footer into the titlebar.
 - Add search over built-in settings pages and settings expanders; selecting a result navigates, expands, focuses, and highlights.
 - Add `auto` system material mode and make it the default.

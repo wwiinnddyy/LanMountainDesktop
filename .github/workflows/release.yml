@@ -637,10 +637,10 @@ jobs:
           dotnet publish LanMountainDesktop/LanMountainDesktop.csproj \
             -c Release \
             -o ./publish/macos-${{ matrix.arch }}-app \
-            --self-contained \
+            --self-contained:false \
             -r osx-${{ matrix.arch }} \
+            -p:SelfContained=false \
             -p:PublishSingleFile=false \
-            -p:SelfContained=true \
             -p:DebugType=none \
             -p:DebugSymbols=false \
             -p:SkipAirAppHostBuild=true \
@@ -650,6 +650,17 @@ jobs:
             -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
+      - name: Optimize and Guard macOS Payload
+        run: |
+          arch="${{ matrix.arch }}"
+          publishDir="publish/macos-${arch}-app"
+
+          pwsh ./LanMountainDesktop/scripts/Optimize-PublishPayload.ps1 \
+            -PublishDir "$publishDir" \
+            -RuntimeIdentifier "osx-${arch}" \
+            -AssertClean
+        shell: bash
 
       - name: Package Payload Zip
         run: |

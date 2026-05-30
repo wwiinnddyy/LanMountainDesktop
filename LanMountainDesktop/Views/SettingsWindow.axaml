@@ -67,11 +67,20 @@
 
     <Grid x:Name="RootGrid"
           Classes="settings-scope"
-          Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+          Background="Transparent"
           RowDefinitions="Auto,*">
+
+        <Border Grid.RowSpan="2"
+                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
+                IsHitTestVisible="False" />
+
+        <Border Grid.RowSpan="2"
+                Background="{DynamicResource AdaptiveSettingsWindowTintBrush}"
+                IsHitTestVisible="False" />
 
         <ui:FANavigationView x:Name="RootNavigationView"
                              Grid.Row="1"
+                             Classes="settings-navigation-view"
                              Margin="0"
                              Background="Transparent"
                              PaneDisplayMode="Auto"
@@ -90,6 +99,11 @@
             <ui:FANavigationView.Resources>
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewMinimalPaneBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewPaneBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewTopPaneBackground" Color="Transparent" />
             </ui:FANavigationView.Resources>
 
             <Grid x:Name="SettingsContentGrid"
@@ -155,9 +169,9 @@
         <Border x:Name="WindowTitleBarHost"
                 Grid.Row="0"
                 Height="48"
-                Background="{DynamicResource AdaptiveSettingsWindowBackgroundBrush}"
-                BorderBrush="{DynamicResource AdaptiveSettingsWindowBorderBrush}"
-                BorderThickness="0,0,0,1"
+                Background="Transparent"
+                BorderBrush="Transparent"
+                BorderThickness="0"
                 PointerPressed="OnTitleBarDragZonePointerPressed">
             <Grid ColumnDefinitions="Auto,*,Auto"
                   VerticalAlignment="Stretch">
