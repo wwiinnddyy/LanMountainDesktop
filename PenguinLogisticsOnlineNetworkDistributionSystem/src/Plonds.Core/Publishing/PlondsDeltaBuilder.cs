@@ -17,7 +17,7 @@ public sealed class PlondsDeltaBuilder
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        var hashAlgorithm = ValidateHashAlgorithmInternal(options.HashAlgorithm);
+        var hashAlgorithm = ValidateHashAlgorithm(options.HashAlgorithm);
 
         var currentPayloadZip = Path.GetFullPath(options.CurrentPayloadZip);
         if (!File.Exists(currentPayloadZip))
@@ -71,8 +71,6 @@ public sealed class PlondsDeltaBuilder
             Channel: options.Channel,
             Platform: options.Platform,
             UpdatedAt: DateTimeOffset.UtcNow,
-            CompareMethod: PlondsConstants.CompareMethodFileCompare,
-            HashAlgorithm: hashAlgorithm,
             FilesMap: filesMap,
             ChangedFilesMap: changedFilesMap,
             Checksums: new Dictionary<string, string>
@@ -94,7 +92,7 @@ public sealed class PlondsDeltaBuilder
             BaselineVersion: options.BaselineVersion);
     }
 
-    internal static string ValidateHashAlgorithmInternal(string algorithm)
+    private static string ValidateHashAlgorithm(string algorithm)
     {
         var normalized = algorithm.Trim().ToLowerInvariant();
         if (normalized is not (PlondsConstants.HashAlgorithmSha256 or PlondsConstants.HashAlgorithmMd5))
@@ -115,22 +113,22 @@ public sealed class PlondsDeltaBuilder
         foreach (var path in currentManifest.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
         {
             var current = currentManifest[path];
-            var currentHash = GetHash(current, hashAlgorithm);
+            var currentHash = ComputeHash(current.FullPath, hashAlgorithm);
 
             if (previousManifest.TryGetValue(path, out var previous))
             {
-                var previousHash = GetHash(previous, hashAlgorithm);
+                var previousHash = ComputeHash(previous.FullPath, hashAlgorithm);
                 if (string.Equals(currentHash, previousHash, StringComparison.OrdinalIgnoreCase))
                 {
                     filesMap[path] = new PlondsFileEntry(PlondsConstants.ActionReuse, currentHash, current.Size, hashAlgorithm);
                     continue;
                 }
+
+                filesMap[path] = new PlondsFileEntry(PlondsConstants.ActionReplace, currentHash, current.Size, hashAlgorithm);
+                continue;
             }
 
-            var action = previousManifest.ContainsKey(path)
-                ? PlondsConstants.ActionReplace
-                : PlondsConstants.ActionAdd;
-            filesMap[path] = new PlondsFileEntry(action, currentHash, current.Size, hashAlgorithm);
+            filesMap[path] = new PlondsFileEntry(PlondsConstants.ActionAdd, currentHash, current.Size, hashAlgorithm);
         }
 
         foreach (var path in previousManifest.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
@@ -142,16 +140,6 @@ public sealed class PlondsDeltaBuilder
         }
 
         return filesMap;
-    }
-
-    private static string GetHash(PayloadUtilities.FileFingerprint fingerprint, string hashAlgorithm)
-    {
-        if (hashAlgorithm == PlondsConstants.HashAlgorithmMd5)
-        {
-            return ComputeMd5Hex(fingerprint.FullPath);
-        }
-
-        return fingerprint.Sha256;
     }
 
     private static Dictionary<string, PlondsChangedFileEntry> BuildChangedFilesMap(
@@ -226,6 +214,15 @@ public sealed class PlondsDeltaBuilder
         }
 
         return !string.Equals(current.Sha256, previous.Sha256, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string ComputeHash(string filePath, string hashAlgorithm)
+    {
+        using var stream = File.OpenRead(filePath);
+        var hash = hashAlgorithm == PlondsConstants.HashAlgorithmMd5
+            ? MD5.HashData(stream)
+            : SHA256.HashData(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static string ComputeMd5Hex(string filePath)

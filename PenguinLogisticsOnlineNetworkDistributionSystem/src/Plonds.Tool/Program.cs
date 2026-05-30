@@ -73,17 +73,14 @@ internal static class PlondsCli
             Channel: Require(options, "channel"),
             BaselineTag: Require(options, "baseline-tag"),
             CurrentTag: Require(options, "current-tag"),
+            HashAlgorithm: Get(options, "hash-algorithm", "sha256") ?? "sha256",
+            SourceDirs: Get(options, "source-dirs"),
             FallbackBaselineZip: Get(options, "fallback-zip"),
-            BaselineVersion: Get(options, "baseline-version"),
-            LauncherRelativePath: Get(options, "launcher-path", "LanMountainDesktop.Launcher.exe") ?? "LanMountainDesktop.Launcher.exe",
-            HashAlgorithm: Get(options, "hash-algorithm", "sha256") ?? "sha256"));
+            LauncherRelativePath: Get(options, "launcher-path", "LanMountainDesktop.Launcher.exe") ?? "LanMountainDesktop.Launcher.exe"));
 
         Console.WriteLine($"Built PLONDS commit-delta for {result.Platform}:");
         Console.WriteLine($"  IsFullUpdate:          {result.IsFullUpdate}");
         Console.WriteLine($"  RequiresCleanInstall:  {result.RequiresCleanInstall}");
-        Console.WriteLine($"  FellBackToFileCompare: {result.FellBackToFileCompare}");
-        Console.WriteLine($"  ChangedSourceFiles:    {result.ChangedSourceFiles.Count}");
-        Console.WriteLine($"  MappedArtifactFiles:   {result.MappedArtifactFiles.Count}");
         Console.WriteLine($"  ChangedZip:            {result.ChangedZipPath}");
         Console.WriteLine($"  Manifest:              {result.ManifestPath}");
     }
@@ -137,8 +134,34 @@ internal static class PlondsCli
     private static void PrintUsage()
     {
         Console.WriteLine("PLONDS Tool");
-        Console.WriteLine("  build-delta --platform <p> --current-version <v> --current-zip <file> --output-dir <dir> [--channel <ch>] [--baseline-version <v>] [--baseline-zip <file>] [--launcher-path <path>] [--hash-algorithm sha256|md5]");
-        Console.WriteLine("  build-delta-from-commits --platform <p> --current-version <v> --current-zip <file> --output-dir <dir> --channel <ch> --baseline-tag <tag> --current-tag <tag> [--fallback-zip <file>] [--baseline-version <v>] [--launcher-path <path>] [--hash-algorithm sha256|md5]");
-        Console.WriteLine("  pack-payload --source-dir <dir> --output-zip <file>");
+        Console.WriteLine();
+        Console.WriteLine("Commands:");
+        Console.WriteLine("  build-delta              Build delta by comparing two payload zips");
+        Console.WriteLine("    --platform <platform>   Platform identifier (e.g. windows-x64)");
+        Console.WriteLine("    --current-version <v>  Current release version");
+        Console.WriteLine("    --current-zip <file>   Current payload zip path");
+        Console.WriteLine("    --output-dir <dir>     Output directory");
+        Console.WriteLine("    [--channel <ch>]       Update channel (default: stable)");
+        Console.WriteLine("    [--baseline-version <v>] Baseline version");
+        Console.WriteLine("    [--baseline-zip <file>]  Baseline payload zip path");
+        Console.WriteLine("    [--hash-algorithm <alg>]  sha256 or md5 (default: sha256)");
+        Console.WriteLine("    [--launcher-path <path>] Launcher exe relative path");
+        Console.WriteLine();
+        Console.WriteLine("  build-delta-from-commits Build delta by analyzing git commits");
+        Console.WriteLine("    --platform <platform>   Platform identifier");
+        Console.WriteLine("    --current-version <v>  Current release version");
+        Console.WriteLine("    --current-zip <file>   Current payload zip path");
+        Console.WriteLine("    --output-dir <dir>     Output directory");
+        Console.WriteLine("    --channel <ch>          Update channel");
+        Console.WriteLine("    --baseline-tag <tag>    Baseline git tag");
+        Console.WriteLine("    --current-tag <tag>    Current git tag");
+        Console.WriteLine("    [--hash-algorithm <alg>]  sha256 or md5 (default: sha256)");
+        Console.WriteLine("    [--source-dirs <dirs>]  Comma-separated source dirs to analyze");
+        Console.WriteLine("    [--fallback-zip <file>] Baseline zip for fallback to file-compare");
+        Console.WriteLine("    [--launcher-path <path>] Launcher exe relative path");
+        Console.WriteLine();
+        Console.WriteLine("  pack-payload             Pack a directory into a payload zip");
+        Console.WriteLine("    --source-dir <dir>      Source directory");
+        Console.WriteLine("    --output-zip <file>     Output zip path");
     }
 }
