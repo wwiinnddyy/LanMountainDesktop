@@ -1,4 +1,4 @@
-﻿name: PLONDS Comparator
+name: PLONDS Comparator
 
 concurrency:
   group: plonds-${{ github.event_name }}-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
@@ -9,7 +9,6 @@ on:
     types:
       - published
       - prereleased
-      - edited
   workflow_dispatch:
     inputs:
       tag:
@@ -17,7 +16,7 @@ on:
         required: true
         type: string
       baseline_tag:
-        description: 'Optional baseline tag'
+        description: 'Optional baseline tag (auto-detected if omitted)'
         required: false
         type: string
       channel:
@@ -28,12 +27,28 @@ on:
         options:
           - stable
           - preview
+      compare_method:
+        description: '比较方法'
+        required: false
+        type: choice
+        default: file-compare
+        options:
+          - file-compare
+          - commit-analyze
+      hash_algorithm:
+        description: '哈希算法（仅 file-compare 模式）'
+        required: false
+        type: choice
+        default: sha256
+        options:
+          - sha256
+          - md5
 
 env:
   DOTNET_VERSION: '10.0.x'
 
 jobs:
-  build:
+  compare:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,6 +63,7 @@ jobs:
       - name: Resolve release context
         shell: bash
         run: |
+          set -euo pipefail
           if [[ "${{ github.event_name }}" == "release" ]]; then
             TAG="${{ github.event.release.tag_name }}"
             if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
@@ -55,7 +71,9 @@ jobs:
             else
               CHANNEL="stable"
             fi
-            BASELINE_TAG=""
+            BASELINE_TAG_INPUT=""
+            COMPARE_METHOD="file-compare"
+            HASH_ALGORITHM="sha256"
           else
             RAW_TAG="${{ github.event.inputs.tag }}"
             if [[ "${RAW_TAG}" == v* ]]; then
@@ -64,18 +82,17 @@ jobs:
               TAG="v${RAW_TAG}"
             fi
             CHANNEL="${{ github.event.inputs.channel }}"
-            BASELINE_TAG="${{ github.event.inputs.baseline_tag }}"
+            BASELINE_TAG_INPUT="${{ github.event.inputs.baseline_tag }}"
+            COMPARE_METHOD="${{ github.event.inputs.compare_method }}"
+            HASH_ALGORITHM="${{ github.event.inputs.hash_algorithm }}"
           fi
 
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
           echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
           echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
-          echo "BASELINE_TAG_INPUT=${BASELINE_TAG}" >> "$GITHUB_ENV"
-          PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
-          if [[ -z "$PUBLIC_BASE" ]]; then
-            PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
-          fi
-          echo "S3_PUBLIC_BASE_URL=${PUBLIC_BASE%/}" >> "$GITHUB_ENV"
+          echo "BASELINE_TAG_INPUT=${BASELINE_TAG_INPUT}" >> "$GITHUB_ENV"
+          echo "COMPARE_METHOD=${COMPARE_METHOD}" >> "$GITHUB_ENV"
+          echo "HASH_ALGORITHM=${HASH_ALGORITHM}" >> "$GITHUB_ENV"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -83,194 +100,158 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: preview
 
-      - name: Prepare signing key
-        env:
-          UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
-          PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          KEY="${PLONDS_SIGNING_KEY:-}"
-          if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
-          if [[ -z "$KEY" ]]; then
-            echo "No signing key is configured."
-            exit 1
-          fi
-          printf '%s' "$KEY" > update-private-key.pem
-          echo "UPDATE_PRIVATE_KEY_PATH=$PWD/update-private-key.pem" >> "$GITHUB_ENV"
-
       - name: Build PLONDS tool
         run: dotnet build PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj -c Release
 
-      - name: Resolve baseline plan
+      - name: Resolve baseline
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $repo = '${{ github.repository }}'
-          $tag = $env:RELEASE_TAG
-          $baselineInput = $env:BASELINE_TAG_INPUT
-          $currentRelease = gh release view $tag --repo $repo --json tagName,isPrerelease,assets,publishedAt | ConvertFrom-Json
-          $allReleases = gh api "repos/$repo/releases?per_page=100" | ConvertFrom-Json
-          $platforms = @('windows-x64', 'windows-x86', 'linux-x64')
+          set -euo pipefail
+          BASELINE_TAG=""
+          BASELINE_VERSION=""
 
-          $entries = foreach ($platform in $platforms) {
-            $assetName = "files-$platform.zip"
-            $currentAsset = $currentRelease.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
-            if (-not $currentAsset) {
-              throw "Current release $tag does not contain required asset $assetName"
-            }
+          if [[ -n "$BASELINE_TAG_INPUT" ]]; then
+            NORMALIZED="$BASELINE_TAG_INPUT"
+            if [[ "$NORMALIZED" != v* ]]; then NORMALIZED="v$NORMALIZED"; fi
+            if gh release view "$NORMALIZED" --repo "${{ github.repository }}" --json tagName >/dev/null 2>&1; then
+              BASELINE_TAG="$NORMALIZED"
+              BASELINE_VERSION="${NORMALIZED#v}"
+            else
+              echo "Specified baseline tag not found: $NORMALIZED"
+              exit 1
+            fi
+          else
+            IS_PRERELEASE="$(gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" --json isPrerelease --jq '.isPrerelease')"
+            CANDIDATES="$(gh api "repos/${{ github.repository }}/releases?per_page=50" \
+              --jq ".[] | select(.draft == false and .prerelease == ${IS_PRERELEASE} and .tag_name != \"${RELEASE_TAG}\") | .tag_name")"
 
-            $baselineRelease = $null
-            if (-not [string]::IsNullOrWhiteSpace($baselineInput)) {
-              $normalizedBaseline = if ($baselineInput.StartsWith('v')) { $baselineInput } else { "v$baselineInput" }
-              $baselineRelease = $allReleases | Where-Object { $_.tag_name -eq $normalizedBaseline } | Select-Object -First 1
-              if (-not $baselineRelease) {
-                throw "Specified baseline tag not found: $normalizedBaseline"
-              }
-            }
-            else {
-              $baselineRelease = $allReleases |
-                Where-Object {
-                  $_.tag_name -ne $tag -and
-                  -not $_.draft -and
-                  [bool]$_.prerelease -eq [bool]$currentRelease.isPrerelease -and
-                  ($_.assets | Where-Object { $_.name -eq $assetName } | Measure-Object).Count -gt 0
-                } |
-                Select-Object -First 1
-            }
+            for CANDIDATE in $CANDIDATES; do
+              if gh release download "$CANDIDATE" -p "files-windows-x64.zip" -D /tmp/baseline-check --clobber 2>/dev/null; then
+                BASELINE_TAG="$CANDIDATE"
+                BASELINE_VERSION="${CANDIDATE#v}"
+                rm -rf /tmp/baseline-check
+                break
+              fi
+            done
+          fi
 
-            [pscustomobject]@{
-              platform = $platform
-              assetName = $assetName
-              baselineTag = if ($baselineRelease) { $baselineRelease.tag_name } else { $null }
-              baselineVersion = if ($baselineRelease) { ($baselineRelease.tag_name -replace '^v', '') } else { $null }
-              isFullPayload = -not $baselineRelease
-            }
-          }
-
-          $plan = [pscustomobject]@{
-            tag = $tag
-            version = $env:RELEASE_VERSION
-            channel = $env:RELEASE_CHANNEL
-            platforms = $entries
-          }
-
-          $plan | ConvertTo-Json -Depth 8 | Set-Content plonds-plan.json -Encoding utf8
-          Get-Content plonds-plan.json
+          if [[ -n "$BASELINE_TAG" ]]; then
+            echo "BASELINE_TAG=${BASELINE_TAG}" >> "$GITHUB_ENV"
+            echo "BASELINE_VERSION=${BASELINE_VERSION}" >> "$GITHUB_ENV"
+            echo "Resolved baseline: ${BASELINE_TAG}"
+          else
+            echo "No baseline found. This will be a full update."
+          fi
 
       - name: Download payload zips
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $repo = '${{ github.repository }}'
-          $plan = Get-Content plonds-plan.json | ConvertFrom-Json
+          set -euo pipefail
+          mkdir -p plonds-input
 
-          foreach ($entry in $plan.platforms) {
-            $currentDir = Join-Path $PWD "plonds-input/current/$($entry.platform)"
-            New-Item -ItemType Directory -Path $currentDir -Force | Out-Null
-            gh release download $plan.tag --repo $repo -p $entry.assetName -D $currentDir
+          gh release download "$RELEASE_TAG" -p "files-windows-x64.zip" -D plonds-input
+          mv plonds-input/files-windows-x64.zip plonds-input/current-files-windows-x64.zip
 
-            if (-not [string]::IsNullOrWhiteSpace($entry.baselineTag)) {
-              $baselineDir = Join-Path $PWD "plonds-input/baseline/$($entry.platform)"
-              New-Item -ItemType Directory -Path $baselineDir -Force | Out-Null
-              gh release download $entry.baselineTag --repo $repo -p $entry.assetName -D $baselineDir
-            }
-          }
+          if [[ -n "$BASELINE_TAG" ]]; then
+            gh release download "$BASELINE_TAG" -p "files-windows-x64.zip" -D /tmp/baseline-dl
+            mv /tmp/baseline-dl/files-windows-x64.zip plonds-input/baseline-files-windows-x64.zip
+          fi
 
-      - name: Build delta assets
-        shell: pwsh
+      - name: Run build-delta (file-compare)
+        if: env.COMPARE_METHOD == 'file-compare'
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $plan = Get-Content plonds-plan.json | ConvertFrom-Json
-          foreach ($entry in $plan.platforms) {
-            $currentZip = Join-Path $PWD "plonds-input/current/$($entry.platform)/$($entry.assetName)"
-            $args = @(
-              'run', '--project', 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj', '--configuration', 'Release', '--',
-              'build-delta',
-              '--platform', $entry.platform,
-              '--current-version', $plan.version,
-              '--current-tag', $plan.tag,
-              '--current-zip', $currentZip,
-              '--output-dir', 'plonds-output',
-              '--private-key', $env:UPDATE_PRIVATE_KEY_PATH,
-              '--channel', $plan.channel,
-              '--static-output-dir', 'plonds-output/static',
-              '--update-base-url', $env:S3_PUBLIC_BASE_URL
+          set -euo pipefail
+          mkdir -p plonds-output
+
+          ARGS=(
+            'run' '--project' 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj'
+            '--configuration' 'Release' '--'
+            'build-delta'
+            '--platform' 'windows-x64'
+            '--current-version' "$RELEASE_VERSION"
+            '--current-zip' "$PWD/plonds-input/current-files-windows-x64.zip"
+            '--output-dir' "$PWD/plonds-output"
+            '--channel' "$RELEASE_CHANNEL"
+            '--hash-algorithm' "$HASH_ALGORITHM"
+          )
+
+          if [[ -n "$BASELINE_TAG" ]]; then
+            ARGS+=(
+              '--baseline-version' "$BASELINE_VERSION"
+              '--baseline-zip' "$PWD/plonds-input/baseline-files-windows-x64.zip"
             )
+          fi
 
-            if ([bool]$entry.isFullPayload) {
-              $args += @('--is-full-payload', 'true')
-            }
-            else {
-              $baselineZip = Join-Path $PWD "plonds-input/baseline/$($entry.platform)/$($entry.assetName)"
-              $args += @('--baseline-tag', $entry.baselineTag, '--baseline-version', $entry.baselineVersion, '--baseline-zip', $baselineZip)
-            }
+          dotnet "${ARGS[@]}"
 
-            dotnet @args
-          }
+      - name: Run build-delta-from-commits (commit-analyze)
+        if: env.COMPARE_METHOD == 'commit-analyze'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p plonds-output
 
-          dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- `
-            build-index `
-            --release-tag $plan.tag `
-            --version $plan.version `
-            --channel $plan.channel `
-            --platform-summaries-dir plonds-output/platform-summaries `
-            --output-dir plonds-output `
-            --private-key $env:UPDATE_PRIVATE_KEY_PATH
+          ARGS=(
+            'run' '--project' 'PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj'
+            '--configuration' 'Release' '--'
+            'build-delta-from-commits'
+            '--platform' 'windows-x64'
+            '--current-version' "$RELEASE_VERSION"
+            '--current-zip' "$PWD/plonds-input/current-files-windows-x64.zip"
+            '--output-dir' "$PWD/plonds-output"
+            '--channel' "$RELEASE_CHANNEL"
+            '--baseline-tag' "${BASELINE_TAG:-v0.0.0}"
+            '--current-tag' "$RELEASE_TAG"
+            '--hash-algorithm' "$HASH_ALGORITHM"
+          )
 
-          foreach ($entry in $plan.platforms) {
-            $summary = Get-Content "plonds-output/platform-summaries/platform-summary-$($entry.platform).json" | ConvertFrom-Json
-            $required = @(
-              "plonds-output/static/meta/channels/$($plan.channel)/$($entry.platform)/latest.json",
-              "plonds-output/static/meta/distributions/$($summary.distributionId).json",
-              "plonds-output/static/manifests/$($summary.distributionId)/plonds-filemap.json",
-              "plonds-output/static/manifests/$($summary.distributionId)/plonds-filemap.json.sig"
+          if [[ -n "$BASELINE_TAG" ]]; then
+            ARGS+=(
+              '--baseline-version' "$BASELINE_VERSION"
+              '--fallback-zip' "$PWD/plonds-input/baseline-files-windows-x64.zip"
             )
+          fi
 
-            foreach ($path in $required) {
-              if (-not (Test-Path $path)) {
-                throw "Missing PLONDS static output: $path"
-              }
-            }
-          }
+          dotnet "${ARGS[@]}"
 
-          $objects = Get-ChildItem -Path "plonds-output/static/repo/sha256" -File -Recurse -ErrorAction SilentlyContinue
-          if (-not $objects -or $objects.Count -eq 0) {
-            throw "PLONDS static object repository is empty."
-          }
+      - name: Validate output
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f plonds-output/changed.zip ]]; then
+            echo "Missing output: changed.zip"
+            exit 1
+          fi
+          if [[ ! -f plonds-output/PLONDS.json ]]; then
+            echo "Missing output: PLONDS.json"
+            exit 1
+          fi
+          jq -e . plonds-output/PLONDS.json >/dev/null
 
-          Compress-Archive -Path "plonds-output/static/*" -DestinationPath "plonds-output/release-assets/plonds-static.zip" -Force
-
-      - name: Upload PLONDS assets to release
+      - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" plonds-output/release-assets/* --clobber
+          gh release upload "$RELEASE_TAG" plonds-output/changed.zip plonds-output/PLONDS.json --clobber
 
       - name: Persist run metadata
         shell: bash
         run: |
           mkdir -p plonds-run-metadata
           printf '%s' "$RELEASE_TAG" > plonds-run-metadata/tag.txt
+          printf '%s' "$COMPARE_METHOD" >> plonds-run-metadata/tag.txt
 
       - name: Upload run metadata artifact
         uses: actions/upload-artifact@v4
         with:
           name: plonds-run-metadata
           path: plonds-run-metadata/tag.txt
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload PLONDS static artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: plonds-static
-          path: plonds-output/static/**
           if-no-files-found: error
           retention-days: 7

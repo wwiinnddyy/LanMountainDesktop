@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using LanMountainDesktop.ComponentSystem;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
@@ -11,46 +12,46 @@ using LanMountainDesktop.Views.Components;
 
 namespace LanMountainDesktop.Services;
 
-/// <summary>
-/// 融合桌面中央管理器服务接口
-/// </summary>
 public interface IFusedDesktopManagerService
 {
     void Initialize();
-    void EnterEditMode();
-    void ExitEditMode();
     void ReloadWidgets();
     void Shutdown();
+    void AddComponent(string componentId);
+    void RemoveComponent(string placementId);
+    void EnterEditMode();
+    void ExitEditMode();
+    bool IsEditMode { get; }
 }
 
-/// <summary>
-/// 融合桌面中央管理器服务实现。用于管理常态下的各个小窗口实体。
-/// </summary>
 internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
 {
     private readonly IFusedDesktopLayoutService _layoutService;
     private readonly ISettingsFacadeService _settingsFacade;
     private readonly Dictionary<string, DesktopWidgetWindow> _widgetWindows = [];
-    
-    // 基础服务依赖
+
     private readonly IWeatherInfoService _weatherDataService;
     private readonly TimeZoneService _timeZoneService;
     private readonly IRecommendationInfoService _recommendationInfoService = new RecommendationDataService();
     private readonly ICalculatorDataService _calculatorDataService = new CalculatorDataService();
-    
+
     private ComponentRegistry? _componentRegistry;
     private DesktopComponentRuntimeRegistry? _componentRuntimeRegistry;
     private bool _isEditMode;
 
     private const double DefaultCellSize = 100;
+    private const double DefaultComponentWidth = 200;
+    private const double DefaultComponentHeight = 200;
+
+    public bool IsEditMode => _isEditMode;
 
     public FusedDesktopManagerService(
-        IFusedDesktopLayoutService layoutService, 
+        IFusedDesktopLayoutService layoutService,
         ISettingsFacadeService settingsFacade)
     {
         _layoutService = layoutService;
         _settingsFacade = settingsFacade;
-        
+
         _weatherDataService = _settingsFacade.Weather.GetWeatherInfoService();
         _timeZoneService = _settingsFacade.Region.GetTimeZoneService();
     }
@@ -58,15 +59,14 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     public void Initialize()
     {
         if (!OperatingSystem.IsWindows()) return;
-        
-        // 检查融合桌面功能是否启用
+
         var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
         if (!appSnapshot.EnableFusedDesktop)
         {
             AppLogger.Info("FusedDesktop", "Fused desktop is disabled. Skipping initialization.");
             return;
         }
-        
+
         EnsureRegistries();
         ReloadWidgets();
     }
@@ -74,7 +74,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
     private void EnsureRegistries()
     {
         if (_componentRuntimeRegistry is not null) return;
-        
+
         var pluginRuntimeService = (Application.Current as App)?.PluginRuntimeService;
         _componentRegistry = DesktopComponentRegistryFactory.Create(pluginRuntimeService);
         _componentRuntimeRegistry = DesktopComponentRegistryFactory.CreateRuntimeRegistry(
@@ -88,12 +88,12 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
         if (_isEditMode) return;
         _isEditMode = true;
 
-        // 【修复问题3】不再隐藏窗口，而是将窗口内容转移到编辑模式覆盖层
-        // 这样可以保持组件的运行状态（动画、输入等）
         foreach (var window in _widgetWindows.Values)
         {
-            window.Hide();
+            window.SetEditMode(true);
         }
+
+        AppLogger.Info("FusedDesktop", "Entered edit mode.");
     }
 
     public void ExitEditMode()
@@ -101,25 +101,91 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
         if (!_isEditMode) return;
         _isEditMode = false;
 
-        // 编辑完成，重新加载布局（可能已发生更改）并显示
-        ReloadWidgets();
+        foreach (var window in _widgetWindows.Values)
+        {
+            window.SetEditMode(false);
+        }
+
+        AppLogger.Info("FusedDesktop", "Exited edit mode.");
+    }
+
+    public void AddComponent(string componentId)
+    {
+        EnsureRegistries();
+        if (_componentRuntimeRegistry is null || !_componentRuntimeRegistry.TryGetDescriptor(componentId, out var descriptor))
+        {
+            AppLogger.Warn("FusedDesktopMgr", $"Unknown component: {componentId}");
+            return;
+        }
+
+        var placement = new FusedDesktopComponentPlacementSnapshot
+        {
+            PlacementId = Guid.NewGuid().ToString("N"),
+            ComponentId = componentId,
+            Width = DefaultComponentWidth,
+            Height = DefaultComponentHeight
+        };
+
+        var screen = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow?.Screens.Primary;
+        if (screen is not null)
+        {
+            var scaling = screen.Scaling;
+            var workArea = screen.WorkingArea;
+            placement.X = (workArea.Width / scaling - placement.Width) / 2;
+            placement.Y = (workArea.Height / scaling - placement.Height) / 2;
+        }
+
+        _layoutService.AddComponentPlacement(placement);
+
+        try
+        {
+            var window = CreateWidgetWindow(placement);
+            if (window != null)
+            {
+                _widgetWindows[placement.PlacementId] = window;
+                if (_isEditMode)
+                {
+                    window.SetEditMode(true);
+                }
+
+                window.Show();
+                window.Position = new PixelPoint((int)placement.X, (int)placement.Y);
+                window.RefreshDesktopLayer();
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktopMgr", $"Failed to create widget window for {componentId}", ex);
+            _layoutService.RemoveComponentPlacement(placement.PlacementId);
+        }
+
+        AppLogger.Info("FusedDesktopMgr", $"Added component '{componentId}' with placement '{placement.PlacementId}'.");
+    }
+
+    public void RemoveComponent(string placementId)
+    {
+        if (_widgetWindows.Remove(placementId, out var windowToRemove))
+        {
+            windowToRemove.Close();
+        }
+
+        _layoutService.RemoveComponentPlacement(placementId);
+        AppLogger.Info("FusedDesktopMgr", $"Removed component placement '{placementId}'.");
     }
 
     public void ReloadWidgets()
     {
-        if (_isEditMode) return; // 编辑模式下不渲染小窗口
-        
         var layout = _layoutService.Load();
         var existingIds = new HashSet<string>(_widgetWindows.Keys);
-        
+
         foreach (var placement in layout.ComponentPlacements)
         {
             existingIds.Remove(placement.PlacementId);
-            
+
             if (_widgetWindows.TryGetValue(placement.PlacementId, out var existingWindow))
             {
-                // 编辑完成后，已有小窗也要同步尺寸，否则会出现“布局已保存但窗口没变”的假象。
-                existingWindow.Position = new Avalonia.PixelPoint((int)placement.X, (int)placement.Y);
+                existingWindow.Position = new PixelPoint((int)placement.X, (int)placement.Y);
                 existingWindow.UpdateComponentLayout(placement.Width, placement.Height);
                 if (existingWindow.IsVisible == false)
                 {
@@ -130,15 +196,19 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             }
             else
             {
-                // 新组件，生成窗口
                 try
                 {
                     var window = CreateWidgetWindow(placement);
                     if (window != null)
                     {
                         _widgetWindows[placement.PlacementId] = window;
+                        if (_isEditMode)
+                        {
+                            window.SetEditMode(true);
+                        }
+
                         window.Show();
-                        window.Position = new Avalonia.PixelPoint((int)placement.X, (int)placement.Y);
+                        window.Position = new PixelPoint((int)placement.X, (int)placement.Y);
                         window.RefreshDesktopLayer();
                     }
                 }
@@ -148,8 +218,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
                 }
             }
         }
-        
-        // 移除被删除的组件
+
         foreach (var id in existingIds)
         {
             if (_widgetWindows.Remove(id, out var windowToRemove))
@@ -179,7 +248,7 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             AppLogger.Warn("FusedDesktopMgr", $"Unknown component: {placement.ComponentId}");
             return null;
         }
-        
+
         var control = descriptor.CreateControl(
             DefaultCellSize,
             _timeZoneService,
@@ -188,28 +257,24 @@ internal sealed class FusedDesktopManagerService : IFusedDesktopManagerService
             _calculatorDataService,
             _settingsFacade,
             placement.PlacementId);
-            
-        // 将组件包装到一个具有准确宽高的容器内（如果组件自身没有设置宽度）
+
         control.Width = placement.Width;
         control.Height = placement.Height;
 
-        var window = new DesktopWidgetWindow(control);
+        var window = new DesktopWidgetWindow(control, placement.PlacementId);
         return window;
     }
 }
 
-/// <summary>
-/// 工厂
-/// </summary>
 public static class FusedDesktopManagerServiceFactory
 {
     private static IFusedDesktopManagerService? _instance;
     private static readonly object _lock = new();
-    
+
     public static IFusedDesktopManagerService GetOrCreate()
     {
         if (_instance is not null) return _instance;
-        
+
         lock (_lock)
         {
             var layoutService = FusedDesktopLayoutServiceProvider.GetOrCreate();

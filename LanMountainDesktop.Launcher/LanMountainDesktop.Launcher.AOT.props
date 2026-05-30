@@ -52,6 +52,7 @@
   </ItemGroup>
   
   <!-- AOT 兼容性：某些包可能需要特殊处理 -->
+
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <!-- 忽略某些警告 -->
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
@@ -60,7 +61,8 @@
     
     <!-- AOT 模式下禁用反射式 JSON 序列化，强制使用 Source Generator -->
     <!-- 之前设置为 true 与 AOT 矛盾，导致 IL2026/IL3050 警告和运行时失败 -->
-    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- [Fix]: 必须设置为 true 以支持 dotnetCampus.Ipc 内部的反射序列化。相关类型的剪裁保护通过 AppJsonContext 保证 -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     
     <!-- 启用 ISerializable 支持（部分库需要） -->
     <IsAotCompatible>true</IsAotCompatible>

@@ -75,9 +75,7 @@ public partial class App : Application
     private DispatcherTimer? _shellRecoveryTimer;
     private PluginRuntimeService? _pluginRuntimeService;
     private MainWindow? _mainWindow;
-    private TransparentOverlayWindow? _transparentOverlayWindow;
     private FusedDesktopComponentLibraryWindow? _fusedComponentLibraryWindow;
-    private bool _isExitingFusedDesktopEditMode;
     private bool _mainWindowClosed;
     private DesktopShellHost? _desktopShellHost;
     private PublicIpcHostService? _publicIpcHostService;
@@ -454,22 +452,10 @@ public partial class App : Application
 
         try
         {
-            var fusedDesktopManager = FusedDesktopManagerServiceFactory.GetOrCreate();
-            fusedDesktopManager.EnterEditMode();
-
-            EnsureTransparentOverlayWindow();
-            if (_transparentOverlayWindow is not null && !_transparentOverlayWindow.IsVisible)
-            {
-                _transparentOverlayWindow.Show();
-            }
+            FusedDesktopManagerServiceFactory.GetOrCreate().EnterEditMode();
 
             if (_fusedComponentLibraryWindow is { } existingWindow)
             {
-                if (_transparentOverlayWindow is not null)
-                {
-                    existingWindow.SetOverlayWindow(_transparentOverlayWindow);
-                }
-
                 if (!existingWindow.IsVisible)
                 {
                     existingWindow.Show();
@@ -477,7 +463,7 @@ public partial class App : Application
 
                 if (centerInWorkArea)
                 {
-                    existingWindow.CenterInWorkArea(_transparentOverlayWindow);
+                    existingWindow.CenterInWorkArea();
                 }
 
                 existingWindow.Activate();
@@ -486,16 +472,12 @@ public partial class App : Application
 
             var window = new FusedDesktopComponentLibraryWindow();
             _fusedComponentLibraryWindow = window;
-            if (_transparentOverlayWindow is not null)
-            {
-                window.SetOverlayWindow(_transparentOverlayWindow);
-            }
 
             window.Closed += OnFusedComponentLibraryWindowClosed;
             window.Show();
             if (centerInWorkArea)
             {
-                window.CenterInWorkArea(_transparentOverlayWindow);
+                window.CenterInWorkArea();
             }
 
             window.Activate();
@@ -503,7 +485,13 @@ public partial class App : Application
         catch (Exception ex)
         {
             AppLogger.Warn("FusedDesktop", "Failed to open fused desktop component library.", ex);
-            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
+            FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
+            if (_fusedComponentLibraryWindow is { } libWindow)
+            {
+                _fusedComponentLibraryWindow = null;
+                libWindow.Closed -= OnFusedComponentLibraryWindowClosed;
+                libWindow.Close();
+            }
         }
     }
 
@@ -520,50 +508,13 @@ public partial class App : Application
             _fusedComponentLibraryWindow = null;
         }
 
-        if (!window.PreserveEditModeOnClose && !_isExitingFusedDesktopEditMode)
-        {
-            ExitFusedDesktopEditModeFromUi(closeLibrary: false);
-        }
-    }
-
-    private void ExitFusedDesktopEditModeFromUi(bool closeLibrary)
-    {
-        if (_isExitingFusedDesktopEditMode)
-        {
-            return;
-        }
-
-        _isExitingFusedDesktopEditMode = true;
         try
         {
-            if (closeLibrary && _fusedComponentLibraryWindow is { } libraryWindow)
-            {
-                _fusedComponentLibraryWindow = null;
-                libraryWindow.Closed -= OnFusedComponentLibraryWindowClosed;
-                libraryWindow.Close();
-            }
-
-            try
-            {
-                _transparentOverlayWindow?.SaveLayoutAndHide();
-            }
-            catch (Exception overlayEx)
-            {
-                AppLogger.Warn("FusedDesktop", "Failed to hide fused desktop overlay.", overlayEx);
-            }
-
-            try
-            {
-                FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-            }
-            catch (Exception exitEx)
-            {
-                AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode.", exitEx);
-            }
+            FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
         }
-        finally
+        catch (Exception ex)
         {
-            _isExitingFusedDesktopEditMode = false;
+            AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode after library closed.", ex);
         }
     }
 
@@ -890,11 +841,6 @@ public partial class App : Application
         {
             AppLogger.Info("DesktopShell", $"Restoring desktop shell started. Source='{source}'.");
 
-            if (_transparentOverlayWindow is not null && _transparentOverlayWindow.IsVisible)
-            {
-                _transparentOverlayWindow.Hide();
-            }
-
             var mainWindow = GetOrCreateMainWindow(desktop, source);
             mainWindow.PrepareEnterAnimation();
 
@@ -936,26 +882,6 @@ public partial class App : Application
         {
             AppLogger.Warn("DesktopShell", $"Failed to restore desktop shell. Source='{source}'.", ex);
             return false;
-        }
-    }
-    
-    private void EnsureTransparentOverlayWindow()
-    {
-        if (_transparentOverlayWindow is null)
-        {
-            _transparentOverlayWindow = new TransparentOverlayWindow();
-            _transparentOverlayWindow.RestoreMainWindowRequested += (s, e) =>
-            {
-                RestoreOrCreateMainWindow("TransparentOverlay");
-            };
-            _transparentOverlayWindow.ExitEditRequested += (s, e) =>
-            {
-                ExitFusedDesktopEditModeFromUi(closeLibrary: true);
-            };
-            _transparentOverlayWindow.RestoreComponentLibraryRequested += (s, e) =>
-            {
-                OpenFusedDesktopComponentLibraryFromUi(centerInWorkArea: true);
-            };
         }
     }
 
@@ -1263,31 +1189,16 @@ public partial class App : Application
             finally
             {
                 _fusedComponentLibraryWindow = null;
-                try
-                {
-                    FusedDesktopManagerServiceFactory.GetOrCreate().ExitEditMode();
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Warn("FusedDesktop", "Failed to exit fused desktop edit mode during shutdown.", ex);
-                }
             }
         }
 
-        if (_transparentOverlayWindow is not null)
+        try
         {
-            try
-            {
-                _transparentOverlayWindow.Close();
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("DesktopShell", "Failed to close transparent overlay during exit cleanup.", ex);
-            }
-            finally
-            {
-                _transparentOverlayWindow = null;
-            }
+            FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Warn("FusedDesktop", "Failed to shut down fused desktop manager during exit cleanup.", ex);
         }
 
         AudioRecorderServiceFactory.DisposeSharedServices();
@@ -1572,13 +1483,6 @@ public partial class App : Application
             AppLogger.Info(
                 "DesktopShell",
                 $"Main window hidden to tray. Source='{source}'; WindowState='{mainWindow.WindowState}'.");
-            
-            var appSnapshot = _settingsFacade.Settings.LoadSnapshot<AppSettingsSnapshot>(SettingsScope.App);
-            if (appSnapshot.EnableThreeFingerSwipe && appSnapshot.EnableFusedDesktop)
-            {
-                EnsureTransparentOverlayWindow();
-                _transparentOverlayWindow?.Show();
-            }
         }
         catch (Exception ex)
         {
@@ -1668,7 +1572,6 @@ public partial class App : Application
 
         if (IsMainWindowDesktopLayerEnabled())
         {
-            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
             FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
             _mainWindow.ShowInTaskbar = false;
             _mainWindowDesktopLayerService.EnableOrRefresh(_mainWindow);
@@ -1697,7 +1600,6 @@ public partial class App : Application
                 return;
             }
 
-            ExitFusedDesktopEditModeFromUi(closeLibrary: true);
             FusedDesktopManagerServiceFactory.GetOrCreate().Shutdown();
         }
         catch (Exception ex)

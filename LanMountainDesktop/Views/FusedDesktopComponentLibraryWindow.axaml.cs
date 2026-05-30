@@ -12,8 +12,6 @@ namespace LanMountainDesktop.Views;
 
 public partial class FusedDesktopComponentLibraryWindow : Window
 {
-    private TransparentOverlayWindow? _overlayWindow;
-
     public FusedDesktopComponentLibraryWindow()
     {
         InitializeComponent();
@@ -45,13 +43,6 @@ public partial class FusedDesktopComponentLibraryWindow : Window
         RootGrid.Resources["DesignCornerRadiusComponent"] = tokens.Component;
     }
 
-    public bool PreserveEditModeOnClose { get; private set; }
-
-    public void SetOverlayWindow(TransparentOverlayWindow overlayWindow)
-    {
-        _overlayWindow = overlayWindow;
-    }
-
     public void CenterInWorkArea(Window? referenceWindow = null)
     {
         var screen = referenceWindow is not null
@@ -74,22 +65,13 @@ public partial class FusedDesktopComponentLibraryWindow : Window
 
     private void OnAddComponentRequested(object? sender, string componentId)
     {
-        if (_overlayWindow is null)
-        {
-            AppLogger.Warn("FusedDesktopLibrary", "Overlay window is not set.");
-            return;
-        }
-
-        _overlayWindow.AddComponentToCenter(componentId);
-        AppLogger.Info("FusedDesktopLibrary", $"Added component '{componentId}' at fused desktop grid center.");
-
-        PreserveEditModeOnClose = true;
+        FusedDesktopManagerServiceFactory.GetOrCreate().AddComponent(componentId);
+        AppLogger.Info("FusedDesktopLibrary", $"Added component '{componentId}' directly to fused desktop.");
         Close();
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        PreserveEditModeOnClose = false;
         Close();
     }
 
@@ -105,7 +87,6 @@ public partial class FusedDesktopComponentLibraryWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            PreserveEditModeOnClose = false;
             Close();
         }
     }
