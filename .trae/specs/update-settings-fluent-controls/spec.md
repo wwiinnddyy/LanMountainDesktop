@@ -15,7 +15,7 @@ Make the Settings > Update page the single user-facing control surface for the h
 - Users can opt into forced reinstall. When enabled, the update check targets the current version manifest where available and the UI labels the next payload as reinstall.
 - The page displays whether the current payload is an incremental update or reinstall/full installer.
 - The page exposes pause, resume, and cancel actions for resumable downloads and install recovery.
-- Existing PloNDS/FileMap incremental update and Launcher rollback ownership remain unchanged.
+- Existing PloNDS/FileMap incremental update behavior remains, but update apply and rollback ownership belongs to the Host. Launcher only selects and starts the current app version.
 
 ## Acceptance
 

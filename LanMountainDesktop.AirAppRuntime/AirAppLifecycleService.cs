@@ -2,15 +2,15 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 
-namespace LanMountainDesktop.Launcher.AirApp;
+namespace LanMountainDesktop.AirAppRuntime;
 
-internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
+internal sealed class AirAppLifecycleService : IAirAppLifecycleService
 {
     private readonly object _gate = new();
     private readonly IAirAppProcessStarter _processStarter;
     private readonly Dictionary<string, ManagedAirAppInstance> _instances = new(StringComparer.OrdinalIgnoreCase);
 
-    public LauncherAirAppLifecycleService(IAirAppProcessStarter processStarter)
+    public AirAppLifecycleService(IAirAppProcessStarter processStarter)
     {
         _processStarter = processStarter;
     }
@@ -20,7 +20,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
         ArgumentNullException.ThrowIfNull(request);
         var appId = Normalize(request.AppId, "unknown");
         var instanceKey = AirAppInstanceKey.Build(appId, request.SourceComponentId, request.SourcePlacementId);
-        Logger.Info(
+        AirAppRuntimeLogger.Info(
             $"Air APP open requested. AppId='{appId}'; InstanceKey='{instanceKey}'; RequesterProcessId={request.RequesterProcessId}.");
 
         lock (_gate)
@@ -57,12 +57,12 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
                     request.SourceComponentId,
                     request.SourcePlacementId);
                 _instances[instanceKey] = instance;
-                Logger.Info($"Started Air APP. AppId='{appId}'; InstanceKey='{instanceKey}'; ProcessId={process.Id}.");
+                AirAppRuntimeLogger.Info($"Started Air APP. AppId='{appId}'; InstanceKey='{instanceKey}'; ProcessId={process.Id}.");
                 return Task.FromResult(BuildResult(true, "started", "Started Air APP instance.", instance));
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Failed to start Air APP '{appId}': {ex.Message}");
+                AirAppRuntimeLogger.Warn($"Failed to start Air APP '{appId}': {ex.Message}");
                 return Task.FromResult(BuildResult(false, "start_failed", ex.Message, null));
             }
         }
@@ -134,7 +134,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
                 request.SourceComponentId,
                 request.SourcePlacementId);
             _instances[instanceKey] = instance;
-            Logger.Info($"Registered Air APP. AppId='{instance.AppId}'; InstanceKey='{instanceKey}'; ProcessId={instance.ProcessId}.");
+            AirAppRuntimeLogger.Info($"Registered Air APP. AppId='{instance.AppId}'; InstanceKey='{instanceKey}'; ProcessId={instance.ProcessId}.");
             return Task.FromResult(BuildResult(true, "registered", "Air APP instance registered.", instance));
         }
     }
@@ -147,7 +147,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
                 (processId <= 0 || instance.ProcessId == processId))
             {
                 _instances.Remove(instanceKey);
-                Logger.Info($"Unregistered Air APP. InstanceKey='{instanceKey}'; ProcessId={processId}.");
+                AirAppRuntimeLogger.Info($"Unregistered Air APP. InstanceKey='{instanceKey}'; ProcessId={processId}.");
                 return Task.FromResult(BuildResult(true, "unregistered", "Air APP instance unregistered.", instance));
             }
 
@@ -174,7 +174,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
         foreach (var key in exitedKeys)
         {
             _instances.Remove(key);
-            Logger.Info($"Pruned exited Air APP instance. InstanceKey='{key}'.");
+            AirAppRuntimeLogger.Info($"Pruned exited Air APP instance. InstanceKey='{key}'.");
         }
     }
 
@@ -237,7 +237,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
         }
     }
 
-    private static bool IsProcessAlive(int processId)
+    internal static bool IsProcessAlive(int processId)
     {
         if (processId <= 0)
         {
@@ -257,9 +257,7 @@ internal sealed class LauncherAirAppLifecycleService : IAirAppLifecycleService
 
     private static string Normalize(string? value, string fallback)
     {
-        return string.IsNullOrWhiteSpace(value)
-            ? fallback
-            : value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
     private const int SW_SHOWNORMAL = 1;

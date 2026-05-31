@@ -46,7 +46,7 @@
   <Target Name="CopyPublicKeyToLauncherDir" AfterTargets="Build">
     <PropertyGroup>
       <PublicKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublicKeySource>
-      <PublicKeyDestDir>$(OutDir).launcher\update</PublicKeyDestDir>
+      <PublicKeyDestDir>$(OutDir).Launcher\update</PublicKeyDestDir>
     </PropertyGroup>
     <MakeDir Directories="$(PublicKeyDestDir)" />
     <Copy SourceFiles="$(PublicKeySource)" DestinationFolder="$(PublicKeyDestDir)" SkipUnchangedFiles="true" />
@@ -55,7 +55,7 @@
   <Target Name="CopyPublicKeyToPublishDir" AfterTargets="Publish">
     <PropertyGroup>
       <PublishedKeySource>$(MSBuildProjectDirectory)\Assets\public-key.pem</PublishedKeySource>
-      <PublishedKeyDestDir>$(PublishDir).launcher\update</PublishedKeyDestDir>
+      <PublishedKeyDestDir>$(PublishDir).Launcher\update</PublishedKeyDestDir>
     </PropertyGroup>
     <MakeDir Directories="$(PublishedKeyDestDir)" />
     <Copy SourceFiles="$(PublishedKeySource)" DestinationFolder="$(PublishedKeyDestDir)" SkipUnchangedFiles="true" />

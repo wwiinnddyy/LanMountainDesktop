@@ -60,13 +60,6 @@ public partial class App : Application
             return;
         }
 
-        if (context.IsAirAppBrokerCommand)
-        {
-            _ = AirAppBrokerEntryHandler.RunAsync(desktop, context);
-            base.OnFrameworkInitializationCompleted();
-            return;
-        }
-
         if (context.IsDebugMode && !context.IsPreviewCommand)
         {
             Logger.Info("Debug mode active; showing DevDebugWindow instead of normal launch flow.");

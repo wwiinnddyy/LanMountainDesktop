@@ -4,6 +4,7 @@
 
 - Windows installers do not bundle the .NET shared runtime.
 - `LanMountainDesktop.Launcher.exe` is the package-root bootstrapper and remains Native AOT/self-contained.
+- `LanMountainDesktop.AirAppRuntime.exe` is a package-root framework-dependent JIT process. Launcher pre-starts it, and Host can start it as a direct-run fallback.
 - `LanMountainDesktop.exe` and `LanMountainDesktop.AirAppHost.exe` are framework-dependent, RID-specific apps under `app-<version>/`.
 - Inno Setup downloads and silently installs the matching .NET 10 Desktop Runtime before continuing:
   - x64 installer: `https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe`

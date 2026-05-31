@@ -1,5 +1,7 @@
 # Tasks
 
+> Superseded by `.trae/specs/air-app-runtime-container/`; the checked items below describe the former Launcher-managed implementation.
+
 - [x] Add shared Air APP lifecycle IPC contracts.
 - [x] Add Launcher Air APP lifecycle service and dedicated IPC host.
 - [x] Make Launcher remain alive while desktop or Air APP processes exist.

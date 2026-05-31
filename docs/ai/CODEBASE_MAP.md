@@ -11,12 +11,13 @@
 | `LanMountainDesktop/` | 桌面宿主应用 | UI、服务、主流程、组件系统、插件接入 |
 | `LanMountainDesktop.PluginSdk/` | 插件 SDK | 公共接口、扩展方法、默认打包行为 |
 | `LanMountainDesktop.Shared.Contracts/` | 共享契约 | 宿主与插件共享记录、模型、边界类型 |
+| `LanMountainDesktop.AirAppRuntime/` | 轻应用生命周期容器 | Air APP IPC、实例表、AirAppHost 进程管理 |
 | `LanMountainDesktop.Appearance/` | 外观基础设施 | 主题、圆角、外观资源相关逻辑 |
 | `LanMountainDesktop.Settings.Core/` | 设置基础设施 | 设置 scope、存储抽象、设置 facade 支撑 |
 | `LanMountainDesktop.DesktopHost/` | 桌面宿主流程 | 生命周期、宿主流程支撑 |
 | `LanMountainDesktop.DesktopComponents.Runtime/` | 组件运行时 | 组件宿主运行时支撑 |
 | `LanMountainDesktop.Host.Abstractions/` | 宿主抽象 | 宿主接口与抽象层 |
-| `LanMountainDesktop.Launcher/` | 启动器 | 发布输出、OOBE、启动页、更新与插件安装/更新 |
+| `LanMountainDesktop.Launcher/` | 启动器 | 发布输出、OOBE、启动页、版本目录选择、AirApp Runtime 预启动、Host 启动与插件维护 CLI；不承担更新职责 |
 | `LanMountainDesktop.PluginTemplate/` | 插件模板 | `dotnet new lmd-plugin` 模板内容 |
 | `LanMountainDesktop.Tests/` | 测试 | 行为回归、契约验证、基础能力校验 |
 

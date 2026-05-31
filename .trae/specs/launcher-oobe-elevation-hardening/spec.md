@@ -23,12 +23,11 @@ Stabilize the launcher startup path so that:
 - `launchSource` values are treated as:
   - `normal`
   - `postinstall`
-  - `apply-update`
   - `plugin-install`
   - `debug-preview`
 - Automatic OOBE is allowed only for normal user-mode startup.
 - `postinstall` may show OOBE only when the launcher is not elevated and user state is available.
-- `apply-update`, `plugin-install`, and `debug-preview` must not auto-enter OOBE.
+- `plugin-install` and `debug-preview` must not auto-enter OOBE.
 - Allowed elevation paths are limited to:
   - the installer itself
   - full installer update application

@@ -10,6 +10,7 @@
   <Project Path="LanMountainDesktop.PluginIsolation.Ipc/LanMountainDesktop.PluginIsolation.Ipc.csproj" />
   <Project Path="LanMountainDesktop.PluginPackaging/LanMountainDesktop.PluginPackaging.csproj" />
   <Project Path="LanMountainDesktop.PluginSdk/LanMountainDesktop.PluginSdk.csproj" />
+  <Project Path="LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj" />
   <Project Path="LanMountainDesktop.AirAppHost/LanMountainDesktop.AirAppHost.csproj" />
   <Project Path="LanMountainDesktop.PluginTemplate/LanMountainDesktop.PluginTemplate.csproj" />
   <Project Path="LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj" />

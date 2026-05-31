@@ -48,6 +48,95 @@ public sealed class LauncherArchitectureTests
     }
 
     [Fact]
+    public void LauncherProject_DoesNotOwnUpdateApplyOrRollback()
+    {
+        var launcherFiles = Directory
+            .EnumerateFiles(LauncherProjectRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        var forbiddenTokens = new[]
+        {
+            "LauncherUpdateCommandExecutor",
+            "PlondsUpdateApplier",
+            "UpdateRollbackGateway",
+            "UpdateInstallGateway",
+            "LanMountainDesktop.Services.Update",
+            "apply-update",
+            "rollback --app-root"
+        };
+
+        var offenders = launcherFiles
+            .SelectMany(file => forbiddenTokens
+                .Where(token => File.ReadAllText(file).Contains(token, StringComparison.Ordinal))
+                .Select(token => $"{RelativeToRepo(file)} contains {token}"))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void LauncherProjectFile_DoesNotSourceLinkHostUpdateImplementation()
+    {
+        var project = File.ReadAllText(Path.Combine(LauncherProjectRoot, "LanMountainDesktop.Launcher.csproj"));
+
+        Assert.DoesNotContain(@"..\LanMountainDesktop\Services\Update", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("PlondsUpdateApplier", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateRollbackGateway", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateInstallGateway", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HostUpdateFlow_DoesNotDelegateApplyOrRollbackToLauncher()
+    {
+        var guardedFiles = new[]
+        {
+            Path.Combine(RepoRoot, "LanMountainDesktop", "Services", "Update", "UpdateInstallGateway.cs"),
+            Path.Combine(RepoRoot, "LanMountainDesktop", "Services", "Update", "UpdateOrchestrator.cs")
+        };
+
+        var forbiddenTokens = new[]
+        {
+            "LauncherPathResolver",
+            "ResolveLauncherExecutablePath",
+            "apply-update",
+            "rollback --app-root",
+            "Launched Launcher"
+        };
+
+        var offenders = guardedFiles
+            .SelectMany(file => forbiddenTokens
+                .Where(token => File.ReadAllText(file).Contains(token, StringComparison.Ordinal))
+                .Select(token => $"{RelativeToRepo(file)} contains {token}"))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void HostUpdateFlow_OwnsDeltaApplyAndRollbackExecution()
+    {
+        var installGateway = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "LanMountainDesktop",
+            "Services",
+            "Update",
+            "UpdateInstallGateway.cs"));
+        var orchestrator = File.ReadAllText(Path.Combine(
+            RepoRoot,
+            "LanMountainDesktop",
+            "Services",
+            "Update",
+            "UpdateOrchestrator.cs"));
+
+        Assert.Contains("new PlondsUpdateApplier", installGateway, StringComparison.Ordinal);
+        Assert.Contains("DeploymentLockService.ClearLock", installGateway, StringComparison.Ordinal);
+        Assert.Contains("new UpdateRollbackGateway().RollbackLatest", orchestrator, StringComparison.Ordinal);
+        Assert.DoesNotContain("LanMountainDesktop.Launcher", orchestrator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LauncherCompositionRootStaysThin()
     {
         AssertFileLineCountAtMost(Path.Combine(LauncherProjectRoot, "Shell", "LauncherCompositionRoot.cs"), 80);

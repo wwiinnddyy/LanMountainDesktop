@@ -8,7 +8,7 @@ This spec is deprecated and superseded by `.trae/specs/pdc-incremental-migration
 
 - VeloPack native package generation introduced unstable release blocking (version format coupling and platform divergence).
 - The project has switched back to signed FileMap incremental assets as the primary update path.
-- Launcher remains the update installer/rollback authority; packaging and distribution are being migrated to PDC/S3-compatible flows.
+- Host owns update install and rollback authority; packaging and distribution are being migrated to PDC/S3-compatible flows. Launcher only selects and starts the current app version.
 
 ## Migration Note
 

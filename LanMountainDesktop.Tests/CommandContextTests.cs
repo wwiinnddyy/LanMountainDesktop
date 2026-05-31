@@ -9,7 +9,6 @@ public sealed class CommandContextTests
     {
         { [], "normal" },
         { ["preview-oobe"], "debug-preview" },
-        { ["apply-update"], "normal" },
         { ["--source", "plugin.lmdp", "--plugins-dir", "plugins", "--result", "result.json"], "plugin-install" },
         { ["launch", "--launch-source", "postinstall"], "postinstall" }
     };
@@ -21,5 +20,13 @@ public sealed class CommandContextTests
         var context = CommandContext.FromArgs(args);
 
         Assert.Equal(expectedLaunchSource, context.LaunchSource);
+    }
+
+    [Fact]
+    public void FromArgs_DoesNotTreatAirAppBrokerAsLauncherGuiCommand()
+    {
+        var context = CommandContext.FromArgs(["air-app-broker", "--requester-pid", "42"]);
+
+        Assert.False(context.IsGuiCommand);
     }
 }

@@ -24,6 +24,9 @@ internal static class LauncherGuiCoordinator
         var startupAttemptRegistry = new StartupAttemptRegistry();
         var coordinatorPipeName = LauncherCoordinatorIpcServer.CreatePipeName();
         var successPolicy = LauncherOrchestrator.ResolveSuccessPolicyKey(context);
+        var airAppRuntimeBridge = new AirAppRuntimeBridge(appRoot, dataLocationResolver.ResolveDataRoot());
+        await airAppRuntimeBridge.EnsureStartedAsync().ConfigureAwait(false);
+
         if (!startupAttemptRegistry.TryReserveCoordinator(
                 context.LaunchSource,
                 successPolicy,
@@ -43,15 +46,6 @@ internal static class LauncherGuiCoordinator
             await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
             return;
         }
-
-        using var airAppIpcHost = new LauncherAirAppLifecycleIpcHost(
-            new LauncherAirAppLifecycleService(
-                new AirAppProcessStarter(
-                    new AirAppHostLocator(),
-                    () => appRoot,
-                    () => null,
-                    () => dataLocationResolver.ResolveDataRoot())));
-        airAppIpcHost.Start();
 
         using var coordinatorServer = new LauncherCoordinatorIpcServer(
             coordinatorPipeName,
@@ -129,7 +123,8 @@ internal static class LauncherGuiCoordinator
         if (result.Success)
         {
             var hostPid = ResolveManagedHostPid(result, startupAttemptRegistry.GetOwnedAttempt()?.HostPid ?? 0);
-            await WaitForManagedProcessesToExitAsync(hostPid, airAppIpcHost.LifecycleService).ConfigureAwait(false);
+            await airAppRuntimeBridge.AttachHostAsync(hostPid).ConfigureAwait(false);
+            await WaitForHostProcessToExitAsync(hostPid).ConfigureAwait(false);
         }
 
         await Dispatcher.UIThread.InvokeAsync(() => desktop.Shutdown(Environment.ExitCode), DispatcherPriority.Background);
@@ -173,17 +168,15 @@ internal static class LauncherGuiCoordinator
         return fallbackHostPid;
     }
 
-    private static async Task WaitForManagedProcessesToExitAsync(
-        int hostPid,
-        LauncherAirAppLifecycleService airAppLifecycleService)
+    private static async Task WaitForHostProcessToExitAsync(int hostPid)
     {
-        Logger.Info($"Launcher entering managed background lifetime. HostPid={hostPid}.");
-        while (TryGetLiveProcess(hostPid) || airAppLifecycleService.HasLiveAirApps())
+        Logger.Info($"Launcher entering host background lifetime. HostPid={hostPid}.");
+        while (TryGetLiveProcess(hostPid))
         {
             await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         }
 
-        Logger.Info("Launcher managed background lifetime completed; no host or Air APP process remains.");
+        Logger.Info("Launcher host background lifetime completed; host process is gone.");
     }
 
     private static async Task<LauncherResult> AttachToExistingCoordinatorAsync(

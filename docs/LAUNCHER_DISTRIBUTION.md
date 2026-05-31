@@ -8,9 +8,11 @@
 LanMountainDesktop/
 ├── LanMountainDesktop.Launcher.exe    # 启动器可执行文件
 ├── LanMountainDesktop.Launcher.dll    # 启动器依赖
+├── LanMountainDesktop.AirAppRuntime.exe # 轻应用生命周期容器（JIT）
 ├── ...                                 # 其他启动器依赖文件
 ├── app-1.0.0/                         # 主程序部署目录
 │   ├── LanMountainDesktop.exe         # 主程序可执行文件
+│   ├── LanMountainDesktop.AirAppHost.exe # 轻应用窗口宿主
 │   ├── LanMountainDesktop.dll         # 主程序依赖
 │   ├── version.json                   # 版本信息文件
 │   └── .current                       # 当前版本标记文件

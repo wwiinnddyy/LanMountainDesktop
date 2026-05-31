@@ -57,14 +57,6 @@
         "DOTNET_ENVIRONMENT": "Development"
       }
     },
-    "Launcher (Update Check)": {
-      "commandName": "Project",
-      "commandLineArgs": "update check",
-      "workingDirectory": "$(SolutionDir)",
-      "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
-      }
-    },
     "Launcher (Plugin Install)": {
       "commandName": "Project",
       "commandLineArgs": "plugin install <path-to-plugin.laapp>",

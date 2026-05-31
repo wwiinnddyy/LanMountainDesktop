@@ -34,16 +34,14 @@ dotnet build LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -c D
 dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- launch
 ```
 
+Air APP 开发调试时需要同时构建 `LanMountainDesktop.AirAppRuntime`。正常 Launcher 启动会预启动该 Runtime；直接运行 Host 时，Host 会在第一次打开 Air APP 时兜底启动 Runtime。
+
 **Launcher 其他命令:**
 ```bash
-# 检查更新
-dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- update check
-
 # 安装插件
 dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- plugin install <path-to-plugin.laapp>
 
-# 版本回退
-dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- update rollback
+# Launcher 不提供更新/回滚 CLI；调试更新请运行主程序并使用 Host 更新服务。
 ```
 
 #### 运行测试
@@ -56,6 +54,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 
 - 宿主应用：`LanMountainDesktop/`
 - **Launcher (启动器)：`LanMountainDesktop.Launcher/`**
+- **AirApp Runtime (轻应用生命周期容器)：`LanMountainDesktop.AirAppRuntime/`**
 - Plugin SDK：`LanMountainDesktop.PluginSdk/`
 - 共享契约：`LanMountainDesktop.Shared.Contracts/`
 - 测试：`LanMountainDesktop.Tests/`
@@ -66,7 +65,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 
 - **Launcher 启动问题优先看 `LanMountainDesktop.Launcher/Program.cs`、`Shell/LauncherOrchestrator.cs` 和 `Startup/LaunchPipeline.cs`**
 - **版本管理问题优先看 `LanMountainDesktop.Launcher/Deployment/DeploymentLocator.cs`**
-- **更新系统问题优先看 `LanMountainDesktop.Launcher/Update/UpdateEngineFacade.cs`、`Update/LegacyUpdateApplier.cs`、`Update/PlondsUpdateApplier.cs` 和 `UpdateCheckService.cs`**
+- **更新检查、下载、应用和回滚问题优先看 `LanMountainDesktop/Services/Update/UpdateOrchestrator.cs`、`UpdateInstallGateway.cs` 和 `UpdateRollbackGateway.cs`**
 - 启动问题优先看 `LanMountainDesktop/Program.cs` 和 `LanMountainDesktop/App.axaml.cs`
 - 设置窗口和设置页问题优先看 `LanMountainDesktop/Views/`、`ViewModels/` 与相关 `Services/`
 - 插件加载与安装问题优先看 `LanMountainDesktop/plugins/`
@@ -103,7 +102,7 @@ dotnet test LanMountainDesktop.slnx -c Debug
 
 ### Launcher 架构说明
 
-LanMountainDesktop 使用 Launcher 作为唯一入口,负责版本管理、更新和启动主程序。
+LanMountainDesktop 使用 Launcher 作为唯一入口,负责版本目录选择、AirApp Runtime 预启动和主程序启动。更新检查、下载、应用和回滚全部由 Host 负责。
 
 #### 目录结构
 
@@ -118,7 +117,7 @@ C:\Program Files\LanMountainDesktop\
 ├── app-1.0.1/                        ← 新版本
 │   ├── .partial                      ← 下载中标记
 │   └── ...
-└── .launcher/                        ← Launcher 数据
+└── .Launcher/                        ← Launcher 数据
     ├── state/                        ← OOBE 状态
     ├── update/incoming/              ← 更新缓存
     └── snapshots/                    ← 更新快照
@@ -136,25 +135,22 @@ C:\Program Files\LanMountainDesktop\
 2. Launcher 扫描 `app-*` 目录,选择最佳版本
 3. 如果是首次启动,显示 OOBE 引导
 4. 显示 Splash 启动动画
-5. 检查并应用待处理的更新
-6. 处理插件升级队列
-7. 启动主程序 `app-{version}/LanMountainDesktop.exe`
-8. 清理标记为 `.destroy` 的旧版本
+5. 预启动 AirApp Runtime
+6. 启动主程序 `app-{version}/LanMountainDesktop.exe`
+7. 主程序启动成功后附加 Host PID 给 AirApp Runtime，并清理标记为 `.destroy` 的旧版本
 
 #### 更新流程
 
-1. Launcher 调用 GitHub Release API 检查更新
-2. 根据更新频道(Stable/Preview)过滤版本
-3. 下载增量包到 `app-{new_version}/` 并标记 `.partial`
-4. 验证文件完整性(SHA256)
-5. 删除 `.partial`,添加 `.current` 到新版本
-6. 标记旧版本 `.destroy`
-7. 下次启动时自动清理
+1. Host 调用更新源检查更新并按频道过滤版本
+2. Host 下载 PLONDS file map、签名和对象文件到 `.Launcher/update/incoming/`
+3. Host 写入 `deployment.lock` 并调用 `UpdateInstallGateway`
+4. Host 验证签名和文件 hash，创建新 `app-*` 目录，切换 `.current`
+5. Host 写入快照并清理 incoming；旧版本按启动清理策略处理
 
 #### 版本回退
 
 ```bash
-dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- update rollback
+运行主程序，打开设置页中的更新区域触发回滚。
 ```
 
 回退会切换到上一个有效版本,并保留快照记录。
@@ -172,5 +168,5 @@ In-app marketplace plugin installs use a per-user pending plugin queue. The pack
 ## VeloPack Release Assets
 
 - Windows incremental release packaging now uses VeloPack native outputs (eleases.win.json, *.nupkg).
-- Launcher still performs update apply/rollback; VeloPack is used for package generation.
+- Host owns update check/download/apply/rollback orchestration. Launcher only selects and starts the current version; VeloPack is used for package generation.
 - Legacy delta script flow is retained behind a disabled fallback switch in CI.

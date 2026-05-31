@@ -1,5 +1,7 @@
 # Launcher Managed Air APP Lifecycle
 
+> Superseded by `.trae/specs/air-app-runtime-container/`. Launcher no longer hosts the Air APP lifecycle broker; it pre-starts `LanMountainDesktop.AirAppRuntime`, which owns the lifecycle IPC and AirAppHost process table.
+
 ## Goal
 
 Make Launcher the authoritative lifecycle manager for built-in Air APP processes. The desktop host requests Air APP operations through IPC, while Launcher creates, activates, tracks, and cleans up Air APP host processes.

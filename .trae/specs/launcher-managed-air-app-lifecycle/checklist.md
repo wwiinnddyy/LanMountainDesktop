@@ -1,5 +1,7 @@
 # Checklist
 
+> Superseded by `.trae/specs/air-app-runtime-container/`; the checked items below describe the former Launcher-managed implementation.
+
 - [x] `LanMountainDesktop.Shared.IPC` builds in Debug.
 - [x] `LanMountainDesktop.Launcher` builds in Debug.
 - [x] `LanMountainDesktop` builds in Debug.

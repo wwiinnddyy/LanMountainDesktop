@@ -1,4 +1,4 @@
-namespace LanMountainDesktop.Launcher.AirApp;
+namespace LanMountainDesktop.AirAppRuntime;
 
 internal static class AirAppInstanceKey
 {
@@ -17,8 +17,6 @@ internal static class AirAppInstanceKey
 
     private static string Normalize(string? value, string fallback)
     {
-        return string.IsNullOrWhiteSpace(value)
-            ? fallback
-            : value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 }

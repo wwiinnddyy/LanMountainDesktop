@@ -224,6 +224,16 @@ function Assert-WindowsPayloadContainsRequiredHosts {
         $violations.Add("LanMountainDesktop.Launcher.exe")
     }
 
+    $airAppRuntimeCandidates = @(
+        (Join-Path $Root "LanMountainDesktop.AirAppRuntime.exe"),
+        (Join-Path $Root "LanMountainDesktop.AirAppRuntime.dll"),
+        (Join-Path (Join-Path $Root "AirAppRuntime") "LanMountainDesktop.AirAppRuntime.exe"),
+        (Join-Path (Join-Path $Root "AirAppRuntime") "LanMountainDesktop.AirAppRuntime.dll")
+    )
+    if (-not ($airAppRuntimeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1)) {
+        $violations.Add("LanMountainDesktop.AirAppRuntime.exe")
+    }
+
     $deploymentDirs = @(Get-ChildItem -LiteralPath $Root -Directory -Filter "app-*" -ErrorAction SilentlyContinue |
         Where-Object {
             -not (Test-Path -LiteralPath (Join-Path $_.FullName ".partial")) -and
@@ -254,7 +264,7 @@ function Assert-WindowsPayloadContainsRequiredHosts {
 
     if ($violations.Count -gt 0) {
         $sample = ($violations | Select-Object -First 50) -join [Environment]::NewLine
-        throw "Windows publish payload is missing required Launcher/Main/AirAppHost files:$([Environment]::NewLine)$sample"
+        throw "Windows publish payload is missing required Launcher/AirAppRuntime/Main/AirAppHost files:$([Environment]::NewLine)$sample"
     }
 
     Write-Host "Windows required host guard passed."
