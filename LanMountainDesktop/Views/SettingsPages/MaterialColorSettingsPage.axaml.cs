@@ -27,11 +27,17 @@ public partial class MaterialColorSettingsPage : SettingsPageBase
     public MaterialColorSettingsPage(MaterialColorSettingsPageViewModel viewModel)
     {
         ViewModel = viewModel;
+        ViewModel.RestartRequested += OnRestartRequested;
         DataContext = ViewModel;
         InitializeComponent();
     }
 
     public MaterialColorSettingsPageViewModel ViewModel { get; }
+
+    private void OnRestartRequested(string reason)
+    {
+        RequestRestart(reason);
+    }
 
     private void OnWallpaperSeedCandidateClick(object? sender, RoutedEventArgs e)
     {

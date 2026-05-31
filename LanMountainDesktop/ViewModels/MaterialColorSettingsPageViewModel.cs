@@ -83,6 +83,8 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
         _materialColorService.MaterialColorChanged += OnMaterialColorChanged;
     }
 
+    public event Action<string>? RestartRequested;
+
     public IReadOnlyList<SelectionOption> ColorModes { get; }
 
     public IReadOnlyList<SelectionOption> WallpaperColorSources { get; }
@@ -175,6 +177,9 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _systemMaterialDescription = string.Empty;
+
+    [ObservableProperty]
+    private string _systemMaterialRestartMessage = string.Empty;
 
     [ObservableProperty]
     private string _nativeWallpaperEventsLabel = string.Empty;
@@ -313,7 +318,14 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
             return;
         }
 
+        var currentMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(_settingsFacade.Theme.Get().SystemMaterialMode);
+        var requestedMode = ThemeAppearanceValues.NormalizeSystemMaterialMode(value.Value);
         SaveTheme();
+        if (!string.Equals(currentMode, requestedMode, StringComparison.OrdinalIgnoreCase))
+        {
+            PendingRestartStateService.SetPending(PendingRestartStateService.SystemMaterialReason, true);
+            RestartRequested?.Invoke(SystemMaterialRestartMessage);
+        }
     }
 
     partial void OnSelectedRefreshIntervalChanged(SelectionOption value)
@@ -577,6 +589,9 @@ public sealed partial class MaterialColorSettingsPageViewModel : ViewModelBase
         WallpaperSeedLabel = L("settings.material_color.wallpaper_seed.label", "Seed");
         SystemMaterialLabel = L("settings.material_color.system_material.label", "System material");
         SystemMaterialDescription = L("settings.material_color.system_material.description", "Apply the selected material mode to windows and host surfaces.");
+        SystemMaterialRestartMessage = L(
+            "settings.material_color.system_material.restart_message",
+            "System material changes require restarting the app.");
         NativeWallpaperEventsLabel = L("settings.material_color.native_events.label", "Native wallpaper change events");
         NativeWallpaperEventsDescription = L("settings.material_color.native_events.description", "Use OS wallpaper notifications first and keep polling as fallback.");
         RefreshIntervalLabel = L("settings.material_color.refresh_interval.label", "Polling interval");

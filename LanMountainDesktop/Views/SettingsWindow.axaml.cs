@@ -15,6 +15,7 @@ using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Settings.Core;
+using LanMountainDesktop.Shared.Contracts;
 using LanMountainDesktop.ViewModels;
 using Symbol = FluentIcons.Common.Symbol;
 
@@ -33,6 +34,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     private const double MinPaneOpenLength = 260d;
     private const double MaxPaneOpenLength = 288d;
     private const double BaseNarrowThreshold = 800d;
+    private const double CustomTitleBarHeight = 48d;
     private const string PaneToggleItemTag = "__pane_toggle__";
 
     private readonly ISettingsPageRegistry _pageRegistry;
@@ -89,14 +91,14 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
 
     private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        TitleBar.Height = 48;
-        TitleBar.ExtendsContentIntoTitleBar = true;
+        TitleBar.Height = CustomTitleBarHeight;
 
-        // SecRandom MainWindow：标题栏按钮悬停/按下/非活动色，与系统 caption 更一致
+        // Match the native caption button feedback used by SecRandom MainWindow.
         TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(23, 0, 0, 0);
         TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(52, 0, 0, 0);
         TitleBar.ButtonInactiveForegroundColor = Colors.Gray;
 
+        ApplyChromeMode(_useSystemChrome);
         SyncPendingRestartState();
         SyncTitleText();
         UpdateChromeMetrics();
@@ -186,8 +188,11 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     {
         _useSystemChrome = useSystemChrome || OperatingSystem.IsMacOS();
 
-        ExtendClientAreaToDecorationsHint = true;
         WindowDecorations = WindowDecorations.Full;
+        ExtendClientAreaToDecorationsHint = !_useSystemChrome;
+        ExtendClientAreaTitleBarHeightHint = _useSystemChrome ? 0d : CustomTitleBarHeight;
+        TitleBar.ExtendsContentIntoTitleBar = !_useSystemChrome;
+        TitleBar.Height = CustomTitleBarHeight;
 
         if (_useSystemChrome)
         {
@@ -564,6 +569,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
                 CloseButtonText = ViewModel.RestartDialogCloseText,
                 DefaultButton = FAContentDialogButton.Primary
             };
+            ApplyFluentCornerRadius(dialog.Resources);
 
             var result = await dialog.ShowAsync(this);
             if (result == FAContentDialogResult.Primary)
@@ -802,27 +808,40 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
     }
 
     /// <summary>
-    /// Override global corner radius tokens on the settings window root grid
+    /// Override inherited corner radius tokens on the settings window root grid
     /// so all child controls use Microsoft Fluent Design System values,
-    /// independent of the user's global corner radius preference.
+    /// independent of the user's component corner radius preference.
     /// </summary>
-    private void ApplyFluentCornerRadius()
+    public void ApplyFluentCornerRadius()
     {
-        if (RootGrid is null)
-        {
-            return;
-        }
-
         var tokens = AppearanceCornerRadiusTokenFactory.Create(
             GlobalAppearanceSettings.CornerRadiusStyleFluent);
-        RootGrid.Resources["DesignCornerRadiusMicro"] = tokens.Micro;
-        RootGrid.Resources["DesignCornerRadiusXs"] = tokens.Xs;
-        RootGrid.Resources["DesignCornerRadiusSm"] = tokens.Sm;
-        RootGrid.Resources["DesignCornerRadiusMd"] = tokens.Md;
-        RootGrid.Resources["DesignCornerRadiusLg"] = tokens.Lg;
-        RootGrid.Resources["DesignCornerRadiusXl"] = tokens.Xl;
-        RootGrid.Resources["DesignCornerRadiusIsland"] = tokens.Island;
-        RootGrid.Resources["DesignCornerRadiusComponent"] = tokens.Component;
+        ApplyFluentCornerRadius(Resources, tokens);
+        if (RootGrid is not null)
+        {
+            ApplyFluentCornerRadius(RootGrid.Resources, tokens);
+        }
+    }
+
+    private static void ApplyFluentCornerRadius(IResourceDictionary resources)
+    {
+        var tokens = AppearanceCornerRadiusTokenFactory.Create(
+            GlobalAppearanceSettings.CornerRadiusStyleFluent);
+        ApplyFluentCornerRadius(resources, tokens);
+    }
+
+    private static void ApplyFluentCornerRadius(
+        IResourceDictionary resources,
+        AppearanceCornerRadiusTokens tokens)
+    {
+        resources["DesignCornerRadiusMicro"] = tokens.Micro;
+        resources["DesignCornerRadiusXs"] = tokens.Xs;
+        resources["DesignCornerRadiusSm"] = tokens.Sm;
+        resources["DesignCornerRadiusMd"] = tokens.Md;
+        resources["DesignCornerRadiusLg"] = tokens.Lg;
+        resources["DesignCornerRadiusXl"] = tokens.Xl;
+        resources["DesignCornerRadiusIsland"] = tokens.Island;
+        resources["DesignCornerRadiusComponent"] = tokens.Component;
     }
 
     private void OnTitleBarDragZonePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -973,7 +992,7 @@ public partial class SettingsWindow : FAAppWindow, ISettingsPageHostContext
         var height = Bounds.Height > 1 ? Bounds.Height : Math.Max(Height, MinHeight);
         var layoutScale = Math.Clamp(Math.Min(width / 1120d, height / 760d), 0.90, 1.18);
 
-        const double titleBarHeight = 48d;
+        const double titleBarHeight = CustomTitleBarHeight;
         var titleFontSize = Math.Clamp(12d * layoutScale, 11d, 14d);
         var titleBarIconSize = Math.Clamp(16d * layoutScale, 15d, 20d);
         var drawerTitleFontSize = Math.Clamp(16d * layoutScale, 14d, 20d);

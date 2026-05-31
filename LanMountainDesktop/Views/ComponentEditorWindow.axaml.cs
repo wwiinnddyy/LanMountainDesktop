@@ -59,14 +59,16 @@ public partial class ComponentEditorWindow : Window
         var preferSystemChrome = useSystemChrome || OperatingSystem.IsMacOS();
         if (preferSystemChrome)
         {
-            ExtendClientAreaToDecorationsHint = true;
             WindowDecorations = WindowDecorations.Full;
+            ExtendClientAreaToDecorationsHint = false;
+            ExtendClientAreaTitleBarHeightHint = 0d;
             CustomTitleBarHost.IsVisible = false;
             return;
         }
 
         WindowDecorations = WindowDecorations.BorderOnly;
         ExtendClientAreaToDecorationsHint = true;
+        ExtendClientAreaTitleBarHeightHint = 0d;
         CustomTitleBarHost.IsVisible = true;
     }
 

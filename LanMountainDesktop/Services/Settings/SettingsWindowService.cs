@@ -299,6 +299,7 @@ internal sealed class SettingsWindowService : ISettingsWindowService
             ? ThemeVariant.Dark
             : ThemeVariant.Light;
         appearanceThemeService.ApplyThemeResources(window.Resources);
+        window.ApplyFluentCornerRadius();
     }
 
     private void ApplyThemeVariantAndResources(SettingsWindow window)
