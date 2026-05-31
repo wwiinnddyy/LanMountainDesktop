@@ -264,5 +264,6 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 - `postinstall` may show OOBE only when the launcher is not elevated.
 - `plugin-install` and `debug-preview` must not auto-open OOBE.
 - Elevation is allowed only for the installer, full installer update application, and user-confirmed legacy uninstall.
-- Default plugin install should stay inside the user's LocalAppData scope and should not ask for UAC.
-- Marketplace plugin installs are queued under the user's data root and take effect after restart; they do not use Launcher elevation.
+- Default plugin install targets the Host data root (`AppDataPathProvider.GetDataRoot()/Extensions/Plugins`) and should not ask for UAC when that directory is writable.
+- In portable data mode, plugin packages follow the configured application data root. If that root is under an administrator-protected install path, Host downloads/verifies the package from a user-writable staging directory and invokes the restricted Launcher `plugin install` command with UAC to copy only into the configured data root.
+- Marketplace plugin installs are queued under the Host data root when writable and take effect after restart; protected portable installs are applied immediately through the elevated maintenance command and still require restart before loading.

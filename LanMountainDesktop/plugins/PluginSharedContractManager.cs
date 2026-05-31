@@ -257,13 +257,7 @@ internal sealed class PluginSharedContractManager : IDisposable
 
     private static string GetSharedContractRootDirectory()
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localAppData))
-        {
-            return Path.Combine(AppContext.BaseDirectory, "Data");
-        }
-
-        return Path.Combine(localAppData, "LanMountainDesktop");
+        return AppDataPathProvider.GetDataRoot();
     }
 
     private static string Sanitize(string value)

@@ -14,7 +14,7 @@ internal static class Commands
         {
             var source = context.GetOption("source") ?? string.Empty;
             var pluginsDir = context.GetOption("plugins-dir") ?? string.Empty;
-            result = installer.InstallPackage(source, pluginsDir);
+            result = installer.InstallPackage(source, pluginsDir, context.ExplicitAppRoot);
         }
         catch (Exception ex)
         {
@@ -91,12 +91,12 @@ internal static class Commands
             {
                 var source = context.GetOption("source") ?? throw new InvalidOperationException("Missing --source.");
                 var pluginsDir = context.GetOption("plugins-dir") ?? throw new InvalidOperationException("Missing --plugins-dir.");
-                return pluginInstaller.InstallPackage(source, pluginsDir);
+                return pluginInstaller.InstallPackage(source, pluginsDir, context.ExplicitAppRoot);
             }
             case "update":
             {
                 var pluginsDir = context.GetOption("plugins-dir") ?? throw new InvalidOperationException("Missing --plugins-dir.");
-                return pluginUpgrades.ApplyPendingUpgrades(pluginsDir);
+                return pluginUpgrades.ApplyPendingUpgrades(pluginsDir, context.ExplicitAppRoot);
             }
             default:
                 return new LauncherResult

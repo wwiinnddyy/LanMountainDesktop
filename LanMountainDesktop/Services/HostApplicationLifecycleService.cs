@@ -1,9 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Threading;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Shared.Contracts.Launcher;
 
@@ -11,8 +9,6 @@ namespace LanMountainDesktop.Services;
 
 public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
 {
-    private const string UpgradeHelperExecutableName = "LanMountainDesktop.PluginUpgradeHelper.exe";
-
     public bool TryExit(HostApplicationLifecycleRequest? request = null)
     {
         App? app = null;
@@ -53,11 +49,6 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
                 return false;
             }
 
-            if (HasPendingPluginUpgrades())
-            {
-                return TryRestartWithUpgradeHelper(request);
-            }
-
             return TryRestartDirectly(request);
         }
         catch (Exception ex)
@@ -66,61 +57,6 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
             AppLogger.Warn("HostLifecycle", "Failed to restart the application.", ex);
             return false;
         }
-    }
-
-    private static bool HasPendingPluginUpgrades()
-    {
-        try
-        {
-            var pluginsDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "LanMountainDesktop",
-                "Extensions",
-                "Plugins");
-            var pendingUpgradesPath = Path.Combine(pluginsDirectory, ".pending-plugin-upgrades.json");
-            return File.Exists(pendingUpgradesPath);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private bool TryRestartWithUpgradeHelper(HostApplicationLifecycleRequest? request)
-    {
-        AppLogger.Info("HostLifecycle", "Detected pending plugin upgrades. Using upgrade helper for restart.");
-
-        var helperPath = ResolveUpgradeHelperPath();
-        if (!File.Exists(helperPath))
-        {
-            AppLogger.Warn("HostLifecycle", $"Upgrade helper not found at '{helperPath}'. Falling back to direct restart.");
-            return TryRestartDirectly(request);
-        }
-
-        var pluginsDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "Extensions",
-            "Plugins");
-
-        var app = Application.Current as App;
-        var restartPresentationMode = app?.GetCurrentRestartPresentationMode() ?? RestartPresentationMode.Foreground;
-        var startInfo = AppRestartService.CreateRestartStartInfo(restartPresentationMode: restartPresentationMode);
-        var launchCommand = startInfo?.FileName ?? Process.GetCurrentProcess().MainModule?.FileName ?? AppContext.BaseDirectory;
-        var launchArgs = startInfo?.Arguments ?? "";
-
-        var helperStartInfo = new ProcessStartInfo
-        {
-            FileName = helperPath,
-            Arguments = $"--plugins-dir \"{pluginsDirectory}\" --parent-pid {Environment.ProcessId} --launch \"{launchCommand}\" --launch-args \"{launchArgs}\" --working-dir \"{AppContext.BaseDirectory}\"",
-            UseShellExecute = true,
-            WorkingDirectory = AppContext.BaseDirectory
-        };
-
-        AppLogger.Info("HostLifecycle", $"Starting upgrade helper: {helperStartInfo.FileName} {helperStartInfo.Arguments}");
-
-        Process.Start(helperStartInfo);
-        return app?.TrySubmitShutdown(HostShutdownMode.Restart, request) == true;
     }
 
     private bool TryRestartDirectly(HostApplicationLifecycleRequest? request)
@@ -149,8 +85,4 @@ public sealed class HostApplicationLifecycleService : IHostApplicationLifecycle
         return app?.TrySubmitShutdown(HostShutdownMode.Restart, shutdownRequest) == true;
     }
 
-    private static string ResolveUpgradeHelperPath()
-    {
-        return Path.Combine(AppContext.BaseDirectory, "PluginUpgradeHelper", UpgradeHelperExecutableName);
-    }
 }

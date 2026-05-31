@@ -14,7 +14,7 @@ internal sealed class PluginUpgradeQueueService
         _installerService = installerService;
     }
 
-    public LauncherResult ApplyPendingUpgrades(string pluginsDirectory)
+    public LauncherResult ApplyPendingUpgrades(string pluginsDirectory, string? appRoot = null)
     {
         var pendingPath = Path.Combine(pluginsDirectory, PendingUpgradesFileName);
         if (!File.Exists(pendingPath))
@@ -43,7 +43,7 @@ internal sealed class PluginUpgradeQueueService
 
             try
             {
-                _installerService.InstallPackage(item.SourcePackagePath, pluginsDirectory);
+                _installerService.InstallPackage(item.SourcePackagePath, pluginsDirectory, appRoot);
                 succeeded.Add(item);
             }
             catch
