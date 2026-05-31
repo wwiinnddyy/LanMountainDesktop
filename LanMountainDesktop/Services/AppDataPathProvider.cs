@@ -50,6 +50,11 @@ public static class AppDataPathProvider
         return Path.Combine(GetDataRoot(), "Wallpapers");
     }
 
+    internal static void ResetForTests()
+    {
+        _overriddenDataRoot = null;
+    }
+
     private static string? ResolveDataRootFromArgs(string[] args)
     {
         const string prefix = "--data-root=";

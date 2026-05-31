@@ -22,7 +22,7 @@ internal sealed class PluginInstallerService
         TimeSpan.FromMilliseconds(500)
     ];
 
-    public LauncherResult InstallPackage(string sourcePath, string pluginsDirectory)
+    public LauncherResult InstallPackage(string sourcePath, string pluginsDirectory, string? appRoot = null)
     {
         var fullSourcePath = Path.GetFullPath(sourcePath);
         var fullPluginsDirectory = Path.GetFullPath(pluginsDirectory);
@@ -32,7 +32,7 @@ internal sealed class PluginInstallerService
             throw new FileNotFoundException($"Plugin package '{fullSourcePath}' was not found.", fullSourcePath);
         }
 
-        if (TryBuildElevationRequiredResult(fullPluginsDirectory) is { } elevationRequiredResult)
+        if (TryBuildElevationRequiredResult(fullPluginsDirectory, appRoot) is { } elevationRequiredResult)
         {
             return elevationRequiredResult;
         }
@@ -58,7 +58,7 @@ internal sealed class PluginInstallerService
         };
     }
 
-    private static LauncherResult? TryBuildElevationRequiredResult(string pluginsDirectory)
+    private static LauncherResult? TryBuildElevationRequiredResult(string pluginsDirectory, string? appRoot)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -68,8 +68,10 @@ internal sealed class PluginInstallerService
         string? allowedRoot = null;
         try
         {
-            var appRoot = Commands.ResolveAppRoot(CommandContext.FromArgs([]));
-            var resolver = new DataLocationResolver(appRoot);
+            var resolvedAppRoot = !string.IsNullOrWhiteSpace(appRoot)
+                ? Path.GetFullPath(appRoot)
+                : Commands.ResolveAppRoot(CommandContext.FromArgs([]));
+            var resolver = new DataLocationResolver(resolvedAppRoot);
             allowedRoot = EnsureTrailingSeparator(resolver.ResolveDataRoot());
         }
         catch

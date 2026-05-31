@@ -46,9 +46,10 @@ public sealed class PluginRuntimeService : IDisposable
         ISettingsFacadeService? settingsFacade = null,
         PublicIpcHostService? publicIpcHostService = null)
     {
-        PluginsDirectory = Path.Combine(GetUserDataRootDirectory(), "Extensions", "Plugins");
+        var dataRoot = AppDataPathProvider.GetDataRoot();
+        PluginsDirectory = Path.Combine(dataRoot, "Extensions", "Plugins");
         _sharedContractManager = new PluginSharedContractManager(
-            Path.Combine(GetUserDataRootDirectory(), "PluginMarket"));
+            AppDataPathProvider.GetPluginMarketDirectory());
         _packageManager = new PluginRuntimePackageManager(this);
         _settingsFacade = settingsFacade ?? new SettingsFacadeService();
         _publicIpcHostService = publicIpcHostService;
@@ -388,9 +389,15 @@ public sealed class PluginRuntimeService : IDisposable
         AppLogger.Info(
             "PluginRuntime",
             $"Installing package. PluginId='{manifest.Id}'; Source='{fullPackagePath}'; PluginsDirectory='{PluginsDirectory}'.");
-        var replacedExisting = RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
 
         var destinationPath = Path.Combine(PluginsDirectory, BuildInstalledPackageFileName(manifest.Id));
+        if (!PluginInstallTargetAccess.CanWriteDirectory(PluginsDirectory))
+        {
+            return InstallPluginPackageWithElevation(fullPackagePath, manifest, destinationPath);
+        }
+
+        var replacedExisting = RemoveExistingPluginPackages(manifest.Id, fullPackagePath);
+
         if (!string.Equals(fullPackagePath, Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
         {
             FileOperationRetryHelper.CopyWithRetry(fullPackagePath, destinationPath, overwrite: true, "PluginRuntime");
@@ -403,6 +410,41 @@ public sealed class PluginRuntimeService : IDisposable
             $"Package staged. PluginId='{manifest.Id}'; Destination='{destinationPath}'; ReplacedExisting={replacedExisting}.");
 
         return new PluginPackageInstallResult(manifest, replacedExisting, RestartRequired: true);
+    }
+
+    private PluginPackageInstallResult InstallPluginPackageWithElevation(
+        string fullPackagePath,
+        PluginManifest manifest,
+        string destinationPath)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new UnauthorizedAccessException(
+                $"Plugin directory '{PluginsDirectory}' is not writable by the current process.");
+        }
+
+        var elevatedResult = new ElevatedPluginInstallService()
+            .InstallAsync(fullPackagePath, PluginsDirectory, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        if (!elevatedResult.Success)
+        {
+            throw new UnauthorizedAccessException(
+                elevatedResult.ErrorMessage ??
+                elevatedResult.Message ??
+                $"Elevated plugin install failed with code '{elevatedResult.Code ?? "unknown"}'.");
+        }
+
+        var installedPath = !string.IsNullOrWhiteSpace(elevatedResult.InstalledPackagePath)
+            ? elevatedResult.InstalledPackagePath
+            : destinationPath;
+        UpdateCatalogAfterPackageInstall(manifest, installedPath);
+        PendingRestartStateService.SetPending(PendingRestartStateService.PluginCatalogReason, true);
+        AppLogger.Info(
+            "PluginRuntime",
+            $"Package staged through elevated installer. PluginId='{manifest.Id}'; Destination='{installedPath}'.");
+
+        return new PluginPackageInstallResult(manifest, ReplacedExisting: false, RestartRequired: true);
     }
 
     private PluginManifest RegisterInstalledPluginPackageCore(string packagePath)
@@ -692,17 +734,6 @@ public sealed class PluginRuntimeService : IDisposable
         return path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
             ? path
             : path + Path.DirectorySeparatorChar;
-    }
-
-    private static string GetUserDataRootDirectory()
-    {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localAppData))
-        {
-            return Path.Combine(AppContext.BaseDirectory, "Data");
-        }
-
-        return Path.Combine(localAppData, "LanMountainDesktop");
     }
 
     private static PluginLoaderOptions CreateOptions()

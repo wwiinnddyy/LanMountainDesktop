@@ -19,13 +19,14 @@ internal sealed class AirAppMarketInstallService : IDisposable
     private readonly ResumableDownloadService _downloadService;
     private readonly AirAppMarketReleaseResolverService _releaseResolverService;
     private readonly PendingPluginUpgradeService _pendingUpgradeService;
+    private readonly ElevatedPluginInstallService _elevatedInstallService = new();
     private readonly string _downloadsDirectory;
     private readonly Version? _hostVersion;
 
     public AirAppMarketInstallService(PluginRuntimeService runtime, string dataDirectory)
     {
         _runtime = runtime;
-        _downloadsDirectory = Path.Combine(dataDirectory, "downloads");
+        _downloadsDirectory = ResolveDownloadsDirectory(dataDirectory);
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromMinutes(2)
@@ -77,9 +78,10 @@ internal sealed class AirAppMarketInstallService : IDisposable
         bool isUpgrade,
         CancellationToken cancellationToken)
     {
+        var canWritePluginsDirectory = PluginInstallTargetAccess.CanWriteDirectory(_runtime.PluginsDirectory);
         AppLogger.Info(
             "PluginMarket",
-            $"Detected {(isUpgrade ? "upgrade" : "new install")} scenario. Downloading package for deferred install. PluginId='{plugin.Id}'.");
+            $"Detected {(isUpgrade ? "upgrade" : "new install")} scenario. Downloading package for {(canWritePluginsDirectory ? "deferred" : "elevated")} install. PluginId='{plugin.Id}'; PluginsDirectory='{_runtime.PluginsDirectory}'; CanWritePluginsDirectory={canWritePluginsDirectory}.");
 
         var sourceErrors = new List<string>();
         foreach (var source in sources)
@@ -98,6 +100,25 @@ internal sealed class AirAppMarketInstallService : IDisposable
             try
             {
                 var manifest = ReadManifestFromPackage(downloadResult.PackagePath);
+                if (!canWritePluginsDirectory)
+                {
+                    var elevatedResult = await _elevatedInstallService.InstallAsync(
+                        downloadResult.PackagePath,
+                        _runtime.PluginsDirectory,
+                        cancellationToken).ConfigureAwait(false);
+                    if (!elevatedResult.Success)
+                    {
+                        sourceErrors.Add($"{source.SourceKind}: {elevatedResult.ErrorMessage ?? elevatedResult.Message ?? elevatedResult.Code ?? "Elevated install failed."}");
+                        continue;
+                    }
+
+                    AppLogger.Info(
+                        "PluginMarket",
+                        $"Plugin package installed through elevated installer. PluginId='{manifest.Id}'; Version='{manifest.Version ?? plugin.Version}'; PackagePath='{downloadResult.PackagePath}'; IsUpgrade={isUpgrade}.");
+
+                    return new AirAppMarketInstallResult(true, manifest, null, RestartRequired: true);
+                }
+
                 _pendingUpgradeService.AddPendingInstallOrUpgrade(
                     manifest.Id,
                     downloadResult.PackagePath,
@@ -274,6 +295,21 @@ internal sealed class AirAppMarketInstallService : IDisposable
         {
             // Ignore cleanup failures for temporary install artifacts.
         }
+    }
+
+    private static string ResolveDownloadsDirectory(string dataDirectory)
+    {
+        var preferred = Path.Combine(dataDirectory, "downloads");
+        if (PluginInstallTargetAccess.CanWriteDirectory(preferred))
+        {
+            return preferred;
+        }
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var fallbackRoot = string.IsNullOrWhiteSpace(localAppData)
+            ? Path.GetTempPath()
+            : Path.Combine(localAppData, "LanMountainDesktop");
+        return Path.Combine(fallbackRoot, "PluginMarket", "downloads");
     }
 
     private async Task<DownloadPackageResult> DownloadPackageAsync(

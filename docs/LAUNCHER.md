@@ -444,8 +444,10 @@ _oobeSteps = [
 - `postinstall` may open OOBE only when the launcher is not elevated and the user state path is available.
 - `plugin-install` and `debug-preview` must not auto-enter OOBE.
 - Allowed elevation paths are limited to the installer itself, full installer update application, and user-confirmed legacy uninstall.
-- Default plugin installation targets the current user's LocalAppData scope and must not request elevation by default.
-- In-app market installs are deferred Host-side operations: download and verify now, apply from the per-user pending queue on the next Host startup.
+- Default plugin installation targets the Host data root and must not request elevation when that directory is writable.
+- The Launcher `plugin install` maintenance command accepts `--app-root` so it can verify the configured data root before writing. It rejects targets outside that root.
+- In-app market installs are deferred Host-side operations when the data root is writable: download and verify now, apply from the pending queue on the next Host startup.
+- If portable data is configured under an administrator-protected install path, Host stages the package in a user-writable download directory and invokes the restricted Launcher maintenance command with UAC to copy the package into `Extensions/Plugins`.
 
 ## Public IPC Baseline
 

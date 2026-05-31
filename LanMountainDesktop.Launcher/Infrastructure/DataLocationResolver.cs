@@ -193,8 +193,10 @@ internal sealed class DataLocationResolver
 
     public bool ApplyLocationChoice(DataLocationMode mode, string? customPath = null, bool migrateExistingData = false)
     {
-        var targetDataRoot = mode == DataLocationMode.Portable && !string.IsNullOrWhiteSpace(customPath)
-            ? Path.GetFullPath(customPath)
+        var targetDataRoot = mode == DataLocationMode.Portable
+            ? Path.GetFullPath(!string.IsNullOrWhiteSpace(customPath)
+                ? customPath
+                : DefaultPortableDataPath)
             : _defaultSystemDataPath;
 
         var config = new DataLocationConfig

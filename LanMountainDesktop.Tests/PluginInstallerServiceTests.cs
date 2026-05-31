@@ -1,5 +1,6 @@
 using LanMountainDesktop.Launcher.Plugins;
 using System.IO.Compression;
+using System.Text.Json;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -34,10 +35,10 @@ public sealed class PluginInstallerServiceTests : IDisposable
         Directory.CreateDirectory(_tempRoot);
         CreatePluginPackage(packagePath, "plugin.json", "plugin.install.sample", "Sample Plugin");
 
-        var pluginsDirectory = CreateUserScopedPluginsDirectory();
+        var pluginsDirectory = CreateConfiguredPortablePluginsDirectory(out var appRoot);
         var service = new PluginInstallerService();
 
-        var result = service.InstallPackage(packagePath, pluginsDirectory);
+        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
 
         Assert.True(result.Success);
         Assert.Equal("ok", result.Code);
@@ -50,6 +51,42 @@ public sealed class PluginInstallerServiceTests : IDisposable
     }
 
     [Fact]
+    public void InstallPackage_AllowsConfiguredPortableDataRootOutsideUserScope()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(_tempRoot);
+        var appRoot = Path.Combine(_tempRoot, "PackageRoot");
+        var portableDataRoot = Path.Combine(appRoot, "Desktop");
+        var launcherDataRoot = Path.Combine(appRoot, ".Launcher");
+        Directory.CreateDirectory(launcherDataRoot);
+        File.WriteAllText(
+            Path.Combine(launcherDataRoot, "data-location.config.json"),
+            JsonSerializer.Serialize(new
+            {
+                DataLocationMode = "Portable",
+                SystemDataPath = Path.Combine(_tempRoot, "System"),
+                PortableDataPath = portableDataRoot
+            }));
+
+        var packagePath = Path.Combine(_tempRoot, "portable.laapp");
+        CreatePluginPackage(packagePath, "plugin.json", "plugin.portable.sample", "Portable Plugin");
+
+        var pluginsDirectory = Path.Combine(portableDataRoot, "Extensions", "Plugins");
+        var service = new PluginInstallerService();
+
+        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
+
+        Assert.True(result.Success);
+        Assert.Equal("ok", result.Code);
+        Assert.True(File.Exists(result.InstalledPackagePath));
+        Assert.StartsWith(Path.GetFullPath(portableDataRoot), Path.GetFullPath(result.InstalledPackagePath!), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void InstallPackage_ReplacesExistingPackageWithSamePluginId()
     {
         Directory.CreateDirectory(_tempRoot);
@@ -58,11 +95,11 @@ public sealed class PluginInstallerServiceTests : IDisposable
         CreatePluginPackage(firstPackagePath, "plugin.json", "plugin.replace.sample", "Sample Plugin v1");
         CreatePluginPackage(secondPackagePath, "plugin.json", "plugin.replace.sample", "Sample Plugin v2");
 
-        var pluginsDirectory = CreateUserScopedPluginsDirectory();
+        var pluginsDirectory = CreateConfiguredPortablePluginsDirectory(out var appRoot);
         var service = new PluginInstallerService();
 
-        var first = service.InstallPackage(firstPackagePath, pluginsDirectory);
-        var second = service.InstallPackage(secondPackagePath, pluginsDirectory);
+        var first = service.InstallPackage(firstPackagePath, pluginsDirectory, appRoot);
+        var second = service.InstallPackage(secondPackagePath, pluginsDirectory, appRoot);
 
         Assert.True(first.Success);
         Assert.True(second.Success);
@@ -77,10 +114,10 @@ public sealed class PluginInstallerServiceTests : IDisposable
         Directory.CreateDirectory(_tempRoot);
         CreatePluginPackage(packagePath, "manifest.json", "plugin.legacy.sample", "Legacy Plugin");
 
-        var pluginsDirectory = CreateUserScopedPluginsDirectory();
+        var pluginsDirectory = CreateConfiguredPortablePluginsDirectory(out var appRoot);
         var service = new PluginInstallerService();
 
-        var result = service.InstallPackage(packagePath, pluginsDirectory);
+        var result = service.InstallPackage(packagePath, pluginsDirectory, appRoot);
 
         Assert.True(result.Success);
         Assert.Equal("plugin.legacy.sample", result.ManifestId);
@@ -103,18 +140,24 @@ public sealed class PluginInstallerServiceTests : IDisposable
               """);
     }
 
-    private static string CreateUserScopedPluginsDirectory()
+    private string CreateConfiguredPortablePluginsDirectory(out string appRoot)
     {
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LanMountainDesktop",
-            "Tests",
-            nameof(PluginInstallerServiceTests),
-            Guid.NewGuid().ToString("N"),
-            "Extensions",
-            "Plugins");
-        Directory.CreateDirectory(root);
-        return root;
+        appRoot = Path.Combine(_tempRoot, "ConfiguredPackageRoot", Guid.NewGuid().ToString("N"));
+        var portableDataRoot = Path.Combine(appRoot, "Desktop");
+        var launcherDataRoot = Path.Combine(appRoot, ".Launcher");
+        Directory.CreateDirectory(launcherDataRoot);
+        File.WriteAllText(
+            Path.Combine(launcherDataRoot, "data-location.config.json"),
+            JsonSerializer.Serialize(new
+            {
+                DataLocationMode = "Portable",
+                SystemDataPath = Path.Combine(_tempRoot, "System"),
+                PortableDataPath = portableDataRoot
+            }));
+
+        var pluginsDirectory = Path.Combine(portableDataRoot, "Extensions", "Plugins");
+        Directory.CreateDirectory(pluginsDirectory);
+        return pluginsDirectory;
     }
 
     public void Dispose()

@@ -161,7 +161,7 @@ Use `LanMountainDesktop.slnx` as the workspace entry point. The standard loop is
 
 For packaging, see `LanMountainDesktop/PACKAGING.md`. For plugin package generation or local feed workflows, use `scripts/Pack-PluginPackages.ps1`.
 
-In-app marketplace plugin installs use a per-user pending plugin queue. The package is downloaded and verified immediately, then applied on the next Host startup before plugin discovery. `LanMountainDesktop.Launcher.exe plugin install` remains only as a maintenance compatibility command.
+In-app marketplace plugin installs use the Host data root. When `Extensions/Plugins` is writable, the package is downloaded and verified immediately, then queued and applied on the next Host startup before plugin discovery. When portable data lives under an administrator-protected install path, Host stages the download in a user-writable location and invokes the restricted `LanMountainDesktop.Launcher.exe plugin install --app-root <package-root>` maintenance command with UAC to copy into the configured data root.
 
 **Launcher Architecture**: LanMountainDesktop uses a Launcher as the single entry point, responsible for version management, updates, and launching the main application. See the Chinese section above for detailed architecture documentation.
 
