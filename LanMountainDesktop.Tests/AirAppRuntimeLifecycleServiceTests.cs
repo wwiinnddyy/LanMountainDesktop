@@ -1,20 +1,17 @@
 using System.Diagnostics;
 using LanMountainDesktop.ComponentSystem;
-using LanMountainDesktop.Launcher;
-using LanMountainDesktop.Launcher.AirApp;
-using LanMountainDesktop.Launcher.Shell.EntryHandlers;
 using LanMountainDesktop.Shared.IPC.Abstractions.Services;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
 
-public sealed class LauncherAirAppLifecycleServiceTests
+public sealed class AirAppRuntimeLifecycleServiceTests
 {
     [Fact]
     public async Task OpenAsync_ReusesExistingInstanceForSameKey()
     {
         var starter = new TestAirAppProcessStarter(Process.GetCurrentProcess());
-        var service = new LauncherAirAppLifecycleService(starter);
+        var service = new AirAppLifecycleService(starter);
         var request = new AirAppOpenRequest(
             "whiteboard",
             BuiltInComponentIds.DesktopWhiteboard,
@@ -36,7 +33,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
     public async Task OpenAsync_ReusesGlobalClockSuiteAcrossClockComponents()
     {
         var starter = new TestAirAppProcessStarter(Process.GetCurrentProcess());
-        var service = new LauncherAirAppLifecycleService(starter);
+        var service = new AirAppLifecycleService(starter);
 
         var first = await service.OpenAsync(new AirAppOpenRequest(
             "world-clock",
@@ -62,7 +59,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
     public async Task OpenAsync_PrunesExitedRegisteredInstanceBeforeRestart()
     {
         var starter = new TestAirAppProcessStarter(Process.GetCurrentProcess());
-        var service = new LauncherAirAppLifecycleService(starter);
+        var service = new AirAppLifecycleService(starter);
         var instanceKey = AirAppInstanceKey.Build(
             "whiteboard",
             BuiltInComponentIds.DesktopWhiteboard,
@@ -92,7 +89,7 @@ public sealed class LauncherAirAppLifecycleServiceTests
     [Fact]
     public async Task HasLiveAirApps_ReturnsFalseAfterUnregisteringLastInstance()
     {
-        var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(Process.GetCurrentProcess()));
+        var service = new AirAppLifecycleService(new TestAirAppProcessStarter(Process.GetCurrentProcess()));
         var instanceKey = AirAppInstanceKey.Build("world-clock", BuiltInComponentIds.DesktopWorldClock, "clock-1");
 
         _ = await service.RegisterAsync(new AirAppRegistrationRequest(
@@ -112,26 +109,35 @@ public sealed class LauncherAirAppLifecycleServiceTests
     }
 
     [Fact]
-    public void AirAppBrokerLifetime_KeepsAliveWhileRequesterIsAlive()
+    public void RuntimeLifetime_KeepsAliveWhileRequesterIsAlive()
     {
-        var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var service = new AirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var lifetime = new AirAppRuntimeLifetime(
+            new AirAppRuntimeOptions(null, null, 0, Environment.ProcessId),
+            service);
 
-        Assert.True(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(Environment.ProcessId, service));
+        Assert.True(lifetime.ShouldKeepAlive());
     }
 
     [Fact]
-    public void AirAppBrokerLifetime_StopsWhenRequesterExitedAndNoAirAppsRemain()
+    public void RuntimeLifetime_StopsWhenNoProcessOrAirAppsRemain()
     {
-        var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var service = new AirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var lifetime = new AirAppRuntimeLifetime(
+            new AirAppRuntimeOptions(null, null, int.MaxValue, int.MaxValue),
+            service);
 
-        Assert.False(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
+        Assert.False(lifetime.ShouldKeepAlive());
     }
 
     [Fact]
-    public async Task AirAppBrokerLifetime_KeepsAliveWhileAirAppIsAlive()
+    public async Task RuntimeLifetime_KeepsAliveWhileAirAppIsAlive()
     {
-        var service = new LauncherAirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var service = new AirAppLifecycleService(new TestAirAppProcessStarter(null));
         var instanceKey = AirAppInstanceKey.Build("world-clock", BuiltInComponentIds.DesktopWorldClock, "clock-2");
+        var lifetime = new AirAppRuntimeLifetime(
+            new AirAppRuntimeOptions(null, null, int.MaxValue, int.MaxValue),
+            service);
 
         _ = await service.RegisterAsync(new AirAppRegistrationRequest(
             instanceKey,
@@ -142,28 +148,23 @@ public sealed class LauncherAirAppLifecycleServiceTests
             BuiltInComponentIds.DesktopWorldClock,
             "clock-2"));
 
-        Assert.True(AirAppBrokerEntryHandler.ShouldKeepAirAppBrokerAlive(int.MaxValue, service));
+        Assert.True(lifetime.ShouldKeepAlive());
     }
 
     [Fact]
-    public void CommandContext_RecognizesAirAppBrokerAsGuiCommandInDebugEnvironment()
+    public async Task RuntimeControl_AttachesHostProcess()
     {
-        var oldEnvironment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-        try
-        {
-            Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Development");
+        var service = new AirAppLifecycleService(new TestAirAppProcessStarter(null));
+        var lifetime = new AirAppRuntimeLifetime(
+            new AirAppRuntimeOptions(null, null, int.MaxValue, int.MaxValue),
+            service);
+        var control = new AirAppRuntimeControlService(lifetime);
 
-            var context = CommandContext.FromArgs(["air-app-broker", "--requester-pid", "42"]);
+        var result = await control.AttachHostAsync(Environment.ProcessId);
 
-            Assert.True(context.IsGuiCommand);
-            Assert.True(context.IsAirAppBrokerCommand);
-            Assert.True(context.IsDebugMode);
-            Assert.Equal(42, context.GetIntOption("requester-pid", 0));
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", oldEnvironment);
-        }
+        Assert.True(result.Accepted);
+        Assert.Equal(Environment.ProcessId, result.Status.HostProcessId);
+        Assert.True(result.Status.HostProcessAlive);
     }
 
     private sealed class TestAirAppProcessStarter : IAirAppProcessStarter

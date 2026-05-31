@@ -96,17 +96,17 @@ public sealed class AirAppLauncherServiceTests
     }
 
     [Fact]
-    public void CreateBrokerStartInfo_UsesAirAppBrokerCommandAndRequesterPid()
+    public void CreateRuntimeStartInfo_UsesAirAppRuntimeAndRequesterPid()
     {
-        var startInfo = AirAppLauncherService.CreateBrokerStartInfo(
-            @"C:\Apps\LanMountainDesktop.Launcher.exe",
+        var startInfo = AirAppLauncherService.CreateRuntimeStartInfo(
+            @"C:\Apps\LanMountainDesktop.AirAppRuntime.exe",
             12345);
 
-        Assert.Equal(@"C:\Apps\LanMountainDesktop.Launcher.exe", startInfo.FileName);
+        Assert.Equal(@"C:\Apps\LanMountainDesktop.AirAppRuntime.exe", startInfo.FileName);
         Assert.Equal(@"C:\Apps", startInfo.WorkingDirectory);
         Assert.False(startInfo.UseShellExecute);
         Assert.Equal(
-            ["air-app-broker", "--requester-pid", "12345"],
+            ["--requester-pid", "12345"],
             startInfo.ArgumentList);
     }
 }

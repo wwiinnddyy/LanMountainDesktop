@@ -27,28 +27,27 @@ LanMountainDesktop 使用基于 GitHub Release 的增量更新系统,支持:
 ### 完整更新流程图
 
 ```
-Launcher 启动
+Host 更新编排
     ↓
-UpdateCheckService.CheckForUpdateAsync()
-    ├─ 调用 GitHub Release API
+UpdateOrchestrator.CheckAsync()
+    ├─ 调用 PLONDS / GitHub manifest provider
     ├─ 根据更新频道过滤版本
     └─ 对比当前版本和最新版本
     ↓
-有新版本? ──No→ 继续启动
+有新版本? ──No→ 回到空闲
     ↓ Yes
-IUpdateEngine.DownloadAsync() / UpdateEngineFacade
-    ├─ 下载 files-{version}.json
-    ├─ 下载 files-{version}.json.sig
-    └─ 下载 delta-{old}-to-{new}.zip (或完整包)
+UpdateOrchestrator.DownloadAsync()
+    ├─ 下载 plonds-filemap.json
+    ├─ 下载 plonds-filemap.sig
+    └─ 下载对象文件或完整安装器
     ↓
-保存到 .launcher/update/incoming/
+保存到 .Launcher/update/incoming/ 并写入 deployment.lock
     ↓
-下次启动时
+Host 调用 UpdateInstallGateway
     ↓
-IUpdateEngine.ApplyPendingUpdateAsync() / UpdateEngineFacade
-    ├─ PendingUpdateDetector 识别 Legacy/PLONDS pending 更新
+UpdateInstallGateway.InstallAsync()
     ├─ UpdateSignatureVerifier 验证签名和哈希
-    ├─ LegacyUpdateApplier 或 PlondsUpdateApplier 应用文件
+    ├─ PlondsUpdateApplier 应用文件
     ├─ DeploymentActivator 切换 .current/.partial/.destroy
     ├─ UpdateSnapshotStore / InstallCheckpointStore 记录快照和断点
     └─ IncomingArtifactsCleaner 清理 incoming 缓存
@@ -253,7 +252,7 @@ private void TryRollbackOnFailure(SnapshotMetadata snapshot)
 ### 手动回退
 
 ```bash
-LanMountainDesktop.Launcher.exe update rollback
+主程序设置页 → 更新 → 回滚
 ```
 
 ### 回退流程
@@ -442,5 +441,5 @@ private static void EnsurePathWithinRoot(string targetPath, string rootPath)
 ## VeloPack Packaging (Current)
 
 - Release pipeline now produces VeloPack native assets (eleases.win.json, *.nupkg, RELEASES).
-- Launcher remains the installer and rollback authority; only package generation moved to VeloPack.
+- Host owns update check/download/apply/rollback orchestration. Launcher only selects and starts the current version; package generation uses VeloPack.
 - Legacy iles.json + update.zip generation remains available only as a disabled fallback path in CI.

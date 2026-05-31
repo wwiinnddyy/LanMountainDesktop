@@ -32,11 +32,10 @@ These APIs report process, shell, tray, taskbar, and activation state separately
 
 ## Air APP Lifecycle
 
-- Launcher is also the Air APP lifecycle manager.
-- The desktop host requests Air APP operations through `IAirAppLifecycleService` on the dedicated `LanMountainDesktop.Launcher.AirApp.v1` IPC pipe.
-- When the dedicated pipe is unavailable, the desktop host starts `LanMountainDesktop.Launcher.exe air-app-broker --requester-pid <pid>` and retries the request.
-- `air-app-broker` is a hidden internal command that starts only the Air APP lifecycle IPC host. It bypasses OOBE, Splash, debug preview windows, and normal desktop launch orchestration.
-- Launcher creates, activates, tracks, and closes Air APP host processes by instance key: `{appId}:{sourceComponentId}:{sourcePlacementId}`.
-- `LanMountainDesktop.AirAppHost` registers itself with Launcher after its window opens and unregisters on close; Launcher also prunes exited processes.
-- Launcher remains alive while either the desktop host process or any Air APP process is alive.
-- Broker mode remains alive while the requester process or any Air APP process is alive, then exits after both are gone.
+- `LanMountainDesktop.AirAppRuntime` is the Air APP lifecycle manager.
+- The desktop host requests Air APP operations through `IAirAppLifecycleService` on the dedicated `LanMountainDesktop.AirAppRuntime.v1` IPC pipe.
+- Launcher pre-starts `LanMountainDesktop.AirAppRuntime`; when the dedicated pipe is unavailable, the desktop host starts the runtime directly and retries the request.
+- AirApp Runtime, not Launcher, owns the Air APP lifecycle IPC host and AirAppHost process table.
+- AirApp Runtime creates, activates, tracks, and closes Air APP host processes by instance key: `{appId}:{sourceComponentId}:{sourcePlacementId}`.
+- `LanMountainDesktop.AirAppHost` registers itself with AirApp Runtime after its window opens and unregisters on close; Runtime also prunes exited processes.
+- Launcher waits only for the desktop host startup path. AirApp Runtime remains alive while Launcher/Host/requester or any Air APP process is alive, then exits after all are gone.

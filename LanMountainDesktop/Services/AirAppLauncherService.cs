@@ -22,7 +22,7 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
     public const string WorldClockAppId = "world-clock";
     public const string WhiteboardAppId = "whiteboard";
 
-    private const int LauncherIpcRetryCount = 4;
+    private const int RuntimeIpcRetryCount = 4;
 
     public void OpenWorldClock(string? sourcePlacementId)
     {
@@ -82,27 +82,27 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
             var result = await SendOpenRequestAsync(request).ConfigureAwait(false);
             if (result.Accepted)
             {
-                AppLogger.Info("AirAppLauncher", $"Launcher accepted Air APP request. AppId='{appId}'; Code='{result.Code}'.");
+                AppLogger.Info("AirAppLauncher", $"AirApp Runtime accepted Air APP request. AppId='{appId}'; Code='{result.Code}'.");
                 return;
             }
 
-            AppLogger.Warn("AirAppLauncher", $"Launcher rejected Air APP request. AppId='{appId}'; Code='{result.Code}'; Message='{result.Message}'.");
+            AppLogger.Warn("AirAppLauncher", $"AirApp Runtime rejected Air APP request. AppId='{appId}'; Code='{result.Code}'; Message='{result.Message}'.");
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("AirAppLauncher", $"Failed to open Air APP through Launcher. AppId='{appId}'.", ex);
+            AppLogger.Warn("AirAppLauncher", $"Failed to open Air APP through AirApp Runtime. AppId='{appId}'.", ex);
         }
     }
 
     private static async Task<AirAppOperationResult> SendOpenRequestAsync(AirAppOpenRequest request)
     {
         Exception? lastException = null;
-        for (var attempt = 1; attempt <= LauncherIpcRetryCount; attempt++)
+        for (var attempt = 1; attempt <= RuntimeIpcRetryCount; attempt++)
         {
             try
             {
                 using var client = new LanMountainDesktopIpcClient();
-                await client.ConnectAsync(IpcConstants.AirAppLifecyclePipeName).ConfigureAwait(false);
+                await client.ConnectAsync(IpcConstants.AirAppRuntimePipeName).ConfigureAwait(false);
                 var proxy = client.CreateProxy<IAirAppLifecycleService>();
                 return await proxy.OpenAsync(request).ConfigureAwait(false);
             }
@@ -113,9 +113,9 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
                 {
                     AppLogger.Warn(
                         "AirAppLauncher",
-                        $"Air APP lifecycle IPC unavailable on first attempt. Pipe='{IpcConstants.AirAppLifecyclePipeName}'. Starting Launcher broker.",
+                        $"Air APP lifecycle IPC unavailable on first attempt. Pipe='{IpcConstants.AirAppRuntimePipeName}'. Starting AirApp Runtime.",
                         ex);
-                    TryStartLauncher();
+                    TryStartRuntime();
                 }
 
                 await Task.Delay(250 * attempt).ConfigureAwait(false);
@@ -123,44 +123,52 @@ internal sealed class AirAppLauncherService : IAirAppLauncherService
         }
 
         throw new InvalidOperationException(
-            $"Launcher Air APP IPC is unavailable. Pipe='{IpcConstants.AirAppLifecyclePipeName}'.",
+            $"AirApp Runtime IPC is unavailable. Pipe='{IpcConstants.AirAppRuntimePipeName}'.",
             lastException);
     }
 
-    internal static ProcessStartInfo CreateBrokerStartInfo(string launcherPath, int requesterProcessId)
+    internal static ProcessStartInfo CreateRuntimeStartInfo(string runtimePath, int requesterProcessId, string? appRoot = null, string? dataRoot = null)
     {
-        var startInfo = new ProcessStartInfo
+        var startInfo = AirAppRuntimeProcessStarter.CreateStartInfo(runtimePath);
+        if (!string.IsNullOrWhiteSpace(appRoot))
         {
-            FileName = launcherPath,
-            WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? AppContext.BaseDirectory,
-            UseShellExecute = false
-        };
-        startInfo.ArgumentList.Add("air-app-broker");
+            startInfo.ArgumentList.Add("--app-root");
+            startInfo.ArgumentList.Add(Path.GetFullPath(appRoot));
+        }
+
+        if (!string.IsNullOrWhiteSpace(dataRoot))
+        {
+            startInfo.ArgumentList.Add("--data-root");
+            startInfo.ArgumentList.Add(Path.GetFullPath(dataRoot));
+        }
+
         startInfo.ArgumentList.Add("--requester-pid");
         startInfo.ArgumentList.Add(requesterProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         return startInfo;
     }
 
-    private static void TryStartLauncher()
+    private static void TryStartRuntime()
     {
         try
         {
-            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
-            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
+            var appRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ".."));
+            var runtimePath = AirAppRuntimePathResolver.ResolveExecutablePath(appRoot, AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(runtimePath) || !File.Exists(runtimePath))
             {
-                AppLogger.Warn("AirAppLauncher", "Unable to start Launcher for Air APP request: launcher path was not found.");
+                AppLogger.Warn("AirAppLauncher", "Unable to start AirApp Runtime for Air APP request: runtime path was not found.");
                 return;
             }
 
-            var startInfo = CreateBrokerStartInfo(launcherPath, Environment.ProcessId);
+            var dataRoot = AirAppRuntimeDataRootResolver.ResolveDataRoot(appRoot);
+            var startInfo = CreateRuntimeStartInfo(runtimePath, Environment.ProcessId, appRoot, dataRoot);
             _ = Process.Start(startInfo);
             AppLogger.Info(
                 "AirAppLauncher",
-                $"Started Launcher Air APP broker. Path='{launcherPath}'; Pipe='{IpcConstants.AirAppLifecyclePipeName}'.");
+                $"Started AirApp Runtime. Path='{runtimePath}'; Pipe='{IpcConstants.AirAppRuntimePipeName}'.");
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("AirAppLauncher", "Failed to start Launcher for Air APP request.", ex);
+            AppLogger.Warn("AirAppLauncher", "Failed to start AirApp Runtime for Air APP request.", ex);
         }
     }
 }

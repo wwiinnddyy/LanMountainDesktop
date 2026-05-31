@@ -11,7 +11,6 @@ public sealed class HostActivationPolicyTests
     [Theory]
     [InlineData("launch", "normal", true)]
     [InlineData("launch", "restart", false)]
-    [InlineData("apply-update", "normal", false)]
     public void ShouldProbeExistingHostBeforeLaunch_RespectsLaunchSource(
         string command,
         string launchSource,

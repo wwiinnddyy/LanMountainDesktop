@@ -254,6 +254,39 @@ function Publish-AirAppHostPayload {
     }
 }
 
+function Publish-AirAppRuntimePayload {
+    param(
+        [Parameter(Mandatory = $true)][string]$PublishedDirectory,
+        [Parameter(Mandatory = $true)][string]$Rid,
+        [Parameter(Mandatory = $true)][string]$VersionValue
+    )
+
+    $airAppRuntimeProject = Join-Path $repoRoot "..\LanMountainDesktop.AirAppRuntime\LanMountainDesktop.AirAppRuntime.csproj"
+    $airAppRuntimeProject = Resolve-ExistingPath -PathValue $airAppRuntimeProject
+    Write-Host "Publishing AirAppRuntime framework-dependent JIT payload..."
+    $runtimePublishArgs = @(
+        "publish",
+        $airAppRuntimeProject,
+        "-c", $Configuration,
+        "-r", $Rid,
+        "--self-contained", "false",
+        "-p:SelfContained=false",
+        "-p:PublishAot=false",
+        "-p:PublishSingleFile=false",
+        "-p:PublishTrimmed=false",
+        "-p:PublishReadyToRun=false",
+        "-p:DebugType=None",
+        "-p:DebugSymbols=false",
+        "-p:Version=$VersionValue",
+        "-o", $PublishedDirectory
+    )
+
+    & dotnet @runtimePublishArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "AirAppRuntime publish failed with exit code $LASTEXITCODE."
+    }
+}
+
 function Publish-LauncherPayload {
     param(
         [Parameter(Mandatory = $true)][string]$PublishedDirectory,
@@ -345,6 +378,7 @@ if (Is-WindowsRuntimeIdentifier -Rid $RuntimeIdentifier) {
     [System.IO.Directory]::CreateDirectory($appPublishDir) | Out-Null
 
     Publish-LauncherPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    Publish-AirAppRuntimePayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
     Publish-MainAppFrameworkDependentPayload -ProjectFile $projectPath -PublishedDirectory $appPublishDir -Rid $RuntimeIdentifier -VersionValue $Version
     Publish-AirAppHostPayload -PublishedDirectory $appPublishDir -Rid $RuntimeIdentifier -VersionValue $Version
     New-Item -ItemType File -Path (Join-Path $appPublishDir ".current") -Force | Out-Null
@@ -374,6 +408,7 @@ if (Is-WindowsRuntimeIdentifier -Rid $RuntimeIdentifier) {
     }
 
     Publish-AirAppHostPayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
+    Publish-AirAppRuntimePayload -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier -VersionValue $Version
     Remove-LibVlcForOtherArch -PublishedDirectory $PublishDir -Rid $RuntimeIdentifier
     Remove-LegacyOutputArtifacts -TargetDirectory $PublishDir
 

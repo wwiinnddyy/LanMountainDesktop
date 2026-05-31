@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using LanMountainDesktop.Shared.Contracts.Update;
@@ -39,15 +38,19 @@ internal sealed class UpdateInstallGateway
 
             if (payloadKind is UpdatePayloadKind.DeltaPlonds)
             {
-                var launched = LaunchLauncherForApplyUpdate(launcherRoot);
-                if (!launched)
+                var applyResult = await ApplyDeltaPayloadAsync(launcherRoot, progress, ct).ConfigureAwait(false);
+                if (!applyResult.Success)
                 {
-                    return new InstallResult(false, "Failed to launch Launcher for delta update application.", false, "apply_failed");
+                    return new InstallResult(
+                        false,
+                        applyResult.ErrorMessage ?? applyResult.Message,
+                        false,
+                        applyResult.Code);
                 }
 
                 progress?.Report(new InstallProgressReport(
                     InstallStage.ActivateDeployment,
-                    "Launcher launched for apply-update.",
+                    "Delta update applied by Host.",
                     100,
                     null,
                     0,
@@ -116,7 +119,9 @@ internal sealed class UpdateInstallGateway
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(deploymentLock.PayloadPath) || !File.Exists(deploymentLock.PayloadPath))
+        if (string.IsNullOrWhiteSpace(deploymentLock.PayloadPath) ||
+            !File.Exists(deploymentLock.PayloadPath) &&
+            !Directory.Exists(deploymentLock.PayloadPath))
         {
             errorCode = "staging_incomplete";
             error = "Deployment lock payload path is missing. Please redownload the update.";
@@ -126,35 +131,82 @@ internal sealed class UpdateInstallGateway
         return true;
     }
 
-    private bool LaunchLauncherForApplyUpdate(string launcherRoot)
+    private static async Task<ApplyUpdateResult> ApplyDeltaPayloadAsync(
+        string launcherRoot,
+        IProgress<InstallProgressReport>? progress,
+        CancellationToken ct)
     {
+        using var applyLock = TryAcquireApplyLock(launcherRoot);
+        if (applyLock is null)
+        {
+            return ApplyUpdateResults.Failed(
+                "update.apply",
+                "apply_in_progress",
+                "Another update apply operation is already running.");
+        }
+
         try
         {
-            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
-            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
+            var paths = new PlondsApplyPaths(launcherRoot);
+            var locator = new AppDeploymentLocator(launcherRoot);
+            var applier = new PlondsUpdateApplier(
+                locator,
+                paths,
+                new UpdateSignatureVerifier(paths),
+                new InstallProgressBridge(progress),
+                new UpdateSnapshotStore(paths),
+                new ApplyInstallCheckpointStore(paths),
+                new DeploymentActivator(locator),
+                new IncomingArtifactsCleaner(paths),
+                new PlondsPayloadResolver(paths));
+
+            var result = await applier.ApplyAsync().WaitAsync(ct).ConfigureAwait(false);
+            if (result.Success)
             {
-                AppLogger.Warn("UpdateInstallGateway", "Launcher executable not found. Falling back to next-startup apply.");
-                return false;
+                DeploymentLockService.ClearLock(launcherRoot);
             }
 
-            var resolvedLauncherRoot = Path.GetDirectoryName(launcherPath)!;
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = launcherPath,
-                Arguments = $"apply-update --app-root \"{resolvedLauncherRoot}\" --launch-source apply-update",
-                UseShellExecute = false,
-                WorkingDirectory = resolvedLauncherRoot
-            };
-
-            Process.Start(startInfo);
-            AppLogger.Info("UpdateInstallGateway", $"Launched Launcher for apply-update: {launcherPath}");
-            return true;
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            AppLogger.Warn("UpdateInstallGateway", $"Failed to launch Launcher for apply-update: {ex.Message}");
-            return false;
+            AppLogger.Warn("UpdateInstallGateway", $"Host delta apply failed: {ex.Message}");
+            return ApplyUpdateResults.Failed("update.apply", "apply_exception", ex.Message);
+        }
+    }
+
+    internal static ApplyLockHandle? TryAcquireApplyLock(string launcherRoot)
+    {
+        var lockPath = UpdatePaths.GetApplyInProgressLockPath(Path.GetFullPath(launcherRoot));
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+        try
+        {
+            return new ApplyLockHandle(
+                lockPath,
+                new FileStream(lockPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None));
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    internal sealed class ApplyLockHandle(string path, FileStream stream) : IDisposable
+    {
+        public void Dispose()
+        {
+            stream.Dispose();
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+            }
         }
     }
 

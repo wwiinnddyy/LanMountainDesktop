@@ -418,23 +418,26 @@ public sealed class UpdateOrchestrator : IDisposable
 
             try
             {
-                var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
-                if (!string.IsNullOrWhiteSpace(launcherPath) && File.Exists(launcherPath))
+                var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+                using var applyLock = UpdateInstallGateway.TryAcquireApplyLock(launcherRoot);
+                if (applyLock is null)
                 {
-                    var launcherRoot = Path.GetDirectoryName(launcherPath)!;
-                    var startInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = launcherPath,
-                        Arguments = $"rollback --app-root \"{launcherRoot}\"",
-                        UseShellExecute = false,
-                        WorkingDirectory = launcherRoot
-                    };
-
-                    System.Diagnostics.Process.Start(startInfo);
-                    AppLogger.Info("UpdateOrchestrator", "Launched Launcher for rollback.");
+                    AppLogger.Warn("UpdateOrchestrator", "Rollback skipped because another update operation is already running.");
+                    _stateStore.TransitionTo(UpdatePhase.Failed);
+                    return;
                 }
 
-                _stateStore.TransitionTo(UpdatePhase.RolledBack);
+                var result = new UpdateRollbackGateway().RollbackLatest(launcherRoot);
+                if (result.Success)
+                {
+                    _stateStore.TransitionTo(UpdatePhase.RolledBack);
+                    AppLogger.Info("UpdateOrchestrator", result.Message);
+                }
+                else
+                {
+                    _stateStore.TransitionTo(UpdatePhase.Failed);
+                    _stateStore.RecordFailure(result.ErrorMessage ?? result.Message);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -578,30 +581,21 @@ public sealed class UpdateOrchestrator : IDisposable
         if (manifest?.IsDelta == true ||
             string.Equals(deploymentLock?.Kind, "delta", StringComparison.OrdinalIgnoreCase))
         {
-            AppLogger.Info("UpdateOrchestrator", "Delta update pending. Launching Launcher to apply on exit.");
-            var launcherPath = LauncherPathResolver.ResolveLauncherExecutablePath();
-            if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
-            {
-                return false;
-            }
-
             try
             {
-                var resolvedRoot = Path.GetDirectoryName(launcherPath)!;
-                var startInfo = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = launcherPath,
-                    Arguments = $"apply-update --app-root \"{resolvedRoot}\" --launch-source apply-update",
-                    UseShellExecute = false,
-                    WorkingDirectory = resolvedRoot
-                };
-
-                System.Diagnostics.Process.Start(startInfo);
-                return true;
+                AppLogger.Info("UpdateOrchestrator", "Delta update pending. Applying from Host on exit.");
+                var result = _installGateway.InstallAsync(
+                        UpdatePayloadKind.DeltaPlonds,
+                        launcherRoot,
+                        progress: null,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+                return result.Success;
             }
             catch (Exception ex)
             {
-                AppLogger.Warn("UpdateOrchestrator", $"Failed to launch Launcher on exit: {ex.Message}");
+                AppLogger.Warn("UpdateOrchestrator", $"Failed to apply delta update on exit: {ex.Message}");
                 return false;
             }
         }

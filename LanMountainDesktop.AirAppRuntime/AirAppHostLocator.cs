@@ -1,9 +1,14 @@
-namespace LanMountainDesktop.Launcher.AirApp;
+namespace LanMountainDesktop.AirAppRuntime;
 
 internal sealed class AirAppHostLocator
 {
     private const string WindowsExecutableName = "LanMountainDesktop.AirAppHost.exe";
+    private const string UnixExecutableName = "LanMountainDesktop.AirAppHost";
     private const string DllName = "LanMountainDesktop.AirAppHost.dll";
+
+    private static string ExecutableName => OperatingSystem.IsWindows()
+        ? WindowsExecutableName
+        : UnixExecutableName;
 
     public string Resolve(string? packageRoot, string? hostPath = null)
     {
@@ -22,18 +27,18 @@ internal sealed class AirAppHostLocator
     {
         foreach (var root in EnumerateRoots(packageRoot, hostPath))
         {
-            yield return Path.Combine(root, "AirAppHost", WindowsExecutableName);
+            yield return Path.Combine(root, "AirAppHost", ExecutableName);
             yield return Path.Combine(root, "AirAppHost", DllName);
-            yield return Path.Combine(root, WindowsExecutableName);
+            yield return Path.Combine(root, ExecutableName);
             yield return Path.Combine(root, DllName);
 
             if (Directory.Exists(root))
             {
                 foreach (var deploymentDirectory in Directory.GetDirectories(root, "app-*", SearchOption.TopDirectoryOnly))
                 {
-                    yield return Path.Combine(deploymentDirectory, "AirAppHost", WindowsExecutableName);
+                    yield return Path.Combine(deploymentDirectory, "AirAppHost", ExecutableName);
                     yield return Path.Combine(deploymentDirectory, "AirAppHost", DllName);
-                    yield return Path.Combine(deploymentDirectory, WindowsExecutableName);
+                    yield return Path.Combine(deploymentDirectory, ExecutableName);
                     yield return Path.Combine(deploymentDirectory, DllName);
                 }
             }
@@ -52,7 +57,7 @@ internal sealed class AirAppHostLocator
                 "Release",
 #endif
                 "net10.0",
-                WindowsExecutableName);
+                ExecutableName);
 
             yield return Path.Combine(
                 current.FullName,

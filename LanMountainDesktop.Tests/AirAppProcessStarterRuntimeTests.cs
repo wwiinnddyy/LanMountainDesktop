@@ -1,5 +1,3 @@
-using LanMountainDesktop.Launcher.AirApp;
-using LanMountainDesktop.Launcher.Infrastructure;
 using Xunit;
 
 namespace LanMountainDesktop.Tests;
@@ -29,38 +27,14 @@ public sealed class AirAppProcessStarterRuntimeTests : IDisposable
     }
 
     [Fact]
-    public void CreateStartInfo_UsesArchitectureMatchedDotnetHost_ForDllFallbackOnWindows()
+    public void CreateStartInfo_UsesDotnetHost_ForDllFallback()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        var programFiles = Path.Combine(_root, "ProgramFiles");
-        var dotnetRoot = Path.Combine(programFiles, "dotnet");
-        Directory.CreateDirectory(dotnetRoot);
-        var dotnetHost = Path.Combine(dotnetRoot, "dotnet.exe");
-        File.WriteAllText(dotnetHost, string.Empty);
-        Directory.CreateDirectory(Path.Combine(
-            dotnetRoot,
-            "shared",
-            DotNetRuntimeProbe.RequiredSharedFrameworkName,
-            "10.0.5"));
-
         var hostDll = Path.Combine(_root, "LanMountainDesktop.AirAppHost.dll");
         File.WriteAllText(hostDll, string.Empty);
-        var options = new DotNetRuntimeProbeOptions
-        {
-            Architecture = DotNetRuntimeArchitecture.X64,
-            ProgramFilesPath = programFiles,
-            ProgramFilesX86Path = Path.Combine(_root, "ProgramFilesX86"),
-            IncludeRegistry = false,
-            IncludeDotNetCli = false
-        };
 
-        var startInfo = AirAppProcessStarter.CreateStartInfo(hostDll, options);
+        var startInfo = AirAppProcessStarter.CreateStartInfo(hostDll);
 
-        Assert.Equal(dotnetHost, startInfo.FileName);
+        Assert.Contains("dotnet", Path.GetFileName(startInfo.FileName), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(hostDll, startInfo.ArgumentList.Single());
     }
 

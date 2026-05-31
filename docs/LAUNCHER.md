@@ -1,6 +1,6 @@
 # Launcher 架构文档
 
-> LanMountainDesktop.Launcher - 应用启动器和版本管理系统
+> LanMountainDesktop.Launcher - 应用启动器与版本目录选择
 
 ## 目录
 
@@ -19,9 +19,10 @@ Launcher 是 LanMountainDesktop 的唯一入口点,负责:
 - 首次体验引导 (OOBE)
 - 启动动画 (Splash Screen)
 - 多版本管理和选择
-- 应用更新 (增量更新、原子化更新)
-- 插件安装和升级
-- 版本回退
+- 不承担更新职责；更新检查、下载、应用与回滚均由主程序负责
+- 插件安装和升级维护命令
+
+Air APP 窗口生命周期不再由 Launcher 进程内 broker 承担。Launcher 在正常启动时预启动包根下的 `LanMountainDesktop.AirAppRuntime`，该进程以框架依赖 JIT 方式运行并负责 Air APP IPC、实例表和 AirAppHost 进程管理。
 
 **设计理念**: 参考 ClassIsland 项目,实现原子化的多版本管理和随时版本回退能力。
 
@@ -43,18 +44,14 @@ Launcher 是 LanMountainDesktop 的唯一入口点,负责:
 - 版本标记系统 (`.current`, `.partial`, `.destroy`)
 - 旧版本自动清理
 
-### 4. 应用更新
-- GitHub Release API 集成
-- 更新频道管理 (Stable/Preview)
-- 增量更新下载
-- 原子化更新应用
-- 签名验证
-- 版本回退
+### 4. 更新边界
+- Host 负责更新检查、频道策略、下载、`deployment.lock` 写入、PLONDS 应用、部署切换和回滚
+- Launcher 不提供 `update check` / `update download` / `apply-update` / `rollback` 命令
+- Launcher 只按版本目录和 `.current` / `.partial` / `.destroy` 标记选择要启动的 Host
 
-### 5. 插件管理
-- 插件安装 (`.laapp` 包)
-- 插件更新检查
-- 插件升级队列处理
+### 5. 插件维护
+- `plugin install` / `plugin update` 保留为兼容维护命令
+- 应用内插件市场下载、校验和 pending 队列由 Host 负责
 
 ## 架构设计
 
@@ -64,9 +61,11 @@ Launcher 是 LanMountainDesktop 的唯一入口点,负责:
 ```
 C:\Program Files\LanMountainDesktop\
 ├── LanMountainDesktop.Launcher.exe  ← 唯一入口
+├── LanMountainDesktop.AirAppRuntime.exe ← Air APP 生命周期容器（JIT）
 ├── app-1.0.0/                        ← 版本目录
 │   ├── .current                      ← 当前版本标记
 │   ├── LanMountainDesktop.exe
+│   ├── LanMountainDesktop.AirAppHost.exe
 │   ├── LanMountainDesktop.dll
 │   └── ... (所有依赖)
 ├── app-1.0.1/                        ← 新版本
@@ -75,7 +74,7 @@ C:\Program Files\LanMountainDesktop\
 ├── app-0.9.9/                        ← 旧版本
 │   ├── .destroy                      ← 待删除标记
 │   └── ...
-└── .launcher/                        ← Launcher 数据目录
+└── .Launcher/                        ← Launcher 数据目录
     ├── state/
     │   └── first_run_completed       ← OOBE 完成标记
     ├── update/
@@ -125,34 +124,11 @@ void CleanupDestroyedDeployments()
 3. 优先选择带 `.current` 标记的版本
 4. 如果没有 `.current`,选择版本号最高的
 
-### UpdateCheckService
-**职责**: 检查 GitHub Release 更新
+### Host UpdateOrchestrator
+**职责**: 更新检查、频道策略、manifest 解析、下载与安装触发位于 Host 的 `LanMountainDesktop/Services/Update/UpdateOrchestrator.cs`。Launcher 不再提供 `update check` / `update download` CLI。
 
-**关键方法**:
-```csharp
-// 检查更新
-Task<UpdateCheckResult> CheckForUpdateAsync(
-    string currentVersion,
-    UpdateChannel channel,
-    CancellationToken cancellationToken = default)
-```
-
-**更新频道**:
-- `Stable` - 只检查 `prerelease=false` 的版本
-- `Preview` - 检查所有版本 (包括 `prerelease=true`)
-
-### IUpdateEngine / UpdateEngineFacade
-**职责**: `UpdateEngineFacade` 是 `IUpdateEngine` 薄门面；pending 检测、签名、Legacy/PLONDS apply、快照、checkpoint、回滚和清理分别位于 `Update/` 策略/基础设施类。
-
-**关键方法**:
-```csharp
-LauncherResult CheckPendingUpdate()
-Task<LauncherResult> DownloadAsync(...)
-Task<LauncherResult> ApplyPendingUpdateAsync()
-LauncherResult RollbackLatest()
-void CleanupDestroyedDeployments()
-void CleanupIncomingArtifacts()
-```
+### Host UpdateInstallGateway
+**职责**: 更新应用与回滚入口位于 Host。`UpdateOrchestrator` 下载后调用 `UpdateInstallGateway` 在 Host 进程内应用 PLONDS payload；回滚通过 Host 的 `UpdateRollbackGateway` 执行。
 
 ### LauncherOrchestrator / LaunchPipeline
 **职责**: 协调完整的启动流程（`Shell/LauncherOrchestrator.cs` + `Startup/LaunchPipeline.cs`）
@@ -160,10 +136,9 @@ void CleanupIncomingArtifacts()
 **启动阶段 (ILaunchPhase)**:
 1. `CleanupDeploymentsPhase` — 清理旧部署
 2. `ExistingHostProbePhase` — 多实例 / 现有 Host 探测
-3. `ApplyPendingUpdatePhase` — 应用 pending 更新
-4. `OobeGatePhase` — OOBE 步骤
-5. `LaunchHostPhase` — 启动 Host
-6. `MonitorStartupPhase` — IPC 启动监控
+3. `OobeGatePhase` — OOBE 步骤
+4. `LaunchHostPhase` — 启动 Host
+5. `MonitorStartupPhase` — IPC 启动监控
 
 **GUI 入口**: `Shell/LauncherCompositionRoot` + `Shell/LauncherServiceRegistration`（MS DI 轻量装配）
 
@@ -355,7 +330,7 @@ internal sealed class LaunchPipeline
 }
 ```
 
-`LauncherFlowCoordinator` 已删除。GUI 顶层生命周期由 `LauncherGuiCoordinator` 处理，启动阶段由 `LaunchPipeline` 和各 `ILaunchPhase` 承载；更新 apply 通过 `IUpdateEngine` 门面进入 `Update/` 策略类。
+`LauncherFlowCoordinator` 已删除。GUI 顶层生命周期由 `LauncherGuiCoordinator` 处理，启动阶段由 `LaunchPipeline` 和各 `ILaunchPhase` 承载；更新检查、下载、应用与回滚均由 Host 处理。
 
 ## 命令行接口
 
@@ -366,38 +341,6 @@ LanMountainDesktop.Launcher.exe launch
 ```
 
 启动完整流程: OOBE → Splash → 更新 → 插件 → 主程序
-
-### update check - 检查更新
-
-```bash
-LanMountainDesktop.Launcher.exe update check
-```
-
-检查 GitHub Release 是否有新版本。
-
-### update download - 下载更新
-
-```bash
-LanMountainDesktop.Launcher.exe update download --version 1.0.1
-```
-
-下载指定版本的更新包。
-
-### update apply - 应用更新
-
-```bash
-LanMountainDesktop.Launcher.exe update apply
-```
-
-应用已下载的更新 (原子化操作)。
-
-### update rollback - 版本回退
-
-```bash
-LanMountainDesktop.Launcher.exe update rollback
-```
-
-回退到上一个有效版本。
 
 ### plugin install - 安装插件
 
@@ -418,11 +361,7 @@ dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csp
 
 **调试特定命令:**
 ```bash
-# 检查更新
-dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- update check
-
-# 版本回退
-dotnet run --project LanMountainDesktop.Launcher/LanMountainDesktop.Launcher.csproj -- update rollback
+# Launcher 不提供更新/回滚 CLI；调试更新请运行主程序并使用设置页或 Host 更新服务。
 ```
 
 ### 模拟多版本环境
@@ -454,10 +393,10 @@ pwsh ./scripts/Generate-DeltaPackage.ps1 `
   -CurrentVersion "1.0.1" `
   -PreviousDir "./test-deploy/app-1.0.0" `
   -CurrentDir "./test-deploy/app-1.0.1" `
-  -OutputDir "./test-deploy/.launcher/update/incoming"
+  -OutputDir "./test-deploy/.Launcher/update/incoming"
 
 # 3. 测试应用更新
-./test-deploy/LanMountainDesktop.Launcher.exe update apply
+# 运行主程序并通过 Host 更新服务触发下载、应用和回滚。
 ```
 
 ### 添加新的 OOBE 步骤
@@ -486,13 +425,7 @@ _oobeSteps = [
 
 ### 自定义更新源
 
-修改 `App.axaml.cs` 中的 GitHub 仓库信息:
-```csharp
-var updateCheckService = new UpdateCheckService(
-    "YourOrg",      // GitHub 组织/用户名
-    "YourRepo"      // 仓库名
-);
-```
+更新源配置与 manifest provider 位于 Host 更新服务中，优先查看 `LanMountainDesktop/Services/Update/UpdateOrchestrator.cs`、`SettingsUpdateManifestProvider.cs` 与具体 provider。
 
 ## 相关文档
 
@@ -506,10 +439,10 @@ var updateCheckService = new UpdateCheckService(
 - OOBE state is a per-user truth source stored at `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
 - Same-user reinstall or upgrade must not re-enter OOBE.
 - `first_run_completed` is legacy compatibility data only and should not remain the long-term primary format.
-- Launch source values are `normal`, `postinstall`, `apply-update`, `plugin-install`, and `debug-preview`.
+- Launch source values are `normal`, `postinstall`, `plugin-install`, and `debug-preview`.
 - Auto-OOBE is allowed only for normal user-mode startup.
 - `postinstall` may open OOBE only when the launcher is not elevated and the user state path is available.
-- `apply-update`, `plugin-install`, and `debug-preview` must not auto-enter OOBE.
+- `plugin-install` and `debug-preview` must not auto-enter OOBE.
 - Allowed elevation paths are limited to the installer itself, full installer update application, and user-confirmed legacy uninstall.
 - Default plugin installation targets the current user's LocalAppData scope and must not request elevation by default.
 - In-app market installs are deferred Host-side operations: download and verify now, apply from the per-user pending queue on the next Host startup.

@@ -7,7 +7,8 @@
 | 路径 | 角色 |
 | --- | --- |
 | `LanMountainDesktop/` | 主桌面宿主应用，包含 UI、服务、组件系统、插件运行时接入 |
-| **`LanMountainDesktop.Launcher/`** | **启动器 - 负责 OOBE、Splash、版本管理、增量更新、插件安装** |
+| **`LanMountainDesktop.Launcher/`** | **启动器 - 负责 OOBE、Splash、版本目录选择与主程序启动** |
+| **`LanMountainDesktop.AirAppRuntime/`** | **Air APP 独立运行容器 - 负责 Air APP IPC、实例表与 AirAppHost 进程生命周期** |
 | `LanMountainDesktop.PluginSdk/` | 官方插件 SDK，定义插件可依赖的公开接口与打包行为 |
 | `LanMountainDesktop.Shared.Contracts/` | 宿主与插件共享的稳定契约类型 |
 | `LanMountainDesktop.Appearance/` | 主题、圆角、外观资源相关基础设施 |
@@ -26,9 +27,9 @@
 2. Launcher 扫描 `app-*` 目录,选择最佳版本 (优先 `.current` 标记,然后按版本号降序)
 3. 首次启动显示 OOBE 引导 (`OobeWindow`)
 4. 显示 Splash 启动动画 (`SplashWindow`)
-5. 检查并应用待处理的更新 (`IUpdateEngine.ApplyPendingUpdateAsync` / `UpdateEngineFacade`)
-6. 启动主程序 `app-{version}/LanMountainDesktop.exe`（待处理插件安装/升级由 Host 在 `PluginRuntimeService.ApplyPendingPluginOperations()` 中应用，而非 Launcher 启动流程）
-7. 清理标记为 `.destroy` 的旧版本
+5. 预启动包根下的 `LanMountainDesktop.AirAppRuntime`（框架依赖 JIT 进程）
+6. 启动主程序 `app-{version}/LanMountainDesktop.exe`（更新检查、下载、应用、回滚和插件 pending 队列均由 Host 处理）
+7. 主程序启动成功后将 Host PID 附加给 AirApp Runtime，并清理标记为 `.destroy` 的旧版本
 
 **主程序启动流程 (LanMountainDesktop.exe):**
 
@@ -89,16 +90,15 @@
 1. **OOBE (首次体验)** - 首次启动引导和欢迎页面
 2. **Splash Screen** - 启动动画和加载进度显示
 3. **版本管理** - 多版本并存、版本选择、版本回退
-4. **应用更新** - 增量更新、静默更新、原子化更新
-5. **插件管理** - 插件安装、插件更新队列处理
+4. **无更新职责** - 不检查、不下载、不应用、不回滚更新；更新系统完全由 Host 接管
+5. **插件维护命令** - 保留 `plugin install` / `plugin update` 作为兼容 CLI；应用内插件市场由 Host 处理
 
 #### 核心服务
 
 | 服务 | 职责 |
 |------|------|
 | `DeploymentLocator` | 扫描和定位 `app-*` 版本目录,选择最佳版本 |
-| `IUpdateEngine` / `UpdateEngineFacade` | 更新门面；pending 检测、签名、Legacy/PLONDS apply、回滚、清理委托给 `Update/` 策略类 |
-| `LauncherOrchestrator` / `LaunchPipeline` | 协调 OOBE → Splash → 更新 → 启动主程序的完整流程 |
+| `LauncherOrchestrator` / `LaunchPipeline` | 协调 OOBE → Splash → AirApp Runtime 预启动 → 启动主程序 |
 | `OobeStateService` | 管理首次运行状态 |
 | `PluginInstallerService` | CLI 维护：`plugin install` 直接安装 `.laapp` |
 | `PluginUpgradeQueueService` | CLI 维护：`plugin update` 应用待处理队列（正常市场安装/升级由 Host 处理） |
@@ -116,7 +116,7 @@
 ├── app-1.0.1/                        ← 新版本
 │   ├── .partial                      ← 下载中标记
 │   └── ...
-└── .launcher/                        ← Launcher 数据
+└── .Launcher/                        ← Launcher 数据
     ├── state/                        ← OOBE 状态
     ├── update/incoming/              ← 更新缓存
     └── snapshots/                    ← 更新快照
@@ -136,15 +136,10 @@
 #### 更新流程
 
 **增量更新:**
-1. `UpdateCheckService` 调用 GitHub Release API
-2. 根据更新频道 (Stable/Preview) 过滤版本
-3. 下载 `delta-{old}-to-{new}.zip` 和 `files-{new}.json`
-4. 创建 `app-{new}/` 目录并标记 `.partial`
-5. 解压增量包,从旧版本复用未变更文件
-6. 验证所有文件 SHA256
-7. 删除 `.partial`,添加 `.current` 到新版本
-8. 标记旧版本 `.destroy`
-9. 保存更新快照到 `.launcher/snapshots/`
+1. Host 的 `UpdateOrchestrator` 检查更新、解析 manifest，并下载 PLONDS file map、签名和对象文件到 `.Launcher/update/incoming/`
+2. Host 写入 `deployment.lock`，随后在 Host 进程内进入 `UpdateInstallGateway`
+3. Host 负责签名校验、创建目标 `app-{new}/`、应用文件、验证 hash、切换 `.current`、写入快照和清理 incoming
+4. 失败时 Host 使用快照尝试回滚；手动回滚通过 Host 设置页进入 `UpdateRollbackGateway`
 
 **原子化保证:**
 - 更新过程中保持 `.partial` 标记
@@ -154,7 +149,7 @@
 
 **版本回退:**
 ```bash
-LanMountainDesktop.Launcher.exe update rollback
+Host 设置页 → 更新 → 回滚
 ```
 回退会:
 1. 读取最新的更新快照
@@ -189,7 +184,7 @@ GitHub Release Assets:
 
 This repository is organized around a desktop host app plus a host-side plugin ecosystem. `LanMountainDesktop/` contains the application entry points, UI, services, component system, and plugin runtime integration. The surrounding projects provide the public SDK, shared contracts, appearance infrastructure, settings primitives, host abstractions, runtime support, and tests.
 
-**Launcher Architecture**: `LanMountainDesktop.Launcher/` serves as the single entry point, managing OOBE, splash screen, multi-version deployment, and incremental updates. In-app plugin market installation is Host-owned: packages are downloaded into the current user's pending plugin queue and applied by the Host before plugin discovery on the next startup. The Launcher still keeps plugin CLI commands as maintenance compatibility entry points. It uses a version directory structure (`app-{version}/`) with marker files (`.current`, `.partial`, `.destroy`) to enable atomic updates and rollback capabilities. See the Chinese section above for detailed architecture documentation.
+**Launcher Architecture**: `LanMountainDesktop.Launcher/` serves as the single entry point, managing OOBE, splash screen, version selection, and host startup. Update check/download/apply/rollback orchestration is fully Host-owned; the Launcher does not expose update CLI commands. In-app plugin market installation is also Host-owned. The Launcher still keeps plugin CLI commands as maintenance compatibility entry points. It uses a version directory structure (`app-{version}/`) with marker files (`.current`, `.partial`, `.destroy`) only to select the host version to start. See the Chinese section above for detailed architecture documentation.
 
 The runtime flow starts with the Launcher selecting the best version, then proceeds into `Program.cs`, into `App.axaml.cs`, initializes settings/theme/localization services, then boots the desktop shell, tray, windows, and plugin runtime. The most important behavior boundaries are component registration, plugin activation, appearance resources, and settings persistence.
 
@@ -197,7 +192,7 @@ The runtime flow starts with the Launcher selecting the best version, then proce
 
 - Incremental package build/publish has moved to VeloPack native assets (
 eleases.win.json + *.nupkg).
-- Launcher runtime responsibilities are unchanged: OOBE, startup orchestration, update apply, and rollback.
+- Launcher runtime responsibilities are OOBE, startup orchestration, AirApp Runtime pre-start, version directory selection, and Host launch. Update check/download/apply/rollback stays in the Host.
 
 ## Plugin Isolation Modes
 
@@ -228,13 +223,13 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 
 ## Air APP Lifecycle
 
-- Launcher is the lifecycle bridge between the desktop host and Air APP processes.
-- The desktop host requests built-in Air APP operations through `IAirAppLifecycleService` on `LanMountainDesktop.Launcher.AirApp.v1`.
-- If that pipe is not available because the desktop host was started directly from IDE/dev tooling, the host starts `LanMountainDesktop.Launcher.exe air-app-broker --requester-pid <pid>` and retries the request.
-- `air-app-broker` is an internal hidden command that starts only the Air APP lifecycle IPC broker and does not run OOBE, Splash, debug preview windows, or normal desktop launch.
-- Launcher owns Air APP process creation, activation, instance-key de-duplication, registration tracking, and exited-process cleanup.
-- `LanMountainDesktop.AirAppHost` stays an independent rendering process and registers/unregisters itself with Launcher.
-- Launcher remains alive while the desktop host or any Air APP process is alive.
+- `LanMountainDesktop.AirAppRuntime` is the lifecycle bridge between the desktop host and Air APP processes.
+- The desktop host requests built-in Air APP operations through `IAirAppLifecycleService` on `LanMountainDesktop.AirAppRuntime.v1`.
+- Launcher pre-starts `LanMountainDesktop.AirAppRuntime` during normal startup and attaches the launched Host PID through `IAirAppRuntimeControlService`.
+- If that pipe is not available because the desktop host was started directly from IDE/dev tooling, the host starts `LanMountainDesktop.AirAppRuntime` and retries the request.
+- AirApp Runtime owns Air APP process creation, activation, instance-key de-duplication, registration tracking, and exited-process cleanup.
+- `LanMountainDesktop.AirAppHost` stays an independent rendering process and registers/unregisters itself with AirApp Runtime.
+- Launcher waits for the desktop host startup path only; AirApp Runtime remains alive while Launcher/Host/requester or any AirAppHost process is alive, and exits when idle.
 - Air APP windows are ordinary application windows: they do not use fused desktop bottom-most services and do not use global `Topmost` promotion.
 
 ## Fused Desktop Window Layer
@@ -264,10 +259,10 @@ See `docs/EXTERNAL_IPC_ARCHITECTURE.md` for the detailed contract and migration 
 - Launcher OOBE state is owned by a per-user JSON file under `%LOCALAPPDATA%\LanMountainDesktop\.launcher\state\oobe-state.json`.
 - Same-user reinstall or upgrade should keep OOBE completed.
 - `first_run_completed` is legacy migration-only data.
-- The recognized launch sources are `normal`, `postinstall`, `apply-update`, `plugin-install`, and `debug-preview`.
+- The recognized launch sources are `normal`, `postinstall`, `plugin-install`, and `debug-preview`.
 - Auto-OOBE is only allowed for normal user-mode startup.
 - `postinstall` may show OOBE only when the launcher is not elevated.
-- `apply-update`, `plugin-install`, and `debug-preview` must not auto-open OOBE.
+- `plugin-install` and `debug-preview` must not auto-open OOBE.
 - Elevation is allowed only for the installer, full installer update application, and user-confirmed legacy uninstall.
 - Default plugin install should stay inside the user's LocalAppData scope and should not ask for UAC.
 - Marketplace plugin installs are queued under the user's data root and take effect after restart; they do not use Launcher elevation.

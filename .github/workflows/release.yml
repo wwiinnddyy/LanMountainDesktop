@@ -185,6 +185,29 @@ jobs:
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
         shell: pwsh
 
+      - name: Publish AirAppRuntime
+        run: |
+          $arch = "${{ matrix.arch }}"
+          $publishDir = "publish/airapp-runtime-win-$arch"
+
+          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj `
+            -c Release `
+            -o ./$publishDir `
+            --self-contained:false `
+            -r win-$arch `
+            -p:SelfContained=false `
+            -p:PublishAot=false `
+            -p:PublishSingleFile=false `
+            -p:PublishTrimmed=false `
+            -p:PublishReadyToRun=false `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:Version=${{ needs.prepare.outputs.version }} `
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} `
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+        shell: pwsh
+
       - name: Publish AirAppHost
         run: |
           $arch = "${{ matrix.arch }}"
@@ -215,6 +238,7 @@ jobs:
           $arch = "${{ matrix.arch }}"
           $publishDir = "publish/windows-$arch"
           $launcherPublishDir = "publish/launcher-win-$arch"
+          $runtimePublishDir = "publish/airapp-runtime-win-$arch"
           $appDir = "app-$version"
           $newStructure = "publish-launcher/windows-$arch"
 
@@ -226,10 +250,15 @@ jobs:
             Copy-Item -Path "$launcherPublishDir\*" -Destination $newStructure -Recurse -Force
           }
 
+          if (Test-Path $runtimePublishDir) {
+            Copy-Item -Path "$runtimePublishDir\*" -Destination $newStructure -Recurse -Force
+          }
+
           New-Item -ItemType File -Path (Join-Path $appPath ".current") -Force | Out-Null
 
           Remove-Item -Path $publishDir -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -Path $launcherPublishDir -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path $runtimePublishDir -Recurse -Force -ErrorAction SilentlyContinue
           Move-Item -Path $newStructure -Destination $publishDir -Force
         shell: pwsh
 
@@ -253,6 +282,7 @@ jobs:
 
           $requiredFiles = @(
             (Join-Path $publishDir "LanMountainDesktop.Launcher.exe"),
+            (Join-Path $publishDir "LanMountainDesktop.AirAppRuntime.exe"),
             (Join-Path $appDir "LanMountainDesktop.exe"),
             (Join-Path $appDir "LanMountainDesktop.AirAppHost.exe")
           )
@@ -462,12 +492,32 @@ jobs:
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
+      - name: Publish AirAppRuntime
+        run: |
+          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+            -c Release \
+            -o ./publish/airapp-runtime-linux-x64 \
+            --self-contained false \
+            -r linux-x64 \
+            -p:SelfContained=false \
+            -p:PublishAot=false \
+            -p:PublishSingleFile=false \
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
       - name: Restructure for Launcher
         run: |
           version="${{ needs.prepare.outputs.version }}"
           publishDir="publish/linux-x64"
           appDir="app-$version"
           launcherDir="publish/launcher-linux-x64"
+          runtimeDir="publish/airapp-runtime-linux-x64"
 
           mkdir -p "$publishDir"
           mv "publish/linux-x64-app" "$publishDir/$appDir"
@@ -477,8 +527,13 @@ jobs:
             chmod +x "$publishDir/LanMountainDesktop.Launcher" 2>/dev/null || true
           fi
 
+          if [ -d "$runtimeDir" ]; then
+            cp -r "$runtimeDir"/* "$publishDir/"
+            chmod +x "$publishDir/LanMountainDesktop.AirAppRuntime" 2>/dev/null || true
+          fi
+
           touch "$publishDir/$appDir/.current"
-          rm -rf "$launcherDir"
+          rm -rf "$launcherDir" "$runtimeDir"
 
       - name: Package as DEB
         run: |
@@ -651,6 +706,25 @@ jobs:
             -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
             -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
 
+      - name: Publish AirAppRuntime
+        run: |
+          dotnet publish LanMountainDesktop.AirAppRuntime/LanMountainDesktop.AirAppRuntime.csproj \
+            -c Release \
+            -o ./publish/airapp-runtime-macos-${{ matrix.arch }} \
+            --self-contained false \
+            -r osx-${{ matrix.arch }} \
+            -p:SelfContained=false \
+            -p:PublishAot=false \
+            -p:PublishSingleFile=false \
+            -p:PublishTrimmed=false \
+            -p:PublishReadyToRun=false \
+            -p:DebugType=none \
+            -p:DebugSymbols=false \
+            -p:Version=${{ needs.prepare.outputs.version }} \
+            -p:AssemblyVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:FileVersion=${{ needs.prepare.outputs.assembly_version }} \
+            -p:InformationalVersion=${{ needs.prepare.outputs.informational_version }}
+
       - name: Optimize and Guard macOS Payload
         run: |
           arch="${{ matrix.arch }}"
@@ -684,6 +758,7 @@ jobs:
           app_name="LanMountainDesktop"
           package_name="${app_name}-${version}-macos-${arch}"
           launcherDir="publish/launcher-macos-$arch"
+          runtimeDir="publish/airapp-runtime-macos-$arch"
           appSourceDir="publish/macos-$arch-app"
 
           mkdir -p "${app_name}.app/Contents/MacOS"
@@ -694,6 +769,11 @@ jobs:
           if [ -d "$launcherDir" ]; then
             cp -r "$launcherDir"/* "${app_name}.app/Contents/MacOS/"
             chmod +x "${app_name}.app/Contents/MacOS/LanMountainDesktop.Launcher" 2>/dev/null || true
+          fi
+
+          if [ -d "$runtimeDir" ]; then
+            cp -r "$runtimeDir"/* "${app_name}.app/Contents/MacOS/"
+            chmod +x "${app_name}.app/Contents/MacOS/LanMountainDesktop.AirAppRuntime" 2>/dev/null || true
           fi
 
           touch "${app_name}.app/Contents/MacOS/$appDir/.current"

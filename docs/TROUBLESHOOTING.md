@@ -327,7 +327,7 @@ rm -rf ~/.local/share/LanMountainDesktop/.launcher/update/incoming/*
 
 1. **版本回退:**
 ```bash
-LanMountainDesktop.Launcher.exe update rollback
+Use Host Settings > Update > Rollback
 ```
 
 2. **检查更新快照:**
