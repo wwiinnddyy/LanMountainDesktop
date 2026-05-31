@@ -38,23 +38,6 @@
                 </ui:FASettingsExpander.Footer>
             </ui:FASettingsExpander>
 
-            <ui:FASettingsExpander Header="{Binding CornerRadiusStyleLabel}"
-                                   Description="{Binding CornerRadiusStyleDescription}">
-                <ui:FASettingsExpander.IconSource>
-                    <ui:FAFontIconSource Glyph="&#xF0126;" FontFamily="avares://fluenticons.resources.avalonia/Assets#Seagull Fluent Icons" />
-                </ui:FASettingsExpander.IconSource>
-                <ui:FASettingsExpander.Footer>
-                    <ComboBox Width="220"
-                              ItemsSource="{Binding CornerRadiusStyleOptions}"
-                              SelectedItem="{Binding SelectedCornerRadiusStyle}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SelectionOption">
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </ui:FASettingsExpander.Footer>
-            </ui:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

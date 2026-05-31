@@ -315,6 +315,10 @@ internal sealed class ThemeAppearanceService : IThemeAppearanceService
         {
             snapshot.UseSystemChrome = state.UseSystemChrome;
             changedKeys.Add(nameof(AppSettingsSnapshot.UseSystemChrome));
+            if (OperatingSystem.IsWindows())
+            {
+                LanMountainDesktop.Platform.Windows.ChromePatchState.UseSystemChrome = state.UseSystemChrome;
+            }
         }
 
         if (!string.Equals(GlobalAppearanceSettings.NormalizeCornerRadiusStyle(snapshot.CornerRadiusStyle), normalizedCornerRadiusStyle, StringComparison.OrdinalIgnoreCase))

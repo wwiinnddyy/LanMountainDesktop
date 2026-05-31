@@ -65,6 +65,22 @@ public sealed class MaterialColorSettingsPageViewModelTests
         Assert.Equal(1, facade.ThemeSaveCount);
     }
 
+    [Fact]
+    public void UserSelection_SystemMaterialModeRequestsRestart()
+    {
+        var facade = new FakeSettingsFacade(CreateThemeState(ThemeAppearanceValues.MaterialNone));
+        var materialService = new FakeMaterialColorService(CreateSnapshot(ThemeAppearanceValues.MaterialNone));
+        var viewModel = new MaterialColorSettingsPageViewModel(facade, materialService);
+        string? restartReason = null;
+        viewModel.RestartRequested += reason => restartReason = reason;
+
+        viewModel.SelectedSystemMaterialMode = viewModel.SystemMaterialModes.Single(option =>
+            option.Value == ThemeAppearanceValues.MaterialMica);
+
+        Assert.Equal(viewModel.SystemMaterialRestartMessage, restartReason);
+        Assert.False(string.IsNullOrWhiteSpace(restartReason));
+    }
+
     private static ThemeAppearanceSettingsState CreateThemeState(string materialMode)
     {
         return new ThemeAppearanceSettingsState(

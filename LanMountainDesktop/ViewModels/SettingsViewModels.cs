@@ -1033,25 +1033,10 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
     private string _useSystemChromeLabel = string.Empty;
 
     [ObservableProperty]
-    private string _cornerRadiusStyleLabel = string.Empty;
-
-    [ObservableProperty]
-    private string _cornerRadiusStyleDescription = string.Empty;
-
-    [ObservableProperty]
     private string _themeHeader = string.Empty;
 
     [ObservableProperty]
     private string _appearanceRestartMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _cornerRadiusStyle = GlobalAppearanceSettings.DefaultCornerRadiusStyle;
-
-    [ObservableProperty]
-    private IReadOnlyList<SelectionOption> _cornerRadiusStyleOptions = [];
-
-    [ObservableProperty]
-    private SelectionOption? _selectedCornerRadiusStyle;
 
     public void Load()
     {
@@ -1101,17 +1086,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         PersistCurrentState(restartRequired: true);
     }
 
-    partial void OnSelectedCornerRadiusStyleChanged(SelectionOption? value)
-    {
-        if (_isInitializing || value is null)
-        {
-            return;
-        }
-
-        CornerRadiusStyle = value.Value;
-        PersistCurrentState(restartRequired: false);
-    }
-
     private void RefreshLocalizedText()
     {
         ThemeHeader = L("settings.appearance.theme_header", "Theme");
@@ -1121,25 +1095,15 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         ThemeModeDarkText = L("settings.appearance.theme_mode.dark", "Dark");
         ThemeModeFollowSystemText = L("settings.appearance.theme_mode.follow_system", "Follow system");
         UseSystemChromeLabel = L("settings.color.use_system_chrome_toggle", "Use system window chrome");
-        CornerRadiusStyleLabel = L("settings.appearance.corner_radius.label", "Global corner radius style");
-        CornerRadiusStyleDescription = L("settings.appearance.corner_radius.description", "Select a fixed corner radius style inspired by Xiaomi HyperOS.");
         AppearanceRestartMessage = L(
             "settings.appearance.restart_message",
             "Window chrome changes require restarting the app.");
-
-        CornerRadiusStyleOptions = GlobalAppearanceSettings.AllCornerRadiusStyles
-            .Select(style => new SelectionOption(style, L($"settings.appearance.corner_radius.style_{style.ToLower()}", style)))
-            .ToList();
     }
 
     private void ApplySavedState(ThemeAppearanceSettingsState theme)
     {
         IsNightMode = theme.IsNightMode;
         UseSystemChrome = theme.UseSystemChrome;
-        CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(theme.CornerRadiusStyle);
-        SelectedCornerRadiusStyle = CornerRadiusStyleOptions.FirstOrDefault(option =>
-            string.Equals(option.Value, CornerRadiusStyle, StringComparison.OrdinalIgnoreCase))
-            ?? CornerRadiusStyleOptions.FirstOrDefault(o => o.Value == GlobalAppearanceSettings.DefaultCornerRadiusStyle);
 
         var savedThemeMode = NormalizeThemeMode(theme.ThemeMode);
         SelectedThemeMode = ThemeModeOptions.FirstOrDefault(option =>
@@ -1201,7 +1165,6 @@ public sealed partial class AppearanceSettingsPageViewModel : ViewModelBase
         {
             IsNightMode = IsNightMode,
             UseSystemChrome = UseSystemChrome,
-            CornerRadiusStyle = GlobalAppearanceSettings.NormalizeCornerRadiusStyle(CornerRadiusStyle),
             ThemeMode = SelectedThemeMode?.Value ?? ThemeAppearanceValues.ThemeModeLight
         };
     }
