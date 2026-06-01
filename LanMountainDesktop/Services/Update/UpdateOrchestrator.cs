@@ -25,8 +25,7 @@ internal static class HostUpdateOrchestratorProvider
 
             var settingsFacade = HostSettingsFacadeProvider.GetOrCreate();
             var githubProvider = new GithubReleaseManifestProvider("wwiinnddyy", "LanMountainDesktop");
-            var plondsProvider = new PlondsApiManifestProvider("https://api.classisland.tech");
-            var manifestProvider = new SettingsUpdateManifestProvider(settingsFacade, plondsProvider, githubProvider);
+            var manifestProvider = githubProvider;
             var httpClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             var downloadEngine = new UpdateDownloadEngine(manifestProvider, new ResumableDownloadService(httpClient));
             var installGateway = new UpdateInstallGateway();
@@ -128,7 +127,7 @@ public sealed class UpdateOrchestrator : IDisposable
             UpdateManifest? manifest;
             try
             {
-                var platform = LanMountainDesktop.Services.PlondsStaticUpdateService.ResolveCurrentPlatform();
+                var platform = ResolveCurrentPlatform();
                 manifest = settings.ForceUpdateReinstall
                     ? await _manifestProvider.GetByVersionAsync(
                         currentVersionText,
@@ -709,6 +708,24 @@ public sealed class UpdateOrchestrator : IDisposable
 
         version = new Version(parsed.Major, parsed.Minor, Math.Max(0, parsed.Build), Math.Max(0, parsed.Revision));
         return true;
+    }
+
+    private static string ResolveCurrentPlatform()
+    {
+        var os = OperatingSystem.IsWindows()
+            ? "windows"
+            : OperatingSystem.IsLinux()
+                ? "linux"
+                : OperatingSystem.IsMacOS()
+                    ? "macos"
+                    : "unknown";
+        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
+        {
+            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+            System.Runtime.InteropServices.Architecture.X86 => "x86",
+            _ => "x64"
+        };
+        return $"{os}-{arch}";
     }
 
     private void OnPhaseChanged(UpdatePhase phase)

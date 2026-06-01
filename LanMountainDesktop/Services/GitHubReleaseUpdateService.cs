@@ -34,20 +34,7 @@ public sealed record UpdateCheckResult(
     GitHubReleaseInfo? Release,
     GitHubReleaseAsset? PreferredAsset,
     string? ErrorMessage,
-    bool ForceMode = false,
-    PlondsUpdatePayload? PlondsPayload = null);
-
-public sealed record PlondsUpdatePayload(
-    string DistributionId,
-    string ChannelId,
-    string SubChannel,
-    string? FileMapJson,
-    string? FileMapSignature,
-    string? FileMapJsonUrl,
-    string? FileMapSignatureUrl,
-    string? UpdateArchiveUrl = null,
-    string? UpdateArchiveSha256 = null,
-    long? UpdateArchiveSizeBytes = null);
+    bool ForceMode = false);
 
 public sealed record UpdateDownloadResult(
     bool Success,
@@ -162,10 +149,6 @@ public sealed class GitHubReleaseUpdateService : IDisposable
             var preferredAsset = isUpdateAvailable
                 ? SelectPreferredInstallerAsset(release.Assets)
                 : null;
-            var plondsPayload = isUpdateAvailable
-                ? TryResolvePlondsPayload(release)
-                : null;
-
             return new UpdateCheckResult(
                 Success: true,
                 IsUpdateAvailable: isUpdateAvailable,
@@ -173,8 +156,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 LatestVersionText: latestVersionText,
                 Release: release,
                 PreferredAsset: preferredAsset,
-                ErrorMessage: null,
-                PlondsPayload: plondsPayload);
+                ErrorMessage: null);
         }
         catch (OperationCanceledException)
         {
@@ -239,8 +221,6 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 : release.TagName;
 
             var preferredAsset = SelectPreferredInstallerAsset(release.Assets);
-            var plondsPayload = TryResolvePlondsPayload(release);
-
             return new UpdateCheckResult(
                 Success: true,
                 IsUpdateAvailable: true,
@@ -249,8 +229,7 @@ public sealed class GitHubReleaseUpdateService : IDisposable
                 Release: release,
                 PreferredAsset: preferredAsset,
                 ErrorMessage: null,
-                ForceMode: true,
-                PlondsPayload: plondsPayload);
+                ForceMode: true);
         }
         catch (OperationCanceledException)
         {
@@ -701,46 +680,6 @@ public sealed class GitHubReleaseUpdateService : IDisposable
         }
 
         return null;
-    }
-
-    private static PlondsUpdatePayload? TryResolvePlondsPayload(GitHubReleaseInfo release)
-    {
-        if (release.Assets is null || release.Assets.Count == 0)
-        {
-            return null;
-        }
-
-        var platformSuffix = GetPlatformAssetSuffix();
-        var fileMapAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json");
-        var signatureAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json.sig")
-                             ?? FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.sig");
-        var archiveAsset = FindAsset(release.Assets, $"update-{platformSuffix}.zip");
-        if (fileMapAsset is null || signatureAsset is null || archiveAsset is null)
-        {
-            return null;
-        }
-
-        var distributionId = $"plonds-{release.TagName.Trim().TrimStart('v')}-{platformSuffix}";
-        var channelId = release.IsPrerelease
-            ? UpdateSettingsValues.ChannelPreview
-            : UpdateSettingsValues.ChannelStable;
-
-        return new PlondsUpdatePayload(
-            DistributionId: distributionId,
-            ChannelId: channelId,
-            SubChannel: platformSuffix,
-            FileMapJson: null,
-            FileMapSignature: null,
-            FileMapJsonUrl: fileMapAsset.BrowserDownloadUrl,
-            FileMapSignatureUrl: signatureAsset.BrowserDownloadUrl,
-            UpdateArchiveUrl: archiveAsset.BrowserDownloadUrl,
-            UpdateArchiveSha256: archiveAsset.Sha256,
-            UpdateArchiveSizeBytes: archiveAsset.SizeBytes > 0 ? archiveAsset.SizeBytes : null);
-    }
-
-    private static GitHubReleaseAsset? FindAsset(IReadOnlyList<GitHubReleaseAsset> assets, string assetName)
-    {
-        return assets.FirstOrDefault(asset => string.Equals(asset.Name, assetName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string GetPlatformAssetSuffix()
