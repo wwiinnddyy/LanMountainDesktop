@@ -4,12 +4,12 @@ return await PlondsCli.RunAsync(args);
 
 internal static class PlondsCli
 {
-    public static Task<int> RunAsync(string[] args)
+    public static async Task<int> RunAsync(string[] args)
     {
         if (args.Length == 0)
         {
             PrintUsage();
-            return Task.FromResult(1);
+            return 1;
         }
 
         var command = args[0].Trim().ToLowerInvariant();
@@ -21,23 +21,25 @@ internal static class PlondsCli
             {
                 case "build-delta":
                     RunBuildDelta(options);
-                    return Task.FromResult(0);
+                    return 0;
                 case "build-delta-from-commits":
                     RunBuildDeltaFromCommits(options);
-                    return Task.FromResult(0);
+                    return 0;
+                case "publish-s3":
+                    return await RunPublishS3Async(options).ConfigureAwait(false);
                 case "pack-payload":
                     RunPackPayload(options);
-                    return Task.FromResult(0);
+                    return 0;
                 default:
                     Console.Error.WriteLine($"Unknown command: {command}");
                     PrintUsage();
-                    return Task.FromResult(1);
+                    return 1;
             }
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine(ex.Message);
-            return Task.FromResult(1);
+            return 1;
         }
     }
 
@@ -91,6 +93,34 @@ internal static class PlondsCli
         var outputZip = Require(options, "output-zip");
         PayloadUtilities.CreatePayloadZip(sourceDirectory, outputZip);
         Console.WriteLine(outputZip);
+    }
+
+    private static async Task<int> RunPublishS3Async(Dictionary<string, string> options)
+    {
+        var publisher = new PlondsPublisher();
+        var result = await publisher.PublishAsync(new PlondsPublishOptions(
+            ReleaseTag: Require(options, "release-tag"),
+            Repository: Require(options, "repository"),
+            ManifestPath: Require(options, "manifest"),
+            ChangedZipPath: Require(options, "changed-zip"),
+            WorkDir: Get(options, "work-dir", "plonds-publish-work") ?? "plonds-publish-work",
+            S3KeyPrefix: Get(options, "s3-prefix", "lanmountain/update/plonds") ?? "lanmountain/update/plonds",
+            S3: new PlondsS3ClientOptions(
+                Endpoint: new Uri(Require(options, "s3-endpoint"), UriKind.Absolute),
+                Region: Get(options, "s3-region", "us-east-1") ?? "us-east-1",
+                Bucket: Require(options, "s3-bucket"),
+                AccessKey: Require(options, "s3-access-key"),
+                SecretKey: Require(options, "s3-secret-key"),
+                PublicBaseUrl: Require(options, "s3-public-base-url"),
+                PublicBaseKeyPrefix: Get(options, "s3-public-base-key-prefix", string.Empty) ?? string.Empty))).ConfigureAwait(false);
+
+        Console.WriteLine($"Published PLONDS release {result.ReleaseTag}:");
+        Console.WriteLine($"  Prefix:             {result.VersionPrefix}");
+        Console.WriteLine($"  Manifest:           {result.ManifestUrl}");
+        Console.WriteLine($"  ChangedZip:         {result.ChangedZipUrl}");
+        Console.WriteLine($"  ChangedFolder:      {result.ChangedFolderUrl}");
+        Console.WriteLine($"  ChangedFileCount:   {result.ChangedFileCount}");
+        return 0;
     }
 
     private static Dictionary<string, string> ParseOptions(string[] args)
@@ -163,5 +193,20 @@ internal static class PlondsCli
         Console.WriteLine("  pack-payload             Pack a directory into a payload zip");
         Console.WriteLine("    --source-dir <dir>      Source directory");
         Console.WriteLine("    --output-zip <file>     Output zip path");
+        Console.WriteLine();
+        Console.WriteLine("  publish-s3               Publish PLONDS.json and changed.zip to S3");
+        Console.WriteLine("    --release-tag <tag>     GitHub release tag");
+        Console.WriteLine("    --repository <owner/repo> GitHub repository");
+        Console.WriteLine("    --manifest <file>       PLONDS.json path");
+        Console.WriteLine("    --changed-zip <file>    changed.zip path");
+        Console.WriteLine("    --s3-endpoint <url>     S3-compatible endpoint");
+        Console.WriteLine("    --s3-region <region>    S3 signing region");
+        Console.WriteLine("    --s3-bucket <bucket>    S3 bucket");
+        Console.WriteLine("    --s3-access-key <key>   S3 access key");
+        Console.WriteLine("    --s3-secret-key <key>   S3 secret key");
+        Console.WriteLine("    --s3-public-base-url <url> Public URL prefix for uploaded keys");
+        Console.WriteLine("    [--s3-public-base-key-prefix <prefix>] Key prefix already represented by public URL");
+        Console.WriteLine("    [--s3-prefix <prefix>]  Object key prefix (default: lanmountain/update/plonds)");
+        Console.WriteLine("    [--work-dir <dir>]      Temporary publish work directory");
     }
 }

@@ -1,7 +1,7 @@
-﻿name: PLONDS Publisher
+name: PLONDS Publisher
 
 concurrency:
-  group: plonds-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
+  group: plonds-publish-${{ github.event_name }}-${{ github.event.workflow_run.id || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: false
 
 on:
@@ -19,6 +19,8 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
+  PLONDS_S3_PREFIX: lanmountain/update/plonds
+  PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: lanmountain/update
 
 jobs:
   publish:
@@ -35,7 +37,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Resolve release tag and channel
+      - name: Resolve release tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -53,22 +55,8 @@ jobs:
             TAG="$(tr -d '\r\n' < plonds-run-metadata/tag.txt)"
           fi
 
+          gh release view "$TAG" --repo "${{ github.repository }}" --json tagName >/dev/null
           echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
-          IS_PRERELEASE="$(gh release view "$TAG" --repo "${{ github.repository }}" --json isPrerelease --jq '.isPrerelease')"
-          if [[ "$IS_PRERELEASE" == "true" ]]; then
-            CHANNEL="preview"
-          else
-            CHANNEL="stable"
-          fi
-          echo "RELEASE_CHANNEL=${CHANNEL}" >> "$GITHUB_ENV"
-          echo "PLONDS_CHANNEL_POINTER_KEY=lanmountain/update/meta/channels/${CHANNEL}/plonds-latest.json" >> "$GITHUB_ENV"
-          PUBLIC_BASE="${{ vars.S3_PUBLIC_BASE_URL }}"
-          if [[ -z "$PUBLIC_BASE" ]]; then
-            PUBLIC_BASE="https://cn-nb1.rains3.com/lmdesktop/lanmountain/update"
-          fi
-          PUBLIC_BASE="${PUBLIC_BASE%/}"
-          echo "S3_PUBLIC_BASE_URL=${PUBLIC_BASE}" >> "$GITHUB_ENV"
-          echo "S3_BASE_URL=${PUBLIC_BASE}/releases/${TAG}/assets" >> "$GITHUB_ENV"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -76,304 +64,64 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: preview
 
-      - name: Prepare signing key
-        env:
-          UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_PRIVATE_KEY_PEM }}
-          PLONDS_SIGNING_KEY: ${{ secrets.PLONDS_SIGNING_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          KEY="${PLONDS_SIGNING_KEY:-}"
-          if [[ -z "$KEY" ]]; then KEY="${UPDATE_PRIVATE_KEY_PEM:-}"; fi
-          if [[ -z "$KEY" ]]; then
-            echo "No signing key is configured."
-            exit 1
-          fi
-          printf '%s' "$KEY" > update-private-key.pem
-          echo "UPDATE_PRIVATE_KEY_PATH=$PWD/update-private-key.pem" >> "$GITHUB_ENV"
-
       - name: Build PLONDS tool
         run: dotnet build PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj -c Release
 
-      - name: Download release assets
+      - name: Download PLONDS release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release-assets
-          gh release download "$RELEASE_TAG" -D release-assets
-          find release-assets -maxdepth 1 -type f | sort
+          rm -rf plonds-assets
+          mkdir -p plonds-assets
+          gh release download "$RELEASE_TAG" -p changed.zip -p PLONDS.json -D plonds-assets --clobber
+          test -f plonds-assets/changed.zip
+          test -f plonds-assets/PLONDS.json
+          jq -e . plonds-assets/PLONDS.json >/dev/null
 
-      - name: Prepare PLONDS static output
+      - name: Publish PLONDS assets to Rainyun S3
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_PUBLIC_BASE_URL: ${{ vars.S3_PUBLIC_BASE_URL }}
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf plonds-static
-          mkdir -p plonds-static
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            gh run download "${{ github.event.workflow_run.id }}" -n plonds-static -D plonds-static || true
-          fi
-          if [[ ! -d plonds-static/repo/sha256 && -f release-assets/plonds-static.zip ]]; then
-            unzip -q release-assets/plonds-static.zip -d plonds-static
-          fi
-          if [[ ! -d plonds-static/repo/sha256 || ! -d plonds-static/meta/channels || ! -d plonds-static/manifests ]]; then
-            echo "PLONDS static output is missing. Run the PLONDS workflow for this release first."
+          if [[ -z "${S3_ACCESS_KEY:-}" || -z "${S3_SECRET_KEY:-}" || -z "${S3_ENDPOINT:-}" || -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_ACCESS_KEY, S3_SECRET_KEY, S3_ENDPOINT, and S3_BUCKET must be configured."
             exit 1
           fi
 
-      - name: Upload release assets to Rainyun S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          aws --version
-          for file in release-assets/*; do
-            [[ -f "$file" ]] || continue
-            name="$(basename "$file")"
-            if [[ "$name" == "plonds.json" || "$name" == "plonds.json.sig" ]]; then
-              continue
-            fi
-            key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
-            sha256="$(sha256sum "$file" | awk '{print $1}')"
-            existing_sha="$(aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object --bucket "$S3_BUCKET" --key "$key" --query 'Metadata.sha256' --output text 2>/dev/null || true)"
-            if [[ "$existing_sha" == "$sha256" ]]; then
-              echo "Skip existing asset: $name"
-              continue
-            fi
-            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
-              --bucket "$S3_BUCKET" \
-              --key "$key" \
-              --body "$file" \
-              --metadata "sha256=$sha256"
-          done
+          REGION="${S3_REGION:-us-east-1}"
+          PUBLIC_BASE="${S3_PUBLIC_BASE_URL:-https://cn-nb1.rains3.com/lmdesktop}"
+          PUBLIC_BASE="${PUBLIC_BASE%/}"
 
-      - name: Upload PLONDS static output to Rainyun S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3 sync \
-            plonds-static/ \
-            "s3://$S3_BUCKET/lanmountain/update/" \
-            --only-show-errors
-
-      - name: Mirror installers to Rainyun S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${RELEASE_TAG#v}"
-          for file in release-assets/*; do
-            [[ -f "$file" ]] || continue
-            name="$(basename "$file")"
-            platform=""
-            case "$name" in
-              *.exe)
-                if [[ "$name" == *x86* ]]; then platform="windows-x86"; else platform="windows-x64"; fi
-                ;;
-              *.deb)
-                platform="linux-x64"
-                ;;
-              *.dmg)
-                if [[ "$name" == *arm64* ]]; then platform="macos-arm64"; else platform="macos-x64"; fi
-                ;;
-            esac
-            [[ -n "$platform" ]] || continue
-            key="lanmountain/update/installers/${platform}/${version}/${name}"
-            sha256="$(sha256sum "$file" | awk '{print $1}')"
-            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
-              --bucket "$S3_BUCKET" \
-              --key "$key" \
-              --body "$file" \
-              --metadata "sha256=$sha256"
-          done
-
-      - name: Build PLONDS manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p plonds-output
           dotnet run --project PenguinLogisticsOnlineNetworkDistributionSystem/src/Plonds.Tool/Plonds.Tool.csproj --configuration Release -- \
-            build-plonds \
+            publish-s3 \
             --release-tag "$RELEASE_TAG" \
-            --assets-dir release-assets \
-            --output-dir plonds-output \
-            --private-key "$UPDATE_PRIVATE_KEY_PATH" \
             --repository "${{ github.repository }}" \
-            --s3-base-url "$S3_BASE_URL"
+            --manifest "$PWD/plonds-assets/PLONDS.json" \
+            --changed-zip "$PWD/plonds-assets/changed.zip" \
+            --work-dir "$PWD/plonds-publish-work" \
+            --s3-prefix "$PLONDS_S3_PREFIX" \
+            --s3-endpoint "$S3_ENDPOINT" \
+            --s3-region "$REGION" \
+            --s3-bucket "$S3_BUCKET" \
+            --s3-access-key "$S3_ACCESS_KEY" \
+            --s3-secret-key "$S3_SECRET_KEY" \
+            --s3-public-base-url "$PUBLIC_BASE" \
+            --s3-public-base-key-prefix "$PLONDS_S3_PUBLIC_BASE_KEY_PREFIX"
 
-      - name: Validate PLONDS asset references in Rainyun S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          keys=$(jq -r '.assets[]?.mirrors[]?.url // empty' plonds-output/plonds.json \
-            | sed -n 's#^.*/lanmountain/update/\(.*\)$#lanmountain/update/\1#p' \
-            | sort -u)
+          jq -e '.downloads.github.changedZipUrl and .downloads.s3.changedFolderUrl' plonds-assets/PLONDS.json >/dev/null
 
-          if [[ -z "$keys" ]]; then
-            echo "No S3-backed asset URLs found in plonds.json"
-            exit 1
-          fi
-
-          while IFS= read -r key; do
-            [[ -n "$key" ]] || continue
-            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
-              --bucket "$S3_BUCKET" \
-              --key "$key" >/dev/null
-          done <<< "$keys"
-
-      - name: Upload PLONDS manifest to release
+      - name: Upload enriched PLONDS manifest to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$RELEASE_TAG" plonds-output/plonds.json plonds-output/plonds.json.sig --clobber
-
-      - name: Upload PLONDS manifest to Rainyun S3 staging
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for file in plonds-output/plonds.json plonds-output/plonds.json.sig; do
-            name="$(basename "$file")"
-            key="lanmountain/update/releases/${RELEASE_TAG}/assets/${name}"
-            sha256="$(sha256sum "$file" | awk '{print $1}')"
-            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
-              --bucket "$S3_BUCKET" \
-              --key "$key" \
-              --body "$file" \
-              --metadata "sha256=$sha256"
-          done
-
-      - name: Prepare PLONDS channel pointer
-        shell: bash
-        run: |
-          set -euo pipefail
-          pointer_file="plonds-output/plonds-latest.json"
-          cat > "$pointer_file" <<'JSON'
-          {
-            "schemaVersion": 1,
-            "channel": "__CHANNEL__",
-            "releaseTag": "__TAG__",
-            "version": "__VERSION__",
-            "updatedAt": "__UPDATED_AT__",
-            "manifest": {
-              "url": "__MANIFEST_URL__",
-              "signatureUrl": "__SIG_URL__"
-            }
-          }
-          JSON
-
-          manifest_url="${S3_BASE_URL}/plonds.json"
-          sig_url="${S3_BASE_URL}/plonds.json.sig"
-          version="${RELEASE_TAG#v}"
-          updated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          sed -i "s|__CHANNEL__|${RELEASE_CHANNEL}|g" "$pointer_file"
-          sed -i "s|__TAG__|${RELEASE_TAG}|g" "$pointer_file"
-          sed -i "s|__VERSION__|${version}|g" "$pointer_file"
-          sed -i "s|__UPDATED_AT__|${updated_at}|g" "$pointer_file"
-          sed -i "s|__MANIFEST_URL__|${manifest_url}|g" "$pointer_file"
-          sed -i "s|__SIG_URL__|${sig_url}|g" "$pointer_file"
-
-          jq -e . "$pointer_file" >/dev/null
-
-      - name: Atomically publish PLONDS channel pointer
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          pointer_file="plonds-output/plonds-latest.json"
-          staging_key="lanmountain/update/releases/${RELEASE_TAG}/assets/plonds-latest.json"
-
-          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
-            --bucket "$S3_BUCKET" \
-            --key "$staging_key" \
-            --body "$pointer_file"
-
-          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api put-object \
-            --bucket "$S3_BUCKET" \
-            --key "$PLONDS_CHANNEL_POINTER_KEY" \
-            --body "$pointer_file"
-
-          aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
-            --bucket "$S3_BUCKET" \
-            --key "$PLONDS_CHANNEL_POINTER_KEY" >/dev/null
-
-          curl -fsSI "$S3_PUBLIC_BASE_URL/meta/channels/${RELEASE_CHANNEL}/plonds-latest.json" >/dev/null
-
-      - name: Verify Rainyun S3 PLONDS output
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-          AWS_DEFAULT_REGION: ${{ vars.S3_REGION }}
-          AWS_REGION: ${{ vars.S3_REGION }}
-          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
-          S3_BUCKET: ${{ vars.S3_BUCKET }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t required < <(
-            {
-              find plonds-static/meta/channels -path '*/latest.json' -type f | sort | head -n 1
-              find plonds-static/meta/distributions -name '*.json' -type f | sort | head -n 1
-              find plonds-static/manifests -name 'plonds-filemap.json' -type f | sort | head -n 1
-              find plonds-static/manifests -name 'plonds-filemap.json.sig' -type f | sort | head -n 1
-              find plonds-static/repo/sha256 -type f | sort | head -n 1
-            } | sed '/^$/d'
-          )
-
-          if [[ "${#required[@]}" -lt 5 ]]; then
-            echo "Not enough PLONDS static files to verify."
-            exit 1
-          fi
-
-          for path in "${required[@]}"; do
-            rel="${path#plonds-static/}"
-            key="lanmountain/update/${rel}"
-            aws --endpoint-url "$S3_ENDPOINT" --region "$AWS_REGION" s3api head-object \
-              --bucket "$S3_BUCKET" \
-              --key "$key" >/dev/null
-            curl -fsSI "$S3_PUBLIC_BASE_URL/$rel" >/dev/null
-          done
+          gh release upload "$RELEASE_TAG" plonds-assets/PLONDS.json --clobber
