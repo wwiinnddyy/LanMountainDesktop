@@ -7,71 +7,8 @@ internal static class UpdateManifestMapper
 {
     public static UpdateManifest FromGitHubRelease(
         GitHubReleaseInfo release,
-        PlondsUpdatePayload? plondsPayload,
         string channel,
-        string platform)
-    {
-        if (plondsPayload is not null)
-        {
-            return FromPlondsPayload(plondsPayload, release, channel, platform);
-        }
-
-        return FromFullInstaller(release, channel, platform);
-    }
-
-    public static UpdateManifest FromPlondsPayload(
-        PlondsUpdatePayload payload,
-        GitHubReleaseInfo release,
-        string channel,
-        string platform)
-    {
-        var files = new List<UpdateFileEntry>();
-
-        if (payload.UpdateArchiveUrl is not null)
-        {
-            files.Add(new UpdateFileEntry(
-                Path: "update.zip",
-                Action: "add",
-                Sha256: payload.UpdateArchiveSha256 ?? string.Empty,
-                Size: payload.UpdateArchiveSizeBytes ?? 0,
-                Mode: "compressed-object",
-                ObjectKey: null,
-                ObjectUrl: payload.UpdateArchiveUrl,
-                ArchiveSha256: null,
-                Metadata: null));
-        }
-
-        var mirrors = release.Assets
-            .Where(IsInstallerAsset)
-            .Select(a => new UpdateMirrorAsset(
-                Platform: platform,
-                Url: a.BrowserDownloadUrl,
-                Name: a.Name,
-                Sha256: a.Sha256,
-                Size: a.SizeBytes))
-            .ToArray();
-
-        var metadata = new Dictionary<string, string>
-        {
-            ["source"] = "github-plonds",
-            ["releaseTag"] = release.TagName
-        };
-
-        return new UpdateManifest(
-            DistributionId: payload.DistributionId,
-            FromVersion: string.Empty,
-            ToVersion: NormalizeTagVersion(release.TagName),
-            Platform: platform,
-            Channel: channel,
-            PublishedAt: release.PublishedAt,
-            Kind: UpdatePayloadKind.DeltaPlonds,
-            FileMapUrl: payload.FileMapJsonUrl,
-            FileMapSignatureUrl: payload.FileMapSignatureUrl,
-            FileMapSha256: null,
-            Files: files,
-            InstallerMirrors: mirrors,
-            Metadata: metadata);
-    }
+        string platform) => FromFullInstaller(release, channel, platform);
 
     public static UpdateManifest FromFullInstaller(
         GitHubReleaseInfo release,

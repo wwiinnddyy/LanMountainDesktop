@@ -2,7 +2,7 @@ using LanMountainDesktop.Shared.Contracts.Update;
 
 namespace LanMountainDesktop.Services.Update;
 
-internal sealed class GithubReleaseManifestProvider : IUpdateManifestProvider
+internal sealed class GithubReleaseManifestProvider : IUpdateManifestProvider, IDisposable
 {
     private readonly GitHubReleaseUpdateService _githubService;
     private readonly bool _ownsService;
@@ -37,7 +37,7 @@ internal sealed class GithubReleaseManifestProvider : IUpdateManifestProvider
             return null;
         }
 
-        return UpdateManifestMapper.FromGitHubRelease(result.Release, result.PlondsPayload, channel, platform);
+        return UpdateManifestMapper.FromGitHubRelease(result.Release, channel, platform);
     }
 
     public async Task<UpdateManifest?> GetByVersionAsync(
@@ -53,8 +53,7 @@ internal sealed class GithubReleaseManifestProvider : IUpdateManifestProvider
             return null;
         }
 
-        var plondsPayload = TryResolvePlondsPayload(release);
-        return UpdateManifestMapper.FromGitHubRelease(release, plondsPayload, channel, platform);
+        return UpdateManifestMapper.FromGitHubRelease(release, channel, platform);
     }
 
     public Task<IReadOnlyList<UpdateManifest>> GetIncrementalChainAsync(
@@ -67,65 +66,11 @@ internal sealed class GithubReleaseManifestProvider : IUpdateManifestProvider
         return Task.FromResult<IReadOnlyList<UpdateManifest>>([]);
     }
 
-    private static PlondsUpdatePayload? TryResolvePlondsPayload(GitHubReleaseInfo release)
+    public void Dispose()
     {
-        if (release.Assets is null || release.Assets.Count == 0)
+        if (_ownsService)
         {
-            return null;
+            _githubService.Dispose();
         }
-
-        var platformSuffix = GetPlatformAssetSuffix();
-        var fileMapAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json");
-        var signatureAsset = FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.json.sig")
-                             ?? FindAsset(release.Assets, $"plonds-filemap-{platformSuffix}.sig");
-        var archiveAsset = FindAsset(release.Assets, $"update-{platformSuffix}.zip");
-
-        if (fileMapAsset is null || signatureAsset is null || archiveAsset is null)
-        {
-            return null;
-        }
-
-        var distributionId = $"plonds-{release.TagName.Trim().TrimStart('v')}-{platformSuffix}";
-        var channelId = release.IsPrerelease
-            ? UpdateSettingsValues.ChannelPreview
-            : UpdateSettingsValues.ChannelStable;
-
-        return new PlondsUpdatePayload(
-            DistributionId: distributionId,
-            ChannelId: channelId,
-            SubChannel: platformSuffix,
-            FileMapJson: null,
-            FileMapSignature: null,
-            FileMapJsonUrl: fileMapAsset.BrowserDownloadUrl,
-            FileMapSignatureUrl: signatureAsset.BrowserDownloadUrl,
-            UpdateArchiveUrl: archiveAsset.BrowserDownloadUrl,
-            UpdateArchiveSha256: archiveAsset.Sha256,
-            UpdateArchiveSizeBytes: archiveAsset.SizeBytes > 0 ? archiveAsset.SizeBytes : null);
-    }
-
-    private static GitHubReleaseAsset? FindAsset(IReadOnlyList<GitHubReleaseAsset> assets, string assetName)
-    {
-        return assets.FirstOrDefault(a => string.Equals(a.Name, assetName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string GetPlatformAssetSuffix()
-    {
-        var os = OperatingSystem.IsWindows()
-            ? "windows"
-            : OperatingSystem.IsLinux()
-                ? "linux"
-                : OperatingSystem.IsMacOS()
-                    ? "macos"
-                    : "unknown";
-
-        var arch = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture switch
-        {
-            System.Runtime.InteropServices.Architecture.X86 => "x86",
-            System.Runtime.InteropServices.Architecture.Arm => "arm",
-            System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
-            _ => "x64"
-        };
-
-        return $"{os}-{arch}";
     }
 }

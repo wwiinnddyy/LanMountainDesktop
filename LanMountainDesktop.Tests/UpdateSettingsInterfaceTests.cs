@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Services.Settings;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Shared.Contracts.Update;
@@ -103,35 +104,74 @@ public sealed class UpdateSettingsInterfaceTests
     }
 
     [Fact]
-    public async Task SettingsUpdateManifestProvider_UsesSelectedUpdateSource()
+    public async Task UpdateSettingsService_WhenPlondsSelected_UsesPlondsServiceWithoutCreatingOrchestrator()
     {
-        var update = new FakeUpdateSettingsService
+        var settings = new FakeSettingsService
         {
-            State = DefaultUpdateState() with { UpdateDownloadSource = UpdateSettingsValues.DownloadSourceGitHub }
+            Snapshot =
+            {
+                UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds
+            }
         };
-        var plonds = new FakeManifestProvider("plonds");
-        var github = new FakeManifestProvider("github");
-        var provider = new SettingsUpdateManifestProvider(new FakeSettingsFacade(update), plonds, github);
+        var plonds = new FakePlondsService
+        {
+            LatestResult = PlondsLatestResult.Available(
+                new Version(1, 0, 0),
+                new Version(9, 9, 9),
+                [new PlondsManifestCandidate(
+                    new PlondsSourceDescriptor("s3", "s3", "https://s3.test/PLONDS.json", 100),
+                    CreatePlondsManifest("9.9.9"))])
+        };
+        var orchestratorCreated = false;
+        var service = new UpdateSettingsService(
+            settings,
+            orchestratorFactory: () =>
+            {
+                orchestratorCreated = true;
+                throw new InvalidOperationException("UpdateOrchestrator should not be created for PLONDS.");
+            },
+            plondsService: plonds);
 
-        var manifest = await provider.GetLatestAsync(
-            UpdateSettingsValues.ChannelStable,
-            "windows-x64",
-            new Version(1, 0, 0),
-            CancellationToken.None);
+        var report = await service.CheckAsync(CancellationToken.None);
 
-        Assert.Equal("github", manifest?.DistributionId);
-        Assert.Equal(0, plonds.GetLatestCalls);
-        Assert.Equal(1, github.GetLatestCalls);
+        Assert.True(report.IsUpdateAvailable);
+        Assert.Equal("9.9.9", report.LatestVersion);
+        Assert.Equal(1, plonds.FindLatestCalls);
+        Assert.False(orchestratorCreated);
+    }
 
-        update.State = update.State with { UpdateDownloadSource = UpdateSettingsValues.DownloadSourcePlonds };
-        manifest = await provider.GetLatestAsync(
-            UpdateSettingsValues.ChannelStable,
-            "windows-x64",
-            new Version(1, 0, 0),
-            CancellationToken.None);
+    [Fact]
+    public async Task UpdateSettingsService_WhenGitHubSelected_UsesOrchestrator()
+    {
+        var settings = new FakeSettingsService
+        {
+            Snapshot =
+            {
+                UpdateDownloadSource = UpdateSettingsValues.DownloadSourceGitHub
+            }
+        };
+        var orchestrator = CreateTestOrchestrator(DefaultUpdateState() with
+        {
+            UpdateDownloadSource = UpdateSettingsValues.DownloadSourceGitHub
+        });
+        var orchestratorCreated = false;
+        var service = new UpdateSettingsService(
+            settings,
+            orchestratorFactory: () =>
+            {
+                orchestratorCreated = true;
+                return orchestrator;
+            },
+            plondsService: new FakePlondsService());
 
-        Assert.Equal("plonds", manifest?.DistributionId);
-        Assert.Equal(1, plonds.GetLatestCalls);
+        var _ = service.CurrentPhase;
+
+        Assert.False(orchestratorCreated);
+
+        var report = await service.CheckAsync(CancellationToken.None);
+
+        Assert.True(orchestratorCreated);
+        Assert.True(report.IsUpdateAvailable);
     }
 
     [Fact]
@@ -176,6 +216,33 @@ public sealed class UpdateSettingsInterfaceTests
         PendingUpdatePublishedAtUtcMs: null,
         LastUpdateCheckUtcMs: null,
         PendingUpdateSha256: null);
+
+    private static UpdateOrchestrator CreateTestOrchestrator(SettingsUpdateState state)
+    {
+        return new UpdateOrchestrator(
+            new FakeManifestProvider("github"),
+            new UpdateDownloadEngine(new FakeManifestProvider("github"), new ResumableDownloadService(new HttpClient(new EmptyHandler()))),
+            new UpdateInstallGateway(),
+            new UpdateStateStore(new FakeSettingsFacade(new FakeUpdateSettingsService { State = state })));
+    }
+
+    private static PlondsClientManifest CreatePlondsManifest(string version)
+    {
+        return new PlondsClientManifest(
+            FormatVersion: "2.0",
+            CurrentVersion: version,
+            PreviousVersion: "1.0.0",
+            IsFullUpdate: false,
+            RequiresCleanInstall: false,
+            Channel: "stable",
+            Platform: "windows-x64",
+            UpdatedAt: DateTimeOffset.Parse("2026-06-01T00:00:00Z"),
+            FilesMap: new Dictionary<string, PlondsClientFileEntry>(),
+            ChangedFilesMap: new Dictionary<string, PlondsClientChangedFileEntry>(),
+            Checksums: new Dictionary<string, string>(),
+            Downloads: null,
+            Sources: []);
+    }
 
     private sealed class FakeUpdateSettingsService : IUpdateSettingsService
     {
@@ -263,9 +330,6 @@ public sealed class UpdateSettingsInterfaceTests
         public Task<UpdateCheckResult> ForceCheckForUpdatesAsync(Version currentVersion, bool includePrerelease, CancellationToken cancellationToken = default)
             => CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
 
-        public Task<PlondsUpdatePayload?> GetPlondsUpdatePayloadAsync(Version currentVersion, bool includePrerelease, bool isForce = false, CancellationToken cancellationToken = default)
-            => Task.FromResult<PlondsUpdatePayload?>(null);
-
         public Task<LanMountainDesktop.Services.UpdateDownloadResult> DownloadAssetAsync(
             GitHubReleaseAsset asset,
             string destinationFilePath,
@@ -283,6 +347,115 @@ public sealed class UpdateSettingsInterfaceTests
             IProgress<double>? progress = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult(new LanMountainDesktop.Services.UpdateDownloadResult(false, null, "not used", false));
+    }
+
+    private sealed class FakePlondsService : IPlondsService
+    {
+        public PlondsLatestResult LatestResult { get; set; } = PlondsLatestResult.UpToDate(new Version(1, 0, 0), new Version(1, 0, 0));
+        public PlondsPrepareResult PrepareResult { get; set; } = PlondsPrepareResult.FailedForUi("not prepared");
+        public int FindLatestCalls { get; private set; }
+        public int PrepareLatestCalls { get; private set; }
+
+        public Task<PlondsLatestResult> FindLatestAsync(Version currentVersion, CancellationToken cancellationToken)
+        {
+            FindLatestCalls++;
+            return Task.FromResult(LatestResult);
+        }
+
+        public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(CancellationToken cancellationToken)
+        {
+            PrepareLatestCalls++;
+            return Task.FromResult(PrepareResult);
+        }
+
+        public Task<PlondsPrepareResult> FindAndPrepareLatestAsync(Version currentVersion, CancellationToken cancellationToken)
+        {
+            PrepareLatestCalls++;
+            return Task.FromResult(PrepareResult);
+        }
+    }
+
+    private sealed class FakeSettingsService : ISettingsService
+    {
+        public event EventHandler<SettingsChangedEvent>? Changed;
+
+        public AppSettingsSnapshot Snapshot { get; init; } = new();
+
+        public T LoadSnapshot<T>(SettingsScope scope, string? subjectId = null, string? placementId = null) where T : new()
+        {
+            if (typeof(T) == typeof(AppSettingsSnapshot))
+            {
+                return (T)(object)Snapshot.Clone();
+            }
+
+            return new T();
+        }
+
+        public void SaveSnapshot<T>(
+            SettingsScope scope,
+            T snapshot,
+            string? subjectId = null,
+            string? placementId = null,
+            string? sectionId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+            if (snapshot is AppSettingsSnapshot appSettings)
+            {
+                CopyUpdateSettings(appSettings, Snapshot);
+            }
+
+            Changed?.Invoke(this, new SettingsChangedEvent(scope, subjectId, placementId, sectionId, changedKeys));
+        }
+
+        public T LoadSection<T>(SettingsScope scope, string subjectId, string sectionId, string? placementId = null) where T : new()
+            => new();
+
+        public void SaveSection<T>(
+            SettingsScope scope,
+            string subjectId,
+            string sectionId,
+            T section,
+            string? placementId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+        }
+
+        public void DeleteSection(SettingsScope scope, string subjectId, string sectionId, string? placementId = null)
+        {
+        }
+
+        public T? GetValue<T>(SettingsScope scope, string key, string? subjectId = null, string? placementId = null, string? sectionId = null)
+            => default;
+
+        public void SetValue<T>(
+            SettingsScope scope,
+            string key,
+            T value,
+            string? subjectId = null,
+            string? placementId = null,
+            string? sectionId = null,
+            IReadOnlyCollection<string>? changedKeys = null)
+        {
+        }
+
+        public IComponentSettingsAccessor GetComponentAccessor(string componentId, string? placementId)
+            => throw new NotSupportedException();
+
+        private static void CopyUpdateSettings(AppSettingsSnapshot source, AppSettingsSnapshot target)
+        {
+            target.IncludePrereleaseUpdates = source.IncludePrereleaseUpdates;
+            target.UpdateChannel = source.UpdateChannel;
+            target.UpdateMode = source.UpdateMode;
+            target.UpdateDownloadSource = source.UpdateDownloadSource;
+            target.UpdateDownloadThreads = source.UpdateDownloadThreads;
+            target.ForceUpdateReinstall = source.ForceUpdateReinstall;
+            target.UseGhProxyMirror = source.UseGhProxyMirror;
+            target.PendingUpdateInstallerPath = source.PendingUpdateInstallerPath;
+            target.PendingUpdateVersion = source.PendingUpdateVersion;
+            target.PendingUpdatePublishedAtUtcMs = source.PendingUpdatePublishedAtUtcMs;
+            target.LastUpdateCheckUtcMs = source.LastUpdateCheckUtcMs;
+            target.PendingUpdateSha256 = source.PendingUpdateSha256;
+        }
     }
 
     private sealed class FakeManifestProvider(string providerName) : IUpdateManifestProvider
@@ -316,6 +489,14 @@ public sealed class UpdateSettingsInterfaceTests
             [],
             null,
             new Dictionary<string, string>());
+    }
+
+    private sealed class EmptyHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
     }
 
     private sealed class FakeSettingsFacade(IUpdateSettingsService update) : ISettingsFacadeService

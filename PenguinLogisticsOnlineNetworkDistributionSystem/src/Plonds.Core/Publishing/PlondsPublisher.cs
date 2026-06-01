@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Plonds.Shared.Models;
@@ -53,6 +54,7 @@ public sealed class PlondsPublisher
         ZipFile.ExtractToDirectory(filesZipPath, filesExtractRoot, overwriteFiles: true);
 
         var manifestKey = $"{versionPrefix}/PLONDS.json";
+        var latestManifestKey = $"{prefix}/PLONDS.json";
         var changedZipKey = $"{versionPrefix}/changed.zip";
         var changedFolderKey = $"{versionPrefix}/{changedFolderName}";
         var filesZipKey = $"{versionPrefix}/Files.zip";
@@ -66,8 +68,15 @@ public sealed class PlondsPublisher
         await s3.UploadFileAsync(new PlondsS3ObjectUpload(changedZipPath, changedZipKey, "application/zip"), cancellationToken).ConfigureAwait(false);
         await s3.UploadFileAsync(new PlondsS3ObjectUpload(filesZipPath, filesZipKey, "application/zip"), cancellationToken).ConfigureAwait(false);
 
+        var updatedChecksums = new Dictionary<string, string>(manifest.Checksums, StringComparer.OrdinalIgnoreCase)
+        {
+            ["changed.zip"] = NormalizeChecksum(manifest.Checksums, "changed.zip", changedZipPath),
+            ["Files.zip"] = $"md5:{ComputeMd5Hex(filesZipPath)}"
+        };
+
         var updatedManifest = manifest with
         {
+            Checksums = updatedChecksums,
             Downloads = new PlondsDownloadInfo(
                 ReleaseTag: releaseTag,
                 GitHub: new PlondsGitHubDownloadInfo(
@@ -92,8 +101,10 @@ public sealed class PlondsPublisher
 
         File.WriteAllText(manifestPath, JsonSerializer.Serialize(updatedManifest, JsonOptions), new UTF8Encoding(false));
         await s3.UploadFileAsync(new PlondsS3ObjectUpload(manifestPath, manifestKey, "application/json"), cancellationToken).ConfigureAwait(false);
+        await s3.UploadFileAsync(new PlondsS3ObjectUpload(manifestPath, latestManifestKey, "application/json"), cancellationToken).ConfigureAwait(false);
 
         await s3.EnsureObjectExistsAsync(manifestKey, cancellationToken).ConfigureAwait(false);
+        await s3.EnsureObjectExistsAsync(latestManifestKey, cancellationToken).ConfigureAwait(false);
         await s3.EnsureObjectExistsAsync(changedZipKey, cancellationToken).ConfigureAwait(false);
         await s3.EnsureObjectExistsAsync(filesZipKey, cancellationToken).ConfigureAwait(false);
 
@@ -138,6 +149,22 @@ public sealed class PlondsPublisher
         var json = File.ReadAllText(manifestPath);
         return JsonSerializer.Deserialize<PlondsManifest>(json, JsonOptions)
                ?? throw new InvalidOperationException("PLONDS manifest is empty or invalid.");
+    }
+
+    private static string NormalizeChecksum(
+        IReadOnlyDictionary<string, string> checksums,
+        string key,
+        string filePath)
+    {
+        return checksums.TryGetValue(key, out var checksum) && !string.IsNullOrWhiteSpace(checksum)
+            ? checksum
+            : $"md5:{ComputeMd5Hex(filePath)}";
+    }
+
+    private static string ComputeMd5Hex(string filePath)
+    {
+        using var stream = File.OpenRead(filePath);
+        return Convert.ToHexString(MD5.HashData(stream)).ToLowerInvariant();
     }
 
     private static string NormalizePrefix(string value)

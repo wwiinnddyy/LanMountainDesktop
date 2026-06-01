@@ -10,6 +10,7 @@ using Avalonia.Media.Imaging;
 using LanMountainDesktop.Models;
 using LanMountainDesktop.PluginSdk;
 using LanMountainDesktop.Services;
+using LanMountainDesktop.Services.Plonds;
 using LanMountainDesktop.Services.Update;
 using LanMountainDesktop.Settings.Core;
 using LanMountainDesktop.Services.PluginMarket;
@@ -788,43 +789,56 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 {
     private readonly ISettingsService _settingsService;
     private readonly GitHubReleaseUpdateService _githubReleaseUpdateService = new("wwiinnddyy", "LanMountainDesktop");
-    private readonly PlondsStaticUpdateService _plondsStaticUpdateService = new();
-    private readonly PlondsReleaseUpdateService _plondsReleaseUpdateService = new();
+    private readonly IPlondsService _plondsService;
+    private readonly PlondsPreparedPackageInstaller _plondsInstaller = new();
     private readonly Lazy<UpdateOrchestrator> _orchestrator;
+    private PlondsLatestResult? _pendingPlondsLatest;
+    private PlondsPreparedPackage? _pendingPlondsPackage;
+    private UpdatePhase _plondsPhase = UpdatePhase.Idle;
+    private bool _orchestratorEventsSubscribed;
 
-    public UpdateSettingsService(ISettingsService settingsService, Func<UpdateOrchestrator>? orchestratorFactory = null)
+    public UpdateSettingsService(
+        ISettingsService settingsService,
+        Func<UpdateOrchestrator>? orchestratorFactory = null,
+        IPlondsService? plondsService = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _plondsService = plondsService ?? PlondsClientServiceFactory.CreateDefault();
         _orchestrator = new Lazy<UpdateOrchestrator>(
             orchestratorFactory ?? HostUpdateOrchestratorProvider.GetOrCreate,
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public UpdatePhase CurrentPhase => _orchestrator.Value.CurrentPhase;
+    public UpdatePhase CurrentPhase => IsPlondsSelected()
+        ? _plondsPhase
+        : (_orchestrator.IsValueCreated ? _orchestrator.Value.CurrentPhase : UpdatePhase.Idle);
 
     public event Action<UpdatePhase>? PhaseChanged
     {
-        add => _orchestrator.Value.PhaseChanged += value;
+        add
+        {
+            _phaseChanged += value;
+        }
         remove
         {
-            if (_orchestrator.IsValueCreated)
-            {
-                _orchestrator.Value.PhaseChanged -= value;
-            }
+            _phaseChanged -= value;
         }
     }
 
     public event Action<UpdateProgressReport>? ProgressChanged
     {
-        add => _orchestrator.Value.ProgressChanged += value;
+        add
+        {
+            _progressChanged += value;
+        }
         remove
         {
-            if (_orchestrator.IsValueCreated)
-            {
-                _orchestrator.Value.ProgressChanged -= value;
-            }
+            _progressChanged -= value;
         }
     }
+
+    private event Action<UpdatePhase>? _phaseChanged;
+    private event Action<UpdateProgressReport>? _progressChanged;
 
     public UpdateSettingsState Get()
     {
@@ -900,47 +914,75 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
 
     public Task<UpdateCheckReport> CheckAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.CheckAsync(cancellationToken);
+        return IsPlondsSelected()
+            ? CheckPlondsAsync(cancellationToken)
+            : GetOrchestrator().CheckAsync(cancellationToken);
     }
 
     public Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.DownloadAsync(cancellationToken);
+        return IsPlondsSelected()
+            ? DownloadPlondsAsync(cancellationToken)
+            : GetOrchestrator().DownloadAsync(cancellationToken);
     }
 
     public Task<InstallResult> InstallAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.InstallAsync(cancellationToken);
+        return IsPlondsSelected()
+            ? InstallPlondsAsync(cancellationToken)
+            : GetOrchestrator().InstallAsync(cancellationToken);
     }
 
     public Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.RollbackAsync(cancellationToken);
+        return GetOrchestrator().RollbackAsync(cancellationToken);
     }
 
     public Task PauseAsync()
     {
-        return _orchestrator.Value.PauseAsync();
+        return IsPlondsSelected()
+            ? PausePlondsAsync()
+            : GetOrchestrator().PauseAsync();
     }
 
     public Task<LanMountainDesktop.Services.Update.DownloadResult> ResumeAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.ResumeAsync(cancellationToken);
+        return IsPlondsSelected()
+            ? ResumePlondsAsync(cancellationToken)
+            : GetOrchestrator().ResumeAsync(cancellationToken);
     }
 
     public Task CancelAsync()
     {
-        return _orchestrator.Value.CancelAsync();
+        if (IsPlondsSelected())
+        {
+            _pendingPlondsLatest = null;
+            _pendingPlondsPackage = null;
+            TransitionPlonds(UpdatePhase.Idle);
+            return Task.CompletedTask;
+        }
+
+        return GetOrchestrator().CancelAsync();
     }
 
     public Task AutoCheckIfEnabledAsync(CancellationToken cancellationToken = default)
     {
-        return _orchestrator.Value.AutoCheckIfEnabledAsync(cancellationToken);
+        if (IsPlondsSelected())
+        {
+            return AutoCheckPlondsIfEnabledAsync(cancellationToken);
+        }
+
+        return GetOrchestrator().AutoCheckIfEnabledAsync(cancellationToken);
     }
 
     public bool TryApplyOnExit()
     {
-        return _orchestrator.Value.TryApplyOnExit();
+        if (IsPlondsSelected())
+        {
+            return false;
+        }
+
+        return GetOrchestrator().TryApplyOnExit();
     }
 
     public Task<UpdateCheckResult> CheckForUpdatesAsync(
@@ -957,26 +999,6 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         CancellationToken cancellationToken = default)
     {
         return CheckForUpdatesCoreAsync(currentVersion, includePrerelease, isForce: true, cancellationToken);
-    }
-
-    public async Task<PlondsUpdatePayload?> GetPlondsUpdatePayloadAsync(
-        Version currentVersion,
-        bool includePrerelease,
-        bool isForce = false,
-        CancellationToken cancellationToken = default)
-    {
-        var staticResult = isForce
-            ? await _plondsStaticUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _plondsStaticUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-        if (staticResult.Success && staticResult.PlondsPayload is not null)
-        {
-            return staticResult.PlondsPayload;
-        }
-
-        var result = isForce
-            ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-        return result.Success ? result.PlondsPayload : null;
     }
 
     public Task<UpdateDownloadResult> DownloadAssetAsync(
@@ -1016,8 +1038,11 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
     public void Dispose()
     {
         _githubReleaseUpdateService.Dispose();
-        _plondsStaticUpdateService.Dispose();
-        _plondsReleaseUpdateService.Dispose();
+        if (_orchestrator.IsValueCreated && _orchestratorEventsSubscribed)
+        {
+            _orchestrator.Value.PhaseChanged -= OnOrchestratorPhaseChanged;
+            _orchestrator.Value.ProgressChanged -= OnOrchestratorProgressChanged;
+        }
     }
 
     private async Task<UpdateCheckResult> CheckForUpdatesCoreAsync(
@@ -1026,59 +1051,240 @@ internal sealed class UpdateSettingsService : IUpdateSettingsService, IDisposabl
         bool isForce,
         CancellationToken cancellationToken)
     {
-        var source = UpdateSettingsValues.NormalizeDownloadSource(Get().UpdateDownloadSource);
-        if (string.Equals(source, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(source, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase))
+        if (IsGitHubSelected())
         {
             return isForce
                 ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
                 : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
         }
 
-        var staticResult = isForce
-            ? await _plondsStaticUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _plondsStaticUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
+        var result = await _plondsService.FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
+        return new UpdateCheckResult(
+            Success: result.Success,
+            IsUpdateAvailable: isForce || result.IsUpdateAvailable,
+            CurrentVersionText: currentVersion.ToString(),
+            LatestVersionText: result.LatestVersion?.ToString() ?? "-",
+            Release: null,
+            PreferredAsset: null,
+            ErrorMessage: result.ErrorMessage,
+            ForceMode: isForce);
+    }
 
-        if (staticResult.Success)
+    private async Task<UpdateCheckReport> CheckPlondsAsync(CancellationToken cancellationToken)
+    {
+        if (!_plondsPhase.CanCheck())
         {
-            return staticResult;
+            return new UpdateCheckReport(false, null, null, null, null, null, null, null, null, $"Cannot check in phase {_plondsPhase}.");
         }
 
-        AppLogger.Warn(
-            "UpdateSettings",
-            $"PLONDS static update check failed and will fallback to GitHub release PLONDS. Error: {staticResult.ErrorMessage}");
-
-        var plondsResult = isForce
-            ? await _plondsReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _plondsReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-
-        if (plondsResult.Success)
+        TransitionPlonds(UpdatePhase.Checking);
+        var currentVersionText = LanMountainDesktop.Shared.Contracts.Launcher.AppVersionProvider.ResolveForCurrentProcess().Version;
+        if (!TryParseVersion(currentVersionText, out var currentVersion))
         {
-            return plondsResult;
+            TransitionPlonds(UpdatePhase.Failed);
+            return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, $"Invalid current version text: {currentVersionText}");
         }
 
-        AppLogger.Warn(
-            "UpdateSettings",
-            $"PLONDS update check failed and will fallback to GitHub. Error: {plondsResult.ErrorMessage}");
+        var latest = await _plondsService.FindLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
+        _pendingPlondsLatest = latest.Success && latest.IsUpdateAvailable ? latest : null;
+        _pendingPlondsPackage = null;
+        TransitionPlonds(UpdatePhase.Checked);
+        SaveLastChecked();
 
-        var githubFallbackResult = isForce
-            ? await _githubReleaseUpdateService.ForceCheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken)
-            : await _githubReleaseUpdateService.CheckForUpdatesAsync(currentVersion, includePrerelease, cancellationToken);
-
-        if (githubFallbackResult.Success)
+        if (!latest.Success)
         {
-            AppLogger.Info(
-                "UpdateSettings",
-                $"GitHub fallback succeeded after PLONDS failure. Original PLONDS error: {plondsResult.ErrorMessage}");
-        }
-        else
-        {
-            AppLogger.Warn(
-                "UpdateSettings",
-                $"GitHub fallback also failed after PLONDS failure. PLONDS error: {plondsResult.ErrorMessage}; GitHub error: {githubFallbackResult.ErrorMessage}");
+            return new UpdateCheckReport(false, null, currentVersionText, null, null, null, null, null, null, latest.ErrorMessage);
         }
 
-        return githubFallbackResult;
+        return new UpdateCheckReport(
+            latest.IsUpdateAvailable,
+            latest.LatestVersion?.ToString(),
+            currentVersionText,
+            latest.IsUpdateAvailable ? UpdatePayloadKind.DeltaPlonds : null,
+            latest.Candidates.FirstOrDefault()?.Source.Id,
+            Get().UpdateChannel,
+            DateTimeOffset.UtcNow,
+            null,
+            null,
+            null);
+    }
+
+    private async Task<LanMountainDesktop.Services.Update.DownloadResult> DownloadPlondsAsync(CancellationToken cancellationToken)
+    {
+        if (_plondsPhase is not UpdatePhase.Checked)
+        {
+            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, $"Cannot download in phase {_plondsPhase}.", false);
+        }
+
+        if (_pendingPlondsLatest is null || !_pendingPlondsLatest.IsUpdateAvailable)
+        {
+            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, "No PLONDS update is pending.", false);
+        }
+
+        TransitionPlonds(UpdatePhase.Downloading);
+        var currentVersion = _pendingPlondsLatest.CurrentVersion;
+        var result = await _plondsService.FindAndPrepareLatestAsync(currentVersion, cancellationToken).ConfigureAwait(false);
+        if (!result.Success || result.Package is null)
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return new LanMountainDesktop.Services.Update.DownloadResult(false, null, result.ErrorMessage ?? "PLONDS package preparation failed.", false);
+        }
+
+        _pendingPlondsPackage = result.Package;
+        TransitionPlonds(UpdatePhase.Downloaded);
+        SavePendingPlondsPackage(result.Package);
+        return new LanMountainDesktop.Services.Update.DownloadResult(true, result.Package.ManifestPath, null, true);
+    }
+
+    private Task PausePlondsAsync()
+    {
+        if (_plondsPhase.CanPause())
+        {
+            TransitionPlonds(UpdatePhase.PausedDownloading);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task<LanMountainDesktop.Services.Update.DownloadResult> ResumePlondsAsync(CancellationToken cancellationToken)
+    {
+        return _plondsPhase is UpdatePhase.PausedDownloading
+            ? await DownloadPlondsAsync(cancellationToken).ConfigureAwait(false)
+            : new LanMountainDesktop.Services.Update.DownloadResult(false, null, $"Cannot resume in phase {_plondsPhase}.", false);
+    }
+
+    private async Task<InstallResult> InstallPlondsAsync(CancellationToken cancellationToken)
+    {
+        if (!_plondsPhase.CanInstall())
+        {
+            return new InstallResult(false, $"Cannot install in phase {_plondsPhase}.", false, "invalid_phase");
+        }
+
+        if (_pendingPlondsPackage is null)
+        {
+            return new InstallResult(false, "No PLONDS package has been prepared.", false, "staging_incomplete");
+        }
+
+        TransitionPlonds(UpdatePhase.Installing);
+        var launcherRoot = UpdatePaths.ResolveLauncherRoot(AppContext.BaseDirectory);
+        var progress = new Progress<InstallProgressReport>(report =>
+        {
+            _progressChanged?.Invoke(new UpdateProgressReport(
+                UpdatePhase.Installing,
+                report.Message,
+                report.ProgressPercent / 100.0,
+                null,
+                report));
+        });
+
+        var install = await _plondsInstaller.InstallAsync(_pendingPlondsPackage, launcherRoot, progress, cancellationToken).ConfigureAwait(false);
+        if (!install.Success)
+        {
+            TransitionPlonds(UpdatePhase.Failed);
+            return new InstallResult(false, install.ErrorMessage, false, install.ErrorCode);
+        }
+
+        TransitionPlonds(UpdatePhase.Installed);
+        return new InstallResult(true, null, false);
+    }
+
+    private async Task AutoCheckPlondsIfEnabledAsync(CancellationToken cancellationToken)
+    {
+        var settings = Get();
+        if (string.Equals(UpdateSettingsValues.NormalizeMode(settings.UpdateMode), UpdateSettingsValues.ModeManual, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var report = await CheckPlondsAsync(cancellationToken).ConfigureAwait(false);
+        if (report.IsUpdateAvailable && _plondsPhase.CanDownload())
+        {
+            await DownloadPlondsAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private bool IsPlondsSelected()
+    {
+        return !IsGitHubSelected();
+    }
+
+    private bool IsGitHubSelected()
+    {
+        var source = UpdateSettingsValues.NormalizeDownloadSource(Get().UpdateDownloadSource);
+        return string.Equals(source, UpdateSettingsValues.DownloadSourceGitHub, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(source, UpdateSettingsValues.DownloadSourceGhProxy, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void TransitionPlonds(UpdatePhase phase)
+    {
+        if (_plondsPhase == phase)
+        {
+            return;
+        }
+
+        _plondsPhase = phase;
+        _phaseChanged?.Invoke(phase);
+        _progressChanged?.Invoke(new UpdateProgressReport(phase, $"Phase changed to {phase}", 0, null, null));
+    }
+
+    private UpdateOrchestrator GetOrchestrator()
+    {
+        var orchestrator = _orchestrator.Value;
+        if (!_orchestratorEventsSubscribed)
+        {
+            orchestrator.PhaseChanged += OnOrchestratorPhaseChanged;
+            orchestrator.ProgressChanged += OnOrchestratorProgressChanged;
+            _orchestratorEventsSubscribed = true;
+        }
+
+        return orchestrator;
+    }
+
+    private void OnOrchestratorPhaseChanged(UpdatePhase phase)
+    {
+        _phaseChanged?.Invoke(phase);
+    }
+
+    private void OnOrchestratorProgressChanged(UpdateProgressReport report)
+    {
+        _progressChanged?.Invoke(report);
+    }
+
+    private void SaveLastChecked()
+    {
+        var state = Get();
+        Save(state with { LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+    }
+
+    private void SavePendingPlondsPackage(PlondsPreparedPackage package)
+    {
+        var state = Get();
+        Save(state with
+        {
+            PendingUpdateInstallerPath = package.ManifestPath,
+            PendingUpdateVersion = package.Version.ToString(),
+            PendingUpdatePublishedAtUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            PendingUpdateSha256 = null,
+            LastUpdateCheckUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+    }
+
+    private static bool TryParseVersion(string? value, out Version version)
+    {
+        version = new Version(0, 0, 0);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.Trim().TrimStart('v', 'V');
+        var separatorIndex = normalized.IndexOfAny(['-', '+', ' ']);
+        if (separatorIndex > 0)
+        {
+            normalized = normalized[..separatorIndex];
+        }
+
+        return Version.TryParse(normalized, out version!);
     }
 }
 

@@ -12,4 +12,5 @@ public sealed record PlondsManifest(
     IReadOnlyDictionary<string, PlondsFileEntry> FilesMap,
     IReadOnlyDictionary<string, PlondsChangedFileEntry> ChangedFilesMap,
     IReadOnlyDictionary<string, string> Checksums,
-    PlondsDownloadInfo? Downloads = null);
+    PlondsDownloadInfo? Downloads = null,
+    IReadOnlyList<PlondsSourceDescriptor>? Sources = null);

@@ -113,6 +113,7 @@ Publisher 上传到 S3 的版本目录：
 
 - `Files.zip` 是上传到 S3 时的完整包标准名。
 - `<version>-Files/` 是 S3 上解压后的完整包目录。
+- `<prefix>/PLONDS.json` 是 S3 的固定 latest manifest 地址，和 GitHub Release latest manifest 一起作为客户端内置初始 source。
 - GitHub Release 仍可保留平台原始文件名，例如 `files-windows-x64.zip`。
 - `PLONDS.json` 的 downloads 字段同时包含 GitHub 与 S3 的增量包、完整包位置。
 
