@@ -75,9 +75,10 @@ jobs:
           set -euo pipefail
           rm -rf plonds-assets
           mkdir -p plonds-assets
-          gh release download "$RELEASE_TAG" -p changed.zip -p PLONDS.json -D plonds-assets --clobber
+          gh release download "$RELEASE_TAG" -p changed.zip -p PLONDS.json -p files-windows-x64.zip -D plonds-assets --clobber
           test -f plonds-assets/changed.zip
           test -f plonds-assets/PLONDS.json
+          test -f plonds-assets/files-windows-x64.zip
           jq -e . plonds-assets/PLONDS.json >/dev/null
 
       - name: Publish PLONDS assets to Rainyun S3
@@ -106,6 +107,7 @@ jobs:
             --repository "${{ github.repository }}" \
             --manifest "$PWD/plonds-assets/PLONDS.json" \
             --changed-zip "$PWD/plonds-assets/changed.zip" \
+            --files-zip "$PWD/plonds-assets/files-windows-x64.zip" \
             --work-dir "$PWD/plonds-publish-work" \
             --s3-prefix "$PLONDS_S3_PREFIX" \
             --s3-endpoint "$S3_ENDPOINT" \
@@ -116,7 +118,7 @@ jobs:
             --s3-public-base-url "$PUBLIC_BASE" \
             --s3-public-base-key-prefix "$PLONDS_S3_PUBLIC_BASE_KEY_PREFIX"
 
-          jq -e '.downloads.github.changedZipUrl and .downloads.s3.changedFolderUrl' plonds-assets/PLONDS.json >/dev/null
+          jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS.json >/dev/null
 
       - name: Upload enriched PLONDS manifest to GitHub Release
         env:

@@ -5,6 +5,7 @@ public sealed record PlondsPublishOptions(
     string Repository,
     string ManifestPath,
     string ChangedZipPath,
+    string FilesZipPath,
     string WorkDir,
     string S3KeyPrefix,
     PlondsS3ClientOptions S3);

@@ -11,7 +11,8 @@ public sealed record PlondsDownloadInfo(
 public sealed record PlondsGitHubDownloadInfo(
     string ReleaseUrl,
     string ManifestUrl,
-    string ChangedZipUrl);
+    string ChangedZipUrl,
+    string FilesZipUrl);
 
 public sealed record PlondsS3DownloadInfo(
     string Bucket,
@@ -21,4 +22,8 @@ public sealed record PlondsS3DownloadInfo(
     string ChangedZipKey,
     string ChangedZipUrl,
     string ChangedFolderKey,
-    string ChangedFolderUrl);
+    string ChangedFolderUrl,
+    string FilesZipKey,
+    string FilesZipUrl,
+    string FilesFolderKey,
+    string FilesFolderUrl);

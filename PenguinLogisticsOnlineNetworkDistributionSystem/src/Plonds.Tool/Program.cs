@@ -103,6 +103,7 @@ internal static class PlondsCli
             Repository: Require(options, "repository"),
             ManifestPath: Require(options, "manifest"),
             ChangedZipPath: Require(options, "changed-zip"),
+            FilesZipPath: Require(options, "files-zip"),
             WorkDir: Get(options, "work-dir", "plonds-publish-work") ?? "plonds-publish-work",
             S3KeyPrefix: Get(options, "s3-prefix", "lanmountain/update/plonds") ?? "lanmountain/update/plonds",
             S3: new PlondsS3ClientOptions(
@@ -119,7 +120,10 @@ internal static class PlondsCli
         Console.WriteLine($"  Manifest:           {result.ManifestUrl}");
         Console.WriteLine($"  ChangedZip:         {result.ChangedZipUrl}");
         Console.WriteLine($"  ChangedFolder:      {result.ChangedFolderUrl}");
+        Console.WriteLine($"  FilesZip:           {result.FilesZipUrl}");
+        Console.WriteLine($"  FilesFolder:        {result.FilesFolderUrl}");
         Console.WriteLine($"  ChangedFileCount:   {result.ChangedFileCount}");
+        Console.WriteLine($"  FilesFileCount:     {result.FilesFileCount}");
         return 0;
     }
 
@@ -199,6 +203,7 @@ internal static class PlondsCli
         Console.WriteLine("    --repository <owner/repo> GitHub repository");
         Console.WriteLine("    --manifest <file>       PLONDS.json path");
         Console.WriteLine("    --changed-zip <file>    changed.zip path");
+        Console.WriteLine("    --files-zip <file>      Full files zip path");
         Console.WriteLine("    --s3-endpoint <url>     S3-compatible endpoint");
         Console.WriteLine("    --s3-region <region>    S3 signing region");
         Console.WriteLine("    --s3-bucket <bucket>    S3 bucket");
