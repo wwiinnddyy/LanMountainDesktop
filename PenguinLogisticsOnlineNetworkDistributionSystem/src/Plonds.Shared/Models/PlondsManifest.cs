@@ -11,4 +11,5 @@ public sealed record PlondsManifest(
     DateTimeOffset UpdatedAt,
     IReadOnlyDictionary<string, PlondsFileEntry> FilesMap,
     IReadOnlyDictionary<string, PlondsChangedFileEntry> ChangedFilesMap,
-    IReadOnlyDictionary<string, string> Checksums);
+    IReadOnlyDictionary<string, string> Checksums,
+    PlondsDownloadInfo? Downloads = null);

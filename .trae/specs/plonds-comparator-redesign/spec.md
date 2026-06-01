@@ -250,7 +250,8 @@ public sealed record PlondsChangedFileEntry(
 ### 6.1 保留两个工作流
 
 - **Comparator**（`plonds-comparator.yml`）：比较文件生成器，只负责生成 `changed.zip` + `PLONDS.json`
-- **Publisher**（`plonds-publisher.yml`，原 `plonds-uploader.yml`）：发布器，负责上传到 S3 和生成 channel pointer
+- **Publisher**（`plonds-uploader.yml`）：发布器，负责用仓库内 C# S3 客户端上传 `changed.zip`、`PLONDS.json` 和解压后的 `<version>-changed/` 目录，并把 GitHub/S3 下载信息写回 `PLONDS.json`
+- **Rollback**：独立 rollback 工作流已废弃，不再维护
 
 ### 6.2 Comparator 改造后步骤
 
@@ -297,7 +298,38 @@ jobs:
         → 上传 artifact: plonds-run-metadata (tag.txt)
 ```
 
-### 6.3 与当前步骤的差异
+### 6.3 Publisher 改造后步骤
+
+```yaml
+# plonds-uploader.yml
+触发: PLONDS Comparator completed / workflow_dispatch
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - Checkout
+      - 解析 release tag
+      - Setup .NET
+      - 构建 PLONDS Tool
+      - 从 GitHub Release 下载 changed.zip + PLONDS.json
+      - 调用 dotnet run Plonds.Tool -- publish-s3
+        → 使用仓库内 C# S3 客户端上传，不依赖 aws CLI
+        → S3 目录布局：
+            <prefix>/<version>/PLONDS.json
+            <prefix>/<version>/changed.zip
+            <prefix>/<version>/<version>-changed/**
+        → 回写 PLONDS.json downloads 字段：
+            downloads.github.releaseUrl
+            downloads.github.manifestUrl
+            downloads.github.changedZipUrl
+            downloads.s3.manifestUrl
+            downloads.s3.changedZipUrl
+            downloads.s3.changedFolderUrl
+      - 将回写后的 PLONDS.json 重新上传到 GitHub Release
+```
+
+### 6.4 与当前步骤的差异
 
 | 当前步骤 | 改造后 |
 |---------|--------|
@@ -307,6 +339,8 @@ jobs:
 | 构建增量资产 (pwsh，含 build-index + 静态布局验证 + plonds-static.zip 打包) | ✅ 简化：只调用 build-delta |
 | 上传 PLONDS assets 到 release | ✅ 简化：只上传 changed.zip + PLONDS.json |
 | 传递元数据 | ✅ 保留，但 artifact 内容简化 |
+| Publisher 中使用 aws CLI / plonds-static / build-plonds / plonds.json.sig | ❌ 删除，改为 C# `publish-s3` |
+| 独立 rollback workflow | ❌ 删除 |
 
 ## 7. 双模式差分生成
 
@@ -504,9 +538,7 @@ build-delta-from-commits --platform <platform>
 
 ## 8. 不在本次改造范围内的事项
 
-- Publisher 工作流改造（后续单独设计）
-- Rollback 工作流改造（后续单独设计）
 - 宿主侧客户端代码改造（PlondsUpdateApplier 等，后续单独设计）
 - Launcher 侧客户端代码改造（后续单独设计）
 - Plonds.Api 项目处置（后续决定是否保留）
-- `build-index`、`build-plonds`、`generate`、`publish`、`sign`、`pack-payload` 等 Tool 命令的清理（后续处理）
+- `build-index`、`generate`、`publish`、`sign` 等旧 Tool 命令的清理（后续处理）
