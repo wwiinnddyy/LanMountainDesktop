@@ -10,4 +10,9 @@ public sealed record PlondsPublishResult(
     string ChangedZipUrl,
     string ChangedFolderKey,
     string ChangedFolderUrl,
-    int ChangedFileCount);
+    string FilesZipKey,
+    string FilesZipUrl,
+    string FilesFolderKey,
+    string FilesFolderUrl,
+    int ChangedFileCount,
+    int FilesFileCount);

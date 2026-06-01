@@ -319,13 +319,18 @@ jobs:
             <prefix>/<version>/PLONDS.json
             <prefix>/<version>/changed.zip
             <prefix>/<version>/<version>-changed/**
+            <prefix>/<version>/Files.zip
+            <prefix>/<version>/<version>-Files/**
         → 回写 PLONDS.json downloads 字段：
             downloads.github.releaseUrl
             downloads.github.manifestUrl
             downloads.github.changedZipUrl
+            downloads.github.filesZipUrl
             downloads.s3.manifestUrl
             downloads.s3.changedZipUrl
             downloads.s3.changedFolderUrl
+            downloads.s3.filesZipUrl
+            downloads.s3.filesFolderUrl
       - 将回写后的 PLONDS.json 重新上传到 GitHub Release
 ```
 
