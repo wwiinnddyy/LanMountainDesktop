@@ -4,7 +4,7 @@ internal static class PlondsClientServiceFactory
 {
     private const string S3ManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_S3_MANIFEST_URL";
     private const string GitHubManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_GITHUB_MANIFEST_URL";
-    private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/plonds/PLONDS.json";
+    private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update/plonds/PLONDS.json";
     private const string DefaultGitHubManifestUrl = "https://github.com/wwiinnddyy/LanMountainDesktop/releases/latest/download/PLONDS.json";
 
     public static IPlondsService CreateDefault(HttpClient? httpClient = null)

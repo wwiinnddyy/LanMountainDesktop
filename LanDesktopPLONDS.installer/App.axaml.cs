@@ -22,10 +22,12 @@ public partial class App : Application
             var privacyIdentity = new PrivacyDeviceIdentityProvider();
             var installService = OnlineInstallService.CreateDefault(privacyIdentity);
             var consentStore = new InstallerPrivacyConsentStore();
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = new MainWindowViewModel(installService, privacyIdentity, consentStore)
             };
+            desktop.MainWindow = mainWindow;
+            mainWindow.Show();
         }
 
         base.OnFrameworkInitializationCompleted();

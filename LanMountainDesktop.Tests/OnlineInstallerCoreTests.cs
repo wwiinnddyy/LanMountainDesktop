@@ -84,6 +84,45 @@ public sealed class OnlineInstallerCoreTests : IDisposable
         Assert.Contains(urls, uri => uri.AbsoluteUri == "https://github.test/Files.zip");
     }
 
+    [Fact]
+    public async Task FindLatest_ParsesCamelCasePlondsManifest()
+    {
+        var client = new InstallerPlondsClient(
+            new HttpClient(new ManifestHandler("""
+                {
+                  "formatVersion": "2.0",
+                  "currentVersion": "1.2.4",
+                  "previousVersion": "1.2.3",
+                  "isFullUpdate": false,
+                  "requiresCleanInstall": true,
+                  "channel": "preview",
+                  "platform": "windows-x64",
+                  "updatedAt": "2026-06-03T00:00:00Z",
+                  "filesMap": {},
+                  "changedFilesMap": {},
+                  "checksums": {
+                    "Files.zip": "md5:00000000000000000000000000000000"
+                  },
+                  "downloads": {
+                    "s3": {
+                      "filesZipUrl": "https://s3.test/Files.zip"
+                    },
+                    "github": {
+                      "filesZipUrl": "https://github.test/files-windows-x64.zip"
+                    }
+                  }
+                }
+                """)),
+            Path.Combine(_tempRoot, "staging"));
+
+        var candidate = await client.FindLatestAsync(CancellationToken.None);
+
+        Assert.Equal("1.2.4", candidate.Manifest.CurrentVersion);
+        Assert.Equal("preview", candidate.Manifest.Channel);
+        Assert.Equal("https://s3.test/Files.zip", candidate.FilesZipUrl.AbsoluteUri);
+    }
+
+
     [Theory]
     [InlineData("")]
     [InlineData("C:\\")]
@@ -141,7 +180,43 @@ public sealed class OnlineInstallerCoreTests : IDisposable
             manifest,
             new Uri("https://s3.test/Files.zip"));
 
-        await Assert.ThrowsAsync<InvalidDataException>(() => client.DownloadAndPrepareFullPackageAsync(candidate, null, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.DownloadAndPrepareFullPackageAsync(candidate, null, CancellationToken.None));
+        Assert.IsType<InvalidDataException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task DownloadAndPrepareFullPackage_FallsBackWhenFirstPackageUrlFails()
+    {
+        var zipPath = Path.Combine(_tempRoot, "Files.zip");
+        Directory.CreateDirectory(_tempRoot);
+        using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+        {
+            var entry = archive.CreateEntry("LanMountainDesktop.exe");
+            await using var stream = entry.Open();
+            await using var writer = new StreamWriter(stream);
+            await writer.WriteAsync("host");
+        }
+
+        var manifest = CreateManifest(
+            downloads: new InstallerPlondsDownloads(
+                new InstallerPlondsGitHubDownloads(null, null, null, "https://github.test/files-windows-x64.zip"),
+                new InstallerPlondsS3Downloads(null, null, null, null, null, null, null, null, null, "https://s3.test/Files.zip", null, null)),
+            checksums: new Dictionary<string, string>
+            {
+                ["Files.zip"] = "sha256:" + Sha256(zipPath)
+            });
+        var client = new InstallerPlondsClient(
+            new HttpClient(new FallbackPackageHandler(zipPath)),
+            Path.Combine(_tempRoot, "staging"));
+        var candidate = new InstallerPlondsCandidate(
+            new InstallerPlondsSource("s3", "s3", "https://origin.test/releases/PLONDS.json", 100),
+            manifest,
+            new Uri("https://s3.test/Files.zip"));
+
+        var package = await client.DownloadAndPrepareFullPackageAsync(candidate, null, CancellationToken.None);
+
+        Assert.True(File.Exists(Path.Combine(package.ExtractDirectory, "LanMountainDesktop.exe")));
     }
 
     private static InstallerPlondsManifest CreateManifest(
@@ -203,6 +278,35 @@ public sealed class OnlineInstallerCoreTests : IDisposable
             };
             response.Content.Headers.ContentLength = new FileInfo(zipPath).Length;
             return Task.FromResult(response);
+        }
+    }
+
+    private sealed class FallbackPackageHandler(string zipPath) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsoluteUri == "https://github.test/files-windows-x64.zip")
+            {
+                var response = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(File.ReadAllBytes(zipPath))
+                };
+                response.Content.Headers.ContentLength = new FileInfo(zipPath).Length;
+                return Task.FromResult(response);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class ManifestHandler(string manifestJson) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(manifestJson)
+            });
         }
     }
 }

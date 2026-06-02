@@ -10,7 +10,8 @@
     <PackageVersion>$(Version)</PackageVersion>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(Configuration)' == 'Debug'">app.Debug.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(Configuration)' != 'Debug'">app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

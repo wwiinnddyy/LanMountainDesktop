@@ -10,7 +10,7 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
 {
     private const string S3ManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_S3_MANIFEST_URL";
     private const string GitHubManifestUrlEnvironmentVariable = "LANMOUNTAIN_PLONDS_GITHUB_MANIFEST_URL";
-    private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/plonds/PLONDS.json";
+    private const string DefaultS3ManifestUrl = "https://cn-nb1.rains3.com/lmdesktop/lanmountain/update/plonds/PLONDS.json";
     private const string DefaultGitHubManifestUrl = "https://github.com/wwiinnddyy/LanMountainDesktop/releases/latest/download/PLONDS.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -78,30 +78,54 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
     {
         var version = ParseVersion(candidate.Manifest.CurrentVersion).ToString();
         var packageRoot = Path.Combine(stagingRoot, SanitizePathSegment(version), SanitizePathSegment(candidate.Source.Id), "full");
-        if (Directory.Exists(packageRoot))
+        var urls = new[] { candidate.FilesZipUrl }
+            .Concat(InstallerPlondsUrlResolver.ResolveFilesZipUrls(candidate.Manifest, candidate.Source))
+            .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        Exception? lastError = null;
+
+        foreach (var filesZipUrl in urls)
         {
-            Directory.Delete(packageRoot, recursive: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Directory.Exists(packageRoot))
+            {
+                Directory.Delete(packageRoot, recursive: true);
+            }
+
+            Directory.CreateDirectory(packageRoot);
+            var zipPath = Path.Combine(packageRoot, "Files.zip");
+            var extractDirectory = Path.Combine(packageRoot, "Files");
+            Directory.CreateDirectory(extractDirectory);
+            var attempt = candidate with { FilesZipUrl = filesZipUrl };
+
+            try
+            {
+                await DownloadToFileAsync(attempt, zipPath, progress, cancellationToken).ConfigureAwait(false);
+                await VerifyPackageAsync(zipPath, attempt.Manifest, filesZipUrl, cancellationToken).ConfigureAwait(false);
+                ExtractZip(zipPath, extractDirectory);
+
+                progress?.Report(new InstallerDeployProgress(
+                    "Files package prepared",
+                    version,
+                    1,
+                    0.10,
+                    "Files.zip",
+                    new FileInfo(zipPath).Length,
+                    new FileInfo(zipPath).Length));
+
+                return new PreparedFilesPackage(version, candidate.Source.Id, zipPath, extractDirectory, candidate.Manifest);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+            }
         }
 
-        Directory.CreateDirectory(packageRoot);
-        var zipPath = Path.Combine(packageRoot, "Files.zip");
-        var extractDirectory = Path.Combine(packageRoot, "Files");
-        Directory.CreateDirectory(extractDirectory);
-
-        await DownloadToFileAsync(candidate, zipPath, progress, cancellationToken).ConfigureAwait(false);
-        await VerifyPackageAsync(zipPath, candidate.Manifest, candidate.FilesZipUrl, cancellationToken).ConfigureAwait(false);
-        ExtractZip(zipPath, extractDirectory);
-
-        progress?.Report(new InstallerDeployProgress(
-            "Files package prepared",
-            version,
-            1,
-            0.10,
-            "Files.zip",
-            new FileInfo(zipPath).Length,
-            new FileInfo(zipPath).Length));
-
-        return new PreparedFilesPackage(version, candidate.Source.Id, zipPath, extractDirectory, candidate.Manifest);
+        throw new InvalidOperationException("Failed to download and prepare the PLONDS Files package.", lastError);
     }
 
     public static long EstimateInstallBytes(InstallerPlondsManifest manifest)
@@ -140,33 +164,43 @@ internal sealed class InstallerPlondsClient(HttpClient httpClient, string stagin
         var totalBytes = response.Content.Headers.ContentLength;
         var partialPath = $"{destinationPath}.partial";
         long downloaded = 0;
-        await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-        await using (var target = File.Create(partialPath))
+        try
         {
-            var buffer = new byte[128 * 1024];
-            while (true)
+            await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            await using (var target = File.Create(partialPath))
             {
-                var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                if (read == 0)
+                var buffer = new byte[128 * 1024];
+                while (true)
                 {
-                    break;
-                }
+                    var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    if (read == 0)
+                    {
+                        break;
+                    }
 
-                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                downloaded += read;
-                var fraction = totalBytes is > 0 ? Math.Clamp((double)downloaded / totalBytes.Value, 0, 1) : 0;
-                progress?.Report(new InstallerDeployProgress(
-                    "Downloading Files.zip",
-                    candidate.Manifest.CurrentVersion,
-                    fraction,
-                    0,
-                    "Files.zip",
-                    downloaded,
-                    totalBytes));
+                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                    downloaded += read;
+                    var fraction = totalBytes is > 0 ? Math.Clamp((double)downloaded / totalBytes.Value, 0, 1) : 0;
+                    progress?.Report(new InstallerDeployProgress(
+                        "Downloading Files.zip",
+                        candidate.Manifest.CurrentVersion,
+                        fraction,
+                        0,
+                        "Files.zip",
+                        downloaded,
+                        totalBytes));
+                }
+            }
+
+            File.Move(partialPath, destinationPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(partialPath))
+            {
+                File.Delete(partialPath);
             }
         }
-
-        File.Move(partialPath, destinationPath, overwrite: true);
     }
 
     private static async Task VerifyPackageAsync(
