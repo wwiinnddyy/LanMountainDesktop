@@ -55,6 +55,7 @@ public sealed class PlondsCommitDeltaBuilder
 
         Directory.CreateDirectory(outputRoot);
         PayloadUtilities.ExtractZip(currentPayloadZip, currentExtractRoot);
+        var currentAppRoot = PlondsDeltaBuilder.ResolvePayloadAppRoot(currentExtractRoot, options.CurrentVersion);
 
         var changedSourceFiles = GetChangedSourceFiles(options.BaselineTag, options.CurrentTag, sourceDirs);
 
@@ -76,7 +77,7 @@ public sealed class PlondsCommitDeltaBuilder
         }
 
         var artifactFiles = MapSourceToArtifacts(changedSourceFiles, sourceDirs);
-        var currentManifest = PayloadUtilities.ScanDirectory(currentExtractRoot);
+        var currentManifest = PayloadUtilities.ScanDirectory(currentAppRoot);
 
         var filesMap = new Dictionary<string, PlondsFileEntry>(StringComparer.OrdinalIgnoreCase);
         var changedFilesMap = new Dictionary<string, PlondsChangedFileEntry>(StringComparer.OrdinalIgnoreCase);
@@ -97,7 +98,7 @@ public sealed class PlondsCommitDeltaBuilder
             changedFilesMap[normalizedPath] = new PlondsChangedFileEntry(normalizedPath, fileHash, fingerprint.Size, hashAlgorithm);
         }
 
-        var changedZipPath = CreateChangedZipFromList(currentExtractRoot, artifactFiles, outputRoot, options.Platform);
+        var changedZipPath = CreateChangedZipFromList(currentAppRoot, artifactFiles, outputRoot, options.Platform);
         var changedZipMd5 = ComputeMd5Hex(changedZipPath);
 
         var launcherInChanges = artifactFiles.Any(f =>

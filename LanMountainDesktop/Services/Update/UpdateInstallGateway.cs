@@ -31,7 +31,7 @@ internal sealed class UpdateInstallGateway
                 0,
                 0));
 
-            if (!VerifyDeploymentLock(payloadKind, launcherRoot, out var lockErrorCode, out var lockError))
+            if (!VerifyDeploymentLock(payloadKind, launcherRoot, out var deploymentLock, out var lockErrorCode, out var lockError))
             {
                 return new InstallResult(false, lockError, false, lockErrorCode);
             }
@@ -59,7 +59,7 @@ internal sealed class UpdateInstallGateway
                 return new InstallResult(true, null, false);
             }
 
-            var installerPath = FindPendingInstaller(launcherRoot, payloadKind, ct);
+            var installerPath = FindPendingInstaller(launcherRoot, deploymentLock!, ct);
             if (installerPath is null)
             {
                 return new InstallResult(false, "No pending installer found.", false, "staging_incomplete");
@@ -92,19 +92,25 @@ internal sealed class UpdateInstallGateway
         }
     }
 
-    private static bool VerifyDeploymentLock(UpdatePayloadKind payloadKind, string launcherRoot, out string? errorCode, out string? error)
+    private static bool VerifyDeploymentLock(
+        UpdatePayloadKind payloadKind,
+        string launcherRoot,
+        out DeploymentLock? deploymentLock,
+        out string? errorCode,
+        out string? error)
     {
+        deploymentLock = null;
         errorCode = null;
         error = null;
-        var deploymentLock = DeploymentLockService.ReadLock(launcherRoot);
-        if (deploymentLock is null)
+        var currentLock = DeploymentLockService.ReadLock(launcherRoot);
+        if (currentLock is null)
         {
             errorCode = "lock_conflict";
             error = "Deployment lock is missing. Please redownload the update.";
             return false;
         }
 
-        if (deploymentLock.SchemaVersion != 1)
+        if (currentLock.SchemaVersion != 1)
         {
             errorCode = "lock_conflict";
             error = "Deployment lock schema is unsupported. Please redownload the update.";
@@ -112,22 +118,23 @@ internal sealed class UpdateInstallGateway
         }
 
         var expectedKind = payloadKind is UpdatePayloadKind.DeltaPlonds ? "delta" : "full";
-        if (!string.Equals(deploymentLock.Kind, expectedKind, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(currentLock.Kind, expectedKind, StringComparison.OrdinalIgnoreCase))
         {
             errorCode = "lock_conflict";
             error = "Deployment lock payload type mismatch. Please redownload the update.";
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(deploymentLock.PayloadPath) ||
-            !File.Exists(deploymentLock.PayloadPath) &&
-            !Directory.Exists(deploymentLock.PayloadPath))
+        if (string.IsNullOrWhiteSpace(currentLock.PayloadPath) ||
+            !File.Exists(currentLock.PayloadPath) &&
+            !Directory.Exists(currentLock.PayloadPath))
         {
             errorCode = "staging_incomplete";
             error = "Deployment lock payload path is missing. Please redownload the update.";
             return false;
         }
 
+        deploymentLock = currentLock;
         return true;
     }
 
@@ -240,9 +247,16 @@ internal sealed class UpdateInstallGateway
         }
     }
 
-    private static string? FindPendingInstaller(string launcherRoot, UpdatePayloadKind payloadKind, CancellationToken ct)
+    private static string? FindPendingInstaller(string launcherRoot, DeploymentLock deploymentLock, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+
+        if (!string.IsNullOrWhiteSpace(deploymentLock.PayloadPath) &&
+            File.Exists(deploymentLock.PayloadPath) &&
+            Path.GetExtension(deploymentLock.PayloadPath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return deploymentLock.PayloadPath;
+        }
 
         var incomingDir = UpdatePaths.GetIncomingDirectory(launcherRoot);
         if (!Directory.Exists(incomingDir))

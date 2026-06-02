@@ -360,7 +360,7 @@ jobs:
         run: |
           $version = "${{ needs.prepare.outputs.version }}"
           $arch = "${{ matrix.arch }}"
-          $payloadRoot = Join-Path (Join-Path $PWD "publish/windows-$arch") "app-$version"
+          $payloadRoot = Join-Path $PWD "publish/windows-$arch"
           if (-not (Test-Path $payloadRoot)) {
             Write-Error "Payload root not found: $payloadRoot"
             exit 1
@@ -374,7 +374,7 @@ jobs:
 
           Get-ChildItem -Path $payloadRoot -Recurse -File | ForEach-Object {
             $relative = [System.IO.Path]::GetRelativePath($payloadRoot, $_.FullName).Replace('\', '/')
-            if ($relative -eq '.current' -or $relative -eq '.partial' -or $relative -eq '.destroy' -or $relative.StartsWith('.current/') -or $relative.StartsWith('.partial/') -or $relative.StartsWith('.destroy/')) {
+            if ($relative -eq '.partial' -or $relative -eq '.destroy' -or $relative.StartsWith('.partial/') -or $relative.StartsWith('.destroy/')) {
               return
             }
 

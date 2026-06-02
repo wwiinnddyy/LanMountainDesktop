@@ -55,12 +55,13 @@ internal sealed class PlondsPreparedPackageInstaller
             return new PlondsInstallResult(false, "PLONDS full package directory is missing.", "staging_incomplete");
         }
 
+        var sourceAppDirectory = ResolveFullPackageAppDirectory(package.FilesDirectory, package.Version);
         var currentDeployment = FindCurrentDeploymentDirectory(launcherRoot);
         var targetDeployment = BuildNextDeploymentDirectory(launcherRoot, package.Version.ToString());
 
         progress?.Report(new InstallProgressReport(InstallStage.CreateTarget, "Creating target deployment...", 15, null, 0, 0));
         PrepareTargetDirectory(targetDeployment);
-        CopyDirectory(package.FilesDirectory, targetDeployment, cancellationToken);
+        CopyDirectory(sourceAppDirectory, targetDeployment, cancellationToken, skipMarkers: true);
 
         progress?.Report(new InstallProgressReport(InstallStage.ActivateDeployment, "Activating deployment...", 85, null, 0, 0));
         ActivateDeployment(currentDeployment, targetDeployment);
@@ -286,6 +287,40 @@ internal sealed class PlondsPreparedPackageInstaller
             .ThenByDescending(x => x.Version)
             .Select(x => x.Path)
             .FirstOrDefault();
+    }
+
+    private static string ResolveFullPackageAppDirectory(string filesDirectory, Version version)
+    {
+        var resolvedRoot = Path.GetFullPath(filesDirectory);
+        if (File.Exists(Path.Combine(resolvedRoot, "LanMountainDesktop.exe")))
+        {
+            return resolvedRoot;
+        }
+
+        var exactAppDirectory = Path.Combine(resolvedRoot, $"app-{version}");
+        if (Directory.Exists(exactAppDirectory) &&
+            File.Exists(Path.Combine(exactAppDirectory, "LanMountainDesktop.exe")))
+        {
+            return exactAppDirectory;
+        }
+
+        var appDirectory = Directory.GetDirectories(resolvedRoot, "app-*", SearchOption.TopDirectoryOnly)
+            .Where(path => File.Exists(Path.Combine(path, "LanMountainDesktop.exe")))
+            .Select(path => new
+            {
+                Path = path,
+                Version = ParseVersionFromDirectory(path)
+            })
+            .OrderByDescending(item => item.Version)
+            .Select(item => item.Path)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(appDirectory))
+        {
+            return appDirectory;
+        }
+
+        throw new DirectoryNotFoundException("PLONDS full package does not contain an app deployment directory.");
     }
 
     private static string BuildNextDeploymentDirectory(string launcherRoot, string targetVersion)
