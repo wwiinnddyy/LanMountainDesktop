@@ -35,4 +35,37 @@ public sealed class DesktopEditOverlayPresenterTests
         Assert.Equal(180, ghost.Width);
         Assert.Equal(120, ghost.Height);
     }
+
+    [Fact]
+    public void CandidateRectUsesCanvasPlacement()
+    {
+        var presenter = new DesktopEditOverlayPresenter(new CompositionVisualAnimationService(_ => null));
+        var root = Assert.IsType<Canvas>(presenter.Root);
+
+        presenter.SetCandidateRect(new Rect(44, 58, 240, 160));
+
+        var candidate = root.Children.OfType<Border>().Single(child => child is not DesktopEditGhostView);
+        Assert.Equal(44, Canvas.GetLeft(candidate));
+        Assert.Equal(58, Canvas.GetTop(candidate));
+        Assert.Equal(240, candidate.Width);
+        Assert.Equal(160, candidate.Height);
+    }
+
+    [Fact]
+    public void ShowPreservesPreviewAndCandidateCanvasPlacement()
+    {
+        var presenter = new DesktopEditOverlayPresenter(new CompositionVisualAnimationService(_ => null));
+        var root = Assert.IsType<Canvas>(presenter.Root);
+
+        presenter.SetPreviewRect(new Rect(16, 32, 180, 120));
+        presenter.SetCandidateRect(new Rect(24, 40, 200, 140));
+        presenter.Show();
+
+        var ghost = root.Children.OfType<DesktopEditGhostView>().Single();
+        var candidate = root.Children.OfType<Border>().Single(child => child is not DesktopEditGhostView);
+        Assert.Equal(16, Canvas.GetLeft(ghost));
+        Assert.Equal(32, Canvas.GetTop(ghost));
+        Assert.Equal(24, Canvas.GetLeft(candidate));
+        Assert.Equal(40, Canvas.GetTop(candidate));
+    }
 }

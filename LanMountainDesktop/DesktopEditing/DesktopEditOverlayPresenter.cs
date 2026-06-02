@@ -33,8 +33,6 @@ internal sealed class DesktopEditOverlayPresenter
     private Rect? _candidateRect;
     private bool _isInvalid;
     private bool _isVisible;
-    private bool _ghostUsesCompositionOffset;
-    private bool _candidateUsesCompositionOffset;
     private int _dismissVersion;
 
     private readonly SolidColorBrush _candidateBrush = new(Color.Parse("#FF0A84FF"));
@@ -68,7 +66,7 @@ internal sealed class DesktopEditOverlayPresenter
             RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
             RenderTransform = _candidateScale
         };
-        if (Dispatcher.UIThread.CheckAccess())
+        if (DesktopEditAnimationRuntime.CanUseTransitions())
         {
             _candidateOutline.Transitions = new Transitions
             {
@@ -102,7 +100,7 @@ internal sealed class DesktopEditOverlayPresenter
             }
         };
 
-        if (Dispatcher.UIThread.CheckAccess())
+        if (DesktopEditAnimationRuntime.CanUseTransitions())
         {
             _root.Transitions = new Transitions
             {
@@ -170,21 +168,24 @@ internal sealed class DesktopEditOverlayPresenter
             targetGhostScale = 1.03;
         }
 
-        _root.Transitions = new Transitions
+        if (DesktopEditAnimationRuntime.CanUseTransitions())
         {
-            CreateOpacityTransition(PickupDuration)
-        };
-        _ghostView.SetOpacityTransitionDuration(PickupDuration);
-        _ghostView.SetScaleTransitionDuration(PickupDuration);
-        _candidateScale.Transitions = new Transitions
-        {
-            CreateScaleTransition(ScaleTransform.ScaleXProperty, PickupDuration),
-            CreateScaleTransition(ScaleTransform.ScaleYProperty, PickupDuration)
-        };
-        _candidateOutline.Transitions = new Transitions
-        {
-            CreateOpacityTransition(PickupDuration)
-        };
+            _root.Transitions = new Transitions
+            {
+                CreateOpacityTransition(PickupDuration)
+            };
+            _ghostView.SetOpacityTransitionDuration(PickupDuration);
+            _ghostView.SetScaleTransitionDuration(PickupDuration);
+            _candidateScale.Transitions = new Transitions
+            {
+                CreateScaleTransition(ScaleTransform.ScaleXProperty, PickupDuration),
+                CreateScaleTransition(ScaleTransform.ScaleYProperty, PickupDuration)
+            };
+            _candidateOutline.Transitions = new Transitions
+            {
+                CreateOpacityTransition(PickupDuration)
+            };
+        }
         _ghostView.SetRestingScale(initialGhostScale);
         _candidateOutline.Opacity = 0;
         _candidateScale.ScaleX = 0.97;
@@ -243,21 +244,24 @@ internal sealed class DesktopEditOverlayPresenter
         var version = ++_dismissVersion;
         _isVisible = false;
         var settleDuration = isCancel ? CancelSettleDuration : CommitSettleDuration;
-        _root.Transitions = new Transitions
+        if (DesktopEditAnimationRuntime.CanUseTransitions())
         {
-            CreateOpacityTransition(settleDuration)
-        };
-        _ghostView.SetOpacityTransitionDuration(settleDuration);
-        _ghostView.SetScaleTransitionDuration(settleDuration);
-        _candidateScale.Transitions = new Transitions
-        {
-            CreateScaleTransition(ScaleTransform.ScaleXProperty, settleDuration),
-            CreateScaleTransition(ScaleTransform.ScaleYProperty, settleDuration)
-        };
-        _candidateOutline.Transitions = new Transitions
-        {
-            CreateOpacityTransition(settleDuration)
-        };
+            _root.Transitions = new Transitions
+            {
+                CreateOpacityTransition(settleDuration)
+            };
+            _ghostView.SetOpacityTransitionDuration(settleDuration);
+            _ghostView.SetScaleTransitionDuration(settleDuration);
+            _candidateScale.Transitions = new Transitions
+            {
+                CreateScaleTransition(ScaleTransform.ScaleXProperty, settleDuration),
+                CreateScaleTransition(ScaleTransform.ScaleYProperty, settleDuration)
+            };
+            _candidateOutline.Transitions = new Transitions
+            {
+                CreateOpacityTransition(settleDuration)
+            };
+        }
         var targetScale = _ghostView.HasPreviewImage
             ? 1.00
             : isCancel ? 0.96 : 1.04;
@@ -292,7 +296,7 @@ internal sealed class DesktopEditOverlayPresenter
         var rect = _previewRect.Value;
         _ghostView.Width = Math.Max(1, rect.Width);
         _ghostView.Height = Math.Max(1, rect.Height);
-        SetOverlayOffset(_ghostView, new Point(rect.X, rect.Y), ref _ghostUsesCompositionOffset);
+        SetOverlayOffset(_ghostView, new Point(rect.X, rect.Y));
         _ghostView.UpdatePreviewMetrics(rect.Width, rect.Height);
     }
 
@@ -309,7 +313,7 @@ internal sealed class DesktopEditOverlayPresenter
         _candidateOutline.IsVisible = true;
         _candidateOutline.Width = Math.Max(1, rect.Width);
         _candidateOutline.Height = Math.Max(1, rect.Height);
-        SetOverlayOffset(_candidateOutline, new Point(rect.X, rect.Y), ref _candidateUsesCompositionOffset);
+        SetOverlayOffset(_candidateOutline, new Point(rect.X, rect.Y));
 
         var cornerRadius = Math.Clamp(Math.Min(rect.Width, rect.Height) * 0.11, 14, 26);
         _candidateOutline.CornerRadius = new CornerRadius(cornerRadius);
@@ -339,24 +343,11 @@ internal sealed class DesktopEditOverlayPresenter
         return new Rect(rect.X, rect.Y, width, height);
     }
 
-    private void SetOverlayOffset(Control target, Point position, ref bool usesCompositionOffset)
+    private void SetOverlayOffset(Control target, Point position)
     {
-        if (_visualAnimationService.TrySetOffset(target, position))
-        {
-            Canvas.SetLeft(target, 0);
-            Canvas.SetTop(target, 0);
-            usesCompositionOffset = true;
-            return;
-        }
-
-        if (usesCompositionOffset)
-        {
-            _visualAnimationService.TryResetOffset(target);
-            usesCompositionOffset = false;
-        }
-
         Canvas.SetLeft(target, position.X);
         Canvas.SetTop(target, position.Y);
+        _visualAnimationService.TryResetOffset(target);
     }
 
     private static DoubleTransition CreateScaleTransition(AvaloniaProperty property, TimeSpan duration) =>
