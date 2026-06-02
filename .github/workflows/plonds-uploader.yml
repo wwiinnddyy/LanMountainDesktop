@@ -21,11 +21,13 @@ env:
   DOTNET_VERSION: '10.0.x'
   PLONDS_S3_PREFIX: lanmountain/update/plonds
   PLONDS_S3_PUBLIC_BASE_KEY_PREFIX: lanmountain/update
+  PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY: '4'
 
 jobs:
   publish:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       actions: read
@@ -116,7 +118,8 @@ jobs:
             --s3-access-key "$S3_ACCESS_KEY" \
             --s3-secret-key "$S3_SECRET_KEY" \
             --s3-public-base-url "$PUBLIC_BASE" \
-            --s3-public-base-key-prefix "$PLONDS_S3_PUBLIC_BASE_KEY_PREFIX"
+            --s3-public-base-key-prefix "$PLONDS_S3_PUBLIC_BASE_KEY_PREFIX" \
+            --directory-upload-concurrency "$PLONDS_S3_DIRECTORY_UPLOAD_CONCURRENCY"
 
           jq -e '.downloads.github.changedZipUrl and .downloads.github.filesZipUrl and .downloads.s3.changedFolderUrl and .downloads.s3.filesFolderUrl' plonds-assets/PLONDS.json >/dev/null
 

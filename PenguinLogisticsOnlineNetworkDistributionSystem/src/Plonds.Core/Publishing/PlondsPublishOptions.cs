@@ -8,4 +8,7 @@ public sealed record PlondsPublishOptions(
     string FilesZipPath,
     string WorkDir,
     string S3KeyPrefix,
-    PlondsS3ClientOptions S3);
+    PlondsS3ClientOptions S3)
+{
+    public int DirectoryUploadConcurrency { get; init; } = 4;
+}

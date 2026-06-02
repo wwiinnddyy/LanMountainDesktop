@@ -69,6 +69,29 @@ public sealed class PlondsS3Client : IDisposable
         }
     }
 
+    public async Task<bool> UploadFileIfChangedAsync(PlondsS3ObjectUpload upload, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(upload);
+
+        var sourcePath = Path.GetFullPath(upload.SourcePath);
+        if (!File.Exists(sourcePath))
+        {
+            throw new FileNotFoundException("S3 upload source file not found.", sourcePath);
+        }
+
+        var key = NormalizeKey(upload.Key);
+        var contentLength = new FileInfo(sourcePath).Length;
+        var existing = await TryGetObjectInfoForUploadAsync(key, cancellationToken).ConfigureAwait(false);
+        if (existing?.ContentLength == contentLength)
+        {
+            Console.WriteLine($"Skipping S3 object {key}; existing object has matching size {FormatBytes(contentLength)}.");
+            return false;
+        }
+
+        await UploadFileAsync(upload, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     private async Task UploadFileOnceAsync(
         string sourcePath,
         string key,
@@ -108,6 +131,16 @@ public sealed class PlondsS3Client : IDisposable
     public async Task EnsureObjectExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         var normalizedKey = NormalizeKey(key);
+        var objectInfo = await TryGetObjectInfoAsync(normalizedKey, cancellationToken).ConfigureAwait(false);
+        if (objectInfo is null)
+        {
+            throw new InvalidOperationException($"S3 object verification failed for {normalizedKey}: object was not found.");
+        }
+    }
+
+    public async Task<PlondsS3ObjectInfo?> TryGetObjectInfoAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var normalizedKey = NormalizeKey(key);
         var now = DateTimeOffset.UtcNow;
         var requestUri = BuildObjectUri(normalizedKey);
 
@@ -115,9 +148,32 @@ public sealed class PlondsS3Client : IDisposable
         SignRequest(request, normalizedKey, EmptyPayloadHash, now);
 
         using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode is HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"S3 object verification failed for {normalizedKey}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+            throw new InvalidOperationException($"S3 object metadata lookup failed for {normalizedKey}: HTTP {(int)response.StatusCode} {response.ReasonPhrase}.");
+        }
+
+        return new PlondsS3ObjectInfo(
+            Key: normalizedKey,
+            ContentLength: response.Content.Headers.ContentLength,
+            ETag: response.Headers.ETag?.Tag);
+    }
+
+    private async Task<PlondsS3ObjectInfo?> TryGetObjectInfoForUploadAsync(string key, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await TryGetObjectInfoAsync(key, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Console.Error.WriteLine($"S3 object metadata lookup for {key} failed; uploading anyway. {ex.Message}");
+            return null;
         }
     }
 

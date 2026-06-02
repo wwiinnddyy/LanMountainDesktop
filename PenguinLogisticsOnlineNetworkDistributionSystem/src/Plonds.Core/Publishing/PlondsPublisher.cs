@@ -62,11 +62,12 @@ public sealed class PlondsPublisher
 
         using var s3 = new PlondsS3Client(options.S3);
 
-        var changedFileCount = await UploadDirectoryAsync(s3, changedExtractRoot, changedFolderKey, cancellationToken).ConfigureAwait(false);
-        var filesFileCount = await UploadDirectoryAsync(s3, filesExtractRoot, filesFolderKey, cancellationToken).ConfigureAwait(false);
+        await UploadArtifactAsync(s3, changedZipPath, changedZipKey, "application/zip", cancellationToken).ConfigureAwait(false);
+        await UploadArtifactAsync(s3, filesZipPath, filesZipKey, "application/zip", cancellationToken).ConfigureAwait(false);
 
-        await s3.UploadFileAsync(new PlondsS3ObjectUpload(changedZipPath, changedZipKey, "application/zip"), cancellationToken).ConfigureAwait(false);
-        await s3.UploadFileAsync(new PlondsS3ObjectUpload(filesZipPath, filesZipKey, "application/zip"), cancellationToken).ConfigureAwait(false);
+        var directoryConcurrency = Math.Max(1, options.DirectoryUploadConcurrency);
+        var changedFileCount = await UploadDirectoryAsync(s3, changedExtractRoot, changedFolderKey, directoryConcurrency, cancellationToken).ConfigureAwait(false);
+        var filesFileCount = await UploadDirectoryAsync(s3, filesExtractRoot, filesFolderKey, directoryConcurrency, cancellationToken).ConfigureAwait(false);
 
         var updatedChecksums = new Dictionary<string, string>(manifest.Checksums, StringComparer.OrdinalIgnoreCase)
         {
@@ -130,18 +131,79 @@ public sealed class PlondsPublisher
         PlondsS3Client s3,
         string sourceDirectory,
         string destinationKeyPrefix,
+        int concurrency,
         CancellationToken cancellationToken)
     {
-        var count = 0;
-        foreach (var filePath in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+        var files = Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
+            .Select(filePath =>
+            {
+                var relativePath = PayloadUtilities.NormalizeRelativePath(Path.GetRelativePath(sourceDirectory, filePath));
+                return new DirectoryUploadPlan(
+                    SourcePath: filePath,
+                    ObjectKey: $"{destinationKeyPrefix}/{relativePath}",
+                    ContentType: ResolveContentType(filePath));
+            })
+            .OrderBy(x => x.ObjectKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (files.Length == 0)
         {
-            var relativePath = PayloadUtilities.NormalizeRelativePath(Path.GetRelativePath(sourceDirectory, filePath));
-            var objectKey = $"{destinationKeyPrefix}/{relativePath}";
-            await s3.UploadFileAsync(new PlondsS3ObjectUpload(filePath, objectKey, ResolveContentType(filePath)), cancellationToken).ConfigureAwait(false);
-            count++;
+            Console.WriteLine($"No files found under {sourceDirectory}; skipping S3 directory upload to {destinationKeyPrefix}.");
+            return 0;
         }
 
-        return count;
+        Console.WriteLine($"Uploading S3 directory {destinationKeyPrefix}: {files.Length} files with concurrency {concurrency}.");
+
+        var processed = 0;
+        var uploaded = 0;
+        var skipped = 0;
+        await Parallel.ForEachAsync(
+            files,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = concurrency,
+                CancellationToken = cancellationToken
+            },
+            async (file, token) =>
+            {
+                var didUpload = await s3.UploadFileIfChangedAsync(
+                    new PlondsS3ObjectUpload(file.SourcePath, file.ObjectKey, file.ContentType),
+                    token).ConfigureAwait(false);
+
+                if (didUpload)
+                {
+                    Interlocked.Increment(ref uploaded);
+                }
+                else
+                {
+                    Interlocked.Increment(ref skipped);
+                }
+
+                var current = Interlocked.Increment(ref processed);
+                if (current == files.Length || current % 10 == 0)
+                {
+                    Console.WriteLine($"S3 directory progress {destinationKeyPrefix}: {current}/{files.Length} processed ({uploaded} uploaded, {skipped} skipped).");
+                }
+            }).ConfigureAwait(false);
+
+        Console.WriteLine($"Finished S3 directory {destinationKeyPrefix}: {files.Length} files processed ({uploaded} uploaded, {skipped} skipped).");
+        return files.Length;
+    }
+
+    private static async Task UploadArtifactAsync(
+        PlondsS3Client s3,
+        string sourcePath,
+        string objectKey,
+        string contentType,
+        CancellationToken cancellationToken)
+    {
+        var didUpload = await s3.UploadFileIfChangedAsync(
+            new PlondsS3ObjectUpload(sourcePath, objectKey, contentType),
+            cancellationToken).ConfigureAwait(false);
+
+        Console.WriteLine(didUpload
+            ? $"Published S3 artifact {objectKey}."
+            : $"S3 artifact {objectKey} already exists with matching size.");
     }
 
     private static PlondsManifest LoadManifest(string manifestPath)
@@ -201,4 +263,9 @@ public sealed class PlondsPublisher
             ? throw new ArgumentException($"{name} is required.", name)
             : value.Trim();
     }
+
+    private sealed record DirectoryUploadPlan(
+        string SourcePath,
+        string ObjectKey,
+        string ContentType);
 }
